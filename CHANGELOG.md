@@ -13,6 +13,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- RBAC viewer access now excludes named sensitive-read tools even when their
+  `readOnlyHint` remains true. Clipboard/history, local data/document/SQL readers,
+  dotenv/reference resolution, credential generators, persistent-store readers,
+  outbound checks, microphone capture, VLM requests and assertion containers
+  require operator/admin; tool listing and invocation use the same capability.
+  Unconfigured RBAC retains existing access. State-changing `ac_realize_item`,
+  `ac_idempotency_begin` and `ac_rate_limit` are excluded from read-only mode.
+
 - REST registry status adds `rbac_enabled` and suppresses the inactive shared
   token in RBAC mode (`token: null`). The GUI explains user-token authentication
   and disables its shared-token field. The Python server's `token` property stays

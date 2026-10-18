@@ -1385,7 +1385,7 @@ def a11y_control_tools() -> List[MCPTool]:
                 "automation_id": {"type": "string"}},
                 required=["item_name"]),
             handler=h_exec.realize_item,
-            annotations=READ_ONLY,
+            annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_get_element_properties",
@@ -6441,7 +6441,7 @@ def rate_limit_tools() -> List[MCPTool]:
                  "capacity": {"type": "number"}, "n": {"type": "number"}},
                 ["name"]),
             handler=h_ops.rate_limit,
-            annotations=READ_ONLY,
+            annotations=SIDE_EFFECT_ONLY,
         ),
     ]
 
@@ -6922,7 +6922,7 @@ def idempotency_tools() -> List[MCPTool]:
                  "request": {"type": "object"}},
                 ["name", "key"]),
             handler=h_exec.idempotency_begin,
-            annotations=READ_ONLY,
+            annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_idempotency_complete",

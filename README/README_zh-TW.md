@@ -288,6 +288,8 @@ MCP 視窗狀態工具 `ac_window_minimize`、`ac_window_maximize` 與 `ac_windo
 
 REST GUI 在使用者存放檔啟用時顯示 RBAC 模式並停用共用 token 欄位。`rest_api_registry.status()` 提供 `rbac_enabled`，該模式的 `token` 為 `null`；請使用個別使用者 token。只實作 `check()` 的自製 REST gate 仍可用於共用 token 模式；RBAC 要求已驗證的使用者 context，會拒絕沒有身分的成功結果。
 
+RBAC viewer 不會取得列管的敏感讀取工具，即使 MCP `readOnlyHint` 為 true：剪貼簿／歷史、本機文件／資料／SQL 與 dotenv 讀取、參照解析、認證資料產生、持久存放區讀取、對外檢查、麥克風擷取與外部 VLM 請求都需要 operator／admin。斷言容器的 spec 也可能讀取這些資源，因此同樣需要 operator。螢幕觀察與純輸入解析維持既有分類。`ac_realize_item`、`ac_idempotency_begin` 與 `ac_rate_limit` 會改變狀態，已從 `--read-only` 模式排除。
+
 間隔／cron 排程、觸發器、熱鍵、watchdog 規則、webhook、e-mail 觸發器與 observer 回呼會保留註冊者身分。每次觸發重新檢查來源使用者檔與角色；已刪除的使用者、無法使用的來源檔與 viewer 不能執行背景工作。啟動 daemon 不會改變既有工作的擁有者。擁有者資訊不保存 RBAC bearer token；未帶 `store_path` 的明確 Python `AuthorizationContext` 保留角色快照，未在 RBAC 下註冊的工作會清除 worker 原有身分。observer／watchdog 回呼使用獨立變數範圍，watchdog 動作失敗不會算成成功排除彈窗。巢狀回呼會保留呼叫端的失敗計數；webhook 擁有者被撤銷權限時回應 HTTP 403 與 `fired: false`。
 
 ### 遠端桌面的線路協定

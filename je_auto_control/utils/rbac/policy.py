@@ -5,9 +5,10 @@ Three surfaces, one rule each:
 * **REST routes** are listed one by one. A route missing from the list needs
   ``manage_hosts``, so a route added without a decision is admin-only rather
   than open.
-* **MCP tools** follow their own annotation -- a tool marked read-only needs
-  ``read_screen``, any other ``drive_input`` -- except the few named here
-  that change how the host itself is exposed.
+* **MCP tools** default to ``read_screen`` for a read-only annotation and
+  ``drive_input`` otherwise. Named overrides separate non-mutating sensitive
+  reads (clipboard, local data, credentials, network and audio) from screen
+  observation, and protect administration of the host itself.
 * **``AC_*`` commands** reach the executor through anything that runs an
   action list (``POST /execute``, ``ac_execute_actions``, an action file).
   Being allowed to run actions is ``drive_input``; the commands named here
@@ -126,6 +127,64 @@ TOOL_CAPABILITIES: Dict[str, str] = {
     "ac_egress_allow": _HOSTS,
     "ac_egress_reset": _HOSTS,
     "ac_load_plugins": _HOSTS,
+    # A non-mutating hint does not grant access to the desktop user's private
+    # clipboard, files, credentials, network endpoints or microphone. Assertion
+    # containers may invoke those same reads through their nested specs.
+    "ac_get_clipboard": _DRIVE,
+    "ac_get_clipboard_image": _DRIVE,
+    "ac_get_clipboard_html": _DRIVE,
+    "ac_get_clipboard_files": _DRIVE,
+    "ac_get_clipboard_rtf": _DRIVE,
+    "ac_get_clipboard_csv": _DRIVE,
+    "ac_clipboard_formats": _DRIVE,
+    "ac_clip_history_list": _DRIVE,
+    "ac_clip_history_search": _DRIVE,
+    "ac_assert_clipboard": _DRIVE,
+    "ac_read_action_file": _DRIVE,
+    "ac_load_dotenv": _DRIVE,
+    "ac_sql_query": _DRIVE,
+    "ac_assert_db": _DRIVE,
+    "ac_read_workbook": _DRIVE,
+    "ac_read_document": _DRIVE,
+    "ac_read_presentation": _DRIVE,
+    "ac_extract_pdf_text": _DRIVE,
+    "ac_assert_pdf_text": _DRIVE,
+    "ac_load_data": _DRIVE,
+    "ac_assert_file": _DRIVE,
+    "ac_resolve_ref": _DRIVE,
+    "ac_resolve_refs": _DRIVE,
+    "ac_jwt_encode": _DRIVE,
+    "ac_generate_otp": _DRIVE,
+    "ac_assert_http": _DRIVE,
+    "ac_wait_for_port": _DRIVE,
+    "ac_s3_list": _DRIVE,
+    "ac_assert_all": _DRIVE,
+    "ac_assert_any": _DRIVE,
+    "ac_assert_eventually": _DRIVE,
+    "ac_assert_audio": _DRIVE,
+    "ac_get_asset": _DRIVE,
+    "ac_list_assets": _DRIVE,
+    "ac_cas_get": _DRIVE,
+    "ac_outbox_pending": _DRIVE,
+    "ac_checkpoint_status": _DRIVE,
+    "ac_memory_recall": _DRIVE,
+    "ac_memory_recent": _DRIVE,
+    "ac_memory_stats": _DRIVE,
+    "ac_queue_stats": _DRIVE,
+    "ac_rank_tests": _DRIVE,
+    "ac_select_tests": _DRIVE,
+    "ac_shard_suite": _DRIVE,
+    "ac_element_find": _DRIVE,
+    "ac_element_list": _DRIVE,
+    "ac_skill_list": _DRIVE,
+    "ac_skill_search": _DRIVE,
+    "ac_pending_artifacts": _DRIVE,
+    "ac_approval_status": _DRIVE,
+    "ac_repair_resolved": _DRIVE,
+    "ac_repair_pending": _DRIVE,
+    "ac_vlm_locate": _DRIVE,
+    "ac_self_heal_locate": _DRIVE,
+    "ac_describe_screen": _DRIVE,
 }
 
 

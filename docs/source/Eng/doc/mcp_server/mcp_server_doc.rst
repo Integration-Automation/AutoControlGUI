@@ -305,9 +305,17 @@ under *Roles* in the operations-layer REST API chapter; both servers can
 share one file. Without a store nothing changes. The stdio transport has no
 bearer token and is never subject to RBAC.
 
-- A tool needs ``read_screen`` when it is marked ``readOnlyHint`` and
-  ``drive_input`` otherwise, so a ``viewer`` gets exactly the read-only
-  tools and an ``operator`` the rest. ``ac_remote_host_start`` / ``_stop``,
+- A tool defaults to ``read_screen`` for ``readOnlyHint`` and ``drive_input``
+  otherwise, with explicit capability overrides. Sensitive reads require
+  ``drive_input`` (operator/admin): clipboard and history, local document/data/SQL
+  readers, dotenv and reference resolution, JWT/OTP generation, persistent-store
+  readers, outbound HTTP/port/S3 checks, microphone capture and external VLM
+  requests. Assertion containers require the same capability because their specs
+  may read those resources. Pure parsing (for example ``ac_parse_dotenv`` and
+  ``ac_jwt_decode``) and screen observation keep their existing classification.
+  Non-mutating hints remain true for these reads; a hint does not grant a role
+  permission to use them. ``ac_realize_item``, ``ac_idempotency_begin`` and
+  ``ac_rate_limit`` change state and are excluded from ``--read-only`` mode. ``ac_remote_host_start`` / ``_stop``,
   ``ac_usb_acl_add`` / ``_remove`` / ``_set_default``,
   ``ac_usb_passthrough_enable``, ``ac_egress_allow`` / ``_reset`` and
   ``ac_load_plugins`` need ``manage_hosts`` (``admin``).

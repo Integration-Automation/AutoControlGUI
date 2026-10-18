@@ -89,6 +89,9 @@ REST gate adaptation preserves check-only custom gates under shared-token auth;
 store-backed servers require an authenticated user context even from replacement
 gates. Registry status exposes `rbac_enabled` and omits the inactive shared token
 so the GUI presents the authentication mode that the server actually accepts.
+MCP role decisions also apply explicit sensitive-read overrides independently
+of read-only hints; clipboard, local data, credential, external service and
+microphone operations require operator authority at both listing and dispatch.
 
 Delayed work captures registration authority through `utils/rbac/deferred.py`.
 Schedulers, triggers, hotkeys, watchdogs, webhooks, e-mail watchers and observers

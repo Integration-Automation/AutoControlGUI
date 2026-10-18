@@ -280,8 +280,14 @@ Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
 同一個檔案。沒有設定存放檔時行為完全不變。stdio 傳輸沒有 bearer token，不受 RBAC
 約束。
 
-- 工具標示 ``readOnlyHint`` 時需要 ``read_screen``，否則需要 ``drive_input``，所以
-  ``viewer`` 拿到的正好是唯讀工具，``operator`` 再加上其餘工具。
+- 工具預設依 ``readOnlyHint`` 使用 ``read_screen``，否則為 ``drive_input``，另有明確
+  的 capability 覆寫。敏感讀取需要 ``drive_input`` （operator／admin）：剪貼簿與歷史、
+  本機文件／資料／SQL、dotenv 與參照解析、JWT／OTP 產生、持久存放區讀取、對外
+  HTTP／port／S3 檢查、麥克風擷取與外部 VLM 請求。斷言容器的 spec 可能讀取相同資源，
+  因此也需要該能力。純解析（例如 ``ac_parse_dotenv`` 與 ``ac_jwt_decode``）及螢幕觀察
+  維持既有分類。這些讀取的非修改提示仍為 true；提示本身不會授予角色權限。
+  ``ac_realize_item``、``ac_idempotency_begin`` 與 ``ac_rate_limit`` 會改變狀態，
+  不會出現在 ``--read-only`` 模式中。
   ``ac_remote_host_start``／``_stop``、``ac_usb_acl_add``／``_remove``／
   ``_set_default``、``ac_usb_passthrough_enable``、``ac_egress_allow``／``_reset`` 與
   ``ac_load_plugins`` 需要 ``manage_hosts``\ （``admin``）。

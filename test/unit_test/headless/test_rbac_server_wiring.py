@@ -423,5 +423,8 @@ def test_default_registry_offers_a_viewer_only_read_only_tools(users):
         listed = MCPServer(tools=registry).handle_line(
             json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}))
     names = {tool["name"] for tool in json.loads(listed)["result"]["tools"]}
-    assert names == {tool.name for tool in registry if tool.annotations.read_only}
+    assert names == {tool.name for tool in registry if tool.annotations.read_only
+                     and capability_for_tool(tool.name, True) == Capability.READ_SCREEN}
+    assert {"ac_get_mouse_position", "ac_screen_size"} <= names
+    assert not {"ac_get_clipboard", "ac_sql_query", "ac_load_dotenv", "ac_jwt_encode"} & names
     assert "ac_execute_actions" not in names and "ac_click_mouse" not in names

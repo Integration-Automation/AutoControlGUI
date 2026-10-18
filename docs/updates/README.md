@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261018-09 | 2026-10-18 | Separate sensitive MCP reads from viewer observation | #done #mcp #rbac | [2026-10](2026-10.md) |
 | U-20261018-08 | 2026-10-18 | Present REST RBAC mode and preserve legacy gate compatibility | #done #rest #rbac | [2026-10](2026-10.md) |
 | U-20261018-07 | 2026-10-18 | Release factory-built GUI panels on explicit tab close | #done #gui #lifecycle | [2026-10](2026-10.md) |
 | U-20261018-06 | 2026-10-18 | Isolate CLI previews, planner runs and state-machine variables | #done #executor #variables | [2026-10](2026-10.md) |
@@ -371,7 +372,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 35 |
+| [2026-10.md](2026-10.md) | 2026-10 | 36 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
