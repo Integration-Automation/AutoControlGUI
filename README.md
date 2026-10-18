@@ -258,6 +258,8 @@ per-module map is in **[architecture_explore.md](architecture_explore.md)**.
 
 ## Command-line interface
 
+Each `je_auto_control run` invocation, including `--dry-run` and runs without `--var`, gets a fresh variable scope. Top-level `run_from_description` and `StateMachine.run()` also isolate variables while sharing them across their own actions and states; nested calls reuse an existing execution scope. A caller-owned `Executor()` keeps its own variables.
+
 ```bash
 je_auto_control run script.json [--var name=value] [--dry-run] [--allow-package NAME]
 je_auto_control validate script.json          # alias: lint

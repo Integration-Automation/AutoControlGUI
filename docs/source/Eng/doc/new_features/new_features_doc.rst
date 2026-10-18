@@ -403,6 +403,16 @@ that called them, also inside an ``AC_parallel`` branch; a branch starts from
 a copy of its parent's variables and its own writes stay in the branch.
 An executor you construct yourself (``Executor()``) always owns its scope.
 
+CLI ``run`` (including ``--dry-run``), top-level ``run_from_description`` and
+``StateMachine.run()`` also isolate variables. A planner or FSM called inside an
+existing ``execution_scope`` shares it, so variables survive across the plan's
+actions and the machine's states, then end with the outer run. The FSM's mutable
+``context`` remains a separate caller-owned scratch pad.
+
+New threads inherit context when Python's thread context inheritance is enabled
+(the free-threaded default), or when the caller explicitly copies the context.
+Use a fresh ``execution_scope`` in an independent worker to isolate its variables.
+
 ::
 
    import je_auto_control as ac

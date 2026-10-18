@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import time
+from contextlib import nullcontext
 from typing import Any, Callable, Dict, Mapping, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.script_vars.execution import current_scope, execution_scope
 
 
 # AutoControlException so `except AutoControlException` boundaries catch a
@@ -58,8 +60,14 @@ class StateMachine:
 
         Returns ``{"final_state": name, "steps": N, "elapsed_s": S}``.
         Raises :class:`StateMachineError` on budget exhaustion or when
-        a state has no fireable transition.
+        a state has no fireable transition. Default-executor actions share a
+        fresh variable scope for this run, or reuse an enclosing run's scope.
         """
+        with execution_scope() if current_scope() is None else nullcontext():
+            return self._run()
+
+    def _run(self) -> Dict[str, Any]:
+        """Drive states inside the run's variable scope."""
         current = self._spec["initial"]
         if current not in self._states:
             raise StateMachineError(f"initial state {current!r} undefined")
@@ -148,9 +156,10 @@ def _validate_spec(spec: Mapping[str, Any]) -> None:
 
 
 def _default_execute_action(action: Any) -> Any:
-    """Lazy bridge to the main executor; isolates test imports."""
+    """Lazy bridge accepting a single action or a nested action batch."""
     from je_auto_control.utils.executor.action_executor import execute_action
-    return execute_action([action] if not isinstance(action, list) else action)
+    batch = isinstance(action, list) and (not action or isinstance(action[0], list))
+    return execute_action(action if batch else [action])
 
 
 def _after_ok(transition: Mapping[str, Any], _context: Mapping[str, Any],

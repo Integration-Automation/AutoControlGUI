@@ -4,6 +4,10 @@
 
 AutoControl 可以直接從命令列執行自動化腳本。
 
+子命令 ``python -m je_auto_control.cli run script.json`` 可加上 ``--var name=value``
+與 ``--dry-run``。每次呼叫都有獨立變數範圍，不論是否傳入 ``--var``；種子與動作寫入的
+變數在成功或出錯後都會捨棄，包含在同一個 Python 行程中重複呼叫與預演。
+
 執行單一動作檔案
 ================
 

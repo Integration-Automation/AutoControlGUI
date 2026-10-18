@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- CLI `run` and `--dry-run` now discard per-run variables, including `--var`
+  seeds, on success or error. Top-level LLM planner and state-machine runs use
+  fresh variables; nested calls reuse the enclosing scope. State-machine
+  `on_enter` now dispatches standard single actions correctly as well as batches.
+
 - MCP `ac_window_minimize`, `ac_window_maximize` and `ac_window_restore`
   return a tool error when the backend refuses the state/activation request,
   instead of reporting the handle as success. Successful calls still return

@@ -7,6 +7,7 @@ list in prose or a code fence, we extract the first JSON array we find.
 """
 import json
 import re
+from contextlib import nullcontext
 from typing import Any, Dict, Iterable, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
@@ -14,6 +15,7 @@ from je_auto_control.utils.executor.action_schema import validate_actions
 from je_auto_control.utils.llm.backends import (
     LLMBackend, LLMNotAvailableError, get_backend,
 )
+from je_auto_control.utils.script_vars.execution import current_scope, execution_scope
 
 _SYSTEM_PROMPT = (
     "You translate plain-language automation instructions into a strict "
@@ -73,7 +75,11 @@ def run_from_description(description: str,
                          backend: Optional[LLMBackend] = None,
                          model: Optional[str] = None,
                          max_tokens: int = 2048) -> Dict[str, Any]:
-    """Plan a description and execute it on ``executor`` in one call."""
+    """Plan and execute in a fresh run, reusing an enclosing execution scope.
+
+    The module executor shares variables across this plan's actions, then drops
+    them on return or failure. Caller-owned executors retain their own scope.
+    """
     actions = plan_actions(
         description,
         known_commands=executor.known_commands(),
@@ -84,7 +90,8 @@ def run_from_description(description: str,
     )
     # A top-level run: ``_validated=True`` would mark it as a nested body,
     # and a stray AC_break from the model would escape as a raw LoopBreak.
-    record = executor.execute_action(actions)
+    with execution_scope() if current_scope() is None else nullcontext():
+        record = executor.execute_action(actions)
     return {"actions": actions, "record": record}
 
 

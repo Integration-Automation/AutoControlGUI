@@ -375,6 +375,14 @@ Variables 分頁顯示的、以及從 GUI 執行的腳本用的就是這個範�
 範圍裡，在 ``AC_parallel`` 分支內也一樣；分支從父層變數的一份複本開始，
 自己寫入的值留在分支內。自行建立的 executor（``Executor()``）永遠擁有自己的範圍。
 
+CLI ``run`` （含 ``--dry-run``）、頂層 ``run_from_description`` 與 ``StateMachine.run()``
+也會隔離變數。規劃器或狀態機若在既有 ``execution_scope`` 內呼叫，會共用該範圍，
+所以變數可跨同一次規劃的動作與狀態機的狀態，隨外層執行結束而捨棄。
+狀態機可變的 ``context`` 仍是獨立、由呼叫端持有的暫存區。
+
+Python 啟用執行緒 context 繼承（free-threaded 預設）或呼叫端明確複製 context 時，
+新執行緒會繼承變數範圍；獨立 worker 應在自己的 ``execution_scope`` 中執行以隔離變數。
+
 
 ::
 

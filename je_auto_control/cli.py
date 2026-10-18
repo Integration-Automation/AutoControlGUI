@@ -64,26 +64,21 @@ def _allow_packages(names: Optional[Sequence[str]]) -> None:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
+    """Execute or preview one script in its own variable scope."""
     from je_auto_control.utils.executor.action_executor import (
-        execute_action, execute_action_with_vars, recorded_failures,
-        reset_recorded_failures,
+        executor, recorded_failures, reset_recorded_failures,
     )
     from je_auto_control.utils.json.json_file import read_executable_action_json
+    from je_auto_control.utils.script_vars.execution import execution_scope
     actions = read_executable_action_json(args.script)
     variables = _parse_vars(args.var)
     _allow_packages(args.allow_package)
     reset_recorded_failures()
-    if args.dry_run:
-        from je_auto_control.utils.executor.action_executor import executor
+    with execution_scope(variables):
         # Seeded, not interpolated over the whole tree: that failed on a loop
         # body's ${item} ("Unknown variable") and would print ${secrets.X}
         # resolved into the dry-run keys.
-        executor.variables.update_many(variables)
-        result = executor.execute_action(actions, dry_run=True)
-    elif variables:
-        result = execute_action_with_vars(actions, variables)
-    else:
-        result = execute_action(actions)
+        result = executor.execute_action(actions, dry_run=args.dry_run)
     json.dump(result, sys.stdout, indent=2, default=str, ensure_ascii=False)
     sys.stdout.write("\n")
     # Failed actions are recorded and the run goes on; exiting 0 anyway left

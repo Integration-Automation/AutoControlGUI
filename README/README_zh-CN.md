@@ -245,6 +245,8 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 ## 命令行界面
 
+每次 `je_auto_control run`（包括 `--dry-run` 与未带 `--var`）使用独立变量作用域。顶层 `run_from_description` 与 `StateMachine.run()` 也会隔离变量，同一次执行内的动作与状态仍可共享；嵌套调用沿用已有的执行作用域。自行创建的 `Executor()` 保留自己的变量。
+
 ```bash
 je_auto_control run script.json [--var name=value] [--dry-run] [--allow-package NAME]
 je_auto_control validate script.json          # 别名：lint

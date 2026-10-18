@@ -93,6 +93,10 @@ re-reads that store for current roles and revocations, without retaining bearer
 tokens. Trusted local registrations bind no RBAC identity. Observer/watchdog
 callbacks also use script jobs' fresh variables and per-run failure deltas,
 preserving any earlier failures recorded by the caller.
+CLI runs and previews seed a fresh variable scope even without `--var`.
+Top-level LLM planner and FSM runs also open a scope; nested invocations reuse
+an existing one so their actions and states share run-local values. Explicit
+`Executor()` objects retain their own variables; FSM `context` is separate.
 
 **C. Record → edit → generate code**
 

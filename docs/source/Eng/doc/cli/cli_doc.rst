@@ -25,7 +25,10 @@ Run a script
 
 ``--var name=value`` is parsed as JSON when the value parses, otherwise
 it is treated as a plain string. ``--dry-run`` records every action
-through the executor without invoking any side effects.
+through the executor without invoking any side effects. Each invocation uses
+an independent variable scope, with or without ``--var``; seeds and action-written
+variables are discarded on success or error, including when called repeatedly
+from the same Python process.
 
 ``--allow-package NAME`` (repeatable) puts a package, and its submodules, on
 the package gate's allowlist for this run: ``AC_add_package_to_executor`` and
