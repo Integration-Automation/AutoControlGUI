@@ -21,6 +21,8 @@ from typing import Any, Callable, Deque, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
+from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.timeouts import clamp_poll_interval
 
 # Errors a rule's matcher/action may raise that must not kill the guard loop
@@ -44,13 +46,21 @@ class WatchdogRule:
     action: Callable[[], None]
 
 
+@dataclass(frozen=True)
+class _RegisteredRule:
+    """One registration of a rule; shared callback objects keep separate owners."""
+
+    rule: WatchdogRule
+    authorization: DeferredAuthorization
+
+
 class PopupWatchdog:
     """Poll for registered popups on a background thread and dismiss them."""
 
     def __init__(self, poll_interval_s: float = 1.0) -> None:
         # Clamped: an infinite interval raised OverflowError in the poll thread.
         self._poll = clamp_poll_interval(poll_interval_s)
-        self._rules: List[WatchdogRule] = []
+        self._rules: List[_RegisteredRule] = []
         self._lock = threading.Lock()
         # 序列化 start()/stop():兩者原本無互斥,交錯的 stop() 會在 start()
         # 指派 _thread 與 .start() 之間 join 未啟動的執行緒 → RuntimeError。
@@ -63,9 +73,9 @@ class PopupWatchdog:
         self._hits: Deque[Dict[str, Any]] = deque(maxlen=_MAX_HITS)
 
     def add_rule(self, rule: WatchdogRule) -> None:
-        """Register a generic detector/dismisser rule."""
+        """Register a detector/dismisser bound to the current caller's authority."""
         with self._lock:
-            self._rules.append(rule)
+            self._rules.append(_RegisteredRule(rule, DeferredAuthorization.capture()))
 
     def add_window_rule(self, title: str, *, action: str = "close",
                         case_sensitive: bool = False,
@@ -98,7 +108,7 @@ class PopupWatchdog:
 
     def rule_names(self) -> List[str]:
         with self._lock:
-            return [rule.name for rule in self._rules]
+            return [registration.rule.name for registration in self._rules]
 
     def start(self) -> None:
         """Start the guard thread (idempotent)."""
@@ -126,16 +136,19 @@ class PopupWatchdog:
         dismissed = 0
         with self._lock:
             rules = list(self._rules)
-        for rule in rules:
-            if self._apply(rule):
+        for registration in rules:
+            if self._apply(registration.rule, registration.authorization):
                 dismissed += 1
         return dismissed
 
-    def _apply(self, rule: WatchdogRule) -> bool:
+    def _apply(self, rule: WatchdogRule,
+               authorization: Optional[DeferredAuthorization] = None) -> bool:
+        bound = authorization if authorization is not None else DeferredAuthorization.capture()
         try:
-            if not rule.matcher():
-                return False
-            rule.action()
+            with bound.scope():
+                if not rule.matcher():
+                    return False
+                run_counting_failures(rule.action)
         # Any rule error, as ScreenObserver does: a matcher raising something
         # off the list (subprocess.TimeoutExpired, sqlite3.Error) killed the
         # guard thread and every other rule with it.

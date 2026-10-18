@@ -27,6 +27,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
@@ -62,6 +63,8 @@ class EmailTrigger:
     _seen_uids: set = field(default_factory=set, repr=False)
     _inflight: set = field(default_factory=set, repr=False)
     _uidvalidity: Optional[str] = field(default=None, repr=False)
+    _authorization: DeferredAuthorization = field(
+        default_factory=DeferredAuthorization.capture, init=False, repr=False, compare=False)
 
 
 def _decode_header_value(value: Optional[str]) -> str:
@@ -263,7 +266,7 @@ class EmailTriggerWatcher:
             search_criteria: str = "UNSEEN",
             mark_seen: bool = True,
             poll_seconds: float = _DEFAULT_POLL_SECONDS) -> EmailTrigger:
-        """Register a new IMAP trigger."""
+        """Register an IMAP trigger bound to the current caller's authority."""
         if not host or not username or not script_path:
             raise ValueError(
                 "host, username, and script_path are required",
@@ -364,7 +367,8 @@ class EmailTriggerWatcher:
 
     def _poll_one(self, trigger: EmailTrigger) -> int:
         try:
-            client = _connect(trigger)
+            with trigger._authorization.scope():
+                client = _connect(trigger)
         except (OSError, imaplib.IMAP4.error) as error:
             self._record_connect_error(trigger, error)
             return 0
@@ -486,8 +490,9 @@ class EmailTriggerWatcher:
             status = STATUS_OK
             error_text: Optional[str] = None
             try:
-                actions = read_executable_action_json(trigger.script_path)
-                run_counting_failures(lambda: self._executor(actions, payload))
+                with trigger._authorization.scope():
+                    actions = read_executable_action_json(trigger.script_path)
+                    run_counting_failures(lambda: self._executor(actions, payload))
             # Any failure is recorded as STATUS_ERROR -- not a bogus
             # STATUS_OK from the finally below -- before re-raising.
             except Exception as error:  # noqa: BLE001  # reason: re-raised

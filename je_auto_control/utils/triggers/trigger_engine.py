@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Callable, ClassVar, Dict, List, Optional, Tupl
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.timeouts import clamp_poll_interval
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
@@ -240,6 +241,7 @@ class TriggerEngine:
         self._execute = executor or execute_action
         self._tick = clamp_poll_interval(tick_seconds)
         self._triggers: Dict[str, _TriggerBase] = {}
+        self._authorizations: Dict[str, DeferredAuthorization] = {}
         self._lock = threading.Lock()
         # start() / stop() race without it: two starts made two polling
         # threads (every trigger fired twice) and a stop() between creating
@@ -250,15 +252,17 @@ class TriggerEngine:
         self._stop = threading.Event()
 
     def add(self, trigger: _TriggerBase) -> _TriggerBase:
-        """Register ``trigger``; assigns an id when missing."""
+        """Register ``trigger`` for the current caller; assign an id when missing."""
         if not trigger.trigger_id:
             trigger.trigger_id = uuid.uuid4().hex[:8]
         with self._lock:
+            self._authorizations[trigger.trigger_id] = DeferredAuthorization.capture()
             self._triggers[trigger.trigger_id] = trigger
         return trigger
 
     def remove(self, trigger_id: str) -> bool:
         with self._lock:
+            self._authorizations.pop(trigger_id, None)
             return self._triggers.pop(trigger_id, None) is not None
 
     def list_triggers(self) -> List[_TriggerBase]:
@@ -358,14 +362,19 @@ class TriggerEngine:
             return False
 
     def _fire(self, trigger: _TriggerBase, now: float) -> None:
+        with self._lock:
+            if self._triggers.get(trigger.trigger_id) is not trigger:
+                return
+            authorization = self._authorizations[trigger.trigger_id]
         run_id = default_history_store.start_run(
             SOURCE_TRIGGER, trigger.trigger_id, trigger.script_path,
         )
         status = STATUS_OK
         error_text: Optional[str] = None
         try:
-            actions = read_executable_action_json(trigger.script_path)
-            run_counting_failures(lambda: self._execute(actions))
+            with authorization.scope():
+                actions = read_executable_action_json(trigger.script_path)
+                run_counting_failures(lambda: self._execute(actions))
         # 這裡刻意攔截所有例外：一個 trigger 失敗必須記錄成 STATUS_ERROR
         # 並繼續，而不是拖垮輪詢執行緒。原本的 tuple 漏掉
         # AutoControlJsonActionException，所以光是改名 script 檔就會讓
@@ -397,6 +406,7 @@ class TriggerEngine:
             live._last_fire = now
             if not live.repeat:
                 self._triggers.pop(trigger.trigger_id, None)
+                self._authorizations.pop(trigger.trigger_id, None)
 
 
 default_trigger_engine = TriggerEngine()

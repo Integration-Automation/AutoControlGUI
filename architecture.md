@@ -85,6 +85,15 @@ AC_web_run / AC_web_run_actions → utils/webrunner_bridge/bridge.py
     (event_dict["WR_*"] on a WebRunner without execute_one); a failure → WebRunnerBridgeError
 ```
 
+Delayed work captures registration authority through `utils/rbac/deferred.py`.
+Schedulers, triggers, hotkeys, watchdogs, webhooks, e-mail watchers and observers
+bind that owner at dispatch, independently of the worker's ambient context.
+`resolve_token` attaches the source store path to `AuthorizationContext`; dispatch
+re-reads that store for current roles and revocations, without retaining bearer
+tokens. Trusted local registrations bind no RBAC identity. Observer/watchdog
+callbacks also use script jobs' fresh variables and per-run failure deltas,
+preserving any earlier failures recorded by the caller.
+
 **C. Record → edit → generate code**
 
 ```

@@ -12,6 +12,7 @@ from typing import Callable, Dict, List, Optional, Set
 
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
@@ -49,6 +50,8 @@ class ScheduledJob:
     runs: int = 0
     enabled: bool = True
     next_run_ts: float = field(default=0.0)
+    _authorization: DeferredAuthorization = field(
+        default_factory=DeferredAuthorization, init=False, repr=False, compare=False)
 
     @property
     def is_cron(self) -> bool:
@@ -85,7 +88,7 @@ class Scheduler:
     def add_job(self, script_path: str, interval_seconds: float,
                 repeat: bool = True, max_runs: Optional[int] = None,
                 job_id: Optional[str] = None) -> ScheduledJob:
-        """Register and schedule a new interval job; return the record."""
+        """Register an interval job bound to the current caller; return its record."""
         max_runs = _check_max_runs(max_runs)
         jid = job_id or uuid.uuid4().hex[:8]
         now = time.monotonic()
@@ -97,6 +100,7 @@ class Scheduler:
             next_run_ts=now + interval,
         )
         with self._lock:
+            job._authorization = DeferredAuthorization.capture()
             self._jobs[jid] = job
         autocontrol_logger.info("scheduler add_job %s %s", jid, script_path)
         return job
@@ -104,7 +108,7 @@ class Scheduler:
     def add_cron_job(self, script_path: str, cron_expression: str,
                      max_runs: Optional[int] = None,
                      job_id: Optional[str] = None) -> ScheduledJob:
-        """Register a cron-driven job (5-field expression)."""
+        """Register a cron job (5 fields) bound to the current caller."""
         max_runs = _check_max_runs(max_runs)
         expression = parse_cron(cron_expression)
         jid = job_id or uuid.uuid4().hex[:8]
@@ -116,6 +120,7 @@ class Scheduler:
             next_run_ts=_next_cron_ts(expression, time.time()),
         )
         with self._lock:
+            job._authorization = DeferredAuthorization.capture()
             self._jobs[jid] = job
         autocontrol_logger.info("scheduler add_cron_job %s %r -> %s",
                                 jid, cron_expression, _dt.datetime.fromtimestamp(job.next_run_ts).isoformat())
@@ -230,8 +235,9 @@ class Scheduler:
         status = STATUS_OK
         error_text: Optional[str] = None
         try:
-            actions = read_executable_action_json(job.script_path)
-            run_counting_failures(lambda: self._execute(actions))
+            with job._authorization.scope():
+                actions = read_executable_action_json(job.script_path)
+                run_counting_failures(lambda: self._execute(actions))
         # 一個排程工作失敗必須記錄為 STATUS_ERROR 並繼續輪詢,絕不能拖垮
         # 排程執行緒。原本的 tuple 漏掉 AutoControlException——它是幾乎所有
         # action 失敗(找不到視窗/圖片、輸入錯誤)的基底,直接繼承

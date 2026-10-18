@@ -209,9 +209,22 @@ the executor refuses the same commands when they come from an action file.
 
 The roles are not a sandbox: an operator drives the real keyboard and can
 launch programs, so whatever the desktop user could do by hand is within
-reach. They protect the host's own privileged state. Work an operator defers
-to another thread -- a scheduler job, a trigger, a hotkey binding -- runs
-later without the caller's role attached.
+reach. They protect the host's own privileged state. Interval/cron jobs,
+triggers, hotkeys, watchdog rules, webhooks, e-mail triggers and observer
+callbacks keep their registrant's identity. Starting or re-enabling the daemon
+does not transfer ownership to that caller. Each dispatch refreshes a
+store-backed user: removal, a missing/damaged store or a downgrade to viewer
+prevents execution, and privileged commands use the current role.
+
+``resolve_token`` records only the source ``store_path`` in its
+``AuthorizationContext``, never the bearer token. Explicit Python contexts
+without a store path retain their captured role. Work registered without RBAC
+clears ambient worker authority and keeps trusted local behavior.
+Observer and watchdog callbacks also get fresh variable scopes; a failed
+watchdog executor action is not counted as a dismissed popup. Observer events
+continue to describe detected transitions, with callback failures logged.
+Nested callbacks preserve the caller's prior failure count. Webhooks whose
+owners are revoked return HTTP 403 with ``fired: false``.
 
 Every audit row of an RBAC request names the user: the ``viewer_id`` column
 holds the user id and the detail reads

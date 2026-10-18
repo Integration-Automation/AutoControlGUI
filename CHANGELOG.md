@@ -13,6 +13,21 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+### Background authorization
+
+- Scheduled interval/cron jobs, triggers, hotkeys, watchdog rules, webhooks,
+  e-mail triggers and observer callbacks retain the identity that registered
+  them. Store-backed users are checked again on dispatch: removal, damaged
+  stores and loss of input privileges prevent execution; role changes apply
+  to privileged commands. Ownership metadata stores no RBAC bearer token.
+- Work registered outside RBAC explicitly clears any worker identity. Explicit
+  Python `AuthorizationContext` values without `store_path` remain role
+  snapshots. Re-enabling or starting a daemon does not change its jobs' owners.
+- Observer and watchdog callbacks get fresh variable scopes. A watchdog action
+  containing failed executor commands no longer counts as a dismissed popup.
+  Nested callback runs preserve the caller's prior failure count. A webhook
+  whose owner was revoked returns HTTP 403 with `fired: false`.
+
 ### GUI workspace
 
 - Tab contents scroll when the window is smaller than their minimum layout;

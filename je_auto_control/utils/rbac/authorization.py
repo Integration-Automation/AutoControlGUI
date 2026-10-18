@@ -16,7 +16,7 @@ from __future__ import annotations
 import contextlib
 import os
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, Optional
 
@@ -39,10 +39,18 @@ class AuthorizationError(AutoControlException, PermissionError):
 
 @dataclass(frozen=True)
 class AuthorizationContext:
-    """One authenticated caller: who it is and the role it holds."""
+    """One caller and its role; resolved tokens also carry their source store path.
+
+    ``store_path`` lets deferred work refresh the user's current role without
+    saving credentials. Manually constructed contexts without a path are
+    explicit trusted Python role snapshots.
+    """
 
     user_id: str
     role: str
+    # A provenance path, never a bearer token. Deferred work re-reads the
+    # authoritative store instead of retaining a request's role indefinitely.
+    store_path: Optional[str] = field(default=None, repr=False, compare=False)
 
     def allows(self, capability: str) -> bool:
         """``True`` when this caller's role grants ``capability``."""
@@ -73,7 +81,8 @@ def resolve_token(store: UserStore, token: str) -> Optional[AuthorizationContext
         record = store.authenticate(token)
     except UserAuthError:
         return None
-    return AuthorizationContext(user_id=record.user_id, role=record.role)
+    return AuthorizationContext(user_id=record.user_id, role=record.role,
+                                store_path=str(store.path.resolve()))
 
 
 _CURRENT: ContextVar[Optional[AuthorizationContext]] = ContextVar(
@@ -89,8 +98,9 @@ def current_authorization() -> Optional[AuthorizationContext]:
 def authorization_scope(context: Optional[AuthorizationContext]) -> Iterator[None]:
     """Serve the enclosed work as ``context``; ``None`` clears any outer scope.
 
-    The scope belongs to the calling thread. Work handed to another thread --
-    a scheduler job, a trigger, a hotkey -- runs outside it.
+    The scope belongs to the calling context. Delayed work explicitly binds
+    its captured registrant through ``DeferredAuthorization.scope()``; it
+    must not depend on a worker thread's ambient context or inheritance.
     """
     token = _CURRENT.set(context)
     try:

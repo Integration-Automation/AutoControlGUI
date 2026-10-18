@@ -20,6 +20,8 @@ import shutil
 import tempfile
 from pathlib import Path
 
+import pytest
+
 _SCRATCH = Path(tempfile.gettempdir()) / "je_auto_control_pytest"
 _SCRATCH.mkdir(parents=True, exist_ok=True)
 _HOME = Path(tempfile.mkdtemp(prefix="home-", dir=_SCRATCH))
@@ -28,3 +30,14 @@ atexit.register(shutil.rmtree, _HOME, ignore_errors=True)
 os.environ["HOME"] = str(_HOME)
 os.environ["USERPROFILE"] = str(_HOME)
 os.environ["JE_AUTOCONTROL_LOG_FILE"] = str(_SCRATCH / "AutoControlGUI.log")
+
+
+@pytest.fixture(autouse=True)
+def permit_test_temporary_paths(tmp_path_factory, monkeypatch):
+    """Allow CLI artifacts in pytest's scratch root, including custom --basetemp.
+
+    A workspace-owned base directory may be outside the OS temp directory.
+    Use the CLI's documented opt-in instead of changing production defaults;
+    individual containment tests can still override or clear the setting.
+    """
+    monkeypatch.setenv("AUTOCONTROL_ALLOWED_PATH_ROOTS", str(tmp_path_factory.getbasetemp()))

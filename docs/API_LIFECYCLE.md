@@ -15,3 +15,11 @@ available for compatibility but is not expanded with new integrations.
 The project remains pre-1.0. A 1.0 release requires passing stable capability
 tests on every claimed platform, documented recovery/diagnostic behavior, and
 no unresolved critical security advisories.
+
+`AuthorizationContext(user_id, role)` remains compatible. Its optional
+`store_path` is filled by `resolve_token` so deferred registrations can refresh
+the user's current permissions without retaining credentials. Explicit Python
+contexts without this path remain role snapshots. Background registration
+methods keep their signatures; the worker or daemon starter no longer supplies
+the authority of registered jobs. Observer/watchdog callback variable scopes
+are independent of the process scope (see `CHANGELOG.md`).

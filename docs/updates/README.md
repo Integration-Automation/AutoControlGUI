@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261018-03 | 2026-10-18 | Bind deferred work to its registrant and isolate callbacks | #done #security #rbac | [2026-10](2026-10.md) |
 | U-20261018-02 | 2026-10-18 | Repair Sphinx source markup and remove completed progress history | #done #docs | [2026-10](2026-10.md) |
 | U-20261018-01 | 2026-10-18 | GUI pages scroll and workspace preferences persist without qt-material | #done #gui #F2 | [2026-10](2026-10.md) |
 | U-20261009-14 | 2026-10-09 | The package gate refuses unlisted packages by default | #done #security #breaking | [2026-10](2026-10.md) |
@@ -365,7 +366,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 29 |
+| [2026-10.md](2026-10.md) | 2026-10 | 30 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

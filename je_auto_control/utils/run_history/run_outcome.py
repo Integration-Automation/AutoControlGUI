@@ -16,15 +16,20 @@ from je_auto_control.utils.exception.exceptions import AutoControlActionExceptio
 
 
 def run_counting_failures(run: Callable[[], Any]) -> Any:
-    """Call ``run()`` in a fresh variable scope; raise if an action it ran failed."""
+    """Run in fresh variables and count new failures without resetting the caller.
+
+    Manual observer/watchdog polls may run inside another action list. Resetting
+    the thread's counter here erased that caller's previous failures and could
+    make the CLI report success. A per-run delta keeps both outcomes intact.
+    """
     from je_auto_control.utils.executor.action_executor import (
-        recorded_failures, reset_recorded_failures,
+        recorded_failures,
     )
     from je_auto_control.utils.script_vars.execution import execution_scope
-    reset_recorded_failures()
+    before = recorded_failures()
     with execution_scope():
         result = run()
-    failures = recorded_failures()
+    failures = recorded_failures() - before
     if failures:
         raise AutoControlActionException(
             f"{failures} action(s) failed; see this run's record for which")

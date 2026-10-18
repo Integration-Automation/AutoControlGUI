@@ -14,12 +14,13 @@ Usage::
 import sys
 import threading
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Dict, FrozenSet, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
@@ -52,6 +53,8 @@ class HotkeyBinding:
     script_path: str
     enabled: bool = True
     fired: int = 0
+    _authorization: DeferredAuthorization = field(
+        default_factory=DeferredAuthorization, init=False, repr=False, compare=False)
 
 
 def split_combo(combo: str) -> Tuple[FrozenSet[str], str]:
@@ -146,7 +149,7 @@ class HotkeyDaemon:
 
     def bind(self, combo: str, script_path: str,
              binding_id: Optional[str] = None) -> HotkeyBinding:
-        """Register a hotkey → script binding. Safe to call before/after start."""
+        """Bind a hotkey for the current caller, before or after daemon start."""
         split_combo(combo)
         # A key the platform cannot take fails here, not later on every tick.
         if sys.platform == "win32":
@@ -159,6 +162,7 @@ class HotkeyDaemon:
             binding_id=bid, combo=combo, script_path=script_path,
         )
         with self._lock:
+            binding._authorization = DeferredAuthorization.capture()
             self._bindings[bid] = binding
         return binding
 
@@ -218,8 +222,9 @@ class HotkeyDaemon:
         status = STATUS_OK
         error_text: Optional[str] = None
         try:
-            actions = read_executable_action_json(match.script_path)
-            run_counting_failures(lambda: self._execute(actions))
+            with match._authorization.scope():
+                actions = read_executable_action_json(match.script_path)
+                run_counting_failures(lambda: self._execute(actions))
         except Exception as error:  # noqa: BLE001  # reason: this runs on the backend's listener thread; any escape ends every hotkey
             # AutoControlException covers the common cases — a missing/renamed
             # script (AutoControlJsonActionException) or an action that raises

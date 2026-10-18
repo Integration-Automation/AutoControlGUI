@@ -211,7 +211,6 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
   私鑰是未加密的 PEM（0600，Windows 上沒驗權限位元），沒有通行碼選項；遷移模式開著時 HMAC 簽章會被接受。
   強制簽章經 socket／REST／MCP 的端到端沒有跑過，覆蓋的是共用的 `read_executable_action_json` 與指令本身。
 - **RBAC**（`JE_AUTOCONTROL_RBAC_USERS`，預設關閉）：
-  - 延後執行的工作不帶角色：operator 註冊的排程、觸發器、熱鍵、watchdog 之後執行時沒有身分，裡面的特權指令不會被擋。
   - 使用者只能用 Python 管（`UserStore.add_user/set_role/rotate_token/remove_user`），沒有 `AC_*`、CLI 或 GUI；`Capability.MANAGE_USERS` 因此沒有任何路由或工具對應。
   - `gui/rest_api_tab.py` 仍顯示共用 token，RBAC 開啟後那個 token 會被拒絕。
   - viewer 拿得到所有標成唯讀的工具，包括 `ac_sql_query`、`ac_load_dotenv`、`ac_get_clipboard`、`ac_jwt_encode`，沒有重新分類。
@@ -225,8 +224,7 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
 - **USB passthrough**：client 仍在 `reply_timeout_s`（10 秒）放棄，即使呼叫端要的 `timeout_ms` 更長（host 接受到 60 秒）；
   對新 host 逾時已經無害，對舊 host 正常使用就會進入「需重連」。通道層的 ERROR（passthrough 關閉、bad frame、host 沒有 session）在 session 之前送出、不帶請求編號，
   呼叫仍是等到逾時。沒對真的舊版 host、真的 WebRTC 通道或真的 USB 裝置跑過。
-- **變數範圍**：`je_auto_control run --dry-run --var`、observer 回呼（`AC_observe_add` 與 MCP 的 observe bridge）、
-  `utils/llm/planner.py` 與狀態機預設 runner 仍用行程層級的範圍。排程／觸發／熱鍵／webhook／e-mail 的隔離是在 `run_counting_failures` 測的，沒有把每個 daemon 真的觸發一次。
+- **變數範圍**：`je_auto_control run --dry-run --var`、`utils/llm/planner.py` 與狀態機預設 runner 仍用行程層級的範圍。
   free-threaded 版（執行緒繼承 context）上，一次執行裡另開的執行緒會看到該次執行的範圍，沒測。
 - **遠端桌面的擁有者模型**：Quick Connect 沒有狀態列，它的連線被取代時視窗只是關掉；主機的 Stop 會停任何擁有者開的 host（刻意的）；
   只用假的 viewer／host 測過，真的 viewer 被擠掉時會不會觸發 `on_error` 而多跳一個警告框，沒看過。

@@ -14,11 +14,13 @@ optional background polling thread. Imports no ``PySide6`` — fully headless.
 """
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
+from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.timeouts import clamp_poll_interval
 
 EVENT_APPEAR = "appear"
@@ -43,6 +45,8 @@ class WatchRule:
     on_event: Callable[[str, Any], None]
     events: Sequence[str] = _ALL_EVENTS
     last: Any = _UNSET
+    _authorization: DeferredAuthorization = field(
+        default_factory=DeferredAuthorization.capture, init=False, repr=False, compare=False)
 
 
 def _transition(last: Any, value: Any) -> Optional[str]:
@@ -81,7 +85,12 @@ class ScreenObserver:
     def add(self, name: str, predicate: Callable[[], Any],
             on_event: Callable[[str, Any], None], *,
             events: Optional[Sequence[str]] = None) -> WatchRule:
-        """Register a watch; ``events`` defaults to all three transitions."""
+        """Watch as the current caller; callbacks get a fresh variable scope.
+
+        ``events`` defaults to all three transitions. Registrations without
+        RBAC explicitly clear worker identity; store-backed users are refreshed
+        at dispatch, including before predicates run.
+        """
         rule = WatchRule(name=name, predicate=predicate, on_event=on_event,
                          events=tuple(events) if events else _ALL_EVENTS)
         with self._lock:
@@ -132,8 +141,9 @@ class ScreenObserver:
         # a numpy array raised from bool() there. One rule may not stop the
         # poll thread -- and with it every other rule -- whatever it raises.
         try:
-            value = rule.predicate()
-            event = _transition(rule.last, value)
+            with rule._authorization.scope():
+                value = rule.predicate()
+                event = _transition(rule.last, value)
         except Exception as error:  # noqa: BLE001  # reason: logged; the other rules keep running
             autocontrol_logger.info(
                 "observer %r predicate error: %r", rule.name, error)
@@ -153,7 +163,8 @@ class ScreenObserver:
 
     def _fire(self, rule: WatchRule, event: str, value: Any) -> None:
         try:
-            rule.on_event(event, value)
+            with rule._authorization.scope():
+                run_counting_failures(lambda: rule.on_event(event, value))
         except Exception as error:  # noqa: BLE001  # reason: logged; the other rules keep running
             autocontrol_logger.info(
                 "observer %r handler error: %r", rule.name, error)

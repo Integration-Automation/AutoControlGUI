@@ -192,8 +192,18 @@ CLI::
 同樣的指令若來自動作檔，則由 executor 拒絕。
 
 角色不是沙箱：operator 操作的是真實鍵盤，也能啟動程式，桌面使用者手動做得到的事
-它都做得到。角色保護的是主機自身的特權狀態。operator 交給其他執行緒延後執行的
-工作（排程工作、觸發器、熱鍵綁定）之後執行時不會帶著呼叫者的角色。
+它都做得到。角色保護的是主機自身的特權狀態。間隔／cron 排程、觸發器、熱鍵、watchdog
+規則、webhook、e-mail 觸發器與 observer 回呼會保留註冊者身分。啟動或重新啟用 daemon
+不會把工作改成該操作者擁有。每次觸發會重新讀取來源使用者檔：刪除使用者、檔案遺失或
+損壞、降為 viewer 都會阻止執行；特權指令依目前角色檢查。
+
+``resolve_token`` 只在 ``AuthorizationContext`` 記錄來源 ``store_path``，不保存 bearer token。
+由 Python 明確建立且未帶來源路徑的 context 則維持角色快照。未在 RBAC 下註冊的工作會
+清除 worker 原有身分，保留本機直接使用的行為。observer 與 watchdog 回呼也會取得獨立
+變數範圍；watchdog 的 executor 動作失敗時不會算成成功排除彈窗。observer 事件仍表示
+偵測到的狀態轉換，回呼失敗會另行記錄。
+巢狀回呼不會清除呼叫端原有的失敗計數。webhook 的擁有者被撤銷權限後，回應為 HTTP 403
+與 ``fired: false``。
 
 RBAC 請求的每一筆稽核紀錄都會記下使用者：``viewer_id`` 欄位存使用者 id，detail 為
 ``POST /execute -> ok:200 user=alice role=operator``\ （被拒絕時為

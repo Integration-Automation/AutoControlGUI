@@ -28,7 +28,7 @@ import hmac
 import json
 import threading
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -41,6 +41,8 @@ from je_auto_control.utils.http_headers import (
 )
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.rbac.authorization import AuthorizationError
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
@@ -82,6 +84,8 @@ class WebhookTrigger:
     enabled: bool = True
     fired: int = 0
     last_status: int = 0
+    _authorization: DeferredAuthorization = field(
+        default_factory=DeferredAuthorization.capture, init=False, repr=False, compare=False)
 
 
 #: Verbs the request handler answers; anything else gets a 501 before routing.
@@ -229,6 +233,10 @@ class _WebhookHandler(BaseHTTPRequestHandler):
         }
         try:
             run_id = registry.fire(trigger, payload)
+        except AuthorizationError:
+            self._send_json(HTTPStatus.FORBIDDEN,
+                            {"fired": False, "error": "webhook owner is not authorised"})
+            return
         except AutoControlException as error:
             # The run-history store failed before the script ran; the client
             # still gets an answer instead of a dropped connection.
@@ -293,7 +301,7 @@ class WebhookTriggerServer:
             methods: Optional[List[str]] = None,
             token: Optional[str] = None,
             ) -> WebhookTrigger:
-        """Register a new webhook → script binding."""
+        """Bind a webhook to a script and the current caller's authority."""
         normalized_path = _normalize_path(path)
         if not script_path:
             raise ValueError("script_path is required")
@@ -380,13 +388,19 @@ class WebhookTriggerServer:
             # response. Catch the whole family so the fire is recorded as an
             # error and _dispatch still answers the request.
             try:
-                actions = read_executable_action_json(trigger.script_path)
-                run_counting_failures(lambda: self._executor(actions, payload))
+                with trigger._authorization.scope():
+                    actions = read_executable_action_json(trigger.script_path)
+                    run_counting_failures(lambda: self._executor(actions, payload))
             except Exception as error:  # noqa: BLE001  # reason: any script failure must be recorded and answered
                 status = STATUS_ERROR
                 error_text = repr(error)
                 autocontrol_logger.error("webhook %s failed: %r",
                                          trigger.webhook_id, error)
+                if isinstance(error, AuthorizationError):
+                    with self._lock:
+                        if self._triggers.get(trigger.webhook_id) is trigger:
+                            trigger.last_status = int(HTTPStatus.FORBIDDEN)
+                    raise
             finally:
                 artifact = (capture_error_snapshot(run_id)
                             if status == STATUS_ERROR else None)
