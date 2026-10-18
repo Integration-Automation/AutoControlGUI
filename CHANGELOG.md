@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add the schema-v1 structured action-journal storage foundation: pre-append
+  secret redaction, fixed outcome-type metadata, interprocess append ordering,
+  durable JSONL writes and bounded torn-tail recovery. Executor capture and its
+  facade/command/GUI integration remain pending.
+
 - RBAC viewer access now excludes named sensitive-read tools even when their
   `readOnlyHint` remains true. Clipboard/history, local data/document/SQL readers,
   dotenv/reference resolution, credential generators, persistent-store readers,

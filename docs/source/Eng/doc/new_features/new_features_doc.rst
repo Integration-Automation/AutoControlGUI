@@ -1451,3 +1451,39 @@ with ``${secrets.NAME}`` so passwords never appear in the JSON.
 
 GUI: **Email Triggers** tab — register IMAP triggers, start/stop the
 watcher, run a manual poll, inspect last error and fire counter.
+
+Structured action journal storage (integration pending)
+=======================================================
+
+B1 provides a storage foundation under ``je_auto_control.utils.action_journal``;
+executor/parallel capture, facade and command exports, and GUI controls remain
+pending integration. Applications can explicitly write schema-v1 snapshots::
+
+   import time
+   from dataclasses import replace
+   from pathlib import Path
+   from je_auto_control.utils.action_journal import ActionEvent, ActionJournal, read_events
+
+   journal = ActionJournal(Path("actions.jsonl"))
+   started = ActionEvent(
+       run_id="review", step_id="step-1", command="AC_set_var",
+       parameters={"name": "login", "value": "${secrets.LOGIN}"},
+       started_at=time.time(),
+   )
+   journal.append(started)  # status: incomplete
+   journal.append(replace(started, status="ok", finished_at=time.time()))
+   snapshots = read_events(journal.path, run_id="review")
+
+Every append preserves run/step/parent IDs and receives a file-wide sequence under
+an interprocess lock. Complete lines are fsynced; an interrupted final fragment is
+ignored by readers and recovered before the next append. Complete malformed lines,
+unknown schemas/fields and invalid order raise ``ActionJournalError``.
+Records are bounded to 8 MiB of UTF-8 bytes and read one at a time.
+
+Secret argument names and secret commands are masked before append. Explicit
+``${secrets.NAME}`` / ``secret://NAME`` references survive as references. Unsupported
+objects, cycles and non-finite values receive non-replayable markers; arbitrary
+``repr`` is never invoked. Opaque results and error text are redacted, including
+result dictionary keys; ``outcome_type`` preserves a fixed safe type category.
+Reading returns lifecycle snapshots, including unfinished ``incomplete`` starts,
+and does not infer a completed step from a missing final record.

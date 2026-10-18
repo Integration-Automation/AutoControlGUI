@@ -1353,3 +1353,34 @@ Watcher 在 process 記憶體中追蹤已觸發的 UID,可選擇把訊息標為
 
 GUI: **Email Triggers** 分頁 — 註冊 IMAP 觸發、啟動 / 停止 watcher、
 手動觸發一次輪詢、檢視最近錯誤與觸發次數。
+
+結構化動作日誌儲存（待接入執行流程）
+====================================
+
+B1 的儲存基礎位於 ``je_auto_control.utils.action_journal``；executor／並行擷取、
+門面與動作指令匯出、GUI 控制仍待接入。應用程式可明確寫入 schema-v1 快照::
+
+   import time
+   from dataclasses import replace
+   from pathlib import Path
+   from je_auto_control.utils.action_journal import ActionEvent, ActionJournal, read_events
+
+   journal = ActionJournal(Path("actions.jsonl"))
+   started = ActionEvent(
+       run_id="review", step_id="step-1", command="AC_set_var",
+       parameters={"name": "login", "value": "${secrets.LOGIN}"},
+       started_at=time.time(),
+   )
+   journal.append(started)  # status: incomplete
+   journal.append(replace(started, status="ok", finished_at=time.time()))
+   snapshots = read_events(journal.path, run_id="review")
+
+每次 append 保留 run／step／parent ID，並在跨行程鎖內取得檔案層級的序號。
+完整行會 fsync；讀取時忽略中斷的最後片段，下次 append 前先復原尾端。
+完整但損壞的行、未知 schema／欄位與錯誤順序會拋出 ``ActionJournalError``。
+每筆以 UTF-8 位元組計算，最多 8 MiB，讀取時逐筆處理。
+
+秘密參數名稱與秘密指令在 append 前遮罩；明確的 ``${secrets.NAME}`` ／ ``secret://NAME``
+保留為參照。不支援的物件、循環與非有限數字會有不可重播標記，不呼叫任意物件的 ``repr``。
+不透明結果與錯誤文字會遮罩，包含結果字典的鍵；``outcome_type`` 保留固定的安全型別分類。
+讀取回傳生命週期快照，包含未結束的 ``incomplete`` 起始紀錄，缺少完成紀錄時不推定成功。

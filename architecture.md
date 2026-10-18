@@ -106,6 +106,12 @@ Top-level LLM planner and FSM runs also open a scope; nested invocations reuse
 an existing one so their actions and states share run-local values. Explicit
 `Executor()` objects retain their own variables; FSM `context` is separate.
 
+Structured action provenance is being built separately in `utils/action_journal/`.
+Its storage foundation uses frozen schema-v1 lifecycle snapshots, pre-write
+redaction, interprocess append sequencing and fsync. Readers preserve incomplete
+steps and ignore bounded uncommitted tails; opaque outcomes/errors are redacted.
+Executor capture and its command/GUI surfaces are not yet connected.
+
 **C. Record → edit → generate code**
 
 ```
