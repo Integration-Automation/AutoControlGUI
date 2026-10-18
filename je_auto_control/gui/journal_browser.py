@@ -1,7 +1,8 @@
-"""Read-only lifecycle snapshots and provenance links inside Run History."""
+"""Read-only lifecycle snapshots and provenance links for journal inspection."""
 from __future__ import annotations
 
 import json
+from contextvars import Context, copy_context
 from typing import Callable, Optional, Sequence
 
 from PySide6.QtCore import Qt, Slot
@@ -33,9 +34,11 @@ class JournalBrowser(TranslatableMixin, QWidget):
         self._generation = 0
         self._handle: Optional[WorkerHandle] = None
         self._worker: Optional[JournalReadWorker] = None
+        self._pending_source: Optional[Context] = None
         self._events: list[dict[str, object]] = []
+        self._step_source = False
         self._status_key, self._status_value = "journal_idle", ""
-        self._path, self._run_id = QLineEdit(), QLineEdit()
+        self._path, self._run_id, self._step_id = QLineEdit(), QLineEdit(), QLineEdit()
         self._links = QComboBox()
         self._links.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self._links.setMinimumContentsLength(16)
@@ -65,7 +68,8 @@ class JournalBrowser(TranslatableMixin, QWidget):
         form = QFormLayout()
         form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         for key, control in (("journal_links", self._links), ("journal_path", self._path),
-                             ("journal_run", self._run_id), ("journal_limit", self._limit)):
+                             ("journal_run", self._run_id), ("journal_step", self._step_id),
+                             ("journal_limit", self._limit)):
             form.addRow(self._tr(QLabel(), key), control)
         layout.addLayout(form)
         views = QSplitter(Qt.Orientation.Horizontal)
@@ -86,7 +90,8 @@ class JournalBrowser(TranslatableMixin, QWidget):
         self._table.setHorizontalHeaderLabels([
             language_wrapper.translate(f"journal_col_{column}") for column in _COLUMNS])
         if self._links.count():
-            self._links.setItemText(0, language_wrapper.translate("journal_links_none"))
+            key = "journal_links_step" if self._step_source else "journal_links_none"
+            self._links.setItemText(0, language_wrapper.translate(key))
         self._set_status(self._status_key, self._status_value)
 
     def _set_status(self, key: str, value: str = "") -> None:
@@ -102,6 +107,7 @@ class JournalBrowser(TranslatableMixin, QWidget):
         """Select provenance metadata without opening a file; discard any older read result."""
         self.cancel()
         self._generation += 1
+        self._step_source = False
         self._clear_events()
         self._links.blockSignals(True)
         self._links.clear()
@@ -119,7 +125,25 @@ class JournalBrowser(TranslatableMixin, QWidget):
         link = self._links.itemData(index)
         self._path.setText(link.journal_path if isinstance(link, JournalLink) else "")
         self._run_id.setText(link.journal_run_id if isinstance(link, JournalLink) else "")
+        self._step_id.clear()
         self._set_status("journal_idle")
+
+    def set_source(self, path: str, run_id: str, step_id: str) -> None:
+        """Select an original captured step without reading or executing its journal."""
+        self.set_links([])
+        self._step_source = True
+        self._links.setItemText(0, language_wrapper.translate("journal_links_step"))
+        self._path.setText(path)
+        self._run_id.setText(run_id)
+        self._step_id.setText(step_id)
+
+    def open_source(self, path: str, run_id: str, step_id: str) -> None:
+        """Inspect this target after any older reader stops, retaining the caller's context."""
+        self.set_source(path, run_id, step_id)
+        if self._handle is not None:
+            self._pending_source = copy_context()
+        else:
+            self.read()
 
     def browse(self) -> None:
         """Choose a source file without reading or rewriting it."""
@@ -151,7 +175,8 @@ class JournalBrowser(TranslatableMixin, QWidget):
             self._set_status("journal_choose_path")
             return
         self._generation += 1
-        request = JournalReadRequest(self._generation, path, self._run_id.text() or None, self._limit.value())
+        request = JournalReadRequest(self._generation, path, self._run_id.text() or None,
+                                      self._limit.value(), self._step_id.text() or None)
         worker = JournalReadWorker(request)
         self._worker = worker
         worker.progress.connect(self._progress)
@@ -164,6 +189,7 @@ class JournalBrowser(TranslatableMixin, QWidget):
 
     def cancel(self) -> None:
         """Ask the current reader to stop at its next validated-record boundary."""
+        self._pending_source = None
         if self._worker is not None:
             self._worker.request_stop()
             self._set_status("journal_cancelling")
@@ -179,7 +205,7 @@ class JournalBrowser(TranslatableMixin, QWidget):
         self._failed(message)
 
     def _set_busy(self, busy: bool) -> None:
-        for control in (self._path, self._run_id, self._limit, self._links):
+        for control in (self._path, self._run_id, self._step_id, self._limit, self._links):
             control.setEnabled(not busy)
 
     @Slot(int, int)
@@ -210,10 +236,13 @@ class JournalBrowser(TranslatableMixin, QWidget):
         self._set_status("journal_error", scrub_secret_text(message))
 
     def _thread_done(self) -> None:
+        pending, self._pending_source = self._pending_source, None
         self._handle = self._worker = None
         self._set_busy(False)
         if self._status_key in ("journal_reading", "journal_progress", "journal_cancelling"):
             self._set_status("journal_interrupted")
+        if pending is not None:
+            pending.run(self.read)
 
     def _show_details(self) -> None:
         row = self._table.currentRow()

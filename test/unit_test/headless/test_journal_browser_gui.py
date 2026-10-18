@@ -44,6 +44,37 @@ def _journal(path, run_id="chosen"):
                            options=ac.JournalRunOptions(run_id=run_id))
 
 
+@pytest.mark.parametrize("next_action", ["viewer", "close"])
+def test_queued_source_retains_caller_authority_and_obeys_close(browser, app, monkeypatch, next_action):
+    entered, release = threading.Event(), threading.Event()
+    calls = []
+
+    def inspect(path, **_kwargs):
+        calls.append(path)
+        entered.set()
+        if not release.wait(5):
+            raise RuntimeError("controlled reader was not released")
+        return []
+
+    monkeypatch.setattr("je_auto_control.gui.journal_browser_worker.inspect_journal", inspect)
+    browser._path.setText("old.jsonl")
+    try:
+        browser.read()
+        assert entered.wait(2)
+        if next_action == "viewer":
+            with authorization_scope(AuthorizationContext("reader", Role.VIEWER)):
+                browser.open_source("new.jsonl", "run", "step")
+        else:
+            browser.open_source("new.jsonl", "run", "step")
+            browser.close()
+    finally:
+        release.set()
+    _until(app, lambda: browser._handle is None)
+    assert calls == ["old.jsonl"] and browser._events == []
+    if next_action == "viewer":
+        assert browser._status_key == "journal_error"
+
+
 def test_browser_has_only_inputs_and_views_until_an_action(browser):
     assert browser.findChildren(QPushButton) == []
     assert browser._handle is None and browser._table.rowCount() == 0

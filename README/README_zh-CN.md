@@ -19,7 +19,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 784 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 785 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -221,7 +221,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 784 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 785 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -246,6 +246,8 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 实时 image／VLM 自愈现在共用一次延迟逻辑截图及实际裁切原点，两条路径的 `screen_region` 均为 `[左, 上, 右, 下]`。Schema-v2 记录增加 run／step 身份、内容与配置版本、frame hash、策略／截图耗时及实际 backend／model，仍兼容旧记录。未配置验证的点击仅记录已送出或失败，验证保持未知。GUI 提供区域输入与所选记录证据，Script Builder 保留结构化区域 JSON。旧 `healed`／`heal_rate` 统计定位候选，独立的操作指标需要明确验证。
 
 实验性 `self_heal_run(SelfHealRequest(...))` 默认只定位。明确选择 `operation="click"`，再通过 `VerificationRequest(verifier=...)`（Python bool callback）或 `VerificationRequest(description=...)`（已配置的 VLM）于输入送出后验证条件。VLM 验证使用新截取的逻辑图像，可能产生 API 费用。`verified` 分为真、假及未知；`found` 与 `issued` 本身不代表操作通过验证。异常与取消原样传递，不重试点击。`AC_self_heal_run` 和 MCP `ac_self_heal_run` 接受嵌套 `request`；明确验证失败使命令／CLI 失败，或返回含结构化结果的 MCP `isError`。GUI **Self-Healing** 提供选填的操作后条件，Script Builder 可编辑 JSON 请求。独立 VLM 截取也改用相同的内存逻辑原点／Retina 归一化。Framework assertion 会中止定位后备。
+
+已捕获的自愈记录新增可选的 `journal_path`，搭配 run／step ID。实验性 `inspect_heal_source(path, run_id, step_id)`、`AC_self_heal_source` 与 MCP `ac_self_heal_source` 只读取原始步骤经清理的生命周期快照。在 **Self-Healing** 选取记录后，使用 **动作 → 查看原始步骤** 打开后台读取器；切换目标时会等待旧读取停止并保留请求者上下文，关闭则取消待处理工作；Run History 读取器也可选填步骤 ID。先筛选 run／step 再应用输出上限，整份日志仍会验证，进度通知前后重查路径根目录，取消不返回部分结果。旧记录或未经动作日志捕获的操作没有来源链接；查阅不会重放命令。
 
 实验性固定图像比较支持 `evaluate_locators`、`evaluate_healing_manifest`、`AC_self_heal_evaluate`、MCP `ac_self_heal_evaluate` 与 **Self-Healing → 版本比较**。报告分别呈现已标注正确率、误判、未知与已验证恢复，包含 p50／p95 及来源，可由 `write_healing_report` 或 GUI 动作导出 JSON／HTML。本机数据集入口不会截图、点击或自行选择网络 backend。参阅[数据集、统计母体与限制](../benchmarks/self_healing/README.md)。
 
@@ -289,7 +291,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 684 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 685 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |

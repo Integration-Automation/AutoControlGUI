@@ -1272,4 +1272,9 @@ simplified_chinese_word_dict = {
     "self_heal_verification_needs_click": "操作后验证必须搭配点击操作。",
     "self_heal_verification_passed": "操作验证通过",
     "self_heal_verification_failed": "操作验证失败",
+    "journal_step": "步骤 ID（选填）",
+    "self_heal_source_open": "查看原始步骤",
+    "self_heal_source_heading": "原始步骤",
+    "self_heal_source_missing": "请选择含原始动作日志步骤信息的记录。",
+    "journal_links_step": "原始步骤",
 }

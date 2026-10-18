@@ -39,6 +39,9 @@ has controlled true/false/unknown, fresh-frame, preflight, exception and phase
 cancellation tests across API/AC/CLI/MCP/GUI. Standalone VLM origin/Retina behavior
 uses synthetic display/grabber tests. These checks establish no native accuracy
 or paid-model acceptance; dispatch without a verifier remains unverified.
+Original-step source inspection has controlled captured/legacy/unbound metadata,
+run/step filtering, whole-file validation, revoked roots, cancellation, AC/CLI/MCP
+and offscreen background-reader tests. It does not capture or replay device input.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**

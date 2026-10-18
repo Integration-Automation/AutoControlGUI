@@ -59,6 +59,15 @@ framework assertions and cancellation propagate; clicks are never retried.
 Legacy signatures and eight-field outcomes are retained. `verify_description`
 now rejects non-bool backend replies instead of returning them as a verdict.
 
+`inspect_heal_source`, `AC_self_heal_source` and `ac_self_heal_source` are
+experimental original-step readers. Additive `HealEvent.journal_path` metadata
+is optional and absent for legacy/unbound attempts. A run scope without an actual
+action-step binding does not invent a link. `inspect_journal` adds an optional
+`step_id` keyword; run/step filters precede the existing limit while the whole
+file is validated. Current roots are rechecked around progress and at completion.
+The shared GUI reader now accepts a step ID. These are read-only inspection paths,
+with no promotion to the stable API and no automatic replay.
+
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.
 - Experimental API may change in any release and must be labelled as such.

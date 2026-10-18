@@ -95,6 +95,33 @@ Script Builder 的新命令提供結構化 JSON 請求欄位。
 上述行為有受控測試，真機與付費 API 驗收仍暫緩。
 
 
+原始步驟追溯
+^^^^^^^^^^^^
+
+在已擷取的 executor 動作中，自癒紀錄會保存可選 ``journal_path`` 與 run／step ID。
+直接呼叫、舊紀錄或沒有動作步驟綁定的 run scope 不會產生來源路徑。
+正規路徑若含本次已解析的秘密文字，也不保存。明確查閱只會讀取資料::
+
+    from je_auto_control import inspect_heal_source
+
+    snapshots = inspect_heal_source(event.journal_path, event.run_id, event.step_id)
+
+``AC_self_heal_source`` 與 MCP ``ac_self_heal_source`` 接受 ``path``（紀錄的 journal_path）、
+``run_id``、``step_id`` 及可選 ``limit``。CLI 動作檔可使用相同指令，Script Builder 提供欄位。
+MCP 的唯讀標記不會授予 viewer 讀取私有日誌的權限。
+
+在 **Self-Healing → 執行紀錄** 選取紀錄後，使用 **動作 → 檢視原始步驟**。
+原始步驟子分頁沿用共用背景讀取器；Run History 也能選填步驟 ID。
+變更所選自癒紀錄會清除並取消舊來源檢視，關閉時取消讀取，舊結果不能覆蓋新目標。新目標會在舊讀取停止後啟動，保留請求者脈絡；
+關閉也會取消待處理的讀取。
+舊紀錄會顯示來源不可用，不捏造連結。檔案不存在或 ID 不符時回傳空快照；格式錯誤則驗證失敗。
+
+``inspect_journal`` 新增可選 ``step_id``；run／step 篩選先於 1–10,000 的輸出上限，
+整份檔案仍須驗證。進入、每次進度通知前後及回傳前都重查作用中路徑根目錄。
+取消原樣傳遞且不回傳部分結果；開始／完成快照維持分開並經過清理。
+來源查閱不會執行任何已記錄指令。
+
+
 錨點定位器
 ----------
 

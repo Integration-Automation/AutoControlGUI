@@ -23,6 +23,9 @@ def widget(monkeypatch, tmp_path):
     monkeypatch.setattr("je_auto_control.gui.self_healing_tab.default_heal_log", log)
     view = SelfHealingTab()
     yield view, log
+    view._source.cancel()
+    if view._source._handle is not None:
+        view._source._handle.wait(5)
     view.deleteLater()
     app.processEvents()
 
@@ -129,3 +132,92 @@ def test_builder_roundtrips_nested_verification_request(widget):
         assert step.params["request"]["operation"] == "click"
     finally:
         form.deleteLater()
+
+
+def test_source_action_without_captured_metadata_does_not_read(widget, monkeypatch):
+    view, log = widget
+    log.append(HealEvent("now", "image", [1, 2], 1))
+    view.refresh_log()
+    view._table.setCurrentCell(0, 0)
+    monkeypatch.setattr(view._source, "read", lambda: pytest.fail("legacy data must not invent a source"))
+    view._on_source()
+    assert view._views.currentWidget() is not view._source
+
+
+def test_source_action_reads_only_selected_original_step_off_thread(widget, monkeypatch, tmp_path):
+    import time
+    import threading
+    import je_auto_control as ac
+    view, log = widget
+    path = tmp_path / "source.jsonl"
+    ac.execute_journal_run([["AC_set_var", {"name": "one", "value": 1}],
+                            ["AC_set_var", {"name": "two", "value": 2}]],
+                           path, options=ac.JournalRunOptions(run_id="chosen"))
+    source = ac.read_events(path)[-1]
+    log.append(HealEvent("now", "image", [1, 2], 1, journal_path=str(path),
+                         run_id=source.run_id, step_id=source.step_id))
+    view.refresh_log()
+    view._table.setCurrentCell(0, 0)
+    from je_auto_control.utils.action_journal.inspection import inspect_journal
+    threads = []
+
+    def inspect(*args, **kwargs):
+        threads.append(threading.get_ident())
+        return inspect_journal(*args, **kwargs)
+
+    monkeypatch.setattr("je_auto_control.gui.journal_browser_worker.inspect_journal", inspect)
+    view._on_source()
+    app = QApplication.instance()
+    deadline = time.monotonic() + 5
+    while view._source._handle is not None and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.005)
+    assert view._source._handle is None
+    assert view._views.currentWidget() is view._source
+    assert view._source._step_source
+    view._source.retranslate()
+    from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
+    assert view._source._links.currentText() == language_wrapper.translate("journal_links_step")
+    assert len(view._source._events) == 2
+    assert all(row["step_id"] == source.step_id for row in view._source._events)
+    assert threads and threads[0] != threading.get_ident()
+    view._table.clearSelection()
+    assert not view._source._events
+
+
+def test_source_action_switching_during_read_loads_new_target(widget, monkeypatch):
+    import threading
+    import time
+    view, log = widget
+    for step in ("first", "second"):
+        log.append(HealEvent("now", "image", [1, 2], 1, journal_path=f"{step}.jsonl", run_id="run", step_id=step))
+    view.refresh_log()
+    entered, release = threading.Event(), threading.Event()
+    calls = []
+
+    def inspect(_path, **kwargs):
+        step = kwargs["step_id"]
+        calls.append(step)
+        if step == "first":
+            entered.set()
+            if not release.wait(5):
+                raise RuntimeError("controlled reader was not released")
+        return [{"step_id": step, "run_id": "run", "command": "synthetic", "status": "ok", "sequence": 1}]
+
+    monkeypatch.setattr("je_auto_control.gui.journal_browser_worker.inspect_journal", inspect)
+    try:
+        view._table.setCurrentCell(0, 0)
+        view._on_source()
+        assert entered.wait(2)
+        view._table.setCurrentCell(1, 0)
+        view._on_source()
+    finally:
+        release.set()
+    app = QApplication.instance()
+    deadline = time.monotonic() + 5
+    while view._source._handle is not None and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.005)
+    assert view._source._handle is None
+    assert calls == ["first", "second"]
+    assert [row["step_id"] for row in view._source._events] == ["second"]

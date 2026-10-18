@@ -1273,4 +1273,9 @@ traditional_chinese_word_dict = {
     "self_heal_verification_needs_click": "操作後驗證必須搭配點擊操作。",
     "self_heal_verification_passed": "操作驗證通過",
     "self_heal_verification_failed": "操作驗證失敗",
+    "journal_step": "步驟 ID（選填）",
+    "self_heal_source_open": "檢視原始步驟",
+    "self_heal_source_heading": "原始步驟",
+    "self_heal_source_missing": "請選擇含原始動作日誌步驟資訊的紀錄。",
+    "journal_links_step": "原始步驟",
 }

@@ -114,6 +114,40 @@ These behaviors have controlled tests; native-device and paid-API acceptance
 remain deferred.
 
 
+Original-step source inspection
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A self-healing call inside a captured executor action records optional
+``journal_path`` plus its run/step IDs. Direct calls, legacy rows and a run scope
+without an action-step binding have no source path. A canonical path containing
+known resolved-secret text is omitted. Explicit inspection is read-only::
+
+    from je_auto_control import inspect_heal_source
+
+    snapshots = inspect_heal_source(event.journal_path, event.run_id, event.step_id)
+
+``AC_self_heal_source`` and MCP ``ac_self_heal_source`` take ``path`` (the row's
+journal_path), ``run_id``, ``step_id`` and optional ``limit``. CLI action files
+can invoke the same command; Script Builder exposes the fields. The read-only
+MCP annotation does not grant viewer access to private journal data.
+
+Select a row in **Self-Healing → Runtime log**, then use **Actions → Inspect
+original step**. The Original step subview uses the shared background reader;
+Run History's reader also accepts an optional step ID. Changing the selected
+healing record clears/cancels its prior source view, closing cancels the reader,
+and late results cannot replace a newer target. A newly opened target starts
+after the older reader stops, retaining its requester context; closing also
+discards pending reads. Old rows report unavailable
+source instead of inventing a link. Missing files or unmatched IDs return no
+snapshots; malformed journals fail validation.
+
+``inspect_journal`` adds optional ``step_id`` filtering. Both run and step
+filters precede the 1–10,000 output limit; the whole file still validates.
+Current roots apply at entry, around every progress callback and before return.
+Cancellation propagates without a partial result. Start/completion snapshots
+remain separate and sanitized. No source inspection executes recorded commands.
+
+
 Anchor-based locator
 --------------------
 

@@ -24,6 +24,7 @@ class JournalReadRequest:
     path: str
     run_id: Optional[str]
     limit: int
+    step_id: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -74,7 +75,7 @@ class JournalReadWorker(QObject):
             self._checkpoint(0)
             with self._authority.scope():
                 events = inspect_journal(request.path, run_id=request.run_id, limit=request.limit,
-                                         observer=self._checkpoint)
+                                         observer=self._checkpoint, step_id=request.step_id)
             self._checkpoint(self._scanned)
         except (CancelledError, AsyncCancelledError):
             return JournalReadOutcome(request.request_id, "cancelled", scanned=self._scanned)

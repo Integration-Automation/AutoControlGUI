@@ -40,6 +40,7 @@ from je_auto_control.utils.run_history.run_outcome import raise_if_run_interrupt
 from je_auto_control.utils.run_history.commands import _history_capture_body
 from je_auto_control.utils.self_healing.evaluation_io import _evaluate_manifest_command
 from je_auto_control.utils.self_healing.commands import _run_self_heal_command
+from je_auto_control.utils.self_healing.source_inspection import _read_heal_source_command
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
@@ -7823,6 +7824,7 @@ class Executor:
             # Self-healing locator (template-first, VLM fallback, audit log)
             "AC_self_heal_locate": _self_heal_locate,
             "AC_self_heal_run": _run_self_heal_command,
+            "AC_self_heal_source": _read_heal_source_command,
             "AC_self_heal_evaluate": _evaluate_manifest_command,
             "AC_self_heal_click": _self_heal_click,
             "AC_self_heal_log_list": _self_heal_log_list,

@@ -48,6 +48,7 @@ class HealEvent:
     verification_model: Optional[str] = None
     verification_error: Optional[str] = None
     verification_description: Optional[str] = None
+    journal_path: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a plain-dict snapshot safe for JSON / network transport."""

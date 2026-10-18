@@ -1407,4 +1407,9 @@ english_word_dict = {
     "self_heal_verification_needs_click": "Post-operation verification requires a click operation.",
     "self_heal_verification_passed": "Operation verification passed",
     "self_heal_verification_failed": "Operation verification failed",
+    "journal_step": "Step ID (optional)",
+    "self_heal_source_open": "Inspect original step",
+    "self_heal_source_heading": "Original step",
+    "self_heal_source_missing": "Select a record with captured original journal-step metadata.",
+    "journal_links_step": "Original step",
 }

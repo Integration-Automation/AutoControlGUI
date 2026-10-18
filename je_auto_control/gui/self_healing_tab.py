@@ -1,4 +1,4 @@
-"""Self-Healing runtime log and fixed-frame version comparison tab.
+"""Self-healing runtime, fixed-frame comparison and original-step inspection tab.
 
 Fire a template-first / VLM-fallback locate from the GUI and browse the
 audit log, or compare explicit versions on provided PNG samples without device effects.
@@ -7,6 +7,7 @@ import json
 from typing import Optional
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QCheckBox, QDoubleSpinBox, QFileDialog, QFormLayout, QGroupBox,
     QLabel, QLineEdit, QMessageBox, QPlainTextEdit, QSplitter,
@@ -15,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.healing_evaluation_panel import HealingEvaluationPanel
+from je_auto_control.gui.journal_browser import JournalBrowser
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -95,8 +97,10 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         runtime_layout.addWidget(self._status)
         self._views = QTabWidget()
         self._evaluation = HealingEvaluationPanel(self)
+        self._source = JournalBrowser(self)
         self._views.addTab(runtime, "")
         self._views.addTab(self._evaluation, "")
+        self._views.addTab(self._source, "")
         root.addWidget(self._views, stretch=1)
         self._apply_translations()
         self.refresh_log()
@@ -120,14 +124,17 @@ class SelfHealingTab(TranslatableMixin, QWidget):
             ("self_heal_click_btn", self._on_click),
             ("self_heal_refresh", self.refresh_log),
             ("self_heal_clear", self._on_clear_log),
-        ] + self._evaluation.menu_actions()
+            ("self_heal_source_open", self._on_source),
+        ] + self._evaluation.menu_actions() + self._source.menu_actions()
 
     # --- translation -----------------------------------------------
 
     def _apply_translations(self) -> None:
         self._views.setTabText(0, _t("healing_eval_log"))
         self._views.setTabText(1, _t("healing_eval_heading"))
+        self._views.setTabText(2, _t("self_heal_source_heading"))
         self._evaluation.retranslate()
+        self._source.retranslate()
         self._group_box.setTitle(_t("self_heal_form_title"))
         self._template_input.setPlaceholderText(_t("self_heal_template_placeholder"))
         self._description_input.setPlaceholderText(_t("self_heal_desc_placeholder"))
@@ -239,11 +246,31 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._show_event()
 
     def _show_event(self) -> None:
+        self._source.set_links([])
         row = self._table.currentRow()
         if row < 0 or row >= len(self._events):
             self._details.clear()
             return
         self._details.setPlainText(json.dumps(self._events[row].to_dict(), ensure_ascii=False, indent=2))
+
+    def _on_source(self) -> None:
+        row = self._table.currentRow()
+        if not 0 <= row < len(self._events):
+            self._status.setText(_t("self_heal_source_missing"))
+            return
+        event = self._events[row]
+        values = (event.journal_path, event.run_id, event.step_id)
+        if not all(isinstance(value, str) and value for value in values):
+            self._status.setText(_t("self_heal_source_missing"))
+            return
+        self._source.open_source(str(event.journal_path), str(event.run_id), str(event.step_id))
+        self._views.setCurrentWidget(self._source)
+
+    # pylint: disable-next=invalid-name  # reason: Qt override
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802  # reason: Qt override
+        """Cancel source inspection immediately when the owning tab closes."""
+        self._source.cancel()
+        super().closeEvent(event)
 
 
 def _format_coordinates(coords) -> str:

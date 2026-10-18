@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import math
+from pathlib import Path
 from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import Any, Optional
@@ -32,6 +33,7 @@ class AttemptEvidence:
     verification_model: Optional[str] = None
     verified: Optional[bool] = None
     verification_error: Optional[str] = None
+    journal_path: Optional[str] = None
 
     def fields(self) -> dict[str, Any]:
         """Snapshot metadata; absence of a real frame/model/verification stays explicit."""
@@ -52,6 +54,7 @@ class AttemptEvidence:
             "verification_backend": self.verification_backend, "verification_model": self.verification_model,
             "verification_error": self.verification_error,
             "verification_description": self.verification_description,
+            "journal_path": self.journal_path,
         }
 
 
@@ -80,7 +83,17 @@ def attempt_evidence(source: LocatorFrameOwner, template_path: Optional[str], de
         "screen_region": source.region,
         "template_configured": bool(template_path),
     }
-    return AttemptEvidence(source, run_id, step_id, sha256(identity.encode("utf-8")).hexdigest(), configuration)
+    path = _source_path(binding.journal.path) if binding is not None and binding.parent_id is not None else None
+    return AttemptEvidence(source, run_id, step_id, sha256(identity.encode("utf-8")).hexdigest(), configuration,
+                            journal_path=path)
+
+
+def _source_path(path: Path) -> Optional[str]:
+    try:
+        value = str(path.resolve())
+    except (OSError, RuntimeError):
+        return None
+    return value if scrub_secret_text(value) == value else None
 
 
 def _masked(value: Optional[str]) -> Optional[str]:

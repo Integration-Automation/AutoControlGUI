@@ -18,7 +18,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 784 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 785 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -233,7 +233,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 784 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 785 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -258,6 +258,8 @@ Self-healing propagates cancellation before fallback or clicking. Its audit log 
 Live image/VLM self-healing now shares one lazy logical capture, including its actual clipped origin. `screen_region` is `[left, top, right, bottom]` for both strategies. Schema-v2 audit records add run/step identity, content/configuration version, frame hash, strategy/capture timing and resolved backend/model; old records still load. Click dispatch without a verifier is recorded as issued or failed, with verification left unknown. The GUI exposes region input and selected-record evidence; Script Builder keeps region JSON structured. Historical `healed`/`heal_rate` count located candidates; separate operation metrics require explicit verification.
 
 Experimental `self_heal_run(SelfHealRequest(...))` defaults to locating. Choose `operation="click"` and `VerificationRequest(verifier=...)` (a Python bool callback) or `VerificationRequest(description=...)` (a configured VLM) to check the post-condition after input dispatch. VLM verification obtains a fresh logical frame and may incur API cost. `verified` is true, false or unknown; `found` and `issued` alone do not verify the operation. Exceptions and cancellation propagate without retrying the click. `AC_self_heal_run` and MCP `ac_self_heal_run` accept a nested `request`; explicit false verification fails the command/CLI or returns MCP `isError` with the structured result. GUI **Self-Healing** offers an optional post-condition field, and Script Builder edits the JSON request. Standalone VLM capture now uses the same logical origin/Retina normalization in memory. Framework assertions stop lookup recovery.
+
+Captured self-healing rows now include an optional `journal_path` alongside run/step IDs. Experimental `inspect_heal_source(path, run_id, step_id)`, `AC_self_heal_source` and MCP `ac_self_heal_source` read only the original step’s sanitized lifecycle snapshots. In **Self-Healing**, select a row and choose **Actions → Inspect original step** to open the background reader. Switching targets waits for the older reader to stop and retains the requester’s context; closing cancels pending work. Run History’s reader also accepts an optional step ID. Run/step filtering precedes the output limit, the whole file is validated, current path roots are rechecked around progress callbacks, and cancellation returns no partial result. Legacy or uncaptured rows have no original-source link; inspection never replays a command.
 
 Experimental fixed-frame comparisons use `evaluate_locators` or `evaluate_healing_manifest`, `AC_self_heal_evaluate`, MCP `ac_self_heal_evaluate`, and **Self-Healing → Version comparison**. Reports separate labelled accuracy, wrong predictions, unknowns and verified recovery, include p50/p95 and provenance, and export JSON/HTML through `write_healing_report` or GUI Actions. The local manifest operation never captures, clicks or selects a network backend. See the [dataset, populations and limits](benchmarks/self_healing/README.md).
 
@@ -308,7 +310,7 @@ under a relative name are written below that directory.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 684 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 685 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |

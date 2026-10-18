@@ -171,7 +171,12 @@ nested journal operations; general nested action argument policies remain pendin
 `MCPToolResult` keeps failure metadata outside its JSON dictionary fields. The
 server sets `isError` and audit status from this explicit type while preserving
 structured payloads; ordinary dictionaries cannot set protocol flags.
-`gui/journal_browser.py` embeds read-only snapshot inspection in Run History.
+`gui/journal_browser.py` shares read-only snapshot inspection between Run History
+and Self-Healing. Captured healing events store an optional canonical journal path
+only when an actual action-step binding exists. The path plus run/step IDs identifies
+the original lifecycle snapshots. Source inspection filters before limiting, validates
+the whole journal and rechecks current roots around observer calls. API/AC/MCP/CLI
+and GUI source views never replay recorded commands; legacy/unbound rows have no source link.
 Its worker copies the submission context, refreshes deferred authority before
 file I/O and uses the shared inspector. Counts are queued to GUI slots;
 request generations reject old results after a target change. Closing the view

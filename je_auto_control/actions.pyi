@@ -2622,6 +2622,9 @@ def AC_self_heal_log_list(limit: int = ...) -> List[Dict[str, Any]]:
 def AC_self_heal_run(request: dict[str, Any]) -> dict[str, Any]:
     ...
 
+def AC_self_heal_source(path: str, run_id: str, step_id: str, limit: int = ...) -> list[dict[str, object]]:
+    """Inspect one original step through a JSON-safe command signature."""
+
 def AC_send_email(message: Any, smtp: Any) -> Dict[str, Any]:
     """Adapter: send an email via SMTP (message/smtp config dicts)."""
 

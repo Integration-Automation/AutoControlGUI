@@ -13,6 +13,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Captured healing records retain an optional journal path for original-step
+  inspection through experimental API/AC/MCP/CLI and the Self-Healing GUI.
+  Legacy and unbound rows retain unknown provenance. Journal inspection adds
+  optional step filtering before output limits, validates the whole file and
+  rechecks roots around progress. The shared background GUI reader supports
+  step selection, cancellation and stale-result disposal. Reads never replay
+  recorded actions; existing row formats and signatures remain compatible.
+
 - Experimental immutable `SelfHealRequest` / `VerificationRequest` and
   `self_heal_run` default to locate and enable explicit post-click verification.
   Callback checks require bool; configured VLM checks use fresh logical pixels

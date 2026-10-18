@@ -1294,4 +1294,9 @@ japanese_word_dict = {
     "self_heal_verification_needs_click": "操作後の検証にはクリック操作が必要です。",
     "self_heal_verification_passed": "操作の検証に成功しました",
     "self_heal_verification_failed": "操作の検証に失敗しました",
+    "journal_step": "ステップ ID（任意）",
+    "self_heal_source_open": "元のステップを表示",
+    "self_heal_source_heading": "元のステップ",
+    "self_heal_source_missing": "元のジャーナルステップ情報を持つ記録を選択してください。",
+    "journal_links_step": "元のステップ",
 }
