@@ -1262,4 +1262,10 @@ traditional_chinese_word_dict = {
     "healing_eval_idle": "選擇資料集，再從「動作」執行比較。",
     "healing_eval_correct_true": "正確",
     "healing_eval_correct_false": "錯誤",
+    "self_heal_region_label": "搜尋區域",
+    "self_heal_region_placeholder": "[左, 上, 右, 下]（邏輯座標，選填）",
+    "self_heal_col_operation": "操作",
+    "self_heal_col_operation_status": "操作狀態",
+    "self_heal_col_verified": "已驗證",
+    "self_heal_unknown": "未知",
 }

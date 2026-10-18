@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import io
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from math import ceil, floor
 from time import perf_counter
 from typing import Any, Optional
@@ -17,7 +17,7 @@ from je_auto_control.utils.vision.backends.base import VLMBackend, VLMNotAvailab
 
 @dataclass(frozen=True)
 class _FrameView:
-    png: bytes
+    png: bytes = field(repr=False)
     origin: Point
     scale: float
     size: tuple[int, int]
@@ -134,8 +134,9 @@ class VLMFrameLocator:
             raise VLMNotAvailableError("explicit evaluation backend is unavailable")
         started = perf_counter()
         view = _view(sample)
-        point = self.backend.locate(view.png, self.description, model=self.model)
+        model = self.backend.resolve_model(self.model)
+        point = self.backend.locate(view.png, self.description, model=model)
         coordinates = None if point is None else view.screen_point(point)
         elapsed = (perf_counter() - started) * 1000
         return LocatorCandidate(coordinates, "vlm" if point is not None else "miss", fallback_used=True,
-                                backend=self.backend.name, model=self.model, timings_ms=(("vlm", elapsed),))
+                                backend=self.backend.name, model=model, timings_ms=(("vlm", elapsed),))

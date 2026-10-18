@@ -22,6 +22,10 @@ class VLMBackend:
     name: str = "abstract"
     available: bool = False
 
+    def resolve_model(self, model: Optional[str] = None) -> Optional[str]:
+        """Return the effective model when known; custom backends may leave it unknown."""
+        return model
+
     def locate(self, image_bytes: bytes, description: str,
                model: Optional[str] = None,
                image_mime: str = "image/png",

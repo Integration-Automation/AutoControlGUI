@@ -2284,7 +2284,8 @@ def self_healing_tools() -> List[MCPTool]:
                          "match misses, fall back to a vision-language model "
                          "using the natural-language ``description``. Every "
                          "attempt is appended to the self-healing audit log. "
-                         "Returns {found, coordinates, method, ...}."),
+                         "Image/VLM share one logical capture and [left, top, right, bottom] region. "
+                         "Returns {found, coordinates, method, ...}; found is an unverified candidate."),
             input_schema=schema({
                 "template_path": {"type": "string", "format": "path"},
                 "description": {"type": "string"},
@@ -2302,7 +2303,8 @@ def self_healing_tools() -> List[MCPTool]:
             description=("Self-heal locate then click the resolved point. "
                          "Provide template_path, description, or both — "
                          "description triggers the VLM fallback when the "
-                         "template fails."),
+                         "template fails. Uses one logical capture for both strategies; "
+                         "a click issued is not a verified UI outcome."),
             input_schema=schema({
                 "template_path": {"type": "string", "format": "path"},
                 "description": {"type": "string"},

@@ -6,7 +6,8 @@ Wraps the existing :func:`locate_image_center` and
 * runs the cheap template-match path first;
 * on miss, asks a vision-language model to find the element by
   natural-language description;
-* records every attempt (hit / heal / miss) to a JSON-lines log so
+* reuses one lazy logical capture across both strategies;
+* records every attempt (candidate / miss) to a JSON-lines log so
   flaky locators can be audited and tuned over time;
 * never raises on a miss by default — returns a :class:`HealOutcome`
   the caller can branch on.
@@ -19,12 +20,14 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from time import monotonic
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
 
 from je_auto_control.utils.exception.exceptions import (
     AutoControlException, ImageNotFoundException,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.cv2_utils.locator_frame import locator_frame_scope
+from je_auto_control.utils.self_healing.runtime_evidence import AttemptEvidence, attempt_evidence
 from je_auto_control.utils.self_healing.heal_log import (
     HealEvent, HealEventLog, default_heal_log,
 )
@@ -33,6 +36,7 @@ from je_auto_control.utils.self_healing.heal_log import (
 METHOD_IMAGE = "image"
 METHOD_VLM = "vlm"
 METHOD_MISS = "miss"
+_Result = TypeVar("_Result")
 
 
 class SelfHealError(AutoControlException, RuntimeError):
@@ -42,6 +46,7 @@ class SelfHealError(AutoControlException, RuntimeError):
 
 
 @dataclass(frozen=True)
+# pylint: disable-next=too-many-instance-attributes  # reason: preserve the existing eight-field public result
 class HealOutcome:
     """Result of a single self-heal attempt."""
 
@@ -63,6 +68,19 @@ class HealOutcome:
         return data
 
 
+@dataclass(frozen=True)
+# pylint: disable-next=too-many-instance-attributes  # reason: immutable request values preserve both legacy call signatures
+class _LocateCall:
+    template_path: Optional[str]
+    description: Optional[str]
+    detect_threshold: float
+    screen_region: Optional[List[int]]
+    model: Optional[str]
+    log: Optional[HealEventLog]
+    raise_on_miss: bool
+    mouse_keycode: Optional[str] = None
+
+
 def self_heal_locate(template_path: Optional[str] = None,
                      description: Optional[str] = None,
                      detect_threshold: float = 0.9,
@@ -77,46 +95,68 @@ def self_heal_locate(template_path: Optional[str] = None,
     Provide both for full self-healing — the VLM path only runs when
     the template match fails or returns no candidates.
     Cancellation propagates unchanged without fallback, click or miss logging.
+    ``screen_region`` is a logical [left, top, right, bottom] bbox for both
+    strategies, clipped to the desktop. With a template, an omitted region
+    searches the virtual desktop; VLM-only calls retain the primary request.
+    Backend-reported nonzero origins are honored even for primary requests.
     """
-    if not template_path and not description:
+    return _run(_LocateCall(template_path, description, detect_threshold, screen_region, model, log, raise_on_miss))
+
+
+def _run(call: _LocateCall) -> HealOutcome:
+    if not call.template_path and not call.description:
         raise ValueError(
             "self_heal_locate requires template_path or description",
         )
     started = monotonic()
-    coords, image_error = _try_image(template_path, detect_threshold)
+    with locator_frame_scope(call.screen_region, all_screens=bool(call.template_path)) as source:
+        evidence = attempt_evidence(source, call.template_path, call.description, call.detect_threshold, call.model)
+        outcome = _locate(call, evidence, started)
+        if call.mouse_keycode is not None:
+            _click(outcome, call, evidence)
+        _finish(outcome, call.log, evidence.fields())
+    if not outcome.found and call.raise_on_miss:
+        raise SelfHealError(f"self_heal_locate failed: image={outcome.image_error!r} vlm={outcome.vlm_error!r}")
+    return outcome
+
+
+def _timed(name: str, operation: Callable[[], _Result], evidence: AttemptEvidence) -> _Result:
+    started = monotonic()
+    try:
+        return operation()
+    finally:
+        evidence.strategy_times_ms[name] = (monotonic() - started) * 1000
+
+
+def _locate(call: _LocateCall, evidence: AttemptEvidence, started: float) -> HealOutcome:
+    template_path, description = call.template_path, call.description
+    def image() -> Tuple[Optional[Tuple[int, int]], Optional[str]]:
+        return _try_image(template_path, call.detect_threshold)
+    coords, image_error = _timed("image", image, evidence) if template_path else image()
     if coords is not None:
-        return _finish(
-            HealOutcome(found=True, coordinates=coords, method=METHOD_IMAGE,
+        return HealOutcome(found=True, coordinates=coords, method=METHOD_IMAGE,
                         description=description, template_path=template_path,
-                        duration_ms=_ms_since(started)),
-            log,
-        )
-    coords, vlm_error = _try_vlm(description, screen_region, model)
+                        duration_ms=_ms_since(started))
+    def vlm() -> Tuple[Optional[Tuple[int, int]], Optional[str]]:
+        return _try_vlm(description, call.screen_region, call.model)
+    coords, vlm_error = _timed("vlm", vlm, evidence) if description else vlm()
     if coords is not None:
         autocontrol_logger.warning(
-            f"self_heal: image miss ({image_error}); VLM healed → {coords}",
+            "self_heal: image miss (%s); VLM located unverified candidate at %s", image_error, coords,
         )
-        return _finish(
-            HealOutcome(found=True, coordinates=coords, method=METHOD_VLM,
+        return HealOutcome(found=True, coordinates=coords, method=METHOD_VLM,
                         description=description, template_path=template_path,
                         image_error=image_error,
-                        duration_ms=_ms_since(started)),
-            log,
-        )
-    outcome = HealOutcome(
+                        duration_ms=_ms_since(started))
+    return HealOutcome(
         found=False, coordinates=None, method=METHOD_MISS,
         description=description, template_path=template_path,
         image_error=image_error, vlm_error=vlm_error,
         duration_ms=_ms_since(started),
     )
-    _finish(outcome, log)
-    if raise_on_miss:
-        raise SelfHealError(
-            f"self_heal_locate failed: image={image_error!r} vlm={vlm_error!r}",
-        )
-    return outcome
 
 
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments  # reason: preserve the existing public signature
 def self_heal_click(template_path: Optional[str] = None,
                     description: Optional[str] = None,
                     mouse_keycode: str = "mouse_left",
@@ -126,15 +166,37 @@ def self_heal_click(template_path: Optional[str] = None,
                     log: Optional[HealEventLog] = None,
                     raise_on_miss: bool = False,
                     ) -> HealOutcome:
-    """``self_heal_locate`` + a click at the resolved coordinates."""
-    outcome = self_heal_locate(
-        template_path=template_path, description=description,
-        detect_threshold=detect_threshold, screen_region=screen_region,
-        model=model, log=log, raise_on_miss=raise_on_miss,
-    )
-    if outcome.found and outcome.coordinates is not None:
-        _click_at(outcome.coordinates, mouse_keycode)
-    return outcome
+    """Locate and issue a click; this does not verify the resulting UI state.
+
+    One audit record is settled after dispatch. An ordinary click failure is
+    recorded and re-raised unchanged; cancellation emits no completion event.
+    The historical eight-field result and locate-duration semantics are kept.
+    """
+    if not isinstance(mouse_keycode, str) or not mouse_keycode:
+        raise ValueError("mouse_keycode must be a nonempty string")
+    return _run(_LocateCall(template_path, description, detect_threshold, screen_region,
+                            model, log, raise_on_miss, mouse_keycode))
+
+
+def _click(outcome: HealOutcome, call: _LocateCall, evidence: AttemptEvidence) -> None:
+    evidence.operation, evidence.operation_status = "click", "not_found"
+    coordinates, keycode = outcome.coordinates, call.mouse_keycode
+    if not outcome.found or coordinates is None or keycode is None:
+        return
+    try:
+        _timed("click", lambda: _click_at(coordinates, keycode), evidence)
+        evidence.operation_status = "issued"
+    except Exception as error:  # reason: record an ordinary click error once, then preserve the original exception
+        # pylint: disable-next=import-outside-toplevel  # reason: run outcomes import the executor during facade setup
+        from je_auto_control.utils.run_history.run_outcome import _ordinary_error_text, raise_if_run_interrupted
+        raise_if_run_interrupted(error)
+        evidence.operation_status, evidence.operation_error = "error", _ordinary_error_text(error)
+        try:
+            _finish(outcome, call.log, evidence.fields())
+        # pylint: disable-next=broad-exception-caught  # reason: preserve the pending original failure across audit plugins
+        except Exception:  # reason: telemetry failure cannot replace the original click failure
+            autocontrol_logger.error("self_heal audit unavailable; preserving original click failure")
+        raise
 
 
 def _try_image(template_path: Optional[str],
@@ -143,6 +205,7 @@ def _try_image(template_path: Optional[str],
     if not template_path:
         return None, "no template_path supplied"
     try:
+        # pylint: disable-next=import-outside-toplevel  # reason: platform image support remains lazy during facade setup
         from je_auto_control.wrapper.auto_control_image import (
             locate_image_center,
         )
@@ -163,6 +226,7 @@ def _try_vlm(description: Optional[str],
     if not description:
         return None, "no description supplied"
     try:
+        # pylint: disable-next=import-outside-toplevel  # reason: backend selection is deferred until VLM is attempted
         from je_auto_control.utils.vision.vlm_api import locate_by_description
         coords = locate_by_description(
             description, screen_region=screen_region, model=model,
@@ -179,12 +243,13 @@ def _try_vlm(description: Optional[str],
 def _failure_detail(error: Exception) -> str:
     """Propagate cancellation before formatting an ordinary locator failure."""
     # pylint: disable-next=import-outside-toplevel  # reason: run outcomes import the executor during facade setup
-    from je_auto_control.utils.run_history.run_outcome import raise_if_run_interrupted
+    from je_auto_control.utils.run_history.run_outcome import _ordinary_error_text, raise_if_run_interrupted
     raise_if_run_interrupted(error)
-    return repr(error)
+    return _ordinary_error_text(error)
 
 
 def _click_at(coordinates: Tuple[int, int], mouse_keycode: str) -> None:
+    # pylint: disable-next=import-outside-toplevel  # reason: platform input initializes only when a click is requested
     from je_auto_control.wrapper.auto_control_mouse import (
         click_mouse, set_mouse_position,
     )
@@ -198,16 +263,16 @@ def _ms_since(started: float) -> float:
 
 
 def _finish(outcome: HealOutcome,
-            log: Optional[HealEventLog]) -> HealOutcome:
+            log: Optional[HealEventLog], metadata: Optional[Dict[str, Any]] = None) -> HealOutcome:
     target = log if log is not None else default_heal_log
     try:
-        target.append(_as_event(outcome))
+        target.append(_as_event(outcome, metadata))
     except (OSError, ValueError) as exc:
-        autocontrol_logger.warning(f"self_heal log append failed: {exc!r}")
+        autocontrol_logger.warning("self_heal log append failed: %r", exc)
     return outcome
 
 
-def _as_event(outcome: HealOutcome) -> HealEvent:
+def _as_event(outcome: HealOutcome, metadata: Optional[Dict[str, Any]] = None) -> HealEvent:
     coords = (
         [int(outcome.coordinates[0]), int(outcome.coordinates[1])]
         if outcome.coordinates is not None else None
@@ -221,6 +286,7 @@ def _as_event(outcome: HealOutcome) -> HealEvent:
         description=outcome.description,
         image_error=outcome.image_error,
         vlm_error=outcome.vlm_error,
+        **(metadata or {}),
     )
 
 

@@ -21,7 +21,13 @@ bounded manifest/PNG inputs → immutable samples → explicit locator strategie
 quality/latency/provenance report → optional atomic JSON/HTML export. It performs
 no capture or input. Python VLM comparisons require an explicit backend; local
 manifest commands never choose one. API, AC, MCP and a cancellable GUI worker use
-the same evaluator. Live self-healing remains on its existing runtime path.
+the same evaluator. Live self-healing binds a lazy `cv2_utils/locator_frame.py`
+owner around the existing image/VLM seams. The owner captures once in logical
+coordinates, retains clipped geometry or a capture failure, and releases pixels
+on exit. `runtime_evidence.py` snapshots source/version/frame/strategy metadata
+without taking a screenshot. One schema-v2 audit row settles after any requested
+click; input dispatch and operation verification remain distinct. Existing result
+and call signatures remain compatible, and unbound locator calls stay unbound.
 
 | Path | Responsibility |
 | --- | --- |

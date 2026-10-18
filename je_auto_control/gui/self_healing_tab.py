@@ -3,12 +3,13 @@
 Fire a template-first / VLM-fallback locate from the GUI and browse the
 audit log, or compare explicit versions on provided PNG samples without device effects.
 """
+import json
 from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox, QDoubleSpinBox, QFileDialog, QFormLayout, QGroupBox,
-    QLabel, QLineEdit, QMessageBox,
+    QLabel, QLineEdit, QMessageBox, QPlainTextEdit, QSplitter,
     QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
 )
 
@@ -18,19 +19,20 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.utils.self_healing import (
-    HealOutcome, default_heal_log, self_heal_click, self_heal_locate,
+    HealEvent, HealOutcome, default_heal_log, self_heal_click, self_heal_locate,
 )
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 _COLUMNS = ("timestamp", "method", "coordinates",
-            "template_path", "description", "duration_ms")
+            "operation", "operation_status", "verified", "duration_ms", "template_path", "description")
 
 
 def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
 
 
+# pylint: disable-next=too-many-instance-attributes  # reason: the tab owns separate runtime and comparison controls
 class SelfHealingTab(TranslatableMixin, QWidget):
     """Trigger self-heal attempts and browse the audit log."""
 
@@ -39,13 +41,21 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._tr_init()
         self._template_input = QLineEdit()
         self._description_input = QLineEdit()
+        self._region_input = QLineEdit()
         self._threshold = QDoubleSpinBox()
         self._threshold.setRange(0.0, 1.0)
         self._threshold.setSingleStep(0.05)
         self._threshold.setValue(0.9)
         self._click_check = QCheckBox()
         self._status = QLabel()
+        self._status.setTextFormat(Qt.TextFormat.PlainText)
         self._table = QTableWidget(0, len(_COLUMNS))
+        self._details = QPlainTextEdit()
+        self._details.setReadOnly(True)
+        self._group_box = QGroupBox()
+        self._events: list[HealEvent] = []
+        # pylint: disable-next=no-member  # reason: PySide binds this Qt signal at runtime
+        self._table.itemSelectionChanged.connect(self._show_event)
         self._build_layout()
 
     def retranslate(self) -> None:
@@ -58,24 +68,30 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         # Browse/locate/click/refresh/clear commands run from the Actions
         # menu; the tab keeps only the inputs, the log table, and the status.
         root = QVBoxLayout(self)
-        root.addWidget(self._build_form_group())
+        runtime = QWidget()
+        runtime_layout = QVBoxLayout(runtime)
+        runtime_layout.addWidget(self._build_form_group())
+        views = QSplitter(Qt.Orientation.Vertical)
+        views.addWidget(self._table)
+        views.addWidget(self._details)
+        runtime_layout.addWidget(views, stretch=1)
+        runtime_layout.addWidget(self._status)
         self._views = QTabWidget()
         self._evaluation = HealingEvaluationPanel(self)
-        self._views.addTab(self._table, "")
+        self._views.addTab(runtime, "")
         self._views.addTab(self._evaluation, "")
         root.addWidget(self._views, stretch=1)
-        root.addWidget(self._status)
         self._apply_translations()
         self.refresh_log()
 
     def _build_form_group(self) -> QGroupBox:
-        group = QGroupBox()
+        group = self._group_box
         form = QFormLayout(group)
         form.addRow(QLabel(), self._template_input)
         form.addRow(QLabel(), self._description_input)
         form.addRow(QLabel(), self._threshold)
+        form.addRow(QLabel(), self._region_input)
         form.addRow(QLabel(), self._click_check)
-        self._group_box = group
         return group
 
     def menu_actions(self) -> list:
@@ -97,12 +113,13 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._group_box.setTitle(_t("self_heal_form_title"))
         self._template_input.setPlaceholderText(_t("self_heal_template_placeholder"))
         self._description_input.setPlaceholderText(_t("self_heal_desc_placeholder"))
+        self._region_input.setPlaceholderText(_t("self_heal_region_placeholder"))
         self._click_check.setText(_t("self_heal_click_check"))
         layout = self._group_box.layout()
         if isinstance(layout, QFormLayout):
             labels = (
                 "self_heal_template_label", "self_heal_desc_label",
-                "self_heal_threshold_label", "",
+                "self_heal_threshold_label", "self_heal_region_label", "",
             )
             for row, key in enumerate(labels):
                 item = layout.itemAt(row, QFormLayout.LabelRole)
@@ -127,7 +144,15 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         if template is None and description is None:
             self._status.setText(_t("self_heal_inputs_required"))
             return None
-        return template, description, float(self._threshold.value())
+        try:
+            raw = self._region_input.text().strip()
+            region = json.loads(raw) if raw else None
+            if region is not None and not isinstance(region, list):
+                raise ValueError(_t("self_heal_region_placeholder"))
+        except ValueError as error:
+            self._status.setText(f"{_t('self_heal_error')}: {error}")
+            return None
+        return template, description, float(self._threshold.value()), region
 
     def _on_locate(self) -> None:
         self._run(do_click=False)
@@ -139,20 +164,21 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         inputs = self._collect_inputs()
         if inputs is None:
             return
-        template, description, threshold = inputs
+        template, description, threshold, region = inputs
         try:
             if do_click or self._click_check.isChecked():
                 outcome = self_heal_click(
                     template_path=template, description=description,
-                    detect_threshold=threshold,
+                    detect_threshold=threshold, screen_region=region,
                 )
             else:
                 outcome = self_heal_locate(
                     template_path=template, description=description,
-                    detect_threshold=threshold,
+                    detect_threshold=threshold, screen_region=region,
                 )
         except (AutoControlException, OSError, ValueError, RuntimeError) as error:
             self._status.setText(f"{_t('self_heal_error')}: {error}")
+            self.refresh_log()
             return
         self._report_outcome(outcome)
         self.refresh_log()
@@ -179,19 +205,33 @@ class SelfHealingTab(TranslatableMixin, QWidget):
     def refresh_log(self) -> None:
         """Reload the table from the on-disk audit log."""
         events = default_heal_log.list_events(limit=200)
+        self._events = events
         self._table.setRowCount(len(events))
         for row, event in enumerate(events):
             values = (
                 event.timestamp, event.method,
                 _format_coordinates(event.coordinates),
-                event.template_path or "", event.description or "",
+                event.operation, event.operation_status,
+                _t("self_heal_unknown") if event.verified is None else str(event.verified),
                 f"{event.duration_ms:.1f}",
+                event.template_path or "", event.description or "",
             )
             for col, text in enumerate(values):
                 item = QTableWidgetItem(str(text))
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self._table.setItem(row, col, item)
         self._table.resizeColumnsToContents()
+        for name in ("template_path", "description"):
+            column = _COLUMNS.index(name)
+            self._table.setColumnWidth(column, min(self._table.columnWidth(column), 240))
+        self._show_event()
+
+    def _show_event(self) -> None:
+        row = self._table.currentRow()
+        if row < 0 or row >= len(self._events):
+            self._details.clear()
+            return
+        self._details.setPlainText(json.dumps(self._events[row].to_dict(), ensure_ascii=False, indent=2))
 
 
 def _format_coordinates(coords) -> str:

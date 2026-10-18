@@ -219,8 +219,11 @@ def _grab_virtual_desktop(image_grab: Any, box: Optional[Rect], all_screens: boo
                           metrics: Optional[MetricsReader]) -> Tuple[Any, int, int]:
     """The frame as Windows, X11 and Wayland build it: one capture, rescaled, cropped."""
     if box is None and not all_screens:
-        # The primary-only grab is already in logical pixels and starts at (0, 0).
-        return image_grab.grab(), 0, 0
+        # Pillow's primary capture starts at zero; self-capturing backends may
+        # return their whole layout even for this request, with a negative origin.
+        image = image_grab.grab()
+        origin_x, origin_y = _backend_frame_origin()
+        return image, origin_x, origin_y
 
     image = image_grab.grab(all_screens=True)
     rect = logical_virtual_rect(metrics)

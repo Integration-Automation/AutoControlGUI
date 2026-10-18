@@ -255,6 +255,8 @@ desktop app; tab commands live in the window's **Actions** menu.
 
 Self-healing propagates cancellation before fallback or clicking. Its audit log masks secrets already resolved in the current run before writing or returning records; returned locator outcomes retain their original values. Legacy log files are not rewritten.
 
+Live image/VLM self-healing now shares one lazy logical capture, including its actual clipped origin. `screen_region` is `[left, top, right, bottom]` for both strategies. Schema-v2 audit records add run/step identity, content/configuration version, frame hash, strategy/capture timing and resolved backend/model; old records still load. Click dispatch is recorded as issued or failed, with verification left unknown. The GUI exposes region input and selected-record evidence; Script Builder keeps region JSON structured. Historical `healed`/`heal_rate` count located candidates; separate operation metrics require explicit verification.
+
 Experimental fixed-frame comparisons use `evaluate_locators` or `evaluate_healing_manifest`, `AC_self_heal_evaluate`, MCP `ac_self_heal_evaluate`, and **Self-Healing → Version comparison**. Reports separate labelled accuracy, wrong predictions, unknowns and verified recovery, include p50/p95 and provenance, and export JSON/HTML through `write_healing_report` or GUI Actions. The local manifest operation never captures, clicks or selects a network backend. See the [dataset, populations and limits](benchmarks/self_healing/README.md).
 
 Beyond this table, `utils/` holds 311 headless packages covering assertions, resilience,

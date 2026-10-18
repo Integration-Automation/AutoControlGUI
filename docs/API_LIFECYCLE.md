@@ -40,6 +40,14 @@ Fixed-frame evaluation models, strategy protocol/adapters, `evaluate_locators`,
 APIs with schema-v1 reports. The corresponding AC, MCP and GUI operations share
 that schema. They do not promote the existing live self-healing APIs to stable.
 
+Live self-healing now emits additive schema-v2 audit fields while retaining the
+historical outcome and call signatures. Old audit rows default to schema 1.
+Unbound image/VLM calls retain their capture APIs; a self-healing attempt supplies
+one shared logical frame and actual origin. VLM backends may override the additive
+`resolve_model` seam; custom backends may leave their effective model unknown.
+Operation dispatch and verification are distinct. Legacy analytics candidate
+aliases remain compatible; explicit operation ratios expose their populations.
+
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.
 - Experimental API may change in any release and must be labelled as such.

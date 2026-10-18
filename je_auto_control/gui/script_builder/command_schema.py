@@ -13,6 +13,7 @@ from typing import List, Mapping, Optional, Sequence, Tuple
 
 class FieldType(str, Enum):
     STRING = "string"
+    JSON = "json"
     INT = "int"
     FLOAT = "float"
     BOOL = "bool"
@@ -67,6 +68,7 @@ def _build_specs() -> List[CommandSpec]:
     _add_keyboard_specs(specs)
     _add_screen_specs(specs)
     _add_image_specs(specs)
+    _add_self_healing_specs(specs)
     _add_ocr_specs(specs)
     _add_window_specs(specs)
     _add_flow_specs(specs)
@@ -78,6 +80,24 @@ def _build_specs() -> List[CommandSpec]:
     ))
     _add_misc_specs(specs)
     return specs
+
+
+def _add_self_healing_specs(specs: List[CommandSpec]) -> None:
+    fields = (
+        FieldSpec("template_path", FieldType.FILE_PATH, optional=True),
+        FieldSpec("description", FieldType.STRING, optional=True),
+        FieldSpec("detect_threshold", FieldType.FLOAT, optional=True, default=0.9, min_value=0, max_value=1),
+        FieldSpec("screen_region", FieldType.JSON, optional=True, placeholder=_REGION_PLACEHOLDER),
+        FieldSpec("model", FieldType.STRING, optional=True),
+        FieldSpec("raise_on_miss", FieldType.BOOL, optional=True, default=False),
+    )
+    for operation in ("locate", "click"):
+        extra = (FieldSpec("mouse_keycode", FieldType.ENUM, optional=True, default="mouse_left",
+                           choices=_MOUSE_BUTTONS),) if operation == "click" else ()
+        specs.append(CommandSpec(
+            "AC_self_heal_" + operation, "Image", "Self-Healing: " + operation.title(), fields=fields + extra,
+            description="Share one logical frame across template/VLM; a found point or issued click is unverified.",
+        ))
 
 
 def _add_journal_specs(specs: List[CommandSpec]) -> None:

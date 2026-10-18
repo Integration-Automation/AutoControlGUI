@@ -36,6 +36,29 @@ Cancellation propagates unchanged before fallback, clicking or miss logging.
 Audit writes and reads mask secret values already resolved in the active run.
 The original locator outcome remains unchanged; reads do not rewrite legacy logs.
 
+Both strategies now reuse one lazy logical capture. ``screen_region`` means
+``[left, top, right, bottom]`` for both, clipped to the actual desktop.
+An omitted region searches all monitors when a template is supplied; VLM-only
+calls retain a primary capture request. Self-capturing backends that return a
+whole layout retain their published origin even for that request. Invalid bboxes
+fail before capture. A capture failure is reused rather than retried for fallback.
+
+Audit schema 2 adds run/step IDs (reusing an active action journal), locator identity,
+decoded-template/configuration version, frame hash, actual origin/size, logical
+scale, per-strategy/capture timing, backend and resolved model. Unknown values and
+unavailable USD costs stay null. Old records load as schema 1. PNGs stay transient
+and are released at scope exit. First-strategy timing includes capture; capture
+time is a subset, not an additional summand. The historical result shape and
+``duration_ms`` locate-only meaning remain unchanged.
+
+Click records settle after dispatch: ``issued`` confirms input dispatch only,
+``error`` records an ordinary failure and preserves the original exception.
+``verified`` stays null without explicit post-operation evidence. Cancellation
+does not append a completion event. The GUI accepts a region, displays operation
+state and selected-record JSON evidence. Runtime controls live in the Runtime log
+subview, separate from fixed-frame comparison. Script Builder provides both live
+commands and a JSON field that preserves structured regions while editing.
+
 
 Anchor-based locator
 --------------------

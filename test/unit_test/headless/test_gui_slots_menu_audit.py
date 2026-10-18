@@ -65,7 +65,8 @@ def test_a_zero_interval_is_refused(monkeypatch):
                      "_status": _Text()})[1]),
     ("self_healing_tab", "SelfHealingTab",
      lambda m, mp: (mp.setattr(m, "self_heal_click", _raiser(AutoControlMouseException("click failed"))),
-                    {"_collect_inputs": lambda: ("t.png", "", 0.8), "_status": _Text(),
+                    {"_collect_inputs": lambda: ("t.png", "", 0.8, None), "_status": _Text(),
+                     "refresh_log": lambda: None,
                      "_click_check": types.SimpleNamespace(isChecked=lambda: True)})[1]),
 ])
 def test_framework_errors_are_shown_by_the_slot(module_name, cls_name, setup, monkeypatch):
@@ -81,6 +82,8 @@ def test_framework_errors_are_shown_by_the_slot(module_name, cls_name, setup, mo
         slot(stub)
     status = getattr(stub, "_status", None) or getattr(stub, "_result")
     assert status.value, "the slot did not report the error"
+    if cls_name == "SelfHealingTab":
+        assert "click failed" in status.value
 
 
 def test_the_planner_run_slot_shows_an_assertion_failure(monkeypatch):

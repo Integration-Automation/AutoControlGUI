@@ -1282,4 +1282,10 @@ japanese_word_dict = {
     "healing_eval_idle": "マニフェストを選び、アクションから比較してください。",
     "healing_eval_correct_true": "正解",
     "healing_eval_correct_false": "不正解",
+    "self_heal_region_label": "検索領域",
+    "self_heal_region_placeholder": "[左, 上, 右, 下]（論理座標、省略可）",
+    "self_heal_col_operation": "操作",
+    "self_heal_col_operation_status": "操作状態",
+    "self_heal_col_verified": "検証済み",
+    "self_heal_unknown": "不明",
 }

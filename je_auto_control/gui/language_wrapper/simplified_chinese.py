@@ -1261,4 +1261,10 @@ simplified_chinese_word_dict = {
     "healing_eval_idle": "选择数据集，再从“动作”执行比较。",
     "healing_eval_correct_true": "正确",
     "healing_eval_correct_false": "错误",
+    "self_heal_region_label": "搜索区域",
+    "self_heal_region_placeholder": "[左, 上, 右, 下]（逻辑坐标，选填）",
+    "self_heal_col_operation": "操作",
+    "self_heal_col_operation_status": "操作状态",
+    "self_heal_col_verified": "已验证",
+    "self_heal_unknown": "未知",
 }

@@ -13,6 +13,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Runtime self-healing shares one lazy logical capture across image/VLM, applies
+  bbox regions to both and honors actual clipped/nonzero origins. Failed capture
+  is not retried for fallback. Additive schema-v2 audit fields retain source,
+  version, frame and strategy/model provenance; old rows still load. Click audit
+  settles after dispatch and preserves failures/cancellation without calling an
+  issued click verified. Legacy outcome/signatures and candidate-count aliases
+  remain compatible. GUI region/evidence controls and structured Script Builder
+  inputs expose the behavior through existing operations.
+
 - Experimental fixed-frame locator comparisons share schema-v1 reports across
   API, AC commands, MCP, CLI action files and the Self-Healing GUI. Ratios show
   eligible populations and unknowns; recovery requires both correct localization

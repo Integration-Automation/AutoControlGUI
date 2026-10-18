@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from je_auto_control.utils.vision.backends import get_backend
+from je_auto_control.utils.cv2_utils.locator_frame import LocatorFrameOwner, current_locator_frame
 from je_auto_control.utils.vision.backends.base import (
     VLMBackend, VLMNotAvailableError,
 )
@@ -32,16 +33,27 @@ def locate_by_description(description: str,
     if not description or not description.strip():
         raise ValueError("description must be a non-empty string")
     bound = backend if backend is not None else get_backend()
+    owner = current_locator_frame()
+    if owner is not None:
+        model = _record_backend(owner, bound, model)
     if not bound.available:
         raise VLMNotAvailableError(
             "no VLM backend configured; set ANTHROPIC_API_KEY or "
             "OPENAI_API_KEY and install the matching SDK",
         )
-    image_bytes = _capture_screenshot_bytes(screen_region)
+    frame = owner.snapshot() if owner is not None else None
+    image_bytes = frame.png if frame is not None else _capture_screenshot_bytes(screen_region)
     coords = bound.locate(image_bytes, description, model=model)
     if coords is None:
         return None
-    return _to_screen(coords, image_bytes, screen_region)
+    return frame.to_screen(coords) if frame is not None else _to_screen(coords, image_bytes, screen_region)
+
+
+def _record_backend(owner: LocatorFrameOwner, bound: VLMBackend, model: Optional[str]) -> Optional[str]:
+    resolver = getattr(bound, "resolve_model", None)
+    chosen = resolver(model) if callable(resolver) else model
+    owner.record_backend(getattr(bound, "name", type(bound).__name__), chosen)
+    return chosen
 
 
 def _to_screen(coords: Tuple[int, int], image_bytes: bytes,

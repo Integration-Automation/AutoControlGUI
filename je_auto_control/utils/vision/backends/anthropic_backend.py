@@ -39,15 +39,17 @@ class AnthropicVLMBackend(VLMBackend):
             )
             self.available = False
 
+    def resolve_model(self, model: Optional[str] = None) -> str:
+        """Resolve the explicit, environment or provider default model before capture."""
+        return model or os.environ.get("AUTOCONTROL_VLM_MODEL") or _DEFAULT_MODEL
+
     def locate(self, image_bytes: bytes, description: str,
                model: Optional[str] = None,
                image_mime: str = "image/png",
                ) -> Optional[Tuple[int, int]]:
         if not self.available or self._client is None:
             return None
-        chosen_model = (model
-                        or os.environ.get("AUTOCONTROL_VLM_MODEL")
-                        or _DEFAULT_MODEL)
+        chosen_model = self.resolve_model(model)
         # Fitted to what the model sees (1568 px on the long edge, 2576 on
         # the high-resolution tier): sent whole, the reply was in the pixels of
         # the downscaled image and read as screen pixels -- (1436, 799) for

@@ -26,6 +26,14 @@ fallbacks, fallback_rate, avg_duration_ms, top_brittle}`` — surfacing
 locators that increasingly need the VLM fallback (decaying selectors) before
 they fail. Exposed as ``AC_heal_stats`` / ``ac_heal_stats``.
 
+``healed`` and ``heal_rate`` are historical located-candidate counts, not verified
+UI recovery. ``located`` and ``located_rate`` name that population explicitly.
+``verified_operations`` and ``operation_success_rate`` use click requests with
+explicit boolean verification results; contradictions such as a click error do
+not count as verified success. ``verification_unknown`` counts click requests
+without such evidence. New ratios include numerator/denominator and null for an
+empty eligible population. Runtime click dispatch alone leaves verification unknown.
+
 
 Secret scan
 ===========

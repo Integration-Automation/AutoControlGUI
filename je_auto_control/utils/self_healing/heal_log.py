@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import threading
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -12,6 +12,7 @@ from je_auto_control.utils.logging.secret_scope import scrub_secret_data
 
 
 @dataclass(frozen=True)
+# pylint: disable-next=too-many-instance-attributes  # reason: backward-compatible audit schema with optional evidence
 class HealEvent:
     """One self-healing locate attempt persisted to disk."""
 
@@ -23,6 +24,25 @@ class HealEvent:
     description: Optional[str] = None
     image_error: Optional[str] = None
     vlm_error: Optional[str] = None
+    schema_version: int = 1
+    run_id: Optional[str] = None
+    step_id: Optional[str] = None
+    locator_id: Optional[str] = None
+    locator_version: Optional[str] = None
+    frame_hash: Optional[str] = None
+    origin: Optional[List[int]] = None
+    frame_size: Optional[List[int]] = None
+    scale: Optional[float] = None
+    screen_region: Optional[List[int]] = None
+    capture_ms: Optional[float] = None
+    strategy_times_ms: Dict[str, float] = field(default_factory=dict)
+    backend: Optional[str] = None
+    model: Optional[str] = None
+    cost_usd: Optional[float] = None
+    verified: Optional[bool] = None
+    operation: str = "locate"
+    operation_status: str = "unknown"
+    operation_error: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a plain-dict snapshot safe for JSON / network transport."""

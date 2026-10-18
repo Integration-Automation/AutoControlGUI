@@ -1396,4 +1396,10 @@ english_word_dict = {
     "healing_eval_idle": "Choose a manifest, then use Actions to compare.",
     "healing_eval_correct_true": "Correct",
     "healing_eval_correct_false": "Incorrect",
+    "self_heal_region_label": "Search region",
+    "self_heal_region_placeholder": "[left, top, right, bottom] (logical units, optional)",
+    "self_heal_col_operation": "Operation",
+    "self_heal_col_operation_status": "Operation state",
+    "self_heal_col_verified": "Verified",
+    "self_heal_unknown": "Unknown",
 }

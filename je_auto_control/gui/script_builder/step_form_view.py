@@ -1,4 +1,5 @@
 """Schema-driven form for editing a Step's parameters."""
+import json
 from typing import Any, Callable, Dict, Optional
 
 from PySide6.QtCore import Signal
@@ -235,6 +236,8 @@ def _set_enum_value(editor: QWidget, value: Any) -> None:
 
 _SETTERS = {
     FieldType.STRING: _set_text_value,
+    FieldType.JSON: lambda editor, value: _set_text_value(
+        editor, json.dumps(value, ensure_ascii=False) if value is not None else None),
     FieldType.INT: _set_text_value,
     FieldType.FLOAT: _set_text_value,
     FieldType.BOOL: lambda e, v: e.setChecked(bool(v)),
@@ -259,6 +262,11 @@ def _read_int(editor: QWidget) -> Any:
     return int(text) if text else None
 
 
+def _read_json(editor: QWidget) -> Any:
+    text = _read_string(editor)
+    return json.loads(text) if text is not None else None
+
+
 def _read_float(editor: QWidget) -> Any:
     text = editor.text().strip()
     return float(text) if text else None
@@ -279,6 +287,7 @@ def _read_rgb(editor: QWidget) -> Any:
 
 _READERS = {
     FieldType.STRING: _read_string,
+    FieldType.JSON: _read_json,
     FieldType.INT: _read_int,
     FieldType.FLOAT: _read_float,
     FieldType.BOOL: lambda e: bool(e.isChecked()),
@@ -296,7 +305,7 @@ def _read_editor_value(editor: QWidget, spec: FieldSpec) -> Any:
 def _read_field_value(editor: QWidget, spec: FieldSpec) -> tuple[bool, Any]:
     """Read one field, returning ``(ok, value)``.
 
-    ``ok`` is ``False`` when the current text cannot be parsed (int/float/rgb
+    ``ok`` is ``False`` when the current text cannot be parsed (int/float/rgb/JSON
     fields), so the caller can skip that field instead of aborting the commit.
     """
     try:
@@ -307,6 +316,7 @@ def _read_field_value(editor: QWidget, spec: FieldSpec) -> tuple[bool, Any]:
 
 _EDITOR_BUILDERS = {
     FieldType.STRING: StepFormView._build_string,
+    FieldType.JSON: StepFormView._build_string,
     FieldType.INT: StepFormView._build_int,
     FieldType.FLOAT: StepFormView._build_float,
     FieldType.BOOL: StepFormView._build_bool,

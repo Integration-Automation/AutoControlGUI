@@ -44,6 +44,8 @@ def heal_stats(events: List[Any]) -> Dict[str, Any]:
     Each event is a :class:`HealEvent` or dict with ``method`` /
     ``coordinates`` / ``duration_ms`` / ``image_error`` /
     ``template_path`` / ``description``.
+    Historical ``healed`` / ``heal_rate`` count located candidates, not verified
+    operation recovery. Explicit operation verification has its own population.
     """
     events = list(events)
     total = len(events)
@@ -58,14 +60,37 @@ def heal_stats(events: List[Any]) -> Dict[str, Any]:
         "fallback_rate": round(fallbacks / total, 4) if total else 0.0,
         "avg_duration_ms": (round(sum(durations) / len(durations), 2)
                             if durations else 0.0),
+        **_operation_stats(events, healed),
         "top_brittle": [{"locator": key, "fallbacks": count}
                         for key, count in top_brittle],
     }
 
 
+def _operation_stats(events: List[Any], located: int) -> Dict[str, Any]:
+    operations = [event for event in events if _attr(event, "operation") == "click"]
+    known = [event for event in operations if isinstance(_attr(event, "verified"), bool)]
+    verified = sum(_verified_operation(event) for event in known)
+    return {
+        "located": located, "located_rate": _ratio(located, len(events)),
+        "verified_operations": verified, "verification_unknown": len(operations) - len(known),
+        "operation_success_rate": _ratio(verified, len(known)),
+    }
+
+
+def _verified_operation(event: Any) -> bool:
+    return (_attr(event, "verified") is True and _attr(event, "coordinates") is not None
+            and _attr(event, "operation_status") not in ("error", "not_found"))
+
+
+def _ratio(numerator: int, denominator: int) -> Dict[str, Any]:
+    return {"numerator": numerator, "denominator": denominator,
+            "value": numerator / denominator if denominator else None}
+
+
 def analyze_heal_log(limit: int = 200, log: Any = None) -> Dict[str, Any]:
     """Aggregate the most recent events from the self-heal log."""
     if log is None:
+        # pylint: disable-next=import-outside-toplevel  # reason: facade setup imports analytics before self-healing
         from je_auto_control.utils.self_healing import default_heal_log
         log = default_heal_log
     return heal_stats(log.list_events(limit=int(limit)))

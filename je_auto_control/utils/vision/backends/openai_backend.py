@@ -40,15 +40,17 @@ class OpenAIVLMBackend(VLMBackend):
             )
             self.available = False
 
+    def resolve_model(self, model: Optional[str] = None) -> str:
+        """Resolve the explicit, environment or provider default model before capture."""
+        return model or os.environ.get("AUTOCONTROL_VLM_MODEL") or _DEFAULT_MODEL
+
     def locate(self, image_bytes: bytes, description: str,
                model: Optional[str] = None,
                image_mime: str = "image/png",
                ) -> Optional[Tuple[int, int]]:
         if not self.available or self._client is None:
             return None
-        chosen_model = (model
-                        or os.environ.get("AUTOCONTROL_VLM_MODEL")
-                        or _DEFAULT_MODEL)
+        chosen_model = self.resolve_model(model)
         b64 = base64.standard_b64encode(image_bytes).decode("ascii")
         prompt = LOCATE_PROMPT.format(description=description)
         data_url = f"data:{image_mime};base64,{b64}"
