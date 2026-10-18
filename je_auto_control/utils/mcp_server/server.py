@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict, List, Optional, TextIO
 from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.mcp_server._authz import authorize_tool_call, visible_tools
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
@@ -637,6 +638,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         self._maybe_confirm_destructive(name, tool, arguments)
         return name, tool, arguments
 
+    @secret_log_scope()
     def _handle_tools_call(self, msg_id: Any,
                            params: Dict[str, Any]) -> Dict[str, Any]:
         try:

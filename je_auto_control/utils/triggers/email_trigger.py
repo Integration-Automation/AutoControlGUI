@@ -27,6 +27,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import scrub_secret_text, secret_log_scope
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
@@ -350,7 +351,7 @@ class EmailTriggerWatcher:
                 try:
                     self._poll_one(trigger)
                 except Exception as error:  # noqa: BLE001  # reason: see above
-                    trigger.last_error = repr(error)
+                    trigger.last_error = scrub_secret_text(repr(error))
                     autocontrol_logger.error(
                         "email trigger %s poll failed: %r",
                         trigger.trigger_id, error, exc_info=True,
@@ -443,10 +444,11 @@ class EmailTriggerWatcher:
 
     def _record_connect_error(self, trigger: EmailTrigger,
                               error: Exception) -> None:
-        trigger.last_error = repr(error)
+        trigger.last_error = scrub_secret_text(repr(error))
         autocontrol_logger.error("imap %s connect failed: %r",
                                  trigger.trigger_id, error)
 
+    @secret_log_scope()
     def _fire_for_uid(self, client: imaplib.IMAP4,
                       trigger: EmailTrigger, uid: str) -> int:
         msg = _fetch_message(client, uid)
@@ -455,7 +457,7 @@ class EmailTriggerWatcher:
         try:
             payload = _build_payload(uid, msg)
         except Exception as error:  # noqa: BLE001  # reason: a message the email package cannot read is skipped, not retried forever
-            trigger.last_error = repr(error)
+            trigger.last_error = scrub_secret_text(repr(error))
             autocontrol_logger.error("imap %s unreadable message %s: %r",
                                      trigger.trigger_id, uid, error)
             trigger._seen_uids.add(uid)
@@ -470,7 +472,7 @@ class EmailTriggerWatcher:
         try:
             self._execute_with_history(trigger, payload)
         except Exception as error:  # noqa: BLE001  # reason: recorded; the uid must still be marked seen
-            trigger.last_error = repr(error)
+            trigger.last_error = scrub_secret_text(repr(error))
             autocontrol_logger.error("imap %s fire failed: %r",
                                      trigger.trigger_id, error)
         else:
@@ -480,6 +482,7 @@ class EmailTriggerWatcher:
             _mark_seen(client, uid)
         return 1
 
+    @secret_log_scope()
     def _execute_with_history(self, trigger: EmailTrigger,
                               payload: Dict[str, Any]) -> None:
         with self._fire_lock:

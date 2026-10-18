@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Callable, ClassVar, Dict, List, Optional, Tupl
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.timeouts import clamp_poll_interval
 from je_auto_control.utils.run_history.artifact_manager import (
@@ -361,6 +362,7 @@ class TriggerEngine:
             )
             return False
 
+    @secret_log_scope()
     def _fire(self, trigger: _TriggerBase, now: float) -> None:
         with self._lock:
             if self._triggers.get(trigger.trigger_id) is not trigger:

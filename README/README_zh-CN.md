@@ -247,7 +247,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 结构化日志可通过 `utils.action_journal` 的显式 Python 作用域捕获：`journal_scope` 记录现有 executor 调用，`execute_action_with_journal` 隔离一次执行。本机 loop／parallel／DAG 步骤保留 parent ID，并区分失败、取消与 dry-run。门面、动作命令、CLI／MCP 与 GUI 控制仍待接入。
 
-executor 执行期间，`${secrets.NAME}` 解析后的值会在 `AutoControlGUI` 应用程序消息与 traceback 中遮罩，包括嵌套动作及本机 parallel／DAG 工作线程。遮罩数据于执行结束时清除；返回结果与抛出的异常保留原始值。
+`${secrets.NAME}` 解析后的值会在 executor 执行期间的应用程序诊断中遮罩，包括嵌套动作及本机 parallel／DAG。CLI／REST／MCP 请求与排程、trigger、hotkey、email 执行会将遮罩保留到错误处理及 audit／history 写入完成；报表记录保存遮罩后的快照。CLI stderr 会遮罩，API 结果、抛出的异常与 CLI 结果数据保留原始值。遮罩于拥有者的请求或执行结束时清除。
 
 ## 命令行界面
 

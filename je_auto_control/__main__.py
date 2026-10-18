@@ -18,6 +18,7 @@ from je_auto_control.utils.file_process.get_dir_file_list import \
     get_dir_files_as_list
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import scrub_secret_text, secret_log_scope
 from je_auto_control.utils.project.create_project_structure import create_project_dir
 
 
@@ -41,6 +42,7 @@ def _preprocess_read_str_execute_action(execute_str: str) -> None:
     execute_action(json_data)
 
 
+@secret_log_scope()
 def _main() -> None:
     """Run the legacy CLI with its original flags, errors and exit statuses."""
     try:
@@ -90,13 +92,13 @@ def _main() -> None:
     # failed -e printed nothing at all.
     except AutoControlArgparseException as error:
         autocontrol_logger.error("argparse failure: %r", error)
-        sys.stderr.write(f"error: {error}\n")
+        sys.stderr.write(f"error: {scrub_secret_text(str(error))}\n")
         sys.exit(1)
     # AutoControlException: a missing or invalid action file used to end in
     # a raw traceback rather than this message (the exit status was 1 then too).
     except (OSError, ValueError, RuntimeError, AutoControlException) as error:
         autocontrol_logger.error("cli execution failed: %r", error)
-        sys.stderr.write(f"error: {error}\n")
+        sys.stderr.write(f"error: {scrub_secret_text(str(error))}\n")
         sys.exit(1)
 
 

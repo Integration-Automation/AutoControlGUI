@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- CLI/REST/MCP and background run owners retain resolved-secret masking through
+  outer error handling and audit/history writes. CLI stderr and delayed report
+  snapshots are sanitized; report snapshots omit opaque/cyclic values when the
+  run resolved secrets. API outcomes, raised exceptions and CLI result payloads
+  keep their existing contents.
+
 - Executor runs mask resolved vault-reference values in application log messages,
   exception text and tracebacks before handlers receive them. Nested actions and
   joined local parallel/DAG workers share a run-local mask, cleared on exit.

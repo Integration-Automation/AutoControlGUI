@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Union
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import scrub_secret_text
 from je_auto_control.utils.sqlite_support import (
     SQLITE_ERRORS, last_row_id, require_sqlite3, sqlite_errors_as,
 )
@@ -193,6 +194,7 @@ class HistoryStore:
         if status == STATUS_RUNNING:
             raise ValueError("cannot finish a run with status=running")
         ts = float(finished_at) if finished_at is not None else time.time()
+        error_text = scrub_secret_text(error_text) if error_text is not None else None
         with self._lock:
             cursor = self._connection().execute(
                 "UPDATE runs SET finished_at = ?, status = ?, error_text = ?,"

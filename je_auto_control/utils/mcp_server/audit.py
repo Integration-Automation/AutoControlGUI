@@ -18,6 +18,7 @@ from typing import Any, Dict, Optional
 
 from je_auto_control.utils.executor.action_redaction import SENSITIVE_ARGUMENT_NAMES, redact_actions
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import scrub_secret_text
 from je_auto_control.utils.rbac.authorization import current_authorization
 
 
@@ -69,7 +70,7 @@ class AuditLogger:
             if caller is not None and caller.user_id == user_id:
                 entry["role"] = caller.role
         if error_text is not None:
-            entry["error"] = error_text
+            entry["error"] = scrub_secret_text(error_text)
         if artifact_path is not None:
             entry["artifact_path"] = artifact_path
         line = json.dumps(entry, ensure_ascii=False, default=str)
@@ -99,13 +100,14 @@ def _sanitise(arguments: Any) -> Any:
     if isinstance(arguments, list):
         return [_sanitise(item) for item in redact_actions(arguments)]
     if not isinstance(arguments, dict):
-        return arguments
+        return scrub_secret_text(arguments) if isinstance(arguments, str) else arguments
     out: Dict[str, Any] = {}
     for key, value in arguments.items():
+        safe_key = scrub_secret_text(key) if isinstance(key, str) else key
         if str(key).lower() in REDACTED_KEYS or str(key).lower() == "key":
-            out[key] = REDACTED_PLACEHOLDER
+            out[safe_key] = REDACTED_PLACEHOLDER
         else:
-            out[key] = _sanitise(value)
+            out[safe_key] = _sanitise(value)
     return out
 
 

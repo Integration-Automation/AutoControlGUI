@@ -12,6 +12,7 @@ from typing import Callable, Dict, List, Optional, Set
 
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
@@ -228,6 +229,7 @@ class Scheduler:
                 self._in_flight.difference_update(
                     job.job_id for job in pending)
 
+    @secret_log_scope()
     def _fire(self, job: ScheduledJob, now_mono: float, now_wall: float) -> None:
         run_id = default_history_store.start_run(
             SOURCE_SCHEDULER, job.job_id, job.script_path,

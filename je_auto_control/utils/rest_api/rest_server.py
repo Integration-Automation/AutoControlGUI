@@ -22,6 +22,7 @@ from je_auto_control.utils.http_headers import (
     bearer_challenge, log_safe, parse_content_length, wire_json_text,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.rbac.authorization import (
     AuthorizationContext, authorization_scope, user_store_from_env,
 )
@@ -180,6 +181,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         # against the rate limit or the lockout.
         self._dispatch("POST", _POST_ROUTES, body=_BODY_PENDING)
 
+    @secret_log_scope()
     def _dispatch(self, method: str, routes: Dict[str, HandlerFn],
                   body: Any) -> None:
         parsed = urlparse(self.path)

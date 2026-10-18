@@ -260,7 +260,7 @@ per-module map is in **[architecture_explore.md](architecture_explore.md)**.
 
 Structured journal capture is available through explicit Python scopes in `utils.action_journal`: `journal_scope` captures existing executor calls, and `execute_action_with_journal` isolates one run. Local loop/parallel/DAG steps retain parent IDs; failures, cancellation and dry-runs are distinct. Facade, command, CLI/MCP and GUI controls remain pending integration.
 
-During executor runs, values resolved from `${secrets.NAME}` are masked in `AutoControlGUI` application messages and tracebacks, including nested actions and local parallel/DAG workers. Masks are discarded at run exit; returned outcomes and raised exceptions keep their original values.
+Values resolved from `${secrets.NAME}` are masked in application diagnostics during executor runs, including nested actions and local parallel/DAG workers. CLI/REST/MCP requests and scheduled, trigger, hotkey and email runs retain the mask through error handling and audit/history writes; report records capture redacted snapshots. CLI stderr is masked, while API outcomes, raised exceptions and CLI result payloads retain their original values. Masks are discarded when the owning request or run exits.
 
 ## Command-line interface
 

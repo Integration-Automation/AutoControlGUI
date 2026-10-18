@@ -1352,10 +1352,16 @@ with ``***`` in ``AutoControlGUI`` application messages, exception text and
 stack information before handlers receive them. Exact values and common
 Python/JSON escaped forms are masked. Nested actions and joined local
 parallel/DAG workers share the run's mask; concurrent independent runs have
-separate masks, and run exit clears the values even on failure. API outcomes
-and raised exceptions retain their original values. This masking covers
-values learned during that executor run; transformed/encoded values and
-other applications' loggers require their own handling.
+separate masks. CLI/REST/MCP requests and scheduled, trigger, hotkey and email
+owners keep their mask through outer error handling and audit/history writes.
+CLI stderr is masked. Report records snapshot known values before the mask is
+cleared; cyclic and opaque diagnostic objects are replaced without calling
+arbitrary repr or deepcopy. Audit fields are sanitized before JSON encoding,
+and history error text before SQLite writes. Owner exit clears the mask even
+on failure. API outcomes, raised exceptions and CLI result payloads retain
+their original values. This masking covers values learned during the owned
+run; transformed/encoded values and other applications' loggers require
+their own handling.
 
 GUI: **Secrets** tab — initialize the vault, unlock it, add / remove
 entries, change passphrase. The vault file is created with mode 0o600

@@ -20,6 +20,7 @@ from typing import Callable, Dict, FrozenSet, List, Optional, Tuple
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
@@ -213,6 +214,7 @@ class HotkeyDaemon:
                 self._thread.join(timeout=timeout)
                 self._thread = None
 
+    @secret_log_scope()
     def _fire_binding(self, binding_id: str) -> None:
         with self._lock:
             match = self._bindings.get(binding_id)

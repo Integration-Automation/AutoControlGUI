@@ -18,6 +18,7 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlException, AutoControlJsonActionException,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.script_vars.execution import execution_scope
 
 
@@ -183,6 +184,7 @@ def _execute_strict(actions: Any) -> HandlerResult:
     return 200, {"ok": True, "result": result}
 
 
+@secret_log_scope()
 def handle_execute(ctx: RouteContext) -> HandlerResult:
     if not isinstance(ctx.body, dict):
         return 400, {"error": "body must be JSON object"}
@@ -208,6 +210,7 @@ def handle_execute(ctx: RouteContext) -> HandlerResult:
     return 200, {"result": result}
 
 
+@secret_log_scope()
 def handle_execute_file(ctx: RouteContext) -> HandlerResult:
     if not isinstance(ctx.body, dict):
         return 400, {"error": "body must be JSON object"}

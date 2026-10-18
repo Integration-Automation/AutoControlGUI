@@ -90,6 +90,49 @@ def remember_secret(value: str) -> None:
         scope.remember(value)
 
 
+def scrub_secret_text(text: str) -> str:
+    """Mask known run-local values before a diagnostic is printed or persisted."""
+    scope = current_secret_scope()
+    return text if scope is None else scope.scrub(text)
+
+
+def _scrub_key(key: object, scope: SecretLogScope) -> object:
+    if isinstance(key, str):
+        return scope.scrub(key)
+    return key if key is None or isinstance(key, (bool, int, float)) else "<opaque-key>"
+
+
+def _scrub_data(value: object, scope: SecretLogScope, seen: set[int]) -> object:
+    if isinstance(value, str):
+        return scope.scrub(value)
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    if not isinstance(value, (dict, list, tuple)):
+        return "<opaque>"
+    identity = id(value)
+    if identity in seen:
+        return "<recursive>"
+    seen.add(identity)
+    try:
+        if isinstance(value, dict):
+            return {_scrub_key(key, scope): _scrub_data(item, scope, seen)
+                    for key, item in value.items()}
+        items = [_scrub_data(item, scope, seen) for item in value]
+        return tuple(items) if isinstance(value, tuple) else items
+    finally:
+        seen.remove(identity)
+
+
+def scrub_secret_data(value: object) -> object:
+    """Snapshot diagnostics while masking strings and omitting opaque/cyclic values.
+
+    Outside a run that resolved secrets the original value is returned. This
+    protects delayed report rendering without calling arbitrary repr/deepcopy.
+    """
+    scope = current_secret_scope()
+    return value if scope is None or not scope.has_values else _scrub_data(value, scope, set())
+
+
 @contextmanager
 def bound_secret_scope(scope: Optional[SecretLogScope]) -> Iterator[None]:
     """Bind a worker to its parent's mask without taking ownership of it."""

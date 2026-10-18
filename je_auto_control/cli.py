@@ -29,6 +29,8 @@ import threading
 import time
 from typing import Callable, Dict, List, Optional, Sequence
 
+from je_auto_control.utils.logging.secret_scope import scrub_secret_text, secret_log_scope
+
 from je_auto_control.utils.exception.exceptions import (
     AutoControlActionException,
     AutoControlException,
@@ -349,6 +351,7 @@ def _port(text: str) -> int:
     return port
 
 
+@secret_log_scope()
 def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -359,7 +362,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     except (AutoControlActionException, AutoControlException,
             AutoControlJsonActionException, OSError, RuntimeError,
             ValueError) as error:
-        sys.stderr.write(f"error: {error}\n")
+        sys.stderr.write(f"error: {scrub_secret_text(str(error))}\n")
         return 1
 
 

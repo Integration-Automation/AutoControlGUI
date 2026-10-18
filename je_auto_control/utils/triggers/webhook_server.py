@@ -41,6 +41,7 @@ from je_auto_control.utils.http_headers import (
 )
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.rbac.authorization import AuthorizationError
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
@@ -361,6 +362,7 @@ class WebhookTriggerServer:
         return hmac.compare_digest(token.strip().encode("utf-8"),
                                    trigger.token.encode("utf-8"))
 
+    @secret_log_scope()
     def fire(self, trigger: WebhookTrigger,
              payload: Dict[str, Any]) -> Optional[int]:
         """Run the trigger's script with ``payload`` seeded into variables.

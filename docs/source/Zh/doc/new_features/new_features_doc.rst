@@ -1255,10 +1255,14 @@ Action JSON 指令::
 executor 執行期間，解析後的 ``${secrets.NAME}`` 值會在送到 handler 前，於
 ``AutoControlGUI`` 應用程式訊息、例外文字與堆疊資訊中替換為 ``***``。
 遮罩包含原始值與常見 Python／JSON 跳脫形式。巢狀動作及等候完成的本機
-parallel／DAG 工作執行緒共用當次執行的遮罩；各個獨立執行彼此隔離，
-即使失敗也會於執行結束時清除資料。API 回傳結果與拋出的例外仍保留原始值。
-此遮罩涵蓋該次 executor 執行期間解析的值；經轉換／編碼的值，以及其他
-應用程式的 logger，仍由各自的邊界處理。
+parallel／DAG 工作執行緒共用當次執行的遮罩；各個獨立執行彼此隔離。
+CLI／REST／MCP 請求與排程、trigger、hotkey、email 擁有者會將遮罩保留到
+外層錯誤處理及 audit／history 寫入完成。CLI stderr 也會遮罩。報表紀錄在遮罩
+清除前保存已處理的快照；循環與不透明診斷物件會替換為標記，不呼叫任意 repr
+或 deepcopy。Audit 欄位在 JSON 編碼前處理，history 錯誤文字在 SQLite 寫入前處理。
+即使失敗也會於擁有者結束時清除資料。API 結果、拋出的例外與 CLI 結果資料保留原始值。
+此遮罩涵蓋當次執行期間解析的值；經轉換／編碼的值，以及其他應用程式的 logger，
+仍由各自的邊界處理。
 
 GUI: **Secrets** 分頁 — 建立 vault、解鎖、新增 / 移除條目、變更
 通行碼。POSIX 系統上 vault 檔以 0o600 建立;Windows 預設 ACL 已限制
