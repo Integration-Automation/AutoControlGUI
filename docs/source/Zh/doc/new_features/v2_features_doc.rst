@@ -30,6 +30,10 @@
 Executor：``AC_self_heal_locate / _click / _log_list / _log_clear``。
 MCP：``ac_self_heal_*``。GUI：**Self-Healing** 分頁。
 
+取消會原樣傳遞，中止後備定位、點擊與失敗紀錄。
+稽核記錄在寫入與讀取時遮蔽本次執行已解析的秘密值。
+定位結果保留原值；讀取時不會改寫既有紀錄檔。
+
 
 錨點定位器
 ----------

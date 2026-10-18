@@ -241,6 +241,8 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 系统诊断 | `run_diagnostics` | `AC_diagnose` | Diagnostics |
 | 测试代码生成 | `generate_code` | — | — |
 
+自愈定位器会在回退或点击前原样传递取消。稽核日志在写入或返回记录前遮蔽本次运行已解析的秘密值；返回的定位结果保留原值，读取时不改写既有日志文件。
+
 除了这张表，`utils/` 下还有 311 个无头包，覆盖断言、韧性、数据质量、i18n 审计、脱敏、
 治理、可观测性等等。完整的逐模块地图在 **[architecture_explore.md](../architecture_explore.md)**。
 

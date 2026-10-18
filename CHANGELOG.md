@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Self-healing preserves cancellation instead of treating it as an image/VLM
+  miss and continuing to fallback or click. Audit writes and reads mask secret
+  values already resolved in the current run, preserving original outcomes and
+  leaving legacy log files untouched on read.
+
 - Explicit manual history is available through `manual_history_scope`,
   `AC_history_capture`, CLI `run --history [--history-db PATH]`, and opt-in
   controls in Script Executor / Script Builder. GUI and CLI results keep their

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.json_store.json_store import append_json_line
+from je_auto_control.utils.logging.secret_scope import scrub_secret_data
 
 
 @dataclass(frozen=True)
@@ -54,13 +55,13 @@ class HealEventLog:
         return self._path
 
     def append(self, event: HealEvent) -> None:
-        """Atomically append one event as a JSON line."""
-        payload = json.dumps(event.to_dict(), ensure_ascii=False)
+        """Append a snapshot with known run-local secrets masked before I/O."""
+        payload = json.dumps(scrub_secret_data(event.to_dict()), ensure_ascii=False)
         with self._lock:
             append_json_line(self._path, payload)
 
     def list_events(self, limit: int = 100) -> List[HealEvent]:
-        """Return up to ``limit`` most-recent events (oldest first in slice)."""
+        """Return recent events, masking known secrets without rewriting disk."""
         capped = max(0, int(limit))
         if capped == 0:
             return []
@@ -97,8 +98,10 @@ def _parse_line(raw: str) -> Optional[HealEvent]:
     if not text:
         return None
     try:
-        payload = json.loads(text)
+        payload = scrub_secret_data(json.loads(text))
     except ValueError:
+        return None
+    if not isinstance(payload, dict):
         return None
     try:
         return HealEvent(**payload)

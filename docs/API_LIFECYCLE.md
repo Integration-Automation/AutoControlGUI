@@ -31,6 +31,10 @@ experimental snapshots. `manual_history_scope` and its `HistoryBinding` value,
 experimental. The scope records an explicit owner without replacing variables
 or result values; the command returns a separate history/result summary.
 
+Self-healing retains its existing signatures and outcome format. Cancellation
+propagates before recovery; audit storage and reads mask secret values known to
+the current run without mutating the returned outcome or rewriting legacy files.
+
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.
 - Experimental API may change in any release and must be labelled as such.

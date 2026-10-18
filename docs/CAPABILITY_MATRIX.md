@@ -28,6 +28,8 @@ Journal storage, executor capture, provenance links, facade/CLI entry points
 and Script Builder commands, observed runs and MCP journal tools have controlled tests. The journal work does not
 claim native device acceptance. Run History journal browsing also has controlled offscreen tests.
 Explicit manual history ownership has controlled API, command, CLI, GUI and MCP execution tests.
+Self-healing cancellation and secret masking have controlled headless tests,
+including registered command and MCP adapters; this adds no native or paid API acceptance.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**

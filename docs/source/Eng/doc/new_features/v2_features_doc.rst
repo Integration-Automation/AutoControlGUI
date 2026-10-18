@@ -32,6 +32,10 @@ locators can be tuned over time::
 Executor: ``AC_self_heal_locate / _click / _log_list / _log_clear``.
 MCP: ``ac_self_heal_*``. GUI: **Self-Healing** tab.
 
+Cancellation propagates unchanged before fallback, clicking or miss logging.
+Audit writes and reads mask secret values already resolved in the active run.
+The original locator outcome remains unchanged; reads do not rewrite legacy logs.
+
 
 Anchor-based locator
 --------------------

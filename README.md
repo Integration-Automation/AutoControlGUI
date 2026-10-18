@@ -253,6 +253,8 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Diagnostics | `run_diagnostics` | `AC_diagnose` | Diagnostics |
 | Test-code generation | `generate_code` | — | — |
 
+Self-healing propagates cancellation before fallback or clicking. Its audit log masks secrets already resolved in the current run before writing or returning records; returned locator outcomes retain their original values. Legacy log files are not rewritten.
+
 Beyond this table, `utils/` holds 311 headless packages covering assertions, resilience,
 data quality, i18n auditing, redaction, governance, observability, and more. The full
 per-module map is in **[architecture_explore.md](architecture_explore.md)**.

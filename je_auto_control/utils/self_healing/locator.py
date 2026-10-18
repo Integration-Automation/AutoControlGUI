@@ -76,6 +76,7 @@ def self_heal_locate(template_path: Optional[str] = None,
     At least one of ``template_path`` / ``description`` must be given.
     Provide both for full self-healing — the VLM path only runs when
     the template match fails or returns no candidates.
+    Cancellation propagates unchanged without fallback, click or miss logging.
     """
     if not template_path and not description:
         raise ValueError(
@@ -152,7 +153,7 @@ def _try_image(template_path: Optional[str],
     except ImageNotFoundException as exc:
         return None, str(exc)
     except (AutoControlException, OSError, RuntimeError, ValueError, TypeError) as exc:
-        return None, repr(exc)
+        return None, _failure_detail(exc)
 
 
 def _try_vlm(description: Optional[str],
@@ -169,10 +170,18 @@ def _try_vlm(description: Optional[str],
     # AutoControlException: a failed screenshot (AutoControlScreenException)
     # escaped the self-heal and left no heal-log entry.
     except (AutoControlException, OSError, RuntimeError, ValueError, TypeError) as exc:
-        return None, repr(exc)
+        return None, _failure_detail(exc)
     if coords is None:
         return None, "vlm returned no match"
     return (int(coords[0]), int(coords[1])), None
+
+
+def _failure_detail(error: Exception) -> str:
+    """Propagate cancellation before formatting an ordinary locator failure."""
+    # pylint: disable-next=import-outside-toplevel  # reason: run outcomes import the executor during facade setup
+    from je_auto_control.utils.run_history.run_outcome import raise_if_run_interrupted
+    raise_if_run_interrupted(error)
+    return repr(error)
 
 
 def _click_at(coordinates: Tuple[int, int], mouse_keycode: str) -> None:
