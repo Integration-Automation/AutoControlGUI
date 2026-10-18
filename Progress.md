@@ -177,8 +177,6 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 但鍵表的註解刻意不替 `oem_*` 取好讀的別名，因為它們隨鍵盤配置而變（`oem_2` 只有在美式配置上是 `/`）。
 要加的話是 `wrapper/_platform_windows.py` 的 `keyboard_key_aliases` 一行。
 
-**MCP 的 `_show_command`**（`utils/mcp_server/tools/_handlers_system.py`，`window_minimize` 等）仍不看 `show_window` 的新回傳值。
-
 ---
 
 ## macOS 的修正：CI 驗到一半，其餘要一台真的 Mac

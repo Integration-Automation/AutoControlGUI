@@ -1,7 +1,7 @@
 """MCP adapters for windows, processes and the rest of the desktop session.
 
 Same contract as :mod:`._handlers` -- normalise arguments and return values so
-they survive the JSON-RPC boundary, with every project import lazy -- split out
+they survive the JSON-RPC boundary, with platform imports kept lazy -- split out
 by theme because ``_handlers.py`` is over the 750-line limit.
 
 Covers window management, processes and the shell, opening files, idle and
@@ -12,6 +12,7 @@ import base64
 import os
 from typing import Any, Dict, List, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.mcp_server.tools._base import MCPContent
 
 
@@ -143,10 +144,12 @@ def window_move(title_substring: str, x: int, y: int,
 
 def _show_command(title_substring: str, case_sensitive: bool,
                   cmd_show: int) -> int:
-    """Resolve the window then call ShowWindow with the given cmd."""
+    """Return the resolved handle only when the requested state is accepted."""
     from je_auto_control.windows.window import windows_window_manage as wm
     hwnd = _resolve_window_hwnd(title_substring, bool(case_sensitive))
-    wm.show_window(hwnd, int(cmd_show))
+    if not wm.show_window(hwnd, int(cmd_show)):
+        raise AutoControlActionException(
+            f"could not apply window state/activation {cmd_show} to window {hwnd}")
     return hwnd
 
 

@@ -1392,12 +1392,13 @@ def test_window_minimize_uses_show_command_six(monkeypatch):
 
     def fake_show(hwnd, cmd_show):
         seen["call"] = (int(hwnd), int(cmd_show))
+        return True
 
     from je_auto_control.windows.window import windows_window_manage
     monkeypatch.setattr(windows_window_manage, "show_window", fake_show)
 
     by_name = {tool.name: tool for tool in build_default_tool_registry()}
-    by_name["ac_window_minimize"].invoke({"title_substring": "Notepad"})
+    assert by_name["ac_window_minimize"].invoke({"title_substring": "Notepad"}) == 456
     assert seen["call"] == (456, 6)
 
 

@@ -39,6 +39,10 @@ Window management (Windows)
   ``ac_list_windows``, ``ac_focus_window``, ``ac_wait_for_window``,
   ``ac_close_window``, ``ac_window_move``, ``ac_window_minimize``,
   ``ac_window_maximize``, ``ac_window_restore``.
+  The three state tools return the window handle only when the backend accepts
+  the requested state/activation. A stale handle or refused foreground request
+  produces a tool result with ``isError: true``. The raw Win32 ``ShowWindow``
+  return value means previous visibility and is not treated as a success flag.
 
 Semantic locators
   ``ac_a11y_list``, ``ac_a11y_find``, ``ac_a11y_click``,

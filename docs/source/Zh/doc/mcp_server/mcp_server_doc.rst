@@ -38,6 +38,9 @@ list-changed 通知與 elicitation。
   ``ac_list_windows``、``ac_focus_window``、``ac_wait_for_window``、
   ``ac_close_window``、``ac_window_move``、``ac_window_minimize``、
   ``ac_window_maximize``、``ac_window_restore``。
+  這三個狀態工具只在後端接受要求的狀態／啟用操作時回傳視窗 handle。
+  handle 已失效或前景請求遭拒時，工具結果為 ``isError: true``。
+  Win32 原始 ``ShowWindow`` 回傳值表示先前可見性，不會被誤當成成功旗標。
 
 語意定位
   ``ac_a11y_list``、``ac_a11y_find``、``ac_a11y_click``、

@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- MCP `ac_window_minimize`, `ac_window_maximize` and `ac_window_restore`
+  return a tool error when the backend refuses the state/activation request,
+  instead of reporting the handle as success. Successful calls still return
+  the same integer handle; raw Win32 previous-visibility values are normalized
+  by the existing backend.
+
 ### Background authorization
 
 - Scheduled interval/cron jobs, triggers, hotkeys, watchdog rules, webhooks,
