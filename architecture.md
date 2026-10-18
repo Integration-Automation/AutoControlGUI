@@ -65,7 +65,9 @@ mask text before storage. Joined local parallel/DAG workers share the mask;
 independent requests isolate it, and the owner clears it on exit. API outcomes
 retain their values; CLI error output is sanitized. Watchdog/observer rules and
 callback-executor invocations own their complete diagnostic scope; nested
-invocations reuse the enclosing run mask.
+invocations reuse the enclosing run mask. DAG calls also own a mask; each
+node worker binds it through runner execution, error handling and final timing,
+including custom local runners. Returned error payloads retain their values.
 
 **A. JSON action script (primary path)**
 

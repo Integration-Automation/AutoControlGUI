@@ -1354,6 +1354,9 @@ Python/JSON escaped forms are masked. Nested actions and joined local
 parallel/DAG workers share the run's mask; concurrent independent runs have
 separate masks. CLI/REST/MCP requests and scheduled, trigger, hotkey and email
 owners keep their mask through outer error handling and audit/history writes.
+Standalone DAG calls own a mask too. Each node worker binds the owner mask
+through runner execution, outcome handling, final error logging and timing,
+including custom local runners. Returned node-error payloads remain unchanged.
 Independent watchdog/observer rules and callback-executor invocations keep a
 mask through their matcher/predicate, trigger, callback and final error log.
 Nested calls reuse the enclosing run's mask; independent rules and subsequent

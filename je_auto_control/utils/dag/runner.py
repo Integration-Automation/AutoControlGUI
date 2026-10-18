@@ -20,6 +20,9 @@ from je_auto_control.utils.dag.graph import (
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.run_history.run_outcome import is_run_interruption
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import (
+    SecretLogScope, bound_secret_scope, current_secret_scope, secret_log_scope,
+)
 
 
 STATUS_PENDING = "pending"
@@ -76,6 +79,7 @@ class DagRunResult:
 NodeRunner = Callable[[DagNode, DagDefinition], Any]
 
 
+@secret_log_scope()
 def run_dag(definition: Any,
             *,
             max_parallel: int = 4,
@@ -180,7 +184,7 @@ def _spawn_ready_nodes(pending: Set[str], inflight: Dict[Future, str],
         results[nid].status = STATUS_RUNNING
         results[nid].started_at = time.monotonic()
         runner = local if node.host == LOCAL_HOST else remote
-        future = pool.submit(_run_one, node, results[nid], runner, nodes_by_id)
+        future = pool.submit(_run_one, node, results[nid], runner, nodes_by_id, current_secret_scope())
         inflight[future] = nid
         pending.discard(nid)
 
@@ -232,33 +236,36 @@ def _record_future(nid: str, finished: Future,
         results[nid].error = repr(error)
 
 
-def _run_one(node: DagNode, result: NodeResult,
-             runner: NodeRunner, _nodes: Dict[str, DagNode]) -> None:
-    try:
-        outcome = runner(node, _build_proxy_definition(node, _nodes))
-    except _NodeStopped:
-        result.status = STATUS_SKIPPED
-        result.error = "stopped"
-    # A runner is user code and may raise any Exception subclass; one that
-    # escaped left the node "running" and run_dag returned no result.
-    except BaseException as error:  # reason: settle node state; cancellation/control signals re-raise
-        # AutoControlException covers validate_actions / locate / assert
-        # failures raised by the executor: a node failure becomes a failed
-        # NodeResult (and a downstream skip cascade), not a raw crash that
-        # leaves the node stuck "running" and returns no DagRunResult.
-        result.status = STATUS_FAILED
-        if not isinstance(error, Exception) or is_run_interruption(error):
-            result.error = f"{type(error).__name__}: run interrupted"
-            raise
-        result.error = f"{type(error).__name__}: {error}"
-        autocontrol_logger.warning(
-            f"DAG node {node.id!r} failed: {result.error}",
-        )
-    else:
-        result.status = STATUS_SUCCEEDED
-        result.result = outcome
-    finally:
-        _finish_node_timing(result)
+def _run_one(node: DagNode, result: NodeResult, runner: NodeRunner, _nodes: Dict[str, DagNode],
+             secret_scope: Optional[SecretLogScope] = None) -> None:
+    """Keep node execution, outcome handling and final diagnostics in one mask."""
+    binding = current_secret_scope() if secret_scope is None else secret_scope
+    with bound_secret_scope(binding):
+        try:
+            outcome = runner(node, _build_proxy_definition(node, _nodes))
+        except _NodeStopped:
+            result.status = STATUS_SKIPPED
+            result.error = "stopped"
+        # A runner is user code and may raise any Exception subclass; one that
+        # escaped left the node "running" and run_dag returned no result.
+        except BaseException as error:  # reason: settle node state; cancellation/control signals re-raise
+            # AutoControlException covers validate_actions / locate / assert
+            # failures raised by the executor: a node failure becomes a failed
+            # NodeResult (and a downstream skip cascade), not a raw crash that
+            # leaves the node stuck "running" and returns no DagRunResult.
+            result.status = STATUS_FAILED
+            if not isinstance(error, Exception) or is_run_interruption(error):
+                result.error = f"{type(error).__name__}: run interrupted"
+                raise
+            result.error = f"{type(error).__name__}: {error}"
+            autocontrol_logger.warning(
+                f"DAG node {node.id!r} failed: {result.error}",
+            )
+        else:
+            result.status = STATUS_SUCCEEDED
+            result.result = outcome
+        finally:
+            _finish_node_timing(result)
 
 
 def _finish_node_timing(result: NodeResult) -> None:
@@ -315,7 +322,6 @@ def _current_run_local_runner() -> NodeRunner:
     from je_auto_control.utils.executor.action_executor import _running_executor
     from je_auto_control.utils.script_vars.execution import bound_scope
     from je_auto_control.utils.action_journal.capture import bound_journal, current_journal
-    from je_auto_control.utils.logging.secret_scope import bound_secret_scope, current_secret_scope
     from je_auto_control.utils.run_history.context import bound_history, current_history
     runner = _running_executor()
     scope = runner.variables

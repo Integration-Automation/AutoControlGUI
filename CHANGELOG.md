@@ -13,6 +13,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- DAG node error diagnostics retain the owning run's resolved-secret mask after
+  the runner exits. Standalone DAG calls and custom local runners receive the
+  same protection; returned node-error data and run outcomes stay unchanged.
+
 - Interrupted background attempts now settle history as `error` and skip error
   screenshots. Hard exits retain their original control flow even if history
   completion fails. Cancellation bypasses non-strict action failure recording,
