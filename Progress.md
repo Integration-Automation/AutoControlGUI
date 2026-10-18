@@ -96,7 +96,7 @@ sys_platform != 'win32' or platform_machine != 'ARM64'
 | `cryptography>=50.0.0` | **沒有** | wheel 只出到 **46.0.3**，46.0.4 起上游就不再發 win_arm64。`>=50.0.0` 是**安全下限**（GHSA-537c-gmf6-5ccf 與 GHSA-g6cj-pr64-35w5），不能為了 arm64 降回去。 |
 | `pillow==12.3.0` | 有 | `pillow-12.3.0-cp3xx-win_arm64.whl` 一直都在。**曾經被寫成卡點，那是猜的，它從來不是。** |
 | `mss`／`defusedxml` | 有 | 純 Python。這三個加上 Pillow 就是 arm64 實際裝到的全部。 |
-| `PySide6==6.11.1` | 有 | `[gui]` extra 在 arm64 上裝得起來。 |
+| `PySide6==6.11.2` | 有 | `[gui]` extra 在 arm64 上裝得起來。 |
 | `aiortc` | **沒有** | 卡在傳遞相依 `google-crc32c`，與本專案的選擇無關；`av` 自己有 wheel。 |
 
 重驗指令（不需要 arm64 機器，也不需要 runner）：
