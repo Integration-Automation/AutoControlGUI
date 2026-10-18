@@ -70,8 +70,27 @@ def _build_specs() -> List[CommandSpec]:
     _add_ocr_specs(specs)
     _add_window_specs(specs)
     _add_flow_specs(specs)
+    _add_journal_specs(specs)
     _add_misc_specs(specs)
     return specs
+
+
+def _add_journal_specs(specs: List[CommandSpec]) -> None:
+    path = FieldSpec("path", FieldType.FILE_PATH)
+    run_id = FieldSpec("run_id", FieldType.STRING, optional=True)
+    specs.append(CommandSpec(
+        "AC_journal_capture", "Flow", "Capture Action Journal",
+        fields=(path, run_id, FieldSpec("device_id", FieldType.STRING, optional=True),
+                FieldSpec("session_id", FieldType.STRING, optional=True)),
+        body_keys=("body",),
+        description="Capture the nested body on its owning executor; preserve variables and strictness.",
+    ))
+    specs.append(CommandSpec(
+        "AC_journal_read", "Data", "Read Action Journal",
+        fields=(path, run_id, FieldSpec("limit", FieldType.INT, optional=True, default=100,
+                                       min_value=1, max_value=10000)),
+        description="Return sanitized lifecycle snapshots in append order; validate the whole file.",
+    ))
 
 
 def _add_mouse_specs(specs: List[CommandSpec]) -> None:

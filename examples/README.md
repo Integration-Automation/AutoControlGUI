@@ -44,6 +44,14 @@ glue between AutoControl's public API and your code.
 
 ## Running
 
+[`28_action_journal.py`](28_action_journal.py) captures variable-only actions
+through `AC_journal_capture` and prints sanitized snapshots with
+`inspect_journal`; it sends no desktop input:
+
+```bash
+python examples/28_action_journal.py run.jsonl --run-id example
+```
+
 Each script is standalone and uses only the package facade
 (`import je_auto_control as ac`). After `pip install -e .` from the
 repo root:

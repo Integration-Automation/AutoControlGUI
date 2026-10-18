@@ -12,8 +12,14 @@ links are experimental while B1 interface integration remains in progress.
 The documented names are available through `je_auto_control` and
 `je_auto_control.utils.action_journal`; `JournalLink` is also exported from
 `je_auto_control.utils.run_history`. CLI journal capture/inspection uses the same
-experimental schema-v1 snapshots. These additions do not change the lifecycle
+experimental schema-v1 snapshots. `inspect_journal` is the sanitized bounded
+reader shared by CLI and `AC_journal_read`; `AC_journal_capture` retains the
+calling executor's scope, while `execute_action_with_journal` starts a fresh
+variable scope. These additions do not change the lifecycle
 of existing executor or history APIs.
+Explicit capture scopes reject identifiers and destinations containing values
+known to the enclosing run's resolved-secret mask before linking history or
+running actions.
 
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.

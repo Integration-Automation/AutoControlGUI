@@ -13,6 +13,7 @@ from je_auto_control.utils.action_journal.events import ActionEvent, ActionJourn
 from je_auto_control.utils.action_journal.redaction import sanitize_event
 from je_auto_control.utils.action_journal.store import ActionJournal
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import scrub_secret_text
 from je_auto_control.utils.path_guard.path_guard import validate_path
 from je_auto_control.utils.script_vars.execution import execution_scope
 from je_auto_control.utils.run_history.context import current_history
@@ -69,10 +70,15 @@ def journal_scope(journal: ActionJournal, *, run_id: Optional[str] = None,
 
     Worker helpers carry the binding explicitly. A new scope starts a new root;
     nested action bodies share the current binding until their call returns.
+    Identifiers and destinations containing secrets known to the enclosing run
+    are refused before history linking, file creation or body execution.
     """
     identity = uuid4().hex if run_id is None else run_id
     if not isinstance(identity, str) or not identity:
         raise ActionJournalError("journal run ID must be a non-empty string")
+    for value in (identity, device_id, session_id, str(journal.path)):
+        if isinstance(value, str) and scrub_secret_text(value) != value:
+            raise ActionJournalError("journal identifiers and destination cannot contain a resolved secret")
     binding = JournalBinding(journal, identity, device_id=device_id, session_id=session_id)
     history = current_history()
     if history is not None and not history.store.attach_journal(history.run_id, str(journal.path.resolve()), identity):

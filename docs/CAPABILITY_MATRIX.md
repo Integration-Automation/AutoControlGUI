@@ -8,6 +8,7 @@ without a compatibility window.
 |---|---|---:|---:|---:|---:|
 | Mouse, keyboard, screenshot | stable | CI | CI/Xvfb + xev | CI/sway + libeis | implementation |
 | JSON executor and variables | stable | CI | CI | CI | platform-neutral |
+| Structured action journals | experimental | controlled tests | controlled tests | platform-neutral | platform-neutral |
 | Image and anchor locators | beta | CI | CI | implementation | implementation |
 | Accessibility locator | beta | CI | CI/AT-SPI | CI/AT-SPI | CI (tree read) |
 | Window management | beta | CI | CI/openbox | unavailable | CI (listing) |
@@ -22,6 +23,11 @@ without a compatibility window.
 “Implementation” means code exists but the repository does not currently run a
 real OS runner for it. It must not be interpreted as a production guarantee.
 Hardware-backed results and known limitations should be attached to releases.
+
+Journal storage, executor capture, provenance links, facade/CLI entry points
+and Script Builder commands have controlled tests. The journal work does not
+claim native device acceptance. Dedicated browsing, manual history ownership
+and MCP journal tools remain pending B1 integration.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**

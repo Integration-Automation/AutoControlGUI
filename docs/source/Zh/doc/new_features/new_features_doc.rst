@@ -1375,7 +1375,8 @@ GUI: **Email Triggers** 分頁 — 註冊 IMAP 觸發、啟動 / 停止 watcher�
 
 B1 的儲存與明確擷取／查閱 API 已從 ``je_auto_control`` 匯出，也可透過
 ``je_auto_control.utils.action_journal`` 使用。CLI 擷取與有界快照查閱已接入；
-動作指令、MCP／GUI 與手動執行的 history 控制仍待接入。B1 整合期間，日誌與來源連結 API
+動作指令與 Script Builder 表單也已接入；MCP 工具、專用 GUI 查閱與手動執行的 history 控制
+仍待接入。B1 整合期間，日誌與來源連結 API
 仍屬實驗性介面。應用程式可明確寫入 schema-v1 快照::
 
    import time
@@ -1422,6 +1423,41 @@ B1 的儲存與明確擷取／查閱 API 已從 ``je_auto_control`` 匯出，也
 一般／嚴格失敗、取消與 ``dry_run`` 分別記錄；``ok`` 表示 dispatch 完成，業務結果需另外驗證。
 行程在動作中被結束時，保留已落盤的未完成起始紀錄。
 完成紀錄無法寫入時會保留原本的取消／錯誤，起始紀錄維持未完成。
+
+
+動作指令與 Script Builder
+-------------------------
+
+``AC_journal_capture`` 要求具名參數（JSON 物件），在目前的 executor 上執行巢狀
+``body``；拒絕位置參數形式的 body，避免過早對巢狀資料插值兩次。它保留呼叫端的變數、
+嚴格模式與 loop／取消訊號。body 會接受結構驗證與 lint，並在各步驟執行時才插值。
+新擷取會建立新的 journal 根，離開時恢復外層擷取；已有 history 擁有者時會自動連結來源::
+
+   ["AC_journal_capture", {
+       "path": "run.jsonl", "run_id": "example",
+       "body": [
+           ["AC_set_var", {"name": "message", "value": "hello"}],
+           ["AC_get_var", {"name": "message"}]
+       ]
+   }]
+
+可選的 ``device_id`` 與 ``session_id`` 標記當次擷取。
+識別碼與目的地不得包含外層執行已知的解析後秘密；擷取入口會在 history 連結、
+開檔及 body 執行前拒絕這類值。回傳摘要包含 ``run_id``、
+``journal_path``、原始 ``record`` 與 ``failed_actions``。此指令保留呼叫端的變數範圍；
+Python 的 ``execute_action_with_journal`` 便利函式則建立全新變數。
+外層 executor 的 dry-run 只會預演擷取指令，不執行 body、不開啟 journal；若要擷取每個
+預演步驟，請使用 Python／CLI 的執行層級擷取並指定 ``dry_run``。
+
+``AC_journal_read`` 接受 ``path``、可選的 ``run_id`` 與 ``limit``（預設 100，範圍
+1–10,000）。它與 CLI 共用公開的 ``inspect_journal``：驗證整份檔案，再按附加順序回傳
+有界的遮罩後生命週期快照清單。先篩選 run，再限制輸出筆數；不修改來源、不推定完成。
+這些操作入口沿用預設允許根目錄檢查；其他位置可透過 ``AUTOCONTROL_ALLOWED_PATH_ROOTS``
+加入。兩個指令在 RBAC 下都要求 ``drive_input``；私人日誌查閱不屬於螢幕觀察權限。
+
+在 Script Builder 的 Flow 類別加入 **Capture Action Journal**，可編輯來源標記與巢狀
+body；Data 類別的 **Read Action Journal** 可編輯路徑、run 篩選與輸出上限。
+``examples/28_action_journal.py`` 示範只操作變數的擷取與查閱，不送出桌面輸入。
 
 
 執行歷史的日誌來源連結

@@ -1160,7 +1160,7 @@ from je_auto_control.utils.run_history.history_store import (
 # Structured action provenance (headless, explicit capture only)
 from je_auto_control.utils.action_journal import (
     ActionEvent, ActionJournal, ActionJournalError, JournalBinding, JournalRunResult,
-    execute_action_with_journal, journal_scope, read_events,
+    execute_action_with_journal, inspect_journal, journal_scope, read_events,
 )
 # Triggers (headless)
 from je_auto_control.utils.triggers.trigger_engine import (
@@ -1813,7 +1813,7 @@ __all__ = [
     # Run history
     "HistoryStore", "JournalLink", "RunRecord", "default_history_store",
     "ActionEvent", "ActionJournal", "ActionJournalError", "JournalBinding", "JournalRunResult",
-    "execute_action_with_journal", "journal_scope", "read_events",
+    "execute_action_with_journal", "inspect_journal", "journal_scope", "read_events",
     # Accessibility
     "AccessibilityElement", "AccessibilityNotAvailableError",
     "accessibility_status",

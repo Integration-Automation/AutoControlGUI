@@ -107,7 +107,7 @@ class ActionLinter:
         if isinstance(params, list):
             return []  # positional arguments, as the executor calls event(*args)
         return [LintIssue(i.index, i.severity, i.code, trail + i.message)
-                for i in self._check_required(idx, name, params)]
+                for i in self._check_required(idx, name, params)] + self._lint_bodies(idx, name, params, trail)
 
     @staticmethod
     def _shape_issue(item: Any) -> Optional[tuple]:

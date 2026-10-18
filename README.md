@@ -18,7 +18,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 779 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 781 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -233,7 +233,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 779 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 781 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -258,7 +258,7 @@ per-module map is in **[architecture_explore.md](architecture_explore.md)**.
 
 ---
 
-Experimental structured journal capture is exported from `je_auto_control` (also available in `utils.action_journal`): `journal_scope` captures existing executor calls, and `execute_action_with_journal` isolates one run. Local loop/parallel/DAG steps retain parent IDs; failures, cancellation and dry-runs are distinct. Existing history owners automatically link explicit captures, including captures opened by local parallel/DAG workers; `HistoryStore.journals_for_run` returns the non-owning links. Clearing/pruning history leaves journal files intact. The CLI supports `run script.json --journal run.jsonl [--journal-run-id ID]` and `journal run.jsonl [--run-id ID] [--limit 100]`. Journal reads show sanitized lifecycle snapshots in append order; output defaults to 100 snapshots (maximum 10,000). Command, MCP/GUI and manual-run history controls remain pending integration.
+Experimental structured journal capture is exported from `je_auto_control` (also available in `utils.action_journal`): `journal_scope` captures existing executor calls, and `execute_action_with_journal` isolates one run. Local loop/parallel/DAG steps retain parent IDs; failures, cancellation and dry-runs are distinct. Existing history owners automatically link explicit captures, including captures opened by local parallel/DAG workers; `HistoryStore.journals_for_run` returns the non-owning links. Clearing/pruning history leaves journal files intact. The CLI supports `run script.json --journal run.jsonl [--journal-run-id ID]` and `journal run.jsonl [--run-id ID] [--limit 100]`. Journal reads show sanitized lifecycle snapshots in append order; output defaults to 100 snapshots (maximum 10,000). `AC_journal_capture` accepts named parameters and runs a nested `body` on the owning executor without replacing its variables; `AC_journal_read` shares sanitized, bounded inspection with the CLI and public `inspect_journal`. Both commands are editable in Script Builder. Capture rejects identifiers or destinations containing secrets known to the run before history linking, file creation or action effects. MCP tools, dedicated GUI browsing and manual-run history controls remain pending integration.
 
 Values resolved from `${secrets.NAME}` are masked in application diagnostics during executor runs, including nested actions and local parallel/DAG workers. CLI/REST/MCP requests and scheduled, trigger, hotkey and email runs retain the mask through error handling and audit/history writes; report records capture redacted snapshots. DAG calls retain the owner mask through complete node diagnostics, including standalone calls and custom local runners. Watchdog, observer and callback-executor calls also retain it through final diagnostics; independent rules have separate masks. CLI stderr is masked, while API outcomes, raised exceptions and CLI result payloads retain their original values. Masks are discarded when the owning request or run exits. Interrupted history runs are recorded as `error`, while journal steps remain `cancelled`; no error screenshot is taken. Cancellation propagates through non-strict execution, recovery/retry, callbacks and local workers. Hard exits retain their original signal even if history completion fails.
 
@@ -451,7 +451,7 @@ ignore synthetic input, and fall back silently when the driver is absent.
 
 | Resource | What's in it |
 |---|---|
-| [`examples/`](examples/) | 27 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators. |
+| [`examples/`](examples/) | 28 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators, action journals. |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | Full API reference, English and 中文. |
 | [architecture_explore.md](architecture_explore.md) | Every module's responsibility, layer by layer. |
 | [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md) | Capability × platform matrix. |

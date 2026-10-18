@@ -132,6 +132,15 @@ selection. Both new CLI paths use the existing allowed-root guard and create no
 history row or database implicitly. Capture starts are durable before effects;
 failed actions, handled loop signals, cancellation and dry-runs receive distinct
 completion statuses.
+`AC_journal_capture` uses `action_journal/commands.py` to validate its nested
+body and run it on the current executor, retaining variables, strictness and
+loop/cancellation signals. The command opens a new capture root and restores any
+outer journal. `inspection.py::inspect_journal` shares default-root confinement,
+full-file validation and bounded sanitized snapshots across the facade, CLI and
+`AC_journal_read`. Both commands have Script Builder forms and require
+`drive_input` under RBAC. Linting walks body-bearing ordinary commands as well
+as blocks. A plain outer dry-run previews the capture command without opening
+a journal; Python/CLI run-level capture can record individual dry-run steps.
 `utils/run_history/context.py` binds an existing history row to execution.
 Scheduler/trigger/hotkey/webhook/email owners bind their own row; local parallel
 and DAG workers carry it explicitly. `journal_scope` attaches an idempotent

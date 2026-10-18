@@ -34,6 +34,8 @@ from je_auto_control.utils.executor.flow_control import (
 )
 from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
 from je_auto_control.utils.action_journal.capture import action_step
+from je_auto_control.utils.action_journal.commands import _capture_body
+from je_auto_control.utils.action_journal.inspection import inspect_journal
 from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.run_history.run_outcome import raise_if_run_interrupted
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
@@ -7493,6 +7495,8 @@ class Executor:
             "AC_check_overflow": _check_overflow,
             "AC_check_catalog": _check_catalog,
             "AC_run_resumable": _run_resumable,
+            "AC_journal_capture": _capture_body,
+            "AC_journal_read": inspect_journal,
             "AC_checkpoint_status": _checkpoint_status,
             "AC_checkpoint_clear": _checkpoint_clear,
             "AC_mark_screen": _mark_screen,

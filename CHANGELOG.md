@@ -13,6 +13,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- `AC_journal_capture` captures a nested body while retaining its owning
+  executor, variables, strictness and control signals; structural validation
+  and linting include the body. `AC_journal_read` and public `inspect_journal`
+  share bounded, sanitized inspection with the CLI. Both commands have Script
+  Builder forms and require `drive_input` under RBAC, including private reads.
+  Capture rejects identifiers and destinations containing secrets already known
+  to the owning run before history linking, file creation or action effects.
+
 - Structured journal types and capture/read helpers, plus history `JournalLink`,
   are exported from `je_auto_control`. CLI `run --journal PATH` captures actions
   with an optional `--journal-run-id`; `journal PATH` supports run filtering and

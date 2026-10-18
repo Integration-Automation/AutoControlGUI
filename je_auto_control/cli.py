@@ -111,12 +111,8 @@ def _run_capture(args: argparse.Namespace) -> AbstractContextManager[object]:
 
 def cmd_journal(args: argparse.Namespace) -> int:
     """Read sanitized snapshots in append order without changing the journal."""
-    from pathlib import Path
-    from je_auto_control.utils.action_journal import read_events
-    from je_auto_control.utils.action_journal.redaction import sanitize_event
-    from je_auto_control.utils.path_guard.path_guard import validate_path
-    events = read_events(validate_path(Path(args.path)), run_id=args.run_id)
-    payload = [sanitize_event(event) for event in events[:args.limit]]
+    from je_auto_control.utils.action_journal import inspect_journal
+    payload = inspect_journal(args.path, run_id=args.run_id, limit=args.limit)
     json.dump(payload, sys.stdout, indent=2, ensure_ascii=False, allow_nan=False)
     sys.stdout.write("\n")
     return 0

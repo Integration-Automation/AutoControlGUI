@@ -1479,8 +1479,8 @@ Structured action journals (partial integration)
 
 B1 exports storage and explicit capture/read APIs from ``je_auto_control`` and
 ``je_auto_control.utils.action_journal``. CLI capture and bounded snapshot reads
-are available; command, MCP/GUI and manual-run history controls remain pending
-integration. The journal/provenance APIs remain experimental during B1.
+are available, along with action commands and Script Builder forms. MCP tools,
+dedicated GUI browsing and manual-run history controls remain pending integration. The journal/provenance APIs remain experimental during B1.
 Applications can explicitly write schema-v1 snapshots::
 
    import time
@@ -1535,6 +1535,50 @@ Soft/strict failures, cancellation and ``dry_run`` stay distinct. ``ok`` reports
 dispatch completion; domain verification is a separate check. A process killed
 mid-command retains its durable incomplete start. Completion-storage failure
 preserves an original cancellation/error and leaves the start incomplete.
+
+
+Action commands and Script Builder
+----------------------------------
+
+``AC_journal_capture`` requires named parameters (a JSON object) and executes
+its nested ``body`` on the current executor. Positional bodies are rejected
+to avoid eagerly interpolating nested data twice.
+It keeps the caller's variables, strictness and loop/cancellation signals.
+The body is structurally validated and linted, and is interpolated only when
+its own steps run. A new capture starts a new journal root and restores any
+outer capture on exit; an existing history owner receives the provenance link::
+
+   ["AC_journal_capture", {
+       "path": "run.jsonl", "run_id": "example",
+       "body": [
+           ["AC_set_var", {"name": "message", "value": "hello"}],
+           ["AC_get_var", {"name": "message"}]
+       ]
+   }]
+
+Optional ``device_id`` and ``session_id`` label the capture. Identifiers and
+the destination must not contain values known to the enclosing
+run's resolved-secret mask; capture rejects them before history linking, file
+creation or body execution. The summary has ``run_id``, ``journal_path``, the original ``record`` and
+``failed_actions``. This command retains the caller's scope; the Python
+``execute_action_with_journal`` convenience function starts fresh variables.
+An outer executor dry-run previews the capture command without running its
+body or opening a journal. Use Python/CLI run-level capture with ``dry_run``
+to capture individual previewed steps.
+
+``AC_journal_read`` accepts ``path``, optional ``run_id`` and ``limit`` (default
+100, range 1–10,000). It uses public ``inspect_journal`` to validate the whole
+file and then return a bounded list of sanitized lifecycle snapshots in append
+order. Filtering precedes the output limit; reads preserve the source and never
+infer completion. The CLI uses the same reader. These operation paths use the
+default allowed-root guard; configure ``AUTOCONTROL_ALLOWED_PATH_ROOTS`` for
+additional destinations. Both commands require ``drive_input`` under RBAC;
+private journal reads are not screen observation.
+
+In Script Builder, add **Capture Action Journal** (Flow) to edit metadata and
+nested body steps, or **Read Action Journal** (Data) to edit path, run filter
+and limit. ``examples/28_action_journal.py`` demonstrates variable-only capture
+and inspection without desktop input.
 
 
 History provenance links
