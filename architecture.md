@@ -153,6 +153,13 @@ nested journal operations; general nested action argument policies remain pendin
 `MCPToolResult` keeps failure metadata outside its JSON dictionary fields. The
 server sets `isError` and audit status from this explicit type while preserving
 structured payloads; ordinary dictionaries cannot set protocol flags.
+`gui/journal_browser.py` embeds read-only snapshot inspection in Run History.
+Its worker copies the submission context, refreshes deferred authority before
+file I/O and uses the shared inspector. Counts are queued to GUI slots;
+request generations reject old results after a target change. Closing the view
+or destroying its owner requests cooperative cancellation. The existing daemon
+worker relay drops callbacks after owner destruction. Selecting history links
+loads metadata only; neither inspection nor link selection creates a history row.
 `utils/run_history/context.py` binds an existing history row to execution.
 Scheduler/trigger/hotkey/webhook/email owners bind their own row; local parallel
 and DAG workers carry it explicitly. `journal_scope` attaches an idempotent

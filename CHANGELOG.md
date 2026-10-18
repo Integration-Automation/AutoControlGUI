@@ -13,6 +13,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Run History includes read-only journal browsing from an existing provenance
+  link or an explicit file. Run filtering and bounded sanitized lifecycle
+  snapshots share the headless inspector. Reads run off the GUI thread, report
+  progress and support cooperative cancellation; closing the view requests
+  cancellation and stale results cannot overwrite a changed selection.
+  Deferred readers refresh stored owners before I/O and retain enclosing path
+  restrictions. Operations live in Actions and labels support all four languages.
+
 - MCP `ac_journal_capture` and `ac_journal_read` support structured journal
   results, progress and cooperative cancellation. Recorded action failures set
   `isError` while retaining the run metadata. `MCPToolResult` lets handlers mark

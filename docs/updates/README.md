@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261019-05 | 2026-10-19 | Browse journal snapshots and history links in Run History | #done #journal #gui | [2026-10](2026-10.md) |
 | U-20261019-04 | 2026-10-19 | Add observed journal runs and dedicated MCP operations | #done #journal #mcp | [2026-10](2026-10.md) |
 | U-20261019-03 | 2026-10-19 | Add scoped journal commands and shared safe inspection | #done #journal #executor | [2026-10](2026-10.md) |
 | U-20261019-02 | 2026-10-19 | Expose journal capture and bounded CLI inspection | #done #journal #cli | [2026-10](2026-10.md) |
@@ -386,7 +387,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 50 |
+| [2026-10.md](2026-10.md) | 2026-10 | 51 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

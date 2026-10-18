@@ -1480,8 +1480,8 @@ Structured action journals (partial integration)
 B1 exports storage and explicit capture/read APIs from ``je_auto_control`` and
 ``je_auto_control.utils.action_journal``. CLI capture and bounded snapshot reads
 are available, along with action commands, Script Builder forms and dedicated
-MCP capture/read tools. Dedicated GUI browsing and manual-run history controls
-remain pending integration. The journal/provenance APIs remain experimental during B1.
+MCP capture/read tools and read-only inspection in Run History. Manual-run
+history controls remain pending integration. The journal/provenance APIs remain experimental during B1.
 Applications can explicitly write schema-v1 snapshots::
 
    import time
@@ -1638,6 +1638,38 @@ policy integration remains tracked in ``Progress.md``. Cancellation is
 cooperative at the described boundaries; running native I/O is not forcibly
 interrupted. ``examples/29_mcp_journal.py`` demonstrates the JSON-RPC workflow
 in process without desktop input or an external service.
+
+
+Run History journal browser
+-----------------------------
+
+Open **Run History**, select a history row and use **Actions > Use Journals
+from Selected Run**. The linked-journal selector fills the file and run ID;
+it does not open the file. Alternatively use **Actions > Choose Journal**
+for any explicit JSONL source. A blank run ID selects all runs. Set the
+snapshot limit (default 100, range 1–10,000), then **Actions > Read Journal**.
+The whole file is validated before bounded sanitized snapshots appear.
+
+The table retains separate start/completion snapshots and shows sequence,
+status, command, run/step/parent IDs. Select a snapshot to see its full JSON,
+including device/session and artifact provenance. Reads do not execute journal
+contents, create history rows or modify the source file.
+
+Parsing runs off the GUI thread through the existing worker relay. Progress
+counts validated snapshots, coalesced every 100 records. **Actions > Cancel
+Journal Read** and closing the history view request cancellation between
+records; an in-progress decode is not forcibly interrupted. A cancelled or
+failed read leaves no partial result visible. Choosing another link invalidates
+and cancels the older request, so its queued result cannot replace the new
+selection. Destroyed views receive no late callbacks.
+
+File selection, provenance lookup and inspection require ``drive_input`` when
+an RBAC context is active. Before background I/O, stored owners are refreshed
+so removal or demotion is honored. Workers retain the submitted context's
+journal path restrictions as well as the default root guard. A rejected or
+corrupt source is shown as an error, never as an empty successful read.
+The controls, headers and state labels support all four GUI languages.
+Manual execution's history ownership remains tracked in ``Progress.md``.
 
 
 History provenance links

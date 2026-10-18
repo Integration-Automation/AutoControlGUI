@@ -26,7 +26,8 @@ Hardware-backed results and known limitations should be attached to releases.
 
 Journal storage, executor capture, provenance links, facade/CLI entry points
 and Script Builder commands, observed runs and MCP journal tools have controlled tests. The journal work does not
-claim native device acceptance. Dedicated browsing and manual history ownership remain pending B1 integration.
+claim native device acceptance. Run History journal browsing also has controlled offscreen tests.
+Manual history ownership remains pending B1 integration.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**

@@ -69,3 +69,10 @@ python examples/01_screenshot_and_click.py
 
 A few scripts have optional dependencies — the script comments
 mention which `pip install` brings them in.
+
+### Inspect journals in the GUI
+
+Open Run History and use **Actions → Choose Journal** to select the JSONL file
+produced by examples 28/29, then **Read Journal**. Existing history rows can
+supply their provenance links through **Use Journals from Selected Run**.
+Set a run ID and output limit, select snapshots for details, or cancel the read.

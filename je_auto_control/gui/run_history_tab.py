@@ -1,10 +1,10 @@
-"""Run History tab: browse past scheduler / trigger / hotkey fires."""
+"""Run History tab: browse recorded runs, artifacts and explicit journal links."""
 import datetime as _dt
 from pathlib import Path
 from typing import List, Optional
 
 from PySide6.QtCore import QTimer, Qt, QUrl
-from PySide6.QtGui import QDesktopServices, QPixmap
+from PySide6.QtGui import QCloseEvent, QDesktopServices, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QComboBox, QFrame, QHBoxLayout, QHeaderView, QLabel,
     QMessageBox, QSplitter, QTableWidget, QTableWidgetItem,
@@ -16,6 +16,9 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.gui.run_history_timeline import RunHistoryTimeline
+from je_auto_control.gui.journal_browser import JournalBrowser
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.rbac.policy import authorize_command
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_HOTKEY, SOURCE_MANUAL, SOURCE_REST, SOURCE_SCHEDULER,
     SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, STATUS_RUNNING, RunRecord,
@@ -59,7 +62,7 @@ def _format_duration(seconds: Optional[float]) -> str:
 
 
 class RunHistoryTab(TranslatableMixin, QWidget):
-    """Timeline view of every fired scheduler job / trigger / hotkey."""
+    """Timeline and read-only journal inspection for recorded execution owners."""
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -92,6 +95,7 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         self._timer.setInterval(_REFRESH_INTERVAL_MS)
         self._timer.timeout.connect(self._refresh)
         self._auto_refresh = True
+        self._journal = JournalBrowser(self)
         self._build_layout()
         self._refresh()
         self._timer.start()
@@ -101,6 +105,13 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         self._apply_table_headers()
         self._repopulate_filter_labels()
         self._refresh()
+        self._journal.retranslate()
+    # pylint: disable-next=invalid-name  # reason: Qt override
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802  # reason: Qt override
+        """Stop journal reads immediately when the history page closes."""
+        self._journal.cancel()
+        self._timer.stop()
+        super().closeEvent(event)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -153,7 +164,12 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         splitter.addWidget(preview)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 1)
-        root.addWidget(splitter, stretch=1)
+        sections = QSplitter(Qt.Vertical)
+        sections.addWidget(splitter)
+        sections.addWidget(self._journal)
+        sections.setStretchFactor(0, 1)
+        sections.setStretchFactor(1, 1)
+        root.addWidget(sections, stretch=1)
 
         self._table.cellDoubleClicked.connect(self._on_cell_double_clicked)
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
@@ -165,7 +181,18 @@ class RunHistoryTab(TranslatableMixin, QWidget):
             ("rh_refresh", self._refresh),
             ("rh_clear", self._on_clear),
             ("rh_open_artifact", self._open_selected_artifact),
-        ]
+            ("journal_selected_run", self._selected_journals),
+        ] + self._journal.menu_actions()
+
+    def _selected_journals(self) -> None:
+        try:
+            authorize_command("AC_journal_read")
+            record = self._selected_record()
+            links = default_history_store.journals_for_run(record.id) if record is not None else []
+        except (AutoControlException, OSError, ValueError) as error:
+            self._journal.report_error(str(error))
+            return
+        self._journal.set_links(links)
 
     def _on_clear(self) -> None:
         reply = QMessageBox.question(

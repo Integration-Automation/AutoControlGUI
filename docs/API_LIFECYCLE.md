@@ -25,7 +25,8 @@ expanding the existing seven-parameter convenience signature. Nested scopes
 inherit observers and intersect policies; callbacks may run on joined worker
 threads. `MCPToolResult` is an experimental JSON-compatible object result with
 separate controlled-failure metadata. The MCP journal tools remain experimental
-alongside the other B1 journal APIs.
+alongside the other B1 journal APIs. Run History inspection uses these same
+experimental snapshots; manual-run history ownership remains pending.
 
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.
