@@ -160,6 +160,14 @@ request generations reject old results after a target change. Closing the view
 or destroying its owner requests cooperative cancellation. The existing daemon
 worker relay drops callbacks after owner destruction. Selecting history links
 loads metadata only; neither inspection nor link selection creates a history row.
+`run_history/manual.py` creates explicitly requested manual owners around an
+existing execution. It binds both an ambient journal and captures opened later,
+retains caller variables/results, counts only the current counter delta and
+keeps normal loop signals distinct from failures. Original signals survive a
+failed finish; labels are scrubbed before insertion. The named-body command
+adapter stays on the owning executor. CLI opt-in and the shared GUI
+`ManualRunControls` wrap existing run paths; only a CLI-owned custom store is
+closed by the CLI. Default and journal-only paths open no history database.
 `utils/run_history/context.py` binds an existing history row to execution.
 Scheduler/trigger/hotkey/webhook/email owners bind their own row; local parallel
 and DAG workers carry it explicitly. `journal_scope` attaches an idempotent

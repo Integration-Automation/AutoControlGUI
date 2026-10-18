@@ -164,9 +164,9 @@ def test_workers_keep_the_parent_history_when_they_start_their_own_journal(store
     def capture(index):
         with journal_scope(ActionJournal(tmp_path / f"{index}.jsonl"), run_id=f"child-{index}"):
             executor.execute_action([["AC_history_inner"]])
-    monkeypatch.setitem(executor.event_dict, "AC_history_capture", capture)
+    monkeypatch.setitem(executor.event_dict, "AC_history_link_capture_probe", capture)
     monkeypatch.setitem(executor.event_dict, "AC_history_inner", lambda: None)
-    bodies = [[["AC_history_capture", {"index": index}]] for index in range(2)]
+    bodies = [[["AC_history_link_capture_probe", {"index": index}]] for index in range(2)]
     script = ([["AC_parallel", {"branches": bodies}]] if kind == "parallel" else
               [["AC_run_dag", {"definition": {"nodes": [
                   {"id": str(index), "actions": body} for index, body in enumerate(bodies)]}}]])
@@ -187,10 +187,10 @@ def test_background_run_owners_link_explicit_journals_to_their_existing_row(kind
     def capture():
         with journal_scope(ActionJournal(path), run_id="background"):
             executor.execute_action([["AC_history_inner"]])
-    monkeypatch.setitem(executor.event_dict, "AC_history_capture", capture)
+    monkeypatch.setitem(executor.event_dict, "AC_history_link_capture_probe", capture)
     monkeypatch.setitem(executor.event_dict, "AC_history_inner", lambda: None)
     script = tmp_path / "actions.json"
-    script.write_text(json.dumps([["AC_history_capture"]]), encoding="utf-8")
+    script.write_text(json.dumps([["AC_history_link_capture_probe"]]), encoding="utf-8")
     if kind == "scheduler":
         owner = scheduler.Scheduler()
         job = owner.add_job(str(script), 60)

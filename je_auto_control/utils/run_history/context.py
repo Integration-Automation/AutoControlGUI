@@ -4,10 +4,9 @@ from __future__ import annotations
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Iterator, Optional
+from typing import Iterator, Optional
 
-if TYPE_CHECKING:
-    from je_auto_control.utils.run_history.history_store import HistoryStore
+from je_auto_control.utils.run_history.history_store import HistoryStore
 
 
 @dataclass(frozen=True)

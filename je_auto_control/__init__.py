@@ -1157,6 +1157,7 @@ from je_auto_control.utils.observability import (
 from je_auto_control.utils.run_history.history_store import (
     HistoryStore, JournalLink, RunRecord, default_history_store,
 )
+from je_auto_control.utils.run_history import HistoryBinding, manual_history_scope
 # Structured action provenance (headless, explicit capture only)
 from je_auto_control.utils.action_journal import (
     ActionEvent, ActionJournal, ActionJournalError, JournalBinding, JournalRunOptions, JournalRunResult,
@@ -1812,6 +1813,7 @@ __all__ = [
     "Tracer", "default_tracer", "traced",
     # Run history
     "HistoryStore", "JournalLink", "RunRecord", "default_history_store",
+    "HistoryBinding", "manual_history_scope",
     "ActionEvent", "ActionJournal", "ActionJournalError", "JournalBinding", "JournalRunOptions", "JournalRunResult",
     "execute_action_with_journal", "execute_journal_run", "inspect_journal", "journal_scope", "read_events",
     # Accessibility

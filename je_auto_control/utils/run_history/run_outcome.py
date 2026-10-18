@@ -50,12 +50,20 @@ class RunOutcome:
         self.hard_abort = not isinstance(error, Exception)
         self.cancelled = is_run_interruption(error)
         self.error_text = (f"{type(error).__name__}: run interrupted" if self.hard_abort or self.cancelled
-                           else repr(error))
+                           else _ordinary_error_text(error))
 
     @property
     def should_capture(self) -> bool:
         """Ordinary failures may capture; cancellation and hard exits may not."""
         return self.status == STATUS_ERROR and not self.hard_abort and not self.cancelled
+
+
+def _ordinary_error_text(error: BaseException) -> str:
+    """Keep a broken exception formatter from replacing the original run failure."""
+    try:
+        return repr(error)
+    except Exception:  # pylint: disable=broad-exception-caught  # reason: preserve the original failure
+        return f"{type(error).__name__}: exception detail unavailable"
 
 
 def finish_history_run(store: HistoryStore, run_id: int, outcome: RunOutcome,

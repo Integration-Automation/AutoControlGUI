@@ -18,7 +18,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 781 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 782 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -233,7 +233,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 781 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 782 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -247,7 +247,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | USB enumeration & passthrough | `list_usb_devices`, `enable_usb_passthrough` | `AC_usb_*` (16 commands) | USB Devices, USB Share |
 | Secrets vault | `default_secret_manager` | `AC_secret_set` + `${secrets.NAME}` | Secrets |
 | Reports (HTML / JSON / XML) | `generate_html_report` | `AC_generate_html_report` | Report |
-| Run history | `HistoryStore` | `AC_history_list` | Run History |
+| Run history | `HistoryStore`, `manual_history_scope` | `AC_history_list`, `AC_history_capture` | Run History, Script Executor, Script Builder |
 | Action journals | `execute_journal_run`, `inspect_journal` | `AC_journal_capture`, `AC_journal_read` | Run History, Script Builder |
 | Metrics & tracing | `default_metric_registry`, `render_metrics_text` | — | — |
 | Diagnostics | `run_diagnostics` | `AC_diagnose` | Diagnostics |
@@ -259,7 +259,9 @@ per-module map is in **[architecture_explore.md](architecture_explore.md)**.
 
 ---
 
-Experimental structured journal capture is exported from `je_auto_control` (also available in `utils.action_journal`): `journal_scope` captures existing executor calls, and `execute_action_with_journal` isolates one run. Local loop/parallel/DAG steps retain parent IDs; failures, cancellation and dry-runs are distinct. Existing history owners automatically link explicit captures, including captures opened by local parallel/DAG workers; `HistoryStore.journals_for_run` returns the non-owning links. Clearing/pruning history leaves journal files intact. The CLI supports `run script.json --journal run.jsonl [--journal-run-id ID]` and `journal run.jsonl [--run-id ID] [--limit 100]`. Journal reads show sanitized lifecycle snapshots in append order; output defaults to 100 snapshots (maximum 10,000). `AC_journal_capture` accepts named parameters and runs a nested `body` on the owning executor without replacing its variables; `AC_journal_read` shares sanitized, bounded inspection with the CLI and public `inspect_journal`. Both commands are editable in Script Builder. Capture rejects identifiers or destinations containing secrets known to the run before history linking, file creation or action effects. MCP `ac_journal_capture` and `ac_journal_read` provide structured results, progress and cooperative cancellation. Captured journal roots and observers survive nested captures and local workers; reads can cancel between validated records. `JournalRunOptions` and `execute_journal_run` expose the same controls in Python. Manual-run history controls remain pending integration.
+Experimental structured journal capture is exported from `je_auto_control` (also available in `utils.action_journal`): `journal_scope` captures existing executor calls, and `execute_action_with_journal` isolates one run. Local loop/parallel/DAG steps retain parent IDs; failures, cancellation and dry-runs are distinct. Existing history owners automatically link explicit captures, including captures opened by local parallel/DAG workers; `HistoryStore.journals_for_run` returns the non-owning links. Clearing/pruning history leaves journal files intact. The CLI supports `run script.json --journal run.jsonl [--journal-run-id ID]` and `journal run.jsonl [--run-id ID] [--limit 100]`. Journal reads show sanitized lifecycle snapshots in append order; output defaults to 100 snapshots (maximum 10,000). `AC_journal_capture` accepts named parameters and runs a nested `body` on the owning executor without replacing its variables; `AC_journal_read` shares sanitized, bounded inspection with the CLI and public `inspect_journal`. Both commands are editable in Script Builder. Capture rejects identifiers or destinations containing secrets known to the run before history linking, file creation or action effects. MCP `ac_journal_capture` and `ac_journal_read` provide structured results, progress and cooperative cancellation. Captured journal roots and observers survive nested captures and local workers; reads can cancel between validated records. `JournalRunOptions` and `execute_journal_run` expose the same controls in Python.
+
+Manual runs can opt into history with `manual_history_scope`, `AC_history_capture`, CLI `run --history [--history-db PATH]`, or **Record in Run History** in Script Executor / Script Builder. An optional GUI journal path also works independently of history. GUI/CLI result JSON and existing variable scopes are preserved; the command returns `history_id`, `record` and `failed_actions`. Existing and nested captures link to the new manual row. CLI previews use the `cli.preview` source label; ordinary runs use `cli.run`.
 
 Run History includes a read-only journal browser. Use **Actions → Use Journals from Selected Run** to select a provenance link, or **Choose Journal** for an external file. Set a run ID and snapshot limit, then **Read Journal**; start/completion snapshots stay separate and their full sanitized data appears on selection. **Cancel Journal Read** and closing the view request cancellation between records. File parsing runs in a background worker; selecting a link opens no file.
 
@@ -454,7 +456,7 @@ ignore synthetic input, and fall back silently when the driver is absent.
 
 | Resource | What's in it |
 |---|---|
-| [`examples/`](examples/) | 29 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators, action journals. |
+| [`examples/`](examples/) | 30 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators, action journals. |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | Full API reference, English and 中文. |
 | [architecture_explore.md](architecture_explore.md) | Every module's responsibility, layer by layer. |
 | [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md) | Capability × platform matrix. |

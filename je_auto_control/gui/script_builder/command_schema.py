@@ -76,6 +76,13 @@ def _build_specs() -> List[CommandSpec]:
 
 
 def _add_journal_specs(specs: List[CommandSpec]) -> None:
+    specs.append(CommandSpec(
+        "AC_history_capture", "Flow", "Record Manual Run History",
+        fields=(FieldSpec("source_id", FieldType.STRING, optional=True, default="script"),
+                FieldSpec("script_path", FieldType.STRING, optional=True, default="<actions>")),
+        body_keys=("body",),
+        description="Record the nested body without replacing its executor or variables; labels do not open files.",
+    ))
     path = FieldSpec("path", FieldType.FILE_PATH)
     run_id = FieldSpec("run_id", FieldType.STRING, optional=True)
     specs.append(CommandSpec(

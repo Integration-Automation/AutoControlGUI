@@ -1252,4 +1252,6 @@ japanese_word_dict = {
     "journal_col_run_id": "実行 ID",
     "journal_col_step_id": "ステップ ID",
     "journal_col_parent_id": "親ステップ ID",
+    "manual_history_record": "実行履歴に記録",
+    "manual_journal_optional": "ログファイル（省略可）",
 }

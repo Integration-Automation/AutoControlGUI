@@ -1474,14 +1474,14 @@ with ``${secrets.NAME}`` so passwords never appear in the JSON.
 GUI: **Email Triggers** tab — register IMAP triggers, start/stop the
 watcher, run a manual poll, inspect last error and fire counter.
 
-Structured action journals (partial integration)
+Structured action journals (experimental)
 ================================================
 
 B1 exports storage and explicit capture/read APIs from ``je_auto_control`` and
 ``je_auto_control.utils.action_journal``. CLI capture and bounded snapshot reads
 are available, along with action commands, Script Builder forms and dedicated
-MCP capture/read tools and read-only inspection in Run History. Manual-run
-history controls remain pending integration. The journal/provenance APIs remain experimental during B1.
+MCP capture/read tools, read-only inspection in Run History and explicit
+manual-run history controls. The journal/provenance APIs remain experimental during B1.
 Applications can explicitly write schema-v1 snapshots::
 
    import time
@@ -1669,7 +1669,66 @@ so removal or demotion is honored. Workers retain the submitted context's
 journal path restrictions as well as the default root guard. A rejected or
 corrupt source is shown as an error, never as an empty successful read.
 The controls, headers and state labels support all four GUI languages.
-Manual execution's history ownership remains tracked in ``Progress.md``.
+
+
+Explicit manual history
+-------------------------
+
+``manual_history_scope(store=None, source_id="manual", script_path="<manual>")``
+creates an explicitly requested manual row and yields a frozen ``HistoryBinding``
+with ``store`` and ``run_id``. Both names are exported from ``je_auto_control``.
+``source_id`` and ``script_path`` are non-empty metadata labels; they do not
+open or execute a script. Known resolved secrets are masked before insertion.
+The caller's executor, variables and result values are preserved. For example::
+
+   from je_auto_control import HistoryStore, manual_history_scope, execute_journal_run
+
+   store = HistoryStore("history.sqlite")
+   try:
+       with manual_history_scope(store=store, source_id="manual-example") as owner:
+           result = execute_journal_run(
+               [["AC_set_var", {"name": "message", "value": "hello"}]],
+               "events.jsonl",
+           )
+       links = store.journals_for_run(owner.run_id)
+   finally:
+       store.close()
+
+An ambient journal is linked when the manual scope starts. Captures opened
+later, including local parallel/DAG captures, retain that owner. Nested manual
+owners create separate rows and restore the previous owner when they leave.
+Clearing history does not delete journal files. Importing the API requires
+neither Qt nor SQLite; entering an opted-in history scope requires SQLite.
+
+The scope counts only new executor-recorded failures. Those settle the row as
+``error`` without replacing action records. Normal break/continue signals keep
+the counted outcome; cancellation and raised errors settle as ``error`` and
+propagate unchanged. Domain result flags still require caller inspection.
+A failed metadata finish cannot replace a pending original signal; its row
+may remain unfinished. Manual ownership does not request an error screenshot.
+
+CLI ``run SCRIPT --history`` uses the default store shown in Run History.
+``--history-db PATH`` requires ``--history`` and chooses a bounded custom path;
+the CLI closes its custom store. It does not switch the GUI's default store.
+Original stdout JSON, variables, dry-run dispatch and failure exit codes remain
+unchanged. History previews use source ID ``cli.preview``; ordinary runs use
+``cli.run``. Existing journal flags combine with history capture.
+
+Script Executor (file/editor/directory) and Script Builder offer **Record in
+Run History**, initially unchecked, and an optional journal path. The journal
+can be used independently of history. A directory invocation has one batch
+history owner. These controls wrap the existing execution paths and do not
+replace their variable scopes or result display. View the default-store rows
+and their links in Run History after execution.
+
+``AC_history_capture`` accepts named ``body``, optional ``source_id`` and
+``script_path``. It keeps the owning executor, strictness and deferred body
+interpolation. Its JSON result contains ``history_id``, ``record`` and
+``failed_actions``. It is available in Script Builder and through the ordinary
+REST/MCP action-execution tools. Outer dry-run previews do not open a history
+row for the command. Recording requires ``drive_input`` under RBAC.
+``examples/30_manual_history.py`` supports validation without files and a
+variable-only run/preview with an explicit output directory.
 
 
 History provenance links

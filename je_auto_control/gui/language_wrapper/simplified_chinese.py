@@ -1231,4 +1231,6 @@ simplified_chinese_word_dict = {
     "journal_col_run_id": "执行 ID",
     "journal_col_step_id": "步骤 ID",
     "journal_col_parent_id": "父步骤 ID",
+    "manual_history_record": "记录到运行历史",
+    "manual_journal_optional": "日志文件（可选）",
 }

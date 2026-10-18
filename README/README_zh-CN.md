@@ -19,7 +19,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 781 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 782 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -221,7 +221,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 781 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 782 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -235,7 +235,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | USB 枚举与直通 | `list_usb_devices`、`enable_usb_passthrough` | `AC_usb_*`（16 个命令） | USB Devices、USB Share |
 | 密钥保险库 | `default_secret_manager` | `AC_secret_set` + `${secrets.NAME}` | Secrets |
 | 报表（HTML／JSON／XML） | `generate_html_report` | `AC_generate_html_report` | Report |
-| 运行历史 | `HistoryStore` | `AC_history_list` | Run History |
+| 运行历史 | `HistoryStore`、`manual_history_scope` | `AC_history_list`、`AC_history_capture` | Run History、Script Executor、Script Builder |
 | 动作日志 | `execute_journal_run`、`inspect_journal` | `AC_journal_capture`、`AC_journal_read` | Run History、Script Builder |
 | 指标与追踪 | `default_metric_registry`、`render_metrics_text` | — | — |
 | 系统诊断 | `run_diagnostics` | `AC_diagnose` | Diagnostics |
@@ -246,7 +246,9 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 ---
 
-实验性的结构化日志已从 `je_auto_control` 导出（也可通过 `utils.action_journal` 使用）：`journal_scope` 记录现有 executor 调用，`execute_action_with_journal` 隔离一次执行。本机 loop／parallel／DAG 步骤保留 parent ID，并区分失败、取消与 dry-run。现有 history 拥有者会自动链接显式捕获，包括本机 parallel／DAG worker 开启的 journal；`HistoryStore.journals_for_run` 可查询非拥有式链接，清理 history 不会删除日志文件。CLI 支持 `run script.json --journal run.jsonl [--journal-run-id ID]` 与 `journal run.jsonl [--run-id ID] [--limit 100]`。查询会按追加顺序显示遮罩后的生命周期快照，默认最多 100 条，上限 10,000 条。`AC_journal_capture` 接受命名参数，在拥有者 executor 上执行嵌套 `body`，保留原变量作用域；`AC_journal_read` 与 CLI、公开的 `inspect_journal` 共用遮罩后的有界查询。两个命令都可在 Script Builder 编辑。捕获会在 history 链接、创建文件及执行动作前拒绝含有当次执行已知密钥值的标识符或目标路径。MCP 的 `ac_journal_capture` 与 `ac_journal_read` 提供结构化结果、进度与协作式取消。捕获的日志根目录限制与 observer 会保留到嵌套捕获及本机 workers；查询可在逐条验证时取消。Python 可通过 `JournalRunOptions` 与 `execute_journal_run` 使用相同控制。手动执行的 history 控制仍待接入。
+实验性的结构化日志已从 `je_auto_control` 导出（也可通过 `utils.action_journal` 使用）：`journal_scope` 记录现有 executor 调用，`execute_action_with_journal` 隔离一次执行。本机 loop／parallel／DAG 步骤保留 parent ID，并区分失败、取消与 dry-run。现有 history 拥有者会自动链接显式捕获，包括本机 parallel／DAG worker 开启的 journal；`HistoryStore.journals_for_run` 可查询非拥有式链接，清理 history 不会删除日志文件。CLI 支持 `run script.json --journal run.jsonl [--journal-run-id ID]` 与 `journal run.jsonl [--run-id ID] [--limit 100]`。查询会按追加顺序显示遮罩后的生命周期快照，默认最多 100 条，上限 10,000 条。`AC_journal_capture` 接受命名参数，在拥有者 executor 上执行嵌套 `body`，保留原变量作用域；`AC_journal_read` 与 CLI、公开的 `inspect_journal` 共用遮罩后的有界查询。两个命令都可在 Script Builder 编辑。捕获会在 history 链接、创建文件及执行动作前拒绝含有当次执行已知密钥值的标识符或目标路径。MCP 的 `ac_journal_capture` 与 `ac_journal_read` 提供结构化结果、进度与协作式取消。捕获的日志根目录限制与 observer 会保留到嵌套捕获及本机 workers；查询可在逐条验证时取消。Python 可通过 `JournalRunOptions` 与 `execute_journal_run` 使用相同控制。
+
+手动执行可通过 `manual_history_scope`、`AC_history_capture`、CLI 的 `run --history [--history-db PATH]`，或 Script Executor／Script Builder 的 **记录到运行历史** 选择记录。GUI 的可选日志路径也能独立使用；GUI／CLI 保留原有结果 JSON 与变量作用域，命令则返回 `history_id`、`record`、`failed_actions`。已有与嵌套捕获都会关联到新的手动历史记录。CLI 预览使用 `cli.preview` 标签，普通执行使用 `cli.run`。
 
 Run History 提供只读日志查看。使用 **操作 → 使用所选执行的日志** 选择来源关联，或用 **选择日志** 指定外部文件；设置执行 ID 与快照上限后，使用 **读取日志**。开始／完成快照保持分离，选中后会显示完整的遮罩数据。**取消读取日志** 与关闭视图会在逐条边界请求取消；文件解析在后台 worker 执行，仅选择关联不会打开文件。
 
@@ -416,7 +418,7 @@ Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协�
 
 | 资源 | 内容 |
 |---|---|
-| [`examples/`](../examples/) | 29 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位、动作日志。 |
+| [`examples/`](../examples/) | 30 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位、动作日志。 |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 参考，含英文与中文。 |
 | [architecture_explore.md](../architecture_explore.md) | 逐层记录每个模块的职责。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台对照矩阵。 |

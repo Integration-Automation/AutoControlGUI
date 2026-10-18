@@ -72,6 +72,7 @@ REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
 #: Commands that need more than ``drive_input``. Every other command is
 #: covered by the capability of the surface that submitted the action list.
 COMMAND_CAPABILITIES: Dict[str, str] = {
+    "AC_history_capture": _DRIVE,
     "AC_journal_capture": _DRIVE,
     "AC_journal_read": _DRIVE,
     "AC_sign_action_file": Capability.SIGN_ACTIONS,

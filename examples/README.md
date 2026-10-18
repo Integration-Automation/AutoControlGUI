@@ -76,3 +76,16 @@ Open Run History and use **Actions → Choose Journal** to select the JSONL file
 produced by examples 28/29, then **Read Journal**. Existing history rows can
 supply their provenance links through **Use Journals from Selected Run**.
 Set a run ID and output limit, select snapshots for details, or cancel the read.
+
+### 30. Explicit manual history
+
+[`30_manual_history.py`](30_manual_history.py) records a variable-only run and
+links its journal to a custom history database in the supplied directory.
+Use `python examples/30_manual_history.py OUTPUT --validate` to check without
+writing, or `--dry-run` to record a preview. Normal execution prints the history
+ID, status, links and original action record. Configure allowed path roots for
+an output directory outside the normal roots.
+
+CLI `run SCRIPT --history` and the GUI's **Record in Run History** use the
+default history store shown in Run History. `--history-db PATH` selects a custom
+store for CLI/Python inspection; it does not switch the GUI's default store.

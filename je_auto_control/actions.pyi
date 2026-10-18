@@ -1422,6 +1422,9 @@ def AC_histogram_changed(
 ) -> Dict[str, Any]:
     """Adapter: whether the screen / current image differs from a reference."""
 
+def AC_history_capture(*, body: list[object], source_id: str = ..., script_path: str = ...) -> dict[str, object]:
+    """Record a named body on its owning executor without eager interpolation."""
+
 def AC_history_clear() -> int:
     """Delete every row (and its artifact file); return rows removed."""
 

@@ -17,6 +17,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlActionExceptio
 
 # Keys whose value is a flat action list: [[name, params], ...]
 FLOW_BODY_KEYS = {
+    "AC_history_capture": ("body",),
     "AC_journal_capture": ("body",),
     "AC_if_image_found": ("then", "else"),
     "AC_if_pixel": ("then", "else"),

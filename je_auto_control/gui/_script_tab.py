@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
+from je_auto_control.gui.manual_run_controls import ManualRunControls, _capture_manual_run
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
@@ -59,6 +60,8 @@ class ScriptTabMixin:
         self.script_editor.setPlaceholderText('[["AC_type_keyboard", {"keycode": "a"}]]')
         layout.addWidget(self.script_editor)
 
+        self.script_history_controls = ManualRunControls()
+        layout.addWidget(self.script_history_controls)
         layout.addWidget(self._tr(QLabel(), "execution_result"))
         self.script_result_text = QTextEdit()
         self.script_result_text.setReadOnly(True)
@@ -82,7 +85,9 @@ class ScriptTabMixin:
             if not path:
                 return
             data = read_executable_action_json(path)
-            result = execute_action(data)
+            with _capture_manual_run(getattr(self, "script_history_controls", None),
+                                     source_id="gui.file", script_path=path):
+                result = execute_action(data)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.script_result_text.setText(f"Error: {error}")
@@ -98,7 +103,9 @@ class ScriptTabMixin:
             if not path:
                 return
             files = get_dir_files_as_list(path)
-            result = execute_files(files)
+            with _capture_manual_run(getattr(self, "script_history_controls", None),
+                                     source_id="gui.directory", script_path=path):
+                result = execute_files(files)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.script_result_text.setText(f"Error: {error}")
@@ -109,7 +116,9 @@ class ScriptTabMixin:
             if not text:
                 return
             data = json.loads(text)
-            result = execute_action(data)
+            with _capture_manual_run(getattr(self, "script_history_controls", None),
+                                     source_id="gui.editor", script_path="<editor>"):
+                result = execute_action(data)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.script_result_text.setText(f"Error: {error}")

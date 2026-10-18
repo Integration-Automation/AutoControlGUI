@@ -1365,4 +1365,6 @@ english_word_dict = {
     "journal_col_run_id": "Run ID",
     "journal_col_step_id": "Step ID",
     "journal_col_parent_id": "Parent ID",
+    "manual_history_record": "Record in Run History",
+    "manual_journal_optional": "Journal file (optional)",
 }

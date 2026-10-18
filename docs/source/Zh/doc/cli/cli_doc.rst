@@ -27,6 +27,22 @@ AutoControl 可以直接從命令列執行自動化腳本。
 查閱會再次套用日誌遮罩規則，不修改來源檔。兩個入口皆沿用既有的允許根目錄檢查；
 預設範圍以外的位置可透過 ``AUTOCONTROL_ALLOWED_PATH_ROOTS`` 設定。
 
+明確記錄手動執行歷史
+------------------------
+
+.. code-block:: bash
+
+   python -m je_auto_control.cli run script.json --history
+   python -m je_auto_control.cli run script.json --history --history-db history.sqlite --journal run.jsonl
+   python -m je_auto_control.cli run script.json --history --dry-run
+
+``--history`` 在預設 Run History store 建立手動擁有者。``--history-db PATH``
+必須搭配該旗標，沿用允許根目錄檢查，離開時關閉 custom store，不會切換 GUI 的預設 store。
+既有或巢狀 journal 擷取會連結到此擁有者；原本 stdout 紀錄、變數範圍與失敗 exit code
+保持不變。executor 記錄的失敗，以及傳遞出的錯誤／取消，會結算為 ``error``。
+預覽使用 ``cli.preview``，實際執行使用 ``cli.run``；沒有選用 history 時，包含僅使用
+journal 的情況，都不會開啟 history 資料庫。
+
 執行單一動作檔案
 ================
 

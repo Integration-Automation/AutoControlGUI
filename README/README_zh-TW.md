@@ -18,7 +18,7 @@
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 781 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 782 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -220,7 +220,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 781 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 782 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -234,7 +234,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | USB 列舉與直通 | `list_usb_devices`、`enable_usb_passthrough` | `AC_usb_*`（16 個指令） | USB Devices、USB Share |
 | 機密保險庫 | `default_secret_manager` | `AC_secret_set` + `${secrets.NAME}` | Secrets |
 | 報表（HTML／JSON／XML） | `generate_html_report` | `AC_generate_html_report` | Report |
-| 執行歷史 | `HistoryStore` | `AC_history_list` | Run History |
+| 執行歷史 | `HistoryStore`、`manual_history_scope` | `AC_history_list`、`AC_history_capture` | Run History、Script Executor、Script Builder |
 | 動作日誌 | `execute_journal_run`、`inspect_journal` | `AC_journal_capture`、`AC_journal_read` | Run History、Script Builder |
 | 指標與追蹤 | `default_metric_registry`、`render_metrics_text` | — | — |
 | 系統診斷 | `run_diagnostics` | `AC_diagnose` | Diagnostics |
@@ -245,7 +245,9 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 ---
 
-實驗性的結構化日誌已從 `je_auto_control` 匯出（也可透過 `utils.action_journal` 使用）：`journal_scope` 記錄現有 executor 呼叫，`execute_action_with_journal` 隔離一次執行。本機 loop／parallel／DAG 步驟保留 parent ID，並區分失敗、取消與 dry-run。既有 history 擁有者會自動連結明確擷取，包含本機 parallel／DAG worker 開啟的 journal；`HistoryStore.journals_for_run` 可查詢非擁有式連結，清理 history 不會刪除日誌檔。CLI 支援 `run script.json --journal run.jsonl [--journal-run-id ID]` 與 `journal run.jsonl [--run-id ID] [--limit 100]`。查閱會按附加順序顯示遮罩後的生命週期快照，預設最多 100 筆，上限 10,000 筆。`AC_journal_capture` 接受具名參數，在擁有者 executor 上執行巢狀 `body`，保留原變數範圍；`AC_journal_read` 與 CLI、公開的 `inspect_journal` 共用遮罩後的有界查閱。兩個指令皆可在 Script Builder 編輯。擷取會在 history 連結、開檔及動作執行前拒絕含有當次執行已知秘密的識別碼或目的地。MCP 的 `ac_journal_capture` 與 `ac_journal_read` 提供結構化結果、進度與合作式取消。擷取的日誌根目錄限制與 observer 會保留至巢狀擷取及本機 workers；查閱可在逐筆驗證時取消。Python 可透過 `JournalRunOptions` 與 `execute_journal_run` 使用相同控制。手動執行的 history 控制仍待接入。
+實驗性的結構化日誌已從 `je_auto_control` 匯出（也可透過 `utils.action_journal` 使用）：`journal_scope` 記錄現有 executor 呼叫，`execute_action_with_journal` 隔離一次執行。本機 loop／parallel／DAG 步驟保留 parent ID，並區分失敗、取消與 dry-run。既有 history 擁有者會自動連結明確擷取，包含本機 parallel／DAG worker 開啟的 journal；`HistoryStore.journals_for_run` 可查詢非擁有式連結，清理 history 不會刪除日誌檔。CLI 支援 `run script.json --journal run.jsonl [--journal-run-id ID]` 與 `journal run.jsonl [--run-id ID] [--limit 100]`。查閱會按附加順序顯示遮罩後的生命週期快照，預設最多 100 筆，上限 10,000 筆。`AC_journal_capture` 接受具名參數，在擁有者 executor 上執行巢狀 `body`，保留原變數範圍；`AC_journal_read` 與 CLI、公開的 `inspect_journal` 共用遮罩後的有界查閱。兩個指令皆可在 Script Builder 編輯。擷取會在 history 連結、開檔及動作執行前拒絕含有當次執行已知秘密的識別碼或目的地。MCP 的 `ac_journal_capture` 與 `ac_journal_read` 提供結構化結果、進度與合作式取消。擷取的日誌根目錄限制與 observer 會保留至巢狀擷取及本機 workers；查閱可在逐筆驗證時取消。Python 可透過 `JournalRunOptions` 與 `execute_journal_run` 使用相同控制。
+
+手動執行可透過 `manual_history_scope`、`AC_history_capture`、CLI 的 `run --history [--history-db PATH]`，或 Script Executor／Script Builder 的 **記錄至執行歷史** 選用紀錄。GUI 的選填日誌路徑也能獨立使用；GUI／CLI 保留原本的結果 JSON 與變數範圍，指令則回傳 `history_id`、`record`、`failed_actions`。既有與巢狀擷取都會連結到新的手動歷史列。CLI 預覽以 `cli.preview` 標示，一般執行使用 `cli.run`。
 
 Run History 提供唯讀日誌檢視。使用 **操作 → 使用所選執行的日誌** 選擇來源連結，或用 **選擇日誌** 指定外部檔案；設定執行 ID 與快照上限後，使用 **讀取日誌**。起始／完成快照保持分離，選取後會顯示完整的遮罩資料。**取消讀取日誌** 與關閉檢視會在逐筆邊界提出取消要求；檔案解析在背景 worker 執行，單純選取連結不會開檔。
 
@@ -416,7 +418,7 @@ Windows、macOS（pyobjc）與 X11（含 XWayland）；純 Wayland session 的�
 
 | 資源 | 內容 |
 |---|---|
-| [`examples/`](../examples/) | 29 個自足腳本：截圖點擊、OCR、排程器、遠端桌面、agent loop、可觀測性、錄製、變數、熱鍵、觸發器、報表、MCP、REST、機密、外掛、computer use、Wayland、跨主機 DAG、chat-ops、pytest/BDD、錨點定位、動作日誌。 |
+| [`examples/`](../examples/) | 30 個自足腳本：截圖點擊、OCR、排程器、遠端桌面、agent loop、可觀測性、錄製、變數、熱鍵、觸發器、報表、MCP、REST、機密、外掛、computer use、Wayland、跨主機 DAG、chat-ops、pytest/BDD、錨點定位、動作日誌。 |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 參考，含英文與中文。 |
 | [architecture_explore.md](../architecture_explore.md) | 逐層記錄每個模組的職責。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台對照矩陣。 |

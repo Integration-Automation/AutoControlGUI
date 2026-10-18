@@ -1370,13 +1370,13 @@ Watcher 在 process 記憶體中追蹤已觸發的 UID,可選擇把訊息標為
 GUI: **Email Triggers** 分頁 — 註冊 IMAP 觸發、啟動 / 停止 watcher、
 手動觸發一次輪詢、檢視最近錯誤與觸發次數。
 
-結構化動作日誌（部分介面待接入）
+結構化動作日誌（實驗性）
 ================================
 
 B1 的儲存與明確擷取／查閱 API 已從 ``je_auto_control`` 匯出，也可透過
 ``je_auto_control.utils.action_journal`` 使用。CLI 擷取與有界快照查閱已接入；
 動作指令、Script Builder 表單、專用 MCP 擷取／查閱工具與 Run History 的唯讀檢視也已
-接入；手動執行的 history 控制仍待接入。B1 整合期間，日誌與來源連結 API
+接入；手動執行的 history 控制也已接入。B1 整合期間，日誌與來源連結 API
 仍屬實驗性介面。應用程式可明確寫入 schema-v1 快照::
 
    import time
@@ -1527,7 +1527,56 @@ RBAC context 啟用時，選檔、來源連結查詢與查閱都要求 ``drive_i
 Worker 保留提交 context 的 journal 路徑限制，也遵守預設根目錄政策。
 遭拒或損壞的來源會顯示錯誤，不會假裝成功讀到空結果。
 控制項、表頭與狀態文字支援 GUI 的四種語言。
-手動執行的 history 擁有者接線仍追蹤於 ``Progress.md``。
+
+
+明確的手動執行歷史
+------------------------
+
+``manual_history_scope(store=None, source_id="manual", script_path="<manual>")``
+會建立明確要求的手動歷史列，回傳含有 ``store`` 與 ``run_id`` 的 frozen
+``HistoryBinding``；兩個名稱都從 ``je_auto_control`` 匯出。``source_id`` 與
+``script_path`` 是非空的來源標籤，不會藉此開啟或執行腳本；已知的解析秘密會在寫入前遮罩。
+呼叫者的 executor、變數與結果值保持原本行為。例如::
+
+   from je_auto_control import HistoryStore, manual_history_scope, execute_journal_run
+
+   store = HistoryStore("history.sqlite")
+   try:
+       with manual_history_scope(store=store, source_id="manual-example") as owner:
+           result = execute_journal_run(
+               [["AC_set_var", {"name": "message", "value": "hello"}]],
+               "events.jsonl",
+           )
+       links = store.journals_for_run(owner.run_id)
+   finally:
+       store.close()
+
+Scope 開始時會連結已存在的 journal；後續開啟的擷取，包含本機 parallel／DAG，
+也會保留該擁有者。巢狀手動 scope 各自建立歷史列，離開後還原上一個擁有者。
+清除 history 不刪除外部日誌。匯入 API 不需要 Qt 或 SQLite；明確進入 history scope 時
+才需要 SQLite。
+
+Scope 只計算新發生的 executor 記錄失敗，將歷史列結算為 ``error``，不替換動作結果。
+正常 break／continue 保留計數後的結果；取消與丟出的例外會記為 ``error`` 並原樣傳遞。
+領域結果旗標仍由呼叫者檢視。歷史結算失敗不會取代原本正在傳遞的訊號，該列可能保持
+未完成。手動擁有者不要求錯誤截圖。
+
+CLI 的 ``run SCRIPT --history`` 使用 Run History 顯示的預設 store。
+``--history-db PATH`` 必須搭配 ``--history``，選用受路徑限制的資料庫；CLI 會關閉自己
+建立的 custom store，但不會切換 GUI 的預設 store。原本 stdout JSON、變數、dry-run
+派送與失敗 exit code 保持不變。預覽以 ``cli.preview`` 為來源，一般執行使用 ``cli.run``；
+也可搭配既有 journal 旗標。
+
+Script Executor（檔案／編輯器／目錄）與 Script Builder 提供預設不勾選的
+**記錄至執行歷史**，以及選填日誌路徑；日誌可獨立於 history 使用。
+目錄呼叫共用一個批次歷史擁有者。控制項包住既有執行流程，不替換變數範圍與結果顯示；
+執行後可到 Run History 查看預設 store 的歷史列與日誌連結。
+
+``AC_history_capture`` 接受具名 ``body``，以及可選的 ``source_id``、``script_path``，
+保留擁有者 executor、strictness 與 body 的延後插值；JSON 結果含 ``history_id``、
+``record``、``failed_actions``。Script Builder 與既有 REST／MCP 動作執行工具都可使用。
+外層 dry-run 不會為該指令建立歷史列；RBAC 下紀錄要求 ``drive_input``。
+``examples/30_manual_history.py`` 支援不寫檔的驗證，以及明確輸出目錄下的純變數執行／預覽。
 
 
 執行歷史的日誌來源連結

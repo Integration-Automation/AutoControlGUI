@@ -347,15 +347,7 @@ class AutoControlGUIWidget(
                 self.tabs.setTabText(
                     index, language_wrapper.translate(entry.title_key, entry.title_key),
                 )
-        # Widgets registered via TranslatableMixin on this widget (screenshot,
-        # image-detect, record, script, screen-record, shell, report tabs).
-        TranslatableMixin.retranslate(self)
-        if hasattr(self, "_auto_click_retranslate"):
-            self._auto_click_retranslate()
-        if hasattr(self, "_screenshot_retranslate"):
-            self._screenshot_retranslate()
-        if hasattr(self, "_record_retranslate"):
-            self._record_retranslate()
+        self._retranslate_core_tabs()
         # Child class tabs get their own retranslate if they implement one.
         for entry in self._built_entries():
             callback = getattr(entry.widget, "retranslate", None)
@@ -364,6 +356,16 @@ class AutoControlGUIWidget(
                     callback()
                 except (RuntimeError, AttributeError):
                     continue
+
+    def _retranslate_core_tabs(self) -> None:
+        """Relabel retained core forms and their optional manual capture controls."""
+        TranslatableMixin.retranslate(self)
+        capture = getattr(self, "script_history_controls", None)
+        if capture is not None:
+            capture.retranslate()
+        for name in ("_auto_click_retranslate", "_screenshot_retranslate", "_record_retranslate"):
+            if hasattr(self, name):
+                getattr(self, name)()
 
     def open_script_file(self, path: str) -> None:
         """Load a JSON script into the Script Executor tab and focus it."""

@@ -1232,4 +1232,6 @@ traditional_chinese_word_dict = {
     "journal_col_run_id": "執行 ID",
     "journal_col_step_id": "步驟 ID",
     "journal_col_parent_id": "父步驟 ID",
+    "manual_history_record": "記錄至執行歷史",
+    "manual_journal_optional": "日誌檔案（選填）",
 }

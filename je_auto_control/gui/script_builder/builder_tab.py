@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui.manual_run_controls import ManualRunControls, _capture_manual_run
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -44,11 +45,14 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         # The other top-level keys of a loaded {"auto_control": [...]} file,
         # written back on Save; None for a bare list.
         self._file_extras: Optional[dict] = None
+        self._source_path = "<script-builder>"
+        self._capture = ManualRunControls()
         self._build_layout()
         self._wire_signals()
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
+        self._capture.retranslate()
         if self._add_btn is not None:
             self._add_btn.setText(_t("sb_add_step"))
         if hasattr(self._form, "retranslate"):
@@ -57,6 +61,7 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
     def _build_layout(self) -> None:
         root = QVBoxLayout(self)
         root.addLayout(self._build_toolbar())
+        root.addWidget(self._capture)
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self._tree)
         splitter.addWidget(self._form)
@@ -130,6 +135,7 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             return
         try:
             save_action_file(path, self._tree.root_steps(), self._file_extras)
+            self._source_path = path
             self._result.setPlainText(f"Saved: {path}")
         except (AutoControlException, OSError, ValueError, TypeError) as error:
             QMessageBox.warning(self, "Error", str(error))
@@ -142,6 +148,7 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             return
         try:
             steps, self._file_extras = load_action_file(path)
+            self._source_path = path
             self._tree.load_steps(steps)
             self._form.load_step(None)
             self._result.setPlainText(f"Loaded: {path}")
@@ -154,7 +161,9 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             if not actions:
                 QMessageBox.information(self, "Info", "No steps to run")
                 return
-            result = execute_action(actions)
+            with _capture_manual_run(getattr(self, "_capture", None), source_id="gui.builder",
+                                     script_path=getattr(self, "_source_path", "<script-builder>")):
+                result = execute_action(actions)
             self._result.setPlainText(
                 json.dumps(result, indent=2, default=str, ensure_ascii=False)
             )

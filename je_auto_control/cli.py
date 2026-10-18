@@ -7,7 +7,7 @@ Usage::
 
     je_auto_control run script.json [--var x=10 --var y=20] [--dry-run]
                         [--allow-package NAME ...] [--journal run.jsonl]
-                        [--journal-run-id ID]
+                        [--journal-run-id ID] [--history [--history-db history.sqlite]]
     je_auto_control journal run.jsonl [--run-id ID] [--limit 100]
     je_auto_control validate script.json          # alias: lint
     je_auto_control list-commands [--filter mouse] [--json]
@@ -29,8 +29,8 @@ import signal
 import sys
 import threading
 import time
-from contextlib import AbstractContextManager, nullcontext
-from typing import Callable, Dict, List, Optional, Sequence
+from contextlib import AbstractContextManager, ExitStack, closing, contextmanager, nullcontext
+from typing import Callable, Dict, Iterator, List, Optional, Sequence
 
 from je_auto_control.utils.logging.secret_scope import scrub_secret_text, secret_log_scope
 
@@ -79,7 +79,8 @@ def cmd_run(args: argparse.Namespace) -> int:
     variables = _parse_vars(args.var)
     _allow_packages(args.allow_package)
     reset_recorded_failures()
-    with _run_capture(args), execution_scope(variables):
+    capture = _run_capture(args)
+    with _run_history(args), capture, execution_scope(variables):
         # Seeded, not interpolated over the whole tree: that failed on a loop
         # body's ${item} ("Unknown variable") and would print ${secrets.X}
         # resolved into the dry-run keys.
@@ -93,6 +94,24 @@ def cmd_run(args: argparse.Namespace) -> int:
         sys.stderr.write(f"error: {failures} action(s) failed\n")
         return 1
     return 0
+
+
+@contextmanager
+def _run_history(args: argparse.Namespace) -> Iterator[object]:
+    """Open an opted-in manual owner and close only a CLI-owned custom store."""
+    from je_auto_control.utils.run_history import HistoryStore, manual_history_scope
+    from je_auto_control.utils.path_guard.path_guard import validate_path
+    path = getattr(args, "history_db", None)
+    if not getattr(args, "history", False):
+        if path is not None:
+            raise ValueError("--history-db requires --history")
+        yield None
+        return
+    with ExitStack() as stack:
+        store = stack.enter_context(closing(HistoryStore(validate_path(path)))) if path is not None else None
+        source = "cli.preview" if getattr(args, "dry_run", False) else "cli.run"
+        owner = stack.enter_context(manual_history_scope(store=store, source_id=source, script_path=args.script))
+        yield owner
 
 
 def _run_capture(args: argparse.Namespace) -> AbstractContextManager[object]:
@@ -294,6 +313,8 @@ def build_parser() -> argparse.ArgumentParser:
                        help="record actions without calling them")
     p_run.add_argument("--journal", metavar="PATH", help="append structured action snapshots to this journal")
     p_run.add_argument("--journal-run-id", metavar="ID", help="explicit capture run ID; requires --journal")
+    p_run.add_argument("--history", action="store_true", help="record this manual run in history")
+    p_run.add_argument("--history-db", metavar="PATH", help="custom history database; requires --history")
     p_run.add_argument("--allow-package", action="append", metavar="NAME",
                        help="package AC_add_package_to_executor may load (submodules "
                             "included); may be repeated. JE_AUTOCONTROL_ALLOWED_PACKAGES "

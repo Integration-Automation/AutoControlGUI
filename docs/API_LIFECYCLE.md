@@ -8,7 +8,7 @@ project's facade rule. Membership in its `__all__` does not promote a feature
 into the versioned stable API.
 
 Structured action-journal storage, capture/read helpers and history provenance
-links are experimental while B1 interface integration remains in progress.
+links remain experimental, including their explicit manual-run integration.
 The documented names are available through `je_auto_control` and
 `je_auto_control.utils.action_journal`; `JournalLink` is also exported from
 `je_auto_control.utils.run_history`. CLI journal capture/inspection uses the same
@@ -26,7 +26,10 @@ inherit observers and intersect policies; callbacks may run on joined worker
 threads. `MCPToolResult` is an experimental JSON-compatible object result with
 separate controlled-failure metadata. The MCP journal tools remain experimental
 alongside the other B1 journal APIs. Run History inspection uses these same
-experimental snapshots; manual-run history ownership remains pending.
+experimental snapshots. `manual_history_scope` and its `HistoryBinding` value,
+`AC_history_capture`, CLI history flags and manual GUI controls are also
+experimental. The scope records an explicit owner without replacing variables
+or result values; the command returns a separate history/result summary.
 
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.

@@ -13,6 +13,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Explicit manual history is available through `manual_history_scope`,
+  `AC_history_capture`, CLI `run --history [--history-db PATH]`, and opt-in
+  controls in Script Executor / Script Builder. GUI and CLI results keep their
+  existing shape and variable scope. Ambient and nested journals link to the
+  manual row; failures and cancellation settle as error while preserving the
+  original signal. Normal loop control retains the counted outcome. CLI
+  previews carry a distinct source label. Known secret values are masked from
+  labels before insertion. A broken exception formatter falls back to its type
+  instead of replacing the original run failure.
+
 - Run History includes read-only journal browsing from an existing provenance
   link or an explicit file. Run filtering and bounded sanitized lifecycle
   snapshots share the headless inspector. Reads run off the GUI thread, report
