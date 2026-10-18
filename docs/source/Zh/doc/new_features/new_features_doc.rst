@@ -1257,7 +1257,10 @@ executor 執行期間，解析後的 ``${secrets.NAME}`` 值會在送到 handler
 遮罩包含原始值與常見 Python／JSON 跳脫形式。巢狀動作及等候完成的本機
 parallel／DAG 工作執行緒共用當次執行的遮罩；各個獨立執行彼此隔離。
 CLI／REST／MCP 請求與排程、trigger、hotkey、email 擁有者會將遮罩保留到
-外層錯誤處理及 audit／history 寫入完成。CLI stderr 也會遮罩。報表紀錄在遮罩
+外層錯誤處理及 audit／history 寫入完成。獨立的 watchdog／observer 規則與
+callback executor 呼叫會將遮罩保留到 matcher／predicate、trigger、callback 及
+最後的錯誤日誌結束；巢狀呼叫沿用外層範圍，獨立規則與後續呼叫各自清除資料。
+CLI stderr 也會遮罩。報表紀錄在遮罩
 清除前保存已處理的快照；循環與不透明診斷物件會替換為標記，不呼叫任意 repr
 或 deepcopy。Audit 欄位在 JSON 編碼前處理，history 錯誤文字在 SQLite 寫入前處理。
 即使失敗也會於擁有者結束時清除資料。API 結果、拋出的例外與 CLI 結果資料保留原始值。

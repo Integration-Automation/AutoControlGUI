@@ -19,6 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.timeouts import clamp_poll_interval
@@ -136,6 +137,7 @@ class ScreenObserver:
             return [event for event in (self._evaluate(rule) for rule in rules)
                     if event is not None]
 
+    @secret_log_scope()
     def _evaluate(self, rule: WatchRule) -> Optional[Dict[str, Any]]:
         # The transition is inside the guard too: a predicate returning, say,
         # a numpy array raised from bool() there. One rule may not stop the
@@ -161,6 +163,7 @@ class ScreenObserver:
             self._events.append(record)
         return record
 
+    @secret_log_scope()
     def _fire(self, rule: WatchRule, event: str, value: Any) -> None:
         try:
             with rule._authorization.scope():

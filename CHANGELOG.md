@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Watchdog and observer rules, and callback-executor invocations, retain their
+  resolved-secret mask through detection, callbacks and final error logging.
+  Independent rules/calls isolate masks; existing return and failure semantics
+  remain unchanged.
+
 - CLI/REST/MCP and background run owners retain resolved-secret masking through
   outer error handling and audit/history writes. CLI stderr and delayed report
   snapshots are sanitized; report snapshots omit opaque/cyclic values when the

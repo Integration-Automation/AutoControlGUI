@@ -9,6 +9,7 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlAssertionException, CallbackExecutorException,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
 # executor
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
@@ -138,6 +139,7 @@ class CallbackFunctionExecutor:
             "AC_execute_process": start_exe,
         }
 
+    @secret_log_scope()
     def callback_function(
             self,
             trigger_function_name: str,
@@ -147,7 +149,7 @@ class CallbackFunctionExecutor:
             **kwargs
     ) -> Any:
         """
-        Execute a trigger function and then call a callback function
+        Execute trigger and callback with one run-local diagnostic mask
         執行指定的 trigger_function，並在完成後呼叫 callback_function
 
         :param trigger_function_name: 要觸發的函式名稱 (必須存在於 event_dict)
@@ -168,7 +170,7 @@ class CallbackFunctionExecutor:
             autocontrol_logger.error("callback_function config error: %r", error)
             return None
 
-        # Run the trigger in its own scope: a trigger failure (including the
+        # Guard the trigger separately: a trigger failure (including the
         # framework family — mouse / image / assertion errors) returns None and
         # is never confused with a later callback failure.
         # Anything the trigger raises (OSError from a file command, a
@@ -181,7 +183,7 @@ class CallbackFunctionExecutor:
             autocontrol_logger.error("callback_function trigger failed: %r", error)
             return None
 
-        # Run the callback in its own scope: a callback failure must not discard
+        # Guard the callback separately: a callback failure must not discard
         # the already-computed trigger result.
         try:
             self._invoke_callback(

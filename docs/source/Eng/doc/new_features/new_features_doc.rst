@@ -1354,6 +1354,10 @@ Python/JSON escaped forms are masked. Nested actions and joined local
 parallel/DAG workers share the run's mask; concurrent independent runs have
 separate masks. CLI/REST/MCP requests and scheduled, trigger, hotkey and email
 owners keep their mask through outer error handling and audit/history writes.
+Independent watchdog/observer rules and callback-executor invocations keep a
+mask through their matcher/predicate, trigger, callback and final error log.
+Nested calls reuse the enclosing run's mask; independent rules and subsequent
+invocations clear their values separately.
 CLI stderr is masked. Report records snapshot known values before the mask is
 cleared; cyclic and opaque diagnostic objects are replaced without calling
 arbitrary repr or deepcopy. Audit fields are sanitized before JSON encoding,

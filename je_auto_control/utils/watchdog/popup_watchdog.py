@@ -21,6 +21,7 @@ from typing import Any, Callable, Deque, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.run_outcome import run_counting_failures
 from je_auto_control.utils.timeouts import clamp_poll_interval
@@ -141,6 +142,7 @@ class PopupWatchdog:
                 dismissed += 1
         return dismissed
 
+    @secret_log_scope()
     def _apply(self, rule: WatchdogRule,
                authorization: Optional[DeferredAuthorization] = None) -> bool:
         bound = authorization if authorization is not None else DeferredAuthorization.capture()

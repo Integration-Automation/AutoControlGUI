@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261018-16 | 2026-10-18 | Retain callback-owner secret masks through final error logging | #done #security #callbacks | [2026-10](2026-10.md) |
 | U-20261018-15 | 2026-10-18 | Keep secret masking alive through outer errors and diagnostic writes | #done #security #diagnostics | [2026-10](2026-10.md) |
 | U-20261018-14 | 2026-10-18 | Isolate the legacy CLI dispatch boundary without changing flags | #done #cli #refactor | [2026-10](2026-10.md) |
 | U-20261018-13 | 2026-10-18 | Mask resolved vault values during executor application logging | #done #security #logging | [2026-10](2026-10.md) |
@@ -378,7 +379,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 42 |
+| [2026-10.md](2026-10.md) | 2026-10 | 43 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

@@ -63,7 +63,9 @@ the mask alive through error handling and persistent diagnostics. A logger
 filter sanitizes records before handlers; audit, history and report snapshots
 mask text before storage. Joined local parallel/DAG workers share the mask;
 independent requests isolate it, and the owner clears it on exit. API outcomes
-retain their values; CLI error output is sanitized.
+retain their values; CLI error output is sanitized. Watchdog/observer rules and
+callback-executor invocations own their complete diagnostic scope; nested
+invocations reuse the enclosing run mask.
 
 **A. JSON action script (primary path)**
 
