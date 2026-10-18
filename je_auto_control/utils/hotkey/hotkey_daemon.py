@@ -26,9 +26,11 @@ from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
-from je_auto_control.utils.run_history.run_outcome import run_counting_failures
+from je_auto_control.utils.run_history.run_outcome import (
+    RunOutcome, finish_history_run, run_counting_failures,
+)
 from je_auto_control.utils.run_history.history_store import (
-    SOURCE_HOTKEY, STATUS_ERROR, STATUS_OK, default_history_store,
+    SOURCE_HOTKEY, STATUS_ERROR as STATUS_ERROR, STATUS_OK as STATUS_OK, default_history_store,
 )
 
 MOD_ALT = 0x0001
@@ -222,24 +224,24 @@ class HotkeyDaemon:
         if match is None or not match.enabled:
             return
         run_id = _start_history(match)
-        status = STATUS_OK
-        error_text: Optional[str] = None
+        outcome = RunOutcome()
         history = HistoryBinding(default_history_store, run_id) if run_id is not None else None
         try:
             with match._authorization.scope(), bound_history(history):
                 actions = read_executable_action_json(match.script_path)
                 run_counting_failures(lambda: self._execute(actions))
-        except Exception as error:  # noqa: BLE001  # reason: this runs on the backend's listener thread; any escape ends every hotkey
+        except BaseException as error:  # noqa: BLE001  # reason: this runs on the backend's listener thread; any escape ends every hotkey
             # AutoControlException covers the common cases — a missing/renamed
             # script (AutoControlJsonActionException) or an action that raises
             # (image/window not found). Without it the exception escaped the
             # backend run-loop and silently killed the whole hotkey daemon.
-            status = STATUS_ERROR
-            error_text = repr(error)
+            outcome.fail(error)
+            if outcome.hard_abort:
+                raise
             autocontrol_logger.error("hotkey %s failed: %r",
                                      match.combo, error)
         finally:
-            _finish_history(run_id, status, error_text)
+            _finish_history(run_id, outcome.status, outcome.error_text, outcome)
         with self._lock:
             match.fired += 1
 
@@ -255,14 +257,12 @@ def _start_history(match: HotkeyBinding) -> Optional[int]:
 
 
 def _finish_history(run_id: Optional[int], status: str,
-                    error_text: Optional[str]) -> None:
+                    error_text: Optional[str], outcome: Optional[RunOutcome] = None) -> None:
     if run_id is None:
         return
     try:
-        artifact = (capture_error_snapshot(run_id)
-                    if status == STATUS_ERROR else None)
-        default_history_store.finish_run(
-            run_id, status, error_text, artifact_path=artifact)
+        result = outcome if outcome is not None else RunOutcome(status=status, error_text=error_text)
+        finish_history_run(default_history_store, run_id, result, capture_error_snapshot)
     except AutoControlException as error:
         autocontrol_logger.error("hotkey run %s: history not updated: %r", run_id, error)
 

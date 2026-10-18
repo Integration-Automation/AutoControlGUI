@@ -18,6 +18,7 @@ from je_auto_control.utils.dag.graph import (
     DagDefinition, DagDefinitionError, DagNode, parse_definition,
 )
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.run_history.run_outcome import is_run_interruption
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -221,6 +222,8 @@ def _record_future(nid: str, finished: Future,
         finished.result()
     except (AutoControlException, RuntimeError, OSError, ValueError,
             LookupError, TypeError, AttributeError, ArithmeticError) as error:
+        if is_run_interruption(error):
+            raise
         # Defensive: _run_one swallows tool errors into NodeResult.
         # This branch only catches pool / runner-side faults. It includes
         # AutoControlException so a framework failure that slips past
@@ -238,12 +241,15 @@ def _run_one(node: DagNode, result: NodeResult,
         result.error = "stopped"
     # A runner is user code and may raise any Exception subclass; one that
     # escaped left the node "running" and run_dag returned no result.
-    except Exception as error:  # noqa: BLE001  # reason: any node failure becomes a failed NodeResult and a skip cascade, never a crash of the whole run
+    except BaseException as error:  # reason: settle node state; cancellation/control signals re-raise
         # AutoControlException covers validate_actions / locate / assert
         # failures raised by the executor: a node failure becomes a failed
         # NodeResult (and a downstream skip cascade), not a raw crash that
         # leaves the node stuck "running" and returns no DagRunResult.
         result.status = STATUS_FAILED
+        if not isinstance(error, Exception) or is_run_interruption(error):
+            result.error = f"{type(error).__name__}: run interrupted"
+            raise
         result.error = f"{type(error).__name__}: {error}"
         autocontrol_logger.warning(
             f"DAG node {node.id!r} failed: {result.error}",
@@ -251,6 +257,12 @@ def _run_one(node: DagNode, result: NodeResult,
     else:
         result.status = STATUS_SUCCEEDED
         result.result = outcome
+    finally:
+        _finish_node_timing(result)
+
+
+def _finish_node_timing(result: NodeResult) -> None:
+    """Settle timing even when a node propagates a cancellation or hard exit."""
     finished_at = time.monotonic()
     result.finished_at = finished_at
     if result.started_at is not None:

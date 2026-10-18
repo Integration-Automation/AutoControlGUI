@@ -10,9 +10,64 @@ per-thread failure count ``je_auto_control run`` already uses for its exit code.
 Each such run also gets its own variable scope: a job's ``AC_set_var`` used to
 stay in the module executor for whichever job, trigger or hotkey fired next.
 """
-from typing import Any, Callable
+from asyncio import CancelledError
+from concurrent.futures import CancelledError as FutureCancelledError
+from dataclasses import dataclass
+from typing import Any, Callable, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.history_store import HistoryStore, STATUS_ERROR, STATUS_OK
+from je_auto_control.utils.script_vars.execution import execution_scope
+
+
+def is_run_interruption(error: BaseException) -> bool:
+    """Whether an error represents an explicit cancellation or hard control signal."""
+    # pylint: disable-next=import-outside-toplevel  # reason: MCP imports the executor during facade setup
+    from je_auto_control.utils.mcp_server.context import OperationCancelledError
+    return isinstance(error, (KeyboardInterrupt, SystemExit, GeneratorExit, CancelledError,
+                              FutureCancelledError, OperationCancelledError))
+
+
+def raise_if_run_interrupted(error: BaseException) -> None:
+    """Keep cancellation out of ordinary failure recovery and retry boundaries."""
+    if is_run_interruption(error):
+        raise error
+
+
+@dataclass
+class RunOutcome:
+    """A run's final history state and permission to take an error snapshot."""
+
+    status: str = STATUS_OK
+    error_text: Optional[str] = None
+    hard_abort: bool = False
+    cancelled: bool = False
+
+    def fail(self, error: BaseException) -> None:
+        """Record failure without formatting a pending hard/cancellation signal."""
+        self.status = STATUS_ERROR
+        self.hard_abort = not isinstance(error, Exception)
+        self.cancelled = is_run_interruption(error)
+        self.error_text = (f"{type(error).__name__}: run interrupted" if self.hard_abort or self.cancelled
+                           else repr(error))
+
+    @property
+    def should_capture(self) -> bool:
+        """Ordinary failures may capture; cancellation and hard exits may not."""
+        return self.status == STATUS_ERROR and not self.hard_abort and not self.cancelled
+
+
+def finish_history_run(store: HistoryStore, run_id: int, outcome: RunOutcome,
+                       capture: Callable[[int], Optional[str]]) -> None:
+    """Settle history while preserving any hard interruption already propagating."""
+    artifact = capture(run_id) if outcome.should_capture else None
+    try:
+        store.finish_run(run_id, outcome.status, outcome.error_text, artifact_path=artifact)
+    except Exception:  # pylint: disable=broad-exception-caught  # reason: preserve pending hard interruption
+        if not outcome.hard_abort:
+            raise
+        autocontrol_logger.error("run history completion unavailable; preserving hard interruption")
 
 
 def run_counting_failures(run: Callable[[], Any]) -> Any:
@@ -22,10 +77,10 @@ def run_counting_failures(run: Callable[[], Any]) -> Any:
     the thread's counter here erased that caller's previous failures and could
     make the CLI report success. A per-run delta keeps both outcomes intact.
     """
+    # pylint: disable-next=import-outside-toplevel  # reason: executor imports this outcome helper
     from je_auto_control.utils.executor.action_executor import (
         recorded_failures,
     )
-    from je_auto_control.utils.script_vars.execution import execution_scope
     before = recorded_failures()
     with execution_scope():
         result = run()

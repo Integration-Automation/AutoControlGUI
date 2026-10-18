@@ -9,7 +9,6 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
-
 class OperationCancelledError(RuntimeError):
     """Raised by :meth:`ToolCallContext.check_cancelled` when the client cancels."""
 
@@ -31,7 +30,7 @@ class ToolCallContext:
 
     request_id: Any
     progress_token: Any = None
-    notifier: Optional[Callable[[str, dict], None]] = field(
+    notifier: Optional[Callable[[str, dict[str, Any]], None]] = field(
         default=None, repr=False,
     )
     cancelled_event: threading.Event = field(default_factory=threading.Event)
@@ -57,7 +56,7 @@ class ToolCallContext:
         """
         if self.progress_token is None or self.notifier is None:
             return
-        params: dict = {
+        params: dict[str, Any] = {
             "progressToken": self.progress_token,
             "progress": float(value),
         }

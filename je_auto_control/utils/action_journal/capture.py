@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import time
-from asyncio import CancelledError
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, replace
@@ -17,6 +16,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.path_guard.path_guard import validate_path
 from je_auto_control.utils.script_vars.execution import execution_scope
 from je_auto_control.utils.run_history.context import current_history
+from je_auto_control.utils.run_history.run_outcome import is_run_interruption
 
 
 @dataclass(frozen=True)
@@ -104,11 +104,9 @@ def _failure_count() -> int:
 def _exception_status(error: BaseException) -> EventStatus:
     # pylint: disable-next=import-outside-toplevel  # reason: flow_control imports this capture adapter
     from je_auto_control.utils.executor.flow_control import LoopBreak, LoopContinue
-    # pylint: disable-next=import-outside-toplevel  # reason: MCP imports the executor during facade setup
-    from je_auto_control.utils.mcp_server.context import OperationCancelledError
     if isinstance(error, (LoopBreak, LoopContinue)):
         return "ok"  # the enclosing loop consumes the signal
-    if isinstance(error, (KeyboardInterrupt, SystemExit, GeneratorExit, CancelledError, OperationCancelledError)):
+    if is_run_interruption(error):
         return "cancelled"
     return "error"
 

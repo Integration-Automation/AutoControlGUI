@@ -130,6 +130,13 @@ Scheduler/trigger/hotkey/webhook/email owners bind their own row; local parallel
 and DAG workers carry it explicitly. `journal_scope` attaches an idempotent
 non-owning path/run-ID link before dispatch. `run_journals` cascades metadata
 when rows are pruned/cleared; external journal files are never deleted by history.
+`run_history/run_outcome.py` shares interruption classification and finalization.
+Cancellation bypasses ordinary executor recovery/retry and callback guards;
+parallel/DAG workers preserve the original signal. History settles interrupted
+attempts as `error`, without a snapshot; a failed completion preserves a pending
+hard signal and leaves the history row unfinished. Explicit script `finally`
+branches retain their cleanup contract. Already-started parallel branches are
+joined before propagation; this is not forcible interruption of native I/O.
 Facade/command/CLI/MCP/GUI and manual-run history controls remain pending.
 
 **C. Record → edit → generate code**

@@ -23,7 +23,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
-from je_auto_control.utils.run_history.run_outcome import run_counting_failures
+from je_auto_control.utils.run_history.run_outcome import raise_if_run_interrupted, run_counting_failures
 from je_auto_control.utils.timeouts import clamp_poll_interval
 
 # Errors a rule's matcher/action may raise that must not kill the guard loop
@@ -155,6 +155,7 @@ class PopupWatchdog:
         # off the list (subprocess.TimeoutExpired, sqlite3.Error) killed the
         # guard thread and every other rule with it.
         except Exception as error:  # noqa: BLE001  # reason: logged; one rule must not stop the others
+            raise_if_run_interrupted(error)
             autocontrol_logger.info(
                 "popup watchdog rule %r error: %r", rule.name, error)
             return False

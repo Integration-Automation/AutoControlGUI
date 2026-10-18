@@ -13,6 +13,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Interrupted background attempts now settle history as `error` and skip error
+  screenshots. Hard exits retain their original control flow even if history
+  completion fails. Cancellation bypasses non-strict action failure recording,
+  retry/recovery, callback and image-condition guards; local parallel/DAG workers
+  preserve the original signal. Explicit script `finally` cleanup still runs.
+  Ordinary failure behavior and the MCP cancellation exception family are unchanged.
+
 - Explicit action journals now link to an enclosing existing run-history row,
   including local parallel/DAG captures. Links are idempotent and non-owning;
   clearing/pruning history keeps external journal files. Plain captures create

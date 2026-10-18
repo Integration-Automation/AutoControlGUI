@@ -33,9 +33,11 @@ from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
-from je_auto_control.utils.run_history.run_outcome import run_counting_failures
+from je_auto_control.utils.run_history.run_outcome import (
+    RunOutcome, finish_history_run, run_counting_failures,
+)
 from je_auto_control.utils.run_history.history_store import (
-    SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
+    SOURCE_TRIGGER, STATUS_ERROR as STATUS_ERROR, STATUS_OK as STATUS_OK, default_history_store,
 )
 
 
@@ -491,24 +493,18 @@ class EmailTriggerWatcher:
                 SOURCE_TRIGGER, f"email:{trigger.trigger_id}",
                 trigger.script_path,
             )
-            status = STATUS_OK
-            error_text: Optional[str] = None
+            outcome = RunOutcome()
             try:
                 with trigger._authorization.scope(), bound_history(HistoryBinding(default_history_store, run_id)):
                     actions = read_executable_action_json(trigger.script_path)
                     run_counting_failures(lambda: self._executor(actions, payload))
             # Any failure is recorded as STATUS_ERROR -- not a bogus
             # STATUS_OK from the finally below -- before re-raising.
-            except Exception as error:  # noqa: BLE001  # reason: re-raised
-                status = STATUS_ERROR
-                error_text = repr(error)
+            except BaseException as error:  # noqa: BLE001  # reason: re-raised
+                outcome.fail(error)
                 raise
             finally:
-                artifact = (capture_error_snapshot(run_id)
-                            if status == STATUS_ERROR else None)
-                default_history_store.finish_run(
-                    run_id, status, error_text, artifact_path=artifact,
-                )
+                finish_history_run(default_history_store, run_id, outcome, capture_error_snapshot)
                 trigger.fired += 1
 
     @staticmethod

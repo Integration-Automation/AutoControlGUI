@@ -1453,3 +1453,21 @@ run ID；本機 parallel 與預設 DAG worker 另開擷取時也保留擁有者�
 舊 history schema 會在開啟時遷移，保留原有列與截圖連結。
 綁定不存在的 history 列時，會在裝置動作發生前拒絕擷取。
 GUI 與手動執行的便利接線仍待整合。
+
+
+中止執行的結果
+------------------------
+
+拋出 ``KeyboardInterrupt``、``SystemExit``、``GeneratorExit``、asyncio／future 取消
+或 MCP ``OperationCancelledError`` 時，不可將該次執行寫成成功。
+History 記為 ``error``，journal 步驟記為 ``cancelled``，且不擷取錯誤截圖。
+一般失敗仍保留既有截圖與復原行為。
+
+取消會穿過非嚴格 executor 的錯誤紀錄、``AC_try`` 的 catch、``AC_retry`` 的重試、
+影像條件的不存在判定，以及 callback 的一般錯誤防護；腳本明確指定的 ``finally``
+清理仍會執行。本機 parallel／DAG worker 會把原始訊號送回擁有者，parallel 會先等候
+已啟動的分支結束。這些規則處理已拋出的中止訊號，不是強制中斷阻塞中的原生操作。
+
+硬中止訊號保留原樣傳遞。若 history 結算在硬中止傳遞期間失敗，診斷儲存不可取代
+原始訊號；該列維持未結算，不會被標為成功。MCP 取消保留既有 ``RuntimeError``
+控制訊號契約，與一般框架失敗分開，也保留原有 JSON-RPC 取消回覆。

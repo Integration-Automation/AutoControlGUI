@@ -1567,3 +1567,26 @@ Clearing/pruning history removes links and preserves journal files. Existing
 history schemas migrate on opening; original rows and screenshot links survive.
 An unknown bound history row refuses capture before device effects. GUI and
 manual-run convenience wiring remain pending integration.
+
+
+Interrupted run outcomes
+------------------------
+
+A raised ``KeyboardInterrupt``, ``SystemExit``, ``GeneratorExit``, asyncio/future
+cancellation or MCP ``OperationCancelledError`` must not turn an interrupted
+attempt into a successful history row. History records ``error``; captured
+journal steps record ``cancelled``. Interrupted attempts do not take an error
+screenshot. Ordinary failures retain their existing snapshot/recovery behavior.
+
+Cancellation bypasses non-strict executor failure recording, ``AC_try`` recovery,
+``AC_retry`` retries, image-condition absence handling and callback failure
+guards. Explicit script ``finally`` cleanup still runs. Local parallel and DAG
+workers return the original signal to the owner; already-started parallel
+branches are joined first. These are propagation rules once a signal is raised,
+not forcible interruption of a blocking native operation.
+
+Hard control signals propagate unchanged. If history completion fails while a
+hard signal is already pending, diagnostic storage cannot replace that signal;
+the history row remains unfinished rather than being marked successful.
+MCP cancellation keeps its existing ``RuntimeError`` control-signal contract,
+separate from ordinary framework failures, and its JSON-RPC cancellation reply.

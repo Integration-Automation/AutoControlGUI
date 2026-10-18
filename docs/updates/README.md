@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261018-19 | 2026-10-18 | Preserve interrupted execution through history, workers and recovery guards | #done #executor #cancellation | [2026-10](2026-10.md) |
 | U-20261018-18 | 2026-10-18 | Link explicit journals to existing run-history owners | #done #journal #history | [2026-10](2026-10.md) |
 | U-20261018-17 | 2026-10-18 | Release SQLite connections after failed history initialization | #incident #history #storage | [2026-10](2026-10.md) |
 | U-20261018-16 | 2026-10-18 | Retain callback-owner secret masks through final error logging | #done #security #callbacks | [2026-10](2026-10.md) |
@@ -381,7 +382,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 45 |
+| [2026-10.md](2026-10.md) | 2026-10 | 46 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

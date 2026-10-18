@@ -24,9 +24,11 @@ from je_auto_control.utils.timeouts import clamp_poll_interval
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
-from je_auto_control.utils.run_history.run_outcome import run_counting_failures
+from je_auto_control.utils.run_history.run_outcome import (
+    RunOutcome, finish_history_run, run_counting_failures,
+)
 from je_auto_control.utils.run_history.history_store import (
-    SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
+    SOURCE_TRIGGER, STATUS_ERROR as STATUS_ERROR, STATUS_OK as STATUS_OK, default_history_store,
 )
 
 if TYPE_CHECKING:  # imported lazily at runtime, where each trigger needs it
@@ -372,33 +374,20 @@ class TriggerEngine:
         run_id = default_history_store.start_run(
             SOURCE_TRIGGER, trigger.trigger_id, trigger.script_path,
         )
-        status = STATUS_OK
-        error_text: Optional[str] = None
+        outcome = RunOutcome()
         try:
             with authorization.scope(), bound_history(HistoryBinding(default_history_store, run_id)):
                 actions = read_executable_action_json(trigger.script_path)
                 run_counting_failures(lambda: self._execute(actions))
-        # 這裡刻意攔截所有例外：一個 trigger 失敗必須記錄成 STATUS_ERROR
-        # 並繼續，而不是拖垮輪詢執行緒。原本的 tuple 漏掉
-        # AutoControlJsonActionException，所以光是改名 script 檔就會讓
-        # 整個引擎永久停擺。
-        # Deliberately broad: a failing trigger must be recorded as
-        # STATUS_ERROR and the loop must go on — which the finally below
-        # already assumes. The previous tuple (OSError, ValueError,
-        # RuntimeError) missed AutoControlJsonActionException, so merely
-        # renaming a trigger's script file killed the polling thread and
-        # silently stopped every other trigger with it.
-        except Exception as error:  # noqa: BLE001  # reason: see comment above
-            status = STATUS_ERROR
-            error_text = repr(error)
+        # Isolate ordinary trigger failures, while preserving hard control flow.
+        except BaseException as error:  # noqa: BLE001  # reason: see comment above
+            outcome.fail(error)
+            if outcome.hard_abort:
+                raise
             autocontrol_logger.error("trigger %s failed: %r",
                                      trigger.trigger_id, error)
         finally:
-            artifact = (capture_error_snapshot(run_id)
-                        if status == STATUS_ERROR else None)
-            default_history_store.finish_run(
-                run_id, status, error_text, artifact_path=artifact,
-            )
+            finish_history_run(default_history_store, run_id, outcome, capture_error_snapshot)
         with self._lock:
             live = self._triggers.get(trigger.trigger_id)
             # Not just "some trigger with this id": one removed and replaced

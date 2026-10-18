@@ -18,9 +18,11 @@ from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
-from je_auto_control.utils.run_history.run_outcome import run_counting_failures
+from je_auto_control.utils.run_history.run_outcome import (
+    RunOutcome, finish_history_run, run_counting_failures,
+)
 from je_auto_control.utils.run_history.history_store import (
-    SOURCE_SCHEDULER, STATUS_ERROR, STATUS_OK, default_history_store,
+    SOURCE_SCHEDULER, STATUS_ERROR as STATUS_ERROR, STATUS_OK as STATUS_OK, default_history_store,
 )
 from je_auto_control.utils.scheduler.cron import (
     CronExpression, next_match, parse_cron,
@@ -235,34 +237,20 @@ class Scheduler:
         run_id = default_history_store.start_run(
             SOURCE_SCHEDULER, job.job_id, job.script_path,
         )
-        status = STATUS_OK
-        error_text: Optional[str] = None
+        outcome = RunOutcome()
         try:
             with job._authorization.scope(), bound_history(HistoryBinding(default_history_store, run_id)):
                 actions = read_executable_action_json(job.script_path)
                 run_counting_failures(lambda: self._execute(actions))
-        # 一個排程工作失敗必須記錄為 STATUS_ERROR 並繼續輪詢,絕不能拖垮
-        # 排程執行緒。原本的 tuple 漏掉 AutoControlException——它是幾乎所有
-        # action 失敗(找不到視窗/圖片、輸入錯誤)的基底,直接繼承
-        # Exception,不屬 OSError/ValueError/RuntimeError——所以任何正常失敗
-        # 的排程工作都會讓執行緒無聲死亡,其餘所有排程從此停擺。
-        # A failing scheduled job must be recorded as STATUS_ERROR and the loop
-        # must go on — it must never kill the scheduler thread. The previous
-        # tuple missed AutoControlException, the base of nearly every action
-        # failure (window/image not found, input error) and a direct Exception
-        # subclass, so any normally-failing job killed the thread silently and
-        # every other scheduled job stopped firing forever.
-        except Exception as error:  # noqa: BLE001  # reason: see comment above
-            status = STATUS_ERROR
-            error_text = repr(error)
+        # Settle every failed run; hard control signals keep propagating.
+        except BaseException as error:  # noqa: BLE001  # reason: see comment above
+            outcome.fail(error)
+            if outcome.hard_abort:
+                raise
             autocontrol_logger.error("scheduler job %s failed: %r",
                                      job.job_id, error)
         finally:
-            artifact = (capture_error_snapshot(run_id)
-                        if status == STATUS_ERROR else None)
-            default_history_store.finish_run(
-                run_id, status, error_text, artifact_path=artifact,
-            )
+            finish_history_run(default_history_store, run_id, outcome, capture_error_snapshot)
         with self._lock:
             live = self._jobs.get(job.job_id)
             if live is not job:

@@ -35,6 +35,7 @@ from je_auto_control.utils.executor.flow_control import (
 from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
 from je_auto_control.utils.action_journal.capture import action_step
 from je_auto_control.utils.logging.secret_scope import secret_log_scope
+from je_auto_control.utils.run_history.run_outcome import raise_if_run_interrupted
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
@@ -8325,6 +8326,7 @@ class Executor:
             # under raise_on_error=False — otherwise the assertion would be
             # silently neutralised. ``AC_try``/``AC_retry`` run their body with
             # raise_on_error=True and still catch it via their own tuples.
+            raise_if_run_interrupted(error)
             if raise_on_error or isinstance(
                     error, (AutoControlAssertionException, MacroDepthExceeded)):
                 raise

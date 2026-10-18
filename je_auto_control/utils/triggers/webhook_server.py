@@ -48,9 +48,11 @@ from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
-from je_auto_control.utils.run_history.run_outcome import run_counting_failures
+from je_auto_control.utils.run_history.run_outcome import (
+    RunOutcome, finish_history_run, run_counting_failures,
+)
 from je_auto_control.utils.run_history.history_store import (
-    SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
+    SOURCE_TRIGGER, STATUS_ERROR as STATUS_ERROR, STATUS_OK as STATUS_OK, default_history_store,
 )
 
 
@@ -383,20 +385,16 @@ class WebhookTriggerServer:
                 SOURCE_TRIGGER, f"webhook:{trigger.webhook_id}",
                 trigger.script_path,
             )
-            status = STATUS_OK
-            error_text: Optional[str] = None
-            # Missing the framework base let a bad/renamed script escape fire()
-            # and propagate out of the HTTP handler: the run was recorded as a
-            # bogus STATUS_OK and the client's connection was dropped with no
-            # response. Catch the whole family so the fire is recorded as an
-            # error and _dispatch still answers the request.
+            outcome = RunOutcome()
+            # Settle failures before answering; hard exits propagate after finalization.
             try:
                 with trigger._authorization.scope(), bound_history(HistoryBinding(default_history_store, run_id)):
                     actions = read_executable_action_json(trigger.script_path)
                     run_counting_failures(lambda: self._executor(actions, payload))
-            except Exception as error:  # noqa: BLE001  # reason: any script failure must be recorded and answered
-                status = STATUS_ERROR
-                error_text = repr(error)
+            except BaseException as error:  # noqa: BLE001  # reason: any script failure must be recorded and answered
+                outcome.fail(error)
+                if outcome.hard_abort:
+                    raise
                 autocontrol_logger.error("webhook %s failed: %r",
                                          trigger.webhook_id, error)
                 if isinstance(error, AuthorizationError):
@@ -405,16 +403,12 @@ class WebhookTriggerServer:
                             trigger.last_status = int(HTTPStatus.FORBIDDEN)
                     raise
             finally:
-                artifact = (capture_error_snapshot(run_id)
-                            if status == STATUS_ERROR else None)
-                default_history_store.finish_run(
-                    run_id, status, error_text, artifact_path=artifact,
-                )
+                finish_history_run(default_history_store, run_id, outcome, capture_error_snapshot)
             with self._lock:
                 live = self._triggers.get(trigger.webhook_id)
                 if live is not None:
                     live.fired += 1
-                    live.last_status = 200 if status == STATUS_OK else 500
+                    live.last_status = 200 if outcome.status == STATUS_OK else 500
             return run_id
         finally:
             self._fire_lock.release()

@@ -26,6 +26,7 @@ from je_auto_control.utils.rbac.authorization import authorization_scope, curren
 from je_auto_control.utils.action_journal.capture import bound_journal, current_journal
 from je_auto_control.utils.logging.secret_scope import bound_secret_scope, current_secret_scope
 from je_auto_control.utils.run_history.context import bound_history, current_history
+from je_auto_control.utils.run_history.run_outcome import is_run_interruption, raise_if_run_interrupted
 from je_auto_control.wrapper.auto_control_image import locate_image_center
 from je_auto_control.wrapper.auto_control_screen import get_pixel
 from je_auto_control.utils.timeouts import deadline_after
@@ -52,7 +53,8 @@ def _image_present(image: str, threshold: float) -> bool:
     try:
         locate_image_center(image, threshold)
         return True
-    except (ImageNotFoundException, OSError, RuntimeError, ValueError, TypeError):
+    except (ImageNotFoundException, OSError, RuntimeError, ValueError, TypeError) as error:
+        raise_if_run_interrupted(error)
         return False
 
 
@@ -217,6 +219,7 @@ def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
         except MacroDepthExceeded:
             raise
         except _TRY_CATCHABLE as error:
+            raise_if_run_interrupted(error)
             last_error = error
             autocontrol_logger.info(
                 "AC_retry attempt %d/%d failed: %s",
@@ -254,6 +257,7 @@ def exec_try(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
         except (LoopBreak, LoopContinue, MacroDepthExceeded):
             raise
         except _TRY_CATCHABLE as error:
+            raise_if_run_interrupted(error)
             caught_repr = repr(error)
             autocontrol_logger.info("AC_try caught: %s", caught_repr)
             error_var = args.get("error_var")
@@ -479,6 +483,7 @@ class _ParallelRun:
         self._failures: list = [0] * len(branches)
         self._errors: Dict[int, str] = {}
         self._assertions: Dict[int, AutoControlAssertionException] = {}
+        self._interruptions: list[Optional[BaseException]] = [None] * len(branches)
 
     def _branch_executor(self) -> Any:
         branch_executor = self._module.Executor()
@@ -511,16 +516,25 @@ class _ParallelRun:
             self._failures[index] = self._module.recorded_failures()
         except AutoControlAssertionException as error:
             self._assertions[index] = error
-        except Exception as error:  # noqa: BLE001  # reason: see comment above
-            self._errors[index] = repr(error)
-            with bound_secret_scope(self._secret_scope):
-                autocontrol_logger.error(
-                    "AC_parallel branch %d failed: %r", index, error, exc_info=True)
+        except BaseException as error:  # reason: return worker control signals to the caller after joining
+            if not isinstance(error, Exception) or is_run_interruption(error):
+                self._interruptions[index] = error
+            else:
+                self._errors[index] = repr(error)
+                with bound_secret_scope(self._secret_scope):
+                    autocontrol_logger.error(
+                        "AC_parallel branch %d failed: %r", index, error, exc_info=True)
+
+    def _raise_interruption(self) -> None:
+        for interruption in self._interruptions:
+            if interruption is not None:
+                raise interruption
 
     def settle(self) -> None:
         """On the parent thread: count branch failures, then raise the first problem."""
         for _ in range(sum(self._failures)):
             self._module._count_recorded_failure()
+        self._raise_interruption()
         if self._assertions:
             # Re-raised as itself so it propagates like a top-level assert.
             raise self._assertions[min(self._assertions)]

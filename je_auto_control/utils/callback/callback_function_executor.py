@@ -10,6 +10,7 @@ from je_auto_control.utils.exception.exceptions import (
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.logging.secret_scope import secret_log_scope
+from je_auto_control.utils.run_history.run_outcome import raise_if_run_interrupted
 # executor
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
@@ -180,6 +181,7 @@ class CallbackFunctionExecutor:
         except AutoControlAssertionException:
             raise   # an assertion failure is the script's verdict, never a None
         except Exception as error:  # noqa: BLE001  # reason: documented to return None
+            raise_if_run_interrupted(error)
             autocontrol_logger.error("callback_function trigger failed: %r", error)
             return None
 
@@ -189,6 +191,7 @@ class CallbackFunctionExecutor:
             self._invoke_callback(
                 callback_function, callback_function_param, callback_param_method)
         except Exception as error:  # noqa: BLE001  # reason: logged; the trigger result stands
+            raise_if_run_interrupted(error)
             autocontrol_logger.error("callback_function callback failed: %r", error)
 
         return execute_return_value
