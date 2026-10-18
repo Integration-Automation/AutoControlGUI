@@ -68,6 +68,18 @@ file is validated. Current roots are rechecked around progress and at completion
 The shared GUI reader now accepts a step ID. These are read-only inspection paths,
 with no promotion to the stable API and no automatic replay.
 
+Template-candidate functions and their immutable state/preview/verification/
+transition models are experimental facade additions. The five
+`AC_template_candidate_*` / `ac_template_candidate_*` operations use schema-v1
+bundles; only explicit creation persists image bytes. Static PNG/JPEG/BMP targets
+are supported, with supplied PNG candidate pixels encoded in the target format.
+A reviewed bundle revision is required for acceptance/revert. Acceptance always
+reverifies current local labelled samples; rollback preserves later edits.
+State names describe current file bytes, not a verified native operation or an
+operator-history record. Thresholds belong to the bundle's verification config;
+activating an image does not rewrite scripts. Existing RepairStore/manual
+coordinate APIs are unchanged and are not called by this workflow.
+
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.
 - Experimental API may change in any release and must be labelled as such.

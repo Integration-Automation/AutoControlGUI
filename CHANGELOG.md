@@ -13,6 +13,17 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Experimental template-candidate bundles support preview, fixed-frame verification,
+  explicit acceptance and byte-exact rollback through API/AC/MCP/CLI/Builder/GUI.
+  Creation retains original/candidate images without changing the active template;
+  previews are bounded thumbnails. Acceptance requires positive and expected-miss
+  labels, all labelled cases correct and the reviewed bundle SHA-256. A target lock,
+  current content checks and atomic replacement protect later edits; rollback refuses
+  conflicts. PNG/JPEG/BMP target encoding is retained. Unknowns/native operation
+  verification remain separate. The shared sample loader accepts samples-only
+  manifests for candidates while ordinary version evaluation still requires versions.
+  Example: `python -m examples.template_candidates`.
+
 - Captured healing records retain an optional journal path for original-step
   inspection through experimental API/AC/MCP/CLI and the Self-Healing GUI.
   Legacy and unbound rows retain unknown provenance. Journal inspection adds

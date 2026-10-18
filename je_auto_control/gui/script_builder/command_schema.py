@@ -82,7 +82,25 @@ def _build_specs() -> List[CommandSpec]:
     return specs
 
 
+def _add_template_candidate_specs(specs: List[CommandSpec]) -> None:
+    bundle = FieldSpec("bundle_path", FieldType.FILE_PATH)
+    dataset = FieldSpec("dataset_path", FieldType.FILE_PATH)
+    revision = FieldSpec("expected_revision", FieldType.STRING, placeholder="Reviewed bundle SHA-256")
+    rows = (
+        ("create", "Create Template Candidate", (
+            FieldSpec("template_path", FieldType.FILE_PATH), FieldSpec("candidate_path", FieldType.FILE_PATH),
+            bundle, FieldSpec("threshold", FieldType.FLOAT, default=0.9, optional=True))),
+        ("preview", "Preview Template Candidate", (bundle,)),
+        ("verify", "Verify Template Candidate", (bundle, dataset)),
+        ("accept", "Accept Template Candidate", (bundle, dataset, revision)),
+        ("revert", "Revert Template Candidate", (bundle, revision)),
+    )
+    for operation, title, fields in rows:
+        specs.append(CommandSpec(f"AC_template_candidate_{operation}", "Image", title, fields=fields))
+
+
 def _add_self_healing_specs(specs: List[CommandSpec]) -> None:
+    _add_template_candidate_specs(specs)
     specs.append(CommandSpec(
         "AC_self_heal_source", "Image", "Inspect Original Healing Step",
         fields=(FieldSpec("path", FieldType.FILE_PATH), FieldSpec("run_id", FieldType.STRING),

@@ -76,6 +76,11 @@ COMMAND_CAPABILITIES: Dict[str, str] = {
     "AC_self_heal_evaluate": _DRIVE,
     "AC_self_heal_run": _DRIVE,
     "AC_self_heal_source": _DRIVE,
+    "AC_template_candidate_create": _DRIVE,
+    "AC_template_candidate_preview": _DRIVE,
+    "AC_template_candidate_verify": _DRIVE,
+    "AC_template_candidate_accept": _DRIVE,
+    "AC_template_candidate_revert": _DRIVE,
     "AC_journal_capture": _DRIVE,
     "AC_journal_read": _DRIVE,
     "AC_sign_action_file": Capability.SIGN_ACTIONS,
@@ -195,6 +200,11 @@ TOOL_CAPABILITIES: Dict[str, str] = {
     "ac_self_heal_evaluate": _DRIVE,
     "ac_self_heal_run": _DRIVE,
     "ac_self_heal_source": _DRIVE,
+    "ac_template_candidate_create": _DRIVE,
+    "ac_template_candidate_preview": _DRIVE,
+    "ac_template_candidate_verify": _DRIVE,
+    "ac_template_candidate_accept": _DRIVE,
+    "ac_template_candidate_revert": _DRIVE,
     "ac_describe_screen": _DRIVE,
 }
 

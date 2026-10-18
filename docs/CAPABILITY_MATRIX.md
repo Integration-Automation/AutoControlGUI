@@ -43,6 +43,12 @@ Original-step source inspection has controlled captured/legacy/unbound metadata,
 run/step filtering, whole-file validation, revoked roots, cancellation, AC/CLI/MCP
 and offscreen background-reader tests. It does not capture or replay device input.
 
+Template-candidate lifecycle has local synthetic PNG, JPEG/BMP byte-preserving
+rollback, labelled/unknown populations, file-conflict/concurrency, commit-boundary
+cancellation, root-revocation and AC/CLI/MCP/offscreen GUI tests. The GUI retains
+reviewed revisions and deferred authority. Eligibility means localization on the
+supplied fixed images; this adds no native accuracy, performance or paid API claim.
+
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
 

@@ -122,6 +122,66 @@ MCP 的唯讀標記不會授予 viewer 讀取私有日誌的權限。
 來源查閱不會執行任何已記錄指令。
 
 
+審閱候選模板
+^^^^^^^^^^^^
+
+實驗性候選流程只使用明確提供的檔案，不截圖、不輸入，也不呼叫模型。
+新的不可變 schema-1 JSON 版本包保存精確原始位元組、依目標 PNG／JPEG／BMP
+格式編碼的候選、雜湊、標準化目標路徑及比對閾值::
+
+    from pathlib import Path
+    from je_auto_control import (
+        create_template_candidate, preview_template_candidate,
+        verify_template_candidate, accept_template_candidate,
+        revert_template_candidate, write_healing_report,
+    )
+
+    create_template_candidate("submit.png", Path("candidate.png").read_bytes(),
+                              "candidate.json", threshold=0.9)
+    reviewed = preview_template_candidate("candidate.json")
+    checked = verify_template_candidate("candidate.json", "dataset.json")
+    write_healing_report(checked.comparison, "comparison.html")
+    if checked.eligible:
+        accepted = accept_template_candidate("candidate.json", "dataset.json",
+                                             reviewed.state.revision)
+        reverted = revert_template_candidate("candidate.json", reviewed.state.revision)
+
+預覽回傳每邊最多 512 像素的兩張 PNG 縮圖與完整尺寸資訊。
+影像上限為 16 MiB／1,600 萬像素，版本包上限 48 MiB；建立時拒絕覆寫既有版本包，
+也不更動目標。驗證沿用固定影像評估的 schema-1 樣本清單（清單 1 MiB、最多 500 樣本，
+影像合計 64 MiB）。可省略 ``versions``；即使提供也會忽略，兩個固定版本均來自版本包::
+
+    {"schema_version": 1, "samples": [
+        {"id": "hit", "frame": "frame.png", "expected_box": [20, 16, 37, 29]},
+        {"id": "miss", "frame": "absent.png", "expected_miss": true},
+        {"id": "unknown", "frame": "unlabelled.png"}
+    ]}
+
+資格要求至少一個已標註目標、一個預期 miss，且全部已標註樣本正確。
+未標註維持未知，原生操作是否成功另行驗證。JPEG 使用目標格式編碼後的實際像素驗證。
+解碼／比對錯誤（包含正規化後的常數模板）會阻止接受。驗證使用記錄的閾值；啟用影像
+不修改腳本的定位閾值，腳本應使用相符設定。
+
+接受一定重新驗證資料集，並要求審閱時取得的 ``expected_revision``。
+這是整份版本包位元組的 SHA-256，與執行時定位器版本雜湊不同。
+取得目標鎖後，在最後進度檢查點之後再次檢查版本包雜湊、路徑與目前內容，才執行一次原子替換。
+狀態依目前位元組判定為 original／candidate／conflict／missing，不代表核准歷史。
+重複相同結果回傳 ``changed=False``；回復只在目前內容仍為此候選或原始版本時精確還原，
+拒絕覆寫後續修改或缺失檔案。提交前取消會阻止替換；已完成替換不因後來取消而復原或改標失敗，
+提交之後不再通知 observer。
+
+Python 提供上述五個函式；JSON 動作／CLI 使用
+``AC_template_candidate_create/preview/verify/accept/revert``，MCP 使用對應
+``ac_template_candidate_*``。建立接受 ``template_path``、``candidate_path``（PNG）、
+``bundle_path`` 與可選 ``threshold``；驗證／接受需要 ``dataset_path``，接受／回復需要
+``expected_revision``。MCP 預覽另外回傳兩個影像區塊，JSON 入口回傳資訊。
+所有操作均要求 drive 權限並遵守目前與外層路徑根目錄，包含版本包內的目標與已載入樣本。
+Script Builder 提供五個命令；**Self-Healing → 候選模板** 以背景工作顯示縮圖、JSON 證據、
+進度與取消，五項操作位於動作選單，四種介面語言均可使用。
+``python -m examples.template_candidates`` 提供只使用合成影像和暫存檔案的範例。
+真機與付費 API 驗收仍暫緩。
+
+
 錨點定位器
 ----------
 

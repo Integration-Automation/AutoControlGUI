@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.healing_evaluation_panel import HealingEvaluationPanel
 from je_auto_control.gui.journal_browser import JournalBrowser
+from je_auto_control.gui.template_candidate_panel import TemplateCandidatePanel
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -98,9 +99,11 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._views = QTabWidget()
         self._evaluation = HealingEvaluationPanel(self)
         self._source = JournalBrowser(self)
+        self._candidates = TemplateCandidatePanel(self)
         self._views.addTab(runtime, "")
         self._views.addTab(self._evaluation, "")
         self._views.addTab(self._source, "")
+        self._views.addTab(self._candidates, "")
         root.addWidget(self._views, stretch=1)
         self._apply_translations()
         self.refresh_log()
@@ -125,7 +128,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
             ("self_heal_refresh", self.refresh_log),
             ("self_heal_clear", self._on_clear_log),
             ("self_heal_source_open", self._on_source),
-        ] + self._evaluation.menu_actions() + self._source.menu_actions()
+        ] + self._evaluation.menu_actions() + self._source.menu_actions() + self._candidates.menu_actions()
 
     # --- translation -----------------------------------------------
 
@@ -133,8 +136,10 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._views.setTabText(0, _t("healing_eval_log"))
         self._views.setTabText(1, _t("healing_eval_heading"))
         self._views.setTabText(2, _t("self_heal_source_heading"))
+        self._views.setTabText(3, _t("template_candidate_heading"))
         self._evaluation.retranslate()
         self._source.retranslate()
+        self._candidates.retranslate()
         self._group_box.setTitle(_t("self_heal_form_title"))
         self._template_input.setPlaceholderText(_t("self_heal_template_placeholder"))
         self._description_input.setPlaceholderText(_t("self_heal_desc_placeholder"))
@@ -270,6 +275,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802  # reason: Qt override
         """Cancel source inspection immediately when the owning tab closes."""
         self._source.cancel()
+        self._candidates.cancel()
         super().closeEvent(event)
 
 

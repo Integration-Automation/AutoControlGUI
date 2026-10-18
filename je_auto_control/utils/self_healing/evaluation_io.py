@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import html
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -53,6 +53,7 @@ class _AssetReader:
     parent: Path
     policy: Optional[PathPolicy]
     remaining: int = 64 * 1024 * 1024
+    paths: list[Path] = field(default_factory=list)
 
     def read(self, value: object) -> bytes:
         """Read one confined asset while reducing the shared encoded-data budget."""
@@ -61,7 +62,13 @@ class _AssetReader:
         path = _bounded_path(self.parent / value, self.policy, parent=self.parent)
         data = _read(path, min(self.remaining, 16 * 1024 * 1024))
         self.remaining -= len(data)
+        self.paths.append(path)
         return data
+
+    def check_paths(self) -> None:
+        """Recheck current permissions on already loaded sample assets before using them."""
+        for path in self.paths:
+            _bounded_path(path, self.policy, parent=self.parent)
 
 
 def _sample(value: object, reader: _AssetReader) -> EvaluationSample:
@@ -88,6 +95,19 @@ def evaluate_healing_manifest(path: str | Path, *, path_policy: Optional[PathPol
     PNGs are bounded to 16 MiB each, manifest to 1 MiB, total pixels/files to
     64 MiB of encoded data. Observer exceptions propagate before further work.
     """
+    samples, version_rows, reader = _load_samples_manifest(path, path_policy, observer, require_versions=True)
+    versions = {}
+    for name, row in version_rows.items():
+        if observer is not None:
+            observer(0)
+        versions[name] = _version(row, reader)
+    return evaluate_locators(samples, versions, observer=observer)
+
+
+def _load_samples_manifest(path: str | Path, path_policy: Optional[PathPolicy],
+                             observer: Optional[Callable[[int], None]], *, require_versions: bool = False
+                             ) -> tuple[list[EvaluationSample], dict[str, Any], _AssetReader]:
+    """Share bounded sample loading; candidate bundles supply their own frozen versions."""
     if observer is not None:
         observer(0)
     candidate = _bounded_path(path, path_policy)
@@ -95,30 +115,36 @@ def evaluate_healing_manifest(path: str | Path, *, path_policy: Optional[PathPol
         payload = json.loads(_read(candidate, 1024 * 1024), object_pairs_hook=_unique_object)
     except (ValueError, UnicodeError) as error:
         raise HealingEvaluationError("manifest must be UTF-8 JSON") from error
-    body = _object(payload, {"schema_version", "samples", "versions"}, {"schema_version", "samples", "versions"})
-    _check_manifest(body)
-    samples, versions = [], {}
+    required = {"schema_version", "samples", "versions"} if require_versions else {"schema_version", "samples"}
+    body = _object(payload, {"schema_version", "samples", "versions"}, required)
+    _check_manifest(body, require_versions=require_versions)
+    samples = []
     reader = _AssetReader(candidate.parent, path_policy)
     for row in body["samples"]:
         if observer is not None:
             observer(0)
         samples.append(_sample(row, reader))
-    for name, row in body["versions"].items():
-        if observer is not None:
-            observer(0)
-        versions[name] = _version(row, reader)
-    return evaluate_locators(samples, versions, observer=observer)
+    return samples, body.get("versions", {}), reader
 
 
-def _check_manifest(body: dict[str, Any]) -> None:
+def _check_manifest(body: dict[str, Any], *, require_versions: bool = True) -> None:
     version = body["schema_version"]
     if isinstance(version, bool) or not isinstance(version, int) or version != 1:
         raise HealingEvaluationError("unsupported evaluation schema_version")
-    samples, versions = body["samples"], body["versions"]
+    sample_count = _sample_count(body["samples"])
+    versions = body.get("versions", {})
+    minimum = 1 if require_versions else 0
+    if not isinstance(versions, dict) or not minimum <= len(versions) <= 32:
+        raise HealingEvaluationError("manifest requires 1–32 versions and at most 10000 pairs")
+    count = len(versions) if require_versions else 2
+    if sample_count * count > 10000:
+        raise HealingEvaluationError("manifest requires 1–32 versions and at most 10000 pairs")
+
+
+def _sample_count(samples: object) -> int:
     if not isinstance(samples, list) or not 1 <= len(samples) <= 500:
         raise HealingEvaluationError("manifest requires 1–500 samples")
-    if not isinstance(versions, dict) or not 1 <= len(versions) <= 32 or len(samples) * len(versions) > 10000:
-        raise HealingEvaluationError("manifest requires 1–32 versions and at most 10000 pairs")
+    return len(samples)
 
 
 def write_healing_report(comparison: HealingComparison, path: str | Path, *,

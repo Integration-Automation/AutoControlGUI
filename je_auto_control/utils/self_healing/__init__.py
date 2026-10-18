@@ -24,6 +24,14 @@ from je_auto_control.utils.self_healing.locator import (
 )
 from je_auto_control.utils.self_healing.requests import SelfHealRequest, SelfHealRequestError, VerificationRequest
 from je_auto_control.utils.self_healing.source_inspection import inspect_heal_source
+from je_auto_control.utils.self_healing.template_candidates import (
+    create_template_candidate, preview_template_candidate, verify_template_candidate,
+    accept_template_candidate, revert_template_candidate,
+)
+from je_auto_control.utils.self_healing.template_models import (
+    TemplateCandidateState, TemplateCandidatePreview, TemplateCandidateVerification, TemplateCandidateTransition,
+    TemplateRevisionError, TemplateRevisionConflict,
+)
 from je_auto_control.utils.self_healing.evaluation import HealingComparison, evaluate_locators
 from je_auto_control.utils.self_healing.evaluation_models import (
     EvaluationRatio, EvaluationSample, HealingAttempt, HealingEvaluationError,
@@ -40,6 +48,9 @@ __all__ = [
     "SelfHealRequest", "SelfHealRequestError", "SelfHealRunResult", "SelfHealVerificationError",
     "VerificationRequest", "self_heal_run",
     "inspect_heal_source",
+    "create_template_candidate", "preview_template_candidate", "verify_template_candidate",
+    "accept_template_candidate", "revert_template_candidate", "TemplateCandidateState", "TemplateCandidatePreview",
+    "TemplateCandidateVerification", "TemplateCandidateTransition", "TemplateRevisionError", "TemplateRevisionConflict",
     "EvaluationRatio", "EvaluationSample", "HealingAttempt", "HealingComparison", "HealingEvaluationError",
     "HealingVersionReport", "LocatorCandidate", "LocatorStrategy", "TemplateFrameLocator", "VLMFrameLocator",
     "evaluate_healing_manifest", "evaluate_locators", "write_healing_report",

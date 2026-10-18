@@ -2864,6 +2864,26 @@ def AC_tag_kinds(elements: Any) -> Dict[str, Any]:
 def AC_take_golden(path: str, region: List[int] | None = ...) -> str:
     """Adapter: capture and save a golden/baseline image."""
 
+def AC_template_candidate_accept(bundle_path: str, dataset_path: str, expected_revision: str) -> dict[str, object]:
+    """Reverify and activate one explicitly reviewed candidate revision."""
+
+def AC_template_candidate_create(
+    template_path: str,
+    candidate_path: str,
+    bundle_path: str,
+    threshold: float = ...,
+) -> dict[str, object]:
+    """Create an immutable candidate bundle from an explicit PNG file."""
+
+def AC_template_candidate_preview(bundle_path: str) -> dict[str, object]:
+    """Return preview metadata; Python/MCP/GUI can obtain the actual thumbnails."""
+
+def AC_template_candidate_revert(bundle_path: str, expected_revision: str) -> dict[str, object]:
+    """Restore original bytes without overwriting a later edit."""
+
+def AC_template_candidate_verify(bundle_path: str, dataset_path: str) -> dict[str, object]:
+    """Return fixed-frame quality populations and candidate eligibility."""
+
 def AC_text_similarity(a: str, b: str, metric: str = ...) -> Dict[str, Any]:
     """Adapter: normalised string similarity for the chosen metric."""
 

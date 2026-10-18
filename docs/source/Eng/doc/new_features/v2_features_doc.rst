@@ -148,6 +148,76 @@ Cancellation propagates without a partial result. Start/completion snapshots
 remain separate and sanitized. No source inspection executes recorded commands.
 
 
+Reviewed template candidates
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The experimental candidate workflow uses only explicitly supplied files. It never
+captures a screen, sends input or invokes a model. Create a new immutable schema-1
+JSON bundle containing exact original bytes, candidate bytes encoded in the
+target's PNG/JPEG/BMP format, hashes, canonical target and match threshold::
+
+    from pathlib import Path
+    from je_auto_control import (
+        create_template_candidate, preview_template_candidate,
+        verify_template_candidate, accept_template_candidate,
+        revert_template_candidate, write_healing_report,
+    )
+
+    create_template_candidate("submit.png", Path("candidate.png").read_bytes(),
+                              "candidate.json", threshold=0.9)
+    reviewed = preview_template_candidate("candidate.json")
+    checked = verify_template_candidate("candidate.json", "dataset.json")
+    write_healing_report(checked.comparison, "comparison.html")
+    if checked.eligible:
+        accepted = accept_template_candidate("candidate.json", "dataset.json",
+                                             reviewed.state.revision)
+        reverted = revert_template_candidate("candidate.json", reviewed.state.revision)
+
+Preview returns two PNG thumbnails bounded to 512 pixels per side and full-size
+metadata. Input images are limited to 16 MiB/16 million pixels; bundles to 48 MiB.
+Creation refuses an existing bundle and leaves the target untouched. Verification
+uses the same schema-1 sample manifest as fixed-frame evaluation (1 MiB manifest,
+500 samples, shared 64 MiB asset budget). ``versions`` may be omitted; if present
+it is ignored because the bundle supplies both frozen versions. For example::
+
+    {"schema_version": 1, "samples": [
+        {"id": "hit", "frame": "frame.png", "expected_box": [20, 16, 37, 29]},
+        {"id": "miss", "frame": "absent.png", "expected_miss": true},
+        {"id": "unknown", "frame": "unlabelled.png"}
+    ]}
+
+Eligibility requires at least one labelled target, one expected miss and all
+labelled cases correct. Unknown samples stay unknown and native operation success
+remains separate. JPEG candidates are verified after target-format encoding.
+Decoding/matching errors, including constant normalized templates, block acceptance.
+The bundle's recorded threshold controls validation; activating an image does
+not change a script's locator threshold, which should use the matching setting.
+
+Acceptance always reverifies the dataset and requires ``expected_revision`` from
+review. This is SHA-256 of the complete bundle bytes, distinct from the runtime
+locator-version hash. Under the target lock, the final progress checkpoint is
+followed by bundle-revision, current-path and file-content checks, then one atomic
+replacement. State is derived from bytes: original/candidate/conflict/missing,
+not approval history. A repeated desired result returns ``changed=False``.
+Revert restores exact original bytes only while current content still matches
+this candidate or original; later edits and missing files cause conflicts.
+Cancellation before commit prevents replacement; cancellation after a completed
+replacement does not undo it or relabel success. No observer runs after commit.
+
+Python exposes the five functions above. JSON actions and CLI use
+``AC_template_candidate_create/preview/verify/accept/revert``; MCP uses the matching
+``ac_template_candidate_*`` names. Create takes ``template_path``,
+``candidate_path`` (PNG), ``bundle_path`` and optional ``threshold``. Verify/accept
+take ``dataset_path``; accept/revert require ``expected_revision``. MCP preview
+adds two image blocks; JSON adapters return metadata. All operations require drive
+permission and obey current/enclosing roots, including embedded targets and loaded
+samples. Script Builder exposes all five commands. **Self-Healing → Template
+candidates** provides previews, JSON evidence and Actions-menu operations with
+background progress/cancellation in all four interface languages. Run
+``python -m examples.template_candidates`` for a synthetic temporary-file example.
+Native-device and paid-API acceptance remain deferred.
+
+
 Anchor-based locator
 --------------------
 

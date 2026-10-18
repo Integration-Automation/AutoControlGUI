@@ -34,6 +34,19 @@ Standalone VLM capture uses `vision/frame_capture.py` with scoped geometry;
 logical PNGs stay in memory. Input dispatch and operation verification remain distinct. Existing result
 and call signatures remain compatible, and unbound locator calls stay unbound.
 
+Template revisions use immutable schema-v1 JSON bundles containing original and
+candidate bytes, content hashes, canonical target and match threshold. Previews
+are bounded PNG thumbnails. Verification reuses the fixed-frame sample loader and
+comparison engine; the bundle supplies the frozen versions. Explicit acceptance
+reverifies labelled positives/expected misses, then takes a target lock, rechecks
+the reviewed bundle and file content and performs one atomic replacement. Revert
+compares content before restoring exact original bytes. File state is derived
+from bytes, so no mutable manifest pointer can disagree after interruption.
+All paths intersect current/enclosing roots, including loaded sample paths at
+commit checkpoints. GUI tasks retain authority/context and stop before writes;
+completed writes are not relabelled cancelled. Native operation verification is
+independent. Candidate operations share API/AC/MCP/CLI/Builder and GUI surfaces.
+
 | Path | Responsibility |
 | --- | --- |
 | `je_auto_control/__init__.py` | Facade: re-exports the public API and lists it in `__all__`. Must import without PySide6. |
