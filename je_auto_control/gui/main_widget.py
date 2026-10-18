@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 from PySide6.QtCore import QTimer, Signal, QObject
 from PySide6.QtGui import QKeyEvent, Qt
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QTabWidget,
+    QWidget, QVBoxLayout, QLabel,
 )
 
 from je_auto_control.gui._auto_click_tab import AutoClickTabMixin
@@ -19,6 +19,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import language
 from je_auto_control.gui.tab_registry import (
     TAB_SPECS, MenuActions, TabEntry, WidgetFactory, lazy_factory,
 )
+from je_auto_control.gui.workspace import ScrollableTabs
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_action_json
 
@@ -52,7 +53,7 @@ class AutoControlGUIWidget(
 
         self._tab_entries: List[TabEntry] = []
 
-        self.tabs = QTabWidget()
+        self.tabs = ScrollableTabs()
         self.tabs.setTabsClosable(True)
         self.tabs.setDocumentMode(True)
         self.tabs.setUsesScrollButtons(True)
@@ -319,6 +320,7 @@ class AutoControlGUIWidget(
 
     def retranslate(self) -> None:
         """Relabel tab titles and propagate into every child tab."""
+        self.tabs.retranslate()
         for entry in self._built_entries():
             index = self.tabs.indexOf(entry.widget)
             if index != -1:

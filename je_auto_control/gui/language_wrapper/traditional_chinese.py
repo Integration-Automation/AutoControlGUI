@@ -1205,4 +1205,5 @@ traditional_chinese_word_dict = {
     "menu_actions_none": "（此分頁沒有操作）",
     "menu_choose_script_dir": "選擇腳本資料夾...",
     "execute_editor_script": "執行編輯器內容",
+    "close_tab": "關閉分頁",
 }

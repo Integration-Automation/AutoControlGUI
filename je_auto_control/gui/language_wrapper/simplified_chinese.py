@@ -1204,4 +1204,5 @@ simplified_chinese_word_dict = {
     "menu_actions_none": "（此标签页没有操作）",
     "menu_choose_script_dir": "选择脚本目录...",
     "execute_editor_script": "运行编辑器内容",
+    "close_tab": "关闭标签页",
 }

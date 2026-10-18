@@ -1338,4 +1338,5 @@ english_word_dict = {
     "menu_actions_none": "(No actions on this tab)",
     "menu_choose_script_dir": "Choose Script Directory...",
     "execute_editor_script": "Run Editor Content",
+    "close_tab": "Close tab",
 }

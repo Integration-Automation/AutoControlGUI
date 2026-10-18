@@ -14,15 +14,9 @@
 各項沒驗到或沒做完的部分在本檔下面三節（輸入與視窗、macOS、這一輪修正留下的後續）。計畫 F（GUI）：F1 的延遲分頁註冊與 F2 的導覽／搜尋／主題已交付（U-20261008-02）。
 計畫 B（動作日誌、自愈量測、codegen）、C（持久化同步與遠端 session；其中 C4 的擁有者模型已做）、D（Wayland）、E（Android／iOS）、G（MCP 逐步揭露）、H（型別深化與總驗收）尚未開始。F 還缺：
 
-- **窄視窗的內容是被擠壓而不是可捲動**：`gui/main_widget.py` 給 `QTabWidget` 明確的最小尺寸讓視窗能縮到 640×420，
-  但分頁內容沒有包進 `QScrollArea`；包進去會改變 `tabs.indexOf(entry.widget)` 這個 PyBreeze 與測試都在用的關係，要一起設計。
-- **主題與面板狀態不會記住**：`AutoControlGUIUI.set_theme`、導覽面板的顯示與寬度、字級都只活在當次執行；
-  要用 `QSettings` 存，並讓測試不寫到使用者的設定。
-- **`qt-material` 還在 `[gui]` extra**：`gui/main_window.py` 已不匯入它。移除要同時改 `pyproject.toml`、`dev.toml`、
-  `requirements.txt`、`uv.lock` 與 mypy 的 override，並先確認 PyBreeze 沒有靠這個 extra 取得它。
-- **分頁的關閉鈕是 Fusion 內建圖示**：計畫規定主題不新增點陣圖相依，換圖示要用 Qt 內建向量或既有資產。
 - **Remote Desktop 與 Script Builder 仍在啟動時建立**（預設開啟），啟動時間 2.6–2.7 秒裡大半是它們與門面匯入。
 - **F1 的 `TabRegistry.open/close` 介面與 `close` 釋放訂閱**：現在關閉分頁只是從分頁列移除，widget 留著。
+- **F2 其餘**：計畫指定的 `WorkspaceShell` 介面、右側可收合詳情，以及各面板的空白／錯誤／permission states 還沒全面交付。
 - **F3**（共用 worker、取消、關閉時不碰已銷毀物件、`webrtc_panel.py` 拆分）與 **F4**（啟動／記憶體基準、mixed-DPI、
   功能對等測試）尚未開始。
 
@@ -120,7 +114,7 @@ sys_platform != 'win32' or platform_machine != 'ARM64'
 | `cryptography>=50.0.0` | **沒有** | wheel 只出到 **46.0.3**，46.0.4 起上游就不再發 win_arm64。`>=50.0.0` 是**安全下限**（GHSA-537c-gmf6-5ccf 與 GHSA-g6cj-pr64-35w5），不能為了 arm64 降回去。 |
 | `pillow==12.3.0` | 有 | `pillow-12.3.0-cp3xx-win_arm64.whl` 一直都在。**曾經被寫成卡點，那是猜的，它從來不是。** |
 | `mss`／`defusedxml` | 有 | 純 Python。這三個加上 Pillow 就是 arm64 實際裝到的全部。 |
-| `PySide6==6.11.1`／`qt-material==2.17` | 有 | `[gui]` extra 在 arm64 上裝得起來。 |
+| `PySide6==6.11.1` | 有 | `[gui]` extra 在 arm64 上裝得起來。 |
 | `aiortc` | **沒有** | 卡在傳遞相依 `google-crc32c`，與本專案的選擇無關；`av` 自己有 wheel。 |
 
 重驗指令（不需要 arm64 機器，也不需要 runner）：
@@ -259,7 +253,7 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
 - **`pytest --cov` 沒有重新量過**：進入點搬到 `je_auto_control_pytest` 之後，它是否還少算，未知；規則仍是 `coverage run -m pytest`。
 - **快到 750 行上限的檔案**：`utils/usb/passthrough/viewer_client.py`（748）、`gui/remote_desktop/connection_screen.py`（729）、
   `utils/mcp_server/server.py`（734）、`utils/mcp_server/http_transport.py`（727）、`utils/agent/backends/anthropic_computer_use.py`（723）——下一次要加東西就得先拆。
-- **Sphinx 沒有建置過**：這批改了 35 個 `.rst`，都沒有渲染檢查。
+- **Sphinx 嚴格建置未通過**：`docs/source` 的英／中文文件仍有標題線過短等既有警告；需修完後以 `-W --keep-going` 重建兩種語言並檢查渲染。
 
 ---
 

@@ -6,7 +6,7 @@
 > 擷取每個模組的 docstring 與頂層公開名稱；統計數字取自實際檔案，非估算。
 > 指令數與公開 API 數以 `executor.known_commands()` 與 `je_auto_control.__all__` 在工作樹上實測取得。
 >
-> **掃描時間**：2026-10-08　**版本**：`pyproject.toml` version `0.0.225`　**分支**：`feat/coverage-to-80`
+> **掃描時間**：2026-10-18　**版本**：`pyproject.toml` version `0.0.228`　**分支**：`dev`
 
 ---
 
@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,077 |
-| 程式碼總行數 | 161,551 |
+| Python 模組總數（含周邊子專案） | 1,079 |
+| 程式碼總行數 | 161,748 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 779 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -873,7 +873,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.5 GUI 層（`gui/`，84 檔／26,367 行）
 
-GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-material），且刻意保持「薄」：
+GUI 是**選用 extra**（`pip install je_auto_control[gui]`，只需要 PySide6），且刻意保持「薄」：
 每個分頁只把使用者輸入翻譯成對 `utils/` 無頭核心的呼叫。
 
 #### 骨架
@@ -881,11 +881,13 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `gui/__init__.py` | 25 | `start_autocontrol_gui()`：**唯一**會延遲匯入 PySide6 的地方，維持頂層套件 Qt-free。 |
-| `main_window.py` | 379 | `QMainWindow`：選單列（File／Actions／View／…）、左側導覽面板 dock（`Ctrl+K` 搜尋、`Ctrl+B` 收合）、即時語言切換、字級預設、深色／淺色主題（`theme.py` 的 token，不再用 qt-material）。分頁分為 core／editing／detection／automation／system 五類。 |
-| `main_widget.py` | 368 | 工作區：擁有 `QTabWidget`，依 `tab_registry.TAB_SPECS` 註冊 48 個分頁，並暴露 show/hide/activate/list API 給選單列與導覽面板。只有預設開啟的三個分頁與自己的 mixin 表單在啟動時建立，其餘第一次開啟才匯入模組、建立 widget。核心分頁在 `_own_tab_builders` 宣告 `(label_key, handler)` 動作對。 |
+| `main_window.py` | 407 | `QMainWindow`：選單列（File／Actions／View／…）、左側導覽面板 dock（`Ctrl+K` 搜尋、`Ctrl+B` 收合）、即時語言切換、字級預設、深色／淺色主題（`theme.py` 的 token，不再用 qt-material）。分頁分為 core／editing／detection／automation／system 五類。 |
+| `main_widget.py` | 370 | 工作區：擁有 `QTabWidget`，依 `tab_registry.TAB_SPECS` 註冊 48 個分頁，並暴露 show/hide/activate/list API 給選單列與導覽面板。只有預設開啟的三個分頁與自己的 mixin 表單在啟動時建立，其餘第一次開啟才匯入模組、建立 widget。核心分頁在 `_own_tab_builders` 宣告 `(label_key, handler)` 動作對。 |
 | `tab_registry.py` | 125 | 分頁表：每個分頁一筆 `TabSpec`（鍵、標題鍵、分類、模組與類別名），`TabEntry` 在第一次存取 `widget` 時才呼叫 factory。不匯入 Qt。 |
 | `navigation.py` | 200 | `NavigationPanel`：搜尋框 + 依分類的功能樹，列出每個已註冊分頁（開啟中的以粗體標示），只回報被選的鍵，開啟分頁仍由視窗負責。 |
 | `theme.py` | 178 | 設計 token（`ThemeTokens`：顏色、圓角、間距、字族）、深色與淺色兩組值、由 token 產生的樣式表與對應的 `QPalette`；不載入圖檔或字型檔。 |
+| `workspace.py` | 121 | 可捲動的分頁容器：保留 `widget/currentWidget/indexOf/setCurrentWidget` 的原始頁面身分、移除時保留頁面所有權，並直接繪製隨 palette 變色的向量關閉鈕。 |
+| `workspace_settings.py` | 42 | 驗證與載入主題、字級、導覽面板顯示與寬度；QSettings 使用當次帳號家目錄的 `gui.ini`，測試可注入獨立檔案。 |
 | `_auto_click_tab.py` | 291 | 自動點擊分頁的 mixin 建構器。 |
 | `_screenshot_tab.py` | 137 | 截圖／取像素分頁 mixin。 |
 | `_image_detect_tab.py` | 115 | 影像偵測分頁 mixin。 |
@@ -897,7 +899,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `_screen_geometry.py` | 55 | Qt 邏輯座標與截圖用的原生像素互轉：`native_region()`、`screen_at_native()`、`logical_point()`（每個螢幕的左上角在兩者相同，螢幕內依 device pixel ratio 縮放）。區域選取與主機端標註覆蓋層都用它。 |
 | `_daemon_thread.py` | 79 | `DaemonThread`：`QThread` 的替代品，保留遠端桌面 worker 用到的介面（`start`／`run`／`isRunning`／`wait`／`requestInterruption`／`started`／`finished`），但 `run()` 跑在 daemon `threading.Thread` 上，刪除物件或程式結束都不會銷毀執行中的執行緒。 |
 | `_worker_thread.py` | 216 | `start_worker()`：在 daemon `threading.Thread` 上執行 `QObject` worker 的 `run()`（沒有 `QThread` 可被銷毀），並經由分頁擁有的中繼物件回報結果（回呼一律在 GUI 執行緒；worker 沒處理的例外也送到 `on_fail`）；worker 留在模組登錄表直到 GUI 執行緒看到它結束，回傳 `WorkerHandle`（`isRunning()`）；程式結束時先呼叫 worker 的 `request_stop()`，最多等 10 秒，仍在跑的隨行程結束。 |
-| `language_wrapper/` | 5,067 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
+| `language_wrapper/` | 5,071 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
 | `selector/` | 216 | 拖曳選取螢幕區域的半透明全螢幕覆蓋層與樣板裁切工具（互動式，但都有對應的程式化 API）。 |
 
 > **分頁指令一律走 Actions 選單**：分頁本身只放輸入、表格與結果檢視，指令由視窗層選單暴露。
@@ -1079,7 +1081,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 98 | 28,507 |
+| `gui/` | 100 | 28,704 |
 | `utils/mcp_server/` | 37 | 19,161 |
 | `utils/remote_desktop/` | 56 | 13,301 |
 | `utils/executor/` | 8 | 9,666 |
@@ -1100,5 +1102,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 852 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 689 | 58,556 |
-| **總計** | **1,071** | **161,486** |
+| **總計** | **1,073** | **161,683** |
 

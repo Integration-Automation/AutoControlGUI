@@ -1225,4 +1225,5 @@ japanese_word_dict = {
     "menu_actions_none": "（このタブにアクションはありません）",
     "menu_choose_script_dir": "スクリプトフォルダーを選択...",
     "execute_editor_script": "エディター内容を実行",
+    "close_tab": "タブを閉じる",
 }

@@ -13,6 +13,18 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+### GUI workspace
+
+- Tab contents scroll when the window is smaller than their minimum layout;
+  the embedded workspace's page lookup and show/hide APIs keep returning the
+  original widgets. Close buttons are painted as vectors in the active palette.
+- Theme, text size, navigation visibility and width persist on window close in
+  `~/.je_auto_control/gui.ini`. Remove this file to reset workspace preferences.
+  `Ctrl+B` now toggles the fixed navigation panel.
+- The `gui` extra and requirements files no longer install `qt-material` or
+  its otherwise unused transitive dependencies. Applications importing
+  `qt_material` themselves must declare their own dependency.
+
 ### Added
 
 - Action files can be signed with an Ed25519 key pair, so an endpoint that

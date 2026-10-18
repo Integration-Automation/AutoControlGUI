@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261018-01 | 2026-10-18 | GUI pages scroll and workspace preferences persist without qt-material | #done #gui #F2 | [2026-10](2026-10.md) |
 | U-20261009-14 | 2026-10-09 | The package gate refuses unlisted packages by default | #done #security #breaking | [2026-10](2026-10.md) |
 | U-20261009-13 | 2026-10-09 | REST routes and MCP tools are authorised by role when a user store is configured | #done #security #rbac #A10 | [2026-10](2026-10.md) |
 | U-20261009-12 | 2026-10-09 | Remote-desktop hosts and viewers have owners | #done #remote-desktop #gui #C4 | [2026-10](2026-10.md) |
@@ -363,7 +364,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 27 |
+| [2026-10.md](2026-10.md) | 2026-10 | 28 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

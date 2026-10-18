@@ -70,8 +70,6 @@ Dependencies
      - Linux X11 backend (auto-installed on Linux)
    * - ``PySide6``
      - GUI application (optional, install with ``[gui]``)
-   * - ``qt-material``
-     - GUI theme (optional, install with ``[gui]``)
 
 Platform Support
 ================

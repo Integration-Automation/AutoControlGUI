@@ -1,8 +1,8 @@
 """Top-level window: menu bar, feature navigation, tabbed workspace, themes, live language switching."""
 import sys
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QActionGroup, QKeySequence
+from PySide6.QtCore import QEvent, QObject, QSettings, Qt
+from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QKeySequence
 from PySide6.QtWidgets import (
     QApplication, QDockWidget, QFileDialog, QMainWindow, QMenu, QMessageBox, QWidget,
 )
@@ -13,8 +13,9 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
 from je_auto_control.gui.main_widget import AutoControlGUIWidget
 from je_auto_control.gui.navigation import NavigationPanel
 from je_auto_control.gui.theme import (
-    DEFAULT_THEME, THEMES, apply_theme, font_rule, prepare_application, theme_named,
+    THEMES, apply_theme, font_rule, prepare_application, theme_named,
 )
+from je_auto_control.gui.workspace_settings import WorkspacePreferences, default_settings
 
 
 def _t(key: str, default: str = "") -> str:
@@ -48,15 +49,18 @@ _THEME_LABELS = {
 class AutoControlGUIUI(QMainWindow):
     """Main window: menu bar, navigation panel and AutoControlGUIWidget (which owns the tabs)."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, settings: QSettings | None = None) -> None:
         super().__init__()
+        self._settings = settings if settings is not None else default_settings()
+        preferences = WorkspacePreferences.load(self._settings)
+        self._navigation_width = preferences.navigation_width
         self.app_id = _t("application_name", "AutoControlGUI")
         if sys.platform in ["win32", "cygwin", "msys"]:
             from ctypes import windll  # type: ignore[attr-defined]  # reason: win32-only ctypes
             windll.shell32.SetCurrentProcessExplicitAppUserModelID(self.app_id)
 
-        self._user_font_pt: int = 0  # 0 means auto-detect from screen
-        self._theme_name: str = DEFAULT_THEME
+        self._user_font_pt: int = preferences.font_pt  # 0 means auto-detect from screen
+        self._theme_name: str = preferences.theme
         # The theme's style sheet is kept so _apply_font_pt can append the
         # font rule instead of replacing (and thereby wiping) the theme.
         self._theme_stylesheet: str = apply_theme(self, theme_named(self._theme_name))
@@ -68,6 +72,9 @@ class AutoControlGUIUI(QMainWindow):
         self.auto_control_gui_widget = AutoControlGUIWidget(parent=self)
         self.setCentralWidget(self.auto_control_gui_widget)
         self._build_navigation()
+        self.resizeDocks([self._navigation_dock], [preferences.navigation_width], Qt.Orientation.Horizontal)
+        self._navigation_dock.setVisible(preferences.navigation_visible)
+        self._navigation_dock.installEventFilter(self)
 
         self._view_menu: QMenu = None
         self._actions_menu: QMenu = None
@@ -85,6 +92,25 @@ class AutoControlGUIUI(QMainWindow):
         listener = self._on_language_changed
         self.destroyed.connect(lambda *_args: language_wrapper.remove_listener(listener))
 
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802  # reason: Qt override
+        """Save workspace preferences when this window closes."""
+        super().closeEvent(event)
+        if event.isAccepted():
+            for key, value in (
+                ("theme", self._theme_name), ("font_pt", self._user_font_pt),
+                ("navigation_visible", not self._navigation_dock.isHidden()),
+                ("navigation_width", self._navigation_width),
+            ):
+                self._settings.setValue(f"workspace/{key}", value)
+            self._settings.sync()
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802  # reason: Qt override
+        """Remember laid-out dock widths, keeping the saved width while hidden."""
+        if watched is self._navigation_dock and event.type() == QEvent.Type.Resize:
+            if not self._navigation_dock.isHidden():
+                self._navigation_width = self._navigation_dock.width()
+        return super().eventFilter(watched, event)
+
     # --- navigation ----------------------------------------------------------
 
     def _build_navigation(self) -> None:
@@ -93,7 +119,9 @@ class AutoControlGUIUI(QMainWindow):
         self.navigation.feature_activated.connect(self.auto_control_gui_widget.activate_tab)
         self._navigation_dock = QDockWidget(self)
         self._navigation_dock.setObjectName("NavigationDock")
-        self._navigation_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+        # Closable enables Qt's toggleViewAction (including Ctrl+B). The empty
+        # title bar still keeps the navigation panel fixed and button-free.
+        self._navigation_dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetClosable)
         self._navigation_dock.setTitleBarWidget(QWidget(self._navigation_dock))
         self._navigation_dock.setWidget(self.navigation)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self._navigation_dock)

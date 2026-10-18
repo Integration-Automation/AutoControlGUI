@@ -6,6 +6,5 @@ je_auto_control>=0.0.217
 # when je_auto_control was still unbounded here, and the floor above never
 # replaced that entry. A direct requirement does.
 pillow>=12.3.0
-qt-material==2.17
 mss==10.2.0
 PySide6==6.11.2
