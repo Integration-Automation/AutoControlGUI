@@ -1244,14 +1244,21 @@ Action JSON 指令::
    [["AC_secret_status"]]
 
 腳本透過 ``${secrets.NAME}`` 佔位符引用 vault 條目。插補器會把
-``secrets.`` 命名空間導向 vault,而不是普通變數作用域,所以明文值
-永遠不會進到變數袋裡::
+``secrets.`` 命名空間直接導向 vault，而不查詢一般變數::
 
    [["AC_shell_command",
      {"command": "curl -H \"Authorization: Bearer ${secrets.github_token}\" ..."}]]
 
 ``AC_shell_command`` 只記錄它啟動的程式,從不記錄參數,所以填入的 secret 不會進到 log;
 程式無法啟動時該動作會失敗。
+
+executor 執行期間，解析後的 ``${secrets.NAME}`` 值會在送到 handler 前，於
+``AutoControlGUI`` 應用程式訊息、例外文字與堆疊資訊中替換為 ``***``。
+遮罩包含原始值與常見 Python／JSON 跳脫形式。巢狀動作及等候完成的本機
+parallel／DAG 工作執行緒共用當次執行的遮罩；各個獨立執行彼此隔離，
+即使失敗也會於執行結束時清除資料。API 回傳結果與拋出的例外仍保留原始值。
+此遮罩涵蓋該次 executor 執行期間解析的值；經轉換／編碼的值，以及其他
+應用程式的 logger，仍由各自的邊界處理。
 
 GUI: **Secrets** 分頁 — 建立 vault、解鎖、新增 / 移除條目、變更
 通行碼。POSIX 系統上 vault 檔以 0o600 建立;Windows 預設 ACL 已限制

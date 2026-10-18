@@ -246,6 +246,8 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 結構化日誌可透過 `utils.action_journal` 的明確 Python 範圍擷取：`journal_scope` 記錄現有 executor 呼叫，`execute_action_with_journal` 隔離一次執行。本機 loop／parallel／DAG 步驟保留 parent ID，並區分失敗、取消與 dry-run。門面、動作指令、CLI／MCP 與 GUI 控制仍待接入。
 
+executor 執行期間，`${secrets.NAME}` 解析後的值會在 `AutoControlGUI` 應用程式訊息與 traceback 中遮罩，包含巢狀動作及本機 parallel／DAG 工作執行緒。遮罩資料於執行結束時清除；回傳結果與拋出的例外保留原始值。
+
 ## 命令列介面
 
 每次 `je_auto_control run`（包括 `--dry-run` 與未帶 `--var`）使用獨立變數範圍。頂層 `run_from_description` 與 `StateMachine.run()` 也會隔離變數，同一次執行內的動作與狀態仍可共享；巢狀呼叫沿用已有的執行範圍。自行建立的 `Executor()` 保留自己的變數。

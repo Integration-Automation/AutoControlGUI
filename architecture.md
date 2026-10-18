@@ -57,6 +57,11 @@ entry points → execution core (`utils/executor/`) → headless capabilities (`
 
 ## 4. Main flows
 
+Executor runs own a `utils/logging/secret_scope.py` mask for vault values resolved
+by interpolation. A logger filter sanitizes application records before handlers;
+joined local parallel/DAG workers share the mask, independent runs isolate it,
+and the owning run clears it on exit. Returned outcomes retain their values.
+
 **A. JSON action script (primary path)**
 
 ```

@@ -1338,8 +1338,7 @@ Action-JSON commands::
 
 Action scripts reference vault entries through ``${secrets.NAME}``
 placeholders. The interpolator routes the ``secrets.`` namespace to the
-vault rather than the regular variable scope, so plaintext values never
-land in the variable bag::
+vault directly rather than looking up an ordinary variable::
 
    [["AC_shell_command",
      {"command": "curl -H \"Authorization: Bearer ${secrets.github_token}\" ..."}]]
@@ -1347,6 +1346,16 @@ land in the variable bag::
 ``AC_shell_command`` logs only the program it starts, never its arguments,
 so a filled-in secret stays out of the log; a program that cannot start
 fails the action.
+
+During executor execution, resolved ``${secrets.NAME}`` values are replaced
+with ``***`` in ``AutoControlGUI`` application messages, exception text and
+stack information before handlers receive them. Exact values and common
+Python/JSON escaped forms are masked. Nested actions and joined local
+parallel/DAG workers share the run's mask; concurrent independent runs have
+separate masks, and run exit clears the values even on failure. API outcomes
+and raised exceptions retain their original values. This masking covers
+values learned during that executor run; transformed/encoded values and
+other applications' loggers require their own handling.
 
 GUI: **Secrets** tab — initialize the vault, unlock it, add / remove
 entries, change passphrase. The vault file is created with mode 0o600

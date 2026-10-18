@@ -24,6 +24,7 @@ from je_auto_control.utils.executor.flow_data_commands import (
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.rbac.authorization import authorization_scope, current_authorization
 from je_auto_control.utils.action_journal.capture import bound_journal, current_journal
+from je_auto_control.utils.logging.secret_scope import bound_secret_scope, current_secret_scope
 from je_auto_control.wrapper.auto_control_image import locate_image_center
 from je_auto_control.wrapper.auto_control_screen import get_pixel
 from je_auto_control.utils.timeouts import deadline_after
@@ -471,6 +472,7 @@ class _ParallelRun:
         # branch thread without it ran privileged commands unchecked.
         self._caller = current_authorization()
         self._journal = current_journal()
+        self._secret_scope = current_secret_scope()
         self.results: list = [None] * len(branches)
         self._failures: list = [0] * len(branches)
         self._errors: Dict[int, str] = {}
@@ -500,7 +502,8 @@ class _ParallelRun:
         _MACRO_DEPTH.value = self._macro_depth
         self._module.reset_recorded_failures()
         try:
-            with authorization_scope(self._caller), bound_journal(self._journal):
+            with (authorization_scope(self._caller), bound_journal(self._journal),
+                  bound_secret_scope(self._secret_scope)):
                 self.results[index] = self._branch_executor().execute_action(
                     branch, raise_on_error=self._strict, _validated=True)
             self._failures[index] = self._module.recorded_failures()
@@ -508,8 +511,9 @@ class _ParallelRun:
             self._assertions[index] = error
         except Exception as error:  # noqa: BLE001  # reason: see comment above
             self._errors[index] = repr(error)
-            autocontrol_logger.error(
-                "AC_parallel branch %d failed: %r", index, error, exc_info=True)
+            with bound_secret_scope(self._secret_scope):
+                autocontrol_logger.error(
+                    "AC_parallel branch %d failed: %r", index, error, exc_info=True)
 
     def settle(self) -> None:
         """On the parent thread: count branch failures, then raise the first problem."""

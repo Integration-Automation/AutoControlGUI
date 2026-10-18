@@ -34,6 +34,7 @@ from je_auto_control.utils.executor.flow_control import (
 )
 from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
 from je_auto_control.utils.action_journal.capture import action_step
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
@@ -8197,7 +8198,6 @@ class Executor:
         :param step_callback: 每個 action 開始前呼叫此 hook（偵錯用）。
         :return: 執行紀錄字典
         """
-        autocontrol_logger.info(f"execute_action, action_list: {redact_actions(action_list)}")
         # A nested body inherits the strictness of the list that runs it, so
         # a failure inside an AC_loop / AC_if_* / macro under raise_on_error
         # reaches the enclosing AC_try / AC_retry / caller instead of being
@@ -8211,8 +8211,10 @@ class Executor:
         running = getattr(_RUNNING, "value", None)
         _RUNNING.value = self
         try:
-            return self._execute_list(action_list, raise_on_error, _validated,
-                                      dry_run, step_callback)
+            with secret_log_scope():
+                autocontrol_logger.info(f"execute_action, action_list: {redact_actions(action_list)}")
+                return self._execute_list(action_list, raise_on_error, _validated,
+                                          dry_run, step_callback)
         finally:
             _STRICT_BODIES.value = inherited
             _RUNNING.value = running

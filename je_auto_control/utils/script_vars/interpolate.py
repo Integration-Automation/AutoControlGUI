@@ -16,6 +16,8 @@ import re
 from pathlib import Path
 from typing import Any, List, Mapping, MutableMapping, Optional, Tuple
 
+from je_auto_control.utils.logging.secret_scope import remember_secret
+
 # Bounded character class with a single quantifier — avoids the nested
 # alternation that ReDoS scanners (semgrep regex_dos) flag on
 # ``([A-Za-z_]\w*(?:\.\w+)*)``. Validation of the segment shape is
@@ -120,6 +122,7 @@ def _lookup_secret(secret_name: str) -> str:
         ) from error
     if value is None:
         raise ValueError(f"Unknown secret: ${{secrets.{secret_name}}}")
+    remember_secret(value)
     return value
 
 

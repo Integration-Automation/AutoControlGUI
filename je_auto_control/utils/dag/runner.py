@@ -303,12 +303,14 @@ def _current_run_local_runner() -> NodeRunner:
     from je_auto_control.utils.executor.action_executor import _running_executor
     from je_auto_control.utils.script_vars.execution import bound_scope
     from je_auto_control.utils.action_journal.capture import bound_journal, current_journal
+    from je_auto_control.utils.logging.secret_scope import bound_secret_scope, current_secret_scope
     runner = _running_executor()
     scope = runner.variables
     journal = current_journal()
+    secret_scope = current_secret_scope()
 
     def run(node: DagNode, definition: DagDefinition) -> Any:
-        with bound_scope(scope), bound_journal(journal):
+        with bound_scope(scope), bound_journal(journal), bound_secret_scope(secret_scope):
             return _default_local_runner(node, definition, runner)
     return run
 

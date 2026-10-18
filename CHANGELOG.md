@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Executor runs mask resolved vault-reference values in application log messages,
+  exception text and tracebacks before handlers receive them. Nested actions and
+  joined local parallel/DAG workers share a run-local mask, cleared on exit.
+  Returned results and raised exceptions retain their original values.
+
 
 - Journal tail recovery validates the destination's format and last committed
   event before truncation. Existing non-journal files, corrupt committed tails

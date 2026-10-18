@@ -28,6 +28,8 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 
+from je_auto_control.utils.logging.secret_scope import SecretLogFilter
+
 # 建立 AutoControlGUI 專用 logger Create dedicated logger
 # 只設自己這個 logger 的等級。以前這裡設的是 root：函式庫改掉宿主程式的全域
 # 日誌設定，任何 import 本套件的程式都會把所有第三方 logger 的 DEBUG 灌進
@@ -37,6 +39,7 @@ from typing import Optional
 # library's DEBUG records.
 autocontrol_logger = logging.getLogger("AutoControlGUI")
 autocontrol_logger.setLevel(logging.DEBUG)
+autocontrol_logger.addFilter(SecretLogFilter())
 
 # 日誌格式 Formatter
 formatter = logging.Formatter(
