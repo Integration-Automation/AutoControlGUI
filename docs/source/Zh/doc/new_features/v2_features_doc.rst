@@ -51,6 +51,50 @@ GUI 可輸入區域，查看操作狀態與所選記錄的 JSON 證據；即時�
 與固定影像比較分開。Script Builder 提供兩個即時命令，JSON 欄位可保留結構化區域。
 
 
+明確的點擊後驗證
+^^^^^^^^^^^^^^^^
+
+實驗性不可變請求 API 預設只定位。驗證須明確指定 ``operation="click"``。
+Python ``VerificationRequest`` 必須擇一提供回傳 bool 的 ``verifier`` callback，
+或交由已設定 VLM 檢查的 ``description``。VLM 檢查可能產生 API 費用::
+
+    from je_auto_control import SelfHealRequest, VerificationRequest, self_heal_run
+
+    result = self_heal_run(SelfHealRequest(
+        template_path="submit.png",
+        operation="click",
+        verification=VerificationRequest(description="確認訊息已顯示"),
+    ))
+    # result.verified 為 True、False 或 None；找到元素本身不是操作驗證。
+
+在送出輸入前檢查 VLM 是否可用。只有點擊成功送出後才執行驗證，並重新取得邏輯 PNG。
+驗證 bbox 獨立於定位 bbox；未指定驗證區域時請求主螢幕。驗證 model 未指定時沿用定位的
+明確 model。Callback 在點擊前影像範圍之外執行，VLM 與其巢狀視覺助手只共用新影像。
+驗證失敗、例外或取消均不會重試點擊。
+
+``AC_self_heal_run`` 與 MCP ``ac_self_heal_run`` 接受巢狀 JSON ``request``::
+
+    [["AC_self_heal_run", {"request": {
+        "template_path": "submit.png", "operation": "click",
+        "verification": {"description": "確認訊息已顯示"}
+    }}]]
+
+JSON 驗證支援 description、model、screen_region，不接受任意 Python callback／backend。
+樣板受作用中路徑根目錄限制，進度通知前後也會重新檢查。明確 false 驗證使 AC／CLI 拋出
+保留結果的 ``SelfHealVerificationError``（CLI exit 1），MCP 則回傳結構化結果與 ``isError``。
+Python 請求 API 將 false 當成結果資料；例外與取消均原樣傳遞。
+
+稽核區分 ``verified``、``verification_failed``、``verification_error`` 與 ``issued``／未知。
+新增可選驗證描述、frame hash、backend／model、錯誤欄位及獨立的 verify 耗時；
+``duration_ms`` 仍只計定位。Callback 不宣稱影像來源證據，舊記錄保持可讀。
+GUI **Self-Healing** 提供選填的操作後條件，提示使用已設定 VLM 可能產生費用，並要求選擇點擊。
+Script Builder 的新命令提供結構化 JSON 請求欄位。
+
+獨立 VLM 擷取也改用記憶體邏輯影像及 Retina 正規化，保留裁切／非零原點。
+``verify_description`` 會拒絕非 bool 後端回覆。Framework assertion 會在後備前中止定位復原。
+上述行為有受控測試，真機與付費 API 驗收仍暫緩。
+
+
 錨點定位器
 ----------
 

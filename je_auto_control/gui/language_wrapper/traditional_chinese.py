@@ -1268,4 +1268,9 @@ traditional_chinese_word_dict = {
     "self_heal_col_operation_status": "操作狀態",
     "self_heal_col_verified": "已驗證",
     "self_heal_unknown": "未知",
+    "self_heal_verification_label": "點擊後檢查（VLM）",
+    "self_heal_verification_placeholder": "預期 UI 狀態（選填）；使用設定的 VLM，可能產生 API 費用",
+    "self_heal_verification_needs_click": "操作後驗證必須搭配點擊操作。",
+    "self_heal_verification_passed": "操作驗證通過",
+    "self_heal_verification_failed": "操作驗證失敗",
 }

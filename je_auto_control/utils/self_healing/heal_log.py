@@ -43,6 +43,11 @@ class HealEvent:
     operation: str = "locate"
     operation_status: str = "unknown"
     operation_error: Optional[str] = None
+    verification_frame_hash: Optional[str] = None
+    verification_backend: Optional[str] = None
+    verification_model: Optional[str] = None
+    verification_error: Optional[str] = None
+    verification_description: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a plain-dict snapshot safe for JSON / network transport."""

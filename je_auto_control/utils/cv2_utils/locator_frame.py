@@ -43,14 +43,15 @@ class LocatorFrame:
 class LocatorFrameOwner:
     """Capture once on demand, sharing either the PNG or the original capture failure."""
 
-    def __init__(self, screen_region: Optional[Sequence[int]], *, all_screens: bool) -> None:
+    def __init__(self, screen_region: Optional[Sequence[int]], *, all_screens: bool,
+                 frame: Optional[LocatorFrame] = None) -> None:
         self.region: Optional[list[int]] = None
         if screen_region is not None:
             _validate_region(list(screen_region))
             self.region = [int(value) for value in screen_region]
         self.all_screens = all_screens
         self._lock = Lock()
-        self._frame: Optional[LocatorFrame] = None
+        self._frame: Optional[LocatorFrame] = frame
         self._failure: Optional[Exception] = None
         self._closed = False
         self.capture_ms: Optional[float] = None
@@ -121,6 +122,19 @@ _CURRENT: ContextVar[Optional[LocatorFrameOwner]] = ContextVar("je_auto_control_
 def current_locator_frame() -> Optional[LocatorFrameOwner]:
     """Return the current attempt's lazy owner; ordinary locator calls remain unbound."""
     return _CURRENT.get()
+
+
+@contextmanager
+def provided_locator_frame(frame: Optional[LocatorFrame]) -> Iterator[None]:
+    """Isolate a verification from pre-operation pixels, optionally binding its fresh snapshot."""
+    owner = LocatorFrameOwner(None, all_screens=False, frame=frame) if frame is not None else None
+    token = _CURRENT.set(owner)
+    try:
+        yield
+    finally:
+        _CURRENT.reset(token)
+        if owner is not None:
+            owner.clear()
 
 
 @contextmanager

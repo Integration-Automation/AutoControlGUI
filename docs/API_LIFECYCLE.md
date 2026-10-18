@@ -42,11 +42,22 @@ that schema. They do not promote the existing live self-healing APIs to stable.
 
 Live self-healing now emits additive schema-v2 audit fields while retaining the
 historical outcome and call signatures. Old audit rows default to schema 1.
-Unbound image/VLM calls retain their capture APIs; a self-healing attempt supplies
+Unbound VLM calls use in-memory logical capture/actual geometry; a self-healing attempt supplies
 one shared logical frame and actual origin. VLM backends may override the additive
 `resolve_model` seam; custom backends may leave their effective model unknown.
 Operation dispatch and verification are distinct. Legacy analytics candidate
 aliases remain compatible; explicit operation ratios expose their populations.
+
+`SelfHealRequest`, `VerificationRequest`, `SelfHealRunResult`, `self_heal_run`
+and their typed request/verification errors are experimental facade additions.
+The default operation is locate. Verification requires an explicit click and
+one Python bool callback or a configured VLM description. VLM verification uses
+fresh pixels after dispatch and may incur cost. A false verdict is structured
+API data; AC/CLI raises `SelfHealVerificationError` with its result, while MCP
+returns structured data with `isError`. Unknown remains null. Callback exceptions,
+framework assertions and cancellation propagate; clicks are never retried.
+Legacy signatures and eight-field outcomes are retained. `verify_description`
+now rejects non-bool backend replies instead of returning them as a verdict.
 
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.

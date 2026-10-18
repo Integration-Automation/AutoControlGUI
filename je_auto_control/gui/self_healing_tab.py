@@ -20,6 +20,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
 )
 from je_auto_control.utils.self_healing import (
     HealEvent, HealOutcome, default_heal_log, self_heal_click, self_heal_locate,
+    SelfHealRequest, SelfHealRequestError, VerificationRequest, self_heal_run,
 )
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -32,6 +33,21 @@ def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
 
 
+def _dispatch(inputs: tuple[Optional[str], Optional[str], float, Optional[list[int]]],
+                do_click: bool, verification: str) -> tuple[HealOutcome, Optional[bool]]:
+    template, description, threshold, region = inputs
+    if verification:
+        if not do_click:
+            raise SelfHealRequestError(_t("self_heal_verification_needs_click"))
+        result = self_heal_run(SelfHealRequest(
+            template_path=template, description=description, detect_threshold=threshold, screen_region=region,
+            operation="click", verification=VerificationRequest(description=verification)))
+        return result.outcome, result.verified
+    implementation = self_heal_click if do_click else self_heal_locate
+    return implementation(template_path=template, description=description,
+                           detect_threshold=threshold, screen_region=region), None
+
+
 # pylint: disable-next=too-many-instance-attributes  # reason: the tab owns separate runtime and comparison controls
 class SelfHealingTab(TranslatableMixin, QWidget):
     """Trigger self-heal attempts and browse the audit log."""
@@ -42,6 +58,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._template_input = QLineEdit()
         self._description_input = QLineEdit()
         self._region_input = QLineEdit()
+        self._verification_input = QLineEdit()
         self._threshold = QDoubleSpinBox()
         self._threshold.setRange(0.0, 1.0)
         self._threshold.setSingleStep(0.05)
@@ -91,6 +108,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         form.addRow(QLabel(), self._description_input)
         form.addRow(QLabel(), self._threshold)
         form.addRow(QLabel(), self._region_input)
+        form.addRow(QLabel(), self._verification_input)
         form.addRow(QLabel(), self._click_check)
         return group
 
@@ -114,12 +132,13 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         self._template_input.setPlaceholderText(_t("self_heal_template_placeholder"))
         self._description_input.setPlaceholderText(_t("self_heal_desc_placeholder"))
         self._region_input.setPlaceholderText(_t("self_heal_region_placeholder"))
+        self._verification_input.setPlaceholderText(_t("self_heal_verification_placeholder"))
         self._click_check.setText(_t("self_heal_click_check"))
         layout = self._group_box.layout()
         if isinstance(layout, QFormLayout):
             labels = (
                 "self_heal_template_label", "self_heal_desc_label",
-                "self_heal_threshold_label", "self_heal_region_label", "",
+                "self_heal_threshold_label", "self_heal_region_label", "self_heal_verification_label", "",
             )
             for row, key in enumerate(labels):
                 item = layout.itemAt(row, QFormLayout.LabelRole)
@@ -164,23 +183,16 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         inputs = self._collect_inputs()
         if inputs is None:
             return
-        template, description, threshold, region = inputs
         try:
-            if do_click or self._click_check.isChecked():
-                outcome = self_heal_click(
-                    template_path=template, description=description,
-                    detect_threshold=threshold, screen_region=region,
-                )
-            else:
-                outcome = self_heal_locate(
-                    template_path=template, description=description,
-                    detect_threshold=threshold, screen_region=region,
-                )
+            outcome, verified = _dispatch(inputs, do_click or self._click_check.isChecked(),
+                                           self._verification_input.text().strip())
         except (AutoControlException, OSError, ValueError, RuntimeError) as error:
             self._status.setText(f"{_t('self_heal_error')}: {error}")
             self.refresh_log()
             return
         self._report_outcome(outcome)
+        if verified is not None:
+            self._status.setText(_t("self_heal_verification_passed" if verified else "self_heal_verification_failed"))
         self.refresh_log()
 
     def _report_outcome(self, outcome: HealOutcome) -> None:

@@ -1402,4 +1402,9 @@ english_word_dict = {
     "self_heal_col_operation_status": "Operation state",
     "self_heal_col_verified": "Verified",
     "self_heal_unknown": "Unknown",
+    "self_heal_verification_label": "Post-click check (VLM)",
+    "self_heal_verification_placeholder": "Optional expected UI state; uses configured VLM and may incur API cost",
+    "self_heal_verification_needs_click": "Post-operation verification requires a click operation.",
+    "self_heal_verification_passed": "Operation verification passed",
+    "self_heal_verification_failed": "Operation verification failed",
 }

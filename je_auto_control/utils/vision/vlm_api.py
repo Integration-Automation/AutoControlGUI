@@ -5,15 +5,17 @@ vision-language model, as a fallback for cases where pixel templates
 and accessibility lookups both come up empty. The backend is chosen
 per :mod:`je_auto_control.utils.vision.backends` by env vars.
 """
-import os
-import tempfile
-from pathlib import Path
+from dataclasses import dataclass
+from hashlib import sha256
 from typing import List, Optional, Tuple
 
 from je_auto_control.utils.vision.backends import get_backend
-from je_auto_control.utils.cv2_utils.locator_frame import LocatorFrameOwner, current_locator_frame
+from je_auto_control.utils.cv2_utils.locator_frame import (
+    LocatorFrame, LocatorFrameOwner, current_locator_frame, provided_locator_frame,
+)
+from je_auto_control.utils.vision.frame_capture import capture_png, capture_with_geometry
 from je_auto_control.utils.vision.backends.base import (
-    VLMBackend, VLMNotAvailableError,
+    VLMBackend, VLMNotAvailableError, VLMRequestError,
 )
 
 
@@ -41,8 +43,12 @@ def locate_by_description(description: str,
             "no VLM backend configured; set ANTHROPIC_API_KEY or "
             "OPENAI_API_KEY and install the matching SDK",
         )
-    frame = owner.snapshot() if owner is not None else None
-    image_bytes = frame.png if frame is not None else _capture_screenshot_bytes(screen_region)
+    frame: Optional[LocatorFrame]
+    if owner is not None:
+        frame = owner.snapshot()
+        image_bytes = frame.png
+    else:
+        image_bytes, frame = capture_with_geometry(_capture_screenshot_bytes, screen_region)
     coords = bound.locate(image_bytes, description, model=model)
     if coords is None:
         return None
@@ -50,10 +56,14 @@ def locate_by_description(description: str,
 
 
 def _record_backend(owner: LocatorFrameOwner, bound: VLMBackend, model: Optional[str]) -> Optional[str]:
-    resolver = getattr(bound, "resolve_model", None)
-    chosen = resolver(model) if callable(resolver) else model
+    chosen = _resolved_model(bound, model)
     owner.record_backend(getattr(bound, "name", type(bound).__name__), chosen)
     return chosen
+
+
+def _resolved_model(bound: VLMBackend, model: Optional[str]) -> Optional[str]:
+    resolver = getattr(bound, "resolve_model", None)
+    return resolver(model) if callable(resolver) else model
 
 
 def _to_screen(coords: Tuple[int, int], image_bytes: bytes,
@@ -97,6 +107,7 @@ def click_by_description(description: str,
     if coords is None:
         return False
     cx, cy = coords
+    # pylint: disable-next=import-outside-toplevel  # reason: native input initializes only for an explicit click
     from je_auto_control.wrapper.auto_control_mouse import (
         click_mouse, set_mouse_position,
     )
@@ -115,6 +126,19 @@ def verify_description(description: str,
     semantic assertions ("the cart shows three items"). Raises
     :class:`VLMNotAvailableError` if no backend is configured.
     """
+    return _verify_snapshot(description, screen_region, model, backend).verified
+
+
+@dataclass(frozen=True)
+class _VerificationSnapshot:
+    verified: bool
+    frame_hash: str
+    backend: str
+    model: Optional[str]
+
+
+def _verify_snapshot(description: str, screen_region: Optional[List[int]] = None,
+                      model: Optional[str] = None, backend: Optional[VLMBackend] = None) -> _VerificationSnapshot:
     if not description or not description.strip():
         raise ValueError("description must be a non-empty string")
     bound = backend if backend is not None else get_backend()
@@ -123,8 +147,14 @@ def verify_description(description: str,
             "no VLM backend configured; set ANTHROPIC_API_KEY or "
             "OPENAI_API_KEY and install the matching SDK",
         )
-    image_bytes = _capture_screenshot_bytes(screen_region)
-    return bool(bound.verify(image_bytes, description, model=model))
+    image_bytes, frame = capture_with_geometry(_capture_screenshot_bytes, screen_region)
+    model = _resolved_model(bound, model)
+    with provided_locator_frame(frame):
+        verified = bound.verify(image_bytes, description, model=model)
+    if not isinstance(verified, bool):
+        raise VLMRequestError("verification backend must return bool")
+    return _VerificationSnapshot(verified, sha256(image_bytes).hexdigest(),
+                                  getattr(bound, "name", type(bound).__name__), model)
 
 
 _PNG_SIGNATURE = bytes.fromhex("89504e470d0a1a0a")
@@ -139,19 +169,8 @@ def _png_size(data: bytes) -> Optional[Tuple[int, int]]:
 
 def _capture_screenshot_bytes(
         screen_region: Optional[List[int]] = None) -> bytes:
-    """Take a screenshot (optionally of ``[left, top, right, bottom]``, on any monitor) as PNG bytes."""
-    fd, tmp = tempfile.mkstemp(prefix="vlm_", suffix=".png")
-    os.close(fd)
-    tmp_path = Path(tmp)
-    try:
-        from je_auto_control.utils.cv2_utils.region_capture import grab_screen_region
-        grab_screen_region(screen_region).save(str(tmp_path), format="PNG")
-        return tmp_path.read_bytes()
-    finally:
-        try:
-            tmp_path.unlink()
-        except FileNotFoundError:
-            pass
+    """Read one in-memory logical PNG, reporting geometry to the scoped caller."""
+    return capture_png(screen_region)
 
 
 __all__ = [

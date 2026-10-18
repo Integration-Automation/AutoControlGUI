@@ -7,6 +7,7 @@ MCP client surfaces to the model.
 """
 from typing import List
 from je_auto_control.utils.mcp_server.tools._healing_evaluation import healing_evaluation_tools
+from je_auto_control.utils.mcp_server.tools._healing_run import healing_run_tools
 
 from je_auto_control.utils.mcp_server.tools import _handlers as h
 from je_auto_control.utils.mcp_server.tools import _handlers_qa as hq
@@ -9040,7 +9041,7 @@ def media_assert_tools() -> List[MCPTool]:
 
 
 ALL_FACTORIES = (
-    journal_tools, healing_evaluation_tools,
+    journal_tools, healing_evaluation_tools, healing_run_tools,
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
     semantic_locator_tools, self_healing_tools, anchor_locator_tools,

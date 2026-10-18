@@ -1,7 +1,7 @@
 # AutoControl Architecture
 
 > Short overview for people and agents. Per-module detail lives in [`architecture_explore.md`](architecture_explore.md).
-> Last verified: 2026-09-22 against `0e8e25b` on `feat/coverage-to-80`.
+> Last verified: 2026-10-19 on `dev`.
 
 ## 1. Purpose
 
@@ -26,7 +26,12 @@ owner around the existing image/VLM seams. The owner captures once in logical
 coordinates, retains clipped geometry or a capture failure, and releases pixels
 on exit. `runtime_evidence.py` snapshots source/version/frame/strategy metadata
 without taking a screenshot. One schema-v2 audit row settles after any requested
-click; input dispatch and operation verification remain distinct. Existing result
+click and explicit verification. Immutable requests prepare callback/VLM checks
+before input; the post-click check binds a fresh frame, isolated from the locator
+owner. JSON adapters constrain nested paths, distinguish false verification from
+unknown and share phase cancellation across AC/MCP/CLI/GUI entry points.
+Standalone VLM capture uses `vision/frame_capture.py` with scoped geometry;
+logical PNGs stay in memory. Input dispatch and operation verification remain distinct. Existing result
 and call signatures remain compatible, and unbound locator calls stay unbound.
 
 | Path | Responsibility |

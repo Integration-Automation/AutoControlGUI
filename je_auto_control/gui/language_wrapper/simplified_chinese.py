@@ -1267,4 +1267,9 @@ simplified_chinese_word_dict = {
     "self_heal_col_operation_status": "操作状态",
     "self_heal_col_verified": "已验证",
     "self_heal_unknown": "未知",
+    "self_heal_verification_label": "点击后检查（VLM）",
+    "self_heal_verification_placeholder": "预期 UI 状态（选填）；使用配置的 VLM，可能产生 API 费用",
+    "self_heal_verification_needs_click": "操作后验证必须搭配点击操作。",
+    "self_heal_verification_passed": "操作验证通过",
+    "self_heal_verification_failed": "操作验证失败",
 }

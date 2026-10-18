@@ -2619,6 +2619,9 @@ def AC_self_heal_log_clear() -> Dict[str, Any]:
 def AC_self_heal_log_list(limit: int = ...) -> List[Dict[str, Any]]:
     """Executor adapter: return the recent self-healing events."""
 
+def AC_self_heal_run(request: dict[str, Any]) -> dict[str, Any]:
+    ...
+
 def AC_send_email(message: Any, smtp: Any) -> Dict[str, Any]:
     """Adapter: send an email via SMTP (message/smtp config dicts)."""
 

@@ -12,6 +12,12 @@ from je_auto_control.utils.self_healing import HealEvent, HealEventLog, HealOutc
 
 @pytest.fixture
 def widget(monkeypatch, tmp_path):
+    def forbidden(*_a, **_k):
+        pytest.fail("offscreen GUI tests must not capture or issue native input")
+
+    monkeypatch.setattr("je_auto_control.utils.monitor_layout.logical_frame._load_image_grab", forbidden)
+    monkeypatch.setattr("je_auto_control.utils.cv2_utils.region_capture.grab_screen_region", forbidden)
+    monkeypatch.setattr("je_auto_control.utils.self_healing.locator._click_at", forbidden)
     app = QApplication.instance() or QApplication([])
     log = HealEventLog(tmp_path / "events.jsonl")
     monkeypatch.setattr("je_auto_control.gui.self_healing_tab.default_heal_log", log)
@@ -78,5 +84,48 @@ def test_builder_edits_structured_region_without_turning_it_into_text(widget, co
         assert step.params["screen_region"] == [-10, -20, 20, 30]
         field.setText("not-json")
         assert step.params["screen_region"] == [-10, -20, 20, 30]
+    finally:
+        form.deleteLater()
+
+
+@pytest.mark.parametrize("verdict", [True, False])
+def test_verification_input_is_explicit_and_reports_its_result(widget, monkeypatch, verdict):
+    from je_auto_control import SelfHealRunResult
+    from je_auto_control.gui.self_healing_tab import _t
+    view, _ = widget
+    calls = []
+
+    def run(request):
+        calls.append(request)
+        return SelfHealRunResult(HealOutcome(True, (2, 3), "image"),
+                                 "verified" if verdict else "verification_failed", verdict)
+
+    monkeypatch.setattr("je_auto_control.gui.self_healing_tab.self_heal_run", run)
+    view._description_input.setText("submit")
+    view._verification_input.setText("confirmation is visible")
+    view._on_locate()
+    assert calls == []
+    view._on_click()
+    assert len(calls) == 1 and calls[0].operation == "click"
+    assert calls[0].verification.description == "confirmation is visible"
+    key = "self_heal_verification_passed" if verdict else "self_heal_verification_failed"
+    assert view._status.text() == _t(key)
+    assert view._verification_input.placeholderText()
+
+
+def test_builder_roundtrips_nested_verification_request(widget):
+    from je_auto_control.gui.script_builder.step_form_view import StepFormView
+    from je_auto_control.gui.script_builder.step_model import Step
+
+    options = {"operation": "click", "description": "submit", "verification": {"description": "done"}}
+    step = Step("AC_self_heal_run", {"request": options})
+    form = StepFormView()
+    try:
+        form.load_step(step)
+        field = form._editors["request"]
+        field.setText(json.dumps({**options, "verification": {"description": "cart is empty"}}))
+        assert step.params["request"]["verification"]["description"] == "cart is empty"
+        field.setText("invalid-json")
+        assert step.params["request"]["operation"] == "click"
     finally:
         form.deleteLater()

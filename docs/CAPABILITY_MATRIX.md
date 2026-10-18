@@ -34,8 +34,11 @@ Fixed-frame comparison has real local PNG/template tests, controlled VLM tests,
 and API/CLI/command/MCP/offscreen GUI checks. Its synthetic quality populations
 and wall-time percentiles do not establish native accuracy or speed improvements.
 Runtime shared capture/region/provenance has controlled image/VLM, journal,
-command/MCP and offscreen GUI tests. Operation dispatch remains unverified;
-no new physical-device or paid-model acceptance is claimed.
+command/MCP and offscreen GUI tests. Explicit post-click callback/VLM verification
+has controlled true/false/unknown, fresh-frame, preflight, exception and phase
+cancellation tests across API/AC/CLI/MCP/GUI. Standalone VLM origin/Retina behavior
+uses synthetic display/grabber tests. These checks establish no native accuracy
+or paid-model acceptance; dispatch without a verifier remains unverified.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**

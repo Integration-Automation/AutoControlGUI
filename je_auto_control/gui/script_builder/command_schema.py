@@ -83,6 +83,11 @@ def _build_specs() -> List[CommandSpec]:
 
 
 def _add_self_healing_specs(specs: List[CommandSpec]) -> None:
+    specs.append(CommandSpec(
+        "AC_self_heal_run", "Image", "Run Self-Healing with Verification",
+        fields=(FieldSpec("request", FieldType.JSON, placeholder='{"operation":"locate","description":"submit"}'),),
+        description="Explicit click plus verification.description opts into a fresh post-click configured-VLM check.",
+    ))
     fields = (
         FieldSpec("template_path", FieldType.FILE_PATH, optional=True),
         FieldSpec("description", FieldType.STRING, optional=True),

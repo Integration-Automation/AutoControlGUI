@@ -26,6 +26,12 @@ class AttemptEvidence:
     operation: str = "locate"
     operation_status: str = "not_requested"
     operation_error: Optional[str] = None
+    verification_description: Optional[str] = None
+    verification_frame_hash: Optional[str] = None
+    verification_backend: Optional[str] = None
+    verification_model: Optional[str] = None
+    verified: Optional[bool] = None
+    verification_error: Optional[str] = None
 
     def fields(self) -> dict[str, Any]:
         """Snapshot metadata; absence of a real frame/model/verification stays explicit."""
@@ -40,8 +46,12 @@ class AttemptEvidence:
             "screen_region": self.source.region, "capture_ms": self.source.capture_ms,
             "strategy_times_ms": dict(self.strategy_times_ms),
             "backend": self.source.backend, "model": self.source.model,
-            "cost_usd": None, "verified": None, "operation": self.operation,
+            "cost_usd": None, "verified": self.verified, "operation": self.operation,
             "operation_status": self.operation_status, "operation_error": self.operation_error,
+            "verification_frame_hash": self.verification_frame_hash,
+            "verification_backend": self.verification_backend, "verification_model": self.verification_model,
+            "verification_error": self.verification_error,
+            "verification_description": self.verification_description,
         }
 
 

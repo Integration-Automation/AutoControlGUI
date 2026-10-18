@@ -6,6 +6,7 @@ Public surface:
   miss outcome without raising;
 * :func:`self_heal_click` — same, then click the resolved point;
 * :class:`HealOutcome` — structured result both helpers return;
+* :func:`self_heal_run` — immutable explicit operation and opt-in fresh verification;
 * :data:`default_heal_log` — singleton JSON-lines log every heal
   attempt is appended to (override per-call via ``log=`` argument).
 * :func:`evaluate_locators` — compare explicit strategies on fixed PNG samples;
@@ -18,7 +19,9 @@ from je_auto_control.utils.self_healing.locator import (
     HealOutcome, SelfHealError,
     METHOD_IMAGE, METHOD_MISS, METHOD_VLM,
     self_heal_click, self_heal_locate,
+    SelfHealRunResult, SelfHealVerificationError, self_heal_run,
 )
+from je_auto_control.utils.self_healing.requests import SelfHealRequest, SelfHealRequestError, VerificationRequest
 from je_auto_control.utils.self_healing.evaluation import HealingComparison, evaluate_locators
 from je_auto_control.utils.self_healing.evaluation_models import (
     EvaluationRatio, EvaluationSample, HealingAttempt, HealingEvaluationError,
@@ -32,6 +35,8 @@ __all__ = [
     "HealEvent", "HealEventLog", "HealOutcome", "SelfHealError",
     "METHOD_IMAGE", "METHOD_MISS", "METHOD_VLM",
     "default_heal_log", "self_heal_click", "self_heal_locate",
+    "SelfHealRequest", "SelfHealRequestError", "SelfHealRunResult", "SelfHealVerificationError",
+    "VerificationRequest", "self_heal_run",
     "EvaluationRatio", "EvaluationSample", "HealingAttempt", "HealingComparison", "HealingEvaluationError",
     "HealingVersionReport", "LocatorCandidate", "LocatorStrategy", "TemplateFrameLocator", "VLMFrameLocator",
     "evaluate_healing_manifest", "evaluate_locators", "write_healing_report",

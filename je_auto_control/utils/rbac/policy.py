@@ -74,6 +74,7 @@ REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
 COMMAND_CAPABILITIES: Dict[str, str] = {
     "AC_history_capture": _DRIVE,
     "AC_self_heal_evaluate": _DRIVE,
+    "AC_self_heal_run": _DRIVE,
     "AC_journal_capture": _DRIVE,
     "AC_journal_read": _DRIVE,
     "AC_sign_action_file": Capability.SIGN_ACTIONS,
@@ -191,6 +192,7 @@ TOOL_CAPABILITIES: Dict[str, str] = {
     "ac_vlm_locate": _DRIVE,
     "ac_self_heal_locate": _DRIVE,
     "ac_self_heal_evaluate": _DRIVE,
+    "ac_self_heal_run": _DRIVE,
     "ac_describe_screen": _DRIVE,
 }
 

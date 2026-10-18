@@ -13,6 +13,17 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Experimental immutable `SelfHealRequest` / `VerificationRequest` and
+  `self_heal_run` default to locate and enable explicit post-click verification.
+  Callback checks require bool; configured VLM checks use fresh logical pixels
+  and may incur API cost. True, false and unknown stay distinct. AC/CLI treats
+  false verification as failure; MCP preserves structured evidence with isError.
+  GUI and Script Builder expose the opt-in controls. Exceptions/cancellation
+  preserve their identity without retrying input. Existing signatures/outcomes
+  remain compatible. Standalone VLM capture now normalizes logical geometry and
+  Retina pixels in memory; `verify_description` rejects non-bool backend replies.
+  Framework assertions propagate through locator recovery instead of becoming misses.
+
 - Runtime self-healing shares one lazy logical capture across image/VLM, applies
   bbox regions to both and honors actual clipped/nonzero origins. Failed capture
   is not retried for fallback. Additive schema-v2 audit fields retain source,

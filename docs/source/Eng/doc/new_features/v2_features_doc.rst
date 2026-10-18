@@ -60,6 +60,60 @@ subview, separate from fixed-frame comparison. Script Builder provides both live
 commands and a JSON field that preserves structured regions while editing.
 
 
+Explicit post-click verification
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The experimental immutable request API defaults to locating. Verification is
+opt-in and requires ``operation="click"``. A Python ``VerificationRequest``
+accepts exactly one ``verifier`` callback returning bool, or a ``description``
+checked by a configured VLM. A VLM check may incur API cost::
+
+    from je_auto_control import SelfHealRequest, VerificationRequest, self_heal_run
+
+    result = self_heal_run(SelfHealRequest(
+        template_path="submit.png",
+        operation="click",
+        verification=VerificationRequest(description="The confirmation is visible"),
+    ))
+    # result.verified is True, False or None; found alone is not verification.
+
+VLM availability is checked before input. Verification only runs after successful
+click dispatch and obtains a fresh logical PNG. Its optional bbox is independent
+of the locator bbox; omitted verification regions request the primary display.
+The verification model inherits the locator's explicit model unless overridden.
+Callbacks execute outside the pre-click frame scope. Backend checks and their
+nested visual helpers share only the new frame. Nothing retries a click after
+failed verification, an exception or cancellation.
+
+``AC_self_heal_run`` and MCP ``ac_self_heal_run`` accept a nested JSON ``request``::
+
+    [["AC_self_heal_run", {"request": {
+        "template_path": "submit.png", "operation": "click",
+        "verification": {"description": "The confirmation is visible"}
+    }}]]
+
+JSON verification supports description, model and screen_region; arbitrary
+Python callbacks/backends are not accepted. Templates honor active path roots,
+including changes at progress checkpoints. Explicit false verification raises
+``SelfHealVerificationError`` on AC/CLI (CLI exits 1), retaining its result.
+MCP returns structured data with ``isError``. The Python request API returns a
+false verdict as data. Exceptions and cancellation propagate unchanged.
+
+Audit rows distinguish ``verified``, ``verification_failed`` and
+``verification_error`` from ``issued``/unknown. New optional fields include the
+verification description, frame hash, backend/model and error; verify timing is
+separate from locate-only ``duration_ms``. Callback checks make no image provenance
+claim. Old rows remain readable. GUI **Self-Healing** has an optional post-condition
+input, with the configured-VLM cost indicated; click must be selected. Script
+Builder provides a structured JSON request field for the new command.
+
+Standalone VLM capture also uses logical geometry and Retina normalization in
+memory, including clipped/nonzero origins. ``verify_description`` rejects non-bool
+backend replies. Framework assertions stop locator recovery before fallback.
+These behaviors have controlled tests; native-device and paid-API acceptance
+remain deferred.
+
+
 Anchor-based locator
 --------------------
 

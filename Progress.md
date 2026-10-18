@@ -14,9 +14,7 @@
 
 `WIP` — 計畫 A（既有決策與執行契約）已交付，A2、A7 在 2026-10-08、其餘在 2026-10-09（U-20261009-01…14）；
 各項沒驗到或沒做完的部分在本檔下面三節（輸入與視窗、macOS、這一輪修正留下的後續）。計畫 F（GUI）：F1 的延遲分頁註冊與 F2 的導覽／搜尋／主題已交付（U-20261008-02）。
-計畫 B 仍缺 B2 的操作後驗證入口、原始步驟連結與候選樣板預覽／驗證／回復，以及 B3 日誌產碼。
-另需統一未綁定 VLM 擷取的原點／Retina 座標（`utils/vision/vlm_api.py`、`utils/cv2_utils/region_capture.py`）。
-尚需補齊 framework assertion 在定位後備邊界的分類與回歸，避免被當成一般 miss（`utils/self_healing/locator.py::_failure_detail`）。
+計畫 B 仍缺 B2 的原始步驟連結與候選樣板預覽／驗證／回復，以及 B3 日誌產碼。
 計畫 C（持久化同步與遠端 session；C4 以外）、D（Wayland）、E（Android／iOS）、G（MCP 逐步揭露）、H（型別深化與總驗收）尚未開始。F 還缺：
 
 - **Remote Desktop 與 Script Builder 仍在啟動時建立**（預設開啟），啟動時間 2.6–2.7 秒裡大半是它們與門面匯入。

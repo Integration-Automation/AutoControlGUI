@@ -1288,4 +1288,10 @@ japanese_word_dict = {
     "self_heal_col_operation_status": "操作状態",
     "self_heal_col_verified": "検証済み",
     "self_heal_unknown": "不明",
+    "self_heal_verification_label": "クリック後の検証（VLM）",
+    "self_heal_verification_placeholder": ("期待する UI 状態（省略可）。設定済み VLM を使用し、"
+                                           "API 料金が発生する場合があります"),
+    "self_heal_verification_needs_click": "操作後の検証にはクリック操作が必要です。",
+    "self_heal_verification_passed": "操作の検証に成功しました",
+    "self_heal_verification_failed": "操作の検証に失敗しました",
 }
