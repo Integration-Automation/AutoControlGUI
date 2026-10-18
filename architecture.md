@@ -16,6 +16,13 @@ macOS, Linux X11, Linux Wayland, Android and iOS.
 Each layer calls only the one below it:
 entry points → execution core (`utils/executor/`) → headless capabilities (`utils/`) → `wrapper/` → one OS backend.
 
+Fixed-frame self-healing evaluation is a separate headless flow in `utils/self_healing/`:
+bounded manifest/PNG inputs → immutable samples → explicit locator strategies →
+quality/latency/provenance report → optional atomic JSON/HTML export. It performs
+no capture or input. Python VLM comparisons require an explicit backend; local
+manifest commands never choose one. API, AC, MCP and a cancellable GUI worker use
+the same evaluator. Live self-healing remains on its existing runtime path.
+
 | Path | Responsibility |
 | --- | --- |
 | `je_auto_control/__init__.py` | Facade: re-exports the public API and lists it in `__all__`. Must import without PySide6. |

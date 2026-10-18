@@ -30,6 +30,9 @@ claim native device acceptance. Run History journal browsing also has controlled
 Explicit manual history ownership has controlled API, command, CLI, GUI and MCP execution tests.
 Self-healing cancellation and secret masking have controlled headless tests,
 including registered command and MCP adapters; this adds no native or paid API acceptance.
+Fixed-frame comparison has real local PNG/template tests, controlled VLM tests,
+and API/CLI/command/MCP/offscreen GUI checks. Its synthetic quality populations
+and wall-time percentiles do not establish native accuracy or speed improvements.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**

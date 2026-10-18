@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "samples": [
+    {"id": "legacy", "frame": "fixtures/frame_old.png", "expected_box": [20, 16, 37, 29],
+     "run_id": "fixture-run", "step_id": "legacy-submit"},
+    {"id": "changed", "frame": "fixtures/frame_new.png", "expected_box": [20, 16, 37, 29],
+     "run_id": "fixture-run", "step_id": "changed-submit"},
+    {"id": "negative-origin-2x-region", "frame": "fixtures/frame_new.png",
+     "origin": [-80, -40], "scale": 2, "region": [-72, -34, -60, -24],
+     "expected_box": [-70, -32, -61.5, -25.5], "run_id": "fixture-run", "step_id": "scaled-submit"},
+    {"id": "expected-miss", "frame": "fixtures/absent.png", "expected_miss": true},
+    {"id": "unlabelled", "frame": "fixtures/frame_new.png"}
+  ],
+  "versions": {
+    "old": {"template": "fixtures/old.png", "threshold": 0.99},
+    "new": {"template": "fixtures/new.png", "threshold": 0.99}
+  }
+}

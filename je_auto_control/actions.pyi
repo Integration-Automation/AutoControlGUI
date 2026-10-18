@@ -2600,6 +2600,9 @@ def AC_self_heal_click(
 ) -> Dict[str, Any]:
     """Executor adapter: locate with self-heal, then click."""
 
+def AC_self_heal_evaluate(path: str) -> dict[str, object]:
+    """Executor adapter shared by scripts, CLI and server action execution."""
+
 def AC_self_heal_locate(
     template_path: str | None = ...,
     description: str | None = ...,

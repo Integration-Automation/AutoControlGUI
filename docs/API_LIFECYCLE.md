@@ -35,6 +35,11 @@ Self-healing retains its existing signatures and outcome format. Cancellation
 propagates before recovery; audit storage and reads mask secret values known to
 the current run without mutating the returned outcome or rewriting legacy files.
 
+Fixed-frame evaluation models, strategy protocol/adapters, `evaluate_locators`,
+`evaluate_healing_manifest` and `write_healing_report` are experimental facade
+APIs with schema-v1 reports. The corresponding AC, MCP and GUI operations share
+that schema. They do not promote the existing live self-healing APIs to stable.
+
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.
 - Experimental API may change in any release and must be labelled as such.

@@ -71,6 +71,11 @@ def _build_specs() -> List[CommandSpec]:
     _add_window_specs(specs)
     _add_flow_specs(specs)
     _add_journal_specs(specs)
+    specs.append(CommandSpec(
+        "AC_self_heal_evaluate", "Image", "Compare Locator Versions",
+        fields=(FieldSpec("path", FieldType.FILE_PATH),),
+        description="Read a local fixed-frame comparison manifest; no capture, clicks or network backend.",
+    ))
     _add_misc_specs(specs)
     return specs
 

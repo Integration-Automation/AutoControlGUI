@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261019-08 | 2026-10-19 | Compare locator versions on provided frames across execution surfaces | #done #self-healing #gui | [2026-10](2026-10.md) |
 | U-20261019-07 | 2026-10-19 | Preserve self-healing cancellation and mask audit secrets | #bugfix #self-healing | [2026-10](2026-10.md) |
 | U-20261019-06 | 2026-10-19 | Record explicit manual runs across API, CLI and GUI | #done #history #journal | [2026-10](2026-10.md) |
 | U-20261019-05 | 2026-10-19 | Browse journal snapshots and history links in Run History | #done #journal #gui | [2026-10](2026-10.md) |
@@ -389,7 +390,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 53 |
+| [2026-10.md](2026-10.md) | 2026-10 | 54 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

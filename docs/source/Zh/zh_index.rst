@@ -26,6 +26,7 @@ AutoControl 所有功能的完整使用指南。
    doc/create_project/create_project_doc
    doc/new_features/new_features_doc
    doc/new_features/v2_features_doc
+   doc/new_features/healing_evaluation_doc
    doc/new_features/v3_features_doc
    doc/new_features/v4_features_doc
    doc/new_features/v5_features_doc

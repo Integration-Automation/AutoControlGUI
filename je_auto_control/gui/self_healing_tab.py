@@ -1,7 +1,7 @@
-"""Self-Healing Locator tab.
+"""Self-Healing runtime log and fixed-frame version comparison tab.
 
 Fire a template-first / VLM-fallback locate from the GUI and browse the
-audit log of every healing attempt the runtime has performed.
+audit log, or compare explicit versions on provided PNG samples without device effects.
 """
 from typing import Optional
 
@@ -9,10 +9,11 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox, QDoubleSpinBox, QFileDialog, QFormLayout, QGroupBox,
     QLabel, QLineEdit, QMessageBox,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui.healing_evaluation_panel import HealingEvaluationPanel
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -58,7 +59,11 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         # menu; the tab keeps only the inputs, the log table, and the status.
         root = QVBoxLayout(self)
         root.addWidget(self._build_form_group())
-        root.addWidget(self._table, stretch=1)
+        self._views = QTabWidget()
+        self._evaluation = HealingEvaluationPanel(self)
+        self._views.addTab(self._table, "")
+        self._views.addTab(self._evaluation, "")
+        root.addWidget(self._views, stretch=1)
         root.addWidget(self._status)
         self._apply_translations()
         self.refresh_log()
@@ -81,11 +86,14 @@ class SelfHealingTab(TranslatableMixin, QWidget):
             ("self_heal_click_btn", self._on_click),
             ("self_heal_refresh", self.refresh_log),
             ("self_heal_clear", self._on_clear_log),
-        ]
+        ] + self._evaluation.menu_actions()
 
     # --- translation -----------------------------------------------
 
     def _apply_translations(self) -> None:
+        self._views.setTabText(0, _t("healing_eval_log"))
+        self._views.setTabText(1, _t("healing_eval_heading"))
+        self._evaluation.retranslate()
         self._group_box.setTitle(_t("self_heal_form_title"))
         self._template_input.setPlaceholderText(_t("self_heal_template_placeholder"))
         self._description_input.setPlaceholderText(_t("self_heal_desc_placeholder"))

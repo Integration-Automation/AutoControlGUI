@@ -13,6 +13,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Experimental fixed-frame locator comparisons share schema-v1 reports across
+  API, AC commands, MCP, CLI action files and the Self-Healing GUI. Ratios show
+  eligible populations and unknowns; recovery requires both correct localization
+  and explicit operation verification. Reports include latency, optional USD
+  costs and provenance, with JSON/HTML export. Local manifests are bounded and
+  never select a network backend. GUI comparisons run off-thread and support
+  cancellation and safe disposal of stale results.
+
 - Self-healing preserves cancellation instead of treating it as an image/VLM
   miss and continuing to fallback or click. Audit writes and reads mask secret
   values already resolved in the current run, preserving original outcomes and
