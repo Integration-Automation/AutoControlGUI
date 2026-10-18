@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,080 |
-| 程式碼總行數 | 161,893 |
+| 程式碼總行數 | 161,971 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 779 |
 | 套件門面 `__all__` 公開名稱數 | 1,244 |
@@ -882,8 +882,8 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，只需要 PySide6
 | --- | ---: | --- |
 | `gui/__init__.py` | 25 | `start_autocontrol_gui()`：**唯一**會延遲匯入 PySide6 的地方，維持頂層套件 Qt-free。 |
 | `main_window.py` | 407 | `QMainWindow`：選單列（File／Actions／View／…）、左側導覽面板 dock（`Ctrl+K` 搜尋、`Ctrl+B` 收合）、即時語言切換、字級預設、深色／淺色主題（`theme.py` 的 token，不再用 qt-material）。分頁分為 core／editing／detection／automation／system 五類。 |
-| `main_widget.py` | 370 | 工作區：擁有 `QTabWidget`，依 `tab_registry.TAB_SPECS` 註冊 48 個分頁，並暴露 show/hide/activate/list API 給選單列與導覽面板。只有預設開啟的三個分頁與自己的 mixin 表單在啟動時建立，其餘第一次開啟才匯入模組、建立 widget。核心分頁在 `_own_tab_builders` 宣告 `(label_key, handler)` 動作對。 |
-| `tab_registry.py` | 125 | 分頁表：每個分頁一筆 `TabSpec`（鍵、標題鍵、分類、模組與類別名），`TabEntry` 在第一次存取 `widget` 時才呼叫 factory。不匯入 Qt。 |
+| `main_widget.py` | 390 | 工作區：擁有 `QTabWidget`，依 `tab_registry.TAB_SPECS` 註冊 48 個分頁，並暴露 show/hide/close/activate/list API 給選單列與導覽面板。只有預設開啟的三個分頁與自己的 mixin 表單在啟動時建立，其餘第一次開啟才匯入模組、建立 widget。核心分頁在 `_own_tab_builders` 宣告 `(label_key, handler)` 動作對。 |
+| `tab_registry.py` | 183 | 分頁表：每個分頁一筆 `TabSpec`（鍵、標題鍵、分類、模組與類別名），`TabEntry` 在第一次存取 `widget` 時才呼叫 factory。`TabRegistry.open/close` 快取或釋放 factory 面板，保留 metadata 與既有表單；不匯入 Qt。 |
 | `navigation.py` | 200 | `NavigationPanel`：搜尋框 + 依分類的功能樹，列出每個已註冊分頁（開啟中的以粗體標示），只回報被選的鍵，開啟分頁仍由視窗負責。 |
 | `theme.py` | 178 | 設計 token（`ThemeTokens`：顏色、圓角、間距、字族）、深色與淺色兩組值、由 token 產生的樣式表與對應的 `QPalette`；不載入圖檔或字型檔。 |
 | `workspace.py` | 121 | 可捲動的分頁容器：保留 `widget/currentWidget/indexOf/setCurrentWidget` 的原始頁面身分、移除時保留頁面所有權，並直接繪製隨 palette 變色的向量關閉鈕。 |
@@ -1081,7 +1081,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 100 | 28,704 |
+| `gui/` | 100 | 28,782 |
 | `utils/mcp_server/` | 37 | 19,164 |
 | `utils/remote_desktop/` | 56 | 13,301 |
 | `utils/executor/` | 8 | 9,666 |
@@ -1102,5 +1102,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 857 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 690 | 58,669 |
-| **總計** | **1,074** | **161,828** |
+| **總計** | **1,074** | **161,906** |
 

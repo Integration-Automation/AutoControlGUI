@@ -17,7 +17,7 @@ from je_auto_control.gui._screenshot_tab import ScreenshotTabMixin
 from je_auto_control.gui._script_tab import ScriptTabMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.tab_registry import (
-    TAB_SPECS, MenuActions, TabEntry, WidgetFactory, lazy_factory,
+    TAB_SPECS, MenuActions, TabEntry, TabRegistry, WidgetFactory, lazy_factory,
 )
 from je_auto_control.gui.workspace import ScrollableTabs
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -52,6 +52,7 @@ class AutoControlGUIWidget(
         layout.setContentsMargins(0, 0, 0, 0)
 
         self._tab_entries: List[TabEntry] = []
+        self.tab_registry = TabRegistry(self._tab_entries, on_close=self._detach_closed_tab)
 
         self.tabs = ScrollableTabs()
         self.tabs.setTabsClosable(True)
@@ -177,10 +178,12 @@ class AutoControlGUIWidget(
         if isinstance(widget, QWidget):
             built = widget
             entry = TabEntry(key=key, title_key=title_key, factory=lambda: built,
-                             category=category, default_visible=default_visible, actions=actions)
+                             category=category, default_visible=default_visible, actions=actions,
+                             retain_on_close=True)
         else:
             entry = TabEntry(key=key, title_key=title_key, factory=widget,
                              category=category, default_visible=default_visible, actions=actions,
+                             retain_on_close=key == "remote_desktop",
                              on_build=lambda page: AutoControlGUIWidget._adopt_hidden_tab(self, page))
         self._tab_entries.append(entry)
         if default_visible:
@@ -283,8 +286,9 @@ class AutoControlGUIWidget(
             if self._is_open(candidate):
                 target_index += 1
         title = language_wrapper.translate(entry.title_key, entry.title_key)
-        self.tabs.insertTab(target_index, entry.widget, title)
-        self.tabs.setCurrentWidget(entry.widget)
+        page = self.tab_registry.open(key)
+        self.tabs.insertTab(target_index, page, title)
+        self.tabs.setCurrentWidget(page)
         self.tabs_changed.emit()
 
     def activate_tab(self, key: str) -> bool:
@@ -312,8 +316,24 @@ class AutoControlGUIWidget(
         widget = self.tabs.widget(index)
         for entry in self._built_entries():
             if entry.widget is widget:
-                self.hide_tab(entry.key)
+                self.close_tab(entry.key)
                 return
+
+    def close_tab(self, key: str) -> None:
+        """Release a feature; keep legacy forms and Remote Desktop reusable.
+
+        Unlike ``hide_tab``, closing a feature discards its local UI state and
+        schedules cleanup of subscriptions and timers. Reopening rebuilds it.
+        Remote Desktop retains live sessions until its lifecycle is migrated.
+        """
+        self.tab_registry.close(key)
+
+    def _detach_closed_tab(self, page: QWidget) -> None:
+        """Remove a closed page before its deferred Qt destruction."""
+        index = self.tabs.indexOf(page)
+        if index != -1:
+            self.tabs.removeTab(index)
+        self.tabs_changed.emit()
 
     def _translate(self, key: str) -> str:
         return language_wrapper.translate(key, key)

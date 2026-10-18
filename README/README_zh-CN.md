@@ -123,6 +123,8 @@ pip install je_auto_control[gui]       # 加上 PySide6 桌面应用
 | `fuzzy` / `locale` | `rapidfuzz` 模糊匹配、`babel` 区域解析 |
 | `s3` / `audio` | S3 制品存储、系统音量控制 |
 
+使用标签页关闭按钮关闭 factory 创建的功能面板时，下一次 Qt event loop 会释放 widget、订阅与计时器；重新打开会创建新面板。**View → Tabs** 与嵌入用的 `hide_tab` 只隐藏并保留状态。`tab_registry.open/close` 与 `close_tab` 提供明确的生命周期接口。既有的所有者表单与 Remote Desktop 在生命周期迁移完成前，关闭后仍保留以供重用。
+
 **Windows arm64** 装得起来也跑得起来，少的是上游在那里发不出来的那些：
 `opencv-python` 与 `cryptography` 都没发 `win_arm64` wheel。所以 `find_image*`、
 `screenshot()`（OpenCV／BGR 那一支——Pillow 截图仍可用）、密钥金库、动作文件加密、

@@ -3,13 +3,22 @@
 Every feature tab is described by a :class:`TabSpec` — key, title key,
 category and where its widget class lives — and nothing more is loaded until
 the tab is opened. :class:`TabEntry` holds one registered tab and builds the
-widget on first access to ``widget``, so the window no longer imports and
+widget on first access to ``widget``. :class:`TabRegistry` owns explicit
+open/close operations; close schedules owned panels for deletion so their
+destruction hooks release subscriptions and timers. The window no longer imports and
 constructs some fifty panels (with the timers and helper threads several of
 them start) before it can show the three it opens on.
 """
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from importlib import import_module
-from typing import Any, Callable, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple
+
+from je_auto_control.utils.exception.exceptions import AutoControlActionException
+
+if TYPE_CHECKING:
+    from PySide6.QtWidgets import QWidget
 
 MenuActions = Tuple[Tuple[str, Callable[[], Any]], ...]
 WidgetFactory = Callable[[], Any]
@@ -47,6 +56,7 @@ class TabEntry:
     default_visible: bool = False
     actions: MenuActions = ()
     on_build: Optional[Callable[[Any], None]] = None
+    retain_on_close: bool = False
     _widget: Any = field(default=None, repr=False)
 
     @property
@@ -62,6 +72,54 @@ class TabEntry:
             if self.on_build is not None:
                 self.on_build(self._widget)
         return self._widget
+
+    def release(self) -> None:
+        """Drop an owned panel and schedule its Qt cleanup, retaining metadata."""
+        if self._widget is not None and not self.retain_on_close:
+            page, self._widget = self._widget, None
+            page.deleteLater()
+
+
+class TabRegistry:
+    """Open cached panels and release owned ones on explicit close.
+
+    Metadata stays registered after close, so reopening creates the same
+    feature with a new widget. Legacy forms supplied as existing widgets use
+    ``retain_on_close``: their owner still exposes their controls to embedders.
+    This module imports no Qt until a factory requests it. Use on the GUI thread.
+    """
+
+    def __init__(self, entries: list[TabEntry], *,
+                 on_close: Optional[Callable[[QWidget], None]] = None) -> None:
+        self._entries = entries
+        self._on_close = on_close
+
+    def _find(self, key: str) -> Optional[TabEntry]:
+        return next((entry for entry in self._entries if entry.key == key), None)
+
+    def open(self, key: str) -> QWidget:
+        """Build and return ``key`` without recreating an existing panel."""
+        entry = self._find(key)
+        if entry is None:
+            raise AutoControlActionException(f"Unknown tab: {key}")
+        return entry.widget
+
+    def close(self, key: str) -> None:
+        """Close a built panel and defer its deletion; respect a refused close.
+
+        Missing/unopened keys do nothing. The workspace detaches the page via
+        ``on_close``. Qt releases subscriptions and child timers during deferred
+        deletion; callers must return to its event loop to complete cleanup.
+        """
+        entry = self._find(key)
+        if entry is None or not entry.built:
+            return
+        page = entry.widget
+        if not page.close():
+            return
+        if self._on_close is not None:
+            self._on_close(page)
+        entry.release()
 
 
 _GUI = "je_auto_control.gui"

@@ -216,6 +216,13 @@ The main window is now a ``QMainWindow`` with:
 
 Close any tab with its ✕ button; re-open it via *View → Tabs*.
 
+Factory-built feature panels are deleted on the next Qt event-loop turn, releasing
+their destruction-bound subscriptions and timers. Reopening creates a fresh panel,
+so save edits first. View-menu hiding and ``hide_tab`` preserve the existing panel.
+Embedders can use ``tab_registry.open(key)`` / ``close(key)`` or ``close_tab(key)``;
+a panel that refuses its close event stays open. Legacy owner-built forms and
+Remote Desktop retain their widgets pending lifecycle migration.
+
 
 OCR (text on screen)
 ====================

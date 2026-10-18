@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- The GUI tab close button now releases factory-built feature panels and their
+  destruction-bound resources; reopening creates a fresh panel. View-menu hiding
+  and `hide_tab` retain state. Explicit `TabRegistry.open/close` and `close_tab`
+  APIs preserve metadata, respect rejected closes, and retain legacy owner-built
+  forms and Remote Desktop until their lifecycle migration.
+
 - CLI `run` and `--dry-run` now discard per-run variables, including `--var`
   seeds, on success or error. Top-level LLM planner and state-machine runs use
   fresh variables; nested calls reuse the enclosing scope. State-machine

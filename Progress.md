@@ -15,7 +15,7 @@
 計畫 B（動作日誌、自愈量測、codegen）、C（持久化同步與遠端 session；其中 C4 的擁有者模型已做）、D（Wayland）、E（Android／iOS）、G（MCP 逐步揭露）、H（型別深化與總驗收）尚未開始。F 還缺：
 
 - **Remote Desktop 與 Script Builder 仍在啟動時建立**（預設開啟），啟動時間 2.6–2.7 秒裡大半是它們與門面匯入。
-- **F1 的 `TabRegistry.open/close` 介面與 `close` 釋放訂閱**：現在關閉分頁只是從分頁列移除，widget 留著。
+- **F1 的遺留面板釋放**：擁有者直接建立的核心表單與 Remote Desktop 在關閉時仍保留 widget；需隨 F3 遷移直接控制項引用、執行中工作與連線生命週期，再啟用銷毀。
 - **F2 其餘**：計畫指定的 `WorkspaceShell` 介面、右側可收合詳情，以及各面板的空白／錯誤／permission states 還沒全面交付。
 - **F3**（共用 worker、取消、關閉時不碰已銷毀物件、`webrtc_panel.py` 拆分）與 **F4**（啟動／記憶體基準、mixed-DPI、
   功能對等測試）尚未開始。

@@ -128,6 +128,8 @@ Optional extras, installed only when you need them:
 | `fuzzy` / `locale` | `rapidfuzz` matching, `babel` locale parsing |
 | `s3` / `audio` | S3 artifact store, system volume control |
 
+Closing a factory-built feature with the tab cross releases its widget, subscriptions and timers on the next Qt event-loop turn; reopening starts a new panel. **View → Tabs** and the embedding `hide_tab` API only hide it and preserve state. `tab_registry.open/close` and `close_tab` expose explicit lifecycle operations. Legacy owner-built forms and Remote Desktop remain reusable on close while their lifecycle migration is pending.
+
 **Windows on arm64** installs and runs, minus what upstream cannot ship
 there: neither `opencv-python` nor `cryptography` publishes a `win_arm64`
 wheel. So `find_image*`, `screenshot()` (the OpenCV/BGR one — the Pillow

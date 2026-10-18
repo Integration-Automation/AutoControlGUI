@@ -203,6 +203,11 @@ GUI 多語系
 
 點擊分頁的 ✕ 即可關閉，之後可從 *View → Tabs* 恢復。
 
+factory 建立的功能面板會在下一次 Qt event loop 刪除，釋放綁定於銷毀事件的訂閱與計時器。
+重新開啟會建立新面板，請先儲存編輯內容。View 選單隱藏與 ``hide_tab`` 會保留原面板。
+嵌入端可用 ``tab_registry.open(key)`` ／ ``close(key)`` 或 ``close_tab(key)``；
+面板拒絕 close event 時仍保持開啟。既有的擁有者表單與 Remote Desktop 在生命週期遷移前保留 widget。
+
 
 OCR 螢幕文字辨識
 ================
