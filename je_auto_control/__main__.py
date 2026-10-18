@@ -1,4 +1,4 @@
-# argparse
+"""Legacy action-file CLI preserving the historical argparse flags."""
 import argparse
 import json
 import os
@@ -20,32 +20,34 @@ from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.project.create_project_structure import create_project_dir
 
-if __name__ == "__main__":
+
+def _preprocess_execute_action(file_path: str) -> None:
+    execute_action(read_executable_action_json(file_path))
+
+
+def _preprocess_execute_files(file_path: str) -> None:
+    if not os.path.isdir(file_path):
+        # os.walk yields nothing for a missing directory, so a typo
+        # ran no file at all and still exited 0.
+        raise AutoControlArgparseException(
+            f"not a directory: {file_path}")
+    execute_files(get_dir_files_as_list(file_path))
+
+
+def _preprocess_read_str_execute_action(execute_str: str) -> None:
+    json_data = json.loads(execute_str)
+    if isinstance(json_data, str):
+        json_data = json.loads(json_data)
+    execute_action(json_data)
+
+
+def _main() -> None:
+    """Run the legacy CLI with its original flags, errors and exit statuses."""
     try:
-        def preprocess_execute_action(file_path: str):
-            execute_action(read_executable_action_json(file_path))
-
-
-        def preprocess_execute_files(file_path: str):
-            if not os.path.isdir(file_path):
-                # os.walk yields nothing for a missing directory, so a typo
-                # ran no file at all and still exited 0.
-                raise AutoControlArgparseException(
-                    f"not a directory: {file_path}")
-            execute_files(get_dir_files_as_list(file_path))
-
-
-        def preprocess_read_str_execute_action(execute_str: str):
-            json_data = json.loads(execute_str)
-            if isinstance(json_data, str):
-                json_data = json.loads(json_data)
-            execute_action(json_data)
-
-
         argparse_event_dict = {
-            "execute_file": preprocess_execute_action,
-            "execute_dir": preprocess_execute_files,
-            "execute_str": preprocess_read_str_execute_action,
+            "execute_file": _preprocess_execute_action,
+            "execute_dir": _preprocess_execute_files,
+            "execute_str": _preprocess_read_str_execute_action,
             "create_project": create_project_dir
         }
         parser = argparse.ArgumentParser()
@@ -96,3 +98,7 @@ if __name__ == "__main__":
         autocontrol_logger.error("cli execution failed: %r", error)
         sys.stderr.write(f"error: {error}\n")
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    _main()

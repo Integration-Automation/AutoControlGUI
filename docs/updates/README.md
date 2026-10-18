@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261018-14 | 2026-10-18 | Isolate the legacy CLI dispatch boundary without changing flags | #done #cli #refactor | [2026-10](2026-10.md) |
 | U-20261018-13 | 2026-10-18 | Mask resolved vault values during executor application logging | #done #security #logging | [2026-10](2026-10.md) |
 | U-20261018-12 | 2026-10-18 | Capture executor action lifecycles with worker parent links | #done #journal #executor | [2026-10](2026-10.md) |
 | U-20261018-11 | 2026-10-18 | Preserve foreign files when recovering journal tails | #incident #journal #storage | [2026-10](2026-10.md) |
@@ -376,7 +377,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 40 |
+| [2026-10.md](2026-10.md) | 2026-10 | 41 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
