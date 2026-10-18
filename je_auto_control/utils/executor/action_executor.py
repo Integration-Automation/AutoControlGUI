@@ -33,6 +33,7 @@ from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue, MacroDepthExceeded,
 )
 from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
+from je_auto_control.utils.action_journal.capture import action_step
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
@@ -8227,24 +8228,31 @@ class Executor:
 
         execute_record_dict: Dict[str, Any] = {}
         for action in action_list:
-            if step_callback is not None:
-                step_callback(action)
-            if dry_run:
-                key = _unique_key(execute_record_dict, "dry-run: " + describe_action(action))
-                execute_record_dict[key] = "(not executed)"
-                continue
-            key = _unique_key(execute_record_dict, "execute: " + describe_action(action))
-            try:
-                self._run_one_action(action, execute_record_dict, raise_on_error, key)
-            except (LoopBreak, LoopContinue, MacroDepthExceeded) as signal:
-                if _validated:
-                    raise  # a nested body: the enclosing block handles it
-                self._record_unwound_signal(
-                    signal, execute_record_dict, raise_on_error, key)
+            self._execute_list_step(action, execute_record_dict, raise_on_error, _validated, dry_run, step_callback)
 
         for key, value in execute_record_dict.items():
             autocontrol_logger.info("%s -> %s", key, value)
         return execute_record_dict
+
+    def _execute_list_step(self, action: list, record: Dict[str, Any], raise_on_error: bool,
+                           validated: bool, dry_run: bool, callback: Optional[Callable[[list], None]]) -> None:
+        """Dispatch one step inside its optional journal capture boundary."""
+        if callback is not None:
+            callback(action)
+        with action_step(action, dry_run=dry_run) as capture:
+            if dry_run:
+                key = _unique_key(record, "dry-run: " + describe_action(action))
+                record[key] = "(not executed)"
+                return
+            key = _unique_key(record, "execute: " + describe_action(action))
+            try:
+                self._run_one_action(action, record, raise_on_error, key)
+            except (LoopBreak, LoopContinue, MacroDepthExceeded) as signal:
+                if validated:
+                    raise  # a nested body: the enclosing block handles it
+                self._record_unwound_signal(signal, record, raise_on_error, key)
+            if capture is not None:
+                capture.outcome = record.get(key)
 
     @staticmethod
     def _record_unwound_signal(signal: Exception, record: Dict[str, Any],

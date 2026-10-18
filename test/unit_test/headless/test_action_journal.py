@@ -285,3 +285,38 @@ def test_storage_errors_stay_in_the_framework_exception_family(tmp_path, operati
             read_events(destination)
         else:
             ActionJournal(destination).append(_event())
+
+
+@pytest.mark.parametrize("existing", [
+    b"unrelated user content",
+    b'{"users":[{"name":"local"}]}',
+    b'{\n  "users": [\n    "local"\n  ]\n}',
+    b'ordinary text\npartial tail',
+    b'{"schema_version":1,"run_id":"partial-first-record"',
+])
+def test_append_never_truncates_an_existing_nonjournal_destination(tmp_path, existing):
+    journal = ActionJournal(tmp_path / "existing.jsonl")
+    journal.path.write_bytes(existing)
+    with pytest.raises(ActionJournalError):
+        journal.append(_event())
+    assert journal.path.read_bytes() == existing
+    with pytest.raises(ActionJournalError):
+        read_events(journal.path)
+
+
+def test_corrupt_complete_record_prevents_torn_tail_repair(tmp_path):
+    journal = ActionJournal(tmp_path / "events.jsonl")
+    journal.append(_event())
+    with journal.path.open("ab") as handle:
+        handle.write(b'{not-json}\npartial')
+    original = journal.path.read_bytes()
+    with pytest.raises(ActionJournalError):
+        journal.append(_event())
+    assert journal.path.read_bytes() == original
+
+
+def test_foreign_destination_reports_the_format_refusal(tmp_path):
+    journal = ActionJournal(tmp_path / "existing.jsonl")
+    journal.path.write_bytes(b"unrelated user content")
+    with pytest.raises(ActionJournalError, match="destination has no committed journal"):
+        journal.append(_event())

@@ -245,6 +245,8 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 ---
 
+结构化日志可通过 `utils.action_journal` 的显式 Python 作用域捕获：`journal_scope` 记录现有 executor 调用，`execute_action_with_journal` 隔离一次执行。本机 loop／parallel／DAG 步骤保留 parent ID，并区分失败、取消与 dry-run。门面、动作命令、CLI／MCP 与 GUI 控制仍待接入。
+
 ## 命令行界面
 
 每次 `je_auto_control run`（包括 `--dry-run` 与未带 `--var`）使用独立变量作用域。顶层 `run_from_description` 与 `StateMachine.run()` 也会隔离变量，同一次执行内的动作与状态仍可共享；嵌套调用沿用已有的执行作用域。自行创建的 `Executor()` 保留自己的变量。

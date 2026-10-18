@@ -13,6 +13,17 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+
+- Journal tail recovery validates the destination's format and last committed
+  event before truncation. Existing non-journal files, corrupt committed tails
+  and ambiguous first fragments remain intact and report a format refusal.
+
+- Explicit Python journal scopes now capture executor starts/outcomes, including
+  local loop/parallel/DAG parent relationships. Failed, cancelled and dry-run
+  steps remain distinct; process interruption leaves a durable incomplete start.
+  The convenience runner isolates variables and returns typed run metadata.
+  Facade, command, CLI/MCP/GUI and run-history integration remain pending.
+
 - Add the schema-v1 structured action-journal storage foundation: pre-append
   secret redaction, fixed outcome-type metadata, interprocess append ordering,
   durable JSONL writes and bounded torn-tail recovery. Executor capture and its

@@ -1357,8 +1357,8 @@ GUI: **Email Triggers** 分頁 — 註冊 IMAP 觸發、啟動 / 停止 watcher�
 結構化動作日誌儲存（待接入執行流程）
 ====================================
 
-B1 的儲存基礎位於 ``je_auto_control.utils.action_journal``；executor／並行擷取、
-門面與動作指令匯出、GUI 控制仍待接入。應用程式可明確寫入 schema-v1 快照::
+B1 的儲存與明確擷取位於 ``je_auto_control.utils.action_journal``；門面與動作指令匯出、
+CLI／MCP／GUI 控制、run-history 連結仍待接入。應用程式可明確寫入 schema-v1 快照::
 
    import time
    from dataclasses import replace
@@ -1376,7 +1376,8 @@ B1 的儲存基礎位於 ``je_auto_control.utils.action_journal``；executor／�
    snapshots = read_events(journal.path, run_id="review")
 
 每次 append 保留 run／step／parent ID，並在跨行程鎖內取得檔案層級的序號。
-完整行會 fsync；讀取時忽略中斷的最後片段，下次 append 前先復原尾端。
+完整行會 fsync；已有有效紀錄時，讀取會忽略中斷的最後片段，下次 append 前先復原尾端。
+既有非日誌檔與無法辨識的首筆片段會被拒絕且保持原內容；復原前先驗證檔案身分與上一筆完整紀錄。
 完整但損壞的行、未知 schema／欄位與錯誤順序會拋出 ``ActionJournalError``。
 每筆以 UTF-8 位元組計算，最多 8 MiB，讀取時逐筆處理。
 
@@ -1384,3 +1385,22 @@ B1 的儲存基礎位於 ``je_auto_control.utils.action_journal``；executor／�
 保留為參照。不支援的物件、循環與非有限數字會有不可重播標記，不呼叫任意物件的 ``repr``。
 不透明結果與錯誤文字會遮罩，包含結果字典的鍵；``outcome_type`` 保留固定的安全型別分類。
 讀取回傳生命週期快照，包含未結束的 ``incomplete`` 起始紀錄，缺少完成紀錄時不推定成功。
+
+亦可明確擷取 executor 執行::
+
+   from pathlib import Path
+   from je_auto_control.utils.action_journal import execute_action_with_journal, read_events
+
+   summary = execute_action_with_journal(
+       [["AC_set_var", {"name": "count", "value": 1}]],
+       Path("captured.jsonl"), run_id="demo", dry_run=True,
+   )
+   snapshots = read_events(Path(summary["journal_path"]), run_id=summary["run_id"])
+
+``journal_scope(ActionJournal(path))`` 可擷取現有 executor 呼叫，不改變私有 executor 的變數所有權。
+便利 runner 使用模組 executor 與新的變數範圍，回傳含 ``run_id``、``journal_path``、
+原始 ``record`` 與 ``failed_actions`` 的 ``JournalRunResult``。
+本機 loop、parallel 與預設 DAG worker 會保留 run 與 parent step；遠端 DAG 端點需另行擷取。
+一般／嚴格失敗、取消與 ``dry_run`` 分別記錄；``ok`` 表示 dispatch 完成，業務結果需另外驗證。
+行程在動作中被結束時，保留已落盤的未完成起始紀錄。
+完成紀錄無法寫入時會保留原本的取消／錯誤，起始紀錄維持未完成。

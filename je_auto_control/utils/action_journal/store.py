@@ -44,6 +44,8 @@ class ActionJournal:
                 append_json_line(self.path, _encode(payload))
                 with self.path.open("ab") as handle:
                     os.fsync(handle.fileno())
+        except ActionJournalError:
+            raise
         except (OSError, ValueError) as error:
             raise ActionJournalError("could not append action journal") from error
 
@@ -60,21 +62,37 @@ def _encode(payload: dict[str, object]) -> str:
 
 
 def _next_sequence(path: Path) -> int:
-    """Read only the tail, discarding an uncommitted fragment under the lock."""
+    """Verify journal identity and its committed tail before repairing anything."""
     fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_APPEND, 0o600)
     with os.fdopen(fd, "a+b") as handle:
         offset, tail = _tail(handle)
-        if tail and not tail.endswith(b"\n"):
-            boundary = tail.rfind(b"\n") + 1
-            handle.truncate(offset + boundary)
-            tail = tail[:boundary]
         if not tail:
             return 1
-        raw = tail[:-1].rsplit(b"\n", 1)[-1]
-        sequence = _decode(raw, 0).sequence + 1
+        first, head_end = _journal_head(handle)
+        boundary = len(tail) if tail.endswith(b"\n") else tail.rfind(b"\n") + 1
+        committed = tail[:boundary]
+        if not committed:
+            raise ActionJournalError("destination has no committed journal record")
+        last = _decode(committed[:-1].rsplit(b"\n", 1)[-1], 0)
+        if last.sequence < first.sequence or (last.sequence == first.sequence and offset + boundary > head_end):
+            raise ActionJournalError("unordered action journal tail")
+        sequence = last.sequence + 1
         if sequence > 2 ** 63 - 1:
             raise ActionJournalError("action journal sequence exhausted")
+        # Reaching here proved both the file's format and the preceding record.
+        # A mistaken destination or corrupt committed line must remain intact.
+        if boundary != len(tail):
+            handle.truncate(offset + boundary)
         return sequence
+
+
+def _journal_head(handle: BinaryIO) -> tuple[ActionEvent, int]:
+    """Refuse foreign files and ambiguous torn first records without modifying them."""
+    handle.seek(0)
+    line = handle.readline(_MAX_RECORD_BYTES + 2)
+    if len(line) > _MAX_RECORD_BYTES + 1 or not line.endswith(b"\n"):
+        raise ActionJournalError("destination has no committed journal header")
+    return _decode(line, 1), handle.tell()
 
 
 def _tail(handle: BinaryIO) -> tuple[int, bytes]:
@@ -107,8 +125,9 @@ def _decode(raw: bytes, line_number: int) -> ActionEvent:
 def read_events(path: Path, *, run_id: Optional[str] = None) -> list[ActionEvent]:
     """Read validated snapshots in append order, optionally selecting one run.
 
-    A final unterminated fragment is uncommitted and ignored. Malformed complete
-    lines, unsupported schemas and non-increasing sequences are rejected. Start
+    A final unterminated fragment after a valid record is uncommitted and ignored.
+    Ambiguous first fragments, malformed complete lines, unsupported schemas and
+    non-increasing sequences are rejected. Start
     snapshots remain incomplete; reading never infers successful completion.
     """
     try:
@@ -131,6 +150,8 @@ def _snapshots(handle: BinaryIO) -> Iterator[ActionEvent]:
         if len(line) > _MAX_RECORD_BYTES + 1:
             raise ActionJournalError("action journal record exceeds 8 MiB")
         if not line.endswith(b"\n"):
+            if line and index == 0:
+                raise ActionJournalError("destination has no committed journal record")
             return  # EOF or the uncommitted final fragment
         index += 1
         event = _decode(line, index)

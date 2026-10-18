@@ -110,7 +110,12 @@ Structured action provenance is being built separately in `utils/action_journal/
 Its storage foundation uses frozen schema-v1 lifecycle snapshots, pre-write
 redaction, interprocess append sequencing and fsync. Readers preserve incomplete
 steps and ignore bounded uncommitted tails; opaque outcomes/errors are redacted.
-Executor capture and its command/GUI surfaces are not yet connected.
+Explicit `journal_scope` capture wraps each executor dispatch; loop bodies keep
+their step parent and local parallel/DAG workers rebind the same run metadata.
+`execute_action_with_journal` opens a fresh variable scope and returns a typed
+run summary. Capture starts are durable before effects; failed actions, handled
+loop signals, cancellation and dry-runs receive distinct completion statuses.
+Facade/command/CLI/MCP/GUI surfaces and run-history linking remain pending.
 
 **C. Record → edit → generate code**
 

@@ -1456,7 +1456,7 @@ Structured action journal storage (integration pending)
 =======================================================
 
 B1 provides a storage foundation under ``je_auto_control.utils.action_journal``;
-executor/parallel capture, facade and command exports, and GUI controls remain
+facade and command exports, CLI/MCP/GUI controls and run-history linking remain
 pending integration. Applications can explicitly write schema-v1 snapshots::
 
    import time
@@ -1475,8 +1475,10 @@ pending integration. Applications can explicitly write schema-v1 snapshots::
    snapshots = read_events(journal.path, run_id="review")
 
 Every append preserves run/step/parent IDs and receives a file-wide sequence under
-an interprocess lock. Complete lines are fsynced; an interrupted final fragment is
-ignored by readers and recovered before the next append. Complete malformed lines,
+an interprocess lock. Complete lines are fsynced; a final fragment after a valid
+record is ignored by readers and recovered before the next append. Existing
+non-journal files and ambiguous torn first records are refused without truncation;
+both the file identity and preceding complete record are validated before repair. Complete malformed lines,
 unknown schemas/fields and invalid order raise ``ActionJournalError``.
 Records are bounded to 8 MiB of UTF-8 bytes and read one at a time.
 
@@ -1487,3 +1489,25 @@ objects, cycles and non-finite values receive non-replayable markers; arbitrary
 result dictionary keys; ``outcome_type`` preserves a fixed safe type category.
 Reading returns lifecycle snapshots, including unfinished ``incomplete`` starts,
 and does not infer a completed step from a missing final record.
+
+Explicit executor capture is also available::
+
+   from pathlib import Path
+   from je_auto_control.utils.action_journal import execute_action_with_journal, read_events
+
+   summary = execute_action_with_journal(
+       [["AC_set_var", {"name": "count", "value": 1}]],
+       Path("captured.jsonl"), run_id="demo", dry_run=True,
+   )
+   snapshots = read_events(Path(summary["journal_path"]), run_id=summary["run_id"])
+
+``journal_scope(ActionJournal(path))`` captures existing executor calls without
+changing a private executor's variable ownership. The convenience runner uses
+the module executor in fresh variables and returns ``JournalRunResult`` with
+``run_id``, ``journal_path``, the original ``record`` and ``failed_actions``.
+Local loop, parallel and default DAG workers preserve the run and parent step;
+remote DAG execution requires separate capture on the remote endpoint.
+Soft/strict failures, cancellation and ``dry_run`` stay distinct. ``ok`` reports
+dispatch completion; domain verification is a separate check. A process killed
+mid-command retains its durable incomplete start. Completion-storage failure
+preserves an original cancellation/error and leaves the start incomplete.

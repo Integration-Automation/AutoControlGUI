@@ -58,6 +58,8 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261018-12 | 2026-10-18 | Capture executor action lifecycles with worker parent links | #done #journal #executor | [2026-10](2026-10.md) |
+| U-20261018-11 | 2026-10-18 | Preserve foreign files when recovering journal tails | #incident #journal #storage | [2026-10](2026-10.md) |
 | U-20261018-10 | 2026-10-18 | Build versioned, redacted and durable action-journal storage | #done #journal #storage | [2026-10](2026-10.md) |
 | U-20261018-09 | 2026-10-18 | Separate sensitive MCP reads from viewer observation | #done #mcp #rbac | [2026-10](2026-10.md) |
 | U-20261018-08 | 2026-10-18 | Present REST RBAC mode and preserve legacy gate compatibility | #done #rest #rbac | [2026-10](2026-10.md) |
@@ -373,7 +375,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 37 |
+| [2026-10.md](2026-10.md) | 2026-10 | 39 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
