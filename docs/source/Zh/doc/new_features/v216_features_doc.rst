@@ -6,9 +6,9 @@
 把取樣區域拆成其主要前景(少數——通常是文字)與背景(多數)顏色,再評其 WCAG 對比。
 
 * :func:`grade_contrast` ——純函式:把前景 / 背景配對對 WCAG 2.x 門檻轉為
-  ``{ratio, aa, aaa, aa_large, aaa_large}``。
-* :func:`dominant_pair` ——純函式:依亮度把一串取樣 RGB 像素拆成主要的 ``{foreground, background}``。
-* :func:`region_contrast` ——取樣螢幕區域並評分,透過可注入的 ``sampler``(預設為真實螢幕擷取)。
+  ``{ratio, aa, aaa, aa_large, aaa_large}`` 。
+* :func:`dominant_pair` ——純函式:依亮度把一串取樣 RGB 像素拆成主要的 ``{foreground, background}`` 。
+* :func:`region_contrast` ——取樣螢幕區域並評分,透過可注入的 ``sampler`` (預設為真實螢幕擷取)。
 
 評分與拆分皆為純函式並重用 :func:`a11y_audit.contrast_ratio`,故能在沒有螢幕的情況下完整測試。
 不匯入 ``PySide6``。

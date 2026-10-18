@@ -364,13 +364,13 @@ macOS entitlement、Windows WinUSB 通常不需要）。README 會逐 OS
 
 八個原始未決問題均已拍板，對應實作見上方各節：
 
-1. **OQ1 — Channel 可靠度**：``maxRetransmits=None``（完全可靠有序）。
-2. **OQ2 — frame 分片**：已實作 ``fragment_payload`` + EOF 重組。
-3. **OQ3 — ``LIST`` 走 channel**：是，ACL 過濾後經 channel 回傳。
-4. **OQ4 — Backpressure 顆粒度**：per-claim（per-endpoint 屬 YAGNI）。
-5. **OQ5 — WinUSB 不可 claim 裝置**：只列出已綁 WinUSB 的裝置，
+1. **OQ1 — Channel 可靠度** ： ``maxRetransmits=None`` （完全可靠有序）。
+2. **OQ2 — frame 分片** ：已實作 ``fragment_payload`` + EOF 重組。
+3. **OQ3 — ``LIST`` 走 channel** ：是，ACL 過濾後經 channel 回傳。
+4. **OQ4 — Backpressure 顆粒度** ：per-claim（per-endpoint 屬 YAGNI）。
+5. **OQ5 — WinUSB 不可 claim 裝置** ：只列出已綁 WinUSB 的裝置，
    claim 不到回明確錯誤。
-6. **OQ6 — macOS 發行**：原生 IOKit 列舉 + libusb 傳輸；notarisation，
+6. **OQ6 — macOS 發行** ：原生 IOKit 列舉 + libusb 傳輸；notarisation，
    無需特殊 entitlement，文件記載 SIP 界線。
-7. **OQ7 — Linux kernel driver**：open 時 detach、close 時 reattach。
-8. **OQ8 — ACL 完整性**：HMAC-SHA256 sidecar，金鑰可插拔（keychain）。
+7. **OQ7 — Linux kernel driver** ：open 時 detach、close 時 reattach。
+8. **OQ8 — ACL 完整性** ：HMAC-SHA256 sidecar，金鑰可插拔（keychain）。

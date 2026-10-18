@@ -56,7 +56,7 @@ window-wait / type / confirm steps go through an injectable
 
 
 Locked-session guard
-===================
+====================
 
 Unattended runs silently fail when the workstation is locked or the RDP
 session is disconnected — input no-ops or throws. Check first::

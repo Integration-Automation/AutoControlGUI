@@ -12,7 +12,7 @@ executor commands, MCP tools, Script Builder).
 
 
 Pseudo-localization
-==================
+===================
 
 Accent and pad UI strings (preserving placeholders) to flush out hardcoded
 text and pre-stress layout *before* any real translation exists::
@@ -50,7 +50,7 @@ the live a11y tree unless ``elements`` are supplied).
 
 
 Catalog completeness
-===================
+====================
 
 Diff a translation catalog against a base locale for missing / orphaned /
 empty keys and placeholder mismatches — a CI gate against blank UI::

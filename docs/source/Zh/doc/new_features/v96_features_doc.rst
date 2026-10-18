@@ -1,5 +1,5 @@
 JSON-Schema 相容性檢查
-=====================
+======================
 
 我們能*依*某個 JSON Schema 驗證(``json_schema``)並*產生*結構(``action_lint/schema``),但無法回答
 「使用舊結構的消費者,是否仍能讀取以新結構寫入的資料?」—— 也就是依 Confluent/Avro 的 backward /

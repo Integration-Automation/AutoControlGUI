@@ -1,5 +1,5 @@
 URI-Scheme 值參照
-================
+=================
 
 ``script_vars.interpolate`` 把單一間接寫死(``${secrets.NAME}`` → vault),而 ``AssetStore`` 的憑證
 參照僅限 vault 名稱。沒有一個通用、可插拔的讀取時間接機制 —— 也就是現代設定模式:儲存一個*指標*

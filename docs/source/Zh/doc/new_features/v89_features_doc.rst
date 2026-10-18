@@ -1,5 +1,5 @@
 multipart/form-data 建立與解析
-=============================
+==============================
 
 ``http_request`` 只送出 JSON 或原始內文 —— 沒有檔案上傳,而曾經能解析 multipart 的標準函式庫 ``cgi``
 模組已在 Python 3.13 移除。本功能以決定性的 boundary 從文字欄位與檔案組裝 ``multipart/form-data``

@@ -1,5 +1,5 @@
 HTTP 內容協商與解壓縮
-===================
+=====================
 
 ``urllib`` / ``http_request`` 從不設定 ``Accept-Encoding``,也從不解碼 ``Content-Encoding`` 回應,因此
 會壓縮的伺服器回傳的內文是原始的;也沒有 quality-value 解析器。本功能加入 ``Accept`` / ``Accept-Encoding``

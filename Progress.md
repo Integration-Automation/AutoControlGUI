@@ -58,24 +58,6 @@
 `gui/language_wrapper/{english,japanese,traditional_chinese,simplified_chinese}.py`
 （1,326／1,213／1,193／1,192,語系字串表；以上皆 2026-09-23 實測）。
 
-### 2026-08-19 決議:上表的實測行數就是新的上限
-
-2026-08-18 重新實測時,表上原有的七列**全部**變長,而 `CLAUDE.md` 明寫
-「列上的檔案不得再變長,要再長就得先拆」,所以這裡曾標成 `[DECIDE]`。
-**維護者已於 2026-08-19 拍板:接受實測數字當新基準**——不為了回到舊數字而去拆
-`_handlers.py`（4,789）與 `webrtc_panel.py`。上表的行數即是各自的新上限,
-規則不變:只准變短,再變長就得先拆。
-（`_handlers.py` 後來還是拆了:2026-09-22 拆出 QA 主題,2026-09-23 再拆出九個主題模組,
-本體降到 522 行、離開上表。見 `docs/updates/` 的 U-20260922-05 與 U-20260923-09。）
-
-同一批裡有六個檔案在 2026-08-19 已經拆回線內、從表上移除,做法寫在
-commit `46f4cd5` 的說明裡（`docs/updates/` 沒有對應條目：舊的 `WHATS_NEW.md` 從沒記過這件事）。
-
-行數沒有任何 CI 在把關（`quality.yml` 的五個 job 裡只有 ruff 管到這一節的限制,而它只管行寬),
-所以這張表只會在有人手動實測時才會被發現對不上——上次就是。
-
----
-
 ## Windows arm64:裝得起來了，但少了影像與加密
 
 `TODO` — 上游仍未發 wheel（`opencv-python`、`cryptography`），但安裝本身不再是卡點
@@ -253,7 +235,6 @@ U-20261009-06 與 -04 的 macOS 部分是在 Windows 上對假的 pyobjc／Quart
 - **`pytest --cov` 沒有重新量過**：進入點搬到 `je_auto_control_pytest` 之後，它是否還少算，未知；規則仍是 `coverage run -m pytest`。
 - **快到 750 行上限的檔案**：`utils/usb/passthrough/viewer_client.py`（748）、`gui/remote_desktop/connection_screen.py`（729）、
   `utils/mcp_server/server.py`（734）、`utils/mcp_server/http_transport.py`（727）、`utils/agent/backends/anthropic_computer_use.py`（723）——下一次要加東西就得先拆。
-- **Sphinx 嚴格建置未通過**：`docs/source` 的英／中文文件仍有標題線過短等既有警告；需修完後以 `-W --keep-going` 重建兩種語言並檢查渲染。
 
 ---
 

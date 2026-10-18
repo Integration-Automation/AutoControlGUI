@@ -1,6 +1,6 @@
-==================================================
+========================================================
 New Features (2026-06-19) — Heal Analytics & Secret Scan
-==================================================
+========================================================
 
 Two pure-standard-library audit/analysis tools: aggregate the self-healing
 log into drift metrics, and scan action JSON for hardcoded secrets. Full
@@ -12,7 +12,7 @@ stack.
 
 
 Self-heal analytics
-==================
+===================
 
 ::
 
@@ -28,7 +28,7 @@ they fail. Exposed as ``AC_heal_stats`` / ``ac_heal_stats``.
 
 
 Secret scan
-==========
+===========
 
 ::
 

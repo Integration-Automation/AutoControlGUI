@@ -1,5 +1,5 @@
 Server-Sent Events(SSE)用戶端解析器
-==================================
+===================================
 
 MCP 的 HTTP 傳輸會*發出* Server-Sent Events,但沒有任何東西消費它:一個串流 ``text/event-stream``
 的 LLM、agent 或 chatops 端點,會讓 ``http_request`` 拿到未經解析的原始 blob。本功能實作 WHATWG

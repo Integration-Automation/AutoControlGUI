@@ -6,8 +6,8 @@ Office 文件的 headless 讀寫——Excel(``.xlsx``)、Word(``.docx``)、
 PowerPoint(``.pptx``)——讓流程不必驅動 GUI 就能吃進資料列或產出報表。
 走完整五層(facade、``AC_*`` 執行器指令、MCP 工具、Script Builder)。
 
-背後的函式庫(``openpyxl`` / ``python-docx`` / ``python-pptx``)是
-**可選**相依::
+背後的函式庫( ``openpyxl`` / ``python-docx`` / ``python-pptx`` )是
+**可選** 相依::
 
     pip install je_auto_control[office]
 

@@ -1,6 +1,6 @@
-=====================
+======================
 New Features (2026-04)
-=====================
+======================
 
 This page documents the April 2026 additions to AutoControl. Every new
 feature ships with a headless Python API **and** a GUI affordance, and is

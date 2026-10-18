@@ -16,7 +16,7 @@ June 2025). Pure standard library; wired through the full stack.
 
 
 Conformance audit
-================
+=================
 
 ::
 
@@ -41,7 +41,7 @@ Findings are filtered to the requested conformance ``level`` (``A`` /
 
 
 Target Size rule
-===============
+================
 
 ``audit_target_size(elements, min_px=24)`` flags interactive elements whose
 bounds are smaller than ``min_px`` on either side (elements with unknown

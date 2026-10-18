@@ -1,6 +1,6 @@
-==================================================
+==============================================================
 New Features (2026-06-19) — CI Annotations & Clipboard History
-==================================================
+==============================================================
 
 Two pure-standard-library utilities: emit CI annotations from results, and
 keep a searchable clipboard history. Full stack.
@@ -11,7 +11,7 @@ keep a searchable clipboard history. Full stack.
 
 
 CI workflow annotations
-======================
+=======================
 
 ::
 
@@ -31,7 +31,7 @@ into GitHub Actions workflow commands so failures surface **inline** in a PR
 
 
 Clipboard history
-================
+=================
 
 ::
 

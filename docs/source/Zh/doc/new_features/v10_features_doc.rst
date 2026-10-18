@@ -51,10 +51,10 @@ Dispatcher / performer
 
 兩種失敗類型,對應 REFramework:
 
-* **application**(暫時性——逾時、stale element):重試至 ``max_retries``
-  (預設 3)次,然後標為 ``failed``。
-* **business**(資料本身無效):永不重試——立即標為 ``failed``。請丟出
-  :class:`BusinessError` 或傳 ``kind="business"``。
+* **application** (暫時性——逾時、stale element):重試至 ``max_retries``
+  (預設 3)次,然後標為 ``failed`` 。
+* **business** (資料本身無效):永不重試——立即標為 ``failed`` 。請丟出
+  :class:`BusinessError` 或傳 ``kind="business"`` 。
 
 ``stats()`` 回傳各狀態計數(``new`` / ``in_progress`` / ``success`` /
 ``failed``),供儀表板與執行報告使用。資料庫無法開啟或使用(不是 SQLite 檔、鎖定逾時)時丟出

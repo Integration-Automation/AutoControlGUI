@@ -1,6 +1,6 @@
-==================================================
+======================================================
 New Features (2026-06-19) — MCP Structured Tool Output
-==================================================
+======================================================
 
 The MCP server now supports the 2025-06-18 **structured tool output** spec
 feature: a tool may declare an ``outputSchema``, and its dict result is
@@ -16,7 +16,7 @@ errors. Pure standard library; an MCP-framework enhancement (no new
 
 
 Declaring an output schema
-=========================
+==========================
 
 ::
 

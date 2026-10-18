@@ -1,5 +1,5 @@
 OTLP/JSON Span 匯出
-==================
+===================
 
 OTLP/JSON 的 span 要放在 ``resourceSpans`` / ``scopeSpans`` 封套裡。本功能把一串 span 塑形成
 OpenTelemetry collector 可透過 file exporter 直接攝取的封套(``agent_trace.to_otel`` 已回傳 OTLP

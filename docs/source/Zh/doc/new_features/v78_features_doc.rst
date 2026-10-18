@@ -1,5 +1,5 @@
 RFC 9457 Problem Details 解析
-============================
+=============================
 
 ``http_request`` 回傳的非 2xx 內文未經解析,因此流程 —— 或 ``assert_http`` —— 無法以結構化方式讀取
 標準化的 API 錯誤。本功能解析 RFC 9457 ``application/problem+json`` 文件:已註冊的 ``type`` /

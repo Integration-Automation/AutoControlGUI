@@ -13,7 +13,7 @@ guardrail**, and an **A2A agent card**.
 
 
 Skill / playbook library
-=======================
+========================
 
 Agents accumulate playbooks — "log in", "export the report", "dismiss the
 cookie banner". A :class:`SkillLibrary` stores each as a named action
@@ -38,7 +38,7 @@ in-memory macro registry.
 
 
 Prompt-injection guardrail
-=========================
+==========================
 
 When a computer-use agent feeds screen scrapes / OCR text into an LLM, a
 hostile page can smuggle instructions ("ignore previous instructions and
@@ -59,7 +59,7 @@ carries a severity; the score sums high=2 / medium=1. Exposed as
 
 
 A2A agent card
-=============
+==============
 
 The A2A protocol lets agents discover each other through an *Agent Card* —
 a JSON document advertising identity, endpoint, and skills. Publishing one

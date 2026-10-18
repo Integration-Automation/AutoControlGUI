@@ -1,9 +1,9 @@
 確保控制項處於目標狀態(冪等)
 ==============================
 
-*無條件採取行動*的自動化——「點選核取方塊」、「輸入該值」——會把已勾選的方塊再次切換,或對已正確的
+*無條件採取行動* 的自動化——「點選核取方塊」、「輸入該值」——會把已勾選的方塊再次切換,或對已正確的
 欄位重新輸入,且無法安全地重跑。穩健的型態是讀取-比較-行動-驗證:看目前狀態,若已相符就什麼都不做,
-否則套用變更並確認生效。``ensure_state`` 正是此原語。
+否則套用變更並確認生效。 ``ensure_state`` 正是此原語。
 
 * :func:`ensure_state` ——通用:透過 ``reader`` 讀取,若不等於 ``desired`` 就套用 ``setter`` 並
   重讀,最多 ``attempts`` 次。
@@ -35,8 +35,8 @@ reader / setter / toggle 接縫皆可注入,故邏輯能在沒有真實控制項
 執行器指令
 ----------
 
-``AC_ensure_field_value``(``desired`` 加上 ``name`` / ``role`` / ``app_name`` /
-``automation_id`` / ``attempts`` → ``{ok, changed, value, attempts}``)透過無障礙後端
+``AC_ensure_field_value`` ( ``desired`` 加上 ``name`` / ``role`` / ``app_name`` /
+``automation_id`` / ``attempts`` → ``{ok, changed, value, attempts}`` )透過無障礙後端
 冪等地設定原生控制項的值——先讀取,若已相符則不做任何事。以對應的 ``ac_ensure_field_value``
-MCP 工具及 Script Builder 指令(位於 **Flow** 分類下)形式提供。:func:`ensure_state` /
-:func:`ensure_toggle`(接受任意 callable)則是 Python API 介面。
+MCP 工具及 Script Builder 指令(位於 **Flow** 分類下)形式提供。 :func:`ensure_state` /
+:func:`ensure_toggle` (接受任意 callable)則是 Python API 介面。

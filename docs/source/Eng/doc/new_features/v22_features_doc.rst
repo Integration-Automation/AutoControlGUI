@@ -16,7 +16,7 @@ dependency); wired through the full stack.
 
 
 Numbering and the legend
-=======================
+========================
 
 ::
 
@@ -34,7 +34,7 @@ unit-testable with synthetic elements.
 
 
 Live "mark then click" loop
-==========================
+===========================
 
 ::
 

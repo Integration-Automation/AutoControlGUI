@@ -16,7 +16,7 @@ socket server, the scheduler, and MCP. Pure standard library
 
 
 Authoring a plugin
-=================
+==================
 
 A plugin package exposes an entry point whose target is a factory returning
 a ``{command_name: handler}`` mapping::
@@ -31,7 +31,7 @@ a ``{command_name: handler}`` mapping::
 
 
 Discovering & loading
-====================
+=====================
 
 ::
 

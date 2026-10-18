@@ -13,7 +13,7 @@ deterministically with a fake clock and a recording sink.
 
 
 Timed timeline replay
-====================
+=====================
 
 ::
 
@@ -31,7 +31,7 @@ to ``[min_gap, max_gap]``). Event ``op`` is one of ``move`` / ``click`` /
 
 
 Input-sequence DSL
-=================
+==================
 
 ::
 
