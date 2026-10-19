@@ -10,6 +10,8 @@ from je_auto_control.utils.config_sync.causal_commands import _queue
 from je_auto_control.utils.config_sync.causal_models import SyncActor
 from je_auto_control.utils.config_sync.causal_state import CausalBucket
 from je_auto_control.utils.config_sync.contract import ConfigSyncError
+from je_auto_control.utils.config_sync.control_models import ControlKind, SyncControlRequest
+from je_auto_control.utils.config_sync.outbox import SyncOutbox
 from je_auto_control.utils.config_sync.outbox_models import SyncRetryPolicy
 from je_auto_control.utils.path_guard.policy import PathPolicy
 
@@ -83,3 +85,29 @@ def _retry_policy(raw: object) -> SyncRetryPolicy:
                            max_delay=cast(float, raw.get("max_delay", 5.0)),
                            max_batch=cast(int, raw.get("max_batch", 100)),
                            lease_seconds=cast(float, raw.get("lease_seconds", 30.0)))
+
+
+def _control_sync_peer(path: str, endpoint: str, user_id: str, operation: str = "status",
+                        options: Optional[dict[str, object]] = None, *, path_policy: Optional[PathPolicy] = None,
+                        cancelled: _Cancelled = None) -> dict[str, object]:
+    _check(cancelled)
+    settings = _options(options, ("policy", "peer_id", "discard_pending", "operation_id"))
+    queue = _queue(path, path_policy)
+    if operation == "status":
+        return _control_reply(queue, endpoint, user_id, None)
+    request = SyncControlRequest(cast(ControlKind, operation),
+                                  operation_id=cast(Optional[str], settings.get("operation_id")),
+                                  peer_id=cast(Optional[str], settings.get("peer_id")),
+                                  discard_pending=cast(bool, settings.get("discard_pending", False)))
+    policy = _retry_policy(settings.get("policy"))
+    client = _client(endpoint, user_id, settings)
+    report = client.control(queue, request, policy=policy, cancelled=cancelled)
+    return _control_reply(queue, endpoint, user_id, asdict(report))
+
+
+def _control_reply(queue: SyncOutbox, endpoint: str, user_id: str,
+                    report: Optional[dict[str, object]]) -> dict[str, object]:
+    snapshot = queue.snapshot(endpoint=endpoint, user_id=user_id)
+    return {"report": report, "state": queue.status(endpoint=endpoint, user_id=user_id),
+            "control": queue.control_status(endpoint=endpoint, user_id=user_id),
+            "snapshot": snapshot.to_dict() if snapshot is not None else None}

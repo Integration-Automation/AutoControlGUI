@@ -354,6 +354,19 @@ def _causal_cancelled(ctx: Optional[ToolCallContext]) -> bool:
     return False
 
 
+def sync_peer_control(path: str, endpoint: str, user_id: str, operation: str = "status",
+                        options: Optional[dict[str, object]] = None, *,
+                        ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Control durable peer state with explicit pending-retirement consent, or review cached local status."""
+    # pylint: disable-next=import-outside-toplevel  # reason: MCP adapters load optional capabilities only when called
+    from je_auto_control.utils.config_sync.http_commands import _control_sync_peer
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _control_sync_peer(path, endpoint, user_id, operation, options,
+                              path_policy=ctx.path_policy if ctx else None,
+                              cancelled=lambda: _causal_cancelled(ctx))
+
+
 def take_golden(path: str, region: Optional[List[int]] = None) -> str:
     from je_auto_control.utils.visual_regression import (
         take_golden as _take,

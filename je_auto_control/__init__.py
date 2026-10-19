@@ -1242,6 +1242,7 @@ from je_auto_control.utils.config_sync.causal_state import CausalBucket
 from je_auto_control.utils.config_sync.causal_store import CausalConfigStore
 from je_auto_control.utils.config_sync.causal_client import CausalSyncClient
 from je_auto_control.utils.config_sync.causal_receipt import CausalReceipt
+from je_auto_control.utils.config_sync.control_models import SyncControlOperation, SyncControlRequest, SyncControlResult
 from je_auto_control.utils.config_sync.peers import FullResyncRequired, SyncPeer, SyncPeers
 from je_auto_control.utils.config_sync.outbox import (
     SyncDrainResult, SyncLocalIdentity, SyncOperation, SyncOutbox, SyncRetryPolicy,
@@ -1339,6 +1340,7 @@ def start_autocontrol_gui(*args, **kwargs):
     return _impl(*args, **kwargs)
 
 __all__ = [
+    "SyncControlOperation", "SyncControlRequest", "SyncControlResult",
     "CausalSyncClient", "CausalReceipt",
     "CausalBucket", "CausalConfigStore", "CausalConflict", "DeletionFence", "SyncActor",
     "MergeDecision", "SyncConflict", "SyncEntry", "merge_entries", "FullResyncRequired", "SyncPeer", "SyncPeers",

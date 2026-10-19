@@ -14,12 +14,15 @@ from je_auto_control.utils.config_sync.contract import (
     ConfigRevisionConflict, ConfigStoreError, ConfigSyncError, _encoded, _identifier, _revision,
 )
 from je_auto_control.utils.config_sync.database import SyncDatabase
+from je_auto_control.utils.config_sync.control_models import ControlKind, SyncControlOperation, _intent
+from je_auto_control.utils.config_sync.control_store import ControlStore
 from je_auto_control.utils.config_sync.causal_receipt import CausalReceipt, _server_snapshot
 from je_auto_control.utils.config_sync.causal_state import CausalBucket
 from je_auto_control.utils.config_sync.outbox_models import (
     SyncDrainResult, SyncLocalIdentity, SyncOperation, SyncRetryPolicy, normalize_sync_endpoint,
 )
 from je_auto_control.utils.config_sync.outbox_schema import initialize_outbox
+from je_auto_control.utils.config_sync.outbox_lease import due as _due
 from je_auto_control.utils.config_sync.peers import FullResyncRequired
 from je_auto_control.utils.logging.secret_scope import scrub_secret_text
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption as _raise_interruption
@@ -113,6 +116,10 @@ class SyncOutbox:
             if row is not None and row[0] != digest:
                 raise ConfigSyncError("operation_id already identifies different queued data")
             if row is None:
+                resync = connection.execute("SELECT 1 FROM sync_controls WHERE endpoint=? AND user_id=? "
+                                           "AND kind='full_resync' AND status!='delivered'", key[:2]).fetchone()
+                if resync is not None:
+                    raise FullResyncRequired("local full resync must complete before new edits are captured")
                 pending = connection.execute("SELECT count(*) FROM sync_operations WHERE endpoint = ? AND user_id = ? "
                                              "AND status NOT IN ('delivered','retired')", key[:2]).fetchone()[0]
                 if pending >= 10000:
@@ -218,6 +225,28 @@ class SyncOutbox:
             raise ConfigStoreError("outbox snapshot belongs to another account")
         return result
 
+    def request_control(self, endpoint: str, user_id: str, kind: ControlKind, *, peer_id: Optional[str] = None,
+                          discard_pending: bool = False, operation_id: Optional[str] = None) -> SyncControlOperation:
+        """Persist or resume one explicit peer-control intent; pending retirement always requires consent."""
+        _intent(kind, peer_id, discard_pending)
+        if operation_id is not None:
+            _identifier(operation_id, "control operation_id")
+        identity = self.identity(endpoint, user_id)
+        return self._controls().enqueue(identity, kind, peer_id=peer_id, discard_pending=discard_pending,
+                                         operation_id=operation_id)
+
+    def control_receipt(self, endpoint: str, user_id: str, operation_id: str) -> Optional[int]:
+        """Read one locally confirmed historical control receipt without resending or changing queued work."""
+        _identifier(operation_id, "control operation_id")
+        return self._controls().receipt(_scope(endpoint, user_id), operation_id)
+
+    def control_status(self, *, endpoint: str, user_id: str) -> dict[str, object]:
+        """Inspect bounded private metadata-control state without HTTP or applying configuration."""
+        return self._controls().status(_scope(endpoint, user_id))
+
+    def _controls(self) -> ControlStore:
+        return ControlStore(self._database, self._now, self._save_snapshot)
+
     def flush(self, sender: _Sender, *, endpoint: str, user_id: str,
                  policy: Optional[SyncRetryPolicy] = None, cancelled: _Cancelled = None) -> SyncDrainResult:
         """Attempt bounded due work; backoff is persisted without sleeping and cancellation never discards edits."""
@@ -266,6 +295,11 @@ class SyncOutbox:
         now = self._now()
         with self._database.connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
+            control = connection.execute("SELECT 1 FROM sync_controls WHERE endpoint=? AND user_id=? "
+                                         "AND status!='delivered'", key[:2]).fetchone()
+            if control is not None:
+                connection.execute("COMMIT")
+                return None
             row = connection.execute("SELECT status,next_attempt,last_attempt,lease_owner,lease_until "
                                      "FROM sync_operations WHERE endpoint = ? AND user_id = ? AND operation_id = ?",
                                      key).fetchone()
@@ -327,18 +361,6 @@ class SyncOutbox:
             connection.execute("UPDATE sync_operations SET status=CASE WHEN status='sending' THEN 'pending' "
                                "ELSE status END,lease_owner='',lease_until=0 WHERE endpoint=? AND user_id=? "
                                "AND operation_id=? AND lease_owner=?", (*key, owner))
-
-
-def _due(row: tuple[object, ...], now: float) -> bool:
-    status, next_attempt, last_attempt, owner, lease_until = row
-    if status not in {"pending", "offline", "sending"}:
-        return False
-    if cast(float, last_attempt) <= now:
-        if owner and cast(float, lease_until) > now:
-            return False
-        if cast(float, next_attempt) > now:
-            return False
-    return True
 
 
 def _receipt_snapshot(receipt: int | CausalReceipt, user_id: str) -> Optional[CausalBucket]:

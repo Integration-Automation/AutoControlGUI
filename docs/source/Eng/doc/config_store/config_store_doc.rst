@@ -100,3 +100,8 @@ retains last-modified ordering and time-bounded tombstones. Automatic peer-contr
 full-resync orchestration and asset adapters remain in Progress.md. The explicit
 CausalSyncClient.flush supplies durable v3 delivery and bounded rebasing. Local tests
 use isolated files and loopback servers, without remote-machine or native acceptance.
+
+Durable causal peer registration/ack/collection/retirement and atomic local full resync
+are available through CausalSyncClient.control and AC_sync_peer_control (MCP/Builder).
+See the causal guide for stable operation IDs, explicit pending-retirement consent,
+SQLite schema 1-to-2 migration and local-only status.

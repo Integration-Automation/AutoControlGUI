@@ -8,22 +8,20 @@ import pytest
 
 import je_auto_control as ac
 from headless.test_config_sync_causal_store import actor, register
+from headless.causal_transport import perform_causal_call
 
 
 def connected(tmp_path, monkeypatch):
-    from fastapi.testclient import TestClient
-    from je_auto_control.utils.remote_desktop.signaling_server import create_app
     from je_auto_control.utils.http_client import http_client
     path = tmp_path / 'server.sqlite3'
     server = ac.CausalConfigStore(path)
     register(server, 'desktop')
-    web = TestClient(create_app(config_store_path=path, shared_secret='synthetic-only', serve_web_viewer=False))
     calls = []
     def perform(call):
         calls.append(dict(call))
         assert call['follow_redirects'] is False
-        response = web.request(call['method'], call['url'], content=call['body'], headers=call['headers'])
-        return {'status': response.status_code, 'text': response.text}
+        assert call['headers']['X-Signaling-Secret'] == 'synthetic-only'
+        return perform_causal_call(server, call)
     monkeypatch.setattr(http_client, 'perform_call', perform)
     queue = ac.SyncOutbox(tmp_path / 'outbox.sqlite3')
     queue.identity('https://controlled.invalid', 'alice', origin='desktop')

@@ -69,8 +69,12 @@ Operation-ID conflicts retain the exact request. CausalReceipt confirms queue de
 and the latest server snapshot in one lease-owned transaction; expired owners cannot
 publish, older snapshots cannot regress and equal-revision forks roll back. Private
 HTTP AC/MCP/Builder fetch/commit/flush commands use live environment credential
-references. Automatic peer-control, ack/collection scheduling and atomic local
-full-resync/old-epoch retirement remain C2 work; shared-secret access is service-wide.
+references. Durable explicit controls use a singleton leased intent per namespace and
+compact receipt history. Controls drain before edits; uncertain payloads retry unchanged.
+Only confirmed full-resync receipts atomically adopt local identity/cache and retire old
+pending work with explicit consent. Schema 1-to-2 migration validates owned tables and
+preserves edit wire. AC/MCP/Builder control status is private and local-only. Applications
+choose ack/collection timing; C3 config/assets/UI remain open. Shared-secret access is service-wide.
 
 Cancellation carriers and classifiers live in the dependency-free
 `utils/exception/control_signals.py` seam. MCP context and run-history import paths

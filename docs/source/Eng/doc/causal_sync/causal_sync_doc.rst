@@ -4,8 +4,7 @@ Causal review and durable local outboxes
 These experimental primitives provide causal entry decisions, a serializable
 peer ledger and a durable local retry queue. The current HTTP client still uses
 its legacy timestamp merge. The explicit CausalSyncClient now integrates durable
-outbox HTTP delivery; automatic peer-control and local full-resync orchestration
-remain separate C2 work. The authoritative store and
+outbox HTTP delivery, durable peer control and atomic local generation adoption. The authoritative store and
 dedicated HTTP protocol below validate peer acknowledgements and deletion collection.
 Local commands do not contact a server or apply configuration.
 
@@ -200,7 +199,7 @@ contains the explicit transient _actor. Path confinement, DRIVE and pre-start
 cancellation remain in force. Starting a new causal account requires a CausalBucket
 snapshot, as shown above. These commands store data without running scripts or
 enabling triggers. The explicit client below supplies HTTP delivery and bounded
-rebasing. Automatic peer-control and atomic local full-resync adoption remain C2 work.
+rebasing. Durable peer control and atomic local full-resync adoption are described below.
 
 Explicit causal HTTP delivery
 ----------------------------------------------------------------
@@ -216,8 +215,7 @@ base_revision=None)`` commits an exact request and returns CausalReceipt, contai
 the original receipt revision and latest complete snapshot. Keep the same ID and
 body for uncertain control-commit results. Base defaults to the bucket revision;
 they must match. Explicit full-sync/ack/retire/collect actors use the server rules
-above. Automatic durable control-request orchestration and local epoch adoption
-remain pending; these manual commits do not retire old local queues automatically.
+above. Raw push commits do not adopt local epochs; use the durable control workflow below.
 
 After explicit peer registration, enqueue versioned edits before network I/O::
 
@@ -265,3 +263,64 @@ live client and never returned or queued. Every command requires DRIVE, includin
 remote reads; flush intersects current path roots and honors pre-start cancellation.
 Action-file CLI execution can invoke these same commands. They store/deliver data
 without executing synced scripts, enabling triggers or applying settings.
+
+Durable peer control and local full resync
+----------------------------------------------------------------
+
+``CausalSyncClient.control(queue, kind, peer_id=None, discard_pending=False,
+policy=None, cancelled=None)`` durably registers, acknowledges, collects, retires
+or fully resynchronizes a peer. Kinds are register, ack, collect, retire and
+full_resync. Only retire takes a target peer_id. Nothing runs on a timer:
+applications explicitly choose when to acknowledge, collect or retire peers.
+
+::
+
+    from je_auto_control import CausalSyncClient, SyncControlRequest, SyncOutbox
+
+    queue = SyncOutbox("config-outbox.sqlite3")
+    queue.identity("https://sync.example", "alice", origin="desktop")
+    client = CausalSyncClient("https://sync.example", user_id="alice")
+    client.control(queue, SyncControlRequest("register", operation_id="join-desktop"))
+    client.flush(queue)  # queued edits survive initial registration
+    client.control(queue, "ack")
+    client.control(queue, "collect")
+
+Use a stable ``SyncControlRequest.operation_id`` for an RPC that may be retried
+after completion or restart. A completed same-ID/same-intent retry returns its
+original revision without HTTP or replaying effects, even after later controls.
+Changed intent with that ID fails. Without an explicit ID, an unfinished matching
+intent resumes, while a completed call starts a new logical operation.
+
+One outstanding control is stored per endpoint/account. Exact uncertain prepared
+requests retry before GET; only typed stale_revision rejection allows bounded
+rebasing (at most three per attempt). Conflicts stay frozen; generation failures
+stay blocked until explicit recovery. A live lease excludes a second sender.
+Cancellation/hard signals release owned leases without treating them as ordinary
+offline failures. Received successful receipts are still confirmed.
+
+``full_resync`` requires explicit ``discard_pending=True`` if old edits remain.
+It blocks new local edits during transition; identical enqueue retries remain
+idempotent. Only a confirmed receipt atomically updates identity, authoritative
+cache and revision, records the control receipt, and marks old pending edits
+retired. Their wire payload remains archived; it is never replayed into the new
+epoch. A failed local transaction leaves all old state intact and retries the
+same prepared request. Unknown or reset server generations use a fresh stable
+origin and may adopt a lower root revision. This adopts sync state only; C3
+settings/assets adapters and synchronization UI remain separate work.
+
+``queue.request_control(...)`` persists without HTTP. ``control_status`` reviews
+state and ``control_receipt(endpoint, user_id, operation_id)`` returns a confirmed
+original revision or None. ``client.flush`` drains outstanding control before
+incremental edits and counts both kinds in its report; raw queue status/pending
+counts contain edits only. Owned outbox SQLite schema 1 migrates atomically to 2
+after validating the old tables; edit/control wire schemas stay at 1. Compact
+control history stores logical intent and revision without full prepared snapshots.
+
+Private ``AC_sync_peer_control`` / ``ac_sync_peer_control`` and its Builder Data
+form take path, endpoint, user_id, operation (default status) and options. Options
+accept operation_id, peer_id, discard_pending, secret_env, timeout_s and policy.
+All modes require DRIVE and current path roots. Status is local only, performs
+no HTTP and does not resolve secret_env. The live credential is never persisted.
+``python -m examples.causal_peer_control`` exercises registration, deletion
+collection, retirement, explicit full resync and historical receipt retry with
+temporary files and loopback HTTP only; it makes no device or external API calls.

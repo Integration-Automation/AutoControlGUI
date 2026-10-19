@@ -2909,6 +2909,18 @@ def AC_sync_outbox_status(
 ) -> dict[str, object]:
     ...
 
+def AC_sync_peer_control(
+    path: str,
+    endpoint: str,
+    user_id: str,
+    operation: str = ...,
+    options: dict[str, object] | None = ...,
+    *,
+    path_policy: Any = ...,
+    cancelled: Callable[[], bool] | None = ...,
+) -> dict[str, object]:
+    ...
+
 def AC_sync_peer_state(
     state: dict[str, object],
     operation: str,

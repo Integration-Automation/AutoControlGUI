@@ -137,6 +137,13 @@ def _add_config_sync_specs(specs: List[CommandSpec]) -> None:
     options = FieldSpec("options", FieldType.JSON, optional=True,
                         placeholder='{"secret_env":"AUTOCONTROL_SYNC_SECRET","timeout_s":5}')
     specs.extend([
+        CommandSpec("AC_sync_peer_control", "Data", "Control Durable Sync Peer",
+                    fields=(FieldSpec("path", FieldType.FILE_PATH, placeholder="config-outbox.sqlite3"),
+                            endpoint, user, FieldSpec("operation", FieldType.ENUM, default="status",
+                            choices=("status", "register", "ack", "collect", "retire", "full_resync")), options),
+                    description="Durable peer control or local status. Retirement uses options.peer_id; full resync "
+                    "requires options.discard_pending=true when old edits are pending. Use options.operation_id "
+                    "for historical retries. No synchronized data runs."),
         CommandSpec("AC_config_causal_fetch", "Data", "Fetch Remote Causal Snapshot", fields=(endpoint, user, options),
                     description="Private v3 HTTP snapshot. Credential environment reference only; requires drive."),
         CommandSpec("AC_config_causal_commit", "Data", "Commit Remote Causal Snapshot",

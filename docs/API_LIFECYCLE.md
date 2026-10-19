@@ -110,8 +110,8 @@ HTTP /causal envelopes are version three. Actor metadata is transient _actor dat
 inside submitted buckets. Server transactions validate membership, acknowledgements,
 retirement/full-sync epochs and deletion collection. Existing store AC/MCP/Builder
 commands also accept causal snapshots. Upgraded accounts refuse plain reads/writes;
-historical identical receipts still return their original revision. Automatic
-peer-control/full-resync orchestration remains pending. CausalSyncClient and
+historical identical receipts still return their original revision. Durable peer control
+and atomic local full-resync adoption are also experimental. CausalSyncClient and
 CausalReceipt are experimental: explicit fetch/push and bounded outbox HTTP
 delivery use v3, retain uncertain prepared requests and atomically confirm complete
 snapshots. The plain ConfigSyncClient API and v2 response shapes remain compatible.
@@ -142,3 +142,12 @@ contexts without this path remain role snapshots. Background registration
 methods keep their signatures; the worker or daemon starter no longer supplies
 the authority of registered jobs. Observer/watchdog callback variable scopes
 are independent of the process scope (see `CHANGELOG.md`).
+
+SyncControlRequest, SyncControlOperation and SyncControlResult are experimental.
+CausalSyncClient.control and AC_sync_peer_control/ac_sync_peer_control persist manual
+register/ack/collect/retire/full_resync intents. Stable explicit operation IDs replay
+compact historical receipts without new effects. Full resync requires explicit pending
+retirement consent and adopts identity/cache/retirement atomically after confirmation.
+Owned outbox SQLite schema 1 migrates to 2 without changing existing edit wire version 1;
+control wire is version 1. Status remains private, local-only and credential-free.
+Settings/assets application and sync UI remain C3 work.

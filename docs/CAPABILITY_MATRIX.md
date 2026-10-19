@@ -71,7 +71,7 @@ HTTP route now validate authoritative membership/epoch transitions, explicit pee
 acknowledgements and payload collection with permanent deletion fences. Tests cover
 stale CAS, historical retries, forbidden legacy overwrites, retained alternatives,
 fabricated acknowledgements, obsolete epochs and explicit restoration after GC.
-Explicit CausalSyncClient/outbox HTTP delivery now has controlled tests for uncertain accepted sends, exact restart retry before fetch, bounded definite-rejection rebasing, operation-ID conflicts, retired peers, credentials, stale leases and atomic snapshot rollback/fork refusal. Automatic peer-control orchestration and atomic local full-resync remain open.
+Explicit CausalSyncClient/outbox HTTP delivery now has controlled tests for uncertain accepted sends, exact restart retry before fetch, bounded definite-rejection rebasing, operation-ID conflicts, retired peers, credentials, stale leases and atomic snapshot rollback/fork refusal. Durable explicit peer controls and atomic local full-resync now cover registration, ack/collection, retirement, uncertain restart retries, compact historical receipts, leases, pending-retirement consent and generation adoption. AC/MCP/Builder share the private control/status surface; the loopback example needs no optional web framework. Settings/assets application and sync UI remain C3 work.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**

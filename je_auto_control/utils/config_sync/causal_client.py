@@ -9,6 +9,8 @@ from je_auto_control.utils.config_sync.causal_receipt import CausalReceipt, _ser
 from je_auto_control.utils.config_sync.causal_state import CausalBucket
 from je_auto_control.utils.config_sync.causal_wire import CausalWire
 from je_auto_control.utils.config_sync.contract import ConfigRevisionConflict, ConfigSyncError, _encoded, _identifier
+from je_auto_control.utils.config_sync.control_delivery import drain_control
+from je_auto_control.utils.config_sync.control_models import ControlKind, SyncControlRequest, SyncControlResult
 from je_auto_control.utils.config_sync.outbox import SyncOutbox
 from je_auto_control.utils.config_sync.outbox_models import (
     SyncDrainResult, SyncOperation, SyncRetryPolicy, normalize_sync_endpoint,
@@ -67,10 +69,41 @@ class CausalSyncClient:
         """Deliver bounded durable work; retry frozen uncertain requests before fetching or changing their base."""
         if isinstance(max_rebases, bool) or not isinstance(max_rebases, int) or not 0 <= max_rebases <= 10:
             raise ConfigSyncError("causal rebasing allows 0–10 definite stale-base retries per attempt")
+        if cancelled is not None and cancelled():
+            pending_data = cast(int, outbox.status(endpoint=self._endpoint, user_id=self._user_id)["pending"])
+            status = outbox.control_status(endpoint=self._endpoint, user_id=self._user_id)
+            pending_control = cast(int, status["pending"])
+            return SyncDrainResult(0, pending_data + pending_control, 0, True)
         with secret_log_scope():
             remember_secret(self._secret or "")
-            return outbox.flush(lambda operation: self._deliver(outbox, operation, max_rebases, cancelled),
-                                endpoint=self._endpoint, user_id=self._user_id, policy=policy, cancelled=cancelled)
+            control = self._drain_control(outbox, policy or SyncRetryPolicy(), cancelled)
+            if control.pending:
+                pending = cast(int, outbox.status(endpoint=self._endpoint, user_id=self._user_id)["pending"])
+                return SyncDrainResult(control.delivered, pending + control.pending, control.failed)
+            data = outbox.flush(lambda operation: self._deliver(outbox, operation, max_rebases, cancelled),
+                                 endpoint=self._endpoint, user_id=self._user_id, policy=policy, cancelled=cancelled)
+            return SyncDrainResult(control.delivered + data.delivered, data.pending,
+                                    control.failed + data.failed, data.cancelled)
+
+    def control(self, outbox: SyncOutbox, kind: ControlKind | SyncControlRequest, *, peer_id: Optional[str] = None,
+                  discard_pending: bool = False, policy: Optional[SyncRetryPolicy] = None,
+                  cancelled: _Cancelled = None) -> SyncControlResult:
+        """Durably register/ack/retire/collect or explicitly adopt a full snapshot and retire pending old edits."""
+        _check_cancelled(cancelled)
+        request = _control_request(kind, peer_id, discard_pending)
+        with secret_log_scope():
+            remember_secret(self._secret or "")
+            operation = outbox.request_control(self._endpoint, self._user_id, request.kind,
+                                                peer_id=request.peer_id, discard_pending=request.discard_pending,
+                                                operation_id=request.operation_id)
+            receipt = outbox.control_receipt(self._endpoint, self._user_id, operation.operation_id)
+            if receipt is not None:
+                return SyncControlResult(operation.operation_id, operation.kind, 0, 0, 0, receipt)
+            return self._drain_control(outbox, policy or SyncRetryPolicy(), cancelled)
+
+    def _drain_control(self, outbox: SyncOutbox, policy: SyncRetryPolicy, cancelled: _Cancelled) -> SyncControlResult:
+        # pylint: disable-next=protected-access  # reason: one package shares the outbox's atomic control/CAS owner
+        return drain_control(self, outbox._controls(), (self._endpoint, self._user_id), policy, cancelled)
 
     def _snapshot(self, reply: dict[str, object]) -> CausalBucket:
         body = reply.get("bucket")
@@ -140,3 +173,12 @@ def _rebase(outbox: SyncOutbox, operation: SyncOperation) -> SyncOperation:
     body = operation.to_dict()
     body["prepared"] = None
     return SyncOperation.from_dict(body)
+
+
+def _control_request(kind: ControlKind | SyncControlRequest, peer_id: Optional[str],
+                      discard: bool) -> SyncControlRequest:
+    if isinstance(kind, SyncControlRequest):
+        if peer_id is not None or discard:
+            raise ConfigSyncError("a typed control request cannot be overridden by separate options")
+        return kind
+    return SyncControlRequest(kind, peer_id=peer_id, discard_pending=discard)

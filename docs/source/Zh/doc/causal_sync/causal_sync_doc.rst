@@ -3,7 +3,7 @@
 
 實驗性基礎元件提供因果 entry 判斷、可序列化 peer ledger 與持久化本機重送佇列。
 既有 ConfigSyncClient 仍使用時間戳合併；明確的 CausalSyncClient 已接上 outbox
-HTTP 投遞。自動 peer 控制與本機完整重同步協調仍保留在 C2。以下因果設定庫與獨立 HTTP 協定已驗證裝置確認及
+HTTP 投遞、持久化 peer 控制與原子本機世代採用。以下因果設定庫與獨立 HTTP 協定已驗證裝置確認及
 刪除回收；本機命令不連線伺服器，也不套用設定。
 
 Entry 與明確衝突
@@ -165,7 +165,7 @@ full_resync_required；格式錯誤回 400。共用秘密與讀取 body 前的�
 Data 命令以第三版讀寫因果快照；提交 bucket 必須含明確且暫存的 _actor。
 路徑限制、DRIVE 與開始前取消仍生效。新建因果帳號需使用上例的 CausalBucket。
 命令只保存資料，不執行腳本或啟用觸發器；下方明確 client 提供 HTTP 投遞與有界
-重合併，自動 peer 控制與原子本機完整重同步套用仍是 C2 待辦。
+重合併；以下持久化控制工作流負責原子本機世代採用。
 
 明確的因果 HTTP 投遞
 ----------------------------------------------------------------
@@ -179,7 +179,7 @@ Data 命令以第三版讀寫因果快照；提交 bucket 必須含明確且暫�
 base_revision=None)`` 提交精確請求並回傳 CausalReceipt，包含原收據版本與最新完整
 快照。控制交易的結果不明時，需保留同一個 ID 與 body 重送；base 預設使用 bucket
 版本，兩者必須一致。full_sync／ack／retire／collect actor 遵循前述伺服器規則。
-自動持久化控制請求與本機 epoch 採用仍待完成；手動提交不會自動退役舊本機佇列。
+原始 push 提交不採用本機 epoch；請使用以下持久化控制工作流。
 
 明確註冊裝置後，先保存有版本的修改，再執行網路投遞::
 
@@ -218,3 +218,52 @@ max_delay、lease_seconds；未知欄位會拒絕。憑證只在 client 執行�
 佇列。包含遠端讀取在內的全部命令要求 DRIVE；flush 遵守目前路徑根目錄與開始前
 取消。既有 action-file CLI 可使用同一命令；只保存／投遞資料，不執行同步腳本、
 啟用觸發器或套用設定。
+
+持久化 peer 控制與本機完整重同步
+----------------------------------------------------------------
+
+``CausalSyncClient.control(queue, kind, peer_id=None, discard_pending=False,
+policy=None, cancelled=None)`` 持久化處理 register、ack、collect、retire、full_resync。
+只有 retire 接受目標 peer_id。應用程式明確決定何時確認、回收與退休，沒有定時工作。
+
+::
+
+    from je_auto_control import CausalSyncClient, SyncControlRequest, SyncOutbox
+
+    queue = SyncOutbox("config-outbox.sqlite3")
+    queue.identity("https://sync.example", "alice", origin="desktop")
+    client = CausalSyncClient("https://sync.example", user_id="alice")
+    client.control(queue, SyncControlRequest("register", operation_id="join-desktop"))
+    client.flush(queue)  # 初次註冊保留原本待送編輯
+    client.control(queue, "ack")
+    client.control(queue, "collect")
+
+可能在完成後或重啟後重試的 RPC 應使用固定 ``SyncControlRequest.operation_id``。
+已完成的同 ID／同意圖重試直接回傳原始 revision，不發 HTTP，也不重播效果，即使其間
+已有其他控制亦然。同 ID 改變意圖會失敗。沒有明確 ID 時，相同的未完成控制會續送，
+已完成後再呼叫則是新的邏輯操作。
+
+每個 endpoint／帳號最多一筆未完成控制。結果不明的固定請求優先於 GET 重送；只有明確
+stale_revision 拒絕允許有界重合併，每次嘗試最多三次。衝突保持固定，世代失效保持
+blocked，直到明確恢復。有效 lease 排除第二個傳送者；取消與硬中斷釋放自己的 lease，
+不記成一般離線錯誤。已收到成功收據仍會確認。
+
+若仍有待送舊編輯，full_resync 必須明確提供 ``discard_pending=True``。轉換期間拒絕
+新編輯，同一 enqueue 的冪等重試仍可使用。只有確認收據後，才在同一交易更新身分、
+權威快照與 revision、記錄控制收據，並將待送舊編輯標成 retired。原始 wire 封存保留，
+不會在新 epoch 重播。本機交易失敗時保留全部舊狀態，重試相同固定請求。伺服器重設或
+未知世代會使用新的穩定 origin，並可採用較低 root revision。此處僅採用同步狀態；
+C3 的設定／資產 adapter 與同步 UI 仍待實作。
+
+``queue.request_control(...)`` 只持久化意圖，不發 HTTP；``control_status`` 檢視狀態；
+``control_receipt(endpoint, user_id, operation_id)`` 回傳已確認的原始 revision 或 None。
+``client.flush`` 先投遞未完成控制，再傳增量編輯，其報告包含兩者；原始 queue status／
+pending 計數只包含編輯。自有 outbox SQLite schema 1 驗證舊表格後原子遷移至 2；
+編輯與控制 wire schema 維持 1。精簡控制歷史只保存邏輯意圖與 revision，不累積完整快照。
+
+私有 ``AC_sync_peer_control``／``ac_sync_peer_control`` 與 Builder Data 表單接受 path、
+endpoint、user_id、operation（預設 status）及 options。選項有 operation_id、peer_id、
+discard_pending、secret_env、timeout_s、policy。所有模式都要求 DRIVE 及目前路徑 roots。
+status 僅查本機，不發 HTTP，也不解析 secret_env；即時憑證不持久化。
+``python -m examples.causal_peer_control`` 使用暫存檔與 loopback HTTP 示範註冊、刪除回收、
+退休、明確完整重同步及歷史收據重試，不呼叫裝置或外部 API。

@@ -8789,6 +8789,15 @@ def causal_sync_tools() -> List[MCPTool]:
     queue_path = {"type": "string", "format": "path"}
     common = {"endpoint": {"type": "string"}, "user_id": {"type": "string"}, "options": {"type": "object"}}
     return [
+        MCPTool(name="ac_sync_peer_control", description="Register/ack/collect/retire peers or explicitly full-resync "
+                "the local generation. options: secret_env/timeout_s/policy, peer_id for retirement, discard_pending "
+                "for full resync, operation_id for exact historical RPC retry. Old edits retire only after explicit "
+                "consent and a confirmed receipt. status is "
+                "local-only and needs no live credentials. Requires DRIVE; never applies synchronized data.",
+                input_schema=schema({**common, "path": queue_path, "operation": {"type": "string", "default": "status",
+                                     "enum": ["status", "register", "ack", "collect", "retire", "full_resync"]}},
+                                    required=["path", "endpoint", "user_id"]),
+                handler=hq.sync_peer_control, annotations=DESTRUCTIVE),
         MCPTool(name="ac_config_causal_fetch", description="Fetch a private causal snapshot over dedicated v3 HTTP. "
                 "options accepts secret_env/timeout_s; credentials stay live. Requires DRIVE.",
                 input_schema=schema(common, required=["endpoint", "user_id"]),

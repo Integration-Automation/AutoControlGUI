@@ -6,20 +6,34 @@ notes are recorded in `docs/updates/` (index: `docs/updates/README.md`).
 The format follows Keep a Changelog. Until 1.0, breaking changes are permitted
 only when documented here with a migration path.
 
-New entries go under `## Unreleased`. The version bump on `main` is automated
+New entries go under `## Unreleased
+
+- Experimental durable peer controls join/ack/collect/retire/full-resync through
+  CausalSyncClient, AC/MCP and Builder. Stable explicit operation IDs replay original
+  receipts without repeating completed effects. Confirmed full resync atomically adopts
+  identity/cache and archives pending old edits only with explicit consent. Owned outbox
+  schema 1 migrates atomically to 2; existing edit wire and plain sync APIs are unchanged.
+  Local status needs no credential or HTTP. Core client tests no longer require FastAPI.`. The version bump on `main` is automated
 and does not touch this file, so after a release tag appears, move the entries
 it shipped into a `## [x.y.z] - date` section of their own; the tag's
 `CHANGELOG.md` shows which ones those are (`git show vX.Y.Z:CHANGELOG.md`).
 
 ## Unreleased
 
+- Experimental durable peer controls join/ack/collect/retire/full-resync through
+  CausalSyncClient, AC/MCP and Builder. Stable explicit operation IDs replay original
+  receipts without repeating completed effects. Confirmed full resync atomically adopts
+  identity/cache and archives pending old edits only with explicit consent. Owned outbox
+  schema 1 migrates atomically to 2; existing edit wire and plain sync APIs are unchanged.
+  Local status needs no credential or HTTP. Core client tests no longer require FastAPI.
+
 - Experimental CausalSyncClient and CausalReceipt connect durable outboxes to v3 HTTP.
   Uncertain requests retry unchanged; only definite stale-base errors permit bounded
   rebase. Delivery and complete snapshots confirm atomically under the current lease;
   older/equal-forked or credential-bearing snapshots cannot replace evidence. Private
   fetch/commit/flush AC/MCP/Builder commands use live environment credential references.
-  Plain ConfigSyncClient behavior stays compatible; automatic peer-control/full-resync
-  orchestration remains pending.
+  Plain ConfigSyncClient behavior stays compatible; the durable peer-control workflow
+  above supplies explicit full-resync orchestration.
   Shared interruption handling avoids an executor dependency; existing MCP/history
   class/function imports and cancellation containment behavior remain compatible.
 
