@@ -8784,6 +8784,40 @@ def config_sync_tools() -> List[MCPTool]:
     ]
 
 
+def causal_sync_tools() -> List[MCPTool]:
+    """Causal data review and explicitly local durable queues, without implying HTTP integration."""
+    queue_path = {"type": "string", "format": "path"}
+    return [
+        MCPTool(name="ac_sync_entry_merge", description="Review supplied causal entry JSON. Concurrent or forked "
+                "versions retain both alternatives; timestamps never choose a winner. No I/O.",
+                input_schema=schema({"left": {"type": "object"}, "right": {"type": "object"}},
+                                    required=["left", "right"]),
+                handler=hq.sync_entry_merge, annotations=READ_ONLY),
+        MCPTool(name="ac_sync_outbox_enqueue", description="Persist one sealed local sync operation in SQLite. "
+                "Equal retries retain identity; changed IDs fail. No HTTP delivery or configuration apply.",
+                input_schema=schema({"path": queue_path, "operation": {"type": "object"}},
+                                    required=["path", "operation"]),
+                handler=hq.sync_outbox_enqueue, annotations=SIDE_EFFECT_ONLY),
+        MCPTool(name="ac_sync_outbox_status", description="Inspect private local queue counts and optionally bounded "
+                "pending snapshots. This may initialize the local database; no server request occurs.",
+                input_schema=schema({"path": queue_path, "endpoint": {"type": "string"},
+                                     "user_id": {"type": "string"},
+                                     "include_pending": {"type": "boolean", "default": False},
+                                     "limit": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 100}},
+                                    required=["path", "endpoint", "user_id"]),
+                handler=hq.sync_outbox_status, annotations=SIDE_EFFECT_ONLY),
+        MCPTool(name="ac_sync_peer_state", description="Transform supplied peer-ledger JSON or test collection "
+                "eligibility. Retirement/full-resync epochs remain in the returned JSON only; no remote state changes.",
+                input_schema=schema({"state": {"type": "object"}, "operation": {"type": "string", "enum":
+                                     ["register", "acknowledge", "retire", "require_active", "can_collect"]},
+                                     "peer_id": {"type": "string"}, "revision": {"type": "integer", "minimum": 0},
+                                     "epoch": {"type": "integer", "minimum": 0},
+                                     "full_resync": {"type": "boolean", "default": False}},
+                                    required=["state", "operation"]),
+                handler=hq.sync_peer_state, annotations=READ_ONLY),
+    ]
+
+
 def flakiness_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -9142,7 +9176,7 @@ ALL_FACTORIES = (
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
     sql_tools, http_tools, email_tools, pdf_tools,
-    visual_regression_tools, state_machine_tools, codegen_tools, config_sync_tools,
+    visual_regression_tools, state_machine_tools, codegen_tools, config_sync_tools, causal_sync_tools,
     flakiness_tools, suite_tools, quarantine_tools,
     a11y_audit_tools, device_matrix_tools, media_assert_tools,
 )

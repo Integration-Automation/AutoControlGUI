@@ -37,15 +37,19 @@ def _revision(value: int) -> None:
         raise ConfigSyncError("revision must be a nonnegative SQLite integer")
 
 
-def _encoded(body: dict[str, object]) -> str:
+def _encoded(body: dict[str, object], *, max_bytes: int = _MAX_BYTES) -> str:
     try:
         text = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False, ensure_ascii=True)
     except (TypeError, ValueError, RecursionError):
         raise ConfigSyncError("config bucket must contain finite JSON data") from None
-    if len(text.encode("ascii")) > _MAX_BYTES:
-        raise ConfigSyncError("config bucket exceeds 1 MiB")
+    if len(text.encode("ascii")) > max_bytes:
+        raise ConfigSyncError(f"config JSON exceeds {max_bytes} bytes")
     return text
 
 
 def _version_two(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value == 2
+
+
+def _schema_one(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value == 1

@@ -47,6 +47,17 @@ commit checkpoints. GUI tasks retain authority/context and stop before writes;
 completed writes are not relabelled cancelled. Native operation verification is
 independent. Candidate operations share API/AC/MCP/CLI/Builder and GUI surfaces.
 
+Local causal primitives retain independent JSON entry snapshots and version
+vectors. Strict dominance selects successors; concurrent/forked data stays an
+explicit conflict, and resolution observes all selected alternatives. A serialized
+peer ledger keeps acknowledgements and retirement epochs without time-based expiry.
+The SQLite outbox binds endpoint/account/device identity, preserves exact prepared
+requests, schedules bounded retries and checks lease ownership before publishing
+results. Cancellation and hard signals keep edits durable. Pure merge/peer-state
+adapters and private local enqueue/status share API/AC/MCP/Builder surfaces; they
+make no network requests or configuration changes. C2 still owns HTTP causal
+integration, authoritative peer acknowledgements/collection and full resync.
+
 Persistent configuration uses a shared wire contract and lazy per-operation
 SQLite connections. One transaction checks the account base revision, replaces
 the bucket and records its operation receipt. Identical retries retain their

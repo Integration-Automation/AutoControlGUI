@@ -252,6 +252,7 @@ AutoControl 所有功能的完整使用指南。
    doc/observability/observability_doc
    doc/journal_candidates/journal_candidates_doc
    doc/config_store/config_store_doc
+   doc/causal_sync/causal_sync_doc
    doc/operations_layer/operations_layer_doc
    doc/operations_layer/usb_passthrough_design
    doc/operations_layer/usb_passthrough_security_review

@@ -62,6 +62,13 @@ HTTP, legacy-opt-in and private AC/MCP/Builder checks. A local loopback server
 exercises the real client protocol. These controlled tests do not establish
 remote-machine convergence, causal merging, outbox or asset synchronization.
 
+Local causal/outbox primitives have controlled conflict/resolution, clock-skew,
+JSON type identity, peer acknowledgement/retirement, durable retry/prepare,
+namespace/epoch, cancellation, bounded views/backoff and concurrent/stale-lease
+tests, plus AC/MCP/Builder surfaces. The supplied-ledger collection check does
+not perform server collection. No HTTP causal convergence or full-resync
+integration is claimed by this stage.
+
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
 

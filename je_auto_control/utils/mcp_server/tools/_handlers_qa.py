@@ -282,6 +282,39 @@ def config_store_commit(path: str, user_id: str, bucket: dict[str, object], base
                                path_policy=ctx.path_policy if ctx is not None else None)
 
 
+def sync_entry_merge(left: dict[str, object], right: dict[str, object]) -> dict[str, object]:
+    """Merge supplied causal snapshots without I/O or choosing a wall-clock winner."""
+    from je_auto_control.utils.config_sync.causal_commands import _merge_sync_entry
+    return _merge_sync_entry(left, right)
+
+
+def sync_outbox_enqueue(path: str, operation: dict[str, object], *,
+                          ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Persist local work only; no network request or configuration apply occurs."""
+    from je_auto_control.utils.config_sync.causal_commands import _enqueue_sync_outbox
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _enqueue_sync_outbox(path, operation, path_policy=ctx.path_policy if ctx is not None else None)
+
+
+def sync_outbox_status(path: str, endpoint: str, user_id: str, include_pending: bool = False, limit: int = 100, *,
+                         ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Read private queue counts and an optional bounded prefix under the current roots."""
+    from je_auto_control.utils.config_sync.causal_commands import _status_sync_outbox
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _status_sync_outbox(path, endpoint, user_id, include_pending, limit,
+                              path_policy=ctx.path_policy if ctx is not None else None)
+
+
+def sync_peer_state(state: dict[str, object], operation: str, peer_id: Optional[str] = None,
+                       revision: Optional[int] = None, epoch: Optional[int] = None,
+                       full_resync: bool = False) -> dict[str, object]:
+    """Transform only the caller's JSON ledger; no remote membership or configuration changes."""
+    from je_auto_control.utils.config_sync.causal_commands import _sync_peer_state
+    return _sync_peer_state(state, operation, peer_id, revision, epoch, full_resync)
+
+
 def take_golden(path: str, region: Optional[List[int]] = None) -> str:
     from je_auto_control.utils.visual_regression import (
         take_golden as _take,

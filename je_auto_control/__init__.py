@@ -1236,6 +1236,11 @@ from je_auto_control.utils.config_sync.client import ConfigBucket, ConfigSyncCli
 from je_auto_control.utils.config_sync.store import (
     ConfigRevisionConflict, ConfigStore, ConfigStoreError, ConfigStoreFull,
 )
+from je_auto_control.utils.config_sync.versions import MergeDecision, SyncConflict, SyncEntry, merge_entries
+from je_auto_control.utils.config_sync.peers import FullResyncRequired, SyncPeer, SyncPeers
+from je_auto_control.utils.config_sync.outbox import (
+    SyncDrainResult, SyncLocalIdentity, SyncOperation, SyncOutbox, SyncRetryPolicy,
+)
 # HTTP/API request action (dependency-free, stdlib urllib)
 from je_auto_control.utils.http_client.http_client import http_request
 # Ad-hoc read-only SQL query against SQLite
@@ -1329,6 +1334,8 @@ def start_autocontrol_gui(*args, **kwargs):
     return _impl(*args, **kwargs)
 
 __all__ = [
+    "MergeDecision", "SyncConflict", "SyncEntry", "merge_entries", "FullResyncRequired", "SyncPeer", "SyncPeers",
+    "SyncDrainResult", "SyncLocalIdentity", "SyncOperation", "SyncOutbox", "SyncRetryPolicy",
     "ConfigBucket", "ConfigSyncClient", "ConfigSyncError", "ConfigStore",
     "ConfigRevisionConflict", "ConfigStoreError", "ConfigStoreFull",
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",

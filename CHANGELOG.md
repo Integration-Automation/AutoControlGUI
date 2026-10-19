@@ -13,6 +13,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Experimental causal entry/peer models and a local SQLite sync outbox preserve
+  concurrent alternatives, explicit resolution, acknowledgement eligibility and
+  retirement epochs. Durable endpoint/account-scoped operation identity and frozen
+  requests survive restart; bounded backoff/cancellation and leases prevent stale
+  senders from publishing results. Private queue and pure-data AC/MCP/Builder
+  commands expose these primitives without HTTP delivery or configuration apply.
+  HTTP client/server causal integration and full resync remain pending C2 work.
+
 - Experimental config buckets and operation receipts persist in SQLite. Commits
   atomically compare base revisions; identical retries return their original
   revision, while stale bases or changed operation identities conflict. Signaling

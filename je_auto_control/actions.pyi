@@ -2860,6 +2860,33 @@ def AC_stop_ws_host() -> Dict[str, Any]:
 def AC_store_validators(response: Any) -> Dict[str, Any]:
     """Adapter: extract cache validators from an HTTP response."""
 
+def AC_sync_entry_merge(left: dict[str, object], right: dict[str, object]) -> dict[str, object]:
+    ...
+
+def AC_sync_outbox_enqueue(path: str, operation: dict[str, object], *, path_policy: Any = ...) -> dict[str, object]:
+    ...
+
+def AC_sync_outbox_status(
+    path: str,
+    endpoint: str,
+    user_id: str,
+    include_pending: bool = ...,
+    limit: int = ...,
+    *,
+    path_policy: Any = ...,
+) -> dict[str, object]:
+    ...
+
+def AC_sync_peer_state(
+    state: dict[str, object],
+    operation: str,
+    peer_id: str | None = ...,
+    revision: int | None = ...,
+    epoch: int | None = ...,
+    full_resync: bool = ...,
+) -> dict[str, object]:
+    ...
+
 def AC_tab_order(app_name: str | None = ..., max_results: int = ...) -> Dict[str, Any]:
     """Executor adapter: focusable elements in keyboard Tab order."""
 

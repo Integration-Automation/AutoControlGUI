@@ -99,6 +99,14 @@ and matching MCP/Builder surfaces are private DRIVE operations. Legacy blind
 writes require explicit compatibility on both sides; default clients never
 silently downgrade. These names do not join the versioned stable API.
 
+Causal primitives (`SyncEntry`, `SyncConflict`, `MergeDecision`, `merge_entries`,
+`SyncPeer`, `SyncPeers`, `FullResyncRequired`, `SyncOperation`, `SyncRetryPolicy`,
+`SyncDrainResult`, `SyncLocalIdentity`, `SyncOutbox`) are experimental. Entry,
+peer and queue wire schemas start at version one. Pure supplied-data operations
+are observable; private outbox commands require DRIVE and path confinement.
+These local APIs do not automatically switch the HTTP client to causal merging
+or establish server-authoritative deletion/full-resync behavior.
+
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.
 - Experimental API may change in any release and must be labelled as such.

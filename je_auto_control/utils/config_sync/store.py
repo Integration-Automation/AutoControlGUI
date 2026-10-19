@@ -2,14 +2,12 @@
 from __future__ import annotations
 
 import json
-import os
-from contextlib import closing, contextmanager
 from hashlib import sha256
 from pathlib import Path
-from threading import Lock
-from typing import TYPE_CHECKING, Iterator, Optional, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 from je_auto_control.utils.config_sync.client import ConfigBucket, ConfigSyncError
+from je_auto_control.utils.config_sync.database import SyncDatabase
 from je_auto_control.utils.config_sync.contract import (
     ConfigRevisionConflict, ConfigStoreError, ConfigStoreFull, _MAX_REVISION, _encoded, _identifier, _revision,
 )
@@ -51,31 +49,8 @@ class ConfigStore:
     def __init__(self, path: Optional[str | Path] = None, *, max_users: int = 1024) -> None:
         if isinstance(max_users, bool) or not isinstance(max_users, int) or max_users < 1:
             raise ConfigSyncError("max_users must be a positive integer")
-        self._configured_path = path
-        self._resolved_path: Optional[Path] = None
-        self._path_lock = Lock()
+        self._database = SyncDatabase(path, "AUTOCONTROL_CONFIG_STORE", "config-sync.sqlite3", _initialize)
         self._max_users = max_users
-
-    def _path(self) -> Path:
-        with self._path_lock:
-            if self._resolved_path is None:
-                value = self._configured_path or os.environ.get("AUTOCONTROL_CONFIG_STORE")
-                path = Path(value).expanduser() if value else Path.home() / ".autocontrol" / "config-sync.sqlite3"
-                self._resolved_path = path.resolve()
-            return self._resolved_path
-
-    @contextmanager
-    def _connection(self) -> Iterator[Connection]:
-        # pylint: disable-next=import-outside-toplevel  # reason: SQLite stays optional until explicit store use
-        import sqlite3
-        try:
-            path = self._path()
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with closing(sqlite3.connect(path, timeout=10, isolation_level=None)) as connection:
-                _initialize(connection)
-                yield connection
-        except (sqlite3.Error, OSError) as error:
-            raise ConfigStoreError("config storage operation failed") from error
 
     def get(self, user_id: str) -> Optional[ConfigBucket]:
         """Read an independent typed bucket at its server-committed revision, or None."""
@@ -85,7 +60,7 @@ class ConfigStore:
     def get_document(self, user_id: str) -> Optional[dict[str, object]]:
         """Read the committed JSON document, including opaque legacy fields without aliasing storage."""
         _identifier(user_id, "user_id")
-        with self._connection() as connection:
+        with self._database.connection() as connection:
             row = connection.execute("SELECT revision, body FROM config_buckets WHERE user_id = ?",
                                      (user_id,)).fetchone()
         if row is None:
@@ -106,7 +81,7 @@ class ConfigStore:
         _revision(base_revision)
         body = _bucket_body(user_id, bucket)
         digest = sha256(body.encode("ascii")).hexdigest()
-        with self._connection() as connection:
+        with self._database.connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             current = _current_revision(connection, user_id)
             receipt = connection.execute(
@@ -135,7 +110,7 @@ class ConfigStore:
         if body.get("user_id", user_id) != user_id:
             raise ConfigSyncError("bucket user_id mismatch")
         encoded = _encoded(dict(body, user_id=user_id))
-        with self._connection() as connection:
+        with self._database.connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             current = _current_revision(connection, user_id)
             revision = self._write(connection, user_id, encoded, current, current)

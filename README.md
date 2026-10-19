@@ -18,7 +18,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 793 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 797 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -233,7 +233,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 793 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 797 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -260,6 +260,8 @@ Live image/VLM self-healing now shares one lazy logical capture, including its a
 Experimental `self_heal_run(SelfHealRequest(...))` defaults to locating. Choose `operation="click"` and `VerificationRequest(verifier=...)` (a Python bool callback) or `VerificationRequest(description=...)` (a configured VLM) to check the post-condition after input dispatch. VLM verification obtains a fresh logical frame and may incur API cost. `verified` is true, false or unknown; `found` and `issued` alone do not verify the operation. Exceptions and cancellation propagate without retrying the click. `AC_self_heal_run` and MCP `ac_self_heal_run` accept a nested `request`; explicit false verification fails the command/CLI or returns MCP `isError` with the structured result. GUI **Self-Healing** offers an optional post-condition field, and Script Builder edits the JSON request. Standalone VLM capture now uses the same logical origin/Retina normalization in memory. Framework assertions stop lookup recovery.
 
 Captured self-healing rows now include an optional `journal_path` alongside run/step IDs. Experimental `inspect_heal_source(path, run_id, step_id)`, `AC_self_heal_source` and MCP `ac_self_heal_source` read only the original step’s sanitized lifecycle snapshots. In **Self-Healing**, select a row and choose **Actions → Inspect original step** to open the background reader. Switching targets waits for the older reader to stop and retains the requester’s context; closing cancels pending work. Run History’s reader also accepts an optional step ID. Run/step filtering precedes the output limit, the whole file is validated, current path roots are rechecked around progress callbacks, and cancellation returns no partial result. Legacy or uncaptured rows have no original-source link; inspection never replays a command.
+
+Experimental local causal primitives provide `SyncEntry`, `merge_entries`, `SyncPeers` and `SyncOutbox`. Concurrent/forked versions retain both values; explicit resolution observes both clocks. Serialized peer acknowledgements gate collection eligibility and retired epochs require full resync. SQLite queues isolate endpoint/account identity, freeze prepared requests and retain bounded cancellable retries across restart. `AC_sync_entry_merge`, `AC_sync_peer_state`, `AC_sync_outbox_enqueue`, `AC_sync_outbox_status` and matching MCP/Builder Data commands expose review and local persistence. Pure transforms are observable; private queues require DRIVE. These primitives do not yet replace the HTTP client merge or wire server collection/full resync. See the [causal/outbox guide](docs/source/Eng/doc/causal_sync/causal_sync_doc.rst) and `python -m examples.causal_sync`.
 
 Experimental persistent configuration uses `ConfigStore.commit(..., base_revision=..., operation_id=...)` and a version-two signaling PUT envelope. SQLite transactions preserve buckets and retry receipts across restart; stale revisions or changed operation identities conflict. `ConfigSyncClient` defaults to conditional writes; blind legacy writes require explicit client/server opt-in. `--config-store` selects the lazy database. Private `AC_config_store_get` / `AC_config_store_commit` and matching MCP tools share explicit Script Builder Data commands. This stores data without running scripts or enabling triggers; causal merge and offline outbox remain separate. See the [persistent config guide](docs/source/Eng/doc/config_store/config_store_doc.rst) and `python -m examples.config_store`.
 
@@ -316,7 +318,7 @@ under a relative name are written below that directory.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 693 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 697 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |
@@ -472,7 +474,7 @@ ignore synthetic input, and fall back silently when the driver is absent.
 
 | Resource | What's in it |
 |---|---|
-| [`examples/`](examples/) | 33 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators, action journals. |
+| [`examples/`](examples/) | 34 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators, action journals. |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | Full API reference, English and 中文. |
 | [architecture_explore.md](architecture_explore.md) | Every module's responsibility, layer by layer. |
 | [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md) | Capability × platform matrix. |
