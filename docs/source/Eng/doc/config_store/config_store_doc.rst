@@ -105,3 +105,8 @@ Durable causal peer registration/ack/collection/retirement and atomic local full
 are available through CausalSyncClient.control and AC_sync_peer_control (MCP/Builder).
 See the causal guide for stable operation IDs, explicit pending-retirement consent,
 SQLite schema 1-to-2 migration and local-only status.
+
+Explicit local asset manifests and complete verified generations use build_asset_manifest
+and sync_assets with DirectoryAssetTransport (API/AC/MCP/Builder). These stage opaque
+files without activating configuration; causal adapter integration remains C3 work.
+See the causal guide for size/hash/path limits and publication semantics.

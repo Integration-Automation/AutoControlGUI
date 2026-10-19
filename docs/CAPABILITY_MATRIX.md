@@ -354,3 +354,10 @@ in that release. Debian trixie ships no `ydotool` package; bookworm and every
 current Ubuntu ship 0.1.8, which answers this argv with exit code 0 and no
 events. AutoControl refuses that version up front rather than reporting
 success for input it never sent.
+
+Explicit local asset-generation API/AC/MCP/Builder paths have controlled size/hash,
+late-file failure, cancellation, live-root revocation, concurrent publication and cache
+tampering coverage. Whole bundles publish only after every file is verified. The example
+uses temporary local files and zero network/device calls. Configuration adapters, causal
+asset integration and synchronization UI remain C3; Windows symlink creation may skip
+locally when the account lacks that filesystem capability.

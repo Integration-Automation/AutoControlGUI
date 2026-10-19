@@ -91,3 +91,7 @@ MCP 在儲存前檢查取消；交易完成後不再重標為取消。
 持久化因果 peer 註冊／確認／回收／退休與原子本機完整重同步可透過
 CausalSyncClient.control 與 AC_sync_peer_control（MCP／Builder）使用。固定操作 ID、
 明確待送退役同意、SQLite schema 1→2 遷移與僅查本機的 status 請參閱因果指南。
+
+明確的本機資產 manifest 與完整驗證版本可透過 build_asset_manifest、sync_assets 與
+DirectoryAssetTransport（API／AC／MCP／Builder）使用。僅暫存原始檔，不啟用設定；
+因果 adapter 整合仍屬 C3。大小／雜湊／路徑限制與發布語意請參閱因果指南。

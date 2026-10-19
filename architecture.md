@@ -411,3 +411,11 @@ first. `AC_*` command names and the legacy CLI flags are public too (action file
   target moves, or the log file name or location changes.
 - A hard rule in CLAUDE.md is added or changed.
 - On every edit, refresh the "Last verified" line. Module-level changes belong in `architecture_explore.md`, not here.
+
+Asset manifests contain portable relative paths, sizes and SHA-256 only. AssetTransport
+provides binary streams and a live local generation root; DirectoryAssetTransport is
+the built-in local-only source. sync_assets stages all files, verifies their content,
+then publishes one immutable generation directory. Reuse verifies metadata, exact tree
+and all hashes; corruption preserves evidence and aborts. Private AC/MCP/Builder paths
+share current root/cancellation checkpoints. Configuration adapters and causal bundle
+activation remain C3; this layer never replaces active workspace files or runs scripts.

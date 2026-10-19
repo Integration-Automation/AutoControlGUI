@@ -324,3 +324,56 @@ no HTTP and does not resolve secret_env. The live credential is never persisted.
 ``python -m examples.causal_peer_control`` exercises registration, deletion
 collection, retirement, explicit full resync and historical receipt retry with
 temporary files and loopback HTTP only; it makes no device or external API calls.
+
+Verified local asset generations
+----------------------------------------------------------------
+
+``AssetFile(path, sha256, size)`` describes one relative portable name, lowercase
+SHA-256 and exact byte length. ``AssetManifest(files)`` sorts an immutable tuple
+and derives its digest from canonical version-one JSON. Unknown fields, unsafe
+names, case/Unicode aliases and file/directory collisions fail before storage.
+Parent-directory spelling must be consistent across all entries.
+Limits are 1024 assets, 64 MiB per file and 256 MiB per complete generation.
+
+::
+
+    from je_auto_control import DirectoryAssetTransport, build_asset_manifest, sync_assets
+
+    manifest = build_asset_manifest("selected-assets", ["script.json", "templates/button.png"])
+    transport = DirectoryAssetTransport("selected-assets", "local-asset-cache")
+    result = sync_assets(manifest, transport)
+    # result.directory contains both verified files. Nothing is executed or enabled.
+
+The manifest contains relative names, hashes and sizes; machine roots remain on
+the live transport. This is an explicit opaque-file selection and preserves file
+bytes. Configuration adapters that replace local secrets and machine paths with
+references, and integration with causal settings synchronization, remain C3 work.
+It does not automatically capture workspace files or upload them to a server.
+
+``build_asset_manifest(source_root, paths, cancelled=None)`` reads the selected
+ordinary files under one root. ``DirectoryAssetTransport`` is lazy and uses no
+network. ``AssetTransport`` is a protocol with a target_root and context-managed
+binary ``open(asset)``; custom transports supply their own I/O timeouts. Cancellation
+is checked before work and between bounded 64 KiB reads; explicit wrapped hard or
+cancellation signals propagate. Successful publication stays successful if
+cancellation follows it.
+
+``sync_assets(manifest, transport, cancelled=None)`` stages every asset and
+verifies exact length/SHA-256 before publishing the entire generation directory
+with one rename. A late failed template cannot publish a partial script bundle.
+Staging files are flushed before publication. This is one complete immutable
+generation, not an in-place replacement of active workspace files. The returned
+AssetSyncResult contains directory, manifest_digest, reused, file_count and
+byte_count. Repeated/concurrent sends reuse only a fully reverified generation.
+Missing, modified or unmanifested cached files and symlinks are refused; damaged
+evidence is retained. Failure/cancellation removes the owned temporary staging
+directory and leaves existing generations intact. No current workspace pointer
+is changed, and scripts/triggers are never executed or enabled.
+
+Private ``AC_sync_asset_manifest`` / ``ac_sync_asset_manifest`` take source_root
+and a paths JSON array and return manifest/digest. ``AC_sync_assets`` /
+``ac_sync_assets`` take manifest, source_root and target_root and return the JSON
+result. Builder Data forms preserve these exact fields. Both commands require
+DRIVE even for local reads, intersect current default/MCP roots and recheck live
+roots and cancellation while transferring. ``python -m examples.sync_assets``
+runs only against temporary local files, with zero network/device/API calls.

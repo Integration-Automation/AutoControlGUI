@@ -151,3 +151,10 @@ retirement consent and adopts identity/cache/retirement atomically after confirm
 Owned outbox SQLite schema 1 migrates to 2 without changing existing edit wire version 1;
 control wire is version 1. Status remains private, local-only and credential-free.
 Settings/assets application and sync UI remain C3 work.
+
+AssetFile, AssetManifest, AssetSyncResult, AssetTransport, DirectoryAssetTransport,
+build_asset_manifest and sync_assets are experimental. Asset manifest wire is version 1.
+Private AC/MCP/Builder manifest/stage commands publish a complete verified local cache
+generation, never an active workspace replacement. Explicit files retain their bytes;
+settings redaction/adapters and causal integration remain C3. Current roots/cancellation
+are rechecked. Corrupt caches fail without overwrite; identical verified caches are reused.

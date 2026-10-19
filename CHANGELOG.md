@@ -6,19 +6,19 @@ notes are recorded in `docs/updates/` (index: `docs/updates/README.md`).
 The format follows Keep a Changelog. Until 1.0, breaking changes are permitted
 only when documented here with a migration path.
 
-New entries go under `## Unreleased
-
-- Experimental durable peer controls join/ack/collect/retire/full-resync through
-  CausalSyncClient, AC/MCP and Builder. Stable explicit operation IDs replay original
-  receipts without repeating completed effects. Confirmed full resync atomically adopts
-  identity/cache and archives pending old edits only with explicit consent. Owned outbox
-  schema 1 migrates atomically to 2; existing edit wire and plain sync APIs are unchanged.
-  Local status needs no credential or HTTP. Core client tests no longer require FastAPI.`. The version bump on `main` is automated
+New entries go under `## Unreleased`. The version bump on `main` is automated
 and does not touch this file, so after a release tag appears, move the entries
 it shipped into a `## [x.y.z] - date` section of their own; the tag's
 `CHANGELOG.md` shows which ones those are (`git show vX.Y.Z:CHANGELOG.md`).
 
 ## Unreleased
+
+- Experimental portable asset manifests and explicit local verified-generation sync
+  now have API/AC/MCP/Builder entry points. All selected files pass size/SHA-256 checks
+  before one directory publication. Cancellation/failure clears staging and preserves
+  previous generations; duplicate/concurrent transfers reverify caches, and corruption
+  or unmanifested content fails without overwrite. No active workspace is replaced and
+  no script/trigger is executed or enabled. Settings adapters/causal integration remain open.
 
 - Experimental durable peer controls join/ack/collect/retire/full-resync through
   CausalSyncClient, AC/MCP and Builder. Stable explicit operation IDs replay original

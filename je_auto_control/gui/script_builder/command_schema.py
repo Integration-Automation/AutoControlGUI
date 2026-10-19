@@ -137,6 +137,14 @@ def _add_config_sync_specs(specs: List[CommandSpec]) -> None:
     options = FieldSpec("options", FieldType.JSON, optional=True,
                         placeholder='{"secret_env":"AUTOCONTROL_SYNC_SECRET","timeout_s":5}')
     specs.extend([
+        CommandSpec("AC_sync_asset_manifest", "Data", "Build Asset Manifest",
+                    fields=(FieldSpec("source_root", FieldType.STRING), FieldSpec("paths", FieldType.JSON)),
+                    description="Hash explicitly selected local relative assets. Private read; no execution."),
+        CommandSpec("AC_sync_assets", "Data", "Verify and Stage Asset Generation",
+                    fields=(FieldSpec("manifest", FieldType.JSON), FieldSpec("source_root", FieldType.STRING),
+                            FieldSpec("target_root", FieldType.STRING)),
+                    description="Publish a complete hash-verified generation in a local cache. No settings activation, "
+                    "script execution or trigger enabling."),
         CommandSpec("AC_sync_peer_control", "Data", "Control Durable Sync Peer",
                     fields=(FieldSpec("path", FieldType.FILE_PATH, placeholder="config-outbox.sqlite3"),
                             endpoint, user, FieldSpec("operation", FieldType.ENUM, default="status",

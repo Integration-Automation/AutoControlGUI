@@ -8789,6 +8789,19 @@ def causal_sync_tools() -> List[MCPTool]:
     queue_path = {"type": "string", "format": "path"}
     common = {"endpoint": {"type": "string"}, "user_id": {"type": "string"}, "options": {"type": "object"}}
     return [
+        MCPTool(name="ac_sync_asset_manifest", description="Hash an explicit local asset selection into a portable "
+                "manifest. Requires DRIVE and current path roots; no script execution.",
+                input_schema=schema({"source_root": {"type": "string", "format": "path"},
+                                     "paths": {"type": "array", "items": {"type": "string"}}},
+                                    required=["source_root", "paths"]),
+                handler=hq.sync_asset_manifest, annotations=READ_ONLY),
+        MCPTool(name="ac_sync_assets", description="Stage, hash-verify and atomically publish a complete local "
+                "asset generation. Requires DRIVE/current roots; never activates settings, scripts or triggers.",
+                input_schema=schema({"manifest": {"type": "object"},
+                                     "source_root": {"type": "string", "format": "path"},
+                                     "target_root": {"type": "string", "format": "path"}},
+                                    required=["manifest", "source_root", "target_root"]),
+                handler=hq.sync_assets, annotations=DESTRUCTIVE),
         MCPTool(name="ac_sync_peer_control", description="Register/ack/collect/retire peers or explicitly full-resync "
                 "the local generation. options: secret_env/timeout_s/policy, peer_id for retirement, discard_pending "
                 "for full resync, operation_id for exact historical RPC retry. Old edits retire only after explicit "

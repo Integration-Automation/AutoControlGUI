@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261019-20 | 2026-10-19 | Complete hash-verified local asset generations | #done #config-sync #assets #C3 | [2026-10](2026-10.md) |
 | U-20261019-19 | 2026-10-19 | Durable peer controls and atomic local full-resync adoption | #done #config-sync #C2 | [2026-10](2026-10.md) |
 | U-20261019-18 | 2026-10-19 | Deliver causal outboxes with exact HTTP retries and atomic snapshot receipts | #done #config-sync #causal | [2026-10](2026-10.md) |
 | U-20261019-17 | 2026-10-19 | Validate causal server transitions and retain deletion fences | #done #config-sync #causal | [2026-10](2026-10.md) |
@@ -401,7 +402,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 65 |
+| [2026-10.md](2026-10.md) | 2026-10 | 66 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

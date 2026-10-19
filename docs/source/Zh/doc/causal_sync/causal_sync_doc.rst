@@ -267,3 +267,45 @@ discard_pending、secret_env、timeout_s、policy。所有模式都要求 DRIVE 
 status 僅查本機，不發 HTTP，也不解析 secret_env；即時憑證不持久化。
 ``python -m examples.causal_peer_control`` 使用暫存檔與 loopback HTTP 示範註冊、刪除回收、
 退休、明確完整重同步及歷史收據重試，不呼叫裝置或外部 API。
+
+經驗證的本機資產版本
+----------------------------------------------------------------
+
+``AssetFile(path, sha256, size)`` 描述可攜相對名稱、小寫 SHA-256 與精確位元組數。
+``AssetManifest(files)`` 對不可變 tuple 排序，以正規化第一版 JSON 計算 digest。
+未知欄位、不安全名稱、大小寫／Unicode 別名與檔案／目錄衝突都在儲存前拒絕。
+同一父目錄在所有項目中的拼寫必須一致。
+每版最多 1024 個資產、每檔 64 MiB、整版合計 256 MiB。
+
+::
+
+    from je_auto_control import DirectoryAssetTransport, build_asset_manifest, sync_assets
+
+    manifest = build_asset_manifest("selected-assets", ["script.json", "templates/button.png"])
+    transport = DirectoryAssetTransport("selected-assets", "local-asset-cache")
+    result = sync_assets(manifest, transport)
+    # result.directory 內含完整且經驗證的兩個檔案，不執行或啟用任何內容。
+
+manifest 只包含相對名稱、雜湊與大小；機器根路徑保留在即時 transport。
+這是明確選擇、不解讀內容的原始檔案複製，保留原始位元組。將本機秘密與機器路徑換成
+參照的設定 adapters，以及因果設定同步整合仍屬 C3；這裡不自動蒐集工作區檔案或上傳。
+
+``build_asset_manifest(source_root, paths, cancelled=None)`` 讀取單一 root 內明確選定
+的一般檔案。``DirectoryAssetTransport`` 延遲使用檔案且不連網。``AssetTransport``
+protocol 提供 target_root 與可作 context manager 的二進位 ``open(asset)``；自訂
+transport 自行設定 I/O timeout。工作前與每次有界 64 KiB 讀取之間檢查取消；明確包裝的
+硬中斷／取消訊號保持傳遞。發布成功後才發生取消時，保留成功結果。
+
+``sync_assets(manifest, transport, cancelled=None)`` 先暫存全部資產，逐一驗證精確大小
+與 SHA-256，再以一次 rename 發布整份版本目錄。樣板在最後失敗時，不會發布只含腳本的
+不完整版本。發布前會 flush 暫存檔。這是完整的不可變版本，不直接替換啟用中的工作區
+檔案。AssetSyncResult 含 directory、manifest_digest、reused、file_count、byte_count。
+重複／並行投遞只重用完整重驗成功的版本。缺檔、修改、未列入 manifest 的快取內容與
+符號連結均拒絕使用，受損證據保留。失敗／取消時清除自己的暫存目錄，保留既有版本。
+不修改目前工作區指標，也不執行腳本或啟用觸發器。
+
+私有 ``AC_sync_asset_manifest``／``ac_sync_asset_manifest`` 接受 source_root 與 paths
+JSON 陣列，回傳 manifest／digest。``AC_sync_assets``／``ac_sync_assets`` 接受 manifest、
+source_root、target_root，回傳 JSON 結果。Builder Data 表單保留完全相同欄位。兩個命令
+即使僅讀本機都要求 DRIVE，交集套用預設及目前 MCP roots，傳輸期間持續檢查即時 roots
+與取消。``python -m examples.sync_assets`` 僅使用本機暫存檔，不呼叫網路、裝置或 API。

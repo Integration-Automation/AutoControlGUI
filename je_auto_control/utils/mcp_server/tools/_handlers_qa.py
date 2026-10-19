@@ -367,6 +367,24 @@ def sync_peer_control(path: str, endpoint: str, user_id: str, operation: str = "
                               cancelled=lambda: _causal_cancelled(ctx))
 
 
+def sync_asset_manifest(source_root: str, paths: list[str], *,
+                          ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Hash an explicit selection under current roots without executing the selected data."""
+    # pylint: disable-next=import-outside-toplevel  # reason: MCP adapters load feature implementations on use
+    from je_auto_control.utils.config_sync.asset_commands import _build_sync_asset_manifest
+    return _build_sync_asset_manifest(source_root, paths, path_policy=ctx.path_policy if ctx else None,
+                                       cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_assets(manifest: dict[str, object], source_root: str, target_root: str, *,
+                  ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Publish one complete local asset generation under live roots/cancellation authority."""
+    # pylint: disable-next=import-outside-toplevel  # reason: MCP adapters load feature implementations on use
+    from je_auto_control.utils.config_sync.asset_commands import _sync_asset_generation
+    return _sync_asset_generation(manifest, source_root, target_root, path_policy=ctx.path_policy if ctx else None,
+                                   cancelled=lambda: _causal_cancelled(ctx))
+
+
 def take_golden(path: str, region: Optional[List[int]] = None) -> str:
     from je_auto_control.utils.visual_regression import (
         take_golden as _take,

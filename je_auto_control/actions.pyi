@@ -2881,6 +2881,25 @@ def AC_stop_ws_host() -> Dict[str, Any]:
 def AC_store_validators(response: Any) -> Dict[str, Any]:
     """Adapter: extract cache validators from an HTTP response."""
 
+def AC_sync_asset_manifest(
+    source_root: str,
+    paths: list[str],
+    *,
+    path_policy: Any = ...,
+    cancelled: Callable[[], bool] | None = ...,
+) -> dict[str, object]:
+    """Read an explicit confined local selection into a portable content-addressed manifest."""
+
+def AC_sync_assets(
+    manifest: dict[str, object],
+    source_root: str,
+    target_root: str,
+    *,
+    path_policy: Any = ...,
+    cancelled: Callable[[], bool] | None = ...,
+) -> dict[str, object]:
+    """Copy an explicit local selection into one verified immutable generation without executing its data."""
+
 def AC_sync_entry_merge(left: dict[str, object], right: dict[str, object]) -> dict[str, object]:
     ...
 
