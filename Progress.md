@@ -13,7 +13,7 @@
 `TODO` — 真機與付費 API 驗收暫緩，待明確恢復後執行；相關項目保留待驗證。
 
 `WIP` — 改版仍缺以下內容；原生平台與正式環境驗收缺口另列於後。
-計畫 C 仍缺 C3 的 script／locator／hotkey／trigger／address-book 設定 adapters、資產與因果同步整合、同步 UI，以及 folder／clipboard 迴圈與斷線回歸。
+計畫 C 仍缺 C3 的工作區／GUI 偏好設定橋接、資產與因果 outbox 協調（含完整重同步的 adapter 基準採用）、Sync UI 與明確的停用原生 profile 載入，以及 folder／clipboard 迴圈與斷線回歸。
 計畫 D（Wayland）、E（Android／iOS）、G（MCP 逐步揭露）、H（型別深化與總驗收）尚未開始。F 還缺：
 
 - **Remote Desktop 與 Script Builder 仍在啟動時建立**（預設開啟），啟動時間 2.6–2.7 秒裡大半是它們與門面匯入。

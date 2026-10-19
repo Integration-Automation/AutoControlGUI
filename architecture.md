@@ -74,7 +74,7 @@ compact receipt history. Controls drain before edits; uncertain payloads retry u
 Only confirmed full-resync receipts atomically adopt local identity/cache and retire old
 pending work with explicit consent. Schema 1-to-2 migration validates owned tables and
 preserves edit wire. AC/MCP/Builder control status is private and local-only. Applications
-choose ack/collection timing; C3 config/assets/UI remain open. Shared-secret access is service-wide.
+choose ack/collection timing; C3 workspace/assets/UI integration remains open. Shared-secret access is service-wide.
 
 Cancellation carriers and classifiers live in the dependency-free
 `utils/exception/control_signals.py` seam. MCP context and run-history import paths
@@ -417,5 +417,16 @@ provides binary streams and a live local generation root; DirectoryAssetTranspor
 the built-in local-only source. sync_assets stages all files, verifies their content,
 then publishes one immutable generation directory. Reuse verifies metadata, exact tree
 and all hashes; corruption preserves evidence and aborts. Private AC/MCP/Builder paths
-share current root/cancellation checkpoints. Configuration adapters and causal bundle
-activation remain C3; this layer never replaces active workspace files or runs scripts.
+share current root/cancellation checkpoints. Causal bundle coordination and explicit native profile loading remain C3; this layer never replaces active workspace files or runs scripts.
+
+Six dependency-free source adapters capture selected scripts, locator repositories,
+hotkey/trigger metadata, address-book entries and JSON settings. A lazy owned SQLite
+ledger retains concurrent heads, source baselines and immutable operation receipts per
+endpoint/account/origin/epoch/profile/domain. Incoming data is validated before the
+transaction; cancellation rolls back the complete batch. Explicit reviewed head sets
+gate resolution. Received profiles never mutate active sources or register callbacks.
+SyncBindings carries named vault/local references; only explicit local scalar bindings
+are resolved, and vault values are never read. Complete native-format profiles publish
+through the verified asset generation layer with hotkeys/triggers disabled. Four private
+AC/MCP/Builder commands use the same lazy descriptor factory and live root/cancellation
+checks. GUI preferences, transport/outbox/full-resync coordination and Sync UI remain C3.

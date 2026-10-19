@@ -130,7 +130,28 @@ def _add_self_healing_specs(specs: List[CommandSpec]) -> None:
         ))
 
 
+def _add_sync_adapter_specs(specs: List[CommandSpec]) -> None:
+    profile = FieldSpec("profile", FieldType.JSON)
+    specs.extend([
+        CommandSpec("AC_sync_adapter_snapshot", "Data", "Capture Sync Definition Profile", fields=(profile,),
+                    description="Read explicit real sources into persistent portable versions. No activation."),
+        CommandSpec("AC_sync_adapter_apply", "Data", "Receive Sync Definition Versions",
+                    fields=(profile, FieldSpec("entries", FieldType.JSON)),
+                    description="Persist inert incoming versions and preserve conflicts. No active source changes."),
+        CommandSpec("AC_sync_adapter_resolve", "Data", "Resolve Reviewed Definition Versions",
+                    fields=(profile, FieldSpec("entry_id", FieldType.STRING), FieldSpec("value", FieldType.JSON),
+                            FieldSpec("observed", FieldType.JSON),
+                            FieldSpec("is_deleted", FieldType.BOOL, optional=True, default=False)),
+                    description="Explicitly choose a value or deletion against the exact reviewed change-ID set."),
+        CommandSpec("AC_sync_profile_materialize", "Data", "Materialize Inert Sync Profiles",
+                    fields=(FieldSpec("profiles", FieldType.JSON), FieldSpec("target_root", FieldType.STRING)),
+                    description="Publish complete ready local profiles as one verified generation. "
+                    "No scripts run and received hotkeys/triggers stay disabled."),
+    ])
+
+
 def _add_config_sync_specs(specs: List[CommandSpec]) -> None:
+    _add_sync_adapter_specs(specs)
     path = FieldSpec("path", FieldType.FILE_PATH, placeholder="config-sync.sqlite3")
     user = FieldSpec("user_id", FieldType.STRING)
     endpoint = FieldSpec("endpoint", FieldType.STRING)

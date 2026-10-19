@@ -1,6 +1,6 @@
 # 跨平台與 GUI 改版實作計畫
 
-狀態：設計已核准；以下實作計畫待審閱，產品實作尚未開始。
+狀態：設計已核准，產品正分階段實作。尚缺項目以 `Progress.md` 為準；已交付內容與驗證證據見 `docs/updates/`。
 
 設計：[2026-10-02-platform-gui-modernization-design.md](../specs/2026-10-02-platform-gui-modernization-design.md)。
 

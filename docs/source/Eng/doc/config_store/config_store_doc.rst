@@ -96,8 +96,8 @@ validate peer acknowledgements, retirement/full-sync epochs and deletion payload
 collection with permanent causal fences. Upgraded accounts reject plain reads and
 writes; existing local store commands accept causal JSON with an explicit _actor.
 See :doc:`../causal_sync/causal_sync_doc`. The current HTTP client/merge helper
-retains last-modified ordering and time-bounded tombstones. Automatic peer-control/
-full-resync orchestration and asset adapters remain in Progress.md. The explicit
+retains last-modified ordering and time-bounded tombstones. Workspace peer-control/
+full-resync orchestration and asset coordination remain in Progress.md. The explicit
 CausalSyncClient.flush supplies durable v3 delivery and bounded rebasing. Local tests
 use isolated files and loopback servers, without remote-machine or native acceptance.
 
@@ -110,3 +110,10 @@ Explicit local asset manifests and complete verified generations use build_asset
 and sync_assets with DirectoryAssetTransport (API/AC/MCP/Builder). These stage opaque
 files without activating configuration; causal adapter integration remains C3 work.
 See the causal guide for size/hash/path limits and publication semantics.
+
+Six causal source adapters now persist portable definitions and publish complete inert
+native profiles through the asset layer (API/AC/MCP/Builder). Named local/vault
+references avoid selected machine values and recognized credentials in portable
+entries. Apply never changes active sources; hotkeys/triggers remain disabled.
+See the causal guide for private schema-1 profiles, exact conflict resolution and
+remaining workspace/GUI-preference/asset/full-resync integration.

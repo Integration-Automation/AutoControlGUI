@@ -8784,6 +8784,37 @@ def config_sync_tools() -> List[MCPTool]:
     ]
 
 
+def sync_adapter_tools() -> List[MCPTool]:
+    """Private causal definition profiles and inert native-format materialization."""
+    profile = {"type": "object"}
+    common = {"profile": profile}
+    return [
+        MCPTool(name="ac_sync_adapter_snapshot", description="Capture explicit script/locator/hotkey/trigger/"
+                "address-book/settings sources as portable causal versions. Credentials and machine paths require "
+                "references. Requires DRIVE/current roots; never activates the source.",
+                input_schema=schema(common, required=["profile"]),
+                handler=hq.sync_adapter_snapshot, annotations=SIDE_EFFECT_ONLY),
+        MCPTool(name="ac_sync_adapter_apply", description="Merge portable definition versions into an inert local "
+                "profile, preserving conflicts and local references. Requires DRIVE; no active files/daemons change.",
+                input_schema=schema({**common, "entries": {"type": "object"}}, required=["profile", "entries"]),
+                handler=hq.sync_adapter_apply, annotations=SIDE_EFFECT_ONLY),
+        MCPTool(name="ac_sync_adapter_resolve", description="Explicitly resolve the exact reviewed profile head set "
+                "as a value or deletion. Requires DRIVE/current roots; never executes synchronized work.",
+                input_schema=schema({**common, "entry_id": {"type": "string"}, "value": {"type": "object"},
+                                     "observed": {"type": "array", "items": {"type": "string"}},
+                                     "is_deleted": {"type": "boolean", "default": False}},
+                                    required=["profile", "entry_id", "value", "observed"]),
+                handler=hq.sync_adapter_resolve, annotations=SIDE_EFFECT_ONLY),
+        MCPTool(name="ac_sync_profile_materialize", description="Publish complete ready profiles in a hash-verified "
+                "local generation. Conflicts/missing local references refuse publication. Requires DRIVE/current "
+                "roots; no scripts execute and received trigger/hotkey definitions stay disabled.",
+                input_schema=schema({"profiles": {"type": "array", "items": profile},
+                                     "target_root": {"type": "string", "format": "path"}},
+                                    required=["profiles", "target_root"]),
+                handler=hq.sync_profile_materialize, annotations=SIDE_EFFECT_ONLY),
+    ]
+
+
 def causal_sync_tools() -> List[MCPTool]:
     """Causal data review, private HTTP commits and explicitly bounded durable queue delivery."""
     queue_path = {"type": "string", "format": "path"}
@@ -9215,6 +9246,7 @@ ALL_FACTORIES = (
     usb_passthrough_tools, assertion_tools, data_source_tools,
     sql_tools, http_tools, email_tools, pdf_tools,
     visual_regression_tools, state_machine_tools, codegen_tools, config_sync_tools, causal_sync_tools,
+    sync_adapter_tools,
     flakiness_tools, suite_tools, quarantine_tools,
     a11y_audit_tools, device_matrix_tools, media_assert_tools,
 )

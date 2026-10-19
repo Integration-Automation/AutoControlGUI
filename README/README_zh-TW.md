@@ -18,7 +18,7 @@
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 803 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 807 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -220,7 +220,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 803 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 807 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -248,7 +248,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 已擷取的自癒紀錄新增可選的 `journal_path`，搭配 run／step ID。實驗性 `inspect_heal_source(path, run_id, step_id)`、`AC_self_heal_source` 與 MCP `ac_self_heal_source` 只讀取原始步驟經清理的生命週期快照。在 **Self-Healing** 選取紀錄後，使用 **動作 → 檢視原始步驟** 開啟背景讀取器；切換目標時會等待舊讀取停止並保留請求者脈絡，關閉則取消待處理工作；Run History 讀取器也可選填步驟 ID。先篩選 run／step 再套用輸出上限，整份日誌仍會驗證，進度通知前後重查路徑根目錄，取消不回傳部分結果。舊紀錄或未經動作日誌擷取的操作沒有來源連結；查閱不會重播指令。
 
-實驗性因果同步提供 `CausalBucket`、`CausalConfigStore`、`SyncActor`、保留衝突的 entry 版本與持久化本機 `SyncOutbox`。獨立且經驗證的 `GET/PUT /config/{user_id}/causal` 第三版協定，在保存重送收據的同一個 CAS 交易內驗證裝置註冊、確認、退休／完整同步 epoch 與刪除回收。回收後保留永久的最小刪除憑證；舊版寫入不能覆蓋已升級帳號。私有 `AC_config_store_get`／`AC_config_store_commit` 與對應 MCP／Builder 命令可讀取及提交帶明確 `_actor` 的因果 JSON；純資料合併／peer 與私有 outbox 命令仍可使用。明確的 `CausalSyncClient` 與 `AC_config_causal_fetch`、`AC_config_causal_commit`、`AC_sync_outbox_flush`（含 MCP／Builder）已提供第三版 HTTP 投遞：結果不明時重送固定請求，只有明確的過期版本才在有界預算內重合併。`CausalReceipt` 在 outbox 原子確認原收據與最新完整快照；命令憑證使用即時的 `options.secret_env` 參照。`CausalSyncClient.control` 與私有 `AC_sync_peer_control`／`ac_sync_peer_control`／Builder Data 命令可持久化註冊、確認、回收、退休與完整重同步。`SyncControlRequest(operation_id=...)` 讓已完成 RPC 的重試保持冪等；完整重同步須明確提供 `discard_pending=True`，收到收據後才原子採用新世代並封存待送舊編輯。本機 `status` 不讀取憑證或網路。`python -m examples.causal_peer_control` 提供暫存 loopback 工作流；明確的本機資產版本可透過 `AssetManifest`、`DirectoryAssetTransport`、`build_asset_manifest`、`sync_assets` 與私有 `AC_sync_asset_manifest`／`AC_sync_assets`（MCP／Builder）操作。全部資產先暫存並通過 SHA-256／大小驗證，再一次發布完整目錄；受損快取拒絕使用，腳本保持未執行。`python -m examples.sync_assets` 只使用暫存目錄。設定 adapter、因果資產整合與同步 UI 仍屬 C3，`ConfigSyncClient` 保留時間戳合併。參閱[因果／outbox 指南](../docs/source/Zh/doc/causal_sync/causal_sync_doc.rst)與 `python -m examples.causal_sync`。
+實驗性因果同步提供 `CausalBucket`、`CausalConfigStore`、`SyncActor`、保留衝突的 entry 版本與持久化本機 `SyncOutbox`。獨立且經驗證的 `GET/PUT /config/{user_id}/causal` 第三版協定，在保存重送收據的同一個 CAS 交易內驗證裝置註冊、確認、退休／完整同步 epoch 與刪除回收。回收後保留永久的最小刪除憑證；舊版寫入不能覆蓋已升級帳號。私有 `AC_config_store_get`／`AC_config_store_commit` 與對應 MCP／Builder 命令可讀取及提交帶明確 `_actor` 的因果 JSON；純資料合併／peer 與私有 outbox 命令仍可使用。明確的 `CausalSyncClient` 與 `AC_config_causal_fetch`、`AC_config_causal_commit`、`AC_sync_outbox_flush`（含 MCP／Builder）已提供第三版 HTTP 投遞：結果不明時重送固定請求，只有明確的過期版本才在有界預算內重合併。`CausalReceipt` 在 outbox 原子確認原收據與最新完整快照；命令憑證使用即時的 `options.secret_env` 參照。`CausalSyncClient.control` 與私有 `AC_sync_peer_control`／`ac_sync_peer_control`／Builder Data 命令可持久化註冊、確認、回收、退休與完整重同步。`SyncControlRequest(operation_id=...)` 讓已完成 RPC 的重試保持冪等；完整重同步須明確提供 `discard_pending=True`，收到收據後才原子採用新世代並封存待送舊編輯。本機 `status` 不讀取憑證或網路。`python -m examples.causal_peer_control` 提供暫存 loopback 工作流；明確的本機資產版本可透過 `AssetManifest`、`DirectoryAssetTransport`、`build_asset_manifest`、`sync_assets` 與私有 `AC_sync_asset_manifest`／`AC_sync_assets`（MCP／Builder）操作。全部資產先暫存並通過 SHA-256／大小驗證，再一次發布完整目錄；受損快取拒絕使用，腳本保持未執行。`python -m examples.sync_assets` 只使用暫存目錄。六種實驗性 adapter 已將明確選定的腳本、locator、熱鍵、觸發器、通訊錄與 JSON 設定保存為持久化因果 profile。`SyncBindings` 將明確指定的秘密與機器值換成具名參照；`materialize_sync_profile` 發布完整且未啟用的原生格式版本。私有 `AC_sync_adapter_snapshot`、`AC_sync_adapter_apply`、`AC_sync_adapter_resolve`、`AC_sync_profile_materialize` 與對應 MCP／Builder 命令提供相同流程。`python -m examples.sync_adapters` 僅使用暫存檔。工作區／GUI 偏好設定、因果資產／完整重同步整合與 Sync UI 仍屬 C3，`ConfigSyncClient` 保留時間戳合併。參閱[因果／outbox 指南](../docs/source/Zh/doc/causal_sync/causal_sync_doc.rst)與 `python -m examples.causal_sync`。
 
 實驗性持久化設定使用 `ConfigStore.commit(..., base_revision=..., operation_id=...)` 與第二版 signaling PUT envelope。SQLite 交易讓 bucket 與重送收據在重啟後保留；過期版本或 ID 改配其他內容會衝突。`ConfigSyncClient` 預設條件寫入；舊版盲寫須在 client／server 明確開啟。`--config-store` 選取延後開啟的資料庫。私有 `AC_config_store_get`／`AC_config_store_commit` 與對應 MCP 工具共用 Script Builder 的明確 Data 命令。只儲存資料，不執行腳本或啟用觸發器；因果合併與離線 outbox 另行交付。參閱[持久化設定指南](../docs/source/Zh/doc/config_store/config_store_doc.rst)與 `python -m examples.config_store`。
 
@@ -298,7 +298,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 703 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用：完整的 `ac_*` 工具介面，以及常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 707 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用：完整的 `ac_*` 工具介面，以及常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 提供 fixture 與供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -436,7 +436,7 @@ Windows、macOS（pyobjc）與 X11（含 XWayland）；純 Wayland session 的�
 
 | 資源 | 內容 |
 |---|---|
-| [`examples/`](../examples/) | 36 個自足腳本：截圖點擊、OCR、排程器、遠端桌面、agent loop、可觀測性、錄製、變數、熱鍵、觸發器、報表、MCP、REST、機密、外掛、computer use、Wayland、跨主機 DAG、chat-ops、pytest/BDD、錨點定位、動作日誌、因果 peer 控制。 |
+| [`examples/`](../examples/) | 37 個自足腳本：截圖點擊、OCR、排程器、遠端桌面、agent loop、可觀測性、錄製、變數、熱鍵、觸發器、報表、MCP、REST、機密、外掛、computer use、Wayland、跨主機 DAG、chat-ops、pytest/BDD、錨點定位、動作日誌、因果 peer 控制。 |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 參考，含英文與中文。 |
 | [architecture_explore.md](../architecture_explore.md) | 逐層記錄每個模組的職責。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台對照矩陣。 |

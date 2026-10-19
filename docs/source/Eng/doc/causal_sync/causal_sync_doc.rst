@@ -106,7 +106,7 @@ Pending views return a bounded enqueue-order prefix (1–1000 records and at mos
 16 MiB of serialized data); aggregate pending counts remain complete. Entry data
 per logical operation is capped at 1 MiB. No client credentials or HTTP headers
 are serialized; known resolved-secret values are refused. Payloads should carry
-secret references, with config/asset adapters still tracked under C3.
+secret references. Source adapters are described below; workspace/asset coordination remains C3.
 
 Commands and Builder
 ----------------------------------------------------------------
@@ -306,7 +306,7 @@ retired. Their wire payload remains archived; it is never replayed into the new
 epoch. A failed local transaction leaves all old state intact and retries the
 same prepared request. Unknown or reset server generations use a fresh stable
 origin and may adopt a lower root revision. This adopts sync state only; C3
-settings/assets adapters and synchronization UI remain separate work.
+workspace/assets coordination and synchronization UI remain separate work.
 
 ``queue.request_control(...)`` persists without HTTP. ``control_status`` reviews
 state and ``control_receipt(endpoint, user_id, operation_id)`` returns a confirmed
@@ -346,8 +346,8 @@ Limits are 1024 assets, 64 MiB per file and 256 MiB per complete generation.
 
 The manifest contains relative names, hashes and sizes; machine roots remain on
 the live transport. This is an explicit opaque-file selection and preserves file
-bytes. Configuration adapters that replace local secrets and machine paths with
-references, and integration with causal settings synchronization, remain C3 work.
+bytes. The source adapters below replace selected secrets and machine paths with
+references; asset/causal workspace coordination remains C3 work.
 It does not automatically capture workspace files or upload them to a server.
 
 ``build_asset_manifest(source_root, paths, cancelled=None)`` reads the selected
@@ -377,3 +377,106 @@ result. Builder Data forms preserve these exact fields. Both commands require
 DRIVE even for local reads, intersect current default/MCP roots and recheck live
 roots and cancellation while transferring. ``python -m examples.sync_assets``
 runs only against temporary local files, with zero network/device/API calls.
+
+Durable source adapters and inert native profiles
+----------------------------------------------------------------
+
+``ScriptSyncAdapter``, ``LocatorSyncAdapter``, ``HotkeySyncAdapter``,
+``TriggerSyncAdapter``, ``AddressBookSyncAdapter`` and ``SettingsSyncAdapter``
+capture explicitly selected real sources without starting backends or callbacks.
+Script selection is relative to one root; settings select a JSON object, not GUI
+QSettings preferences. Locator repositories use name/role/app_name filters. Hotkey
+and trigger adapters capture definitions only, excluding runtime enabled/fired state.
+Address-book definitions exclude last-used and local connection/wake metadata.
+
+::
+
+    from je_auto_control import ScriptSyncAdapter, SyncAdapterState, SyncLocalIdentity
+
+    identity = SyncLocalIdentity("https://sync.example", "alice", "desktop", 0, 0)
+    state = SyncAdapterState("adapter-state.sqlite3", identity)
+    adapter = ScriptSyncAdapter("selected-scripts", state, paths=["login.json"])
+    entries = adapter.snapshot()  # change_id -> SyncEntry, including alternatives
+
+State construction is lazy. The default path is
+``AUTOCONTROL_SYNC_ADAPTER_STATE`` or ``~/.autocontrol/sync-adapters.sqlite3``.
+Owned SQLite schema 1 isolates endpoint/account/origin/epoch/profile/domain. Capture
+emits an operation only for a changed portable source fingerprint. ``apply(entries)``
+validates the complete incoming batch before persisting heads/receipts/source baselines
+in one transaction. It returns stored/unchanged/conflicts/unresolved entry IDs and never
+replaces an active source, registers received bindings or starts a trigger poller.
+Unactivated local source edits remain concurrent with received alternatives. Old replay
+cannot resurrect a deletion, and the same operation ID cannot change its bytes.
+
+``resolve(entry_id, value, observed=head_ids, is_deleted=False)`` requires the exact
+reviewed change-ID set and captures source changes before resolution. A stale review
+fails. Tombstone resolution uses an empty value and ``is_deleted=True``. Conflicts,
+missing references and invalid native local binding types remain durable for review;
+``definitions()`` and complete materialization refuse them rather than omit entries.
+``materialize_sync_profile(adapters, target_root)`` publishes 1-6 distinct kinds using
+the verified asset layer. Native files and ``profile/<kind>.json`` version metadata
+share one immutable generation. Hotkey/trigger enabled flags are false, recursively.
+No active workspace pointer changes, source files are untouched and scripts stay inert.
+
+Named references
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``SyncReference("secret", "LOGIN")`` and ``SyncReference("local", "downloads")``
+serialize as ``{"$autocontrol_ref": {"kind": "local", "name": "downloads"}}``.
+``SyncBindings(fields={entry_id: {json_pointer: reference}}, local_values={...})``
+replaces explicit fields before persistence. JSON pointers address the portable record,
+for example ``/actions/0/1/password`` in a script. Existing ``${secrets.LOGIN}``
+placeholders become secret references automatically. Exact string matches against
+unambiguous local values also become local references. Local bindings accept immutable
+finite JSON scalars; raw vault values are never bindings and vault lookup never occurs.
+Secret names follow the vault placeholder grammar. Scripts and JSON settings retain
+secret references as placeholders on materialization; other native fields support only
+local references. Missing local names or type-incompatible values block publication.
+Recognized credential fields, private secret-command arguments, absolute machine paths
+and device/display selectors require references. These checks do not infer arbitrary
+semantic secrets: callers must select portable data and explicitly bind sensitive fields.
+
+Private command descriptors
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Four Data commands and matching MCP tools require DRIVE and current default/MCP roots,
+even for snapshots: ``AC_sync_adapter_snapshot(profile)``,
+``AC_sync_adapter_apply(profile, entries)``,
+``AC_sync_adapter_resolve(profile, entry_id, value, observed, is_deleted=False)`` and
+``AC_sync_profile_materialize(profiles, target_root)``. Snapshot returns kind/entries;
+entries map change IDs to versioned wire objects. Apply returns ApplyReport fields;
+resolve returns one wire entry. ``profiles`` is an array of 1-6 private descriptors.
+Builder JSON fields preserve these structures. Live source/state authority and
+cancellation remain checked through final profile publication; cancellation rolls back
+an incomplete merge. Explicit wrapped hard/cancellation signals preserve their meaning.
+
+::
+
+    {
+      "schema_version": 1,
+      "kind": "scripts",
+      "state_path": "adapter-state.sqlite3",
+      "identity": {"endpoint": "https://sync.example", "user_id": "alice",
+                   "origin": "desktop", "epoch": 0, "confirmed_revision": 0},
+      "profile_id": "main",
+      "source": {"path": "selected-scripts", "paths": ["login.json"]},
+      "bindings": {"fields": {}, "local_values": {}}
+    }
+
+``adapter_from_profile`` constructs lazily from this private schema-1 descriptor.
+Supported kinds are scripts/locators/hotkeys/triggers/address_book/settings. Source is
+either an explicit path (only scripts accept paths) or an inline records object.
+File sources use each domain's native JSON: locator object, address-book entries array,
+schema-1 hotkey/trigger arrays or plain settings object. These descriptors contain local
+paths and binding values and remain private; only portable entries belong on the wire.
+``python -m examples.sync_adapters`` captures all six actual sources and materializes
+twelve temporary native/metadata files, with zero execution, registration, vault reads
+or network calls. Workspace/GUI preference bridges, asset references/transport, outbox
+coordination, full-resync baseline adoption, explicit native loading, Sync UI and
+folder/clipboard/disconnection regression remain C3 work in Progress.md.
+
+Journal capture keeps the existing conservative secret-field policy. An inline
+definition containing a password field is masked even when its value is a reference,
+so candidate generation excludes that action rather than reconstruct an incomplete
+apply/resolve operation. Private reference descriptors and publication commands can
+remain reproducible. No redacted value is substituted with a working credential.

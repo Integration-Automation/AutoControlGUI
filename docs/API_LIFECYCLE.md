@@ -150,11 +150,22 @@ compact historical receipts without new effects. Full resync requires explicit p
 retirement consent and adopts identity/cache/retirement atomically after confirmation.
 Owned outbox SQLite schema 1 migrates to 2 without changing existing edit wire version 1;
 control wire is version 1. Status remains private, local-only and credential-free.
-Settings/assets application and sync UI remain C3 work.
+Workspace/assets application and sync UI remain C3 work.
 
 AssetFile, AssetManifest, AssetSyncResult, AssetTransport, DirectoryAssetTransport,
 build_asset_manifest and sync_assets are experimental. Asset manifest wire is version 1.
 Private AC/MCP/Builder manifest/stage commands publish a complete verified local cache
 generation, never an active workspace replacement. Explicit files retain their bytes;
-settings redaction/adapters and causal integration remain C3. Current roots/cancellation
+causal workspace integration remains C3. Current roots/cancellation
 are rechecked. Corrupt caches fail without overwrite; identical verified caches are reused.
+
+SyncReference, SyncBindings, ApplyReport, SyncAdapter, SyncAdapterState,
+ScriptSyncAdapter, LocatorSyncAdapter, HotkeySyncAdapter, TriggerSyncAdapter,
+AddressBookSyncAdapter, SettingsSyncAdapter, adapter_from_profile and
+materialize_sync_profile are experimental. Private adapter descriptor and ledger schemas
+are version 1. Four private AC/MCP/Builder snapshot/apply/resolve/materialize commands
+require DRIVE. Apply persists a causal inbox; it never replaces live definitions.
+Materialization publishes an inert complete generation with native hotkey/trigger flags
+disabled. Secret references remain vault placeholders without vault lookup; native
+non-script/settings fields accept local references only. JSON settings do not yet bridge
+GUI preferences. Asset references, full-resync adapter baselines and Sync UI remain C3.

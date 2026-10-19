@@ -85,7 +85,7 @@ MCP 在儲存前檢查取消；交易完成後不再重標為取消。
 並在回收刪除 payload 後保留永久因果憑證。升級帳號拒絕普通讀寫；既有本機設定庫
 命令接受帶明確 _actor 的因果 JSON。參閱 :doc:`../causal_sync/causal_sync_doc`。
 目前 HTTP client／merge helper 仍使用 last-modified 排序與限時 tombstone；
-自動 peer 控制／完整重同步協調與資產 adapter 保留在 Progress.md；明確的 CausalSyncClient.flush 已提供持久化第三版投遞與有界重合併。
+工作區 peer 控制／完整重同步協調與資產整合保留在 Progress.md；明確的 CausalSyncClient.flush 已提供持久化第三版投遞與有界重合併。
 本機驗證使用隔離檔案與 loopback server，不增加遠端機器或真機驗收聲明。
 
 持久化因果 peer 註冊／確認／回收／退休與原子本機完整重同步可透過
@@ -95,3 +95,8 @@ CausalSyncClient.control 與 AC_sync_peer_control（MCP／Builder）使用。固
 明確的本機資產 manifest 與完整驗證版本可透過 build_asset_manifest、sync_assets 與
 DirectoryAssetTransport（API／AC／MCP／Builder）使用。僅暫存原始檔，不啟用設定；
 因果 adapter 整合仍屬 C3。大小／雜湊／路徑限制與發布語意請參閱因果指南。
+
+六種因果來源 adapter 已保存可攜定義，並透過資產層發布完整且未啟用的原生 profile
+（API／AC／MCP／Builder）。具名 local／vault 參照避免將選定的機器值與辨識到的
+憑證放入可攜 entries。Apply 不改啟用中的來源，熱鍵／觸發器保持停用。私有 schema-1
+描述、明確衝突解決與尚缺的工作區／GUI 偏好／資產／完整重同步整合請參閱因果指南。

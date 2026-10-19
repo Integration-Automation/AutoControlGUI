@@ -385,6 +385,43 @@ def sync_assets(manifest: dict[str, object], source_root: str, target_root: str,
                                    cancelled=lambda: _causal_cancelled(ctx))
 
 
+def sync_adapter_snapshot(profile: dict[str, object], *,
+                            ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Capture real source definitions under live private-profile authority."""
+    # pylint: disable-next=import-outside-toplevel  # reason: feature implementations load only for the invoked tool
+    from je_auto_control.utils.config_sync.adapter_commands import _snapshot_sync_adapter
+    return _snapshot_sync_adapter(profile, path_policy=ctx.path_policy if ctx else None,
+                                    cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_adapter_apply(profile: dict[str, object], entries: dict[str, dict[str, object]], *,
+                         ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Merge received profile versions without touching an active source or daemon."""
+    # pylint: disable-next=import-outside-toplevel  # reason: feature implementations load only for the invoked tool
+    from je_auto_control.utils.config_sync.adapter_commands import _apply_sync_adapter
+    return _apply_sync_adapter(profile, entries, path_policy=ctx.path_policy if ctx else None,
+                                cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_adapter_resolve(profile: dict[str, object], entry_id: str, value: dict[str, object], observed: list[str],
+                           is_deleted: bool = False, *, ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Resolve a reviewed profile head set explicitly, preserving tombstone choices and protocol cancellation."""
+    # pylint: disable-next=import-outside-toplevel  # reason: feature implementations load only for the invoked tool
+    from je_auto_control.utils.config_sync.adapter_commands import _resolve_sync_adapter
+    return _resolve_sync_adapter(profile, entry_id, value, observed, is_deleted,
+                                  path_policy=ctx.path_policy if ctx else None,
+                                  cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_profile_materialize(profiles: list[dict[str, object]], target_root: str, *,
+                               ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Publish a complete inert generation while retaining every selected profile's live authority."""
+    # pylint: disable-next=import-outside-toplevel  # reason: feature implementations load only for the invoked tool
+    from je_auto_control.utils.config_sync.adapter_commands import _materialize_sync_profile
+    return _materialize_sync_profile(profiles, target_root, path_policy=ctx.path_policy if ctx else None,
+                                      cancelled=lambda: _causal_cancelled(ctx))
+
+
 def take_golden(path: str, region: Optional[List[int]] = None) -> str:
     from je_auto_control.utils.visual_regression import (
         take_golden as _take,

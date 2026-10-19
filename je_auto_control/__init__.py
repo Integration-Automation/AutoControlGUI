@@ -1244,6 +1244,15 @@ from je_auto_control.utils.config_sync.causal_client import CausalSyncClient
 from je_auto_control.utils.config_sync.causal_receipt import CausalReceipt
 from je_auto_control.utils.config_sync.control_models import SyncControlOperation, SyncControlRequest, SyncControlResult
 from je_auto_control.utils.config_sync.asset_models import AssetFile, AssetManifest, AssetSyncResult
+from je_auto_control.utils.config_sync.adapter_references import SyncBindings, SyncReference
+from je_auto_control.utils.config_sync.adapter_schema import ApplyReport
+from je_auto_control.utils.config_sync.adapter_state import SyncAdapterState
+from je_auto_control.utils.config_sync.adapters import (
+    AddressBookSyncAdapter, HotkeySyncAdapter, LocatorSyncAdapter, ScriptSyncAdapter, SettingsSyncAdapter,
+    SyncAdapter, TriggerSyncAdapter,
+)
+from je_auto_control.utils.config_sync.adapter_profiles import materialize_sync_profile
+from je_auto_control.utils.config_sync.adapter_factory import adapter_from_profile
 from je_auto_control.utils.config_sync.assets import (
     AssetTransport, DirectoryAssetTransport, build_asset_manifest, sync_assets,
 )
@@ -1346,6 +1355,10 @@ def start_autocontrol_gui(*args, **kwargs):
 __all__ = [
     "SyncControlOperation", "SyncControlRequest", "SyncControlResult",
     "AssetFile", "AssetManifest", "AssetSyncResult", "AssetTransport", "DirectoryAssetTransport",
+    "SyncBindings", "SyncReference", "ApplyReport", "SyncAdapterState", "SyncAdapter", "ScriptSyncAdapter",
+    "LocatorSyncAdapter", "HotkeySyncAdapter", "TriggerSyncAdapter", "AddressBookSyncAdapter", "SettingsSyncAdapter",
+    "materialize_sync_profile",
+    "adapter_from_profile",
     "build_asset_manifest", "sync_assets",
     "CausalSyncClient", "CausalReceipt",
     "CausalBucket", "CausalConfigStore", "CausalConflict", "DeletionFence", "SyncActor",

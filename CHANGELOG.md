@@ -13,6 +13,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add experimental causal adapters for selected scripts, locators, hotkeys, triggers,
+  address-book entries and JSON settings, with durable concurrent profiles and exact
+  reviewed conflict resolution. Named vault/local references keep selected secrets and
+  machine values local. Four private AC/MCP/Builder commands capture, apply, resolve and
+  publish complete inert native-format generations; active sources are never replaced,
+  and received hotkeys/triggers remain disabled. Workspace/assets/full-resync integration
+  and Sync UI remain separate C3 work.
+
 - Experimental portable asset manifests and explicit local verified-generation sync
   now have API/AC/MCP/Builder entry points. All selected files pass size/SHA-256 checks
   before one directory publication. Cancellation/failure clears staging and preserves

@@ -91,7 +91,7 @@ status 提供完整數量、確認投遞版本與最多十筆已清理錯誤預�
 pending 檢視為追加順序的有界前段（1–1000 筆、序列化資料最多 16 MiB），總數仍完整。
 每個邏輯操作的 entry 資料最多 1 MiB。
 不序列化 client 認證或 HTTP header，已知解析後秘密值會拒絕；payload 應使用秘密參照。
-設定／資產 adapter 仍列於 C3。
+來源 adapter 說明見下方；工作區／資產協調仍列於 C3。
 
 命令與 Builder
 ----------------------------------------------------------------
@@ -253,7 +253,7 @@ blocked，直到明確恢復。有效 lease 排除第二個傳送者；取消與
 權威快照與 revision、記錄控制收據，並將待送舊編輯標成 retired。原始 wire 封存保留，
 不會在新 epoch 重播。本機交易失敗時保留全部舊狀態，重試相同固定請求。伺服器重設或
 未知世代會使用新的穩定 origin，並可採用較低 root revision。此處僅採用同步狀態；
-C3 的設定／資產 adapter 與同步 UI 仍待實作。
+C3 的工作區／資產協調與同步 UI 仍待實作。
 
 ``queue.request_control(...)`` 只持久化意圖，不發 HTTP；``control_status`` 檢視狀態；
 ``control_receipt(endpoint, user_id, operation_id)`` 回傳已確認的原始 revision 或 None。
@@ -287,8 +287,8 @@ status 僅查本機，不發 HTTP，也不解析 secret_env；即時憑證不持
     # result.directory 內含完整且經驗證的兩個檔案，不執行或啟用任何內容。
 
 manifest 只包含相對名稱、雜湊與大小；機器根路徑保留在即時 transport。
-這是明確選擇、不解讀內容的原始檔案複製，保留原始位元組。將本機秘密與機器路徑換成
-參照的設定 adapters，以及因果設定同步整合仍屬 C3；這裡不自動蒐集工作區檔案或上傳。
+這是明確選擇、不解讀內容的原始檔案複製，保留原始位元組。下方來源 adapters 將明確選定的秘密與機器路徑換成
+參照；資產／因果工作區協調仍屬 C3；這裡不自動蒐集工作區檔案或上傳。
 
 ``build_asset_manifest(source_root, paths, cancelled=None)`` 讀取單一 root 內明確選定
 的一般檔案。``DirectoryAssetTransport`` 延遲使用檔案且不連網。``AssetTransport``
@@ -309,3 +309,87 @@ JSON 陣列，回傳 manifest／digest。``AC_sync_assets``／``ac_sync_assets``
 source_root、target_root，回傳 JSON 結果。Builder Data 表單保留完全相同欄位。兩個命令
 即使僅讀本機都要求 DRIVE，交集套用預設及目前 MCP roots，傳輸期間持續檢查即時 roots
 與取消。``python -m examples.sync_assets`` 僅使用本機暫存檔，不呼叫網路、裝置或 API。
+
+持久化來源 adapters 與未啟用的原生 profile
+----------------------------------------------------------------
+
+``ScriptSyncAdapter``、``LocatorSyncAdapter``、``HotkeySyncAdapter``、
+``TriggerSyncAdapter``、``AddressBookSyncAdapter`` 與 ``SettingsSyncAdapter``
+讀取明確選定的真實來源，不啟動 backend 或 callback。腳本以單一 root 內的相對檔名選取；
+設定來源是 JSON 物件，尚未橋接 GUI QSettings 偏好設定。Locator 保留 name/role/app_name；
+熱鍵／觸發器只取定義，不取執行中的 enabled/fired。通訊錄排除 last-used 與本機連線／喚醒欄位。
+
+::
+
+    from je_auto_control import ScriptSyncAdapter, SyncAdapterState, SyncLocalIdentity
+
+    identity = SyncLocalIdentity("https://sync.example", "alice", "desktop", 0, 0)
+    state = SyncAdapterState("adapter-state.sqlite3", identity)
+    adapter = ScriptSyncAdapter("selected-scripts", state, paths=["login.json"])
+    entries = adapter.snapshot()  # change_id -> SyncEntry，保留每個並行版本
+
+建構狀態不開啟資料庫；預設路徑依 ``AUTOCONTROL_SYNC_ADAPTER_STATE`` 或
+``~/.autocontrol/sync-adapters.sqlite3``。自有 SQLite schema 1 依 endpoint／帳號／
+origin／epoch／profile／種類隔離資料。只有可攜來源指紋變動才新增操作。
+``apply(entries)`` 先驗證整批，再以單一交易保存 heads／操作收據／來源基準，回傳
+stored／unchanged／conflicts／unresolved。接收資料不替換啟用中的來源、不註冊熱鍵或啟動
+觸發器。尚未啟用接收版本時，舊本機來源的編輯仍與外來版本並行；重送舊操作不復活刪除，
+同一操作 ID 不得換內容。
+
+``resolve(entry_id, value, observed=head_ids, is_deleted=False)`` 要求完全相同的已檢閱
+change-ID 集合，且先捕捉目前來源變更；過期檢閱會失敗。選擇刪除時使用空 value 與
+``is_deleted=True``。衝突、缺少參照與原生本機值型別錯誤都保留待檢閱；``definitions()``
+與完整發布會拒絕，而非靜默省略。``materialize_sync_profile(adapters, target_root)``
+接受 1–6 個不同種類，透過已驗證的資產層一次發布原生檔與 ``profile/<kind>.json``
+版本中繼資料。熱鍵／觸發器的 enabled 遞迴設為 false；不改工作區指標或來源，不執行腳本。
+
+具名參照
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``SyncReference("secret", "LOGIN")`` 與 ``SyncReference("local", "downloads")``
+採用 ``{"$autocontrol_ref": {"kind": "local", "name": "downloads"}}`` 格式。
+``SyncBindings(fields={entry_id: {json_pointer: reference}}, local_values={...})``
+在保存前替換明確欄位；JSON pointer 對準可攜 record，例如腳本的 ``/actions/0/1/password``。
+既有 ``${secrets.LOGIN}`` 自動轉為 secret 參照；與不歧義本機字串值完全相同的欄位也可自動
+轉換。Local 值僅接受有限、不可變的 JSON scalar；不接受 vault 原值，也不讀取 vault。
+Secret 名稱遵循 vault placeholder 語法。腳本／JSON 設定在發布時保留 secret placeholder；
+其他原生欄位僅允許 local 參照。缺少本機名稱或型別不合會阻止完整發布。辨識到的憑證欄位、
+私有秘密命令參數、絕對機器路徑與裝置／螢幕選取值要求參照。此檢查無法推斷任意語意秘密；
+呼叫端仍須選擇可攜資料，並明確綁定敏感欄位。
+
+私有命令描述
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+四個 Data 命令及對應 MCP 工具均要求 DRIVE，交集套用預設與目前 MCP roots：
+``AC_sync_adapter_snapshot(profile)``、``AC_sync_adapter_apply(profile, entries)``、
+``AC_sync_adapter_resolve(profile, entry_id, value, observed, is_deleted=False)``、
+``AC_sync_profile_materialize(profiles, target_root)``。Snapshot 回傳 kind／entries，
+entries 以 change-ID 對應版本 wire 物件；apply 回傳 ApplyReport 欄位，resolve 回傳單筆 wire。
+Profiles 為 1–6 筆私有描述陣列。Builder 保留全部 JSON；直到最後發布仍檢查來源／狀態的
+即時路徑權限與取消。未完成 merge 會整批回滾；明確包裝的硬中斷／取消訊號保持傳遞。
+
+::
+
+    {
+      "schema_version": 1,
+      "kind": "scripts",
+      "state_path": "adapter-state.sqlite3",
+      "identity": {"endpoint": "https://sync.example", "user_id": "alice",
+                   "origin": "desktop", "epoch": 0, "confirmed_revision": 0},
+      "profile_id": "main",
+      "source": {"path": "selected-scripts", "paths": ["login.json"]},
+      "bindings": {"fields": {}, "local_values": {}}
+    }
+
+``adapter_from_profile`` 依此私有 schema 1 延遲建構。Kind 支援 scripts／locators／
+hotkeys／triggers／address_book／settings。Source 擇一使用明確 path（僅 scripts 接受 paths）
+或 inline records 物件。檔案來源使用各領域原生 JSON：locator 物件、通訊錄 entries 陣列、
+schema-1 熱鍵／觸發器陣列或一般設定物件。描述內含本機路徑與綁定值，必須保持私有；
+只有可攜 entries 才放上 wire。``python -m examples.sync_adapters`` 使用六種真實來源產生
+十二個暫存原生／中繼檔，不執行腳本、不註冊接收熱鍵／觸發器、不讀 vault、不連網。
+工作區／GUI 偏好設定、資產參照／傳輸、outbox 協調、完整重同步基準採用、明確原生載入、
+Sync UI 與 folder／clipboard／斷線回歸仍列於 Progress.md 的 C3。
+
+日誌沿用既有的保守秘密欄位政策：內嵌定義只要包含 password 欄位，即使值為參照也會遮罩，
+候選產生器因此排除該動作，不重建不完整的 apply／resolve。私有參照描述與發布命令仍可
+保留重現；不以可用憑證代替已遮罩值。

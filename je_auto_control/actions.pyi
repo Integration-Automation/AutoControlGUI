@@ -2881,6 +2881,35 @@ def AC_stop_ws_host() -> Dict[str, Any]:
 def AC_store_validators(response: Any) -> Dict[str, Any]:
     """Adapter: extract cache validators from an HTTP response."""
 
+def AC_sync_adapter_apply(
+    profile: dict[str, object],
+    entries: dict[str, dict[str, object]],
+    *,
+    path_policy: Any = ...,
+    cancelled: Callable[[], bool] | None = ...,
+) -> dict[str, object]:
+    """Persist incoming portable versions as an inert profile, preserving all parallel alternatives."""
+
+def AC_sync_adapter_resolve(
+    profile: dict[str, object],
+    entry_id: str,
+    value: dict[str, object],
+    observed: list[str],
+    is_deleted: bool = ...,
+    *,
+    path_policy: Any = ...,
+    cancelled: Callable[[], bool] | None = ...,
+) -> dict[str, object]:
+    """Resolve exactly the reviewed alternatives into a value or tombstone; runtime sources stay untouched."""
+
+def AC_sync_adapter_snapshot(
+    profile: dict[str, object],
+    *,
+    path_policy: Any = ...,
+    cancelled: Callable[[], bool] | None = ...,
+) -> dict[str, object]:
+    """Capture source changes and return portable heads without activating anything."""
+
 def AC_sync_asset_manifest(
     source_root: str,
     paths: list[str],
@@ -2949,6 +2978,15 @@ def AC_sync_peer_state(
     full_resync: bool = ...,
 ) -> dict[str, object]:
     ...
+
+def AC_sync_profile_materialize(
+    profiles: list[dict[str, object]],
+    target_root: str,
+    *,
+    path_policy: Any = ...,
+    cancelled: Callable[[], bool] | None = ...,
+) -> dict[str, object]:
+    """Publish one complete ready local profile generation without replacing active workspace files."""
 
 def AC_tab_order(app_name: str | None = ..., max_results: int = ...) -> Dict[str, Any]:
     """Executor adapter: focusable elements in keyboard Tab order."""
