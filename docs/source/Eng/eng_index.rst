@@ -251,6 +251,7 @@ Comprehensive guides for all AutoControl features.
    doc/ocr_backends/ocr_backends_doc
    doc/observability/observability_doc
    doc/journal_candidates/journal_candidates_doc
+   doc/config_store/config_store_doc
    doc/operations_layer/operations_layer_doc
    doc/operations_layer/usb_passthrough_design
    doc/operations_layer/usb_passthrough_security_review

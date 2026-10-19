@@ -5,10 +5,14 @@ import json
 import math
 import time
 import urllib.parse
+from uuid import uuid4
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Mapping, NoReturn, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.config_sync.contract import (
+    ConfigRevisionConflict, ConfigSyncError, _encoded, _identifier, _revision, _version_two,
+)
 
 _DEFAULT_TIMEOUT_S = 5.0
 
@@ -21,10 +25,6 @@ TOMBSTONE_RETENTION_S = 30 * 24 * 3600.0
 def is_tombstone(entry: Mapping[str, Any]) -> bool:
     """Whether ``entry`` records a deletion rather than a value."""
     return entry.get("deleted") is True
-
-
-class ConfigSyncError(AutoControlException, RuntimeError):
-    """Raised on network errors or schema validation failures."""
 
 
 @dataclass
@@ -222,7 +222,8 @@ class ConfigSyncClient:
 
     def __init__(self, server_url: str, *,
                  user_id: str, secret: Optional[str] = None,
-                 timeout_s: float = _DEFAULT_TIMEOUT_S) -> None:
+                 timeout_s: float = _DEFAULT_TIMEOUT_S,
+                 legacy_writes: bool = False) -> None:
         if not server_url:
             raise ConfigSyncError("server_url is required")
         if not user_id:
@@ -231,11 +232,17 @@ class ConfigSyncClient:
         self._user_id = user_id
         self._secret = secret
         self._timeout = float(timeout_s)
+        self._legacy_writes = legacy_writes
 
     def _endpoint(self, suffix: str = "") -> str:
         encoded = urllib.parse.quote(self._user_id, safe="")
         path = f"/config/{encoded}{suffix}"
         return f"{self._server_url}{path}"
+
+    def _request_endpoint(self, method: str) -> str:
+        """Use a distinct conditional-write route that an old blind-write server cannot accept."""
+        suffix = "/commit" if method == "PUT" and not self._legacy_writes else ""
+        return self._endpoint(suffix)
 
     def _request(self, method: str, *,
                  body: Optional[Mapping[str, Any]] = None,
@@ -246,7 +253,7 @@ class ConfigSyncClient:
             headers["X-Signaling-Secret"] = self._secret
         data = json.dumps(body).encode("utf-8") if body is not None else None
         try:
-            call = build_call(self._endpoint(), method=method, headers=headers,
+            call = build_call(self._request_endpoint(method), method=method, headers=headers,
                               data=data, timeout=self._timeout)
             # Through http_client for the egress policy and the body cap, and
             # without following redirects: urlopen carried X-Signaling-Secret
@@ -258,6 +265,8 @@ class ConfigSyncClient:
         status = int(response["status"])
         if status == 404:
             return None
+        if status == 409:
+            _raise_conflict(response["text"])
         if not 200 <= status < 300:
             raise ConfigSyncError(f"config sync {method} returned HTTP {status}")
         if not response.get("text"):
@@ -274,22 +283,63 @@ class ConfigSyncClient:
             return None
         return ConfigBucket.from_dict(body)
 
-    def push(self, bucket: ConfigBucket) -> None:
-        """PUT the bucket to the server, replacing whatever's there."""
+    def push(self, bucket: ConfigBucket, *, base_revision: Optional[int] = None,
+             operation_id: Optional[str] = None) -> Optional[int]:
+        """Commit conditionally and return the server revision; explicit legacy mode returns None.
+
+        Reuse operation_id and the identical request when retrying an uncertain
+        network result. Without an explicit ID each call creates a new operation.
+        A 409 propagates for caller-directed refetch rather than a blind overwrite.
+        """
         if bucket.user_id != self._user_id:
             raise ConfigSyncError(
                 f"bucket user_id={bucket.user_id!r} mismatches client user_id"
                 f"={self._user_id!r}",
             )
-        self._request("PUT", body=bucket.to_dict())
+        if self._legacy_writes:
+            if base_revision is not None or operation_id is not None:
+                raise ConfigSyncError("conditional commit arguments cannot be used with legacy writes")
+            self._request("PUT", body=bucket.to_dict())
+            return None
+        base = bucket.revision if base_revision is None else base_revision
+        identity = uuid4().hex if operation_id is None else operation_id
+        _identifier(identity, "operation_id")
+        _revision(base)
+        _revision(bucket.revision)
+        _encoded(bucket.to_dict())
+        ConfigBucket.from_dict(bucket.to_dict())
+        reply = self._request("PUT", body={"version": 2, "base_revision": base,
+                                          "operation_id": identity, "bucket": bucket.to_dict()})
+        return _confirm_commit(reply, base)
 
     def sync(self, local: ConfigBucket
              ) -> Tuple[ConfigBucket, List[ConflictRecord]]:
         """One-shot bidirectional sync: fetch, merge, push the result."""
         remote = self.fetch() or ConfigBucket(user_id=self._user_id)
         merged, conflicts = merge_buckets(local, remote)
-        self.push(merged)
+        committed = self.push(merged) if self._legacy_writes else self.push(merged, base_revision=remote.revision)
+        if committed is not None:
+            merged.revision = committed
         return merged, conflicts
+
+
+def _raise_conflict(text: str) -> NoReturn:
+    try:
+        revision = json.loads(text)["detail"]["revision"]
+        if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
+            raise ValueError("invalid conflict revision")
+    except (KeyError, TypeError, ValueError, RecursionError):
+        raise ConfigSyncError("config sync: invalid conflict reply") from None
+    raise ConfigRevisionConflict(revision)
+
+
+def _confirm_commit(reply: Optional[Mapping[str, object]], base: int) -> int:
+    if not isinstance(reply, Mapping) or not _version_two(reply.get("version")):
+        raise ConfigSyncError("server did not confirm a version-two conditional commit")
+    revision = reply.get("revision")
+    if isinstance(revision, bool) or not isinstance(revision, int) or revision != base + 1:
+        raise ConfigSyncError("server returned an invalid committed revision")
+    return revision
 
 
 __all__ = [

@@ -1,34 +1,26 @@
-"""Phase 7.4: cross-machine config sync through a small bucket server.
+"""Persistent cross-machine config buckets and conditional HTTP commits.
 
-Operators running AutoControl on several machines (work desktop, home
-desktop, demo laptop) currently have to copy hotkey bindings, trigger
-definitions, and address-book entries by hand. The sync module gives
-each user a small namespaced bucket on a sync server and a
-deterministic merge strategy: every entry carries a ``last_modified``
-timestamp; the newer entry wins on conflict.
+ConfigStore persists buckets and operation receipts in lazy SQLite storage.
+ConfigSyncClient uses version-two base revisions and operation IDs by default;
+legacy blind writes require explicit client/server compatibility settings.
+The signaling server serves GET/PUT /config/{user_id} with its existing optional
+X-Signaling-Secret gate. Bucket account names are namespaces, not separate logins.
 
-This module is the **headless client**. It speaks HTTP to a sync endpoint,
-``GET`` / ``PUT /config/{user_id}`` with an optional ``X-Signaling-Secret``
-header, that stores the bucket as an opaque JSON document; this package does
-not ship that endpoint yet -- the signaling server has no ``/config`` routes.
-
-Each section maps an entry id to a dict carrying ``last_modified``. Section
-names are free-form; ``hotkeys``, ``triggers``, ``address_book`` and
-``custom`` are the conventional ones, and the syncer treats every section the
-same way.
-
-Conflicts always resolve to "later wins"; the loser is preserved in
-``ConflictRecord`` so callers can show a "merged 3 entries, dropped 1
-older copy" notification. A removed entry is kept as a tombstone so the
-deletion reaches every machine; read live entries with
-``ConfigBucket.entries(section)``.
+The current merge_buckets helper still uses last_modified ordering and bounded
+wall-clock tombstones. Conditional persistence prevents concurrent blind writes;
+it does not supply causal merge, peer acknowledgements or a durable client outbox.
+Synchronization stores data without executing scripts or enabling triggers.
 """
 from je_auto_control.utils.config_sync.client import (
     TOMBSTONE_RETENTION_S, ConflictRecord, ConfigBucket, ConfigSyncClient,
     ConfigSyncError, is_tombstone, merge_buckets,
 )
+from je_auto_control.utils.config_sync.store import (
+    ConfigRevisionConflict, ConfigStore, ConfigStoreError, ConfigStoreFull,
+)
 
 __all__ = [
+    "ConfigRevisionConflict", "ConfigStore", "ConfigStoreError", "ConfigStoreFull",
     "ConfigBucket", "ConflictRecord", "ConfigSyncClient",
     "ConfigSyncError", "TOMBSTONE_RETENTION_S", "is_tombstone", "merge_buckets",
 ]

@@ -47,6 +47,17 @@ commit checkpoints. GUI tasks retain authority/context and stop before writes;
 completed writes are not relabelled cancelled. Native operation verification is
 independent. Candidate operations share API/AC/MCP/CLI/Builder and GUI surfaces.
 
+Persistent configuration uses a shared wire contract and lazy per-operation
+SQLite connections. One transaction checks the account base revision, replaces
+the bucket and records its operation receipt. Identical retries retain their
+original revision across later writes and restart; stale or reused identities
+conflict. The signaling service delegates conditional config routes to this
+headless store; SDP remains process-local. Clients use version-two envelopes by
+default and propagate conflicts. Legacy blind writes require explicit client and
+server settings. AC/MCP/Builder expose local private store reads and commits;
+no synchronized script or trigger is activated. Causal merge/outbox and asset
+adapters remain separate layers.
+
 Journal candidates read a bounded byte snapshot and validate the whole structured
 wire schema and append order before selecting a run. Lifecycle reconciliation
 retains source line and append-sequence provenance, parent hierarchy and provable

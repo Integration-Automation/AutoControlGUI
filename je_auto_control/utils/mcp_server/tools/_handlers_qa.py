@@ -263,6 +263,25 @@ def generate_candidate_from_log(path: str, run_id: str, target: str = "pytest", 
         data["output"] = str(write_candidate_archive(candidate, output, observer=progress, path_policy=policy))
     return data
 
+
+def config_store_get(path: str, user_id: str, *, ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Read one private persistent bucket through the caller's path policy."""
+    from je_auto_control.utils.config_sync.commands import _get_config_store
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _get_config_store(path, user_id, path_policy=ctx.path_policy if ctx is not None else None)
+
+
+def config_store_commit(path: str, user_id: str, bucket: dict[str, object], base_revision: int, operation_id: str, *,
+                          ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Commit conditionally; a completed SQLite commit is not relabelled cancelled."""
+    from je_auto_control.utils.config_sync.commands import _commit_config_store
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _commit_config_store(path, user_id, bucket, base_revision, operation_id,
+                               path_policy=ctx.path_policy if ctx is not None else None)
+
+
 def take_golden(path: str, region: Optional[List[int]] = None) -> str:
     from je_auto_control.utils.visual_regression import (
         take_golden as _take,

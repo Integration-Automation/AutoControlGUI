@@ -706,6 +706,20 @@ def AC_config_export() -> Dict[str, Any]:
 def AC_config_import(bundle: Dict[str, Any], dry_run: bool = ...) -> Dict[str, Any]:
     """Executor adapter: apply a config bundle dict to the user config root."""
 
+def AC_config_store_commit(
+    path: str,
+    user_id: str,
+    bucket: dict[str, object],
+    base_revision: int,
+    operation_id: str,
+    *,
+    path_policy: Any = ...,
+) -> dict[str, object]:
+    ...
+
+def AC_config_store_get(path: str, user_id: str, *, path_policy: Any = ...) -> dict[str, object]:
+    ...
+
 def AC_confusable_compare(first: str, second: str) -> Dict[str, Any]:
     """Adapter: whether two strings render to the same skeleton."""
 

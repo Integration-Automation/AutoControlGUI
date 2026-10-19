@@ -13,6 +13,18 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Experimental config buckets and operation receipts persist in SQLite. Commits
+  atomically compare base revisions; identical retries return their original
+  revision, while stale bases or changed operation identities conflict. Signaling
+  PUT uses version-two envelopes by default. Client conditional writes return the
+  committed revision and propagate 409 conflicts. A dedicated /config/{user_id}/commit
+  route prevents an older blind-write server from storing unsupported envelopes.
+  Blind legacy writes now require
+  explicit client/server compatibility settings (otherwise HTTP 428); revisions
+  remain server-owned. CLI adds --config-store/--allow-legacy-config-writes.
+  Private AC/MCP/Script Builder store operations share bounded validation. Existing
+  timestamp merge and tombstone policies remain separate from this CAS change.
+
 - Experimental journal candidates reconcile lifecycle snapshots and parent/retry
   provenance, preserve recorded control sources and label observed-only fallbacks.
   Python/pytest/Robot code, actions, warnings and manifests share API/AC/MCP/CLI

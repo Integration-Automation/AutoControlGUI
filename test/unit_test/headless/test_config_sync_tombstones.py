@@ -23,8 +23,8 @@ class _Server:
 
     def request(self, method, body=None):
         if method == "PUT":
-            self.body = body
-            return {}
+            self.body = {**body["bucket"], "revision": body["base_revision"] + 1}
+            return {"version": 2, "revision": self.body["revision"]}
         return self.body
 
 

@@ -56,6 +56,12 @@ AC/CLI/MCP/offscreen review/import tests. A real virtual retry capture proves
 source retention without duplicate replay. GUI import never dispatches input;
 this adds no native-device or paid-API acceptance.
 
+Persistent configuration has isolated SQLite reopen, multi-connection CAS,
+account/payload identity, historical retry, capacity, lazy-path, authenticated
+HTTP, legacy-opt-in and private AC/MCP/Builder checks. A local loopback server
+exercises the real client protocol. These controlled tests do not establish
+remote-machine convergence, causal merging, outbox or asset synchronization.
+
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
 

@@ -8765,6 +8765,25 @@ def codegen_tools() -> List[MCPTool]:
     ]
 
 
+def config_sync_tools() -> List[MCPTool]:
+    """Persistent local bucket inspection and explicit conditional commits."""
+    common = {"path": {"type": "string", "format": "path"}, "user_id": {"type": "string", "minLength": 1}}
+    return [
+        MCPTool(name="ac_config_store_get",
+                description="Read a private local SQLite config bucket and server revision.",
+                input_schema=schema(common, required=["path", "user_id"]), handler=hq.config_store_get,
+                annotations=SIDE_EFFECT_ONLY),
+        MCPTool(name="ac_config_store_commit",
+                description="Commit a config bucket against base_revision with a durable operation_id receipt. "
+                "Stale revisions and reused IDs with different inputs conflict; no script executes.",
+                input_schema=schema({**common, "bucket": {"type": "object"},
+                                     "base_revision": {"type": "integer", "minimum": 0},
+                                     "operation_id": {"type": "string", "minLength": 1}},
+                                    required=["path", "user_id", "bucket", "base_revision", "operation_id"]),
+                handler=hq.config_store_commit, annotations=SIDE_EFFECT_ONLY),
+    ]
+
+
 def flakiness_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -9123,7 +9142,7 @@ ALL_FACTORIES = (
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
     sql_tools, http_tools, email_tools, pdf_tools,
-    visual_regression_tools, state_machine_tools, codegen_tools,
+    visual_regression_tools, state_machine_tools, codegen_tools, config_sync_tools,
     flakiness_tools, suite_tools, quarantine_tools,
     a11y_audit_tools, device_matrix_tools, media_assert_tools,
 )

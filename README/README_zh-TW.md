@@ -18,7 +18,7 @@
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 791 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 793 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -220,7 +220,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 791 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 793 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -247,6 +247,8 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 實驗性 `self_heal_run(SelfHealRequest(...))` 預設只定位。明確選擇 `operation="click"`，再透過 `VerificationRequest(verifier=...)`（Python bool callback）或 `VerificationRequest(description=...)`（已設定的 VLM）於輸入送出後驗證條件。VLM 驗證使用新擷取的邏輯影像，可能產生 API 費用。`verified` 分為真、假及未知；`found` 與 `issued` 本身不代表操作通過驗證。例外與取消原樣傳遞，不重試點擊。`AC_self_heal_run` 和 MCP `ac_self_heal_run` 接受巢狀 `request`；明確驗證失敗使指令／CLI 失敗，或回傳含結構化結果的 MCP `isError`。GUI **Self-Healing** 提供選填的操作後條件，Script Builder 可編輯 JSON 請求。獨立 VLM 擷取也改用相同的記憶體邏輯原點／Retina 正規化。Framework assertion 會中止定位後備。
 
 已擷取的自癒紀錄新增可選的 `journal_path`，搭配 run／step ID。實驗性 `inspect_heal_source(path, run_id, step_id)`、`AC_self_heal_source` 與 MCP `ac_self_heal_source` 只讀取原始步驟經清理的生命週期快照。在 **Self-Healing** 選取紀錄後，使用 **動作 → 檢視原始步驟** 開啟背景讀取器；切換目標時會等待舊讀取停止並保留請求者脈絡，關閉則取消待處理工作；Run History 讀取器也可選填步驟 ID。先篩選 run／step 再套用輸出上限，整份日誌仍會驗證，進度通知前後重查路徑根目錄，取消不回傳部分結果。舊紀錄或未經動作日誌擷取的操作沒有來源連結；查閱不會重播指令。
+
+實驗性持久化設定使用 `ConfigStore.commit(..., base_revision=..., operation_id=...)` 與第二版 signaling PUT envelope。SQLite 交易讓 bucket 與重送收據在重啟後保留；過期版本或 ID 改配其他內容會衝突。`ConfigSyncClient` 預設條件寫入；舊版盲寫須在 client／server 明確開啟。`--config-store` 選取延後開啟的資料庫。私有 `AC_config_store_get`／`AC_config_store_commit` 與對應 MCP 工具共用 Script Builder 的明確 Data 命令。只儲存資料，不執行腳本或啟用觸發器；因果合併與離線 outbox 另行交付。參閱[持久化設定指南](../docs/source/Zh/doc/config_store/config_store_doc.rst)與 `python -m examples.config_store`。
 
 實驗性日誌產碼候選支援 `generate_candidate_from_log(path, run_id=...)`、`AC_generate_candidate_from_log` 與 MCP `ac_generate_candidate_from_log`。它會整合開始／完成快照，保留已記錄的控制來源與重試證據，並將不完整重建標示為已觀察路徑。失敗／未完成呼叫、未知命令及遮罩輸入均列為排除項目，不捏造平行順序。Python／pytest／Robot 產物經靜態、命令及不發送輸入的乾跑檢查。`codegen --from-log run.jsonl --run-id selected` 輸出 JSON 審閱包；`-o review.zip` 或 `write_candidate_archive` 可將程式、動作與來源資訊一起原子匯出。Recording Editor 與 Script Builder 的 **動作 → 審閱日誌候選腳本** 提供程式／差異／來源／警告；Builder 匯入為獨立操作，拒絕覆蓋審閱期間的編輯變更。產生與匯入均不執行候選。參閱[候選指南](../docs/source/Zh/doc/journal_candidates/journal_candidates_doc.rst)與 `python -m examples.journal_candidates`。
 
@@ -294,7 +296,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 691 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用：完整的 `ac_*` 工具介面，以及常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 693 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用：完整的 `ac_*` 工具介面，以及常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 提供 fixture 與供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -432,7 +434,7 @@ Windows、macOS（pyobjc）與 X11（含 XWayland）；純 Wayland session 的�
 
 | 資源 | 內容 |
 |---|---|
-| [`examples/`](../examples/) | 32 個自足腳本：截圖點擊、OCR、排程器、遠端桌面、agent loop、可觀測性、錄製、變數、熱鍵、觸發器、報表、MCP、REST、機密、外掛、computer use、Wayland、跨主機 DAG、chat-ops、pytest/BDD、錨點定位、動作日誌。 |
+| [`examples/`](../examples/) | 33 個自足腳本：截圖點擊、OCR、排程器、遠端桌面、agent loop、可觀測性、錄製、變數、熱鍵、觸發器、報表、MCP、REST、機密、外掛、computer use、Wayland、跨主機 DAG、chat-ops、pytest/BDD、錨點定位、動作日誌。 |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 參考，含英文與中文。 |
 | [architecture_explore.md](../architecture_explore.md) | 逐層記錄每個模組的職責。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台對照矩陣。 |

@@ -91,6 +91,14 @@ mutation. Source/current roots and cancellation apply throughout. CLI --from-log
 requires an explicit run ID and defaults to actions style/JSON output; legacy
 file codegen retains its calls-style/source-output behavior. No replay is implicit.
 
+Persistent configuration (`ConfigStore`, its errors, and the top-level
+`ConfigBucket`/`ConfigSyncClient` convenience exports) remains experimental.
+Version-two commits and the schema-v1 SQLite store provide CAS and durable retry
+receipts, with bounded finite JSON. `AC_config_store_get`/`AC_config_store_commit`
+and matching MCP/Builder surfaces are private DRIVE operations. Legacy blind
+writes require explicit compatibility on both sides; default clients never
+silently downgrade. These names do not join the versioned stable API.
+
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.
 - Experimental API may change in any release and must be labelled as such.

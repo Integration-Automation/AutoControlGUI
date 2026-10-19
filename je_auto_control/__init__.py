@@ -1232,6 +1232,10 @@ from je_auto_control.utils.codegen.codegen import (
 from je_auto_control.utils.codegen.candidate_models import CandidateGenerationError, CandidateScript
 from je_auto_control.utils.codegen.journal_import import generate_candidate_from_log
 from je_auto_control.utils.codegen.candidate_archive import write_candidate_archive
+from je_auto_control.utils.config_sync.client import ConfigBucket, ConfigSyncClient, ConfigSyncError
+from je_auto_control.utils.config_sync.store import (
+    ConfigRevisionConflict, ConfigStore, ConfigStoreError, ConfigStoreFull,
+)
 # HTTP/API request action (dependency-free, stdlib urllib)
 from je_auto_control.utils.http_client.http_client import http_request
 # Ad-hoc read-only SQL query against SQLite
@@ -1325,6 +1329,8 @@ def start_autocontrol_gui(*args, **kwargs):
     return _impl(*args, **kwargs)
 
 __all__ = [
+    "ConfigBucket", "ConfigSyncClient", "ConfigSyncError", "ConfigStore",
+    "ConfigRevisionConflict", "ConfigStoreError", "ConfigStoreFull",
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
     "mouse_scroll", "mouse_scroll_error_message", "set_mouse_position", "special_mouse_keys_table",
     "HumanizedMotion", "humanized_path", "move_mouse_humanized",

@@ -174,13 +174,14 @@ def test_push_round_trip_uses_put():
     calls: list = []
     local = ConfigBucket(user_id="alice")
     local.upsert("hotkeys", "hk1", {"combo": "ctrl+a"})
-    with _patch_request({}, calls=calls):
+    with _patch_request({"version": 2, "revision": 1}, calls=calls):
         client.push(local)
     assert len(calls) == 1
     method, body = calls[0]
     assert method == "PUT"
-    assert body["user_id"] == "alice"
-    assert "hk1" in body["sections"]["hotkeys"]
+    assert body["version"] == 2 and body["base_revision"] == 0
+    assert body["bucket"]["user_id"] == "alice"
+    assert "hk1" in body["bucket"]["sections"]["hotkeys"]
 
 
 def test_sync_merges_remote_into_local_and_pushes_result():
@@ -200,7 +201,7 @@ def test_sync_merges_remote_into_local_and_pushes_result():
 
     def fake_request(self, method, body=None):
         fetched.append(method)
-        return remote_body if method == "GET" else {}
+        return remote_body if method == "GET" else {"version": 2, "revision": 1}
 
     with patch.object(ConfigSyncClient, "_request", new=fake_request):
         merged, conflicts = client.sync(local)

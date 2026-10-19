@@ -6,7 +6,9 @@ an in-memory dict with TTL eviction — restart loses pending sessions.
 
 It also serves ``GET`` / ``PUT /config/{user_id}``, the per-user bucket that
 :mod:`je_auto_control.utils.config_sync` pushes and pulls. Buckets are kept
-in memory as sent (no TTL), so they too are lost on restart.
+in lazy SQLite storage with atomic revision checks and durable retry receipts.
+Version-two writes require base_revision/operation_id. Blind legacy writes need
+explicit allow_legacy_config_writes / --allow-legacy-config-writes opt-in.
 
 Run::
 
@@ -16,9 +18,9 @@ Run::
 Optional ``--shared-secret`` requires every request to carry a matching
 ``X-Signaling-Secret`` header (cheap protection against drive-by use).
 
-Deployment: drop behind nginx + TLS on a small VPS. The server itself
-is single-process; for HA put two instances behind a sticky load balancer
-or swap the in-memory store for Redis (left as a follow-up).
+Deployment: run one rendezvous process behind nginx + TLS on a small VPS.
+Pending SDP sessions remain process-local; configuration persistence does not
+make signaling sessions durable or add a high-availability deployment.
 """
 from __future__ import annotations
 
@@ -29,6 +31,7 @@ import os
 import threading
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Annotated, Dict, List, Optional
 
 try:
@@ -42,6 +45,10 @@ except ImportError as exc:  # pragma: no cover - optional dep
         "Signaling server requires the 'signaling' extra: "
         "pip install je_auto_control[signaling]"
     ) from exc
+
+
+from je_auto_control.utils.config_sync.routes import register_config_routes
+from je_auto_control.utils.config_sync.store import ConfigStore
 
 
 _DEFAULT_TTL_S = 120.0
@@ -65,26 +72,6 @@ class _Session:
     answer_sdp: Optional[str] = None
     created_at: float = field(default_factory=time.monotonic)
     updated_at: float = field(default_factory=time.monotonic)
-
-
-class _ConfigStore:
-    """Thread-safe in-memory map of user id -> config-sync bucket."""
-
-    def __init__(self) -> None:
-        self._buckets: Dict[str, Dict] = {}
-        self._lock = threading.Lock()
-
-    def get(self, user_id: str) -> Optional[Dict]:
-        with self._lock:
-            return self._buckets.get(user_id)
-
-    def put(self, user_id: str, bucket: Dict) -> bool:
-        """Store ``bucket``; ``False`` when a new user would exceed the cap."""
-        with self._lock:
-            if user_id not in self._buckets and len(self._buckets) >= _MAX_CONFIG_USERS:
-                return False
-            self._buckets[user_id] = bucket
-            return True
 
 
 class _SessionStore:
@@ -313,46 +300,6 @@ def _register_body_guard(app: FastAPI, shared_secret: Optional[str]) -> None:
         return refusal if refusal is not None else await call_next(request)
 
 
-def _validate_user_id(user_id: str) -> None:
-    # Printable, no path separators: the id is a single URL path segment.
-    if not user_id or len(user_id) > 128 or not user_id.isprintable() or "/" in user_id:
-        raise HTTPException(status_code=400, detail="invalid user_id")  # NOSONAR — see _CONFIG_RESPONSES
-
-
-_CONFIG_RESPONSES = {
-    400: {"description": "invalid user_id or bucket"},
-    404: {"description": "no bucket for this user"},
-    503: {"description": "too many users"},
-    **_AUTH_RESPONSES,
-}
-
-
-def _register_config_routes(app: FastAPI, store: _ConfigStore, secret_dep) -> None:
-    """``GET`` / ``PUT /config/{user_id}`` for :mod:`je_auto_control.utils.config_sync`.
-
-    The client has always called these; nothing served them, so every sync
-    failed. A bucket is stored as sent -- the merge happens client-side.
-    """
-    auth_only = [Depends(secret_dep)]
-
-    @app.get("/config/{user_id}", responses=_CONFIG_RESPONSES, dependencies=auth_only)
-    def _get_config(user_id: str) -> dict:
-        _validate_user_id(user_id)
-        bucket = store.get(user_id)
-        if bucket is None:
-            raise HTTPException(status_code=404, detail="no bucket")  # NOSONAR — see _CONFIG_RESPONSES
-        return bucket
-
-    @app.put("/config/{user_id}", responses=_CONFIG_RESPONSES, dependencies=auth_only)
-    def _put_config(user_id: str, bucket: Dict) -> dict:
-        _validate_user_id(user_id)
-        if bucket.get("user_id", user_id) != user_id:
-            raise HTTPException(status_code=400, detail="bucket user_id mismatch")  # NOSONAR — see _CONFIG_RESPONSES
-        if not store.put(user_id, bucket):
-            raise HTTPException(status_code=503, detail="too many users")  # NOSONAR — see _CONFIG_RESPONSES
-        return {"ok": True}
-
-
 def _register_request_logging(app: FastAPI) -> None:
     @app.middleware("http")
     async def _log_request(request: Request, call_next):
@@ -365,7 +312,9 @@ def _register_request_logging(app: FastAPI) -> None:
 def create_app(shared_secret: Optional[str] = None,
                ttl_s: float = _DEFAULT_TTL_S,
                serve_web_viewer: bool = True,
-               cors_origins: Optional[list] = None) -> FastAPI:
+               cors_origins: Optional[list] = None,
+               config_store_path: Optional[str | Path] = None,
+               allow_legacy_config_writes: bool = False) -> FastAPI:
     """Build the FastAPI app. Importable for embedding in larger services."""
     app = FastAPI(title="AutoControl Signaling", version="1.0.0")
     store = _SessionStore(ttl_s=ttl_s)
@@ -375,7 +324,8 @@ def create_app(shared_secret: Optional[str] = None,
     _maybe_mount_viewer(app, serve_web_viewer)
     secret_dep = _build_secret_dependency(shared_secret)
     _register_routes(app, store, secret_dep)
-    _register_config_routes(app, _ConfigStore(), secret_dep)
+    config = ConfigStore(config_store_path, max_users=_MAX_CONFIG_USERS)
+    register_config_routes(app, config, secret_dep, allow_legacy_writes=allow_legacy_config_writes)
     _register_request_logging(app)
     return app
 
@@ -398,6 +348,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                         help="don't mount the bundled web viewer at /viewer")
     parser.add_argument("--cors-origin", action="append", default=None,
                         help="allowed CORS origin (repeatable; default: *)")
+    parser.add_argument("--config-store", help="Persistent config SQLite path (resolved on first config access)")
+    parser.add_argument("--allow-legacy-config-writes", action="store_true",
+                        help="Opt in to blind legacy config writes without revision protection")
     return parser
 
 
@@ -419,6 +372,8 @@ def main(argv: Optional[list] = None) -> None:
         ttl_s=args.ttl_seconds,
         serve_web_viewer=not args.no_web_viewer,
         cors_origins=args.cors_origin,
+        config_store_path=args.config_store,
+        allow_legacy_config_writes=args.allow_legacy_config_writes,
     )
     uvicorn.run(app, host=args.bind, port=args.port, log_level="info")
 

@@ -73,6 +73,7 @@ def _build_specs() -> List[CommandSpec]:
     _add_window_specs(specs)
     _add_flow_specs(specs)
     _add_journal_specs(specs)
+    _add_config_sync_specs(specs)
     specs.append(CommandSpec(
         "AC_self_heal_evaluate", "Image", "Compare Locator Versions",
         fields=(FieldSpec("path", FieldType.FILE_PATH),),
@@ -127,6 +128,20 @@ def _add_self_healing_specs(specs: List[CommandSpec]) -> None:
             "AC_self_heal_" + operation, "Image", "Self-Healing: " + operation.title(), fields=fields + extra,
             description="Share one logical frame across template/VLM; a found point or issued click is unverified.",
         ))
+
+
+def _add_config_sync_specs(specs: List[CommandSpec]) -> None:
+    path = FieldSpec("path", FieldType.FILE_PATH, placeholder="config-sync.sqlite3")
+    user = FieldSpec("user_id", FieldType.STRING)
+    specs.extend([
+        CommandSpec("AC_config_store_get", "Data", "Read Persistent Config Bucket", fields=(path, user),
+                    description="Local private SQLite bucket and committed revision; requires drive authority."),
+        CommandSpec("AC_config_store_commit", "Data", "Commit Persistent Config Bucket",
+                    fields=(path, user, FieldSpec("bucket", FieldType.JSON),
+                            FieldSpec("base_revision", FieldType.INT, min_value=0, default=0),
+                            FieldSpec("operation_id", FieldType.STRING)),
+                    description="Atomic revision comparison and retry receipt; stale or reused IDs conflict."),
+    ])
 
 
 def _add_journal_specs(specs: List[CommandSpec]) -> None:
