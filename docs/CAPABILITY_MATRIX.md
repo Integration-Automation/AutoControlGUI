@@ -49,6 +49,13 @@ cancellation, root-revocation and AC/CLI/MCP/offscreen GUI tests. The GUI retain
 reviewed revisions and deferred authority. Eligibility means localization on the
 supplied fixed images; this adds no native accuracy, performance or paid API claim.
 
+Journal-to-code candidates have controlled run selection/lifecycle/parent/retry
+provenance, strict/bounded schema, secret-reference and encoded-source redaction,
+all-target static/dry-run, artifact integrity, path revocation, cancellation and
+AC/CLI/MCP/offscreen review/import tests. A real virtual retry capture proves
+source retention without duplicate replay. GUI import never dispatches input;
+this adds no native-device or paid-API acceptance.
+
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
 

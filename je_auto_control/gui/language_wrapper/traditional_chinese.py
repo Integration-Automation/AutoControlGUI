@@ -1311,3 +1311,43 @@ traditional_chinese_word_dict = {
     "template_candidate_interrupted": "工作已結束，繼續前請先檢視目前檔案狀態。",
     "template_candidate_error": "候選錯誤：{value}",
 }
+
+
+# Journal candidate review and explicit Script Builder transfer.
+traditional_chinese_word_dict.update({
+    "journal_candidate_open": "審閱日誌候選腳本",
+    "journal_candidate_title": "日誌候選腳本審閱",
+    "journal_candidate_actions": "動作",
+    "journal_candidate_explanation": (
+        "從已觀察的執行產生候選，不重播輸入。請審閱程式、差異、來源與排除項目；匯入 Sc"
+        "ript Builder 是獨立操作。"
+    ),
+    "journal_candidate_path": "JSONL 日誌",
+    "journal_candidate_run_id": "選取的 run ID",
+    "journal_candidate_target": "程式目標",
+    "journal_candidate_style": "程式風格",
+    "journal_candidate_code": "候選程式",
+    "journal_candidate_diff": "與目前動作的差異",
+    "journal_candidate_manifest": "來源清單",
+    "journal_candidate_warnings": "警告／排除項目",
+    "journal_candidate_browse": "選擇日誌",
+    "journal_candidate_generate": "產生並驗證",
+    "journal_candidate_export": "匯出審閱 ZIP",
+    "journal_candidate_import": "匯入 Script Builder",
+    "journal_candidate_cancel": "取消目前工作",
+    "journal_candidate_idle": "選擇日誌與 run ID，再產生候選供審閱。",
+    "journal_candidate_running": "正在背景處理…",
+    "journal_candidate_progress": "驗證進度：{value}",
+    "journal_candidate_ready": "候選已備妥。靜態檢查與乾跑不發送輸入；原生操作結果仍待驗證。",
+    "journal_candidate_ready_truncated": "候選已備妥；各檢視最多顯示 200,000 字元，完整證據請匯出審閱 ZIP。",
+    "journal_candidate_error": "錯誤：{value}",
+    "journal_candidate_cancelled": "已取消，不發佈部分候選。",
+    "journal_candidate_cancelling": "已要求取消；完成的 ZIP 匯出仍會保留。",
+    "journal_candidate_interrupted": "工作已停止，尚未收到結束結果。",
+    "journal_candidate_exported": "已匯出審閱檔：{value}",
+    "journal_candidate_imported": "已匯入 Script Builder，尚未執行任何動作。",
+    "journal_candidate_review_required": "請先產生並審閱候選。",
+    "journal_candidate_no_import": "請從 Script Builder 開啟日誌審閱，再匯入候選動作。",
+    "journal_candidate_empty": "沒有可重播動作；請保留證據並處理排除項目，再進行匯入。",
+    "journal_candidate_stale": "Script Builder 在差異基準建立後已有變更；請關閉並重新開啟日誌審閱，再替換動作。",
+})

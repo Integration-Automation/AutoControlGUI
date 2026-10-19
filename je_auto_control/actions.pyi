@@ -1258,6 +1258,15 @@ def AC_gamepad_right_stick(x: int, y: int) -> Dict[str, Any]:
 def AC_gamepad_right_trigger(value: int) -> Dict[str, Any]:
     ...
 
+def AC_generate_candidate_from_log(
+    path: str,
+    run_id: str,
+    target: str = ...,
+    style: str = ...,
+    output: str | None = ...,
+) -> dict[str, object]:
+    """Return candidate source/provenance, optionally atomically exporting a ZIP review artifact."""
+
 def AC_generate_code(
     source: Any,
     output: str | None = ...,

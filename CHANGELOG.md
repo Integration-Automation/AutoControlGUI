@@ -13,6 +13,19 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Experimental journal candidates reconcile lifecycle snapshots and parent/retry
+  provenance, preserve recorded control sources and label observed-only fallbacks.
+  Python/pytest/Robot code, actions, warnings and manifests share API/AC/MCP/CLI
+  and owned GUI review. Static/signature/dry-run checks dispatch no input; explicit
+  Builder import retains provenance and rejects intervening edits. Atomic ZIP
+  exports keep source/actions/manifest together and reject changed review data.
+  `codegen --from-log ... --run-id ...` returns JSON; `-o review.zip` exports it.
+  Legacy action-file codegen defaults remain unchanged.
+- Journal source sanitization now inspects encoded parallel branches before
+  persistence, preserves nested/positional secret references and masks known
+  resolved input strings and dynamic keys. Duplicate encoded keys become explicit
+  non-replayable markers. Safe recorded argument text stays unchanged.
+
 - Experimental template-candidate bundles support preview, fixed-frame verification,
   explicit acceptance and byte-exact rollback through API/AC/MCP/CLI/Builder/GUI.
   Creation retains original/candidate images without changing the active template;

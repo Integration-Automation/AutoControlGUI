@@ -207,18 +207,23 @@ def _set_on_enter(stop_event: threading.Event) -> None:
 
 def cmd_codegen(args: argparse.Namespace) -> int:
     """Generate pytest/python/robot source from an action file."""
+    if getattr(args, "from_log", None) is not None:
+        from je_auto_control.utils.codegen.journal_cli import candidate_codegen
+        return candidate_codegen(args)
+    if getattr(args, "run_id", None) is not None or args.script is None:
+        raise ValueError("provide an action script, or --from-log with --run-id")
     from je_auto_control.utils.codegen.codegen import (
         generate_code, generate_code_file,
     )
     from je_auto_control.utils.json.json_file import read_action_json
     if args.output:
         generate_code_file(args.script, args.output, target=args.target,
-                           name=args.name, style=args.style,
+                           name=args.name, style=args.style or "calls",
                            failure_bundle=args.failure_bundle)
         sys.stderr.write(f"Wrote {args.target} code to {args.output}\n")
     else:
         code = generate_code(read_action_json(args.script), target=args.target,
-                             name=args.name, style=args.style,
+                             name=args.name, style=args.style or "calls",
                              failure_bundle=args.failure_bundle)
         sys.stdout.write(code)
     return 0
@@ -352,13 +357,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_codegen = sub.add_parser(
         "codegen", help="Generate test code from an action file")
-    p_codegen.add_argument("script")
+    p_codegen.add_argument("script", nargs="?")
+    p_codegen.add_argument("--from-log", help="Read a structured journal; returns a JSON candidate review bundle")
+    p_codegen.add_argument("--run-id", help="Explicit journal run for --from-log")
     p_codegen.add_argument("--target", choices=("pytest", "python", "robot"),
                            default="pytest")
     p_codegen.add_argument("--style", choices=("calls", "actions"),
-                           default="calls")
+                           default=None)
     p_codegen.add_argument("--name", default="recorded_flow")
-    p_codegen.add_argument("-o", "--output", help="Write to file instead of stdout")
+    p_codegen.add_argument("-o", "--output", help="Write code, or a review .zip with --from-log")
     p_codegen.add_argument(
         "--failure-bundle", action="store_true",
         help="Wrap generated pytest in automatic failure diagnostics")

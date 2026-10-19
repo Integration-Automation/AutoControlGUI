@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261019-14 | 2026-10-19 | Generate sealed observed-path script candidates from selected journal runs | #done #journal #codegen | [2026-10](2026-10.md) |
 | U-20261019-13 | 2026-10-19 | Review and verify template candidates before atomic acceptance or exact rollback | #done #self-healing #templates | [2026-10](2026-10.md) |
 | U-20261019-12 | 2026-10-19 | Trace healing records to their original journal steps | #done #self-healing #journal | [2026-10](2026-10.md) |
 | U-20261019-11 | 2026-10-19 | Keep progress focused on unfinished work and active exemptions | #docs #progress | [2026-10](2026-10.md) |
@@ -395,7 +396,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 59 |
+| [2026-10.md](2026-10.md) | 2026-10 | 60 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

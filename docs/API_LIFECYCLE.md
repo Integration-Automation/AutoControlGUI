@@ -80,6 +80,17 @@ operator-history record. Thresholds belong to the bundle's verification config;
 activating an image does not rewrite scripts. Existing RepairStore/manual
 coordinate APIs are unchanged and are not called by this workflow.
 
+Journal-candidate APIs (`generate_candidate_from_log`, `CandidateScript`,
+`CandidateGenerationError`, `write_candidate_archive`) are experimental. The
+`AC_generate_candidate_from_log` / `ac_generate_candidate_from_log` adapters return
+code, proposed actions, schema-v1 provenance and explicit exclusions; optional
+output exports a single review ZIP. All candidates remain observed-path-only.
+Static command/signature/AST and non-dispatching dry-run checks leave dynamic
+inputs and native outcomes unverified. Review content is sealed against later
+mutation. Source/current roots and cancellation apply throughout. CLI --from-log
+requires an explicit run ID and defaults to actions style/JSON output; legacy
+file codegen retains its calls-style/source-output behavior. No replay is implicit.
+
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.
 - Experimental API may change in any release and must be labelled as such.

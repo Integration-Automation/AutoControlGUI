@@ -1,9 +1,9 @@
 """Composite widget that ties the step tree and form into a Script Builder tab."""
 import json
-from typing import Optional
+from typing import Callable, Optional
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QCloseEvent
 from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QMenu, QMessageBox, QPushButton, QSplitter,
     QTextEdit, QToolButton, QVBoxLayout, QWidget,
@@ -20,8 +20,11 @@ from je_auto_control.gui.script_builder.command_schema import (
 from je_auto_control.gui.script_builder.step_form_view import StepFormView
 from je_auto_control.gui.script_builder.step_list_view import StepTreeView
 from je_auto_control.gui.script_builder.step_model import (
-    Step, load_action_file, save_action_file, steps_to_actions,
+    Step, actions_to_steps, load_action_file, save_action_file, steps_to_actions,
 )
+from je_auto_control.utils.codegen.candidate_models import CandidateGenerationError, CandidateScript
+from je_auto_control.utils.codegen.candidate_validation import validate_candidate_actions
+from je_auto_control.utils.rbac.policy import authorize_command
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action
 
@@ -126,6 +129,41 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
     def _on_delete(self) -> None:
         self._tree.remove_selected()
         self._form.load_step(None)
+
+    def menu_actions(self) -> list[tuple[str, Callable[[], None]]]:
+        """Open journal review through Actions; importing never calls Run."""
+        return [("journal_candidate_open", self._open_journal_candidate)]
+
+    def _open_journal_candidate(self) -> None:
+        # pylint: disable-next=import-outside-toplevel  # reason: defer the optional review dialog until requested
+        from je_auto_control.gui.journal_candidate_dialog import show_journal_candidate
+        try:
+            show_journal_candidate(self, steps_to_actions(self._tree.root_steps()),
+                                      on_import=self._import_journal_candidate,
+                                      current_actions=lambda: steps_to_actions(self._tree.root_steps()))
+        except (AutoControlException, ValueError, TypeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
+
+    def _import_journal_candidate(self, candidate: CandidateScript) -> None:
+        """Replace editor data explicitly with independent reviewed actions and source metadata."""
+        authorize_command("AC_generate_candidate_from_log")
+        if not candidate.actions:
+            raise CandidateGenerationError("candidate has no replayable actions to import")
+        validate_candidate_actions(candidate.actions)
+        data = candidate.to_dict()
+        self._tree.load_steps(actions_to_steps(data["actions"]))
+        self._form.load_step(None)
+        self._file_extras = {"journal_candidate": data["manifest"], "candidate_warnings": data["warnings"]}
+        self._source_path = "<journal-candidate>"
+        self._result.setPlainText(_t("journal_candidate_imported"))
+
+    # pylint: disable-next=invalid-name  # reason: Qt override
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802  # reason: Qt override
+        """Cancel owned review tasks as the editor closes."""
+        # pylint: disable-next=import-outside-toplevel  # reason: avoid loading review UI during tab registration
+        from je_auto_control.gui.journal_candidate_dialog import close_candidate_dialogs
+        close_candidate_dialogs(self)
+        super().closeEvent(event)
 
     def _on_save(self) -> None:
         path, _ = QFileDialog.getSaveFileName(

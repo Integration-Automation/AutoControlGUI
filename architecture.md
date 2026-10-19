@@ -47,6 +47,21 @@ commit checkpoints. GUI tasks retain authority/context and stop before writes;
 completed writes are not relabelled cancelled. Native operation verification is
 independent. Candidate operations share API/AC/MCP/CLI/Builder and GUI surfaces.
 
+Journal candidates read a bounded byte snapshot and validate the whole structured
+wire schema and append order before selecting a run. Lifecycle reconciliation
+retains source line and append-sequence provenance, parent hierarchy and provable
+retry boundaries.
+Selection preserves recorded block inputs, covers their children once and uses
+explicit observed-path fallbacks only for sequential observations; incomplete or
+failed roots and unreconstructable parallel sources are excluded. Existing codegen
+renders all three targets; static/signature/dry-run validation dispatches no input
+and unbinds enclosing journal capture. Sealed review data rejects later mutation.
+One atomic ZIP contains code, actions and provenance. CLI --from-log, AC/MCP and
+owned background GUI review share the core. Explicit Builder import retains source
+metadata and refuses edits made after the diff baseline; it does not execute.
+Journal redaction inspects encoded parallel branches before persistence, preserves
+safe source strings/references and masks resolved input strings/dynamic keys.
+
 | Path | Responsibility |
 | --- | --- |
 | `je_auto_control/__init__.py` | Facade: re-exports the public API and lists it in `__all__`. Must import without PySide6. |

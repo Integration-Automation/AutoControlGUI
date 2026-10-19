@@ -8726,6 +8726,23 @@ def state_machine_tools() -> List[MCPTool]:
 def codegen_tools() -> List[MCPTool]:
     return [
         MCPTool(
+            name="ac_generate_candidate_from_log",
+            description=("Generate a review-only candidate from one structured journal run. Returns code, actions, "
+                         "provenance and exclusions; retains recorded loops/branches/retries and labels observed-only "
+                         "fallbacks. Static/signature/dry-run checks dispatch no input "
+                         "and do not verify native success. "
+                         "Optional output atomically writes a .zip review artifact; no automatic replay."),
+            input_schema=schema({
+                "path": {"type": "string", "format": "path"},
+                "run_id": {"type": "string", "minLength": 1},
+                "target": {"type": "string", "enum": ["pytest", "python", "robot"], "default": "pytest"},
+                "style": {"type": "string", "enum": ["actions", "calls"], "default": "actions"},
+                "output": {"type": "string", "format": "path", "description": "Optional .zip review archive."},
+            }, required=["path", "run_id"]),
+            handler=hq.generate_candidate_from_log,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
             name="ac_generate_code",
             description=("Generate runnable test code from an action list or a "
                          "JSON action-file path. target=pytest|python|robot; "

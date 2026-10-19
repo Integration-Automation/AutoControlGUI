@@ -250,6 +250,7 @@ AutoControl 所有功能的完整使用指南。
    doc/new_features/v223_features_doc
    doc/ocr_backends/ocr_backends_doc
    doc/observability/observability_doc
+   doc/journal_candidates/journal_candidates_doc
    doc/operations_layer/operations_layer_doc
    doc/operations_layer/usb_passthrough_design
    doc/operations_layer/usb_passthrough_security_review

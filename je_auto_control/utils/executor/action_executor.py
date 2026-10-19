@@ -45,6 +45,7 @@ from je_auto_control.utils.self_healing.template_commands import (
     _create_candidate_command, _preview_candidate_command, _verify_candidate_command,
     _accept_candidate_command, _revert_candidate_command,
 )
+from je_auto_control.utils.codegen.journal_commands import _generate_candidate_command
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
@@ -7259,6 +7260,7 @@ class Executor:
             "AC_generate_json_report": generate_json_report,
             "AC_generate_xml_report": generate_xml_report,
             "AC_generate_code": _generate_code,
+            "AC_generate_candidate_from_log": _generate_candidate_command,
             "AC_send_email": _send_email,
             "AC_assert_pdf_text": _assert_pdf_text,
             "AC_take_golden": _take_golden,

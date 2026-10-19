@@ -131,6 +131,15 @@ def _add_self_healing_specs(specs: List[CommandSpec]) -> None:
 
 def _add_journal_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
+        "AC_generate_candidate_from_log", "Data", "Generate Journal Candidate",
+        fields=(FieldSpec("path", FieldType.FILE_PATH), FieldSpec("run_id", FieldType.STRING),
+                FieldSpec("target", FieldType.ENUM, choices=("pytest", "python", "robot"), default="pytest"),
+                FieldSpec("style", FieldType.ENUM, choices=("actions", "calls"), default="actions"),
+                FieldSpec("output", FieldType.FILE_PATH, optional=True, placeholder="review.zip")),
+        description="Review-only journal source/provenance; optional ZIP export. "
+                    "No input dispatch or automatic replay.",
+    ))
+    specs.append(CommandSpec(
         "AC_history_capture", "Flow", "Record Manual Run History",
         fields=(FieldSpec("source_id", FieldType.STRING, optional=True, default="script"),
                 FieldSpec("script_path", FieldType.STRING, optional=True, default="<actions>")),

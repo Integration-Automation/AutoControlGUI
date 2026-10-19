@@ -1447,3 +1447,51 @@ english_word_dict = {
     "template_candidate_interrupted": "Task ended; inspect the current file state before continuing.",
     "template_candidate_error": "Candidate error: {value}",
 }
+
+
+# Journal candidate review and explicit Script Builder transfer.
+english_word_dict.update({
+    "journal_candidate_open": "Review journal candidate",
+    "journal_candidate_title": "Journal candidate review",
+    "journal_candidate_actions": "Actions",
+    "journal_candidate_explanation": (
+        "Generate an observed-run candidate without replaying input. Review "
+        "source, changes, provenance and exclusions. Import into Script Builder "
+        "is a separate action."),
+    "journal_candidate_path": "Journal JSONL",
+    "journal_candidate_run_id": "Selected run ID",
+    "journal_candidate_target": "Code target",
+    "journal_candidate_style": "Code style",
+    "journal_candidate_code": "Candidate code",
+    "journal_candidate_diff": "Changes from current actions",
+    "journal_candidate_manifest": "Provenance manifest",
+    "journal_candidate_warnings": "Warnings / exclusions",
+    "journal_candidate_browse": "Choose journal",
+    "journal_candidate_generate": "Generate and validate",
+    "journal_candidate_export": "Export review ZIP",
+    "journal_candidate_import": "Import into Script Builder",
+    "journal_candidate_cancel": "Cancel current task",
+    "journal_candidate_idle": "Choose a journal and run ID, then generate a review candidate.",
+    "journal_candidate_running": "Working in the background…",
+    "journal_candidate_progress": "Validated progress: {value}",
+    "journal_candidate_ready": (
+        "Review ready. Static checks and dry-run dispatch no input; native "
+        "results remain unverified."),
+    "journal_candidate_ready_truncated": (
+        "Review ready; each visible view is limited to 200,000 characters. "
+        "Export the complete review ZIP for all evidence."),
+    "journal_candidate_error": "Error: {value}",
+    "journal_candidate_cancelled": "Cancelled; no partial candidate was published.",
+    "journal_candidate_cancelling": "Cancellation requested. A completed archive export remains committed.",
+    "journal_candidate_interrupted": "Task stopped before a terminal result arrived.",
+    "journal_candidate_exported": "Review archive exported: {value}",
+    "journal_candidate_imported": "Candidate imported into Script Builder; nothing was run.",
+    "journal_candidate_review_required": "Generate and review a candidate first.",
+    "journal_candidate_no_import": "Open journal review from Script Builder to import its reviewed actions.",
+    "journal_candidate_empty": (
+        "No replayable actions; keep the evidence archive and resolve the "
+        "exclusions before importing."),
+    "journal_candidate_stale": (
+        "Script Builder changed after the diff baseline. Close and reopen "
+        "journal review before replacing its actions."),
+})

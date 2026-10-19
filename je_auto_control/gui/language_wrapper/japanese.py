@@ -1333,3 +1333,49 @@ japanese_word_dict = {
     "template_candidate_interrupted": "タスクが終了しました。続行前に現在の状態を確認してください。",
     "template_candidate_error": "候補エラー: {value}",
 }
+
+
+# Journal candidate review and explicit Script Builder transfer.
+japanese_word_dict.update({
+    "journal_candidate_open": "ログ候補をレビュー",
+    "journal_candidate_title": "ログ候補スクリプトのレビュー",
+    "journal_candidate_actions": "操作",
+    "journal_candidate_explanation": (
+        "観測済みの実行から候補を生成し、入力は再生しません。コード、差分、出典、除外項目"
+        "を確認してください。Script Builder への取込は別の操作です。"
+    ),
+    "journal_candidate_path": "JSONL ログ",
+    "journal_candidate_run_id": "選択する run ID",
+    "journal_candidate_target": "コードの形式",
+    "journal_candidate_style": "コードのスタイル",
+    "journal_candidate_code": "候補コード",
+    "journal_candidate_diff": "現在の操作との差分",
+    "journal_candidate_manifest": "出典マニフェスト",
+    "journal_candidate_warnings": "警告／除外項目",
+    "journal_candidate_browse": "ログを選択",
+    "journal_candidate_generate": "生成して検証",
+    "journal_candidate_export": "レビュー ZIP を出力",
+    "journal_candidate_import": "Script Builder に取り込む",
+    "journal_candidate_cancel": "現在の処理をキャンセル",
+    "journal_candidate_idle": "ログと run ID を選択して、レビュー用候補を生成してください。",
+    "journal_candidate_running": "バックグラウンドで処理中…",
+    "journal_candidate_progress": "検証の進捗：{value}",
+    "journal_candidate_ready": "候補を確認できます。静的検査とドライランは入力を送信せず、実機の結果は未検証です。",
+    "journal_candidate_ready_truncated": (
+        "候補を確認できます。各表示は 200,000 文字までです。全証拠はレビュー Z"
+        "IP に出力してください。"
+    ),
+    "journal_candidate_error": "エラー：{value}",
+    "journal_candidate_cancelled": "キャンセルしました。部分的な候補は公開しません。",
+    "journal_candidate_cancelling": "キャンセルを要求しました。完了済みの ZIP 出力は保持されます。",
+    "journal_candidate_interrupted": "終了結果を受け取る前に処理が停止しました。",
+    "journal_candidate_exported": "レビュー ZIP を出力しました：{value}",
+    "journal_candidate_imported": "Script Builder に取り込みました。操作は実行していません。",
+    "journal_candidate_review_required": "先に候補を生成してレビューしてください。",
+    "journal_candidate_no_import": "Script Builder からログレビューを開くと、確認した操作を取り込めます。",
+    "journal_candidate_empty": "再生可能な操作がありません。証拠を保存し、除外項目を解決してから取り込んでください。",
+    "journal_candidate_stale": (
+        "差分の基準作成後に Script Builder が変更されました。レビューを閉"
+        "じて開き直してから置き換えてください。"
+    ),
+})

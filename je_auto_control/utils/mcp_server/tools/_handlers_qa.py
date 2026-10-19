@@ -10,6 +10,7 @@ flaky detection and quarantine, the suite runner, accessibility audits, the
 device matrix and media assertions.
 """
 from typing import Any, Dict, List, Optional
+from je_auto_control.utils.mcp_server.context import ToolCallContext
 
 
 # --- Assertion DSL ---------------------------------------------------------
@@ -237,6 +238,30 @@ def generate_code(source: Any, target: str = "pytest",
 
 
 # --- Visual regression + state machine -------------------------------------
+
+
+def generate_candidate_from_log(path: str, run_id: str, target: str = "pytest", style: str = "actions",
+                                  output: Optional[str] = None, *,
+                                  ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Generate source/provenance without dispatch; optional output is an atomic ZIP review artifact."""
+    from je_auto_control.utils.codegen.journal_import import generate_candidate_from_log as generate
+    from je_auto_control.utils.codegen.candidate_archive import write_candidate_archive
+    event_count = -1
+
+    def progress(_count: int) -> None:
+        nonlocal event_count
+        if ctx is not None:
+            ctx.check_cancelled()
+            event_count += 1
+            ctx.progress(event_count, message="journal candidate review")
+            ctx.check_cancelled()
+
+    policy = ctx.path_policy if ctx is not None else None
+    candidate = generate(path, run_id=run_id, target=target, style=style, observer=progress, path_policy=policy)
+    data = candidate.to_dict()
+    if output is not None:
+        data["output"] = str(write_candidate_archive(candidate, output, observer=progress, path_policy=policy))
+    return data
 
 def take_golden(path: str, region: Optional[List[int]] = None) -> str:
     from je_auto_control.utils.visual_regression import (

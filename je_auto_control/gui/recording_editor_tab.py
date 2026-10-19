@@ -2,7 +2,7 @@
 import json
 from typing import Optional
 
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtGui import QCloseEvent, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
     QMessageBox, QTextEdit, QVBoxLayout, QWidget,
@@ -107,6 +107,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
             ("re_load", self._load),
             ("re_save_as", self._save_as),
             ("re_export_code", self._export_code),
+            ("journal_candidate_open", self._open_journal_candidate),
             ("re_apply_trim", self._apply_trim),
             ("re_remove_selected", self._remove_selected),
             ("re_undo", self._undo),
@@ -118,6 +119,23 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
 
     def _keep_mouse(self) -> None:
         self._filter_prefix("AC_mouse")
+
+    def _open_journal_candidate(self) -> None:
+        """Preview source/diff/provenance without replacing this recording or replaying input."""
+        # pylint: disable-next=import-outside-toplevel  # reason: load candidate UI only when its action is invoked
+        from je_auto_control.gui.journal_candidate_dialog import show_journal_candidate
+        try:
+            show_journal_candidate(self, self._actions)
+        except (AutoControlException, ValueError, TypeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
+
+    # pylint: disable-next=invalid-name  # reason: Qt override
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802  # reason: Qt override
+        """Cancel pending review tasks when the recording editor closes."""
+        # pylint: disable-next=import-outside-toplevel  # reason: avoid loading review UI during tab registration
+        from je_auto_control.gui.journal_candidate_dialog import close_candidate_dialogs
+        close_candidate_dialogs(self)
+        super().closeEvent(event)
 
     def _keep_keyboard(self) -> None:
         self._filter_prefix((
