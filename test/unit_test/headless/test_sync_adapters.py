@@ -280,6 +280,34 @@ def test_corrupted_native_repository_fails_with_typed_error_before_state(tmp_pat
     assert path.read_text(encoding='utf-8') == '[]'
 
 
+@pytest.mark.parametrize('extreme', [10 ** 400, -10 ** 400])
+def test_extreme_integer_condition_is_refused_with_typed_error_before_state(tmp_path, extreme):
+    profile = {'schema_version': 1, 'kind': 'triggers', 'state_path': str(tmp_path / 'state.sqlite3'),
+               'identity': {'endpoint': 'https://controlled.invalid', 'user_id': 'alice', 'origin': 'desktop'},
+               'source': {'records': {'watch': {'kind': 'file', 'script_path': 'run.json', 'repeat': True,
+                                              'cooldown_seconds': extreme,
+                                              'condition': {'watch_path': 'watched'}}}}}
+    adapter = ac.adapter_from_profile(profile)
+    with pytest.raises(ac.ConfigSyncError, match='number'):
+        adapter.snapshot()
+    assert not (tmp_path / 'state.sqlite3').exists()
+
+
+def test_private_posix_path_binding_is_not_a_high_entropy_credential():
+    from je_auto_control.utils.logging.secret_scope import remember_secret, secret_log_scope
+    from je_auto_control.utils.secrets_scan.secrets_scan import scan_secrets
+    path = '/tmp/pytest-of-runner/pytest-0/test_sync_never_enables_trigger0/watched'
+    assert scan_secrets({'value': path})[0]['kind'] == 'high-entropy-string'
+    assert ac.SyncBindings(local_values={'watch': path}).local_values['watch'] == path
+    for value in ('AbCdEfGhIjKlMnOpQrStUvWxYz0123456789', path + '/AKIA' + 'A1' * 8):
+        with pytest.raises(ac.ConfigSyncError):
+            ac.SyncBindings(local_values={'watch': value})
+    with secret_log_scope():
+        remember_secret(path)
+        with pytest.raises(ac.ConfigSyncError, match='resolved credentials'):
+            ac.SyncBindings(local_values={'watch': path})
+
+
 def test_non_ascii_corrupt_head_wire_raises_a_framework_storage_error(tmp_path):
     import sqlite3
     adapter = script_adapter(tmp_path, 'desktop')

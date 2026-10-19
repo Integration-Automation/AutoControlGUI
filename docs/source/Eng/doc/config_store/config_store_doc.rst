@@ -117,3 +117,11 @@ references avoid selected machine values and recognized credentials in portable
 entries. Apply never changes active sources; hotkeys/triggers remain disabled.
 See the causal guide for private schema-1 profiles, exact conflict resolution and
 remaining workspace/GUI-preference/asset/full-resync integration.
+
+Native numeric definitions check supported ranges before finite conversion.
+Extreme JSON integers fail with ConfigSyncError before adapter storage is opened.
+
+Private absolute local path bindings may contain high-entropy names. Only that
+heuristic is exempted for those private paths; recognized credential formats, sensitive
+binding names and known resolved-secret values remain refused. Portable data and the
+shared secret scanner are unchanged.

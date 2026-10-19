@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Accept high-entropy private absolute path bindings on POSIX while continuing
+  to reject recognized credential patterns and known resolved secrets.
+
+- Reject extreme JSON integers in native sync definition numeric fields with
+  ConfigSyncError before storage, preserving framework error containment.
+
 - Add experimental causal adapters for selected scripts, locators, hotkeys, triggers,
   address-book entries and JSON settings, with durable concurrent profiles and exact
   reviewed conflict resolution. Named vault/local references keep selected secrets and

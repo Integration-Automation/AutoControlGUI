@@ -64,7 +64,7 @@ def _number(value: object, minimum: float, maximum: float) -> None:
         return
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ConfigSyncError('definition requires a finite number')
-    if not math.isfinite(value) or not minimum <= value <= maximum:
+    if not minimum <= value <= maximum or not math.isfinite(value):
         raise ConfigSyncError('definition number is outside its supported range')
 
 

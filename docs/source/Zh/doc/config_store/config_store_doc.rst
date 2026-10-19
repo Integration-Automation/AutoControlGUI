@@ -100,3 +100,10 @@ DirectoryAssetTransport（API／AC／MCP／Builder）使用。僅暫存原始檔
 （API／AC／MCP／Builder）。具名 local／vault 參照避免將選定的機器值與辨識到的
 憑證放入可攜 entries。Apply 不改啟用中的來源，熱鍵／觸發器保持停用。私有 schema-1
 描述、明確衝突解決與尚缺的工作區／GUI 偏好／資產／完整重同步整合請參閱因果指南。
+
+原生數值定義先檢查支援範圍再作有限值轉換；超大 JSON 整數以 ConfigSyncError
+拒絕，不會開啟 adapter 儲存。
+
+私有絕對本機路徑綁定可包含高熵名稱；僅對這些私有路徑排除熵值啟發式判定，
+仍拒絕可辨識憑證格式、敏感綁定名稱與已知解析後秘密。可攜資料與共用秘密掃描器
+沿用原有政策。

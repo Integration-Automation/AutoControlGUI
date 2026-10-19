@@ -98,7 +98,7 @@ def _local_values(values: Mapping[str, object]) -> dict[str, object]:
     result: dict[str, object] = {}
     for name, value in values.items():
         SyncReference('local', name)
-        if not _local_scalar(value) or is_secret_key(name) or scan_secrets({'value': value}):
+        if not _local_scalar(value) or is_secret_key(name) or _local_credential(value):
             raise ConfigSyncError('local bindings cannot carry recognized plaintext credentials')
         result[name] = value
     _known_secrets(result)
@@ -107,6 +107,12 @@ def _local_values(values: Mapping[str, object]) -> dict[str, object]:
 
 def _local_scalar(value: object) -> bool:
     return value is None or isinstance(value, (str, int, float, bool))
+
+
+def _local_credential(value: object) -> bool:
+    path = isinstance(value, str) and _machine_path(value)
+    return any(finding['kind'] != 'high-entropy-string' or not path
+               for finding in scan_secrets({'value': value}))
 
 
 def _reference(value: object) -> Optional[SyncReference]:

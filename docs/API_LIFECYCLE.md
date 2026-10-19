@@ -169,3 +169,12 @@ Materialization publishes an inert complete generation with native hotkey/trigge
 disabled. Secret references remain vault placeholders without vault lookup; native
 non-script/settings fields accept local references only. JSON settings do not yet bridge
 GUI preferences. Asset references, full-resync adapter baselines and Sync UI remain C3.
+
+Native sync definition numeric bounds are checked before floating-point finite
+conversion. Out-of-range arbitrary-precision JSON integers raise ConfigSyncError
+before profile I/O, preserving the documented framework exception boundary.
+
+Private local absolute paths may contain high-entropy directory names. The adapter
+exempts only this heuristic for those paths; recognized credential patterns, sensitive
+binding names and active resolved-secret masks still refuse plaintext credentials.
+Portable entries and the shared secret scanner keep their existing policies.

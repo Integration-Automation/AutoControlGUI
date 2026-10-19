@@ -373,3 +373,10 @@ publication. This establishes local capture/inert materialization, with no scrip
 vault lookup or listener startup; it does not establish remote workspace convergence.
 GUI preferences, causal assets/full-resync orchestration, explicit native profile loading,
 Sync UI and folder/clipboard/disconnection regression remain in Progress.md.
+
+Controlled native-definition numeric tests refuse positive and negative 401-digit
+JSON integers with ConfigSyncError before creating adapter storage.
+
+A controlled POSIX temporary path reproduces the CI entropy false positive in local
+bindings. The regression now accepts that private path while rejecting token-like
+non-path strings and recognizable credentials embedded in an absolute path.

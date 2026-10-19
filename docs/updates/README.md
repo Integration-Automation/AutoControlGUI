@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261019-22 | 2026-10-19 | Keep sync validation portable and typed for paths and numeric bounds | #bugfix #config-sync #validation | [2026-10](2026-10.md) |
 | U-20261019-21 | 2026-10-19 | Capture six causal source adapters and publish inert native profiles | #done #config-sync #adapters #C3 | [2026-10](2026-10.md) |
 | U-20261019-20 | 2026-10-19 | Complete hash-verified local asset generations | #done #config-sync #assets #C3 | [2026-10](2026-10.md) |
 | U-20261019-19 | 2026-10-19 | Durable peer controls and atomic local full-resync adoption | #done #config-sync #C2 | [2026-10](2026-10.md) |
@@ -403,7 +404,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 67 |
+| [2026-10.md](2026-10.md) | 2026-10 | 68 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

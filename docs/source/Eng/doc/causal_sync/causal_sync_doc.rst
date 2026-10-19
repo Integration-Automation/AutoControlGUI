@@ -480,3 +480,11 @@ definition containing a password field is masked even when its value is a refere
 so candidate generation excludes that action rather than reconstruct an incomplete
 apply/resolve operation. Private reference descriptors and publication commands can
 remain reproducible. No redacted value is substituted with a working credential.
+
+Native numeric definitions check supported ranges before finite conversion.
+Extreme JSON integers fail with ConfigSyncError before adapter storage is opened.
+
+Private absolute local path bindings may contain high-entropy names. Only that
+heuristic is exempted for those private paths; recognized credential formats, sensitive
+binding names and known resolved-secret values remain refused. Portable data and the
+shared secret scanner are unchanged.

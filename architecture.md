@@ -423,10 +423,10 @@ Six dependency-free source adapters capture selected scripts, locator repositori
 hotkey/trigger metadata, address-book entries and JSON settings. A lazy owned SQLite
 ledger retains concurrent heads, source baselines and immutable operation receipts per
 endpoint/account/origin/epoch/profile/domain. Incoming data is validated before the
-transaction; cancellation rolls back the complete batch. Explicit reviewed head sets
+transaction, including numeric ranges before finite conversion; cancellation rolls back the complete batch. Explicit reviewed head sets
 gate resolution. Received profiles never mutate active sources or register callbacks.
 SyncBindings carries named vault/local references; only explicit local scalar bindings
-are resolved, and vault values are never read. Complete native-format profiles publish
+are resolved (absolute path entropy is not a credential classification), and vault values are never read. Complete native-format profiles publish
 through the verified asset generation layer with hotkeys/triggers disabled. Four private
 AC/MCP/Builder commands use the same lazy descriptor factory and live root/cancellation
 checks. GUI preferences, transport/outbox/full-resync coordination and Sync UI remain C3.
