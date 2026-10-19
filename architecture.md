@@ -55,8 +55,15 @@ The SQLite outbox binds endpoint/account/device identity, preserves exact prepar
 requests, schedules bounded retries and checks lease ownership before publishing
 results. Cancellation and hard signals keep edits durable. Pure merge/peer-state
 adapters and private local enqueue/status share API/AC/MCP/Builder surfaces; they
-make no network requests or configuration changes. C2 still owns HTTP causal
-integration, authoritative peer acknowledgements/collection and full resync.
+make no network requests or configuration changes. CausalBucket snapshots and
+CausalConfigStore bind server-assigned change revisions, peer epochs and explicit
+actor transitions to the same atomic CAS/receipt transaction. Dedicated version-three
+/causal routes reject malformed membership, forgotten alternatives and obsolete
+epochs. All active peers must acknowledge a deletion before payload collection;
+permanent minimal fences retain its causal floor. Plain writes and reads refuse
+upgraded accounts. Existing private store commands also accept causal JSON with
+an explicit transient _actor. Automatic HTTP-client/outbox/full-resync orchestration
+remains C2 work; shared-secret protection remains service-wide.
 
 Persistent configuration uses a shared wire contract and lazy per-operation
 SQLite connections. One transaction checks the account base revision, replaces

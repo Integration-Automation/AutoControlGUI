@@ -1237,6 +1237,9 @@ from je_auto_control.utils.config_sync.store import (
     ConfigRevisionConflict, ConfigStore, ConfigStoreError, ConfigStoreFull,
 )
 from je_auto_control.utils.config_sync.versions import MergeDecision, SyncConflict, SyncEntry, merge_entries
+from je_auto_control.utils.config_sync.causal_models import CausalConflict, DeletionFence, SyncActor
+from je_auto_control.utils.config_sync.causal_state import CausalBucket
+from je_auto_control.utils.config_sync.causal_store import CausalConfigStore
 from je_auto_control.utils.config_sync.peers import FullResyncRequired, SyncPeer, SyncPeers
 from je_auto_control.utils.config_sync.outbox import (
     SyncDrainResult, SyncLocalIdentity, SyncOperation, SyncOutbox, SyncRetryPolicy,
@@ -1334,6 +1337,7 @@ def start_autocontrol_gui(*args, **kwargs):
     return _impl(*args, **kwargs)
 
 __all__ = [
+    "CausalBucket", "CausalConfigStore", "CausalConflict", "DeletionFence", "SyncActor",
     "MergeDecision", "SyncConflict", "SyncEntry", "merge_entries", "FullResyncRequired", "SyncPeer", "SyncPeers",
     "SyncDrainResult", "SyncLocalIdentity", "SyncOperation", "SyncOutbox", "SyncRetryPolicy",
     "ConfigBucket", "ConfigSyncClient", "ConfigSyncError", "ConfigStore",

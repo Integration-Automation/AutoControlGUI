@@ -2,9 +2,9 @@
 ================================================================
 
 實驗性基礎元件提供因果 entry 判斷、可序列化 peer ledger 與持久化本機重送佇列。
-目前 HTTP client 仍使用既有時間戳合併；自動因果 client／server 整合、
-依確認版本回收刪除內容與完整重同步工作流程仍保留在 C2。
-以下命令不連線伺服器，也不套用設定。
+目前 HTTP client 仍使用既有時間戳合併；HTTP client／outbox 自動整合與本機
+完整重同步協調仍保留在 C2。以下因果設定庫與獨立 HTTP 協定已驗證裝置確認及
+刪除回收；本機命令不連線伺服器，也不套用設定。
 
 Entry 與明確衝突
 ----------------------------------------------------------------
@@ -46,7 +46,8 @@ Peer 確認與 epoch
 
 ``can_collect(deletion_revision)`` 只判斷資格：已提交的正版本必須經所有有效 peer 確認，
 沒有有效 peer 或版本為零均為 false，不會移除資料。
-``to_dict/from_dict`` 保留 ledger 並拒絕重複 ID；與伺服器正式版本及刪除回收的接線仍待完成。
+``to_dict/from_dict`` 保留 ledger 並拒絕重複 ID。``CausalConfigStore`` 依已提交 ledger
+驗證這些轉換；單純轉換呼叫者提供的 peer-state 不會改變正式確認或裝置成員狀態。
 
 持久化操作與重送
 ----------------------------------------------------------------
@@ -106,3 +107,61 @@ pending 檢視為追加順序的有界前段（1–1000 筆、序列化資料最
 
 ``python -m examples.causal_sync`` 只使用暫存檔案與受控 callback，展示衝突保留、明確解決、
 peer epoch 及相同請求重送，HTTP／裝置呼叫為零；這不代表遠端收斂或真機驗收。
+
+伺服器因果設定庫與第三版協定
+----------------------------------------------------------------
+
+``CausalConfigStore(path)`` 與 ``ConfigStore`` 共用延後開啟的 SQLite、帳號容量、
+原子 CAS 與持久化歷史收據。``get(user_id)`` 回傳封存的 ``CausalBucket``；
+未知帳號是 revision 為零的空快照。可辨識的舊 bucket 轉換時不會讓舊 tombstone
+因時間到期而消失；不透明的根欄位要求明確遷移，避免無聲遺失。
+
+編輯前先明確註冊完整快照::
+
+    from je_auto_control import CausalConfigStore, SyncActor
+
+    store = CausalConfigStore("config-sync.sqlite3")
+    state = store.get("alice")
+    peers = state.peers
+    peer = peers.register("desktop", full_revision=state.revision)
+    revision = store.commit(
+        "alice", state.with_peers(peers), base_revision=state.revision,
+        operation_id="register-desktop",
+        actor=SyncActor("desktop", peer.epoch, "full_sync", revision=state.revision))
+
+``SyncActor`` 模式為 edit、full_sync、ack、retire、collect。完整同步必須保留現有
+全部資料並確認精確的 base 快照；既有裝置以新 epoch 明確重新加入。其餘操作必須
+符合活躍裝置的 epoch。只有 actor 能提高自己的確認版本，且不可確認未來版本；
+退休需指定單一目標。中繼資料操作不能編輯值，伺服器會核對整份 ledger 是否只包含
+該次 actor 允許的轉換。
+
+``with_entries`` 保存全部非支配替代值；``conflicts`` 包含所有衝突選項及最小刪除
+憑證，``live_entries`` 排除有歧義與已刪除的鍵。新修改必須來自 actor origin、
+增加自己的計數且不能捏造其他來源的觀察版本。交易禁止遺漏衝突選項、同一修改
+更換 payload 或偽造伺服器指派的 change revision。
+
+``collect()`` 只提出回收提案：未衝突的 tombstone 必須有正值的伺服器提交版本，
+而且所有活躍裝置都已確認。以 ``SyncActor(origin, epoch, "collect")`` 提交時，
+伺服器依已提交狀態重新驗證。永久 ``DeletionFence`` 保留鍵、版本向量、origin、
+操作 ID 與刪除版本，但不保留舊值。重啟後舊快照仍被支配；並行修改會顯示衝突。
+明確復原需觀察刪除版本下限與其他衝突。沒有時間到期或推測退休。
+
+經驗證的 ``GET /config/{user_id}/causal`` 對新帳號也回傳 version 3 與 bucket。
+``PUT`` 僅接受 version、base_revision、operation_id、bucket；提交 bucket 內需加
+``_actor: actor.to_dict()``，驗證後不會把 actor 存成帳號資料。快照／刪除憑證的
+schema 為第一版，既有 entry／outbox wire 格式保持相容。
+
+回應包含 version 3、該次操作的收據 revision 與最新已提交 bucket。歷史相同請求
+可能回傳較舊收據與較新 bucket。過期或重用請求回 409；失效裝置回 409，code 為
+full_resync_required；格式錯誤回 400。共用秘密與讀取 body 前的大小限制仍生效；
+帳號只是服務共用驗證之下的 namespace，並沒有新增每帳號登入。
+
+升級後，舊 typed／HTTP 讀取與普通條件／盲寫都拒絕該帳號，避免丟棄因果資料；
+已提交的歷史相同收據仍可在不修改內容的情況下回傳原版本。沒有自動降級。
+獨立路由讓不支援的舊伺服器無法把因果資料當成不透明舊設定接受。
+
+既有私有 ``AC_config_store_get``／``AC_config_store_commit`` 與對應 MCP／Builder
+Data 命令以第三版讀寫因果快照；提交 bucket 必須含明確且暫存的 _actor。
+路徑限制、DRIVE 與開始前取消仍生效。新建因果帳號需使用上例的 CausalBucket。
+命令只保存資料，不執行腳本或啟用觸發器；outbox 自動投遞、有界 HTTP 重合併
+與本機完整重同步套用仍是 C2 待辦。

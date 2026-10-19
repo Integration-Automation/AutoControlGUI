@@ -13,6 +13,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Experimental CausalBucket/CausalConfigStore and a dedicated authenticated version-three
+  /config/{user_id}/causal endpoint preserve concurrent alternatives, validate explicit
+  actor/peer/epoch transitions and collect acknowledged deletion payloads while retaining
+  permanent causal fences. Upgraded accounts reject plain readers/writers. Historical
+  identical requests remain idempotent. Existing private AC/MCP/Builder store commands
+  accept causal JSON with _actor; automatic client/outbox orchestration remains pending.
+
 - Experimental causal entry/peer models and a local SQLite sync outbox preserve
   concurrent alternatives, explicit resolution, acknowledgement eligibility and
   retirement epochs. Durable endpoint/account-scoped operation identity and frozen

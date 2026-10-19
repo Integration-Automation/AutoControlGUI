@@ -66,6 +66,14 @@ class SyncEntry:
         """Section and entry ID jointly identify the merge domain."""
         return self.section, self.entry_id
 
+    @property
+    def change_id(self) -> str:
+        """Identify causal change metadata independently of payload reclamation or wire ordering."""
+        self.to_dict()
+        metadata = {"section": self.section, "entry_id": self.entry_id, "version": self.version,
+                    "operation_id": self.operation_id, "origin": self.origin, "is_deleted": self.is_deleted}
+        return sha256(_encoded(metadata).encode("ascii")).hexdigest()
+
     def _wire(self) -> dict[str, object]:
         return {"schema_version": 1, "section": self.section, "entry_id": self.entry_id,
                 "value": self.value, "version": self.version, "operation_id": self.operation_id,

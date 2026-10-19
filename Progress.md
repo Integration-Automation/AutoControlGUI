@@ -13,7 +13,7 @@
 `TODO` — 真機與付費 API 驗收暫緩，待明確恢復後執行；相關項目保留待驗證。
 
 `WIP` — 改版仍缺以下內容；原生平台與正式環境驗收缺口另列於後。
-計畫 C 仍缺 C2 的 HTTP client 因果合併／CAS 重試與 outbox 整合、伺服器 peer ack／刪除回收與 full-resync 接線，以及 C3（設定／資產 adapter 與同步 UI）。
+計畫 C 仍缺 C2 的 HTTP client 因果合併／有界 CAS 重試、outbox 自動投遞與本機 full-resync 協調，以及 C3（設定／資產 adapter 與同步 UI）。
 計畫 D（Wayland）、E（Android／iOS）、G（MCP 逐步揭露）、H（型別深化與總驗收）尚未開始。F 還缺：
 
 - **Remote Desktop 與 Script Builder 仍在啟動時建立**（預設開啟），啟動時間 2.6–2.7 秒裡大半是它們與門面匯入。

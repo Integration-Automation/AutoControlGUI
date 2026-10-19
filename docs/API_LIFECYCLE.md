@@ -104,8 +104,14 @@ Causal primitives (`SyncEntry`, `SyncConflict`, `MergeDecision`, `merge_entries`
 `SyncDrainResult`, `SyncLocalIdentity`, `SyncOutbox`) are experimental. Entry,
 peer and queue wire schemas start at version one. Pure supplied-data operations
 are observable; private outbox commands require DRIVE and path confinement.
-These local APIs do not automatically switch the HTTP client to causal merging
-or establish server-authoritative deletion/full-resync behavior.
+CausalBucket, CausalConfigStore, SyncActor, CausalConflict and DeletionFence are
+also experimental. Account snapshot/fence wire schemas are version one; dedicated
+HTTP /causal envelopes are version three. Actor metadata is transient _actor data
+inside submitted buckets. Server transactions validate membership, acknowledgements,
+retirement/full-sync epochs and deletion collection. Existing store AC/MCP/Builder
+commands also accept causal snapshots. Upgraded accounts refuse plain reads/writes;
+historical identical receipts still return their original revision. Automatic
+HTTP-client/outbox integration and local full-resync orchestration remain pending.
 
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.

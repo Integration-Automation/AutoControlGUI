@@ -19,14 +19,14 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,144 |
-| 程式碼總行數 | 170,799 |
+| Python 模組總數（含周邊子專案） | 1,151 |
+| 程式碼總行數 | 171,461 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 797 |
-| 套件門面 `__all__` 公開名稱數 | 1,333 |
+| 套件門面 `__all__` 公開名稱數 | 1,338 |
 | GUI 分頁數（`main_widget` 註冊） | 48 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 697 |
-| `test_*.py` 測試檔／測試函式 | 793 / 8,352 |
+| `test_*.py` 測試檔／測試函式 | 795 / 8,368 |
 | 範例腳本 | 34 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -92,7 +92,7 @@ USB/IP 協定、Prometheus 指標），以維持這條輕相依基線。
 | 模式 | 落點 | 說明 |
 | --- | --- | --- |
 | **Strategy** | `wrapper/platform_wrapper.py` | 依 `sys.platform` 只匯入當前 OS 的 `keyboard`／`mouse`／`screen`／`recorder` 實作；Linux 再細分 Wayland／X11，Wayland 後端不可用時自動退回 XWayland 並記警告。新增平台不需要改 wrapper。 |
-| **Facade** | `je_auto_control/__init__.py` | 把 1,333 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
+| **Facade** | `je_auto_control/__init__.py` | 把 1,338 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
 | **Command** | `utils/executor/action_executor.py` | `Executor.event_dict` 是字串 → callable 的分派表；JSON 動作檔即指令序列，因此可錄製、序列化、重播、簽章。 |
 | **Observer** | `utils/callback/`、`utils/observer/`、`utils/triggers/` | 動作完成後觸發回呼；畫面出現／消失／變化與外部事件（webhook／IMAP／檔案）驅動腳本。 |
 | **Template Method** | `utils/generate_report/` | HTML／JSON／XML 三個產生器共用「收集紀錄 → 格式化 → 寫檔」骨架，各自實作渲染。 |
@@ -154,7 +154,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `je_auto_control/__init__.py` | 2,037 | **套件門面**。集中匯入並再匯出 1,333 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
+| `je_auto_control/__init__.py` | 2,041 | **套件門面**。集中匯入並再匯出 1,338 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
 | `je_auto_control/__main__.py` | 106 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
 | `je_auto_control/cli.py` | 444 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`／`--journal`）、`journal`（依 run 篩選與有界遮罩快照）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`。所有子命令延遲匯入，確保不碰 Qt。 |
 | `je_auto_control/api/__init__.py` | 22 | 版本化整合進入點。 |
@@ -515,12 +515,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 21,293 行。
+> 6 個套件、約 21,951 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 418 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
-| `utils/config_sync/` | 1,652 | 持久化設定與條件交易：`contract.py` 管理有限 JSON 與協定例外；`store.py` 以 SQLite 原子比較版本／記錄重送收據；`routes.py` 提供第二版 HTTP 與明確盲寫相容；`commands.py` 共用 AC／MCP／Builder；`client.py` 條件提交，另有因果模型、peer ledger 與本機 SQLite outbox；HTTP 因果接線仍待 C2。 |
+| `utils/config_sync/` | 2,310 | 持久化設定與條件交易：`contract.py` 管理有限 JSON 與協定例外；`store.py` 以 SQLite 原子比較版本／記錄重送收據；`routes.py` 提供第二版 HTTP 與明確盲寫相容；`commands.py` 共用 AC／MCP／Builder；`client.py` 條件提交，另有因果模型、peer ledger 與本機 SQLite outbox；第三版 /causal 交易已接上確認／退休／回收與刪除憑證；client／outbox 整合仍待 C2。 |
 | `utils/device_matrix/` | 143 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 13,256 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,816 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
@@ -855,23 +855,30 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cv2_utils/template_detection.py` | 182 | Locate a template image on screen, in the coordinates the mouse takes. |
 | `utils/cv2_utils/video_recording.py` | 76 | Internal image/capture utilities. |
 
-#### `utils/config_sync/`（1,652 行）— 持久化、因果模型與本機重送
+#### `utils/config_sync/`（2,310 行）— 持久化、因果模型與本機重送
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/config_sync/__init__.py` | 36 | 設定、因果模型與本機 outbox 的無頭匯出；HTTP 整合範圍明確分開。 |
+| `utils/config_sync/__init__.py` | 41 | 設定、因果模型與本機 outbox 的無頭匯出；HTTP 整合範圍明確分開。 |
 | `utils/config_sync/client.py` | 348 | 既有 HTTP／第二版 CAS 與時間戳合併，尚未自動採用因果 outbox。 |
 | `utils/config_sync/contract.py` | 55 | 共用有限 JSON、識別碼／版本與平坦例外契約。 |
 | `utils/config_sync/database.py` | 49 | 延後解析路徑、按操作持有與釋放的可選 SQLite 連線。 |
-| `utils/config_sync/store.py` | 150 | bucket CAS 交易、歷史操作收據、帳號容量與明確盲寫相容。 |
-| `utils/config_sync/routes.py` | 73 | 可選 signaling 的私有第二版設定路由與專用 commit 路徑。 |
-| `utils/config_sync/commands.py` | 27 | 本機設定庫 get／commit 共用 AC／MCP／Builder 轉接。 |
-| `utils/config_sync/versions.py` | 147 | 因果版本向量、雙方衝突保存、封存 JSON 與明確觀察後的解決。 |
+| `utils/config_sync/store.py` | 175 | bucket CAS 交易、歷史操作收據、帳號容量與明確盲寫相容。 |
+| `utils/config_sync/routes.py` | 79 | 可選 signaling 的私有第二版設定路由、專用 commit 與第三版路由註冊；舊讀取拒絕因果帳號。 |
+| `utils/config_sync/commands.py` | 37 | 本機設定庫 v2／因果 v3 get／commit 共用 AC／MCP／Builder，保留根目錄與取消檢查。 |
+| `utils/config_sync/versions.py` | 155 | 因果版本向量、雙方衝突保存、封存 JSON 與明確觀察後的解決。 |
 | `utils/config_sync/peers.py` | 132 | 可序列化 peer 確認／退休／full-resync epoch 與刪除回收資格判斷。 |
 | `utils/config_sync/outbox_models.py` | 193 | 操作身分／來源封存、端點正規化、重試預算與投遞報告。 |
 | `utils/config_sync/outbox_schema.py` | 46 | 辨識自有 outbox SQLite application/schema，拒絕修改外來資料庫。 |
 | `utils/config_sync/outbox.py` | 317 | 本機持久化佇列、固定準備請求、有界退避／取消與 lease 擁有權。 |
 | `utils/config_sync/causal_commands.py` | 79 | 純資料合併／peer 轉換與私有佇列 enqueue／status；不連線或套用設定。 |
+| `utils/config_sync/causal_models.py` | 145 | 明確 actor、完整衝突 alternatives 與不保留舊 payload 的永久刪除憑證。 |
+| `utils/config_sync/causal_merge.py` | 68 | 確定性多值 frontier、因果支配、操作分叉拒絕與刪除憑證合併。 |
+| `utils/config_sync/causal_state.py` | 137 | 封存帳號快照、獨立 peer ledger、完整衝突視圖與確認後的 payload 回收。 |
+| `utils/config_sync/causal_legacy.py` | 41 | 可辨識舊 bucket 的無時間到期轉換；不透明欄位要求明確遷移。 |
+| `utils/config_sync/causal_validation.py` | 113 | 交易內驗證 actor／epoch／確認、禁止丟失替代值並由伺服器分配 change revision。 |
+| `utils/config_sync/causal_store.py` | 47 | 共用 C1 CAS／收據交易的第三版因果設定庫與獨立請求快照。 |
+| `utils/config_sync/causal_routes.py` | 53 | 可選 signaling 的獨立第三版 GET／PUT 路由與 full-resync 拒絕回應。 |
 
 #### `utils/codegen/`（1,094 行）— 動作列表與日誌候選產碼
 
@@ -1086,7 +1093,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，只需要 PySide6
 | `scripts/dev_release.py` | 只用標準函式庫的發佈輔助腳本 | dev 通道（PyPI 的 `je_auto_control_dev`）的版本與比對：`prepare` 把 `dev.toml` 寫成 `pyproject.toml`，版本取 PyPI 最新一版加一個 patch（`dev.toml` 的版本只是下限，不回寫 repo）；`changed dist` 把建好的 wheel 跟 PyPI 最新一版逐檔比對，內容沒變就不上傳。只給 `dev.yml` 的 `publish-dev` job 與拋棄式的 checkout 用，因為 `prepare` 會蓋掉 `pyproject.toml`。 |
 | `docs/` | Sphinx（`API`／`Eng`／`Zh`／`getting_started`） | Read the Docs 文件。 |
 | `architecture_diagram/` | drawio + png | 既有的架構圖原始檔。 |
-| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 793 個 `test_*.py`／8,352 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
+| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 795 個 `test_*.py`／8,368 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
 
 ---
 
@@ -1173,7 +1180,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/remote_desktop/` | 56 | 13,256 |
 | `utils/executor/` | 8 | 9,734 |
 | `utils/usb/` | 17 | 4,816 |
-| `je_auto_control/`（頂層 3 檔） | 3 | 2,587 |
+| `je_auto_control/`（頂層 3 檔） | 3 | 2,591 |
 | `utils/accessibility/` | 14 | 3,143 |
 | `wrapper/` | 19 | 4,099 |
 | `windows/` | 23 | 2,154 |
@@ -1188,6 +1195,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 738 | 64,352 |
-| **總計** | **1,137** | **170,712** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 745 | 65,010 |
+| **總計** | **1,144** | **171,374** |
 

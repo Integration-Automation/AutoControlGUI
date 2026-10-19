@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261019-17 | 2026-10-19 | Validate causal server transitions and retain deletion fences | #done #config-sync #causal | [2026-10](2026-10.md) |
 | U-20261019-16 | 2026-10-19 | Add causal review models and durable local sync queues | #done #config-sync #causal | [2026-10](2026-10.md) |
 | U-20261019-15 | 2026-10-19 | Persist config buckets with atomic revisions and durable operation receipts | #done #config-sync #sqlite | [2026-10](2026-10.md) |
 | U-20261019-14 | 2026-10-19 | Generate sealed observed-path script candidates from selected journal runs | #done #journal #codegen | [2026-10](2026-10.md) |
@@ -398,7 +399,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 62 |
+| [2026-10.md](2026-10.md) | 2026-10 | 63 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

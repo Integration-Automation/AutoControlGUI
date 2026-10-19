@@ -4,8 +4,9 @@ from typing import Callable, cast
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 
 from je_auto_control.utils.config_sync.contract import ConfigSyncError, _version_two
+from je_auto_control.utils.config_sync.causal_routes import register_causal_routes
 from je_auto_control.utils.config_sync.store import (
-    ConfigRevisionConflict, ConfigStore, ConfigStoreError, ConfigStoreFull, _identifier, _parse_bucket,
+    ConfigRevisionConflict, ConfigStore, ConfigStoreError, ConfigStoreFull, _identifier, _parse_bucket, _require_plain,
 )
 
 _RESPONSES = {
@@ -23,15 +24,20 @@ def register_config_routes(app: FastAPI, store: ConfigStore, secret_dep: Callabl
                            allow_legacy_writes: bool = False) -> None:
     """Register private bucket reads and CAS writes; database access stays lazy until an authorized request."""
     auth = [Depends(secret_dep)]
+    register_causal_routes(app, store, secret_dep)
 
     @app.get("/config/{user_id}", responses=_RESPONSES, dependencies=auth)
     def get_config(user_id: str, response: Response) -> dict[str, object]:
         try:
             body = store.get_document(user_id)
+            _require_plain(body)
         except ConfigSyncError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         except ConfigStoreError as error:
             raise HTTPException(status_code=503, detail="config storage unavailable") from error
+        except ConfigRevisionConflict as error:
+            raise HTTPException(status_code=409, detail={"message": str(error),
+                                                         "revision": error.current_revision}) from error
         if body is None:
             raise HTTPException(status_code=404, detail="no bucket")
         response.headers["X-Autocontrol-Config-Protocol"] = "2"

@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Callable, Optional, cast
 
 from je_auto_control.utils.config_sync.client import ConfigBucket, ConfigSyncError
 from je_auto_control.utils.config_sync.database import SyncDatabase
@@ -55,6 +55,7 @@ class ConfigStore:
     def get(self, user_id: str) -> Optional[ConfigBucket]:
         """Read an independent typed bucket at its server-committed revision, or None."""
         body = self.get_document(user_id)
+        _require_plain(body)
         return ConfigBucket.from_dict(body) if body is not None else None
 
     def get_document(self, user_id: str) -> Optional[dict[str, object]]:
@@ -76,10 +77,14 @@ class ConfigStore:
         content or base raises ConfigRevisionConflict, even if the base is current.
         The input bucket is never mutated and its revision does not choose the next revision.
         """
+        body = _bucket_body(user_id, bucket)
+        return self._commit_document(user_id, body, base_revision, operation_id, _plain_document)
+
+    def _commit_document(self, user_id: str, body: str, base_revision: int, operation_id: str,
+                         transform: Callable[[Optional[dict[str, object]], int], str]) -> int:
         _identifier(user_id, "user_id")
         _identifier(operation_id, "operation_id")
         _revision(base_revision)
-        body = _bucket_body(user_id, bucket)
         digest = sha256(body.encode("ascii")).hexdigest()
         with self._database.connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -94,7 +99,14 @@ class ConfigStore:
                     raise ConfigRevisionConflict(current, "operation_id already identifies a different config request")
                 connection.execute("COMMIT")
                 return int(receipt[2])
-            revision = self._write(connection, user_id, body, current, base_revision)
+            if current != base_revision or current >= _MAX_REVISION:
+                raise ConfigRevisionConflict(current)
+            row = connection.execute("SELECT body FROM config_buckets WHERE user_id = ?", (user_id,)).fetchone()
+            previous = json.loads(row[0]) if row else None
+            if previous is not None:
+                previous["revision"] = current
+            stored = transform(previous, current + 1)
+            revision = self._write(connection, user_id, stored or body, current, base_revision)
             connection.execute("INSERT INTO config_operations VALUES (?, ?, ?, ?, ?)",
                                (user_id, operation_id, base_revision, digest, revision))
             connection.execute("COMMIT")
@@ -110,9 +122,12 @@ class ConfigStore:
         if body.get("user_id", user_id) != user_id:
             raise ConfigSyncError("bucket user_id mismatch")
         encoded = _encoded(dict(body, user_id=user_id))
+        _require_plain(body)
         with self._database.connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             current = _current_revision(connection, user_id)
+            row = connection.execute("SELECT body FROM config_buckets WHERE user_id = ?", (user_id,)).fetchone()
+            _require_plain(json.loads(row[0]) if row else None)
             revision = self._write(connection, user_id, encoded, current, current)
             connection.execute("COMMIT")
             return revision
@@ -131,6 +146,16 @@ class ConfigStore:
 def _current_revision(connection: Connection, user_id: str) -> int:
     row = connection.execute("SELECT revision FROM config_buckets WHERE user_id = ?", (user_id,)).fetchone()
     return int(row[0]) if row is not None else 0
+
+
+def _require_plain(body: Optional[dict[str, object]]) -> None:
+    if body is not None and body.get("kind") == "autocontrol.causal":
+        raise ConfigRevisionConflict(cast(int, body.get("revision", 0)), "causal protocol required for this account")
+
+
+def _plain_document(previous: Optional[dict[str, object]], _revision_number: int) -> str:
+    _require_plain(previous)
+    return ""
 
 
 def _initialize(connection: Connection) -> None:

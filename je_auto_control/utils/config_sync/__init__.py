@@ -9,8 +9,9 @@ X-Signaling-Secret gate. Bucket account names are namespaces, not separate login
 SyncEntry/merge_entries preserve concurrent alternatives using version vectors;
 SyncPeers models explicit acknowledgements and retirement/full-resync epochs.
 SyncOutbox persists isolated edits and prepared requests with bounded retry leases.
-These local primitives do not yet replace the HTTP client's timestamp merge or
-automatically wire peer acknowledgements/collection into the server. The current
+CausalConfigStore and the dedicated version-three /causal route validate peer
+acknowledgements, full-resync epochs and payload collection with permanent fences.
+The HTTP client's timestamp merge and outbox integration remain separate. The current
 merge_buckets helper retains its legacy last_modified and time-bounded tombstones.
 Synchronization stores data without executing scripts or enabling triggers.
 """
@@ -21,6 +22,9 @@ from je_auto_control.utils.config_sync.client import (
 from je_auto_control.utils.config_sync.store import (
     ConfigRevisionConflict, ConfigStore, ConfigStoreError, ConfigStoreFull,
 )
+from je_auto_control.utils.config_sync.causal_models import CausalConflict, DeletionFence, SyncActor
+from je_auto_control.utils.config_sync.causal_state import CausalBucket
+from je_auto_control.utils.config_sync.causal_store import CausalConfigStore
 from je_auto_control.utils.config_sync.versions import MergeDecision, SyncConflict, SyncEntry, merge_entries
 from je_auto_control.utils.config_sync.peers import FullResyncRequired, SyncPeer, SyncPeers
 from je_auto_control.utils.config_sync.outbox import (
@@ -28,6 +32,7 @@ from je_auto_control.utils.config_sync.outbox import (
 )
 
 __all__ = [
+    "CausalBucket", "CausalConfigStore", "CausalConflict", "DeletionFence", "SyncActor",
     "MergeDecision", "SyncConflict", "SyncEntry", "merge_entries", "FullResyncRequired", "SyncPeer", "SyncPeers",
     "SyncDrainResult", "SyncLocalIdentity", "SyncOperation", "SyncOutbox", "SyncRetryPolicy",
     "ConfigRevisionConflict", "ConfigStore", "ConfigStoreError", "ConfigStoreFull",

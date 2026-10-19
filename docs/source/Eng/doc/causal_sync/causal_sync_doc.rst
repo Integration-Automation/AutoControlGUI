@@ -3,9 +3,10 @@ Causal review and durable local outboxes
 
 These experimental primitives provide causal entry decisions, a serializable
 peer ledger and a durable local retry queue. The current HTTP client still uses
-its legacy timestamp merge; automatic causal client/server integration,
-acknowledgement-based collection and the full-resync workflow remain separate
-C2 work. The commands below never contact a server or apply configuration.
+its legacy timestamp merge; automatic HTTP client/outbox integration and local
+full-resync orchestration remain separate C2 work. The authoritative store and
+dedicated HTTP protocol below validate peer acknowledgements and deletion collection.
+Local commands do not contact a server or apply configuration.
 
 Entries and explicit conflicts
 ----------------------------------------------------------------
@@ -51,8 +52,9 @@ confirmed revision. The ledger never infers retirement from elapsed time.
 ``can_collect(deletion_revision)`` only tests eligibility. A positive committed
 deletion revision must be acknowledged by every active peer; no active peers and
 revision zero both return false. It does not remove data. ``to_dict/from_dict``
-preserve ledger state and reject duplicate IDs; binding this state to authoritative
-server revisions and deletion collection is still pending.
+preserve ledger state and reject duplicate IDs. CausalConfigStore validates these
+transitions against the committed ledger; a supplied peer-state transform alone
+cannot change authoritative acknowledgement or membership.
 
 Durable operations and retry
 ----------------------------------------------------------------
@@ -128,3 +130,73 @@ drive these AC commands.
 to show conflict retention, explicit resolution, peer epochs and identical queued
 request retry with zero HTTP/device calls. This is local evidence, not remote
 convergence or native acceptance.
+
+Authoritative causal store and protocol
+----------------------------------------------------------------
+
+``CausalConfigStore(path)`` shares the lazy SQLite database, account capacity,
+atomic CAS and durable historical receipts with ``ConfigStore``. ``get(user_id)``
+returns a sealed ``CausalBucket``; an unknown account is an empty revision-zero
+snapshot. Recognized plain buckets convert without expiring old tombstones.
+Opaque root fields require explicit migration rather than silent loss.
+
+Register a complete snapshot explicitly before editing::
+
+    from je_auto_control import CausalConfigStore, SyncActor
+
+    store = CausalConfigStore("config-sync.sqlite3")
+    state = store.get("alice")
+    peers = state.peers
+    peer = peers.register("desktop", full_revision=state.revision)
+    revision = store.commit(
+        "alice", state.with_peers(peers), base_revision=state.revision,
+        operation_id="register-desktop",
+        actor=SyncActor("desktop", peer.epoch, "full_sync", revision=state.revision))
+
+``SyncActor`` modes are edit, full_sync, ack, retire and collect. Full sync must
+retain all current data and acknowledge the exact base snapshot; an existing peer
+explicitly rejoins at its next epoch. Other modes require an active matching epoch.
+Only the actor may acknowledge its own revision (never a future revision), and
+retirement names one explicit target. Metadata operations cannot edit values.
+The server validates the entire proposed ledger against that one transition.
+
+``with_entries`` retains all nondominated alternatives. ``conflicts`` lists every
+alternative, including compact deletion fences; ``live_entries`` excludes ambiguous
+and deleted keys. New changes require the actor origin, an advancing own counter
+and no invented observations of other origins. Commits cannot forget alternatives,
+reuse a change with different payload, or forge committed change revisions.
+
+``collect()`` proposes payload compaction only for unambiguous tombstones whose
+positive server commit revision every active peer has acknowledged. Commit with
+``SyncActor(origin, epoch, "collect")`` rechecks against authoritative state.
+``DeletionFence`` keeps key, version vector, origin, operation ID and deletion
+revision permanently, without the old value. Old snapshots remain dominated after
+restart; a concurrent edit becomes a visible conflict. Explicit restoration must
+observe the deletion floor and any conflicting alternatives. There is no clock
+expiry or inferred peer retirement.
+
+Authenticated ``GET /config/{user_id}/causal`` returns ``{version: 3, bucket: ...}``
+even for a new account. ``PUT`` accepts exactly version, base_revision,
+operation_id and bucket. Add ``_actor: actor.to_dict()`` inside the submitted bucket;
+it is validated and never persisted as account data. Snapshot/fence schemas remain
+version one, compatible with existing entry/outbox wire formats.
+
+The reply contains version 3, the operation's receipt revision and the latest
+committed bucket. An identical historical retry can return its older receipt with
+a newer bucket revision. Stale/reused requests return 409; obsolete peers return
+409 with code full_resync_required. Malformed data returns 400. Shared-secret and
+pre-body size guards apply before storage; account names remain namespaces under
+service-wide authentication. This endpoint does not introduce per-account logins.
+
+Once upgraded, old typed/HTTP reads and plain conditional/blind writes refuse the
+account rather than dropping causal metadata. Identical old committed receipts may
+still return their original revision without mutation. There is no automatic downgrade.
+The dedicated route ensures unsupported older servers cannot accept opaque causal data.
+
+Existing private ``AC_config_store_get`` and ``AC_config_store_commit`` (and matching
+MCP/Builder Data commands) use version 3 for causal snapshots; a commit's bucket
+contains the explicit transient _actor. Path confinement, DRIVE and pre-start
+cancellation remain in force. Starting a new causal account requires a CausalBucket
+snapshot, as shown above. These commands store data without running scripts or
+enabling triggers. Automatic outbox delivery, bounded HTTP rebasing and local
+full-resync adoption remain open C2 work.

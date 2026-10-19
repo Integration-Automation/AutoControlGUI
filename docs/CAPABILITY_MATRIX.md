@@ -66,8 +66,12 @@ Local causal/outbox primitives have controlled conflict/resolution, clock-skew,
 JSON type identity, peer acknowledgement/retirement, durable retry/prepare,
 namespace/epoch, cancellation, bounded views/backoff and concurrent/stale-lease
 tests, plus AC/MCP/Builder surfaces. The supplied-ledger collection check does
-not perform server collection. No HTTP causal convergence or full-resync
-integration is claimed by this stage.
+not perform server collection. The dedicated causal store and private version-three
+HTTP route now validate authoritative membership/epoch transitions, explicit peer
+acknowledgements and payload collection with permanent deletion fences. Tests cover
+stale CAS, historical retries, forbidden legacy overwrites, retained alternatives,
+fabricated acknowledgements, obsolete epochs and explicit restoration after GC.
+Automatic causal HTTP client/outbox convergence and local full-resync remain open.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**

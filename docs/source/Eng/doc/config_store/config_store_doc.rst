@@ -91,8 +91,11 @@ private operation. These commands store data; they never run synced scripts or
 enable triggers. MCP cancellation is checked before storage; a completed commit
 is not relabelled cancelled.
 
-Persistence and CAS do not replace causal merging, acknowledgement-based
-removal, offline outbox or asset adapters. The current merge helper still uses
-last-modified ordering and time-bounded tombstones. Those remaining features
-are tracked separately in Progress.md. Local tests use isolated files and a
-loopback server; they add no remote-machine or native-device acceptance claim.
+The separate CausalConfigStore and dedicated version-three /causal protocol
+validate peer acknowledgements, retirement/full-sync epochs and deletion payload
+collection with permanent causal fences. Upgraded accounts reject plain reads and
+writes; existing local store commands accept causal JSON with an explicit _actor.
+See :doc:`../causal_sync/causal_sync_doc`. The current HTTP client/merge helper
+retains last-modified ordering and time-bounded tombstones; automatic causal
+client/outbox integration and asset adapters remain in Progress.md. Local tests
+use isolated files and loopback servers, without remote-machine or native acceptance.

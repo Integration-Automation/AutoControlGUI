@@ -81,6 +81,9 @@ GET 保持 bucket 形狀並回傳實際提交版本，另附協定版本與 CAS 
 只儲存資料，不執行同步腳本或啟用觸發器。
 MCP 在儲存前檢查取消；交易完成後不再重標為取消。
 
-持久化與 CAS 不取代因果合併、peer 確認式刪除、離線 outbox 或資產 adapter。
-目前 merge helper 仍使用 last-modified 排序與限時 tombstone，其他工作保留在 Progress.md。
+獨立的 CausalConfigStore 與第三版 /causal 協定驗證 peer 確認、退休／完整同步 epoch，
+並在回收刪除 payload 後保留永久因果憑證。升級帳號拒絕普通讀寫；既有本機設定庫
+命令接受帶明確 _actor 的因果 JSON。參閱 :doc:`../causal_sync/causal_sync_doc`。
+目前 HTTP client／merge helper 仍使用 last-modified 排序與限時 tombstone；
+自動因果 client／outbox 整合及資產 adapter 保留在 Progress.md。
 本機驗證使用隔離檔案與 loopback server，不增加遠端機器或真機驗收聲明。
