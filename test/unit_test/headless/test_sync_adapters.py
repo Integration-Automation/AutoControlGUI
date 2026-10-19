@@ -365,8 +365,8 @@ def test_cancel_after_first_merge_rolls_back_heads_receipts_and_source_baselines
     adapter = ac.ScriptSyncAdapter(directory, ledger, paths=())
     adapter.snapshot()
     original = state_module.merge_head
-    def after_merge(*args):
-        result = original(*args)
+    def after_merge(*args, **kwargs):
+        result = original(*args, **kwargs)
         stop.set()
         return result
     monkeypatch.setattr(state_module, 'merge_head', after_merge)

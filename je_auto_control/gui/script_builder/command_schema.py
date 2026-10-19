@@ -133,6 +133,14 @@ def _add_self_healing_specs(specs: List[CommandSpec]) -> None:
 def _add_sync_adapter_specs(specs: List[CommandSpec]) -> None:
     profile = FieldSpec("profile", FieldType.JSON)
     specs.extend([
+        CommandSpec("AC_sync_workspace", "Data", "Coordinate Sync Workspace",
+                    fields=(FieldSpec("configuration", FieldType.JSON),
+                            FieldSpec("operation", FieldType.ENUM, optional=True, default="status",
+                                      choices=("status", "capture", "sync", "review", "resolve", "materialize",
+                                               "register", "ack", "retire", "collect", "full_resync")),
+                            FieldSpec("options", FieldType.JSON, optional=True)),
+                    description="Coordinate explicit sources and causal delivery; full resync prepares baselines. "
+                    "Received profiles remain inert until separately loaded."),
         CommandSpec("AC_sync_adapter_snapshot", "Data", "Capture Sync Definition Profile", fields=(profile,),
                     description="Read explicit real sources into persistent portable versions. No activation."),
         CommandSpec("AC_sync_adapter_apply", "Data", "Receive Sync Definition Versions",

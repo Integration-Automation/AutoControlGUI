@@ -91,7 +91,7 @@ status 提供完整數量、確認投遞版本與最多十筆已清理錯誤預�
 pending 檢視為追加順序的有界前段（1–1000 筆、序列化資料最多 16 MiB），總數仍完整。
 每個邏輯操作的 entry 資料最多 1 MiB。
 不序列化 client 認證或 HTTP header，已知解析後秘密值會拒絕；payload 應使用秘密參照。
-來源 adapter 說明見下方；工作區／資產協調仍列於 C3。
+來源 adapter 與協調說明見下方；資產整合仍列於 C3。
 
 命令與 Builder
 ----------------------------------------------------------------
@@ -253,12 +253,12 @@ blocked，直到明確恢復。有效 lease 排除第二個傳送者；取消與
 權威快照與 revision、記錄控制收據，並將待送舊編輯標成 retired。原始 wire 封存保留，
 不會在新 epoch 重播。本機交易失敗時保留全部舊狀態，重試相同固定請求。伺服器重設或
 未知世代會使用新的穩定 origin，並可採用較低 root revision。此處僅採用同步狀態；
-C3 的工作區／資產協調與同步 UI 仍待實作。
+來源基準協調見下方；C3 的資產整合與同步 UI 仍待實作。
 
 ``queue.request_control(...)`` 只持久化意圖，不發 HTTP；``control_status`` 檢視狀態；
 ``control_receipt(endpoint, user_id, operation_id)`` 回傳已確認的原始 revision 或 None。
 ``client.flush`` 先投遞未完成控制，再傳增量編輯，其報告包含兩者；原始 queue status／
-pending 計數只包含編輯。自有 outbox SQLite schema 1 驗證舊表格後原子遷移至 2；
+pending 計數只包含編輯。自有 outbox SQLite schema 1／2 驗證舊表格後原子遷移至 3；
 編輯與控制 wire schema 維持 1。精簡控制歷史只保存邏輯意圖與 revision，不累積完整快照。
 
 私有 ``AC_sync_peer_control``／``ac_sync_peer_control`` 與 Builder Data 表單接受 path、
@@ -329,7 +329,7 @@ source_root、target_root，回傳 JSON 結果。Builder Data 表單保留完全
     entries = adapter.snapshot()  # change_id -> SyncEntry，保留每個並行版本
 
 建構狀態不開啟資料庫；預設路徑依 ``AUTOCONTROL_SYNC_ADAPTER_STATE`` 或
-``~/.autocontrol/sync-adapters.sqlite3``。自有 SQLite schema 1 依 endpoint／帳號／
+``~/.autocontrol/sync-adapters.sqlite3``。自有 SQLite schema 2 依 endpoint／帳號／
 origin／epoch／profile／種類隔離資料。只有可攜來源指紋變動才新增操作。
 ``apply(entries)`` 先驗證整批，再以單一交易保存 heads／操作收據／來源基準，回傳
 stored／unchanged／conflicts／unresolved。接收資料不替換啟用中的來源、不註冊熱鍵或啟動
@@ -388,7 +388,7 @@ hotkeys／triggers／address_book／settings／workspace。Source 擇一使用�
 schema-1 熱鍵／觸發器陣列或一般設定物件。描述內含本機路徑與綁定值，必須保持私有；
 只有可攜 entries 才放上 wire。``python -m examples.sync_adapters`` 使用六種真實來源產生
 十二個暫存原生／中繼檔，不執行腳本、不註冊接收熱鍵／觸發器、不讀 vault、不連網。
-GUI 即時偏好套用、資產參照／傳輸、outbox 協調、完整重同步基準採用、明確原生載入、
+來源／outbox 與完整重同步基準協調見下方。GUI 即時偏好套用、資產參照／傳輸、明確原生載入、
 Sync UI 與 folder／clipboard／斷線回歸仍列於 Progress.md 的 C3。
 
 日誌沿用既有的保守秘密欄位政策：內嵌定義只要包含 password 欄位，即使值為參照也會遮罩，
@@ -436,3 +436,60 @@ JSON boolean、navigation_width 為 200–1200 的整數；不接受參照或未
 偏好。Capture 讀已保存值，接收版本不會重載執行中的視窗。專用 Sync UI 與即時偏好套用
 仍屬 C3 待辦。``python -m examples.sync_workspace`` 示範捕捉、未啟用發布與明確工作副本，
 不匯入 Qt、不呼叫網路／裝置／API，也不修改既有工作區。
+
+
+來源工作區協調
+----------------------------------------------------------------
+
+``SyncWorkspace(configuration, path_policy=None, cancelled=None)`` 延遲選取 1-7 種
+不同來源。建構只驗證即時路徑權限，不開來源檔案、憑證或 SQLite。私有設定使用 schema 1::
+
+    {
+      "schema_version": 1,
+      "endpoint": "https://sync.example",
+      "user_id": "alice",
+      "outbox_path": "workspace-outbox.sqlite3",
+      "profiles": [{"kind": "workspace", "state_path": "adapter-state.sqlite3",
+                    "source": {"path": "saved-gui.ini"}}]
+    }
+
+Profiles 沿用上述 source／profile_id／bindings 規則，不另帶 identity／schema_version。
+Outbox 提供 origin／epoch；每個 kind 固定綁定 state_path／profile_id，不同 kind 可共用
+adapter 資料庫。來源檔、adapter 狀態與 outbox 角色不可重疊。私有綁定與設定不傳上 wire。
+
+``capture()`` 不連網、不讀憑證，將可攜 heads 冪等排入持久佇列。每批最多 10,000 筆／
+16 MiB，整批成功或回滾。重啟先匯入待送 frontier，再觀察來源，保留 actor counter。
+``synchronize(options=...)`` 捕捉離線編輯、必要時註冊、在 GET 前優先重送結果不明的固定
+請求、投遞編輯並協調已驗證快照。全部七種領域與永久刪除憑證都在 cache／prepare／確認
+之前驗證。非法快照拋固定代碼的 SyncWorkspaceError；傳輸失敗保留待送工作。
+既有通用 CausalSyncClient 保留可選驗證，不改既有使用者的資料模型。
+
+WorkspaceSyncResult 包含 captured／delivered／pending／revision／conflicts／unresolved／state。
+Delivered 只計定義編輯；pending 包含編輯與控制。``status()`` 只讀本機中繼資料，
+不讀來源／憑證、不連網。短期 workspace lease 排除其他變更協調器；每次 RPC 前重查
+權限、取消及即時憑證參照。網路操作在來源捕捉前就記住宣告的秘密遮罩，短憑證也不可進入
+定義；純本機 capture 不查憑證。原生 INI 解析錯誤不保留可能含私有內容的來源行。
+
+``review(kind)`` 不觀察來源，只傳回既有 heads。``resolve(kind, entry_id, value,
+observed=change_ids, is_deleted=False)`` 依精確檢視集合建立並排入明確選擇。
+``materialize(target_root)`` 發布完整驗證且未啟用的版本；未完成重設、退休 peer、衝突
+或未解析參照都拒絕發布。不執行腳本、不啟用熱鍵／觸發器、不改目前偏好。
+
+``control(SyncControlRequest(...), options=...)`` 明確註冊、確認、回收、退休或完整重同步。
+來源指紋與持久 reset 意圖在同一 outbox 交易提交；只在成功收據確認後採用身分／cache 並
+退休舊待送編輯。每個新 adapter 世代只採用一次權威 frontier 與預先來源基準，未改動的
+舊檔不會重播退休編輯；結果不明期間的新來源變更仍會在之後捕捉。相同控制 ID 重送只回
+原始收據，不退休後來工作。舊版／外部 reset 或缺少相符基準的新來源選取以 missing_baseline
+拒絕，需建立新的協調完整重同步；已採用世代可在之後改選來源。
+自有 outbox schema 1／2 遷移至 3，adapter schema 1 遷移至 2，保留 heads、來源指紋、
+編輯 wire 與精簡控制收據；wire schemas 維持 1。
+
+私有 ``AC_sync_workspace``／``ac_sync_workspace``／Builder Data 接受 configuration、
+operation（預設 status）與可選 options；所有模式都需要 DRIVE／目前 roots。
+status／capture 不接受 options；review 使用 kind；resolve 使用 kind／entry_id／value／
+observed／is_deleted；materialize 使用 target_root。網路操作 sync 與 register／ack／collect／
+retire／full_resync 接受 secret_env／timeout_s／policy／max_rebases；控制另依規則接受
+operation_id／peer_id／discard_pending。
+``python -m examples.sync_workspace_http`` 以兩組真實暫存來源與 loopback HTTP 示範離線並行、
+精確解決、重啟、未啟用發布與退休編輯不重播。資產參照／傳輸、GUI 即時套用、明確原生載入、
+Sync UI 與 folder／clipboard／斷線回歸仍在 Progress.md；不代表真機或付費 API 驗收。

@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from je_auto_control.utils.config_sync.contract import ConfigStoreError
+from je_auto_control.utils.config_sync.workspace_schema import WORKSPACE_TABLES
 
 if TYPE_CHECKING:
     from sqlite3 import Connection
@@ -36,18 +37,21 @@ _CONTROL_RECEIPTS = (
 
 def initialize_outbox(connection: Connection) -> None:
     """Reject foreign/future databases before modifying tables; serialize first-use initialization."""
-    if _version(connection) == (_APPLICATION, 2):
+    if _version(connection) == (_APPLICATION, 3):
         return
     connection.execute("BEGIN IMMEDIATE")
     version = _version(connection)
-    if version == (_APPLICATION, 2):
+    if version == (_APPLICATION, 3):
         connection.execute("COMMIT")
         return
-    if version == (_APPLICATION, 1):
-        _require_version_one_tables(connection)
-        connection.execute(_CONTROL_TABLE)
-        connection.execute(_CONTROL_RECEIPTS)
-        connection.execute("PRAGMA user_version = 2")
+    if version in {(_APPLICATION, 1), (_APPLICATION, 2)}:
+        _require_owned_tables(connection, version[1])
+        if version[1] == 1:
+            connection.execute(_CONTROL_TABLE)
+            connection.execute(_CONTROL_RECEIPTS)
+        for statement in WORKSPACE_TABLES:
+            connection.execute(statement)
+        connection.execute("PRAGMA user_version = 3")
         connection.execute("COMMIT")
         return
     tables = connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
@@ -57,8 +61,10 @@ def initialize_outbox(connection: Connection) -> None:
         connection.execute(statement)
     connection.execute(_CONTROL_TABLE)
     connection.execute(_CONTROL_RECEIPTS)
+    for statement in WORKSPACE_TABLES:
+        connection.execute(statement)
     connection.execute(f"PRAGMA application_id = {_APPLICATION}")
-    connection.execute("PRAGMA user_version = 2")
+    connection.execute("PRAGMA user_version = 3")
     connection.execute("COMMIT")
 
 
@@ -67,19 +73,26 @@ def _version(connection: Connection) -> tuple[int, int]:
             connection.execute("PRAGMA user_version").fetchone()[0])
 
 
-def _require_version_one_tables(connection: Connection) -> None:
+def _require_owned_tables(connection: Connection, version: int) -> None:
     expected = {
         "sync_namespaces": {"endpoint", "user_id", "origin", "epoch", "confirmed_revision", "snapshot"},
         "sync_operations": {"sequence", "endpoint", "user_id", "operation_id", "wire", "digest", "status", "attempts",
                             "next_attempt", "last_attempt", "prepared", "lease_owner", "lease_until", "error",
                             "delivered_revision"},
     }
+    if version == 2:
+        expected.update({
+            "sync_controls": {"endpoint", "user_id", "operation_id", "kind", "wire", "digest", "prepared", "status",
+                              "attempts", "next_attempt", "last_attempt", "lease_owner", "lease_until", "error",
+                              "receipt_revision"},
+            "sync_control_receipts": {"endpoint", "user_id", "operation_id", "wire", "digest", "revision"},
+        })
     tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table' "
                                                   "AND name NOT LIKE 'sqlite_%'")}
     if tables != set(expected):
-        raise ConfigStoreError("invalid owned version-one outbox schema")
+        raise ConfigStoreError("invalid owned outbox schema")
     for name, columns in expected.items():
         # Names are fixed schema literals above, never user-supplied SQL identifiers.
         actual = {row[1] for row in connection.execute(f"PRAGMA table_info({name})")}
         if actual != columns:
-            raise ConfigStoreError("invalid owned version-one outbox columns")
+            raise ConfigStoreError("invalid owned outbox columns")

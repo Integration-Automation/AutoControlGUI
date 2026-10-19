@@ -71,7 +71,7 @@ HTTP route now validate authoritative membership/epoch transitions, explicit pee
 acknowledgements and payload collection with permanent deletion fences. Tests cover
 stale CAS, historical retries, forbidden legacy overwrites, retained alternatives,
 fabricated acknowledgements, obsolete epochs and explicit restoration after GC.
-Explicit CausalSyncClient/outbox HTTP delivery now has controlled tests for uncertain accepted sends, exact restart retry before fetch, bounded definite-rejection rebasing, operation-ID conflicts, retired peers, credentials, stale leases and atomic snapshot rollback/fork refusal. Durable explicit peer controls and atomic local full-resync now cover registration, ack/collection, retirement, uncertain restart retries, compact historical receipts, leases, pending-retirement consent and generation adoption. AC/MCP/Builder share the private control/status surface; the loopback example needs no optional web framework. Workspace/assets application and sync UI remain C3 work.
+Explicit CausalSyncClient/outbox HTTP delivery now has controlled tests for uncertain accepted sends, exact restart retry before fetch, bounded definite-rejection rebasing, operation-ID conflicts, retired peers, credentials, stale leases and atomic snapshot rollback/fork refusal. Durable explicit peer controls and atomic local full-resync now cover registration, ack/collection, retirement, uncertain restart retries, compact historical receipts, leases, pending-retirement consent and generation adoption. AC/MCP/Builder share the private control/status surface; the loopback example needs no optional web framework. Coordinated source workspaces are covered below; asset integration and sync UI remain C3 work.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
@@ -370,8 +370,8 @@ corrupt storage, named references, recognized credential/path refusal and disabl
 profile generation. AC/MCP/Builder share private DRIVE and live root/cancellation guards.
 Missing references and native binding type mismatches persist for review but block complete
 publication. This establishes local capture/inert materialization, with no script execution,
-vault lookup or listener startup; it does not establish remote workspace convergence.
-Live GUI preference application, causal assets/full-resync orchestration, explicit native profile loading,
+vault lookup or listener startup; coordinated loopback convergence is covered below.
+Live GUI preference application, causal assets and explicit native profile loading,
 Sync UI and folder/clipboard/disconnection regression remain in Progress.md.
 
 Controlled native-definition numeric tests refuse positive and negative 401-digit
@@ -389,3 +389,16 @@ Tests compare native group/key case, exclude Python DEFAULT inheritance and conf
 explicit new-GUI loading from a working copy preserves the immutable generation and the
 current workspace. Seven domains publish together through AC/MCP/Builder. Current live-GUI
 application and Sync UI coordination remain open; no native device acceptance is added.
+
+Coordinated SyncWorkspace tests cover offline idempotent capture, two-source concurrent
+conflicts/exact resolution, immutable generation publication, uncertain exact PUT retries,
+retirement/full-resync baselines, new edits during an uncertain reset, permanent deletion
+fences and historical reset idempotency after later work. Late SQL failures roll back
+batch enqueue and reset baselines/intents atomically; owned outbox 1/2-to-3 and adapter
+1-to-2 migrations preserve wire/source/receipt data. Invalid remote domains never reach
+cache/prepared requests. Live roots, cancellation after accepted receipts, concurrent
+coordinator leases, credential rotation/short masks and private INI error lines have
+controlled regressions. AC/MCP/Builder round-trip and DRIVE/prestart refusal are covered.
+The real temporary two-source loopback example converges without executing scripts or
+changing active preferences. This establishes local HTTP integration, not device or paid
+API acceptance. Asset references/transport and Sync UI remain tracked in Progress.md.

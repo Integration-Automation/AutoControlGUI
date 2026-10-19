@@ -66,6 +66,14 @@ def test_corrupt_or_oversized_native_ini_is_refused_without_state(tmp_path):
         assert not (tmp_path / 'desktop.sqlite3').exists()
 
 
+def test_native_ini_errors_do_not_include_private_source_lines(tmp_path):
+    import traceback
+    (tmp_path / 'desktop.ini').write_text('private-credential-in-a-malformed-source\n', encoding='utf-8')
+    with pytest.raises(ac.ConfigSyncError) as caught:
+        adapter(tmp_path, 'desktop').snapshot()
+    assert 'private-credential-in-a-malformed-source' not in ''.join(traceback.format_exception(caught.value))
+
+
 def test_ini_default_sections_do_not_inject_preferences(tmp_path):
     (tmp_path / 'desktop.ini').write_text('[DEFAULT]\ntheme=light\n\n[workspace]\nfont_pt="16"\n', encoding='utf-8')
     entries = adapter(tmp_path, 'desktop').snapshot()

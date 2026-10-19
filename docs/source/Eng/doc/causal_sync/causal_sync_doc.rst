@@ -106,7 +106,7 @@ Pending views return a bounded enqueue-order prefix (1–1000 records and at mos
 16 MiB of serialized data); aggregate pending counts remain complete. Entry data
 per logical operation is capped at 1 MiB. No client credentials or HTTP headers
 are serialized; known resolved-secret values are refused. Payloads should carry
-secret references. Source adapters are described below; workspace/asset coordination remains C3.
+secret references. Source adapters and coordination are described below; asset integration remains C3.
 
 Commands and Builder
 ----------------------------------------------------------------
@@ -305,14 +305,14 @@ cache and revision, records the control receipt, and marks old pending edits
 retired. Their wire payload remains archived; it is never replayed into the new
 epoch. A failed local transaction leaves all old state intact and retries the
 same prepared request. Unknown or reset server generations use a fresh stable
-origin and may adopt a lower root revision. This adopts sync state only; C3
-workspace/assets coordination and synchronization UI remain separate work.
+origin and may adopt a lower root revision. This adopts sync state only; coordinated source baselines are described below.
+Asset integration and synchronization UI remain separate work.
 
 ``queue.request_control(...)`` persists without HTTP. ``control_status`` reviews
 state and ``control_receipt(endpoint, user_id, operation_id)`` returns a confirmed
 original revision or None. ``client.flush`` drains outstanding control before
 incremental edits and counts both kinds in its report; raw queue status/pending
-counts contain edits only. Owned outbox SQLite schema 1 migrates atomically to 2
+counts contain edits only. Owned outbox SQLite schemas 1/2 migrate atomically to 3
 after validating the old tables; edit/control wire schemas stay at 1. Compact
 control history stores logical intent and revision without full prepared snapshots.
 
@@ -400,7 +400,7 @@ Address-book definitions exclude last-used and local connection/wake metadata.
 
 State construction is lazy. The default path is
 ``AUTOCONTROL_SYNC_ADAPTER_STATE`` or ``~/.autocontrol/sync-adapters.sqlite3``.
-Owned SQLite schema 1 isolates endpoint/account/origin/epoch/profile/domain. Capture
+Owned SQLite schema 2 isolates endpoint/account/origin/epoch/profile/domain. Capture
 emits an operation only for a changed portable source fingerprint. ``apply(entries)``
 validates the complete incoming batch before persisting heads/receipts/source baselines
 in one transaction. It returns stored/unchanged/conflicts/unresolved entry IDs and never
@@ -472,8 +472,8 @@ schema-1 hotkey/trigger arrays or plain settings object. These descriptors conta
 paths and binding values and remain private; only portable entries belong on the wire.
 ``python -m examples.sync_adapters`` captures all six actual sources and materializes
 twelve temporary native/metadata files, with zero execution, registration, vault reads
-or network calls. Live GUI preference application, asset references/transport, outbox
-coordination, full-resync baseline adoption, explicit native loading, Sync UI and
+or network calls. Source/outbox coordination and full-resync baselines are described below.
+Live GUI preference application, asset references/transport, explicit native loading, Sync UI and
 folder/clipboard/disconnection regression remain C3 work in Progress.md.
 
 Journal capture keeps the existing conservative secret-field policy. An inline
@@ -529,3 +529,72 @@ receiving versions does not reload a running window. The dedicated Sync UI and l
 preference application remain separate C3 work. ``python -m examples.sync_workspace``
 demonstrates capture, inert publication and the explicit working copy without Qt,
 network/device/API calls or an existing workspace change.
+
+
+Coordinated source workspaces
+----------------------------------------------------------------
+
+``SyncWorkspace(configuration, path_policy=None, cancelled=None)`` lazily selects
+1-7 distinct private source profiles. Construction authorizes paths without opening
+source files, credentials or SQLite. Configuration is schema 1::
+
+    {
+      "schema_version": 1,
+      "endpoint": "https://sync.example",
+      "user_id": "alice",
+      "outbox_path": "workspace-outbox.sqlite3",
+      "profiles": [{"kind": "workspace", "state_path": "adapter-state.sqlite3",
+                    "source": {"path": "saved-gui.ini"}}]
+    }
+
+Profiles use the source/profile_id/bindings rules above, without a separate identity
+or schema_version. Outbox identity supplies origin/epoch; one kind stays bound to its
+state path/profile_id. Different kinds may share an adapter database. Source files,
+adapter storage and outbox roles cannot overlap. Private bindings/configuration stay local.
+
+``capture()`` durably queues portable heads once, without network or credential reads.
+Batch enqueue is atomic and bounded to 10,000 edits/16 MiB. Restart imports the pending
+frontier before observing sources, preserving actor counters. ``synchronize(options=...)``
+captures offline work, registers when needed, retries uncertain frozen requests before
+GET, delivers edits and reconciles validated server snapshots. All seven domains are
+validated before cache/prepare/confirmation, including permanent deletion fences.
+Invalid snapshots raise SyncWorkspaceError with a fixed code; transport failures keep
+pending work. Generic CausalSyncClient retains optional validation for existing callers.
+
+WorkspaceSyncResult contains captured/delivered/pending/revision/conflicts/unresolved/state.
+Delivered counts definition edits; pending includes edits and controls. ``status()`` reads
+local metadata without source/credential/network access. A short workspace lease excludes
+other mutating coordinators; authority/cancellation and live credential references are
+rechecked before RPCs. Resolved credentials never belong in queued definitions; even a
+short declared credential is masked before network-operation source capture. Local
+capture has no credential lookup. Native INI parse failures omit private source lines.
+
+``review(kind)`` returns current heads without observing sources. ``resolve(kind, entry_id,
+value, observed=change_ids, is_deleted=False)`` queues an explicit choice against the exact
+reviewed head set. ``materialize(target_root)`` publishes a complete verified inert
+generation and refuses pending resets, retired peers, conflicts or unresolved references.
+It never executes scripts, enables hotkeys/triggers or changes active preferences.
+
+``control(SyncControlRequest(...), options=...)`` explicitly registers, acknowledges,
+collects, retires or performs full_resync. Source fingerprints and the durable reset intent
+commit in one outbox transaction. Only confirmed reset adopts identity/cache and retires
+old pending edits. Each new adapter generation adopts the authoritative frontier and
+prepared source baseline once. Unchanged pre-reset files never replay retired edits;
+new source changes made during an uncertain reset survive later capture. Repeated control
+IDs return the original receipt without retiring later work. Legacy/external resets or
+new source selections without matching baselines fail with missing_baseline; use a fresh
+coordinated full reset. Existing adopted generations allow later source selection changes.
+Owned outbox schemas 1/2 migrate to 3; adapter schema 1 migrates to 2 while preserving
+heads, source fingerprints, edit wire and compact control receipts. Wire schemas stay 1.
+
+Private ``AC_sync_workspace`` / ``ac_sync_workspace`` / Builder Data take configuration,
+operation (default status) and optional options. All modes require DRIVE/current roots.
+Local status/capture accept no options; review takes kind; resolve takes kind/entry_id/
+value/observed/is_deleted; materialize takes target_root. Network operations sync and
+register/ack/collect/retire/full_resync accept secret_env/timeout_s/policy/max_rebases.
+Controls additionally accept operation_id/peer_id/discard_pending under their usual rules.
+``python -m examples.sync_workspace_http`` uses two real temporary source selections and
+loopback HTTP to demonstrate offline concurrency, exact resolution, restart, inert
+publication and no retired replay. Asset references/transport, live GUI application,
+explicit native loading, Sync UI and folder/clipboard/disconnection regression remain
+open in Progress.md. No device or paid API acceptance is implied.

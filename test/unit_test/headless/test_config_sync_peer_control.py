@@ -237,7 +237,7 @@ def test_owned_version_one_database_migrates_without_changing_old_edit_wires(tmp
     assert queue.pending(endpoint=endpoint, user_id='alice') == (replace(operation, prepared=prepared),)
     assert queue.control_status(endpoint=endpoint, user_id='alice')['state'] == 'idle'
     with sqlite3.connect(path) as connection:
-        assert connection.execute('PRAGMA user_version').fetchone()[0] == 2
+        assert connection.execute('PRAGMA user_version').fetchone()[0] == 3
         assert connection.execute('SELECT wire FROM sync_operations').fetchone()[0] == encoded
 
 

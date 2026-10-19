@@ -17,9 +17,12 @@ from je_auto_control.utils.config_sync.adapter_sources import (
     address_records, hotkey_records, locator_records, read_json, script_records, trigger_records,
 )
 from je_auto_control.utils.config_sync.adapter_state import SyncAdapterState, _validate_incoming, resolution_ids
+from je_auto_control.utils.config_sync.adapter_ledger import fingerprint
+from je_auto_control.utils.config_sync.causal_state import CausalBucket
 from je_auto_control.utils.config_sync.contract import ConfigSyncError, _encoded
 from je_auto_control.utils.config_sync.versions import SyncEntry
 from je_auto_control.utils.config_sync.workspace_preferences import _read_workspace_preferences
+from je_auto_control.utils.config_sync.workspace_models import validate_workspace_snapshot, workspace_frontier
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -79,6 +82,45 @@ class _DomainAdapter:
         _ready, conflicts, unresolved = self._project(heads)
         unchanged = tuple(sorted({item.entry_id for item in entries.values()} - set(stored)))
         return ApplyReport(stored, unchanged, conflicts, unresolved)
+
+    def receive_frontier(self, snapshot: CausalBucket) -> None:
+        """Merge a complete validated server section, including fences, without observing or activating live sources."""
+        validate_workspace_snapshot(snapshot)
+        if snapshot.user_id != self._state.identity.user_id:
+            raise ConfigSyncError('workspace frontier belongs to another account')
+        incoming, compacted = workspace_frontier(snapshot, self.kind)
+        self._state.update(self.kind, None, incoming, compacted=compacted)
+
+    def receive_entries(self, entries: Mapping[str, SyncEntry]) -> None:
+        """Merge portable queued versions without observing sources or changing operation identities."""
+        self._state.update(self.kind, None, entries)
+
+    def source_fingerprints(self) -> dict[str, str]:
+        """Capture portable source fingerprints without opening adapter state or serializing raw machine values."""
+        return {name: fingerprint(value) for name, value in self._sources().items()}
+
+    def adopt_frontier(self, snapshot: CausalBucket, baseline: Mapping[str, str], *, operation_id: str) -> None:
+        """Initialize a confirmed new peer generation once; unchanged pre-resync sources stay retired."""
+        validate_workspace_snapshot(snapshot)
+        identity = self._state.identity
+        if snapshot.user_id != identity.user_id:
+            raise ConfigSyncError('workspace adoption belongs to another account')
+        snapshot.peers.require_active(identity.origin, epoch=identity.epoch)
+        incoming, compacted = workspace_frontier(snapshot, self.kind)
+        self._state.adopt(self.kind, incoming, baseline, operation_id=operation_id, compacted=compacted)
+
+    def report(self) -> ApplyReport:
+        """Inspect conflicts and unresolved local bindings without reading source files or enabling a runtime."""
+        _values, conflicts, unresolved = self._project(self._state.heads(self.kind))
+        return ApplyReport((), (), conflicts, unresolved)
+
+    def review(self) -> dict[str, SyncEntry]:
+        """Read the exact current portable head set without creating source edits."""
+        return self._state.heads(self.kind)
+
+    def adopted_control(self) -> Optional[str]:
+        """Return the adopted reset; repeated reconciliation never resets subsequent edits."""
+        return self._state.adopted_control(self.kind)
 
     def resolve(self, entry_id: str, value: dict[str, object], *, observed: Iterable[str],
                   is_deleted: bool = False) -> SyncEntry:

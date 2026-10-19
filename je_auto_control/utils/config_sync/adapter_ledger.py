@@ -55,20 +55,17 @@ def fingerprint_wire(wire: str) -> str:
     return sha256(wire.encode('ascii')).hexdigest()
 
 
-def merge_head(connection: Connection, scope: str, entry: SyncEntry, origin: str) -> bool:
+def merge_head(connection: Connection, scope: str, entry: SyncEntry, origin: str, *, compacted: bool = False) -> bool:
     """Remember an operation once and keep every nondominated alternative; no wall-clock selection occurs."""
     wire = _encoded(entry.to_dict())
     digest = fingerprint_wire(wire)
     key = (scope, entry.entry_id, entry.origin, entry.operation_id)
-    seen = connection.execute('SELECT change_id,digest FROM adapter_seen '
-                              'WHERE scope=? AND entry_id=? AND origin=? AND operation_id=?', key).fetchone()
-    if seen is not None:
-        if seen != (entry.change_id, digest):
-            raise ConfigSyncError('adapter operation ID identifies different causal data')
+    if _remembered(connection, key, entry, digest, compacted):
         return False
     previous = list(read_heads(connection, scope, entry.entry_id).values())
     pruned, dominated = _merge_plan(previous, entry)
-    connection.execute('INSERT INTO adapter_seen VALUES (?,?,?,?,?,?)', (*key, entry.change_id, digest))
+    connection.execute('INSERT INTO adapter_seen VALUES (?,?,?,?,?,?,?)',
+                       (*key, entry.change_id, digest, int(compacted)))
     _ensure_source(connection, scope, entry.entry_id)
     connection.execute('UPDATE adapter_sources SET counter=max(counter,?) WHERE scope=? AND entry_id=?',
                        (entry.version.get(origin, 0), scope, entry.entry_id))
@@ -80,6 +77,21 @@ def merge_head(connection: Connection, scope: str, entry: SyncEntry, origin: str
         connection.execute('DELETE FROM adapter_heads WHERE scope=? AND change_id=?', (scope, change_id))
     connection.execute('INSERT INTO adapter_heads VALUES (?,?,?,?,?)',
                        (scope, entry.entry_id, entry.change_id, wire, digest))
+    return True
+
+
+def _remembered(connection: Connection, key: tuple[str, str, str, str], entry: SyncEntry,
+                  digest: str, compacted: bool) -> bool:
+    seen = connection.execute('SELECT change_id,digest,compacted FROM adapter_seen '
+                              'WHERE scope=? AND entry_id=? AND origin=? AND operation_id=?', key).fetchone()
+    if seen is None:
+        return False
+    minimal = compacted or bool(seen[2] and entry.is_deleted)
+    if seen[0] != entry.change_id or not minimal and seen[1] != digest:
+        raise ConfigSyncError('adapter operation ID identifies different causal data')
+    if compacted:
+        connection.execute('UPDATE adapter_seen SET compacted=1 '
+                           'WHERE scope=? AND entry_id=? AND origin=? AND operation_id=?', key)
     return True
 
 

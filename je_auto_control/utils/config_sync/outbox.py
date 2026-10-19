@@ -7,7 +7,7 @@ import time
 from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Optional, cast
+from typing import TYPE_CHECKING, Callable, Iterable, Optional, cast
 from uuid import uuid4
 
 from je_auto_control.utils.config_sync.contract import (
@@ -21,6 +21,7 @@ from je_auto_control.utils.config_sync.causal_state import CausalBucket
 from je_auto_control.utils.config_sync.outbox_models import (
     SyncDrainResult, SyncLocalIdentity, SyncOperation, SyncRetryPolicy, normalize_sync_endpoint,
 )
+from je_auto_control.utils.config_sync.outbox_batch import enqueue_batch, logical_operation as _logical
 from je_auto_control.utils.config_sync.outbox_schema import initialize_outbox
 from je_auto_control.utils.config_sync.outbox_lease import due as _due
 from je_auto_control.utils.config_sync.peers import FullResyncRequired
@@ -41,13 +42,6 @@ _SELECT = "SELECT wire, digest, prepared FROM sync_operations WHERE endpoint = ?
 def _scope(endpoint: str, user_id: str) -> _Scope:
     _identifier(user_id, "user_id")
     return normalize_sync_endpoint(endpoint), user_id
-
-
-def _logical(operation: SyncOperation) -> tuple[str, str]:
-    body = operation.to_dict()
-    body["prepared"] = None
-    wire = _encoded(body, max_bytes=2 * 1024 * 1024)
-    return wire, sha256(wire.encode("ascii")).hexdigest()
 
 
 def _operation(row: tuple[object, ...]) -> SyncOperation:
@@ -106,29 +100,11 @@ class SyncOutbox:
 
     def enqueue(self, operation: SyncOperation) -> None:
         """Persist once by namespace/ID; duplicate equal input is idempotent, changed input is refused."""
-        wire, digest = _logical(operation)
-        self.identity(operation.endpoint, operation.user_id, origin=operation.origin, epoch=operation.epoch)
-        key = operation.endpoint, operation.user_id, operation.operation_id
-        with self._database.connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
-            row = connection.execute("SELECT digest FROM sync_operations WHERE endpoint = ? "
-                                     "AND user_id = ? AND operation_id = ?", key).fetchone()
-            if row is not None and row[0] != digest:
-                raise ConfigSyncError("operation_id already identifies different queued data")
-            if row is None:
-                resync = connection.execute("SELECT 1 FROM sync_controls WHERE endpoint=? AND user_id=? "
-                                           "AND kind='full_resync' AND status!='delivered'", key[:2]).fetchone()
-                if resync is not None:
-                    raise FullResyncRequired("local full resync must complete before new edits are captured")
-                pending = connection.execute("SELECT count(*) FROM sync_operations WHERE endpoint = ? AND user_id = ? "
-                                             "AND status NOT IN ('delivered','retired')", key[:2]).fetchone()[0]
-                if pending >= 10000:
-                    raise ConfigSyncError("outbox namespace exceeds 10000 pending edits")
-                prepared = _encoded(operation.prepared) if operation.prepared is not None else None
-                connection.execute("INSERT INTO sync_operations "
-                                   "(endpoint,user_id,operation_id,wire,digest,prepared) VALUES (?,?,?,?,?,?)",
-                                   (*key, wire, digest, prepared))
-            connection.execute("COMMIT")
+        self.enqueue_many((operation,))
+
+    def enqueue_many(self, operations: Iterable[SyncOperation]) -> int:
+        """Atomically persist bounded same-generation edits, returning the number newly queued."""
+        return enqueue_batch(self._database, operations)
 
     def pending(self, *, endpoint: str, user_id: str, limit: int = 1000) -> tuple[SyncOperation, ...]:
         """Read a bounded prefix in enqueue order; status reports the full count even when this view is truncated."""
@@ -224,6 +200,23 @@ class SyncOutbox:
         if result.user_id != user_id:
             raise ConfigStoreError("outbox snapshot belongs to another account")
         return result
+
+    def observe(self, snapshot: CausalBucket, *, endpoint: str, minimum_revision: int = 0) -> CausalBucket:
+        """Cache a complete validated GET without acknowledging edits; reject rollback behind the pre-GET frontier."""
+        _revision(minimum_revision)
+        snapshot = _server_snapshot(snapshot)
+        if snapshot.revision < minimum_revision:
+            raise FullResyncRequired('server snapshot moved behind the pre-fetch frontier')
+        self.identity(endpoint, snapshot.user_id)
+        scope = _scope(endpoint, snapshot.user_id)
+        with self._database.connection() as connection:
+            connection.execute('BEGIN IMMEDIATE')
+            self._save_snapshot(connection, scope, snapshot)
+            connection.execute('COMMIT')
+        current = self.snapshot(endpoint=endpoint, user_id=snapshot.user_id)
+        if current is None:
+            raise ConfigStoreError('observed workspace snapshot disappeared')
+        return current
 
     def request_control(self, endpoint: str, user_id: str, kind: ControlKind, *, peer_id: Optional[str] = None,
                           discard_pending: bool = False, operation_id: Optional[str] = None) -> SyncControlOperation:

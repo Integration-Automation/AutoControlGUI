@@ -148,9 +148,9 @@ CausalSyncClient.control and AC_sync_peer_control/ac_sync_peer_control persist m
 register/ack/collect/retire/full_resync intents. Stable explicit operation IDs replay
 compact historical receipts without new effects. Full resync requires explicit pending
 retirement consent and adopts identity/cache/retirement atomically after confirmation.
-Owned outbox SQLite schema 1 migrates to 2 without changing existing edit wire version 1;
+Owned outbox SQLite schemas 1/2 migrate to 3 without changing existing edit wire version 1;
 control wire is version 1. Status remains private, local-only and credential-free.
-Workspace/assets application and sync UI remain C3 work.
+Source coordination is described below; asset integration and sync UI remain C3 work.
 
 AssetFile, AssetManifest, AssetSyncResult, AssetTransport, DirectoryAssetTransport,
 build_asset_manifest and sync_assets are experimental. Asset manifest wire is version 1.
@@ -162,15 +162,16 @@ are rechecked. Corrupt caches fail without overwrite; identical verified caches 
 SyncReference, SyncBindings, ApplyReport, SyncAdapter, SyncAdapterState,
 ScriptSyncAdapter, LocatorSyncAdapter, HotkeySyncAdapter, TriggerSyncAdapter,
 AddressBookSyncAdapter, SettingsSyncAdapter, adapter_from_profile and
-materialize_sync_profile are experimental. Private adapter descriptor and ledger schemas
-are version 1. Four private AC/MCP/Builder snapshot/apply/resolve/materialize commands
+materialize_sync_profile are experimental. Private adapter descriptor schema is 1;
+owned ledger schema is 2 (migrated from 1). Four private AC/MCP/Builder
+snapshot/apply/resolve/materialize commands
 require DRIVE. Apply persists a causal inbox; it never replaces live definitions.
 Materialization publishes an inert complete generation with native hotkey/trigger flags
 disabled. Secret references remain vault placeholders without vault lookup; native
 locator/hotkey/trigger/address-book fields accept local references only. Workspace
 preferences require literal values. The separate workspace adapter bridges saved native
-GUI preferences; live GUI application remains explicit. Asset references, full-resync
-adapter baselines and Sync UI remain C3.
+GUI preferences; live GUI application remains explicit. Full-resync adapter baselines
+are coordinated below; asset references/transport and Sync UI remain C3.
 
 Native sync definition numeric bounds are checked before floating-point finite
 conversion. Out-of-range arbitrary-precision JSON integers raise ConfigSyncError
@@ -187,3 +188,12 @@ kinds. Its four portable preference fields use exact incoming types/bounds. Sour
 fallbacks match the GUI. No QSettings or other Qt module is imported by headless capture.
 workspace.ini is inert generated data; explicit GUI use first creates a separate mutable
 working file. No existing active workspace is overwritten or reloaded on receipt.
+
+SyncWorkspace, SyncWorkspaceError and WorkspaceSyncResult are experimental. The private
+workspace descriptor is schema 1. AC_sync_workspace/ac_sync_workspace/Builder Data share
+local capture/status/review/resolve/materialize and explicit network sync/peer controls.
+All server modes require DRIVE. A short workspace lease, atomic reset intent/source
+fingerprints and idempotent adapter-generation adoption preserve uncertain retries and
+prevent retired source replay. Missing legacy reset baselines require a new coordinated
+full reset. Source/state/outbox path roles cannot overlap; existing kind/state bindings
+remain stable. Credentials refresh per RPC and received data never activates a source.

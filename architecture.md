@@ -72,9 +72,51 @@ HTTP AC/MCP/Builder fetch/commit/flush commands use live environment credential
 references. Durable explicit controls use a singleton leased intent per namespace and
 compact receipt history. Controls drain before edits; uncertain payloads retry unchanged.
 Only confirmed full-resync receipts atomically adopt local identity/cache and retire old
-pending work with explicit consent. Schema 1-to-2 migration validates owned tables and
+pending work with explicit consent. Schema 1/2-to-3 migration validates owned tables and
 preserves edit wire. AC/MCP/Builder control status is private and local-only. Applications
-choose ack/collection timing; C3 workspace/assets/UI integration remains open. Shared-secret access is service-wide.
+choose ack/collection timing; C3 asset transport and Sync UI remain open. Shared-secret access is service-wide.
+
+Asset manifests contain portable relative paths, sizes and SHA-256 only. AssetTransport
+provides binary streams and a live local generation root; DirectoryAssetTransport is
+the built-in local-only source. sync_assets stages all files, verifies their content,
+then publishes one immutable generation directory. Reuse verifies metadata, exact tree
+and all hashes; corruption preserves evidence and aborts. Private AC/MCP/Builder paths
+share current root/cancellation checkpoints. Causal bundle coordination and explicit native profile loading remain C3; this layer never replaces active workspace files or runs scripts.
+
+Seven dependency-free source adapters capture selected scripts, locator repositories,
+hotkey/trigger metadata, address-book entries, JSON settings and saved native workspace preferences. A lazy owned SQLite
+ledger retains concurrent heads, source baselines and immutable operation receipts per
+endpoint/account/origin/epoch/profile/domain. Incoming data is validated before the
+transaction, including numeric ranges before finite conversion; cancellation rolls back the complete batch. Explicit reviewed head sets
+gate resolution. Received profiles never mutate active sources or register callbacks.
+SyncBindings carries named vault/local references; only explicit local scalar bindings
+are resolved (absolute path entropy is not a credential classification), and vault values are never read. Complete native-format profiles publish
+through the verified asset generation layer with hotkeys/triggers disabled. Four private
+AC/MCP/Builder commands use the same lazy descriptor factory and live root/cancellation
+checks. Source/outbox/full-resync coordination is described below;
+live GUI preference application, asset transport and Sync UI remain C3.
+
+WorkspaceSettingsSyncAdapter adds the workspace causal section for saved native GUI
+INI preferences. Only theme/font_pt/navigation_visible/navigation_width are captured;
+other sections and machine state are excluded. A Qt-free bounded INI reader follows
+local native key case and refuses ambiguous aliases, without Python DEFAULT inheritance.
+The GUI and source reader share tolerant preference normalization, while incoming values
+require canonical types and supported bounds. Complete generations include workspace.ini
+and portable version metadata, with defaults for absent/deleted preferences. Seven kinds
+can publish together. Explicit GUI loading uses a separate mutable working copy; opening
+the immutable generation itself for GUI writes would damage its verified cache. Existing
+four private AC/MCP/Builder commands accept workspace descriptors without new commands.
+
+SyncWorkspace coordinates explicit seven-domain source profiles over the causal outbox
+and HTTP client. A bounded namespace lease excludes concurrent mutators, atomic batch
+enqueue imports pending heads before source capture, and strict typed validation runs
+before snapshot cache/prepare/receipt adoption. Full-resync source fingerprints share
+the durable control-intent transaction. Adapter ledger schema 2 adopts each confirmed
+new-generation baseline once, retaining later local edits and compact deletion fences.
+Source/state/outbox roles cannot overlap; selected kind/state bindings remain fixed.
+Private API/AC/MCP/Builder use live roots/cancellation and per-RPC environment credentials.
+Materialization remains inert; GUI application, native loading and asset transport remain
+open C3 work. The two-source example and regressions use temporary loopback only.
 
 Cancellation carriers and classifiers live in the dependency-free
 `utils/exception/control_signals.py` seam. MCP context and run-history import paths
@@ -411,33 +453,3 @@ first. `AC_*` command names and the legacy CLI flags are public too (action file
   target moves, or the log file name or location changes.
 - A hard rule in CLAUDE.md is added or changed.
 - On every edit, refresh the "Last verified" line. Module-level changes belong in `architecture_explore.md`, not here.
-
-Asset manifests contain portable relative paths, sizes and SHA-256 only. AssetTransport
-provides binary streams and a live local generation root; DirectoryAssetTransport is
-the built-in local-only source. sync_assets stages all files, verifies their content,
-then publishes one immutable generation directory. Reuse verifies metadata, exact tree
-and all hashes; corruption preserves evidence and aborts. Private AC/MCP/Builder paths
-share current root/cancellation checkpoints. Causal bundle coordination and explicit native profile loading remain C3; this layer never replaces active workspace files or runs scripts.
-
-Seven dependency-free source adapters capture selected scripts, locator repositories,
-hotkey/trigger metadata, address-book entries, JSON settings and saved native workspace preferences. A lazy owned SQLite
-ledger retains concurrent heads, source baselines and immutable operation receipts per
-endpoint/account/origin/epoch/profile/domain. Incoming data is validated before the
-transaction, including numeric ranges before finite conversion; cancellation rolls back the complete batch. Explicit reviewed head sets
-gate resolution. Received profiles never mutate active sources or register callbacks.
-SyncBindings carries named vault/local references; only explicit local scalar bindings
-are resolved (absolute path entropy is not a credential classification), and vault values are never read. Complete native-format profiles publish
-through the verified asset generation layer with hotkeys/triggers disabled. Four private
-AC/MCP/Builder commands use the same lazy descriptor factory and live root/cancellation
-checks. Live GUI preference application, transport/outbox/full-resync coordination and Sync UI remain C3.
-
-WorkspaceSettingsSyncAdapter adds the workspace causal section for saved native GUI
-INI preferences. Only theme/font_pt/navigation_visible/navigation_width are captured;
-other sections and machine state are excluded. A Qt-free bounded INI reader follows
-local native key case and refuses ambiguous aliases, without Python DEFAULT inheritance.
-The GUI and source reader share tolerant preference normalization, while incoming values
-require canonical types and supported bounds. Complete generations include workspace.ini
-and portable version metadata, with defaults for absent/deleted preferences. Seven kinds
-can publish together. Explicit GUI loading uses a separate mutable working copy; opening
-the immutable generation itself for GUI writes would damage its verified cache. Existing
-four private AC/MCP/Builder commands accept workspace descriptors without new commands.

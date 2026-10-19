@@ -385,6 +385,16 @@ def sync_assets(manifest: dict[str, object], source_root: str, target_root: str,
                                    cancelled=lambda: _causal_cancelled(ctx))
 
 
+def sync_workspace(configuration: dict[str, object], operation: str = 'status',
+                   options: Optional[dict[str, object]] = None, *,
+                   ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Coordinate explicit profiles with durable causal delivery and recovery; received definitions stay inert."""
+    # pylint: disable-next=import-outside-toplevel  # reason: load coordination only for the invoked private tool
+    from je_auto_control.utils.config_sync.workspace_commands import _sync_workspace
+    return _sync_workspace(configuration, operation, options, path_policy=ctx.path_policy if ctx else None,
+                           cancelled=lambda: _causal_cancelled(ctx))
+
+
 def sync_adapter_snapshot(profile: dict[str, object], *,
                             ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
     """Capture real source definitions under live private-profile authority."""

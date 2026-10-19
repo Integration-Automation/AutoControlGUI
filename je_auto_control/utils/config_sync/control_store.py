@@ -53,7 +53,8 @@ class ControlStore:
         self._save_snapshot = save_snapshot
 
     def enqueue(self, identity: SyncLocalIdentity, kind: ControlKind, *, peer_id: Optional[str] = None,
-                 discard_pending: bool = False, operation_id: Optional[str] = None) -> SyncControlOperation:
+                 discard_pending: bool = False, operation_id: Optional[str] = None,
+                 prepare: Optional[Callable[[Connection, SyncControlOperation], None]] = None) -> SyncControlOperation:
         """Persist a control intent once; a matching open intent is resumed instead of creating another request ID."""
         candidate = SyncControlOperation(uuid4().hex if operation_id is None else operation_id,
                                           identity, kind, peer_id, discard_pending)
@@ -70,6 +71,8 @@ class ControlStore:
                 connection.execute("COMMIT")
                 return previous
             _retirement_consent(connection, candidate)
+            if prepare is not None:
+                prepare(connection, candidate)
             wire, digest = _logical(candidate)
             connection.execute("DELETE FROM sync_controls WHERE endpoint=? AND user_id=?", scope)
             connection.execute("INSERT INTO sync_controls (endpoint,user_id,operation_id,kind,wire,digest) "

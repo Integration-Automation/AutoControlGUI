@@ -13,6 +13,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add experimental SyncWorkspace coordination with durable offline capture, strict seven-domain
+  causal HTTP validation, exact reviewed resolution and inert materialization, plus private
+  AC_sync_workspace/MCP/Builder Data routing. Full resync atomically prepares source fingerprints
+  with its durable intent, adopts each new adapter generation once and preserves edits made
+  during uncertain recovery without replaying retired source data. Outbox schemas 1/2 migrate
+  to 3; adapter schema 1 migrates to 2 without changing edit/control wire schemas. Source/storage
+  role collisions are refused before I/O; credentials refresh per RPC and INI errors exclude
+  private source lines. Asset transport and Sync UI remain tracked in Progress.md.
 - Add an experimental workspace adapter for saved native GUI INI preferences. Theme,
   font size and navigation visibility/width retain causal conflicts and publish as inert
   workspace.ini data through existing AC/MCP/Builder commands. Headless capture stays

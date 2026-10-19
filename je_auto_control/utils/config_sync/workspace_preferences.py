@@ -9,6 +9,7 @@ from types import MappingProxyType
 from typing import Mapping, cast
 
 from je_auto_control.utils.config_sync.contract import ConfigSyncError
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 
 _DEFAULTS: Mapping[str, object] = MappingProxyType({
     'theme': 'dark', 'font_pt': 0, 'navigation_visible': True, 'navigation_width': 260,
@@ -73,7 +74,10 @@ def _read_workspace_preferences(path: Path) -> dict[str, dict[str, object]]:
             raise ConfigSyncError('workspace preference file exceeds one MiB')
         parser = _WorkspaceIni(default_section='', interpolation=None, delimiters=('=',), empty_lines_in_values=False)
         parser.read_string(data.decode('utf-8-sig'))
-    except (OSError, UnicodeError, IniError) as error:
+    except IniError as error:
+        raise_caused_run_interruption(error)
+        raise ConfigSyncError('invalid workspace preference source file') from None
+    except (OSError, UnicodeError) as error:
         raise ConfigSyncError('invalid workspace preference source file') from error
     section = _workspace_section(parser)
     return {name: {'value': _coerce_preference(name, _native_text(section[name]))}

@@ -96,15 +96,15 @@ validate peer acknowledgements, retirement/full-sync epochs and deletion payload
 collection with permanent causal fences. Upgraded accounts reject plain reads and
 writes; existing local store commands accept causal JSON with an explicit _actor.
 See :doc:`../causal_sync/causal_sync_doc`. The current HTTP client/merge helper
-retains last-modified ordering and time-bounded tombstones. Workspace peer-control/
-full-resync orchestration and asset coordination remain in Progress.md. The explicit
+retains last-modified ordering and time-bounded tombstones. SyncWorkspace source/peer-control/full-resync orchestration is described in the causal guide.
+Asset coordination remains in Progress.md. The explicit
 CausalSyncClient.flush supplies durable v3 delivery and bounded rebasing. Local tests
 use isolated files and loopback servers, without remote-machine or native acceptance.
 
 Durable causal peer registration/ack/collection/retirement and atomic local full resync
 are available through CausalSyncClient.control and AC_sync_peer_control (MCP/Builder).
 See the causal guide for stable operation IDs, explicit pending-retirement consent,
-SQLite schema 1-to-2 migration and local-only status.
+SQLite schema 1/2-to-3 migration and local-only status.
 
 Explicit local asset manifests and complete verified generations use build_asset_manifest
 and sync_assets with DirectoryAssetTransport (API/AC/MCP/Builder). These stage opaque
@@ -116,7 +116,7 @@ native profiles through the asset layer (API/AC/MCP/Builder). Named local/vault
 references avoid selected machine values and recognized credentials in portable
 entries. Apply never changes active sources; hotkeys/triggers remain disabled.
 See the causal guide for private schema-1 profiles, exact conflict resolution and
-remaining workspace/GUI-preference/asset/full-resync integration.
+coordinated source/outbox recovery and remaining live GUI/asset integration.
 
 Native numeric definitions check supported ranges before finite conversion.
 Extreme JSON integers fail with ConfigSyncError before adapter storage is opened.
@@ -130,3 +130,8 @@ WorkspaceSettingsSyncAdapter adds a separate workspace domain for four saved nat
 GUI INI preferences. Existing private AC/MCP/Builder commands publish inert workspace.ini
 data; explicit GUI loading uses a separate working copy. Capture stays Qt-free, ignores
 private/geometry data and shares GUI fallback normalization. See the causal guide.
+
+SyncWorkspace and AC_sync_workspace/ac_sync_workspace (Builder Data) coordinate selected
+profiles, durable capture/delivery and prepared full-resync baselines. Status is local;
+all server modes require DRIVE. Incoming data stays inert. See the causal guide for the
+private schema-1 descriptor, exact review/resolution, lease and migration boundaries.

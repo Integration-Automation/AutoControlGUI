@@ -29,17 +29,26 @@ class CausalSyncClient:
     """
 
     def __init__(self, server_url: str, *, user_id: str, secret: Optional[str] = None,
-                 timeout_s: float = 5.0) -> None:
+                 timeout_s: float = 5.0, snapshot_validator: Optional[Callable[[CausalBucket], None]] = None) -> None:
         self._wire = CausalWire(server_url, user_id, secret, timeout_s)
         self._endpoint = normalize_sync_endpoint(server_url)
         self._user_id = user_id
         self._secret = secret
+        self._snapshot_validator = snapshot_validator
+
+    def _request(self, method: str, body: Optional[dict[str, object]] = None) -> dict[str, object]:
+        return self._wire.request(method) if body is None else self._wire.request(method, body)
+
+    def _validate_snapshot(self, snapshot: CausalBucket) -> None:
+        if self._snapshot_validator is not None:
+            self._snapshot_validator(snapshot)
+            snapshot.to_dict()
 
     def fetch(self) -> CausalBucket:
         """Fetch a complete server snapshot; unsupported older endpoints fail without any write."""
         with secret_log_scope():
             remember_secret(self._secret or "")
-            reply = self._wire.request("GET")
+            reply = self._request("GET")
             if set(reply) != {"version", "bucket"}:
                 raise ConfigSyncError("invalid causal snapshot reply")
             return self._snapshot(reply)
@@ -53,13 +62,14 @@ class CausalSyncClient:
         base = bucket.revision if base_revision is None else base_revision
         if base != bucket.revision or isinstance(base, bool):
             raise ConfigSyncError("causal request must retain its snapshot base revision")
+        self._validate_snapshot(bucket)
         with secret_log_scope():
             remember_secret(self._secret or "")
             body = bucket.to_dict()
             body["_actor"] = actor.to_dict()
             envelope = {"version": 3, "base_revision": base, "operation_id": operation_id, "bucket": body}
             _encoded(envelope)
-            reply = self._wire.request("PUT", envelope)
+            reply = self._request("PUT", envelope)
             if set(reply) != {"version", "revision", "bucket"} or reply["revision"] != base + 1:
                 raise ConfigSyncError("server returned an invalid causal commit receipt")
             return CausalReceipt(reply["revision"], self._snapshot(reply))
@@ -112,6 +122,7 @@ class CausalSyncClient:
         snapshot = _server_snapshot(CausalBucket.from_dict(body))
         if snapshot.user_id != self._user_id:
             raise ConfigSyncError("causal server snapshot/client account mismatch")
+        self._validate_snapshot(snapshot)
         return snapshot
 
     def _deliver(self, outbox: SyncOutbox, operation: SyncOperation, max_rebases: int,
@@ -123,7 +134,9 @@ class CausalSyncClient:
             if operation.prepared is None:
                 current = self.fetch()
                 current.peers.require_active(operation.origin, epoch=operation.epoch)
-                body = current.with_entries(operation.entries).to_dict()
+                candidate = current.with_entries(operation.entries)
+                self._validate_snapshot(candidate)
+                body = candidate.to_dict()
                 body["_actor"] = SyncActor(operation.origin, operation.epoch).to_dict()
                 operation = outbox.prepare(operation, base_revision=current.revision, bucket=body)
             _check_cancelled(cancelled)

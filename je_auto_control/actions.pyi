@@ -2988,6 +2988,16 @@ def AC_sync_profile_materialize(
 ) -> dict[str, object]:
     """Publish one complete ready local profile generation without replacing active workspace files."""
 
+def AC_sync_workspace(
+    configuration: dict[str, object],
+    operation: str = ...,
+    options: dict[str, object] | None = ...,
+    *,
+    path_policy: Any = ...,
+    cancelled: Callable[[], bool] | None = ...,
+) -> dict[str, object]:
+    """Coordinate explicit local profiles; even local status requires private DRIVE authority at server boundaries."""
+
 def AC_tab_order(app_name: str | None = ..., max_results: int = ...) -> Dict[str, Any]:
     """Executor adapter: focusable elements in keyboard Tab order."""
 
