@@ -11,7 +11,8 @@ from typing import Callable, Iterable, Mapping, Optional
 from je_auto_control.utils.config_sync.adapter_schema import AdapterKind, KINDS
 from je_auto_control.utils.config_sync.adapter_protocol import SyncAdapter
 from je_auto_control.utils.config_sync.asset_models import AssetFile, AssetManifest, AssetSyncResult
-from je_auto_control.utils.config_sync.assets import DirectoryAssetTransport, _check, sync_assets
+from je_auto_control.utils.config_sync.assets import _check, sync_assets
+from je_auto_control.utils.config_sync.blob_binding import BoundProfileAsset, ProfileAssetTransport, ProfileBundle
 from je_auto_control.utils.config_sync.contract import ConfigSyncError, _encoded
 from je_auto_control.utils.config_sync.versions import SyncEntry
 from je_auto_control.utils.config_sync.workspace_preferences import _workspace_ini
@@ -66,8 +67,8 @@ def materialize_sync_profile(adapters: Iterable[SyncAdapter], target_root: str |
         return False
 
     try:
-        files = _collect_files(selected, checkpoint)
-        return _publish_files(files, target_root, checkpoint)
+        files, assets = _collect_files(selected, checkpoint)
+        return _publish_files(files, assets, target_root, checkpoint)
     except (OSError, ConfigSyncError) as error:
         raise_caused_run_interruption(error)
         if isinstance(error, ConfigSyncError):
@@ -75,25 +76,41 @@ def materialize_sync_profile(adapters: Iterable[SyncAdapter], target_root: str |
         raise ConfigSyncError('could not materialize a complete adapter profile') from error
 
 
-def _collect_files(selected: tuple[SyncAdapter, ...], checkpoint: Callable[[], bool]) -> dict[str, bytes]:
+def _collect_files(selected: tuple[SyncAdapter, ...], checkpoint: Callable[[], bool]
+                   ) -> tuple[dict[str, bytes], dict[str, BoundProfileAsset]]:
     files: dict[str, bytes] = {}
+    assets: dict[str, BoundProfileAsset] = {}
     kinds = set()
     for adapter in selected:
         checkpoint()
         if adapter.kind not in KINDS or adapter.kind in kinds:
             raise ConfigSyncError('a materialized profile can contain only one adapter per kind')
         kinds.add(adapter.kind)
-        files.update(adapter.profile_files())
+        builder = getattr(adapter, 'profile_bundle', None)
+        bundle = builder() if callable(builder) else ProfileBundle(adapter.profile_files())
+        if not isinstance(bundle, ProfileBundle):
+            raise ConfigSyncError('invalid adapter profile bundle')
+        files.update(bundle.files)
+        _collect_assets(assets, bundle)
     if not files:
         raise ConfigSyncError('materialization requires at least one adapter')
     if any(not isinstance(name, str) or not isinstance(body, bytes) for name, body in files.items()):
         raise ConfigSyncError('adapter profile files require relative names and binary contents')
-    return files
+    return files, assets
 
 
-def _publish_files(files: dict[str, bytes], target_root: str | Path, checkpoint: Callable[[], bool]) -> AssetSyncResult:
+def _collect_assets(assets: dict[str, BoundProfileAsset], bundle: ProfileBundle) -> None:
+    for item in bundle.assets:
+        path = item.reference.path
+        if path in assets and assets[path].reference != item.reference:
+            raise ConfigSyncError('profile assets have conflicting portable destinations')
+        assets[path] = item
+
+
+def _publish_files(files: dict[str, bytes], assets: dict[str, BoundProfileAsset],
+                     target_root: str | Path, checkpoint: Callable[[], bool]) -> AssetSyncResult:
     entries = tuple(AssetFile(name, sha256(body).hexdigest(), len(body)) for name, body in files.items())
-    manifest = AssetManifest(entries)
+    manifest = AssetManifest(entries + tuple(item.reference.file for item in assets.values()))
     with TemporaryDirectory(prefix='autocontrol-profile-') as temporary:
         source = Path(temporary)
         for name, body in files.items():
@@ -101,4 +118,4 @@ def _publish_files(files: dict[str, bytes], target_root: str | Path, checkpoint:
             path = source / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(body)
-        return sync_assets(manifest, DirectoryAssetTransport(source, target_root), cancelled=checkpoint)
+        return sync_assets(manifest, ProfileAssetTransport(source, assets, target_root), cancelled=checkpoint)

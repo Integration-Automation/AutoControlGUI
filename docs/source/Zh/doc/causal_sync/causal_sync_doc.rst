@@ -91,7 +91,7 @@ status 提供完整數量、確認投遞版本與最多十筆已清理錯誤預�
 pending 檢視為追加順序的有界前段（1–1000 筆、序列化資料最多 16 MiB），總數仍完整。
 每個邏輯操作的 entry 資料最多 1 MiB。
 不序列化 client 認證或 HTTP header，已知解析後秘密值會拒絕；payload 應使用秘密參照。
-來源 adapter 與協調說明見下方；資產整合仍列於 C3。
+來源 adapter、協調與引用資產說明見下方。
 
 命令與 Builder
 ----------------------------------------------------------------
@@ -253,7 +253,7 @@ blocked，直到明確恢復。有效 lease 排除第二個傳送者；取消與
 權威快照與 revision、記錄控制收據，並將待送舊編輯標成 retired。原始 wire 封存保留，
 不會在新 epoch 重播。本機交易失敗時保留全部舊狀態，重試相同固定請求。伺服器重設或
 未知世代會使用新的穩定 origin，並可採用較低 root revision。此處僅採用同步狀態；
-來源基準協調見下方；C3 的資產整合與同步 UI 仍待實作。
+來源基準與資產協調見下方；C3 的同步 UI 仍待實作。
 
 ``queue.request_control(...)`` 只持久化意圖，不發 HTTP；``control_status`` 檢視狀態；
 ``control_receipt(endpoint, user_id, operation_id)`` 回傳已確認的原始 revision 或 None。
@@ -288,7 +288,7 @@ status 僅查本機，不發 HTTP，也不解析 secret_env；即時憑證不持
 
 manifest 只包含相對名稱、雜湊與大小；機器根路徑保留在即時 transport。
 這是明確選擇、不解讀內容的原始檔案複製，保留原始位元組。下方來源 adapters 將明確選定的秘密與機器路徑換成
-參照；資產／因果工作區協調仍屬 C3；這裡不自動蒐集工作區檔案或上傳。
+參照；引用資產／因果工作區協調見下方；這裡不自動蒐集工作區檔案或上傳。
 
 ``build_asset_manifest(source_root, paths, cancelled=None)`` 讀取單一 root 內明確選定
 的一般檔案。``DirectoryAssetTransport`` 延遲使用檔案且不連網。``AssetTransport``
@@ -388,7 +388,7 @@ hotkeys／triggers／address_book／settings／workspace。Source 擇一使用�
 schema-1 熱鍵／觸發器陣列或一般設定物件。描述內含本機路徑與綁定值，必須保持私有；
 只有可攜 entries 才放上 wire。``python -m examples.sync_adapters`` 使用六種真實來源產生
 十二個暫存原生／中繼檔，不執行腳本、不註冊接收熱鍵／觸發器、不讀 vault、不連網。
-來源／outbox 與完整重同步基準協調見下方。GUI 即時偏好套用、資產參照／傳輸、明確原生載入、
+來源／outbox 與完整重同步基準協調見下方。GUI 即時偏好套用、明確原生載入、
 Sync UI 與 folder／clipboard／斷線回歸仍列於 Progress.md 的 C3。
 
 日誌沿用既有的保守秘密欄位政策：內嵌定義只要包含 password 欄位，即使值為參照也會遮罩，
@@ -491,5 +491,71 @@ observed／is_deleted；materialize 使用 target_root。網路操作 sync 與 r
 retire／full_resync 接受 secret_env／timeout_s／policy／max_rebases；控制另依規則接受
 operation_id／peer_id／discard_pending。
 ``python -m examples.sync_workspace_http`` 以兩組真實暫存來源與 loopback HTTP 示範離線並行、
-精確解決、重啟、未啟用發布與退休編輯不重播。資產參照／傳輸、GUI 即時套用、明確原生載入、
+精確解決、重啟、未啟用發布與退休編輯不重播。引用資產見下方；GUI 即時套用、明確原生載入、
 Sync UI 與 folder／clipboard／斷線回歸仍在 Progress.md；不代表真機或付費 API 驗收。
+
+
+引用資產同步
+----------------------------------------------------------------
+
+``SyncAssetBlob(sha256, size, chunks)`` 以精確的 256-KiB 分塊 hash tuple 描述最多
+64 MiB 內容（最後一塊可較短）。``SyncAssetReference(path, blob)`` 使用保留標記
+``$autocontrol_asset``，目的路徑必須是 ``assets/`` 下的明確可攜檔名。描述為版本化有限
+JSON，不含來源機器路徑。目的路徑中的可辨識憑證、私有／機器欄位中的資產參照都拒絕。
+腳本參數與原生 script／image 檔案欄位可接受資產；秘密參照仍在本機，不讀 vault。
+
+透過私有綁定明確選取來源資產::
+
+    {
+      "fields": {"login.json": {"/actions/0/1/image":
+        {"$autocontrol_ref": {"kind": "local", "name": "button"}}}},
+      "local_values": {"button": "selected/templates/button.png"},
+      "assets": {"button": "assets/templates/button.png"}
+    }
+
+``assets`` 將選定本機別名對應到可攜目的檔；local_values 提供來源檔名。Factory 建構時
+會驗證並固定絕對路徑，後續變更工作目錄不會轉向其他檔案。捕捉只複製明確選取且被引用
+的檔案到不可變分塊 cache，然後才記錄因果指紋。傳送不透明的原始 bytes，不自動探索
+檔案或讀 vault。只改資產也會建立新定義版本，不要求腳本 JSON 改變。缺失／非法的目前
+來源明確拒絕捕捉；已封存分塊仍持久保留。來源與所有儲存角色不可重疊。
+
+Workspace 設定可選 ``asset_cache_path``，預設 ``<outbox_path>.assets.sqlite3``。
+Cache 路徑獨立固定於 namespace，不改既有 adapter 狀態綁定。低階 profile／
+SyncAdapterState 也接受 asset_cache_path，預設 ``<state_path>.assets.sqlite3``。
+Endpoint／帳號 cache scope 跨 peer epoch 保留；既有無資產的 binding／reset baseline
+hash 不變。來源別名／目的路徑規則納入重設設定比對。
+
+``SyncAssetStore(path=None, max_users=1024, max_bytes=256*1024*1024,
+max_chunks=8192, max_blobs=4096)`` 延遲開啟 SQLite。分塊在入庫前驗證自己的 hash；
+commit 在發布 blob 收據前驗證排列、大小及完整 hash。冪等重送不增加配額。缺塊、損壞、
+外來或未來版本資料庫不可發布可用內容。讀取重驗分塊 bytes，可 seek 暫存 stream 以
+256 KiB 為切換至磁碟的門檻；晚期收據失敗／取消仍保留已接受分塊。超過配額會明確失敗；不可變
+歷史保留，不自動回收。自有資產資料庫 schema 為 1。
+
+``SyncAssetHTTPClient(endpoint, user_id=..., secret_env=None, timeout_s=5,
+cancelled=None)`` 在指定 store／帳號與遠端帳號之間上傳／下載。Probe 查缺塊，重啟略過
+結果不明但已接受的塊，最終 blob 收據可冪等重送。每次 RPC 重查宣告的環境憑證，沿用
+有界 HTTP egress 並停用 redirect；描述或收據不帶憑證與本機來源路徑。
+
+Signaling ``create_app(..., asset_store_path=None)``／CLI ``--asset-store`` 選擇獨立的
+延遲 server 資料庫，預設 AUTOCONTROL_SYNC_ASSET_STORE 或
+``~/.autocontrol/sync-assets.sqlite3``。第一版 JSON 路由位於具驗證的
+``/config/{user_id}/assets``：POST probe、GET／PUT chunks/{sha256}、PUT blobs/{sha256}。
+上傳用有界且規範化的 base64，共用讀 body 前的秘密／一-MiB 限制；分塊與收據均按帳號
+隔離及限額。不改 config／outbox wire 協定或既有資料庫版本。舊 server 在 Workspace
+傳送帶資產的定義前就會拒絕專用路由。
+
+``SyncWorkspace.synchronize`` 在準備新因果編輯請求前上傳封存資產。已準備且結果不明
+的定義會先重送精確 PUT，不先 probe 資產。已在 server 完整發布的遠端參照，可在本機
+bytes 尚未下載時先解決，後續同步補下載。下載中斷保留已驗證分塊，顯示 offline／
+unresolved，不產生只有腳本的版本。完整重同步基準採用會抑制未改變的退休來源／資產重播。
+
+既有 AC_sync_workspace／ac_sync_workspace／Builder 操作與四個私有 adapter／profile
+命令接受這些描述欄位，沿用 DRIVE／目前 roots／取消。完整發布由同一 head 視圖串流
+原生中繼資料與引用 bytes，一次驗證發布整版；缺失、衝突或損壞的資產拒絕全部輸出。
+原生檔案路徑相對於 generation 根目錄，明確載入的工作副本須依此根目錄解析。不執行腳本、
+註冊熱鍵、啟用觸發器或替換目前偏好。
+``python -m examples.sync_referenced_assets`` 經暫存 stdlib loopback HTTP 傳送真實的
+多分塊 PNG／腳本並發布三個未啟用檔案，不需可選 web framework 或外部服務。Sync UI／
+即時套用／原生載入，以及獨立 folder／clipboard／斷線回歸仍在 Progress.md；真機與付費
+驗收維持暫緩。

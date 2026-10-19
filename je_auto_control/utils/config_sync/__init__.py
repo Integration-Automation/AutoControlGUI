@@ -43,6 +43,9 @@ from je_auto_control.utils.config_sync.adapters import (
 from je_auto_control.utils.config_sync.adapter_profiles import materialize_sync_profile
 from je_auto_control.utils.config_sync.adapter_factory import adapter_from_profile
 from je_auto_control.utils.config_sync.workspace_sync import SyncWorkspace
+from je_auto_control.utils.config_sync.blob_models import SyncAssetBlob, SyncAssetReference
+from je_auto_control.utils.config_sync.blob_store import SyncAssetStore
+from je_auto_control.utils.config_sync.blob_http import SyncAssetHTTPClient
 from je_auto_control.utils.config_sync.workspace_models import SyncWorkspaceError, WorkspaceSyncResult
 from je_auto_control.utils.config_sync.assets import (
     AssetTransport, DirectoryAssetTransport, build_asset_manifest, sync_assets,
@@ -55,6 +58,8 @@ from je_auto_control.utils.config_sync.outbox import (
 
 __all__ = [
     "SyncWorkspace", "SyncWorkspaceError", "WorkspaceSyncResult",
+    "SyncAssetBlob", "SyncAssetReference", "SyncAssetStore",
+    "SyncAssetHTTPClient",
     "SyncBindings", "SyncReference", "ApplyReport", "SyncAdapterState", "SyncAdapter", "ScriptSyncAdapter",
     "LocatorSyncAdapter", "HotkeySyncAdapter", "TriggerSyncAdapter", "AddressBookSyncAdapter", "SettingsSyncAdapter",
     "WorkspaceSettingsSyncAdapter",

@@ -150,13 +150,13 @@ compact historical receipts without new effects. Full resync requires explicit p
 retirement consent and adopts identity/cache/retirement atomically after confirmation.
 Owned outbox SQLite schemas 1/2 migrate to 3 without changing existing edit wire version 1;
 control wire is version 1. Status remains private, local-only and credential-free.
-Source coordination is described below; asset integration and sync UI remain C3 work.
+Source coordination is described below; referenced assets are described below; sync UI remains C3 work.
 
 AssetFile, AssetManifest, AssetSyncResult, AssetTransport, DirectoryAssetTransport,
 build_asset_manifest and sync_assets are experimental. Asset manifest wire is version 1.
 Private AC/MCP/Builder manifest/stage commands publish a complete verified local cache
 generation, never an active workspace replacement. Explicit files retain their bytes;
-causal workspace integration remains C3. Current roots/cancellation
+referenced-asset workspace integration is described below. Current roots/cancellation
 are rechecked. Corrupt caches fail without overwrite; identical verified caches are reused.
 
 SyncReference, SyncBindings, ApplyReport, SyncAdapter, SyncAdapterState,
@@ -168,10 +168,10 @@ snapshot/apply/resolve/materialize commands
 require DRIVE. Apply persists a causal inbox; it never replaces live definitions.
 Materialization publishes an inert complete generation with native hotkey/trigger flags
 disabled. Secret references remain vault placeholders without vault lookup; native
-locator/hotkey/trigger/address-book fields accept local references only. Workspace
+machine fields accept local references; native script/image file fields also accept typed assets. Workspace
 preferences require literal values. The separate workspace adapter bridges saved native
 GUI preferences; live GUI application remains explicit. Full-resync adapter baselines
-are coordinated below; asset references/transport and Sync UI remain C3.
+and referenced assets are coordinated below; Sync UI remains C3.
 
 Native sync definition numeric bounds are checked before floating-point finite
 conversion. Out-of-range arbitrary-precision JSON integers raise ConfigSyncError
@@ -197,3 +197,16 @@ fingerprints and idempotent adapter-generation adoption preserve uncertain retri
 prevent retired source replay. Missing legacy reset baselines require a new coordinated
 full reset. Source/state/outbox path roles cannot overlap; existing kind/state bindings
 remain stable. Credentials refresh per RPC and received data never activates a source.
+
+SyncAssetBlob, SyncAssetReference, SyncAssetStore and SyncAssetHTTPClient are experimental.
+Reserved asset marker/descriptor and chunk HTTP protocols are version 1; the separate
+owned asset SQLite schema is 1. Private bindings.assets and optional asset_cache_path
+are additive schema-1 descriptor fields. Non-asset adapter binding/reset hashes stay
+compatible. Source files freeze to content-addressed chunks before causal capture; new
+requests upload assets before prepare, while uncertain prepared definitions retry first.
+Received metadata and assets publish as one inert generation. Native paths are relative
+to its root. Existing AC/MCP/Builder fields preserve DRIVE/current roots/cancellation.
+Signaling adds optional create_app asset_store_path and --asset-store, with the same
+authentication/pre-body size guard. Server/client stores have explicit byte/object/user
+quotas; immutable content has no automatic garbage collection. Older asset-unaware
+participants require upgrade before processing new typed references.

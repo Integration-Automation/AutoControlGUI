@@ -97,7 +97,7 @@ collection with permanent causal fences. Upgraded accounts reject plain reads an
 writes; existing local store commands accept causal JSON with an explicit _actor.
 See :doc:`../causal_sync/causal_sync_doc`. The current HTTP client/merge helper
 retains last-modified ordering and time-bounded tombstones. SyncWorkspace source/peer-control/full-resync orchestration is described in the causal guide.
-Asset coordination remains in Progress.md. The explicit
+Referenced-asset coordination is described in that guide. The explicit
 CausalSyncClient.flush supplies durable v3 delivery and bounded rebasing. Local tests
 use isolated files and loopback servers, without remote-machine or native acceptance.
 
@@ -108,7 +108,7 @@ SQLite schema 1/2-to-3 migration and local-only status.
 
 Explicit local asset manifests and complete verified generations use build_asset_manifest
 and sync_assets with DirectoryAssetTransport (API/AC/MCP/Builder). These stage opaque
-files without activating configuration; causal adapter integration remains C3 work.
+files without activating configuration; referenced-asset integration is described in the causal guide.
 See the causal guide for size/hash/path limits and publication semantics.
 
 Seven causal source adapters now persist portable definitions and publish complete inert
@@ -116,7 +116,7 @@ native profiles through the asset layer (API/AC/MCP/Builder). Named local/vault
 references avoid selected machine values and recognized credentials in portable
 entries. Apply never changes active sources; hotkeys/triggers remain disabled.
 See the causal guide for private schema-1 profiles, exact conflict resolution and
-coordinated source/outbox recovery and remaining live GUI/asset integration.
+coordinated source/outbox/asset recovery and remaining live GUI integration.
 
 Native numeric definitions check supported ranges before finite conversion.
 Extreme JSON integers fail with ConfigSyncError before adapter storage is opened.
@@ -135,3 +135,9 @@ SyncWorkspace and AC_sync_workspace/ac_sync_workspace (Builder Data) coordinate 
 profiles, durable capture/delivery and prepared full-resync baselines. Status is local;
 all server modes require DRIVE. Incoming data stays inert. See the causal guide for the
 private schema-1 descriptor, exact review/resolution, lease and migration boundaries.
+
+Referenced assets use a separate lazy SyncAssetStore selected by signaling --asset-store
+and version-one authenticated chunk/blob routes. SyncWorkspace pins its asset_cache_path,
+uploads frozen content before new causal definitions and publishes native metadata/assets
+atomically. Existing AC/MCP/Builder descriptors add explicit bindings.assets aliases;
+source paths and credentials stay private. See the causal guide for quotas and wire details.

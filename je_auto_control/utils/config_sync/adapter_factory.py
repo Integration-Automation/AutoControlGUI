@@ -26,30 +26,42 @@ def adapter_from_profile(profile: dict[str, object], *, path_policy: Optional[Pa
     _checkpoint((), path_policy, cancelled)
     body = _profile(profile)
     identity = _identity(body['identity'])
-    kind = cast(AdapterKind, body['kind'])
     source = cast(dict[str, object], body['source'])
     state_path = _root(cast(str, body['state_path']), path_policy)
     source_path = _source_path(source, path_policy)
-    roots = (state_path,) if source_path is None else (state_path, source_path)
+    asset_path, bindings, roots = _asset_paths(body, state_path, source_path, path_policy)
 
     def checkpoint() -> None:
         _checkpoint(roots, path_policy, cancelled)
 
     state = SyncAdapterState(state_path, identity, profile=cast(str, body.get('profile_id', 'main')),
-                              checkpoint=checkpoint)
-    bindings = SyncBindings.from_dict(cast(dict[str, object], body.get('bindings', {})))
-    if kind == 'scripts' and source_path is not None:
+                              checkpoint=checkpoint, asset_cache_path=asset_path)
+    if body['kind'] == 'scripts' and source_path is not None:
         paths = source.get('paths', [])
         if not isinstance(paths, list):
             raise ConfigSyncError('script profile paths require a JSON array')
         return ScriptSyncAdapter(source_path, state, paths=paths, bindings=bindings)
-    reader = _reader(kind, source, source_path)
-    return _DomainAdapter(kind, reader, state, bindings)
+    reader = _reader(cast(AdapterKind, body['kind']), source, source_path)
+    return _DomainAdapter(cast(AdapterKind, body['kind']), reader, state, bindings)
+
+
+def _asset_paths(body: dict[str, object], state: Path, source: Optional[Path], policy: Optional[PathPolicy]
+                  ) -> tuple[Path, SyncBindings, tuple[Path, ...]]:
+    cache = _root(_path(body.get('asset_cache_path', str(state) + '.assets.sqlite3')), policy)
+    bindings = SyncBindings.from_dict(cast(dict[str, object], body.get('bindings', {})))
+    paths = {name: _root(cast(str, bindings.local_values[name]), policy) for name in bindings.assets}
+    if cache == state or cache == source or set(paths.values()) & {state, cache}:
+        raise ConfigSyncError('adapter asset source and storage roles overlap')
+    local = dict(bindings.local_values)
+    local.update({name: str(path) for name, path in paths.items()})
+    bindings = SyncBindings(bindings.fields, local, bindings.assets)
+    roots = (state, cache, *paths.values()) + (() if source is None else (source,))
+    return cache, bindings, roots
 
 
 def _profile(value: dict[str, object]) -> dict[str, object]:
     required = {'schema_version', 'kind', 'state_path', 'identity', 'source'}
-    optional = {'profile_id', 'bindings'}
+    optional = {'profile_id', 'bindings', 'asset_cache_path'}
     if not isinstance(value, dict) or not required <= set(value) or not set(value) <= required | optional:
         raise ConfigSyncError('invalid private adapter profile fields')
     if not _schema_one(value['schema_version']) or not isinstance(value['kind'], str) or value['kind'] not in KINDS:

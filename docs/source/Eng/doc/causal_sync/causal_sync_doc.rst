@@ -106,7 +106,7 @@ Pending views return a bounded enqueue-order prefix (1–1000 records and at mos
 16 MiB of serialized data); aggregate pending counts remain complete. Entry data
 per logical operation is capped at 1 MiB. No client credentials or HTTP headers
 are serialized; known resolved-secret values are refused. Payloads should carry
-secret references. Source adapters and coordination are described below; asset integration remains C3.
+secret references. Source adapters and coordination are described below; referenced assets are described below.
 
 Commands and Builder
 ----------------------------------------------------------------
@@ -306,7 +306,7 @@ retired. Their wire payload remains archived; it is never replayed into the new
 epoch. A failed local transaction leaves all old state intact and retries the
 same prepared request. Unknown or reset server generations use a fresh stable
 origin and may adopt a lower root revision. This adopts sync state only; coordinated source baselines are described below.
-Asset integration and synchronization UI remain separate work.
+Referenced-asset integration is described below; synchronization UI remains separate work.
 
 ``queue.request_control(...)`` persists without HTTP. ``control_status`` reviews
 state and ``control_receipt(endpoint, user_id, operation_id)`` returns a confirmed
@@ -347,7 +347,7 @@ Limits are 1024 assets, 64 MiB per file and 256 MiB per complete generation.
 The manifest contains relative names, hashes and sizes; machine roots remain on
 the live transport. This is an explicit opaque-file selection and preserves file
 bytes. The source adapters below replace selected secrets and machine paths with
-references; asset/causal workspace coordination remains C3 work.
+references; referenced-asset workspace coordination is described below.
 It does not automatically capture workspace files or upload them to a server.
 
 ``build_asset_manifest(source_root, paths, cancelled=None)`` reads the selected
@@ -473,7 +473,7 @@ paths and binding values and remain private; only portable entries belong on the
 ``python -m examples.sync_adapters`` captures all six actual sources and materializes
 twelve temporary native/metadata files, with zero execution, registration, vault reads
 or network calls. Source/outbox coordination and full-resync baselines are described below.
-Live GUI preference application, asset references/transport, explicit native loading, Sync UI and
+Live GUI preference application, explicit native loading, Sync UI and
 folder/clipboard/disconnection regression remain C3 work in Progress.md.
 
 Journal capture keeps the existing conservative secret-field policy. An inline
@@ -595,6 +595,88 @@ register/ack/collect/retire/full_resync accept secret_env/timeout_s/policy/max_r
 Controls additionally accept operation_id/peer_id/discard_pending under their usual rules.
 ``python -m examples.sync_workspace_http`` uses two real temporary source selections and
 loopback HTTP to demonstrate offline concurrency, exact resolution, restart, inert
-publication and no retired replay. Asset references/transport, live GUI application,
+publication and no retired replay. Referenced assets are described below. Live GUI application,
 explicit native loading, Sync UI and folder/clipboard/disconnection regression remain
 open in Progress.md. No device or paid API acceptance is implied.
+
+
+Referenced asset synchronization
+----------------------------------------------------------------
+
+``SyncAssetBlob(sha256, size, chunks)`` describes at most 64 MiB as an exact tuple
+of 256-KiB chunk hashes (the last may be shorter). ``SyncAssetReference(path, blob)``
+uses the reserved ``$autocontrol_asset`` marker, with an exact portable path under
+``assets/``. Both descriptors are versioned finite JSON, with no source machine path.
+Recognized credentials in destination paths or asset references in private/machine
+fields are refused. Script arguments and native script/image file fields accept assets;
+secret references still stay local and never trigger vault reads.
+
+Select source assets explicitly through private bindings::
+
+    {
+      "fields": {"login.json": {"/actions/0/1/image":
+        {"$autocontrol_ref": {"kind": "local", "name": "button"}}}},
+      "local_values": {"button": "selected/templates/button.png"},
+      "assets": {"button": "assets/templates/button.png"}
+    }
+
+``assets`` maps a selected local alias to its portable destination; local_values
+supplies the source filename. All factory paths are authorized and bound absolutely
+at construction, so a later working-directory change cannot redirect a read. Capture
+copies only selected referenced files into an immutable chunk cache before recording
+their causal fingerprint. It transfers opaque raw bytes and never discovers files or
+reads a vault. An asset-only change creates a new definition version even when the
+script JSON stays unchanged. Missing/invalid current sources fail capture explicitly;
+already frozen chunks remain durable. Source and all storage roles cannot overlap.
+
+Workspace configuration optionally accepts ``asset_cache_path`` (default
+``<outbox_path>.assets.sqlite3``). The cache path is pinned per namespace independently
+of existing adapter state bindings. Low-level profiles/SyncAdapterState also accept
+asset_cache_path, defaulting to ``<state_path>.assets.sqlite3``. Endpoint/account cache
+scope survives peer epoch changes. Existing non-asset binding and reset baseline hashes
+remain unchanged. Source alias/destination rules participate in reset configuration.
+
+``SyncAssetStore(path=None, max_users=1024, max_bytes=256*1024*1024,
+max_chunks=8192, max_blobs=4096)`` opens SQLite lazily. Chunks verify their own hash
+before admission; commit verifies layout, size and the complete hash before publishing
+a blob receipt. Equal retries consume no extra quota. Missing, corrupt, foreign or
+future storage cannot publish usable content. Reads reverify chunk bytes and use a
+seekable temporary stream with a 256-KiB spool threshold. Accepted chunks survive late
+receipt failures/cancellation. Quota exhaustion is explicit; immutable history is
+retained without automatic garbage collection. The owned asset database schema is 1.
+
+``SyncAssetHTTPClient(endpoint, user_id=..., secret_env=None, timeout_s=5,
+cancelled=None)`` uploads/downloads between a supplied store/account and the remote
+account. Probe identifies missing hashes, accepted uncertain chunks are skipped on
+restart, and the final blob receipt is idempotent. Every RPC refreshes the declared
+environment credential and reuses bounded HTTP egress with redirects disabled. No
+credential or local source path is part of a blob descriptor or receipt.
+
+Signaling ``create_app(..., asset_store_path=None)`` and CLI ``--asset-store`` select a
+separate lazy server database, defaulting to AUTOCONTROL_SYNC_ASSET_STORE or
+``~/.autocontrol/sync-assets.sqlite3``. Version-one JSON routes are authenticated under
+``/config/{user_id}/assets``: POST probe, GET/PUT chunks/{sha256}, PUT blobs/{sha256}.
+Uploads use canonical bounded base64 and share the pre-body secret/one-MiB guard;
+account isolation and quotas apply to chunks and blob receipts. Config/outbox wire
+protocols and existing database versions do not change. Older asset-unaware servers
+refuse the dedicated route before a Workspace sends an asset-bearing definition.
+
+``SyncWorkspace.synchronize`` uploads frozen assets before preparing new causal edit
+requests. An already prepared uncertain definition retries its exact PUT first, without
+an asset probe. A received reference already complete on the server may be resolved
+before local bytes arrive; later synchronization downloads them. Interrupted downloads
+retain verified chunks and report offline/unresolved, never a script-only generation.
+Full-resync baseline adoption suppresses unchanged retired source/asset versions.
+
+Existing AC_sync_workspace/ac_sync_workspace/Builder operations and the four private
+adapter/profile commands accept these descriptor fields with DRIVE/current roots and
+cancellation. Complete publication streams the exact native metadata and referenced
+bytes from one head view into a single verified generation. Missing, conflicting or
+corrupt assets refuse the entire output. Native file paths are relative to the generation
+root; explicitly loaded working copies must resolve them against that root. Receipt
+does not execute scripts, register hotkeys, arm triggers or replace current preferences.
+``python -m examples.sync_referenced_assets`` transfers an actual multi-chunk PNG/script
+over temporary stdlib loopback HTTP and publishes three inert files. It needs no optional
+web framework or external service. Sync UI/live application/native loading and separate
+folder/clipboard/disconnection regression remain in Progress.md; native/paid acceptance
+remains deferred.

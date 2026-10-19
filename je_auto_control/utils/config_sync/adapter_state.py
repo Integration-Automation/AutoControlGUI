@@ -15,6 +15,7 @@ from je_auto_control.utils.config_sync.adapter_schema import AdapterKind, KINDS,
 from je_auto_control.utils.config_sync.contract import ConfigStoreError, ConfigSyncError, _encoded, _identifier
 from je_auto_control.utils.config_sync.control_models import _identity
 from je_auto_control.utils.config_sync.database import SyncDatabase
+from je_auto_control.utils.config_sync.blob_store import SyncAssetStore
 from je_auto_control.utils.config_sync.outbox_models import SyncLocalIdentity
 from je_auto_control.utils.config_sync.versions import SyncEntry
 
@@ -84,13 +85,30 @@ class SyncAdapterState:
     """Persist one named profile's identity-scoped heads and source baselines; construction opens no database."""
 
     def __init__(self, path: Optional[str | Path], identity: SyncLocalIdentity, *, profile: str = 'main',
-                   checkpoint: Optional[Callable[[], None]] = None) -> None:
+                   checkpoint: Optional[Callable[[], None]] = None,
+                   asset_cache_path: Optional[str | Path] = None) -> None:
         _identity(identity)
         _identifier(profile, 'adapter profile')
         self.identity = identity
         self.profile = profile
         self._checkpoint = checkpoint
         self._database = SyncDatabase(path, 'AUTOCONTROL_SYNC_ADAPTER_STATE', 'sync-adapters.sqlite3', _initialize)
+        self._asset_path = asset_cache_path
+        self._assets: Optional[SyncAssetStore] = None
+
+    @property
+    def asset_user(self) -> str:
+        """Isolate cached bytes by endpoint/account, retaining the same immutable content across peer generations."""
+        return fingerprint({'endpoint': self.identity.endpoint, 'user_id': self.identity.user_id})
+
+    def asset_store(self) -> SyncAssetStore:
+        """Construct a lazy private chunk cache only when an asset is explicitly selected or received."""
+        self.checkpoint()
+        if self._assets is None:
+            # pylint: disable-next=protected-access  # reason: derive a lazy sibling cache from this owned adapter database's stable path binding
+            path = self._asset_path or str(self._database._path()) + '.assets.sqlite3'
+            self._assets = SyncAssetStore(path)
+        return self._assets
 
     def _scope(self, kind: AdapterKind) -> str:
         if kind not in KINDS:

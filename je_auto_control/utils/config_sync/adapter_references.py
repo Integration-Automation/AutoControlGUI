@@ -5,9 +5,12 @@ from dataclasses import dataclass, field
 from pathlib import PurePosixPath, PureWindowsPath
 import re
 from types import MappingProxyType
-from typing import Literal, Mapping, Optional, cast
+from typing import Callable, Literal, Mapping, Optional, cast
 
 from je_auto_control.utils.config_sync.contract import ConfigSyncError, _encoded
+from je_auto_control.utils.config_sync.asset_models import AssetFile
+from je_auto_control.utils.config_sync.blob_models import SyncAssetReference
+from je_auto_control.utils.config_sync.blob_binding import asset_reference, convert_asset_bindings
 from je_auto_control.utils.executor.action_redaction import _ALL_SECRET_COMMANDS, is_sensitive_argument
 from je_auto_control.utils.logging.secret_scope import scrub_secret_data
 from je_auto_control.utils.secrets_scan.secrets_scan import is_secret_key, scan_secrets
@@ -48,17 +51,19 @@ class SyncBindings:
 
     fields: Mapping[str, Mapping[str, SyncReference]] = field(default_factory=dict)
     local_values: Mapping[str, object] = field(default_factory=dict, repr=False)
+    assets: Mapping[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         fields = _fields(self.fields)
         local = _local_values(self.local_values)
         object.__setattr__(self, 'fields', MappingProxyType(fields))
         object.__setattr__(self, 'local_values', MappingProxyType(local))
+        object.__setattr__(self, 'assets', MappingProxyType(_asset_aliases(self.assets, local)))
 
     @classmethod
     def from_dict(cls, body: dict[str, object]) -> SyncBindings:
         """Parse private local binding configuration; this structure is never part of a portable sync entry."""
-        if not isinstance(body, dict) or not set(body) <= {'fields', 'local_values'}:
+        if not isinstance(body, dict) or not set(body) <= {'fields', 'local_values', 'assets'}:
             raise ConfigSyncError('invalid local adapter binding configuration')
         raw = body.get('fields', {})
         if not isinstance(raw, dict):
@@ -68,7 +73,23 @@ class SyncBindings:
             if not isinstance(values, dict):
                 raise ConfigSyncError('invalid adapter reference field map')
             fields[entry_id] = {pointer: _required_reference(value) for pointer, value in values.items()}
-        return cls(fields, cast(Mapping[str, object], body.get('local_values', {})))
+        return cls(fields, cast(Mapping[str, object], body.get('local_values', {})),
+                   cast(Mapping[str, str], body.get('assets', {})))
+
+
+def _asset_aliases(values: Mapping[str, str], local: Mapping[str, object]) -> dict[str, str]:
+    if not isinstance(values, Mapping) or len(values) > 1000:
+        raise ConfigSyncError('asset aliases must be a bounded mapping')
+    result = {}
+    for name, path in values.items():
+        SyncReference('local', name)
+        if not isinstance(local.get(name), str):
+            raise ConfigSyncError('asset aliases require a selected local source path')
+        AssetFile(path, '0' * 64, 0)
+        if not path.startswith('assets/'):
+            raise ConfigSyncError('asset alias destinations must stay under assets/')
+        result[name] = path
+    return result
 
 
 def _fields(values: Mapping[str, Mapping[str, SyncReference]]) -> dict[str, Mapping[str, SyncReference]]:
@@ -132,11 +153,14 @@ def _required_reference(value: object) -> SyncReference:
 
 
 def export_value(entry_id: str, value: dict[str, object], bindings: SyncBindings, *,
-                    root_key: str = '') -> dict[str, object]:
+                    root_key: str = '', asset_resolver: Optional[Callable[[str], SyncAssetReference]] = None
+                    ) -> dict[str, object]:
     """Replace declared source fields before refusing remaining recognized secrets or absolute paths."""
     _encoded(value)
     walker = _ReferenceWalker(bindings.fields.get(entry_id, {}), bindings.local_values, True)
-    result = cast(dict[str, object], walker.visit(value, '', root_key))
+    result = cast(dict[str, object], convert_asset_bindings(walker.visit(value, '', root_key),
+                                                           bindings.assets, asset_resolver))
+    validate_portable(result, root_key=root_key)
     _known_secrets(result)
     return result
 
@@ -150,27 +174,41 @@ def validate_portable(value: dict[str, object], *, root_key: str = '') -> None:
     _known_secrets(value)
 
 
-def resolve_value(value: dict[str, object], bindings: SyncBindings) -> tuple[dict[str, object], tuple[str, ...]]:
+def resolve_value(value: dict[str, object], bindings: SyncBindings, *,
+                    asset_resolver: Optional[Callable[[SyncAssetReference], Optional[str]]] = None
+                    ) -> tuple[dict[str, object], tuple[str, ...]]:
     """Produce a local profile copy; vault references stay interpolation placeholders and never read a vault."""
     missing: set[str] = set()
-    result = _resolve(value, bindings.local_values, missing)
+    result = _resolve(value, bindings.local_values, missing, asset_resolver)
     return cast(dict[str, object], result), tuple(sorted(missing))
 
 
-def _resolve(value: object, local: Mapping[str, object], missing: set[str]) -> object:
+def _resolve(value: object, local: Mapping[str, object], missing: set[str],
+               asset_resolver: Optional[Callable[[SyncAssetReference], Optional[str]]]) -> object:
+    asset = asset_reference(value)
+    if asset is not None:
+        path = asset_resolver(asset) if asset_resolver is not None else None
+        if path is None:
+            missing.add('asset:' + asset.path)
+            return value
+        return path
     reference = _reference(value)
     if reference is not None:
-        if reference.kind == 'secret':
-            return '${secrets.' + reference.name + '}'
-        if reference.name not in local:
-            missing.add(reference.name)
-            return value
-        return local[reference.name]
+        return _resolve_reference(reference, local, missing)
     if isinstance(value, dict):
-        return {key: _resolve(item, local, missing) for key, item in value.items()}
+        return {key: _resolve(item, local, missing, asset_resolver) for key, item in value.items()}
     if isinstance(value, list):
-        return [_resolve(item, local, missing) for item in value]
+        return [_resolve(item, local, missing, asset_resolver) for item in value]
     return value
+
+
+def _resolve_reference(reference: SyncReference, local: Mapping[str, object], missing: set[str]) -> object:
+    if reference.kind == 'secret':
+        return '${secrets.' + reference.name + '}'
+    if reference.name not in local:
+        missing.add(reference.name)
+        return reference.to_dict()
+    return local[reference.name]
 
 
 def _known_secrets(value: Mapping[str, object]) -> None:
@@ -194,18 +232,25 @@ class _ReferenceWalker:
             raise ConfigSyncError('adapter definitions exceed the nesting limit')
         if pointer in self._fields:
             return self._fields[pointer].to_dict()
+        asset = _asset_value(value, key, command)
+        if asset is not None:
+            return asset
         reference = _reference(value)
         if reference is not None:
             return reference.to_dict()
+        if isinstance(value, (dict, list)):
+            return self._children(value, pointer, key, command, depth)
+        return self._scalar(value, pointer, key, command)
+
+    def _children(self, value: dict[str, object] | list[object], pointer: str, key: str,
+                     command: str, depth: int) -> object:
         if isinstance(value, dict):
             return {name: self.visit(item, pointer + '/' + _escape(name),
                                      _field_key(pointer, key, name), command, depth + 1)
                     for name, item in value.items()}
-        if isinstance(value, list):
-            action = _action_name(value) or command
-            return [self.visit(item, pointer + '/' + str(index), key, action, depth + 1)
-                    for index, item in enumerate(value)]
-        return self._scalar(value, pointer, key, command)
+        action = _action_name(value) or command
+        return [self.visit(item, pointer + '/' + str(index), key, action, depth + 1)
+                for index, item in enumerate(value)]
 
     def _scalar(self, value: object, pointer: str, key: str, command: str) -> object:
         if isinstance(value, str):
@@ -248,6 +293,17 @@ def _validate_scalar(value: object, pointer: str, key: str, command: str) -> Non
 
 def _private_command(command: str) -> bool:
     return command in _ALL_SECRET_COMMANDS or command.startswith('AC_secret_')
+
+
+def _asset_value(value: object, key: str, command: str) -> Optional[dict[str, object]]:
+    asset = asset_reference(value)
+    if asset is None:
+        return None
+    _validate_scalar(asset.path, '/asset/path', 'path', '')
+    if (_private_command(command) or key.lower() in _LOCAL_FIELDS
+            or is_sensitive_argument(command, key) or is_secret_key(key)):
+        raise ConfigSyncError('private or machine fields cannot contain asset references')
+    return asset.to_dict()
 
 
 def _action_token(value: str, pointer: str, key: str, command: str) -> bool:

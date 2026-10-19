@@ -71,7 +71,7 @@ HTTP route now validate authoritative membership/epoch transitions, explicit pee
 acknowledgements and payload collection with permanent deletion fences. Tests cover
 stale CAS, historical retries, forbidden legacy overwrites, retained alternatives,
 fabricated acknowledgements, obsolete epochs and explicit restoration after GC.
-Explicit CausalSyncClient/outbox HTTP delivery now has controlled tests for uncertain accepted sends, exact restart retry before fetch, bounded definite-rejection rebasing, operation-ID conflicts, retired peers, credentials, stale leases and atomic snapshot rollback/fork refusal. Durable explicit peer controls and atomic local full-resync now cover registration, ack/collection, retirement, uncertain restart retries, compact historical receipts, leases, pending-retirement consent and generation adoption. AC/MCP/Builder share the private control/status surface; the loopback example needs no optional web framework. Coordinated source workspaces are covered below; asset integration and sync UI remain C3 work.
+Explicit CausalSyncClient/outbox HTTP delivery now has controlled tests for uncertain accepted sends, exact restart retry before fetch, bounded definite-rejection rebasing, operation-ID conflicts, retired peers, credentials, stale leases and atomic snapshot rollback/fork refusal. Durable explicit peer controls and atomic local full-resync now cover registration, ack/collection, retirement, uncertain restart retries, compact historical receipts, leases, pending-retirement consent and generation adoption. AC/MCP/Builder share the private control/status surface; the loopback example needs no optional web framework. Coordinated source workspaces are covered below; referenced assets are covered below; sync UI remains C3 work.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
@@ -358,8 +358,8 @@ success for input it never sent.
 Explicit local asset-generation API/AC/MCP/Builder paths have controlled size/hash,
 late-file failure, cancellation, live-root revocation, concurrent publication and cache
 tampering coverage. Whole bundles publish only after every file is verified. The example
-uses temporary local files and zero network/device calls. Configuration adapters, causal
-asset integration and synchronization UI remain C3; Windows symlink creation may skip
+uses temporary local files and zero network/device calls. Configuration adapters and
+referenced assets are covered below; synchronization UI remains C3. Windows symlink creation may skip
 locally when the account lacks that filesystem capability.
 
 Seven local configuration adapters have controlled tests against actual JSON script files,
@@ -371,7 +371,7 @@ profile generation. AC/MCP/Builder share private DRIVE and live root/cancellatio
 Missing references and native binding type mismatches persist for review but block complete
 publication. This establishes local capture/inert materialization, with no script execution,
 vault lookup or listener startup; coordinated loopback convergence is covered below.
-Live GUI preference application, causal assets and explicit native profile loading,
+Live GUI preference application and explicit native profile loading,
 Sync UI and folder/clipboard/disconnection regression remain in Progress.md.
 
 Controlled native-definition numeric tests refuse positive and negative 401-digit
@@ -401,4 +401,17 @@ coordinator leases, credential rotation/short masks and private INI error lines 
 controlled regressions. AC/MCP/Builder round-trip and DRIVE/prestart refusal are covered.
 The real temporary two-source loopback example converges without executing scripts or
 changing active preferences. This establishes local HTTP integration, not device or paid
-API acceptance. Asset references/transport and Sync UI remain tracked in Progress.md.
+API acceptance. Referenced assets are covered below; Sync UI remains tracked in Progress.md.
+
+Referenced asset tests verify durable per-account chunks/full-hash publication, exact
+retries, late SQL receipt rollback, foreign/future database refusal, byte/object/user
+quotas and corrupt-content rejection. Authenticated HTTP covers pre-body refusal,
+accepted uncertain chunk restart, live environment rotation and prestart cancellation.
+Workspace tests cover frozen offline assets, asset-only version changes, missing downloads
+blocking complete generation, exact uncertain definition PUT before asset probe, reset
+baselines preventing retired asset replay, cancellation/hard-carrier preservation,
+private-field/credential-path refusal and disabled image-trigger output. Red regressions
+fix relative asset paths following later cwd changes and resolution before local download.
+The actual temporary stdlib loopback example transfers a real multi-chunk PNG and script
+without execution, GUI starts, native device calls or active preference changes. Optional
+FastAPI route tests skip when its extra is absent; local controlled routes are exercised.

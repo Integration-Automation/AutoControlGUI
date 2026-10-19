@@ -10,6 +10,10 @@ in lazy SQLite storage with atomic revision checks and durable retry receipts.
 Version-two writes require base_revision/operation_id. Blind legacy writes need
 explicit allow_legacy_config_writes / --allow-legacy-config-writes opt-in.
 
+Authenticated version-one ``/config/{user_id}/assets`` routes retain verified
+content-addressed chunks and publish only complete blob receipts. ``--asset-store``
+selects their separate lazy SQLite database; uploads share the pre-body secret/size guard.
+
 Run::
 
     python -m je_auto_control.utils.remote_desktop.signaling_server \\
@@ -49,6 +53,8 @@ except ImportError as exc:  # pragma: no cover - optional dep
 
 from je_auto_control.utils.config_sync.routes import register_config_routes
 from je_auto_control.utils.config_sync.store import ConfigStore
+from je_auto_control.utils.config_sync.blob_routes import register_asset_routes
+from je_auto_control.utils.config_sync.blob_store import SyncAssetStore
 
 
 _DEFAULT_TTL_S = 120.0
@@ -314,7 +320,8 @@ def create_app(shared_secret: Optional[str] = None,
                serve_web_viewer: bool = True,
                cors_origins: Optional[list] = None,
                config_store_path: Optional[str | Path] = None,
-               allow_legacy_config_writes: bool = False) -> FastAPI:
+               allow_legacy_config_writes: bool = False,
+               asset_store_path: Optional[str | Path] = None) -> FastAPI:
     """Build the FastAPI app. Importable for embedding in larger services."""
     app = FastAPI(title="AutoControl Signaling", version="1.0.0")
     store = _SessionStore(ttl_s=ttl_s)
@@ -326,6 +333,7 @@ def create_app(shared_secret: Optional[str] = None,
     _register_routes(app, store, secret_dep)
     config = ConfigStore(config_store_path, max_users=_MAX_CONFIG_USERS)
     register_config_routes(app, config, secret_dep, allow_legacy_writes=allow_legacy_config_writes)
+    register_asset_routes(app, SyncAssetStore(asset_store_path), secret_dep)
     _register_request_logging(app)
     return app
 
@@ -349,6 +357,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cors-origin", action="append", default=None,
                         help="allowed CORS origin (repeatable; default: *)")
     parser.add_argument("--config-store", help="Persistent config SQLite path (resolved on first config access)")
+    parser.add_argument("--asset-store", help="Persistent verified asset SQLite path (resolved on first asset access)")
     parser.add_argument("--allow-legacy-config-writes", action="store_true",
                         help="Opt in to blind legacy config writes without revision protection")
     return parser
@@ -374,6 +383,7 @@ def main(argv: Optional[list] = None) -> None:
         cors_origins=args.cors_origin,
         config_store_path=args.config_store,
         allow_legacy_config_writes=args.allow_legacy_config_writes,
+        asset_store_path=args.asset_store,
     )
     uvicorn.run(app, host=args.bind, port=args.port, log_level="info")
 

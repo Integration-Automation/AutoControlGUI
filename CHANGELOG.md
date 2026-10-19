@@ -13,6 +13,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add experimental content-addressed referenced assets through SyncAssetBlob/SyncAssetReference,
+  durable account-isolated SyncAssetStore and resumable SyncAssetHTTPClient. Private bindings.assets
+  and asset_cache_path connect real source files to causal versions and existing AC/MCP/Builder
+  flows. Signaling adds authenticated bounded asset routes and --asset-store. New definitions
+  upload frozen bytes before prepare; uncertain prepared retries still send exact PUT first.
+  Native metadata/assets publish together, with no execution or activation. Byte/object/user
+  quotas bound storage, while corrupt/missing content blocks output. Fix asset reads following
+  later cwd changes, credential-like destination paths and resolution before local download.
 - Add experimental SyncWorkspace coordination with durable offline capture, strict seven-domain
   causal HTTP validation, exact reviewed resolution and inert materialization, plus private
   AC_sync_workspace/MCP/Builder Data routing. Full resync atomically prepares source fingerprints

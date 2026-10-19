@@ -74,7 +74,7 @@ compact receipt history. Controls drain before edits; uncertain payloads retry u
 Only confirmed full-resync receipts atomically adopt local identity/cache and retire old
 pending work with explicit consent. Schema 1/2-to-3 migration validates owned tables and
 preserves edit wire. AC/MCP/Builder control status is private and local-only. Applications
-choose ack/collection timing; C3 asset transport and Sync UI remain open. Shared-secret access is service-wide.
+choose ack/collection timing; C3 Sync UI remains open; referenced assets are described below. Shared-secret access is service-wide.
 
 Asset manifests contain portable relative paths, sizes and SHA-256 only. AssetTransport
 provides binary streams and a live local generation root; DirectoryAssetTransport is
@@ -94,7 +94,7 @@ are resolved (absolute path entropy is not a credential classification), and vau
 through the verified asset generation layer with hotkeys/triggers disabled. Four private
 AC/MCP/Builder commands use the same lazy descriptor factory and live root/cancellation
 checks. Source/outbox/full-resync coordination is described below;
-live GUI preference application, asset transport and Sync UI remain C3.
+live GUI preference application and Sync UI remain C3.
 
 WorkspaceSettingsSyncAdapter adds the workspace causal section for saved native GUI
 INI preferences. Only theme/font_pt/navigation_visible/navigation_width are captured;
@@ -113,10 +113,23 @@ enqueue imports pending heads before source capture, and strict typed validation
 before snapshot cache/prepare/receipt adoption. Full-resync source fingerprints share
 the durable control-intent transaction. Adapter ledger schema 2 adopts each confirmed
 new-generation baseline once, retaining later local edits and compact deletion fences.
-Source/state/outbox roles cannot overlap; selected kind/state bindings remain fixed.
+Source/asset-cache/state/outbox roles cannot overlap; selected kind/state bindings remain fixed.
 Private API/AC/MCP/Builder use live roots/cancellation and per-RPC environment credentials.
-Materialization remains inert; GUI application, native loading and asset transport remain
-open C3 work. The two-source example and regressions use temporary loopback only.
+Materialization remains inert; GUI application and native loading remain open C3 work. The two-source example and regressions use temporary loopback only.
+
+Referenced assets add explicit private alias/destination bindings and portable full/chunk
+SHA-256 descriptors. Source capture freezes bytes in an account/endpoint-scoped sibling
+cache before causal fingerprints. A separate owned schema-1 chunk store verifies bytes,
+size/layout and full hashes before immutable blob receipts, with byte/object/user quotas.
+Authenticated signaling asset routes and the lazy per-RPC credential client resume only
+missing content-addressed chunks. Upload precedes new causal prepare; uncertain prepared
+definition retries bypass asset probes. Selected received heads download to the cache;
+one consistent profile bundle streams native metadata and exact asset capabilities into
+the all-or-none generation publisher. Native paths are relative to generation root;
+missing/corrupt/conflicting assets cannot publish a script-only generation. No received
+work activates. Low-level profile paths are authorized and fixed at construction, so
+later cwd changes cannot redirect asset reads. Server --asset-store chooses a separate
+lazy SQLite location; existing config/outbox database and wire versions stay unchanged.
 
 Cancellation carriers and classifiers live in the dependency-free
 `utils/exception/control_signals.py` seam. MCP context and run-history import paths

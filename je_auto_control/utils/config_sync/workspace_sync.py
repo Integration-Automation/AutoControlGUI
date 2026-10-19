@@ -25,7 +25,9 @@ from je_auto_control.utils.config_sync.outbox import SyncOutbox
 from je_auto_control.utils.config_sync.outbox_models import SyncLocalIdentity, SyncOperation
 from je_auto_control.utils.config_sync.peers import FullResyncRequired
 from je_auto_control.utils.config_sync.versions import SyncEntry
-from je_auto_control.utils.config_sync.workspace_config import parse_workspace, profile_binding, source_configuration
+from je_auto_control.utils.config_sync.workspace_config import (
+    asset_cache_binding, parse_workspace, profile_binding, source_configuration,
+)
 from je_auto_control.utils.config_sync.workspace_models import (
     SyncWorkspaceError, WorkspaceSyncResult, WorkspaceState, validate_workspace_snapshot,
 )
@@ -74,6 +76,7 @@ class SyncWorkspace:
     def _operation(self, seconds: float = 300) -> Iterator[None]:
         self._check()
         bindings = {cast(str, profile['kind']): profile_binding(profile) for profile in self._spec.profiles}
+        bindings['__assets__'] = asset_cache_binding(self._spec.asset_cache_path)
         owner = self._store.claim(bindings, seconds)
         token = self._owner.set(owner)
         try:
@@ -269,7 +272,18 @@ class SyncWorkspace:
             self._reconcile()
             if not report.failed and self._store.pending_control() is None and not self._has_prepared():
                 self._pull(client)
+            self._download_assets(client)
             return self._result(captured, report.delivered)
+
+    def _download_assets(self, client: WorkspaceClient) -> None:
+        self._check()
+        adapters = self._adapters(self._identity())
+        entries = (entry for adapter in adapters.values() for entry in adapter.review().values())
+        try:
+            client.download_assets(entries)
+        except (OSError, ConfigSyncError) as error:
+            raise_caused_run_interruption(error)
+            self._note('network_error')
 
     def _resume_control(self, operation: SyncControlOperation, options: dict[str, object]) -> SyncControlResult:
         if operation.kind == 'full_resync':
@@ -367,7 +381,8 @@ def _workspace_state(outbox: dict[str, object], control: dict[str, object], coor
 def _protocol_state(outbox: dict[str, object], control: dict[str, object], error: str) -> WorkspaceState | None:
     known: dict[str, WorkspaceState] = {'invalid_snapshot': 'invalid', 'invalid_pending': 'invalid',
         'configuration_changed': 'invalid', 'requires_full_resync': 'requires_full_resync',
-        'missing_baseline': 'requires_full_resync', 'network_error': 'offline'}
+        'missing_baseline': 'requires_full_resync', 'network_error': 'offline',
+        'invalid_asset_reply': 'invalid', 'missing_asset': 'unresolved'}
     if error in known:
         return known[error]
     for label, state in (('blocked', 'requires_full_resync'), ('offline', 'offline'), ('conflict', 'conflict')):

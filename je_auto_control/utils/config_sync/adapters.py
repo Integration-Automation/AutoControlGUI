@@ -23,6 +23,10 @@ from je_auto_control.utils.config_sync.contract import ConfigSyncError, _encoded
 from je_auto_control.utils.config_sync.versions import SyncEntry
 from je_auto_control.utils.config_sync.workspace_preferences import _read_workspace_preferences
 from je_auto_control.utils.config_sync.workspace_models import validate_workspace_snapshot, workspace_frontier
+from je_auto_control.utils.config_sync.blob_models import SyncAssetReference
+from je_auto_control.utils.config_sync.blob_binding import (
+    BoundProfileAsset, ProfileBundle, asset_references, capture_asset,
+)
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -63,9 +67,18 @@ class _DomainAdapter:
         if len(raw) > 1000:
             raise ConfigSyncError('adapter source has more than 1000 definitions')
         result = {}
+        assets: dict[str, SyncAssetReference] = {}
+
+        def resolve_asset(name: str) -> SyncAssetReference:
+            if name not in assets:
+                assets[name] = capture_asset(cast(str, self._bindings.local_values[name]), self._bindings.assets[name],
+                    self._state.asset_store(), self._state.asset_user, self.checkpoint)
+            return assets[name]
+
         for entry_id, value in raw.items():
             self._state.checkpoint()
-            value = export_value(entry_id, value, self._bindings, root_key=entry_id if self.kind == 'settings' else '')
+            value = export_value(entry_id, value, self._bindings, root_key=entry_id if self.kind == 'settings' else '',
+                                 asset_resolver=resolve_asset)
             validate_record(self.kind, entry_id, value)
             result[entry_id] = value
         return result
@@ -147,7 +160,7 @@ class _DomainAdapter:
                 continue
             if versions[0].is_deleted:
                 continue
-            value, missing = resolve_value(versions[0].value, self._bindings)
+            value, missing = resolve_value(versions[0].value, self._bindings, asset_resolver=self._resolve_asset)
             if missing:
                 unresolved.extend(f'{entry_id}:{name}' for name in missing)
                 continue
@@ -168,11 +181,22 @@ class _DomainAdapter:
 
     def profile_files(self) -> dict[str, bytes]:
         """Serialize one consistent head view in its native data format, retaining exact version IDs in metadata."""
+        return dict(self.profile_bundle().files)
+
+    def _resolve_asset(self, reference: SyncAssetReference) -> Optional[str]:
+        self.checkpoint()
+        return reference.path if self._state.asset_store().contains(self._state.asset_user, reference.blob) else None
+
+    def profile_bundle(self) -> ProfileBundle:
+        """Bind native metadata and complete cached assets to the same exact causal head view."""
         heads = self._state.heads(self.kind)
         values, conflicts, unresolved = self._project(heads)
         if conflicts or unresolved:
             raise ConfigSyncError('adapter profile has unresolved conflicts or local references')
-        return profile_files(self.kind, values, heads)
+        references = {item for head in heads.values() if not head.is_deleted for item in asset_references(head.value)}
+        assets = tuple(BoundProfileAsset(item, self._state.asset_store(), self._state.asset_user, self.checkpoint)
+                       for item in sorted(references, key=lambda item: (item.path, item.blob.sha256)))
+        return ProfileBundle(profile_files(self.kind, values, heads), assets)
 
 
 def _disabled(value: dict[str, object]) -> dict[str, object]:

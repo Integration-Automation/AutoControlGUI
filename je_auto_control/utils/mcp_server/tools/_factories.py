@@ -8790,7 +8790,7 @@ def sync_adapter_tools() -> List[MCPTool]:
     common = {"profile": profile}
     return [
         MCPTool(name="ac_sync_workspace", description="Coordinate explicit private definition profiles with an "
-                "offline outbox, causal HTTP, exact conflict review and prepared full-resync baselines. "
+                "offline outbox, verified referenced assets, causal HTTP and prepared full-resync baselines. "
                 "Requires DRIVE/current roots even for status; received work is never activated.",
                 input_schema=schema({"configuration": {"type": "object"},
                     "operation": {"type": "string", "default": "status", "enum": ["status", "capture", "sync",

@@ -85,7 +85,7 @@ MCP 在儲存前檢查取消；交易完成後不再重標為取消。
 並在回收刪除 payload 後保留永久因果憑證。升級帳號拒絕普通讀寫；既有本機設定庫
 命令接受帶明確 _actor 的因果 JSON。參閱 :doc:`../causal_sync/causal_sync_doc`。
 目前 HTTP client／merge helper 仍使用 last-modified 排序與限時 tombstone；
-來源工作區與完整重同步協調見因果指南；資產整合保留在 Progress.md。
+來源工作區、完整重同步與引用資產協調見因果指南。
 明確的 CausalSyncClient.flush 已提供持久化第三版投遞與有界重合併。
 本機驗證使用隔離檔案與 loopback server，不增加遠端機器或真機驗收聲明。
 
@@ -95,12 +95,12 @@ CausalSyncClient.control 與 AC_sync_peer_control（MCP／Builder）使用。固
 
 明確的本機資產 manifest 與完整驗證版本可透過 build_asset_manifest、sync_assets 與
 DirectoryAssetTransport（API／AC／MCP／Builder）使用。僅暫存原始檔，不啟用設定；
-因果 adapter 整合仍屬 C3。大小／雜湊／路徑限制與發布語意請參閱因果指南。
+引用資產整合見因果指南。大小／雜湊／路徑限制與發布語意請參閱因果指南。
 
 七種因果來源 adapter 已保存可攜定義，並透過資產層發布完整且未啟用的原生 profile
 （API／AC／MCP／Builder）。具名 local／vault 參照避免將選定的機器值與辨識到的
 憑證放入可攜 entries。Apply 不改啟用中的來源，熱鍵／觸發器保持停用。私有 schema-1
-描述、明確衝突解決、來源／outbox 恢復及尚缺的 GUI 即時套用／資產整合請參閱因果指南。
+描述、明確衝突解決、來源／outbox／資產恢復及尚缺的 GUI 即時套用請參閱因果指南。
 
 原生數值定義先檢查支援範圍再作有限值轉換；超大 JSON 整數以 ConfigSyncError
 拒絕，不會開啟 adapter 儲存。
@@ -117,3 +117,8 @@ WorkspaceSettingsSyncAdapter 提供獨立 workspace 種類，處理四項已保�
 SyncWorkspace 與 AC_sync_workspace／ac_sync_workspace（Builder Data）協調明確 profiles、
 持久捕捉／投遞與完整重同步來源基準。Status 只讀本機；所有 server 模式需要 DRIVE。
 接收資料保持未啟用；私有 schema-1 描述、精確檢視／解決、lease 與遷移邊界見因果指南。
+
+引用資產使用獨立的延遲 SyncAssetStore，由 signaling --asset-store 與第一版具驗證
+chunk／blob 路由提供。SyncWorkspace 固定 asset_cache_path，在新因果定義前上傳封存
+內容，再原子發布原生中繼資料／資產。既有 AC／MCP／Builder 描述加入明確 bindings.assets
+別名，來源路徑與憑證保持私有；配額與 wire 說明見因果指南。

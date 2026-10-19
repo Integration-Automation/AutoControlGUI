@@ -7,6 +7,7 @@ from typing import Callable, Literal, cast
 
 from je_auto_control.utils.config_sync.adapter_references import _reference
 from je_auto_control.utils.config_sync.asset_models import AssetFile
+from je_auto_control.utils.config_sync.blob_binding import asset_reference
 from je_auto_control.utils.config_sync.contract import ConfigSyncError, _encoded
 from je_auto_control.utils.config_sync.outbox_models import normalize_sync_endpoint
 from je_auto_control.utils.config_sync.workspace_preferences import _validate_workspace_record
@@ -96,7 +97,7 @@ def _locator(_entry_id: str, value: dict[str, object]) -> None:
 def _hotkey(_entry_id: str, value: dict[str, object]) -> None:
     _fields(value, {'combo', 'script_path'})
     _text(value['combo'])
-    _text(value['script_path'])
+    _file_text(value['script_path'])
     if not _local_reference(value['combo']) and not isinstance(value['combo'], str):
         raise ConfigSyncError('hotkey combination must be portable literal text')
 
@@ -120,7 +121,7 @@ def _trigger_node(value: dict[str, object], depth: int) -> None:
         raise ConfigSyncError('unsupported synchronized trigger kind')
     composite = kind in {'all', 'any', 'sequence'}
     _fields(value, {'kind', 'script_path', 'repeat', 'cooldown_seconds', 'children' if composite else 'condition'})
-    _text(value['script_path'], blank=True)
+    _file_text(value['script_path'], blank=True)
     _boolean(value['repeat'])
     _number(value['cooldown_seconds'], 0, 86400)
     if composite:
@@ -151,7 +152,7 @@ def _condition(kind: str, raw: object) -> None:
 
 
 def _image_condition(value: dict[str, object]) -> None:
-    _text(value['image_path'])
+    _file_text(value['image_path'])
     _number(value['threshold'], 0, 1)
 
 
@@ -203,3 +204,8 @@ def _local_reference(value: object) -> bool:
     if reference.kind != 'local':
         raise ConfigSyncError('native definition fields require local references; vault interpolation is data-only')
     return True
+
+
+def _file_text(value: object, *, blank: bool = False) -> None:
+    if asset_reference(value) is None:
+        _text(value, blank=blank)

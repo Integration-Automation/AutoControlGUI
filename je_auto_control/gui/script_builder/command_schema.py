@@ -139,7 +139,7 @@ def _add_sync_adapter_specs(specs: List[CommandSpec]) -> None:
                                       choices=("status", "capture", "sync", "review", "resolve", "materialize",
                                                "register", "ack", "retire", "collect", "full_resync")),
                             FieldSpec("options", FieldType.JSON, optional=True)),
-                    description="Coordinate explicit sources and causal delivery; full resync prepares baselines. "
+                    description="Coordinate sources, referenced assets and causal delivery with recovery baselines. "
                     "Received profiles remain inert until separately loaded."),
         CommandSpec("AC_sync_adapter_snapshot", "Data", "Capture Sync Definition Profile", fields=(profile,),
                     description="Read explicit real sources into persistent portable versions. No activation."),
