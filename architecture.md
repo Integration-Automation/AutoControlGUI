@@ -419,8 +419,8 @@ then publishes one immutable generation directory. Reuse verifies metadata, exac
 and all hashes; corruption preserves evidence and aborts. Private AC/MCP/Builder paths
 share current root/cancellation checkpoints. Causal bundle coordination and explicit native profile loading remain C3; this layer never replaces active workspace files or runs scripts.
 
-Six dependency-free source adapters capture selected scripts, locator repositories,
-hotkey/trigger metadata, address-book entries and JSON settings. A lazy owned SQLite
+Seven dependency-free source adapters capture selected scripts, locator repositories,
+hotkey/trigger metadata, address-book entries, JSON settings and saved native workspace preferences. A lazy owned SQLite
 ledger retains concurrent heads, source baselines and immutable operation receipts per
 endpoint/account/origin/epoch/profile/domain. Incoming data is validated before the
 transaction, including numeric ranges before finite conversion; cancellation rolls back the complete batch. Explicit reviewed head sets
@@ -429,4 +429,15 @@ SyncBindings carries named vault/local references; only explicit local scalar bi
 are resolved (absolute path entropy is not a credential classification), and vault values are never read. Complete native-format profiles publish
 through the verified asset generation layer with hotkeys/triggers disabled. Four private
 AC/MCP/Builder commands use the same lazy descriptor factory and live root/cancellation
-checks. GUI preferences, transport/outbox/full-resync coordination and Sync UI remain C3.
+checks. Live GUI preference application, transport/outbox/full-resync coordination and Sync UI remain C3.
+
+WorkspaceSettingsSyncAdapter adds the workspace causal section for saved native GUI
+INI preferences. Only theme/font_pt/navigation_visible/navigation_width are captured;
+other sections and machine state are excluded. A Qt-free bounded INI reader follows
+local native key case and refuses ambiguous aliases, without Python DEFAULT inheritance.
+The GUI and source reader share tolerant preference normalization, while incoming values
+require canonical types and supported bounds. Complete generations include workspace.ini
+and portable version metadata, with defaults for absent/deleted preferences. Seven kinds
+can publish together. Explicit GUI loading uses a separate mutable working copy; opening
+the immutable generation itself for GUI writes would damage its verified cache. Existing
+four private AC/MCP/Builder commands accept workspace descriptors without new commands.

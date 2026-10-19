@@ -3,6 +3,7 @@ from dataclasses import asdict
 from typing import Callable, Optional
 
 from je_auto_control.utils.config_sync.adapter_factory import adapter_from_profile
+from je_auto_control.utils.config_sync.adapter_schema import KINDS
 from je_auto_control.utils.config_sync.adapter_profiles import materialize_sync_profile
 from je_auto_control.utils.config_sync.asset_commands import _checkpoint, _root
 from je_auto_control.utils.config_sync.contract import ConfigSyncError
@@ -41,8 +42,8 @@ def _materialize_sync_profile(profiles: list[dict[str, object]], target_root: st
                                 cancelled: _Cancelled = None) -> dict[str, object]:
     """Publish one complete ready local profile generation without replacing active workspace files."""
     _checkpoint((), path_policy, cancelled)
-    if not isinstance(profiles, list) or not 1 <= len(profiles) <= 6:
-        raise ConfigSyncError('materialization requires 1–6 explicit adapter profiles')
+    if not isinstance(profiles, list) or not 1 <= len(profiles) <= len(KINDS):
+        raise ConfigSyncError(f'materialization requires 1–{len(KINDS)} explicit adapter profiles')
     target = _root(target_root, path_policy)
     adapters = tuple(adapter_from_profile(item, path_policy=path_policy, cancelled=cancelled) for item in profiles)
     result = materialize_sync_profile(adapters, target,

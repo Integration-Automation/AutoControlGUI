@@ -1,23 +1,17 @@
 """Read validated GUI preferences from an injectable per-user QSettings file."""
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from PySide6.QtCore import QSettings
 
-from je_auto_control.gui.theme import DEFAULT_THEME, theme_named
+from je_auto_control.gui.theme import DEFAULT_THEME
+from je_auto_control.utils.config_sync.workspace_preferences import _coerce_preference
 
 
 def default_settings() -> QSettings:
     """Resolve the account home at use time so tests can isolate all writes."""
     return QSettings(str(Path.home() / ".je_auto_control" / "gui.ini"), QSettings.Format.IniFormat)
-
-
-def _integer(settings: QSettings, key: str, default: int, minimum: int, maximum: int) -> int:
-    try:
-        value = int(settings.value(f"workspace/{key}", default))
-    except (TypeError, ValueError, OverflowError):
-        return default
-    return value if minimum <= value <= maximum else default
 
 
 @dataclass(frozen=True)
@@ -32,11 +26,11 @@ class WorkspacePreferences:
     @classmethod
     def load(cls, settings: QSettings) -> "WorkspacePreferences":
         """Load supported values, rejecting unknown sizes and corrupted data."""
-        font = _integer(settings, "font_pt", 0, 0, 20)
-        visible = str(settings.value("workspace/navigation_visible", "true")).lower()
+        defaults = cls()
+        values = {key: _coerce_preference(key, settings.value('workspace/' + key, getattr(defaults, key)))
+                  for key in ('theme', 'font_pt', 'navigation_visible', 'navigation_width')}
         return cls(
-            theme=theme_named(str(settings.value("workspace/theme", DEFAULT_THEME))).name,
-            font_pt=font if font in (0, 10, 12, 14, 16, 20) else 0,
-            navigation_visible=visible not in ("false", "0"),
-            navigation_width=_integer(settings, "navigation_width", 260, 200, 1200),
+            theme=cast(str, values['theme']), font_pt=cast(int, values['font_pt']),
+            navigation_visible=cast(bool, values['navigation_visible']),
+            navigation_width=cast(int, values['navigation_width']),
         )

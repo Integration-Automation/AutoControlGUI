@@ -14,6 +14,7 @@ from je_auto_control.utils.config_sync.asset_models import AssetFile, AssetManif
 from je_auto_control.utils.config_sync.assets import DirectoryAssetTransport, _check, sync_assets
 from je_auto_control.utils.config_sync.contract import ConfigSyncError, _encoded
 from je_auto_control.utils.config_sync.versions import SyncEntry
+from je_auto_control.utils.config_sync.workspace_preferences import _workspace_ini
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 
 def profile_files(kind: AdapterKind, values: Mapping[str, dict[str, object]],
@@ -22,19 +23,26 @@ def profile_files(kind: AdapterKind, values: Mapping[str, dict[str, object]],
     files: dict[str, bytes] = {}
     if kind == 'scripts':
         files = {'scripts/' + name: _json(value['actions']) for name, value in values.items()}
-    elif kind == 'locators':
-        files['locators.json'] = _json(values)
-    elif kind == 'address_book':
-        files['address_book.json'] = _json({'entries': list(values.values())})
-    elif kind == 'settings':
-        files['settings.json'] = _json({name: value['value'] for name, value in values.items()})
     else:
-        id_field = 'binding_id' if kind == 'hotkeys' else 'trigger_id'
-        files[kind + '.json'] = _json({'schema_version': 1, kind: [dict(value, **{id_field: name})
-                                                                for name, value in values.items()]})
+        name, content = _native_file(kind, values)
+        files[name] = content
     files['profile/' + kind + '.json'] = _json({'schema_version': 1, 'kind': kind,
                                               'heads': {key: item.to_dict() for key, item in heads.items()}})
     return files
+
+
+def _native_file(kind: AdapterKind, values: Mapping[str, dict[str, object]]) -> tuple[str, bytes]:
+    if kind == 'locators':
+        return 'locators.json', _json(values)
+    if kind == 'address_book':
+        return 'address_book.json', _json({'entries': list(values.values())})
+    if kind == 'settings':
+        return 'settings.json', _json({name: value['value'] for name, value in values.items()})
+    if kind == 'workspace':
+        return 'workspace.ini', _workspace_ini(values)
+    id_field = 'binding_id' if kind == 'hotkeys' else 'trigger_id'
+    return kind + '.json', _json({'schema_version': 1, kind: [dict(value, **{id_field: name})
+                                                            for name, value in values.items()]})
 
 
 def _json(value: object) -> bytes:
@@ -47,9 +55,9 @@ def materialize_sync_profile(adapters: Iterable[SyncAdapter], target_root: str |
                                cancelled: Optional[Callable[[], bool]] = None) -> AssetSyncResult:
     """Publish all selected resolved definitions together; never replace active source files or start a runtime."""
     _check(cancelled)
-    selected = tuple(islice(adapters, 7))
-    if not 1 <= len(selected) <= 6:
-        raise ConfigSyncError('materialization requires 1–6 explicit adapter profiles')
+    selected = tuple(islice(adapters, len(KINDS) + 1))
+    if not 1 <= len(selected) <= len(KINDS):
+        raise ConfigSyncError(f'materialization requires 1–{len(KINDS)} explicit adapter profiles')
 
     def checkpoint() -> bool:
         _check(cancelled)

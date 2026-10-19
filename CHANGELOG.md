@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add an experimental workspace adapter for saved native GUI INI preferences. Theme,
+  font size and navigation visibility/width retain causal conflicts and publish as inert
+  workspace.ini data through existing AC/MCP/Builder commands. Headless capture stays
+  Qt-free; explicit GUI use creates a separate working copy. Materialization accepts
+  seven distinct domains, and unrelated/private settings never enter portable profiles.
+
 - Accept high-entropy private absolute path bindings on POSIX while continuing
   to reject recognized credential patterns and known resolved secrets.
 

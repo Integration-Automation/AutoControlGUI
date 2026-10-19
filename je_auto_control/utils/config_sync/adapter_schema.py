@@ -9,11 +9,12 @@ from je_auto_control.utils.config_sync.adapter_references import _reference
 from je_auto_control.utils.config_sync.asset_models import AssetFile
 from je_auto_control.utils.config_sync.contract import ConfigSyncError, _encoded
 from je_auto_control.utils.config_sync.outbox_models import normalize_sync_endpoint
+from je_auto_control.utils.config_sync.workspace_preferences import _validate_workspace_record
 from je_auto_control.utils.executor.action_schema import unknown_command_names, validate_actions
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 
-AdapterKind = Literal['scripts', 'locators', 'hotkeys', 'triggers', 'address_book', 'settings']
-KINDS = frozenset({'scripts', 'locators', 'hotkeys', 'triggers', 'address_book', 'settings'})
+AdapterKind = Literal['scripts', 'locators', 'hotkeys', 'triggers', 'address_book', 'settings', 'workspace']
+KINDS = frozenset({'scripts', 'locators', 'hotkeys', 'triggers', 'address_book', 'settings', 'workspace'})
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,9 @@ def validate_record(kind: AdapterKind, entry_id: str, value: dict[str, object], 
     if kind not in KINDS or not isinstance(entry_id, str) or not entry_id or len(entry_id) > 512:
         raise ConfigSyncError('invalid adapter kind or definition ID')
     _encoded(value)
+    if kind == 'workspace':
+        _validate_workspace_record(entry_id, value, deleted=deleted)
+        return
     if deleted and not value:
         return
     validators: dict[str, Callable[[str, dict[str, object]], None]] = {

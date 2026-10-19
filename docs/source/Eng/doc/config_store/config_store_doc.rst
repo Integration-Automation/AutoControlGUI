@@ -111,7 +111,7 @@ and sync_assets with DirectoryAssetTransport (API/AC/MCP/Builder). These stage o
 files without activating configuration; causal adapter integration remains C3 work.
 See the causal guide for size/hash/path limits and publication semantics.
 
-Six causal source adapters now persist portable definitions and publish complete inert
+Seven causal source adapters now persist portable definitions and publish complete inert
 native profiles through the asset layer (API/AC/MCP/Builder). Named local/vault
 references avoid selected machine values and recognized credentials in portable
 entries. Apply never changes active sources; hotkeys/triggers remain disabled.
@@ -125,3 +125,8 @@ Private absolute local path bindings may contain high-entropy names. Only that
 heuristic is exempted for those private paths; recognized credential formats, sensitive
 binding names and known resolved-secret values remain refused. Portable data and the
 shared secret scanner are unchanged.
+
+WorkspaceSettingsSyncAdapter adds a separate workspace domain for four saved native
+GUI INI preferences. Existing private AC/MCP/Builder commands publish inert workspace.ini
+data; explicit GUI loading uses a separate working copy. Capture stays Qt-free, ignores
+private/geometry data and shares GUI fallback normalization. See the causal guide.

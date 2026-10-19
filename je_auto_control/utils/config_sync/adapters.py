@@ -19,11 +19,12 @@ from je_auto_control.utils.config_sync.adapter_sources import (
 from je_auto_control.utils.config_sync.adapter_state import SyncAdapterState, _validate_incoming, resolution_ids
 from je_auto_control.utils.config_sync.contract import ConfigSyncError, _encoded
 from je_auto_control.utils.config_sync.versions import SyncEntry
+from je_auto_control.utils.config_sync.workspace_preferences import _read_workspace_preferences
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 __all__ = ['SyncAdapter', 'ScriptSyncAdapter', 'LocatorSyncAdapter', 'HotkeySyncAdapter',
-           'TriggerSyncAdapter', 'AddressBookSyncAdapter', 'SettingsSyncAdapter']
+           'TriggerSyncAdapter', 'AddressBookSyncAdapter', 'SettingsSyncAdapter', 'WorkspaceSettingsSyncAdapter']
 
 
 class _DomainAdapter:
@@ -200,3 +201,11 @@ def _settings(path: Path) -> dict[str, dict[str, object]]:
         raise ConfigSyncError('working settings require a JSON object')
     _encoded(value)
     return {key: {'value': item} for key, item in value.items()}
+
+
+class WorkspaceSettingsSyncAdapter(_DomainAdapter):
+    """Capture four portable native GUI INI preferences; receiving them never changes the current workspace."""
+
+    def __init__(self, source_path: str | Path, state: SyncAdapterState) -> None:
+        path = Path(source_path).resolve()
+        super().__init__('workspace', lambda: _read_workspace_preferences(path), state, None)

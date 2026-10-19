@@ -96,7 +96,7 @@ CausalSyncClient.control 與 AC_sync_peer_control（MCP／Builder）使用。固
 DirectoryAssetTransport（API／AC／MCP／Builder）使用。僅暫存原始檔，不啟用設定；
 因果 adapter 整合仍屬 C3。大小／雜湊／路徑限制與發布語意請參閱因果指南。
 
-六種因果來源 adapter 已保存可攜定義，並透過資產層發布完整且未啟用的原生 profile
+七種因果來源 adapter 已保存可攜定義，並透過資產層發布完整且未啟用的原生 profile
 （API／AC／MCP／Builder）。具名 local／vault 參照避免將選定的機器值與辨識到的
 憑證放入可攜 entries。Apply 不改啟用中的來源，熱鍵／觸發器保持停用。私有 schema-1
 描述、明確衝突解決與尚缺的工作區／GUI 偏好／資產／完整重同步整合請參閱因果指南。
@@ -107,3 +107,8 @@ DirectoryAssetTransport（API／AC／MCP／Builder）使用。僅暫存原始檔
 私有絕對本機路徑綁定可包含高熵名稱；僅對這些私有路徑排除熵值啟發式判定，
 仍拒絕可辨識憑證格式、敏感綁定名稱與已知解析後秘密。可攜資料與共用秘密掃描器
 沿用原有政策。
+
+WorkspaceSettingsSyncAdapter 提供獨立 workspace 種類，處理四項已保存的原生 GUI INI
+偏好。既有私有 AC／MCP／Builder 命令發布未啟用的 workspace.ini；明確載入 GUI 時使用
+獨立工作副本。Capture 不匯入 Qt，忽略私有／幾何位置資料，並與 GUI 共用預設正規化；
+詳細語意見因果指南。

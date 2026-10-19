@@ -14,6 +14,7 @@ from je_auto_control.utils.config_sync.adapters import ScriptSyncAdapter, _Domai
 from je_auto_control.utils.config_sync.asset_commands import _checkpoint, _root
 from je_auto_control.utils.config_sync.contract import ConfigSyncError, _encoded, _schema_one
 from je_auto_control.utils.config_sync.outbox_models import SyncLocalIdentity, normalize_sync_endpoint
+from je_auto_control.utils.config_sync.workspace_preferences import _read_workspace_preferences
 from je_auto_control.utils.path_guard import PathPolicy
 
 _Cancelled = Optional[Callable[[], bool]]
@@ -98,6 +99,8 @@ def _reader(kind: AdapterKind, source: dict[str, object], path: Optional[Path]
 def _file_records(kind: AdapterKind, path: Path) -> dict[str, dict[str, object]]:
     if not path.parent.is_dir():
         raise ConfigSyncError('adapter source parent directory is unavailable')
+    if kind == 'workspace':
+        return _read_workspace_preferences(path)
     raw = read_json(path) if path.exists() else {}
     if kind == 'settings':
         return _settings_file(raw)

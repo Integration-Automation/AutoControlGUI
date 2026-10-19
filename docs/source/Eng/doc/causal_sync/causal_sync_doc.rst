@@ -382,10 +382,10 @@ Durable source adapters and inert native profiles
 ----------------------------------------------------------------
 
 ``ScriptSyncAdapter``, ``LocatorSyncAdapter``, ``HotkeySyncAdapter``,
-``TriggerSyncAdapter``, ``AddressBookSyncAdapter`` and ``SettingsSyncAdapter``
+``TriggerSyncAdapter``, ``AddressBookSyncAdapter``, ``SettingsSyncAdapter`` and ``WorkspaceSettingsSyncAdapter``
 capture explicitly selected real sources without starting backends or callbacks.
 Script selection is relative to one root; settings select a JSON object, not GUI
-QSettings preferences. Locator repositories use name/role/app_name filters. Hotkey
+QSettings preferences; use the separate workspace adapter below. Locator repositories use name/role/app_name filters. Hotkey
 and trigger adapters capture definitions only, excluding runtime enabled/fired state.
 Address-book definitions exclude last-used and local connection/wake metadata.
 
@@ -413,7 +413,7 @@ reviewed change-ID set and captures source changes before resolution. A stale re
 fails. Tombstone resolution uses an empty value and ``is_deleted=True``. Conflicts,
 missing references and invalid native local binding types remain durable for review;
 ``definitions()`` and complete materialization refuse them rather than omit entries.
-``materialize_sync_profile(adapters, target_root)`` publishes 1-6 distinct kinds using
+``materialize_sync_profile(adapters, target_root)`` publishes 1-7 distinct kinds using
 the verified asset layer. Native files and ``profile/<kind>.json`` version metadata
 share one immutable generation. Hotkey/trigger enabled flags are false, recursively.
 No active workspace pointer changes, source files are untouched and scripts stay inert.
@@ -430,8 +430,9 @@ placeholders become secret references automatically. Exact string matches agains
 unambiguous local values also become local references. Local bindings accept immutable
 finite JSON scalars; raw vault values are never bindings and vault lookup never occurs.
 Secret names follow the vault placeholder grammar. Scripts and JSON settings retain
-secret references as placeholders on materialization; other native fields support only
-local references. Missing local names or type-incompatible values block publication.
+secret references as placeholders on materialization; locator/hotkey/trigger/address-book
+fields support only local references. Workspace preferences require literal values.
+Missing local names or type-incompatible values block publication.
 Recognized credential fields, private secret-command arguments, absolute machine paths
 and device/display selectors require references. These checks do not infer arbitrary
 semantic secrets: callers must select portable data and explicitly bind sensitive fields.
@@ -445,7 +446,7 @@ even for snapshots: ``AC_sync_adapter_snapshot(profile)``,
 ``AC_sync_adapter_resolve(profile, entry_id, value, observed, is_deleted=False)`` and
 ``AC_sync_profile_materialize(profiles, target_root)``. Snapshot returns kind/entries;
 entries map change IDs to versioned wire objects. Apply returns ApplyReport fields;
-resolve returns one wire entry. ``profiles`` is an array of 1-6 private descriptors.
+resolve returns one wire entry. ``profiles`` is an array of 1-7 private descriptors.
 Builder JSON fields preserve these structures. Live source/state authority and
 cancellation remain checked through final profile publication; cancellation rolls back
 an incomplete merge. Explicit wrapped hard/cancellation signals preserve their meaning.
@@ -464,14 +465,14 @@ an incomplete merge. Explicit wrapped hard/cancellation signals preserve their m
     }
 
 ``adapter_from_profile`` constructs lazily from this private schema-1 descriptor.
-Supported kinds are scripts/locators/hotkeys/triggers/address_book/settings. Source is
+Supported kinds are scripts/locators/hotkeys/triggers/address_book/settings/workspace. Source is
 either an explicit path (only scripts accept paths) or an inline records object.
 File sources use each domain's native JSON: locator object, address-book entries array,
 schema-1 hotkey/trigger arrays or plain settings object. These descriptors contain local
 paths and binding values and remain private; only portable entries belong on the wire.
 ``python -m examples.sync_adapters`` captures all six actual sources and materializes
 twelve temporary native/metadata files, with zero execution, registration, vault reads
-or network calls. Workspace/GUI preference bridges, asset references/transport, outbox
+or network calls. Live GUI preference application, asset references/transport, outbox
 coordination, full-resync baseline adoption, explicit native loading, Sync UI and
 folder/clipboard/disconnection regression remain C3 work in Progress.md.
 
@@ -488,3 +489,43 @@ Private absolute local path bindings may contain high-entropy names. Only that
 heuristic is exempted for those private paths; recognized credential formats, sensitive
 binding names and known resolved-secret values remain refused. Portable data and the
 shared secret scanner are unchanged.
+
+Saved native GUI workspace preferences
+----------------------------------------------------------------
+
+``WorkspaceSettingsSyncAdapter(source_path, state)`` captures the saved native GUI
+INI file, normally ``~/.je_auto_control/gui.ini``. The causal kind is ``workspace``;
+records are the four independent keys theme/font_pt/navigation_visible/navigation_width,
+each wrapped as ``{"value": ...}``. Other sections, secrets, geometry and device state
+are never selected. Missing source files contain no edits; removing a stored preference
+emits a causal tombstone. Source fallback normalization is shared with the GUI.
+Incoming values require theme dark/light, font_pt in 0/10/12/14/16/20, a JSON boolean
+for navigation_visible and an integer 200-1200 for navigation_width. References and
+unknown keys are refused for this domain. Source INI is UTF-8 and bounded to one MiB;
+malformed input and ambiguous native aliases fail before adapter storage.
+Group/key case follows local native QSettings rules; Python's DEFAULT inheritance is
+disabled. See `Qt's key syntax documentation <https://doc.qt.io/qt-6/qsettings.html#section-and-key-syntax>`_.
+
+::
+
+    from je_auto_control import WorkspaceSettingsSyncAdapter
+
+    adapter = WorkspaceSettingsSyncAdapter("saved-gui.ini", state)
+    entries = adapter.snapshot()
+    # An explicitly configured receiver applies these versions to its inert profile.
+
+Existing snapshot/apply/resolve/materialize commands take ``kind: "workspace"`` in
+the private descriptor, with ``source: {"path": "saved-gui.ini"}`` or explicit inline
+records. The four preferences preserve independent conflicts and exact reviewed
+resolution. Up to seven distinct kinds can publish together. A complete generation
+contains ``workspace.ini`` plus ``profile/workspace.json``. Absent/deleted preferences
+use safe native defaults in that INI, without changing the source or current GUI.
+
+For explicit new-GUI loading, copy the generated workspace.ini to a separate mutable
+working file, then pass ``QSettings(working_file, QSettings.Format.IniFormat)`` to
+``AutoControlGUIUI(settings=...)``. Do not open the immutable cache itself for GUI
+writes: the GUI saves its preferences on close. Capture reads saved preferences;
+receiving versions does not reload a running window. The dedicated Sync UI and live
+preference application remain separate C3 work. ``python -m examples.sync_workspace``
+demonstrates capture, inert publication and the explicit working copy without Qt,
+network/device/API calls or an existing workspace change.

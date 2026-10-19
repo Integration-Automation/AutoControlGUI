@@ -8790,7 +8790,7 @@ def sync_adapter_tools() -> List[MCPTool]:
     common = {"profile": profile}
     return [
         MCPTool(name="ac_sync_adapter_snapshot", description="Capture explicit script/locator/hotkey/trigger/"
-                "address-book/settings sources as portable causal versions. Credentials and machine paths require "
+                "address-book/settings/workspace sources as portable causal versions. Credentials and paths require "
                 "references. Requires DRIVE/current roots; never activates the source.",
                 input_schema=schema(common, required=["profile"]),
                 handler=hq.sync_adapter_snapshot, annotations=SIDE_EFFECT_ONLY),

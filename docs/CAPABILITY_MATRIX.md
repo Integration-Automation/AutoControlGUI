@@ -362,7 +362,7 @@ uses temporary local files and zero network/device calls. Configuration adapters
 asset integration and synchronization UI remain C3; Windows symlink creation may skip
 locally when the account lacks that filesystem capability.
 
-Six local configuration adapters have controlled tests against actual JSON script files,
+Seven local configuration adapters have controlled tests against actual JSON script files,
 ElementRepository, HotkeyDaemon, TriggerEngine, AddressBook and JSON settings. Tests cover
 restart-stable captures, concurrent alternatives, exact reviewed resolution, tombstones,
 unchanged-source baselines, immutable receipts, cancellation/SQLite rollback, foreign and
@@ -371,7 +371,7 @@ profile generation. AC/MCP/Builder share private DRIVE and live root/cancellatio
 Missing references and native binding type mismatches persist for review but block complete
 publication. This establishes local capture/inert materialization, with no script execution,
 vault lookup or listener startup; it does not establish remote workspace convergence.
-GUI preferences, causal assets/full-resync orchestration, explicit native profile loading,
+Live GUI preference application, causal assets/full-resync orchestration, explicit native profile loading,
 Sync UI and folder/clipboard/disconnection regression remain in Progress.md.
 
 Controlled native-definition numeric tests refuse positive and negative 401-digit
@@ -380,3 +380,12 @@ JSON integers with ConfigSyncError before creating adapter storage.
 A controlled POSIX temporary path reproduces the CI entropy false positive in local
 bindings. The regression now accepts that private path while rejecting token-like
 non-path strings and recognizable credentials embedded in an absolute path.
+
+Saved native GUI preferences have controlled headless capture and offscreen real-QSettings
+round-trip tests. The workspace adapter excludes other/private/geometry sections, keeps
+concurrent values, gates exact reviewed resolution and emits versioned removals. Unknown
+keys, wrong native types, extreme bounds, malformed/oversized INI fail before state I/O.
+Tests compare native group/key case, exclude Python DEFAULT inheritance and confirm that
+explicit new-GUI loading from a working copy preserves the immutable generation and the
+current workspace. Seven domains publish together through AC/MCP/Builder. Current live-GUI
+application and Sync UI coordination remain open; no native device acceptance is added.

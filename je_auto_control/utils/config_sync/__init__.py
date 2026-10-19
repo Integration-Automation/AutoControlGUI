@@ -38,7 +38,7 @@ from je_auto_control.utils.config_sync.adapter_schema import ApplyReport
 from je_auto_control.utils.config_sync.adapter_state import SyncAdapterState
 from je_auto_control.utils.config_sync.adapters import (
     AddressBookSyncAdapter, HotkeySyncAdapter, LocatorSyncAdapter, ScriptSyncAdapter, SettingsSyncAdapter,
-    SyncAdapter, TriggerSyncAdapter,
+    SyncAdapter, TriggerSyncAdapter, WorkspaceSettingsSyncAdapter,
 )
 from je_auto_control.utils.config_sync.adapter_profiles import materialize_sync_profile
 from je_auto_control.utils.config_sync.adapter_factory import adapter_from_profile
@@ -54,6 +54,7 @@ from je_auto_control.utils.config_sync.outbox import (
 __all__ = [
     "SyncBindings", "SyncReference", "ApplyReport", "SyncAdapterState", "SyncAdapter", "ScriptSyncAdapter",
     "LocatorSyncAdapter", "HotkeySyncAdapter", "TriggerSyncAdapter", "AddressBookSyncAdapter", "SettingsSyncAdapter",
+    "WorkspaceSettingsSyncAdapter",
     "materialize_sync_profile",
     "adapter_from_profile",
     "AssetFile", "AssetManifest", "AssetSyncResult", "AssetTransport", "DirectoryAssetTransport",

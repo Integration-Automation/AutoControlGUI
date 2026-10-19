@@ -167,8 +167,10 @@ are version 1. Four private AC/MCP/Builder snapshot/apply/resolve/materialize co
 require DRIVE. Apply persists a causal inbox; it never replaces live definitions.
 Materialization publishes an inert complete generation with native hotkey/trigger flags
 disabled. Secret references remain vault placeholders without vault lookup; native
-non-script/settings fields accept local references only. JSON settings do not yet bridge
-GUI preferences. Asset references, full-resync adapter baselines and Sync UI remain C3.
+locator/hotkey/trigger/address-book fields accept local references only. Workspace
+preferences require literal values. The separate workspace adapter bridges saved native
+GUI preferences; live GUI application remains explicit. Asset references, full-resync
+adapter baselines and Sync UI remain C3.
 
 Native sync definition numeric bounds are checked before floating-point finite
 conversion. Out-of-range arbitrary-precision JSON integers raise ConfigSyncError
@@ -178,3 +180,10 @@ Private local absolute paths may contain high-entropy directory names. The adapt
 exempts only this heuristic for those paths; recognized credential patterns, sensitive
 binding names and active resolved-secret masks still refuse plaintext credentials.
 Portable entries and the shared secret scanner keep their existing policies.
+
+WorkspaceSettingsSyncAdapter is experimental and adds the workspace kind to private
+schema-1 descriptors and versioned profiles; materialization now accepts 1-7 distinct
+kinds. Its four portable preference fields use exact incoming types/bounds. Source INI
+fallbacks match the GUI. No QSettings or other Qt module is imported by headless capture.
+workspace.ini is inert generated data; explicit GUI use first creates a separate mutable
+working file. No existing active workspace is overwritten or reloaded on receipt.

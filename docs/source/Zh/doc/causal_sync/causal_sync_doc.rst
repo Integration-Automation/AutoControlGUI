@@ -314,9 +314,9 @@ source_root、target_root，回傳 JSON 結果。Builder Data 表單保留完全
 ----------------------------------------------------------------
 
 ``ScriptSyncAdapter``、``LocatorSyncAdapter``、``HotkeySyncAdapter``、
-``TriggerSyncAdapter``、``AddressBookSyncAdapter`` 與 ``SettingsSyncAdapter``
+``TriggerSyncAdapter``、``AddressBookSyncAdapter``、``SettingsSyncAdapter`` 與 ``WorkspaceSettingsSyncAdapter``
 讀取明確選定的真實來源，不啟動 backend 或 callback。腳本以單一 root 內的相對檔名選取；
-設定來源是 JSON 物件，尚未橋接 GUI QSettings 偏好設定。Locator 保留 name/role/app_name；
+設定來源是 JSON 物件，GUI QSettings 偏好設定使用下方獨立的 workspace adapter。Locator 保留 name/role/app_name；
 熱鍵／觸發器只取定義，不取執行中的 enabled/fired。通訊錄排除 last-used 與本機連線／喚醒欄位。
 
 ::
@@ -340,7 +340,7 @@ stored／unchanged／conflicts／unresolved。接收資料不替換啟用中的�
 change-ID 集合，且先捕捉目前來源變更；過期檢閱會失敗。選擇刪除時使用空 value 與
 ``is_deleted=True``。衝突、缺少參照與原生本機值型別錯誤都保留待檢閱；``definitions()``
 與完整發布會拒絕，而非靜默省略。``materialize_sync_profile(adapters, target_root)``
-接受 1–6 個不同種類，透過已驗證的資產層一次發布原生檔與 ``profile/<kind>.json``
+接受 1–7 個不同種類，透過已驗證的資產層一次發布原生檔與 ``profile/<kind>.json``
 版本中繼資料。熱鍵／觸發器的 enabled 遞迴設為 false；不改工作區指標或來源，不執行腳本。
 
 具名參照
@@ -353,7 +353,8 @@ change-ID 集合，且先捕捉目前來源變更；過期檢閱會失敗。選�
 既有 ``${secrets.LOGIN}`` 自動轉為 secret 參照；與不歧義本機字串值完全相同的欄位也可自動
 轉換。Local 值僅接受有限、不可變的 JSON scalar；不接受 vault 原值，也不讀取 vault。
 Secret 名稱遵循 vault placeholder 語法。腳本／JSON 設定在發布時保留 secret placeholder；
-其他原生欄位僅允許 local 參照。缺少本機名稱或型別不合會阻止完整發布。辨識到的憑證欄位、
+locator／熱鍵／觸發器／通訊錄原生欄位僅允許 local 參照，workspace 偏好僅接受原始值。
+缺少本機名稱或型別不合會阻止完整發布。辨識到的憑證欄位、
 私有秘密命令參數、絕對機器路徑與裝置／螢幕選取值要求參照。此檢查無法推斷任意語意秘密；
 呼叫端仍須選擇可攜資料，並明確綁定敏感欄位。
 
@@ -365,7 +366,7 @@ Secret 名稱遵循 vault placeholder 語法。腳本／JSON 設定在發布時�
 ``AC_sync_adapter_resolve(profile, entry_id, value, observed, is_deleted=False)``、
 ``AC_sync_profile_materialize(profiles, target_root)``。Snapshot 回傳 kind／entries，
 entries 以 change-ID 對應版本 wire 物件；apply 回傳 ApplyReport 欄位，resolve 回傳單筆 wire。
-Profiles 為 1–6 筆私有描述陣列。Builder 保留全部 JSON；直到最後發布仍檢查來源／狀態的
+Profiles 為 1–7 筆私有描述陣列。Builder 保留全部 JSON；直到最後發布仍檢查來源／狀態的
 即時路徑權限與取消。未完成 merge 會整批回滾；明確包裝的硬中斷／取消訊號保持傳遞。
 
 ::
@@ -382,12 +383,12 @@ Profiles 為 1–6 筆私有描述陣列。Builder 保留全部 JSON；直到最
     }
 
 ``adapter_from_profile`` 依此私有 schema 1 延遲建構。Kind 支援 scripts／locators／
-hotkeys／triggers／address_book／settings。Source 擇一使用明確 path（僅 scripts 接受 paths）
+hotkeys／triggers／address_book／settings／workspace。Source 擇一使用明確 path（僅 scripts 接受 paths）
 或 inline records 物件。檔案來源使用各領域原生 JSON：locator 物件、通訊錄 entries 陣列、
 schema-1 熱鍵／觸發器陣列或一般設定物件。描述內含本機路徑與綁定值，必須保持私有；
 只有可攜 entries 才放上 wire。``python -m examples.sync_adapters`` 使用六種真實來源產生
 十二個暫存原生／中繼檔，不執行腳本、不註冊接收熱鍵／觸發器、不讀 vault、不連網。
-工作區／GUI 偏好設定、資產參照／傳輸、outbox 協調、完整重同步基準採用、明確原生載入、
+GUI 即時偏好套用、資產參照／傳輸、outbox 協調、完整重同步基準採用、明確原生載入、
 Sync UI 與 folder／clipboard／斷線回歸仍列於 Progress.md 的 C3。
 
 日誌沿用既有的保守秘密欄位政策：內嵌定義只要包含 password 欄位，即使值為參照也會遮罩，
@@ -400,3 +401,38 @@ Sync UI 與 folder／clipboard／斷線回歸仍列於 Progress.md 的 C3。
 私有絕對本機路徑綁定可包含高熵名稱；僅對這些私有路徑排除熵值啟發式判定，
 仍拒絕可辨識憑證格式、敏感綁定名稱與已知解析後秘密。可攜資料與共用秘密掃描器
 沿用原有政策。
+
+已保存的原生 GUI 工作區偏好
+----------------------------------------------------------------
+
+``WorkspaceSettingsSyncAdapter(source_path, state)`` 讀取已保存的原生 GUI INI，
+通常位於 ``~/.je_auto_control/gui.ini``。因果種類為 ``workspace``；四個獨立 key 是
+theme／font_pt／navigation_visible／navigation_width，各以 ``{"value": ...}`` 包裝。
+不選取其他區段、秘密、幾何位置或裝置狀態。來源檔案不存在時沒有本機編輯；刪除已存偏好
+會產生因果 tombstone。來源的安全預設正規化與 GUI 共用。
+接收值要求 theme 為 dark/light、font_pt 為 0/10/12/14/16/20、navigation_visible 為
+JSON boolean、navigation_width 為 200–1200 的整數；不接受參照或未知 key。
+來源為至多一 MiB 的 UTF-8 INI；損壞輸入與歧義的原生別名在開啟 adapter 儲存前失敗。
+區段／key 大小寫遵循本機 QSettings 規則，不啟用 Python DEFAULT 繼承。
+參閱 `Qt key 語法文件 <https://doc.qt.io/qt-6/qsettings.html#section-and-key-syntax>`_。
+
+::
+
+    from je_auto_control import WorkspaceSettingsSyncAdapter
+
+    adapter = WorkspaceSettingsSyncAdapter("saved-gui.ini", state)
+    entries = adapter.snapshot()
+    # 明確設定的接收端將這些版本套用至未啟用的 profile。
+
+既有 snapshot／apply／resolve／materialize 命令的私有描述可使用 ``kind: "workspace"``，
+搭配 ``source: {"path": "saved-gui.ini"}`` 或明確 inline records。四個偏好各自保留衝突，
+解決時須提供完全相同的已檢閱版本集合。最多七種資料可一起發布，完整版本包含
+``workspace.ini`` 與 ``profile/workspace.json``。INI 中缺少／刪除的偏好採安全原生預設，
+不改來源或目前 GUI。
+
+明確交給新 GUI 載入前，先將產生的 workspace.ini 複製為獨立且可寫的工作檔，再以
+``QSettings(working_file, QSettings.Format.IniFormat)`` 傳給
+``AutoControlGUIUI(settings=...)``。不要讓 GUI 直接寫入不可變快取；GUI 關閉時會保存
+偏好。Capture 讀已保存值，接收版本不會重載執行中的視窗。專用 Sync UI 與即時偏好套用
+仍屬 C3 待辦。``python -m examples.sync_workspace`` 示範捕捉、未啟用發布與明確工作副本，
+不匯入 Qt、不呼叫網路／裝置／API，也不修改既有工作區。
