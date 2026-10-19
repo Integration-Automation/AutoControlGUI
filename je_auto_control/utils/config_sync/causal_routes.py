@@ -35,7 +35,7 @@ def register_causal_routes(app: FastAPI, store: ConfigStore, secret_dep: Callabl
             raise HTTPException(status_code=400, detail=str(error)) from error
         except ConfigRevisionConflict as error:
             raise HTTPException(status_code=409, detail={"message": str(error), "revision": error.current_revision,
-                                                         "code": "revision_conflict"}) from error
+                                                         "code": error.code}) from error
         except FullResyncRequired as error:
             detail = {"message": str(error), "code": "full_resync_required"}
             raise HTTPException(status_code=409, detail=detail) from error

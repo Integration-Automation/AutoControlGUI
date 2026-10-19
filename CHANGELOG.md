@@ -13,6 +13,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Experimental CausalSyncClient and CausalReceipt connect durable outboxes to v3 HTTP.
+  Uncertain requests retry unchanged; only definite stale-base errors permit bounded
+  rebase. Delivery and complete snapshots confirm atomically under the current lease;
+  older/equal-forked or credential-bearing snapshots cannot replace evidence. Private
+  fetch/commit/flush AC/MCP/Builder commands use live environment credential references.
+  Plain ConfigSyncClient behavior stays compatible; automatic peer-control/full-resync
+  orchestration remains pending.
+  Shared interruption handling avoids an executor dependency; existing MCP/history
+  class/function imports and cancellation containment behavior remain compatible.
+
 - Experimental CausalBucket/CausalConfigStore and a dedicated authenticated version-three
   /config/{user_id}/causal endpoint preserve concurrent alternatives, validate explicit
   actor/peer/epoch transitions and collect acknowledged deletion payloads while retaining

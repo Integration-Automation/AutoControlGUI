@@ -71,7 +71,7 @@ HTTP route now validate authoritative membership/epoch transitions, explicit pee
 acknowledgements and payload collection with permanent deletion fences. Tests cover
 stale CAS, historical retries, forbidden legacy overwrites, retained alternatives,
 fabricated acknowledgements, obsolete epochs and explicit restoration after GC.
-Automatic causal HTTP client/outbox convergence and local full-resync remain open.
+Explicit CausalSyncClient/outbox HTTP delivery now has controlled tests for uncertain accepted sends, exact restart retry before fetch, bounded definite-rejection rebasing, operation-ID conflicts, retired peers, credentials, stale leases and atomic snapshot rollback/fork refusal. Automatic peer-control orchestration and atomic local full-resync remain open.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**

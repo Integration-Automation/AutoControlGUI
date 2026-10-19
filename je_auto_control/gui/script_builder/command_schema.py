@@ -133,7 +133,20 @@ def _add_self_healing_specs(specs: List[CommandSpec]) -> None:
 def _add_config_sync_specs(specs: List[CommandSpec]) -> None:
     path = FieldSpec("path", FieldType.FILE_PATH, placeholder="config-sync.sqlite3")
     user = FieldSpec("user_id", FieldType.STRING)
+    endpoint = FieldSpec("endpoint", FieldType.STRING)
+    options = FieldSpec("options", FieldType.JSON, optional=True,
+                        placeholder='{"secret_env":"AUTOCONTROL_SYNC_SECRET","timeout_s":5}')
     specs.extend([
+        CommandSpec("AC_config_causal_fetch", "Data", "Fetch Remote Causal Snapshot", fields=(endpoint, user, options),
+                    description="Private v3 HTTP snapshot. Credential environment reference only; requires drive."),
+        CommandSpec("AC_config_causal_commit", "Data", "Commit Remote Causal Snapshot",
+                    fields=(endpoint, user, FieldSpec("bucket", FieldType.JSON), FieldSpec("actor", FieldType.JSON),
+                            FieldSpec("operation_id", FieldType.STRING), options),
+                    description="Explicit causal actor commit. Reuse exact request/ID after uncertain results."),
+        CommandSpec("AC_sync_outbox_flush", "Data", "Deliver Local Sync Queue",
+                    fields=(FieldSpec("path", FieldType.FILE_PATH, placeholder="config-outbox.sqlite3"),
+                            endpoint, user, options),
+                    description="Bounded v3 HTTP delivery. options may include policy/max_rebases; no script runs."),
         CommandSpec("AC_sync_entry_merge", "Data", "Review Causal Entry Merge",
                     fields=(FieldSpec("left", FieldType.JSON), FieldSpec("right", FieldType.JSON)),
                     description="Merge supplied causal JSON only; concurrent values remain explicit alternatives."),

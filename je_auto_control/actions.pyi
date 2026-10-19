@@ -700,6 +700,27 @@ def AC_computer_use(
 ) -> Dict[str, Any]:
     """Executor adapter: run Anthropic Computer-Use to achieve ``goal``."""
 
+def AC_config_causal_commit(
+    endpoint: str,
+    user_id: str,
+    bucket: dict[str, object],
+    actor: dict[str, object],
+    operation_id: str,
+    options: dict[str, object] | None = ...,
+    *,
+    cancelled: Callable[[], bool] | None = ...,
+) -> dict[str, object]:
+    ...
+
+def AC_config_causal_fetch(
+    endpoint: str,
+    user_id: str,
+    options: dict[str, object] | None = ...,
+    *,
+    cancelled: Callable[[], bool] | None = ...,
+) -> dict[str, object]:
+    ...
+
 def AC_config_export() -> Dict[str, Any]:
     """Executor adapter: build the config bundle dict in-memory."""
 
@@ -2864,6 +2885,17 @@ def AC_sync_entry_merge(left: dict[str, object], right: dict[str, object]) -> di
     ...
 
 def AC_sync_outbox_enqueue(path: str, operation: dict[str, object], *, path_policy: Any = ...) -> dict[str, object]:
+    ...
+
+def AC_sync_outbox_flush(
+    path: str,
+    endpoint: str,
+    user_id: str,
+    options: dict[str, object] | None = ...,
+    *,
+    path_policy: Any = ...,
+    cancelled: Callable[[], bool] | None = ...,
+) -> dict[str, object]:
     ...
 
 def AC_sync_outbox_status(

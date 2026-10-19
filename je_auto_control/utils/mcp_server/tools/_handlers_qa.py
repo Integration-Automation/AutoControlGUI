@@ -315,6 +315,45 @@ def sync_peer_state(state: dict[str, object], operation: str, peer_id: Optional[
     return _sync_peer_state(state, operation, peer_id, revision, epoch, full_resync)
 
 
+def config_causal_fetch(endpoint: str, user_id: str, options: Optional[dict[str, object]] = None, *,
+                         ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Fetch a private remote snapshot using live credential references and current egress authority."""
+    # pylint: disable-next=import-outside-toplevel  # reason: MCP adapters load optional capabilities only when called
+    from je_auto_control.utils.config_sync.http_commands import _fetch_causal_config
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _fetch_causal_config(endpoint, user_id, options, cancelled=lambda: _causal_cancelled(ctx))
+
+
+def config_causal_commit(endpoint: str, user_id: str, bucket: dict[str, object], actor: dict[str, object],
+                          operation_id: str, options: Optional[dict[str, object]] = None, *,
+                          ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Commit an explicit actor request; keep the supplied ID/body when retrying an uncertain result."""
+    # pylint: disable-next=import-outside-toplevel  # reason: MCP adapters load optional capabilities only when called
+    from je_auto_control.utils.config_sync.http_commands import _commit_causal_config
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _commit_causal_config(endpoint, user_id, bucket, actor, operation_id, options,
+                                cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_outbox_flush(path: str, endpoint: str, user_id: str, options: Optional[dict[str, object]] = None, *,
+                       ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Drain bounded private durable work with current path roots and cancellation checkpoints."""
+    # pylint: disable-next=import-outside-toplevel  # reason: MCP adapters load optional capabilities only when called
+    from je_auto_control.utils.config_sync.http_commands import _flush_sync_outbox
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _flush_sync_outbox(path, endpoint, user_id, options, path_policy=ctx.path_policy if ctx else None,
+                              cancelled=lambda: _causal_cancelled(ctx))
+
+
+def _causal_cancelled(ctx: Optional[ToolCallContext]) -> bool:
+    if ctx is not None:
+        ctx.check_cancelled()
+    return False
+
+
 def take_golden(path: str, region: Optional[List[int]] = None) -> str:
     from je_auto_control.utils.visual_regression import (
         take_golden as _take,

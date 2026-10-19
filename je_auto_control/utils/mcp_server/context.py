@@ -10,13 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
 from je_auto_control.utils.path_guard.policy import PathPolicy
-
-class OperationCancelledError(RuntimeError):
-    """Raised by :meth:`ToolCallContext.check_cancelled` when the client cancels."""
-
-    def __init__(self, request_id: Any) -> None:
-        super().__init__(f"tool call {request_id!r} was cancelled by the client")
-        self.request_id = request_id
+from je_auto_control.utils.exception.control_signals import OperationCancelledError as OperationCancelledError
 
 
 @dataclass

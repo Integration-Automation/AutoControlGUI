@@ -62,8 +62,21 @@ actor transitions to the same atomic CAS/receipt transaction. Dedicated version-
 epochs. All active peers must acknowledge a deletion before payload collection;
 permanent minimal fences retain its causal floor. Plain writes and reads refuse
 upgraded accounts. Existing private store commands also accept causal JSON with
-an explicit transient _actor. Automatic HTTP-client/outbox/full-resync orchestration
-remains C2 work; shared-secret protection remains service-wide.
+an explicit transient _actor. The explicit CausalSyncClient composes a v3 wire
+adapter over the existing bounded HTTP egress/redirect seam. Durable prepared requests
+retry before any refetch; only typed stale-base rejection allows bounded rebase.
+Operation-ID conflicts retain the exact request. CausalReceipt confirms queue delivery
+and the latest server snapshot in one lease-owned transaction; expired owners cannot
+publish, older snapshots cannot regress and equal-revision forks roll back. Private
+HTTP AC/MCP/Builder fetch/commit/flush commands use live environment credential
+references. Automatic peer-control, ack/collection scheduling and atomic local
+full-resync/old-epoch retirement remain C2 work; shared-secret access is service-wide.
+
+Cancellation carriers and classifiers live in the dependency-free
+`utils/exception/control_signals.py` seam. MCP context and run-history import paths
+remain aliases to the same classes/functions; transport code need not import the
+executor to preserve wrapped interruptions. MCP cancellation keeps its deliberate
+RuntimeError-only ancestry so ordinary framework handlers cannot swallow it.
 
 Persistent configuration uses a shared wire contract and lazy per-operation
 SQLite connections. One transaction checks the account base revision, replaces

@@ -2,8 +2,8 @@
 ================================================================
 
 實驗性基礎元件提供因果 entry 判斷、可序列化 peer ledger 與持久化本機重送佇列。
-目前 HTTP client 仍使用既有時間戳合併；HTTP client／outbox 自動整合與本機
-完整重同步協調仍保留在 C2。以下因果設定庫與獨立 HTTP 協定已驗證裝置確認及
+既有 ConfigSyncClient 仍使用時間戳合併；明確的 CausalSyncClient 已接上 outbox
+HTTP 投遞。自動 peer 控制與本機完整重同步協調仍保留在 C2。以下因果設定庫與獨立 HTTP 協定已驗證裝置確認及
 刪除回收；本機命令不連線伺服器，也不套用設定。
 
 Entry 與明確衝突
@@ -76,7 +76,8 @@ Peer 確認與 epoch
 
 ``flush(sender, endpoint=..., user_id=..., policy=..., cancelled=...)`` 呼叫使用者提供的同步 sink，
 sink 接收相同操作／準備請求並回傳正修訂版；以 ``operation.delivery_id`` 作穩定收據身分。
-sink 須處理至少一次投遞；本機元件不自動提供 HTTP／CAS 重建。
+sink 須處理至少一次投遞；通用本機 callback 不會自行重建 HTTP／CAS，
+下方 ``CausalSyncClient.flush`` 提供專用第三版投遞。
 成功提交後的取消不會把完成投遞改標失敗。
 取消與硬中斷，包括明確包裝在 cause 中的訊號，會向外傳遞，不記成一般離線失敗。
 
@@ -163,5 +164,57 @@ full_resync_required；格式錯誤回 400。共用秘密與讀取 body 前的�
 既有私有 ``AC_config_store_get``／``AC_config_store_commit`` 與對應 MCP／Builder
 Data 命令以第三版讀寫因果快照；提交 bucket 必須含明確且暫存的 _actor。
 路徑限制、DRIVE 與開始前取消仍生效。新建因果帳號需使用上例的 CausalBucket。
-命令只保存資料，不執行腳本或啟用觸發器；outbox 自動投遞、有界 HTTP 重合併
-與本機完整重同步套用仍是 C2 待辦。
+命令只保存資料，不執行腳本或啟用觸發器；下方明確 client 提供 HTTP 投遞與有界
+重合併，自動 peer 控制與原子本機完整重同步套用仍是 C2 待辦。
+
+明確的因果 HTTP 投遞
+----------------------------------------------------------------
+
+``CausalSyncClient(server_url, user_id=..., secret=None, timeout_s=5)`` 使用獨立第三版
+路由及既有 HTTP egress／redirect 保護。這是明確選用的 API；ConfigSyncClient
+保留既有時間戳合併。timeout 必須為有限正數且不超過 300 秒；不支援的舊路由或
+錯誤協定資料會拒絕，不會退回舊版盲寫。
+
+``fetch()`` 回傳完整 CausalBucket。``push(bucket, actor=..., operation_id=...,
+base_revision=None)`` 提交精確請求並回傳 CausalReceipt，包含原收據版本與最新完整
+快照。控制交易的結果不明時，需保留同一個 ID 與 body 重送；base 預設使用 bucket
+版本，兩者必須一致。full_sync／ack／retire／collect actor 遵循前述伺服器規則。
+自動持久化控制請求與本機 epoch 採用仍待完成；手動提交不會自動退役舊本機佇列。
+
+明確註冊裝置後，先保存有版本的修改，再執行網路投遞::
+
+    from je_auto_control import CausalSyncClient, SyncOperation, SyncOutbox
+
+    client = CausalSyncClient("https://sync.example", user_id="alice")
+    queue = SyncOutbox("config-outbox.sqlite3")
+    # resolved.origin/epoch must match the stable registered queue identity.
+    operation = SyncOperation("delivery-1", "https://sync.example", "alice",
+                              resolved.origin, (resolved,))
+    queue.enqueue(operation)
+    report = client.flush(queue, max_rebases=3)
+    confirmed = queue.snapshot(endpoint=operation.endpoint, user_id="alice")
+
+``flush`` 優先重送已持久化的原 prepared 請求，之後才可重新抓取；已被接受但結果
+不明的投遞，在重啟後仍保留原 ID／base。只有明確的 stale_revision 409 才清除該
+準備版本，並在有界預算內重新抓取、合併及準備。操作 ID 衝突不重合併；未知／退休
+epoch 維持 blocked。每次 attempt 允許 0–10 次 rebase，另外仍受既有 attempt／
+batch／退避限制。耗盡預算會保留 offline 修改，供下次 drain 重試；並行值仍是衝突，
+不會被選出或套用。取消在請求之間檢查；已收到成功交易會確認，不重標為取消。
+包裝的取消／硬中斷仍傳播並保留工作。
+
+CausalReceipt 要求快照每個修改都具有正值的提交版本；歷史重送的快照版本可高於
+原操作收據。outbox 在同一個 SQLite 交易內，以目前 lease 擁有權確認成功、收據與
+最新完整快照。快照寫入失敗會回滾成功標記；lease 已轉交後的舊擁有者不能發布，舊版本不能倒退
+快取，相同版本的不同資料會拒絕。舊 int callback 仍相容，但不更新快照。
+憑證 header 不序列化，回應中的已知解析憑證會在保存前拒絕。``snapshot`` 在首筆
+因果投遞確認前回傳 None；它是伺服器快照，不會套用本機設定。
+
+私有 ``AC_config_causal_fetch``、``AC_config_causal_commit``、``AC_sync_outbox_flush``
+均有對應 MCP 與 Builder Data 命令。fetch／commit 接受 endpoint、user_id、選用的
+options；commit 另需 bucket、actor、operation_id。flush 接受 path、endpoint、
+user_id、選用的 options。options 支援 secret_env（即時環境變數名稱）與 timeout_s；
+flush 另可設定 max_rebases，以及 policy 的 max_attempts、max_batch、backoff、
+max_delay、lease_seconds；未知欄位會拒絕。憑證只在 client 執行時讀取，不回傳或排入
+佇列。包含遠端讀取在內的全部命令要求 DRIVE；flush 遵守目前路徑根目錄與開始前
+取消。既有 action-file CLI 可使用同一命令；只保存／投遞資料，不執行同步腳本、
+啟用觸發器或套用設定。

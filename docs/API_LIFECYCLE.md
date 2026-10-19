@@ -111,7 +111,18 @@ inside submitted buckets. Server transactions validate membership, acknowledgeme
 retirement/full-sync epochs and deletion collection. Existing store AC/MCP/Builder
 commands also accept causal snapshots. Upgraded accounts refuse plain reads/writes;
 historical identical receipts still return their original revision. Automatic
-HTTP-client/outbox integration and local full-resync orchestration remain pending.
+peer-control/full-resync orchestration remains pending. CausalSyncClient and
+CausalReceipt are experimental: explicit fetch/push and bounded outbox HTTP
+delivery use v3, retain uncertain prepared requests and atomically confirm complete
+snapshots. The plain ConfigSyncClient API and v2 response shapes remain compatible.
+Causal 409 details carry typed stale_revision/operation_id_conflict/full_resync_required
+reasons; only the first permits rebase. New private HTTP commands use live
+options.secret_env credentials and current path/egress authority.
+
+MCP OperationCancelledError and run-history interruption classifiers keep their
+existing import aliases and carrier identity through the dependency-free shared
+control-signals module. Cancellation retains its deliberate RuntimeError-only
+ancestry and remains outside ordinary framework-error containment.
 
 - Stable API removal requires a deprecation warning and two minor releases.
 - Beta API removal requires one release note and one minor release.

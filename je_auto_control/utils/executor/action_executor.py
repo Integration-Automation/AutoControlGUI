@@ -47,6 +47,9 @@ from je_auto_control.utils.self_healing.template_commands import (
 )
 from je_auto_control.utils.codegen.journal_commands import _generate_candidate_command
 from je_auto_control.utils.config_sync.commands import _commit_config_store, _get_config_store
+from je_auto_control.utils.config_sync.http_commands import (
+    _commit_causal_config, _fetch_causal_config, _flush_sync_outbox,
+)
 from je_auto_control.utils.config_sync.causal_commands import (
     _enqueue_sync_outbox, _merge_sync_entry, _status_sync_outbox, _sync_peer_state,
 )
@@ -7267,6 +7270,9 @@ class Executor:
             "AC_generate_candidate_from_log": _generate_candidate_command,
             "AC_config_store_get": _get_config_store,
             "AC_config_store_commit": _commit_config_store,
+            "AC_config_causal_fetch": _fetch_causal_config,
+            "AC_config_causal_commit": _commit_causal_config,
+            "AC_sync_outbox_flush": _flush_sync_outbox,
             "AC_sync_entry_merge": _merge_sync_entry,
             "AC_sync_outbox_enqueue": _enqueue_sync_outbox,
             "AC_sync_outbox_status": _status_sync_outbox,

@@ -18,9 +18,11 @@ class ConfigStoreError(AutoControlException, RuntimeError):
 class ConfigRevisionConflict(AutoControlException, RuntimeError):
     """A stale base revision or reused operation ID cannot replace committed data."""
 
-    def __init__(self, current_revision: int, message: str = "stale config revision") -> None:
+    def __init__(self, current_revision: int, message: str = "stale config revision", *,
+                 code: str = "stale_revision") -> None:
         super().__init__(message)
         self.current_revision = current_revision
+        self.code = code
 
 
 class ConfigStoreFull(AutoControlException, RuntimeError):

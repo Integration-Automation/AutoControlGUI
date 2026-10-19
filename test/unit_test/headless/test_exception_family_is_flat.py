@@ -50,7 +50,7 @@ DELIBERATELY_OUTSIDE = {
     ("utils/executor/flow_control.py", "LoopBreak"),
     ("utils/executor/flow_control.py", "LoopContinue"),
     ("utils/mcp_server/_protocol.py", "_MCPError"),
-    ("utils/mcp_server/context.py", "OperationCancelledError"),
+    ("utils/exception/control_signals.py", "OperationCancelledError"),
 }
 
 #: Builtin exception classes, which are outside the family however specific

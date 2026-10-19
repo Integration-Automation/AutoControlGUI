@@ -8,6 +8,7 @@ Nothing here touches the real mouse, keyboard or screen: REST handlers that
 would are replaced by recorders, and the MCP tools are local fakes.
 """
 import json
+from threading import Condition
 import urllib.error
 import urllib.request
 
@@ -61,9 +62,18 @@ class _FakeAudit:
 
     def __init__(self):
         self.rows = []
+        self._changed = Condition()
 
     def log(self, event_type, **fields):
-        self.rows.append({"event_type": event_type, **fields})
+        with self._changed:
+            self.rows.append({"event_type": event_type, **fields})
+            self._changed.notify_all()
+
+    def completed_rows(self, count):
+        """Wait for post-response auditing before asserting its exact row count and identities."""
+        with self._changed:
+            assert self._changed.wait_for(lambda: len(self.rows) >= count, timeout=2.0)
+            return list(self.rows)
 
     def query(self, **_kwargs):
         return list(self.rows)
@@ -215,8 +225,9 @@ def test_executor_check_is_typed_and_silent_outside_a_scope():
 def test_rest_audit_rows_name_the_user(rest, users):
     server = rest(user_store=users)
     _call(server, "GET", "/commands", users.tokens[Role.OPERATOR])
+    server._audit_log.completed_rows(1)
     _call(server, "POST", "/execute", users.tokens[Role.VIEWER], {"actions": []})
-    allowed, refused = server._audit_log.rows
+    allowed, refused = server._audit_log.completed_rows(2)
     assert allowed["viewer_id"] == "operator-user"
     assert "user=operator-user role=operator" in allowed["detail"]
     assert refused["viewer_id"] == "viewer-user"

@@ -3,8 +3,9 @@ Causal review and durable local outboxes
 
 These experimental primitives provide causal entry decisions, a serializable
 peer ledger and a durable local retry queue. The current HTTP client still uses
-its legacy timestamp merge; automatic HTTP client/outbox integration and local
-full-resync orchestration remain separate C2 work. The authoritative store and
+its legacy timestamp merge. The explicit CausalSyncClient now integrates durable
+outbox HTTP delivery; automatic peer-control and local full-resync orchestration
+remain separate C2 work. The authoritative store and
 dedicated HTTP protocol below validate peer acknowledgements and deletion collection.
 Local commands do not contact a server or apply configuration.
 
@@ -88,7 +89,7 @@ This separation preserves uncertain-result retries across restart.
 caller-provided synchronous sink. The sink receives the same operation/prepared
 request and returns a positive revision. Use ``operation.delivery_id`` as the
 stable server receipt identity. The sink must honor at-least-once delivery;
-HTTP/CAS rebasing is not automatically supplied by this local primitive.
+The generic callback primitive does not itself implement HTTP/CAS rebasing; CausalSyncClient.flush supplies the dedicated v3 sender.
 Successful committed sends stay successful when cancellation follows them.
 Cancellation/hard exits, including explicit interruption causes, propagate without
 being stored as ordinary offline failures.
@@ -198,5 +199,69 @@ MCP/Builder Data commands) use version 3 for causal snapshots; a commit's bucket
 contains the explicit transient _actor. Path confinement, DRIVE and pre-start
 cancellation remain in force. Starting a new causal account requires a CausalBucket
 snapshot, as shown above. These commands store data without running scripts or
-enabling triggers. Automatic outbox delivery, bounded HTTP rebasing and local
-full-resync adoption remain open C2 work.
+enabling triggers. The explicit client below supplies HTTP delivery and bounded
+rebasing. Automatic peer-control and atomic local full-resync adoption remain C2 work.
+
+Explicit causal HTTP delivery
+----------------------------------------------------------------
+
+``CausalSyncClient(server_url, user_id=..., secret=None, timeout_s=5)`` uses the
+dedicated v3 route and the existing HTTP egress/redirect protections. It is an
+explicit API; ConfigSyncClient keeps its existing timestamp merge. HTTP timeouts
+must be finite, positive and at most 300 seconds. Unsupported older routes or
+malformed protocol data fail without falling back to legacy writes.
+
+``fetch()`` returns a complete CausalBucket. ``push(bucket, actor=..., operation_id=...,
+base_revision=None)`` commits an exact request and returns CausalReceipt, containing
+the original receipt revision and latest complete snapshot. Keep the same ID and
+body for uncertain control-commit results. Base defaults to the bucket revision;
+they must match. Explicit full-sync/ack/retire/collect actors use the server rules
+above. Automatic durable control-request orchestration and local epoch adoption
+remain pending; these manual commits do not retire old local queues automatically.
+
+After explicit peer registration, enqueue versioned edits before network I/O::
+
+    from je_auto_control import CausalSyncClient, SyncOperation, SyncOutbox
+
+    client = CausalSyncClient("https://sync.example", user_id="alice")
+    queue = SyncOutbox("config-outbox.sqlite3")
+    # resolved.origin/epoch must match the stable registered queue identity.
+    operation = SyncOperation("delivery-1", "https://sync.example", "alice",
+                              resolved.origin, (resolved,))
+    queue.enqueue(operation)
+    report = client.flush(queue, max_rebases=3)
+    confirmed = queue.snapshot(endpoint=operation.endpoint, user_id="alice")
+
+``flush`` first retries any exact persisted prepared request, before refetching.
+An uncertain accepted send therefore retains its original delivery identity/base
+across restart. Only a typed stale_revision 409 clears that exact prepared base and
+allows a bounded fetch/merge/reprepare. Operation-ID conflicts never rebase;
+unknown/retired epochs stay blocked. Rebases allow 0–10 retries per attempt, in
+addition to the existing bounded attempt/batch/backoff policy. Exhausted stale-base
+budgets keep edits offline/due for a later drain. Concurrent values stay conflicts;
+delivery does not choose or apply one. Cancellation is checked between requests,
+while a received successful commit is confirmed rather than relabelled cancelled.
+Wrapped hard/cancellation signals propagate and leave work durable.
+
+``CausalReceipt`` requires every snapshot change to have a positive committed
+revision. Its snapshot revision may exceed its operation receipt after an old retry.
+The outbox confirms delivery, receipt and latest complete snapshot in one SQLite
+transaction guarded by the current lease owner. Snapshot storage failure rolls
+back delivery; replaced lease owners cannot publish. Older snapshots do not regress the
+cache and different data at the same revision is refused. Generic int-returning
+sinks remain compatible and simply do not update the snapshot cache. Credential
+headers are never serialized; known resolved credential values in replies are
+refused before persistence. ``snapshot`` returns None until a causal delivery has
+been durably confirmed. It is a server snapshot, not a local settings application.
+
+Private ``AC_config_causal_fetch``, ``AC_config_causal_commit`` and
+``AC_sync_outbox_flush`` have matching MCP and explicit Builder Data commands.
+Fetch/commit take endpoint, user_id and optional options; commit also takes bucket,
+actor and operation_id. Flush takes path, endpoint, user_id and optional options.
+Options accept secret_env (a live environment variable name) and timeout_s. Flush
+also accepts max_rebases and policy fields max_attempts, max_batch, backoff,
+max_delay and lease_seconds. Unknown fields fail. Credentials are read only for the
+live client and never returned or queued. Every command requires DRIVE, including
+remote reads; flush intersects current path roots and honors pre-start cancellation.
+Action-file CLI execution can invoke these same commands. They store/deliver data
+without executing synced scripts, enabling triggers or applying settings.

@@ -96,7 +96,8 @@ class ConfigStore:
             ).fetchone()
             if receipt is not None:
                 if receipt[:2] != (base_revision, digest):
-                    raise ConfigRevisionConflict(current, "operation_id already identifies a different config request")
+                    raise ConfigRevisionConflict(current, "operation_id already identifies a different config request",
+                                                 code="operation_id_conflict")
                 connection.execute("COMMIT")
                 return int(receipt[2])
             if current != base_revision or current >= _MAX_REVISION:
@@ -150,7 +151,8 @@ def _current_revision(connection: Connection, user_id: str) -> int:
 
 def _require_plain(body: Optional[dict[str, object]]) -> None:
     if body is not None and body.get("kind") == "autocontrol.causal":
-        raise ConfigRevisionConflict(cast(int, body.get("revision", 0)), "causal protocol required for this account")
+        raise ConfigRevisionConflict(cast(int, body.get("revision", 0)), "causal protocol required for this account",
+                                     code="causal_protocol_required")
 
 
 def _plain_document(previous: Optional[dict[str, object]], _revision_number: int) -> str:

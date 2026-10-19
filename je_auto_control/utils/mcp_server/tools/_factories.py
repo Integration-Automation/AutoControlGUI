@@ -8785,9 +8785,25 @@ def config_sync_tools() -> List[MCPTool]:
 
 
 def causal_sync_tools() -> List[MCPTool]:
-    """Causal data review and explicitly local durable queues, without implying HTTP integration."""
+    """Causal data review, private HTTP commits and explicitly bounded durable queue delivery."""
     queue_path = {"type": "string", "format": "path"}
+    common = {"endpoint": {"type": "string"}, "user_id": {"type": "string"}, "options": {"type": "object"}}
     return [
+        MCPTool(name="ac_config_causal_fetch", description="Fetch a private causal snapshot over dedicated v3 HTTP. "
+                "options accepts secret_env/timeout_s; credentials stay live. Requires DRIVE.",
+                input_schema=schema(common, required=["endpoint", "user_id"]),
+                handler=hq.config_causal_fetch, annotations=SIDE_EFFECT_ONLY),
+        MCPTool(name="ac_config_causal_commit", description="Commit explicit causal JSON and actor metadata. Reuse "
+                "the exact body/operation_id after uncertain results. Does not execute synced scripts.",
+                input_schema=schema({**common, "bucket": {"type": "object"}, "actor": {"type": "object"},
+                                     "operation_id": {"type": "string"}},
+                                    required=["endpoint", "user_id", "bucket", "actor", "operation_id"]),
+                handler=hq.config_causal_commit, annotations=SIDE_EFFECT_ONLY),
+        MCPTool(name="ac_sync_outbox_flush", description="Deliver bounded durable edits over v3 HTTP. Exact uncertain "
+                "requests survive restart; only explicit stale-base errors rebase. options also accepts policy/"
+                "max_rebases. Returns counts and confirmed snapshot; never applies local configuration.",
+                input_schema=schema({**common, "path": queue_path}, required=["path", "endpoint", "user_id"]),
+                handler=hq.sync_outbox_flush, annotations=SIDE_EFFECT_ONLY),
         MCPTool(name="ac_sync_entry_merge", description="Review supplied causal entry JSON. Concurrent or forked "
                 "versions retain both alternatives; timestamps never choose a winner. No I/O.",
                 input_schema=schema({"left": {"type": "object"}, "right": {"type": "object"}},

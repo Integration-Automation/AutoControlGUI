@@ -85,5 +85,5 @@ MCP 在儲存前檢查取消；交易完成後不再重標為取消。
 並在回收刪除 payload 後保留永久因果憑證。升級帳號拒絕普通讀寫；既有本機設定庫
 命令接受帶明確 _actor 的因果 JSON。參閱 :doc:`../causal_sync/causal_sync_doc`。
 目前 HTTP client／merge helper 仍使用 last-modified 排序與限時 tombstone；
-自動因果 client／outbox 整合及資產 adapter 保留在 Progress.md。
+自動 peer 控制／完整重同步協調與資產 adapter 保留在 Progress.md；明確的 CausalSyncClient.flush 已提供持久化第三版投遞與有界重合併。
 本機驗證使用隔離檔案與 loopback server，不增加遠端機器或真機驗收聲明。

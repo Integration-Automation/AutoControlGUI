@@ -10,29 +10,17 @@ per-thread failure count ``je_auto_control run`` already uses for its exit code.
 Each such run also gets its own variable scope: a job's ``AC_set_var`` used to
 stay in the module executor for whichever job, trigger or hotkey fired next.
 """
-from asyncio import CancelledError
-from concurrent.futures import CancelledError as FutureCancelledError
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.exception.control_signals import (
+    is_run_interruption as is_run_interruption,
+    raise_if_run_interrupted as raise_if_run_interrupted,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.history_store import HistoryStore, STATUS_ERROR, STATUS_OK
 from je_auto_control.utils.script_vars.execution import execution_scope
-
-
-def is_run_interruption(error: BaseException) -> bool:
-    """Whether an error represents an explicit cancellation or hard control signal."""
-    # pylint: disable-next=import-outside-toplevel  # reason: MCP imports the executor during facade setup
-    from je_auto_control.utils.mcp_server.context import OperationCancelledError
-    return isinstance(error, (KeyboardInterrupt, SystemExit, GeneratorExit, CancelledError,
-                              FutureCancelledError, OperationCancelledError))
-
-
-def raise_if_run_interrupted(error: BaseException) -> None:
-    """Keep cancellation out of ordinary failure recovery and retry boundaries."""
-    if is_run_interruption(error):
-        raise error
 
 
 @dataclass

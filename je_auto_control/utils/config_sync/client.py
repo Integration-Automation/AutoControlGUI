@@ -266,7 +266,7 @@ class ConfigSyncClient:
         if status == 404:
             return None
         if status == 409:
-            _raise_conflict(response["text"])
+            self._conflict(response["text"])
         if not 200 <= status < 300:
             raise ConfigSyncError(f"config sync {method} returned HTTP {status}")
         if not response.get("text"):
@@ -275,6 +275,9 @@ class ConfigSyncClient:
             return json.loads(response["text"])
         except (json.JSONDecodeError, RecursionError) as error:
             raise ConfigSyncError("config sync: invalid JSON reply") from error
+
+    def _conflict(self, text: str) -> NoReturn:
+        _raise_conflict(text)
 
     def fetch(self) -> Optional[ConfigBucket]:
         """GET the bucket from the server, or ``None`` when none exists."""

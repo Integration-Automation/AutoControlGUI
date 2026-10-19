@@ -96,6 +96,7 @@ validate peer acknowledgements, retirement/full-sync epochs and deletion payload
 collection with permanent causal fences. Upgraded accounts reject plain reads and
 writes; existing local store commands accept causal JSON with an explicit _actor.
 See :doc:`../causal_sync/causal_sync_doc`. The current HTTP client/merge helper
-retains last-modified ordering and time-bounded tombstones; automatic causal
-client/outbox integration and asset adapters remain in Progress.md. Local tests
+retains last-modified ordering and time-bounded tombstones. Automatic peer-control/
+full-resync orchestration and asset adapters remain in Progress.md. The explicit
+CausalSyncClient.flush supplies durable v3 delivery and bounded rebasing. Local tests
 use isolated files and loopback servers, without remote-machine or native acceptance.

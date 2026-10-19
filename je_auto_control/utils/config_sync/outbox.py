@@ -7,24 +7,30 @@ import time
 from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
-from typing import Callable, Optional, cast
+from typing import TYPE_CHECKING, Callable, Optional, cast
 from uuid import uuid4
 
 from je_auto_control.utils.config_sync.contract import (
     ConfigRevisionConflict, ConfigStoreError, ConfigSyncError, _encoded, _identifier, _revision,
 )
 from je_auto_control.utils.config_sync.database import SyncDatabase
+from je_auto_control.utils.config_sync.causal_receipt import CausalReceipt, _server_snapshot
+from je_auto_control.utils.config_sync.causal_state import CausalBucket
 from je_auto_control.utils.config_sync.outbox_models import (
     SyncDrainResult, SyncLocalIdentity, SyncOperation, SyncRetryPolicy, normalize_sync_endpoint,
 )
 from je_auto_control.utils.config_sync.outbox_schema import initialize_outbox
 from je_auto_control.utils.config_sync.peers import FullResyncRequired
 from je_auto_control.utils.logging.secret_scope import scrub_secret_text
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption as _raise_interruption
+
+if TYPE_CHECKING:
+    from sqlite3 import Connection
 
 _Scope = tuple[str, str]
 _Key = tuple[str, str, str]
 _Clock = Callable[[], float]
-_Sender = Callable[[SyncOperation], int]
+_Sender = Callable[[SyncOperation], int | CausalReceipt]
 _Cancelled = Optional[Callable[[], bool]]
 _SELECT = "SELECT wire, digest, prepared FROM sync_operations WHERE endpoint = ? AND user_id = ? AND operation_id = ?"
 
@@ -199,6 +205,19 @@ class SyncOutbox:
                                "AND user_id = ? AND operation_id = ?", key)
             connection.execute("COMMIT")
 
+    def snapshot(self, *, endpoint: str, user_id: str) -> Optional[CausalBucket]:
+        """Read the latest complete server snapshot durably confirmed by a current delivery lease owner."""
+        scope = _scope(endpoint, user_id)
+        with self._database.connection() as connection:
+            row = connection.execute("SELECT snapshot FROM sync_namespaces WHERE endpoint=? AND user_id=?",
+                                     scope).fetchone()
+        if row is None or row[0] is None:
+            return None
+        result = _server_snapshot(CausalBucket.from_dict(json.loads(row[0])))
+        if result.user_id != user_id:
+            raise ConfigStoreError("outbox snapshot belongs to another account")
+        return result
+
     def flush(self, sender: _Sender, *, endpoint: str, user_id: str,
                  policy: Optional[SyncRetryPolicy] = None, cancelled: _Cancelled = None) -> SyncDrainResult:
         """Attempt bounded due work; backoff is persisted without sleeping and cancellation never discards edits."""
@@ -230,8 +249,9 @@ class SyncOutbox:
                 if cancelled is not None and cancelled():
                     return 0, failed, True
                 receipt = sender(claimed)
-                _revision(receipt)
-                if receipt == 0:
+                revision = receipt.revision if isinstance(receipt, CausalReceipt) else receipt
+                _revision(revision)
+                if revision == 0:
                     raise ConfigSyncError("delivery receipt must be a positive revision")
                 return int(self._delivered(key, owner, receipt)), failed, False
             except (OSError, ConfigSyncError, ConfigStoreError, ConfigRevisionConflict, FullResyncRequired) as error:
@@ -259,17 +279,34 @@ class SyncOutbox:
             connection.execute("COMMIT")
             return value
 
-    def _delivered(self, key: _Key, owner: str, revision: int) -> bool:
+    def _delivered(self, key: _Key, owner: str, receipt: int | CausalReceipt) -> bool:
+        revision = receipt.revision if isinstance(receipt, CausalReceipt) else receipt
+        snapshot = _receipt_snapshot(receipt, key[1])
         with self._database.connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             changed = connection.execute("UPDATE sync_operations SET status='delivered',delivered_revision=?, "
                                          "error='',lease_owner='',lease_until=0 WHERE endpoint=? AND user_id=? "
                                          "AND operation_id=? AND lease_owner=?", (revision, *key, owner)).rowcount
             if changed:
+                self._save_snapshot(connection, key[:2], snapshot)
                 connection.execute("UPDATE sync_namespaces SET confirmed_revision=max(confirmed_revision,?) "
                                    "WHERE endpoint=? AND user_id=?", (revision, *key[:2]))
             connection.execute("COMMIT")
             return bool(changed)
+
+    @staticmethod
+    def _save_snapshot(connection: Connection, scope: _Scope, snapshot: Optional[CausalBucket]) -> None:
+        if snapshot is None:
+            return
+        row = connection.execute("SELECT snapshot FROM sync_namespaces WHERE endpoint=? AND user_id=?",
+                                 scope).fetchone()
+        previous = CausalBucket.from_dict(json.loads(row[0])) if row and row[0] else None
+        if previous is not None and snapshot.revision == previous.revision:
+            if _encoded(snapshot.to_dict()) != _encoded(previous.to_dict()):
+                raise ConfigSyncError("server snapshot fork at an already confirmed revision")
+        if previous is None or snapshot.revision >= previous.revision:
+            connection.execute("UPDATE sync_namespaces SET snapshot=? WHERE endpoint=? AND user_id=?",
+                               (_encoded(snapshot.to_dict()), *scope))
 
     def _failed(self, key: _Key, owner: str, error: Exception, policy: SyncRetryPolicy) -> None:
         status = ("blocked" if isinstance(error, FullResyncRequired) else
@@ -304,14 +341,10 @@ def _due(row: tuple[object, ...], now: float) -> bool:
     return True
 
 
-def _raise_interruption(error: BaseException) -> None:
-    # pylint: disable-next=import-outside-toplevel  # reason: executor initialization imports this headless queue
-    from je_auto_control.utils.run_history.run_outcome import raise_if_run_interrupted
-    current: Optional[BaseException] = error
-    seen: set[int] = set()
-    while current is not None and id(current) not in seen:
-        if len(seen) >= 64:
-            raise error
-        seen.add(id(current))
-        raise_if_run_interrupted(current)
-        current = current.__cause__
+def _receipt_snapshot(receipt: int | CausalReceipt, user_id: str) -> Optional[CausalBucket]:
+    if not isinstance(receipt, CausalReceipt):
+        return None
+    snapshot = _server_snapshot(receipt.snapshot)
+    if snapshot.user_id != user_id:
+        raise ConfigSyncError("delivery receipt snapshot belongs to another account")
+    return snapshot
