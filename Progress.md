@@ -15,7 +15,7 @@
 `WIP` — 改版仍缺以下內容；原生平台與正式環境驗收缺口另列於後。
 計畫 D1 仍缺 portal session 關閉／恢復、compositor 重啟的狀態與原生驗收、
 擷取結果與擁有者 context 的接合，以及原生 session 的重試／取消／停止控制。
-D2 的原生 EI 釋放驗證與 D3 的錄製／全域停止／Windows 原生崩潰證據仍缺，詳見計畫與下方生命週期待辦。
+D2 仍缺 `ei-lifecycle.yml` 原生結果確認與據此判斷 helper 隔離；D3 的錄製／全域停止／Windows 原生崩潰證據仍缺，詳見計畫與下方生命週期待辦。
 計畫 E（Android／iOS）、G（MCP 逐步揭露）、H（型別深化與總驗收）尚未開始。F 還缺：
 
 - **Remote Desktop 與 Script Builder 仍在啟動時建立**（預設開啟），啟動時間 2.6–2.7 秒裡大半是它們與門面匯入。

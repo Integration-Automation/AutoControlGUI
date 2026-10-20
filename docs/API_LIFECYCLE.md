@@ -1,5 +1,14 @@
 # Public API lifecycle
 
+Selected dev pushes now run `.github/workflows/ei-lifecycle.yml` against an
+isolated libei/libeis container. It runs the silent-peer teardown/refusal probe
+and live EIS peer independently, retaining available version/native logs in
+`ei-lifecycle-<run>-<attempt>` artifacts for 14 days. The teardown child has a
+10-second deadline and faulthandler; only SIGSEGV reached inside `ei_unref` is
+classified as the known upstream fault. A successful cleanup must report equal
+descriptor counts. Other failures fail CI. No compositor, device or consent
+dialog is involved; results must be inspected before changing native cleanup.
+
 A native Wayland pointer coordinate outside every granted EIS region, after
 raw-coordinate and layout-origin mapping, raises `LibeiUnavailable` with
 `state="failed"` and disables automatic CLI fallback. A rejected move emits

@@ -528,6 +528,13 @@ Linux 先在完整套件的 debugger 外檢查工具，保留原始 argv 與已�
 重現方法見 :doc:`/getting_started/run_in_ci`。蒐集證據不代表完成尚缺的 portal／原生生命週期驗收。
 
 
+選定的 dev 推送會由 ``.github/workflows/ei-lifecycle.yml`` 在隔離的 libei／libeis
+容器驗證靜默 peer 的釋放／拒絕與獨立的 live EIS peer，將可取得的版本／原生紀錄保留於
+``ei-lifecycle-<run>-<attempt>`` artifact 十四天。釋放子行程有十秒時限與 faulthandler；
+只有已進入 ``ei_unref`` 的 SIGSEGV 才分類為既有上游故障。釋放成功必須有相同 fd 數量的
+證據，其餘失敗仍使 CI 失敗。此流程不涉及合成器、裝置或授權對話框；修改原生清理前仍須
+檢查實際結果。
+
 macOS Accessibility：tree dump + recorder
 -----------------------------------------
 

@@ -576,6 +576,13 @@ Linux 安装 GDB 后，可在 `--` 前加入 `--native`。
 含空格／引号的 argv 仍是原始参数，已处理的 `SIGINT` 会传给子进程。
 Linux 先在完整套件的 debugger 外验证诊断工具；前置检查记录也收在同一 artifact。
 
+选定的 dev 推送会由 `.github/workflows/ei-lifecycle.yml` 在隔离的 libei／libeis
+容器验证静默 peer 的释放／拒绝与独立的 live EIS peer，将可取得的版本／原生记录保留于
+`ei-lifecycle-<run>-<attempt>` artifact 十四天。释放子进程有十秒时限与 faulthandler；
+只有已进入 `ei_unref` 的 SIGSEGV 才分类为既有上游故障。释放成功必须有相同 fd 数量的
+证据，其余失败仍使 CI 失败。此流程不涉及合成器、设备或授权对话框；修改原生清理前仍须
+检查实际结果。
+
 欢迎贡献——请见 [CONTRIBUTING.md](../CONTRIBUTING.md) 与
 [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)。CI 会强制两条规则：`import je_auto_control`
 绝不能加载 PySide6；每个功能都必须同时具备无头 API 与 GUI 界面。

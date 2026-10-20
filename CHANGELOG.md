@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Collect isolated native EI lifecycle evidence on selected dev pushes. Bound
+  the half-open teardown child, retain fault traces and descriptor counts,
+  reject unrelated probe failures, and verify native refusal separately from
+  explicit CLI selection. Package runtime behavior is unchanged.
+
 - Run Diagnostics through the shared owner-bound controller with localized
   progress/stop/retry states and no late updates after close. Add scoped
   cancellation primitives to both SDK namespaces and the previously absent

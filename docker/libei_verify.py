@@ -8,9 +8,9 @@ every mock and only surface on a user's machine.
 
 So: resolve every prototype against the installed library, then drive
 ``connect()`` at a socket that accepts the connection but speaks no EI. The
-handshake cannot complete, and that is the point — the fail-closed promise
-("anything short of a live device means use the ydotool CLI") is checked
-here against the real library rather than asserted about a mock.
+handshake cannot complete, and that is the point — a protocol failure must
+refuse input without silently handing over to a CLI. Explicit CLI selection
+is checked separately, against the real library rather than only a mock.
 
 What this half cannot answer is anything a peer has to *agree* with: the
 capability and event-type enum values, the variadic
@@ -24,13 +24,15 @@ from __future__ import annotations
 
 import ctypes.util
 import faulthandler
+import json
 import os
+import subprocess  # nosec B404  # reason: isolate a known native teardown fault in this interpreter
 import socket
 import sys
 import tempfile
 import threading
 import traceback
-from typing import Any, Callable, List, Tuple
+from typing import Any, Callable, List, Tuple, cast
 
 # A wrong prototype in a ctypes binding shows up as a segfault, not as an
 # exception, and a segfault with no traceback is the hardest kind of bug to
@@ -56,6 +58,7 @@ def _scratch_dir() -> str:
 
 
 def check(name: str, fn: Callable[[], Any]) -> Any:
+    """Retain each verification result and continue collecting evidence after an ordinary failure."""
     try:
         detail = fn()
     except Exception:  # noqa: BLE001  # reason: one failed check must not stop the rest
@@ -121,6 +124,8 @@ def _check_each_call_in_isolation(socket_path: str) -> str:
     """
     from je_auto_control.linux_wayland import libei
     symbols = libei._load_symbols()
+    if symbols is None:
+        raise AssertionError('libei did not resolve before isolated native calls')
 
     def step(message: str) -> None:
         print(f"        · {message}", flush=True)
@@ -162,39 +167,67 @@ def _check_each_call_in_isolation(socket_path: str) -> str:
 
 
 def _check_unref_sentinel(socket_path: str) -> str:
-    """Is the upstream ei_unref crash this binding works around still there?"""
-    import subprocess  # nosec B404  # reason: argv list, no shell
-    program = (
-        "import ctypes, ctypes.util, os, socket, threading;"
-        "lib = ctypes.CDLL(ctypes.util.find_library('ei'));"
-        "lib.ei_new_sender.restype = ctypes.c_void_p;"
-        "lib.ei_new_sender.argtypes = (ctypes.c_void_p,);"
-        "lib.ei_setup_backend_socket.restype = ctypes.c_int;"
-        "lib.ei_setup_backend_socket.argtypes = "
-        "(ctypes.c_void_p, ctypes.c_char_p);"
-        "lib.ei_unref.restype = ctypes.c_void_p;"
-        "lib.ei_unref.argtypes = (ctypes.c_void_p,);"
-        f"p = {socket_path!r};"
-        "s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM);"
-        "s.connect(p);"
-        "h = lib.ei_new_sender(None);"
-        "rc = lib.ei_setup_backend_socket(h, p.encode());"
-        "assert rc == 0, rc;"
-        "lib.ei_unref(h)"
+    """Classify only a measured half-open teardown; preserve native traces and bound the child."""
+    program = f"""
+import ctypes, ctypes.util, json, os
+lib = ctypes.CDLL(ctypes.util.find_library('ei'))
+lib.ei_new_sender.restype = ctypes.c_void_p
+lib.ei_new_sender.argtypes = (ctypes.c_void_p,)
+lib.ei_setup_backend_socket.restype = ctypes.c_int
+lib.ei_setup_backend_socket.argtypes = (ctypes.c_void_p, ctypes.c_char_p)
+lib.ei_unref.restype = ctypes.c_void_p
+lib.ei_unref.argtypes = (ctypes.c_void_p,)
+fd_before = len(os.listdir('/proc/self/fd'))
+handle = lib.ei_new_sender(None)
+if not handle:
+    raise RuntimeError('ei_new_sender returned NULL')
+code = lib.ei_setup_backend_socket(handle, {socket_path!r}.encode('utf-8'))
+if code != 0:
+    raise RuntimeError(f'ei_setup_backend_socket returned {{code}}')
+print('ei_unref: begin', flush=True)
+lib.ei_unref(handle)
+print('ei_unref: end', flush=True)
+result = {{'fd_before': fd_before, 'fd_after': len(os.listdir('/proc/self/fd'))}}
+print('EI_UNREF_RESULT='+json.dumps(result), flush=True)
+"""
+    finished = subprocess.run(  # nosec B603  # nosemgrep  # reason: fixed interpreter/argv, no shell or user program
+        [sys.executable, '-X', 'faulthandler', '-c', program], capture_output=True,
+        text=True, encoding='utf-8', errors='replace', timeout=10, check=False,
     )
-    # This interpreter, running a program built from literals above; no shell.
-    finished = subprocess.run([sys.executable, "-c", program],  # nosec B603  # nosemgrep
-                              capture_output=True)
+    print(finished.stdout, end='')
+    print(finished.stderr, end='')
+    return _interpret_unref(finished)
+
+
+def _interpret_unref(finished: subprocess.CompletedProcess[str]) -> str:
+    """An unrelated failure is not evidence of a fixed upstream teardown."""
+    began = 'ei_unref: begin' in finished.stdout.splitlines()
+    ended = 'ei_unref: end' in finished.stdout.splitlines()
     if finished.returncode == -11:
+        if not began or ended:
+            raise AssertionError('native fault occurred before or outside ei_unref')
         return ("still segfaults (rc=-11), so the abandon-on-teardown "
                 "workaround in libei.py::_teardown is still required")
-    print()
-    print("      *** REVISIT ***  ei_unref no longer crashes on this")
-    print("      libei (rc=%s). The workaround in LibeiBackend._teardown"
-          % finished.returncode)
-    print("      can probably go; see Progress.md.")
-    print()
-    return f"no longer crashes (rc={finished.returncode}) — see above"
+    if finished.returncode != 0:
+        raise AssertionError(f'unexpected ei_unref probe exit {finished.returncode}')
+    if not began or not ended:
+        raise AssertionError('ei_unref did not reach completed cleanup')
+    return f'no longer crashes (rc=0), descriptors {_descriptor_evidence(finished.stdout)}; revisit Progress.md'
+
+
+def _descriptor_evidence(output: str) -> str:
+    """Require exact nonnegative integer descriptor counts after successful native cleanup."""
+    records = [line.removeprefix('EI_UNREF_RESULT=') for line in output.splitlines()
+               if line.startswith('EI_UNREF_RESULT=')]
+    if len(records) != 1:
+        raise AssertionError('successful cleanup lacks descriptor evidence')
+    counts = json.loads(records[0])
+    before, after = counts['fd_before'], counts['fd_after']
+    if any(isinstance(value, bool) or not isinstance(value, int) or value < 0 for value in (before, after)):
+        raise AssertionError('ei_unref descriptor counts are not nonnegative integers')
+    if before != after:
+        raise AssertionError(f'ei_unref descriptor counts differ: {before!r} -> {after!r}')
+    return f'{before} -> {after}'
 
 
 def _check_connect_fails_closed(socket_path: str) -> str:
@@ -225,24 +258,55 @@ def _check_teardown_survives(socket_path: str) -> str:
     return "teardown survived a failed connect, twice"
 
 
-def _check_keyboard_falls_back() -> str:
-    """With no libei and no ydotool, the CLI path must surface its hint.
-
-    ydotool is deliberately not installed in this image, so what comes back
-    must be the install hint — not a libei error and not a silent no-op.
-    """
-    from je_auto_control.linux_wayland import keyboard as wl_keyboard
+def _check_native_refusal() -> str:
+    """A timed-out native handshake must refuse an implicit CLI handoff."""
+    # pylint: disable-next=import-outside-toplevel  # reason: native modules load only when this check runs
+    from je_auto_control.linux_wayland import _select_input, libei
     try:
+        cast(Callable[[], object], _select_input.active_backend)()
+    except libei.LibeiUnavailable as error:
+        if error.state == 'failed' and not error.status.fallback_allowed:
+            return f'failed, no fallback: {error}'
+        raise
+    raise AssertionError('a failed native handshake did not refuse automatic CLI fallback')
+
+
+def _check_keyboard_refuses_native() -> str:
+    """The keyboard path retains the cached native refusal without starting another provider."""
+    # pylint: disable-next=import-outside-toplevel  # reason: native modules load only when this check runs
+    from je_auto_control.linux_wayland import keyboard, libei
+    try:
+        keyboard.press_key(30)
+    except libei.LibeiUnavailable as error:
+        if error.state == 'failed' and not error.status.fallback_allowed:
+            return f'failed, no fallback: {error}'
+        raise
+    raise AssertionError('press_key bypassed the failed native session')
+
+
+def _check_explicit_cli_hint() -> str:
+    """An explicit CLI choice remains usable and reports its missing helper clearly."""
+    from je_auto_control.linux_wayland import keyboard as wl_keyboard
+    key = 'JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND'
+    previous = os.environ.get(key)
+    try:
+        os.environ[key] = 'cli'
         wl_keyboard.press_key(30)
     except Exception as error:  # noqa: BLE001  # reason: any type is informative
         if "ydotool" in str(error):
             return f"{type(error).__name__}: {str(error)[:60]}"
         raise
+    finally:
+        if previous is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = previous
     raise AssertionError("press_key claimed success with no libei and no "
                          "ydotool")
 
 
 def main() -> int:
+    """Verify native ABI, bounded half-open teardown, authority refusal and explicit CLI behavior."""
     print("=" * 72)
     print("AutoControl libei binding — against the real libei.so")
     print("=" * 72)
@@ -252,7 +316,8 @@ def main() -> int:
     print(f"find_library('oeffis')   = {ctypes.util.find_library('oeffis')!r}")
     print("-" * 72)
 
-    from je_auto_control.linux_wayland import _select_input, libei, oeffis
+    # pylint: disable-next=import-outside-toplevel  # reason: native modules load only for the explicit verification run
+    from je_auto_control.linux_wayland import libei, oeffis
 
     # --- a real sender against a socket that speaks no EI ----------------
     runtime = _scratch_dir()
@@ -289,14 +354,11 @@ def main() -> int:
     check("teardown after a failed handshake does not crash the process",
           lambda: _check_teardown_survives(socket_path))
 
-    # --- the fallback the whole design rests on --------------------------
+    # --- native refusal and deliberate CLI selection --------------------
     libei.reset_default_backend()
-    check("active_backend() gives up and hands over to the CLI",
-          lambda: _assert_true(_select_input.active_backend() is None,
-                               "active_backend() returned a backend that "
-                               "cannot emit"))
-    check("press_key falls through to the ydotool CLI path",
-          _check_keyboard_falls_back)
+    check("failed native handshake refuses automatic CLI fallback", _check_native_refusal)
+    check("press_key retains the native refusal", _check_keyboard_refuses_native)
+    check("explicit CLI selection retains its missing-helper hint", _check_explicit_cli_hint)
 
     server.close()
 

@@ -184,3 +184,26 @@ Limitations
 * The REST and Remote-Desktop hosts default to binding on ``0.0.0.0``
   inside the container — front them with a network policy or
   reverse-proxy when exposing them beyond ``localhost``.
+
+Isolated native EI lifecycle evidence
+========================================
+
+Selected dev pushes now run ``.github/workflows/ei-lifecycle.yml`` against an
+isolated libei/libeis container. It runs the silent-peer teardown/refusal probe
+and live EIS peer independently, retaining available version/native logs in
+``ei-lifecycle-<run>-<attempt>`` artifacts for 14 days. The teardown child has a
+10-second deadline and faulthandler; only SIGSEGV reached inside ``ei_unref`` is
+classified as the known upstream fault. A successful cleanup must report equal
+descriptor counts. Other failures fail CI. No compositor, device or consent
+dialog is involved; results must be inspected before changing native cleanup.
+
+On a disposable Linux Docker host, run the same image explicitly::
+
+    docker build -f docker/Dockerfile.eis -t autocontrol-ei-lifecycle:local .
+    docker run --rm --entrypoint python autocontrol-ei-lifecycle:local /opt/verify/libei_verify.py
+    docker run --rm --entrypoint python autocontrol-ei-lifecycle:local /opt/verify/eis_verify.py
+
+The dev job attempts both probes even when the first fails, preserves pipeline
+exit status, and always attempts log upload and removal of its named containers.
+The known isolated teardown fault is a measurement, not permission to call that
+unsafe teardown in the GUI process or proof that pending D2 isolation is complete.

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261021-13 | 2026-10-21 | Collect bounded native EI teardown evidence on dev | #done #ci #D2 | [2026-10-b](2026-10-b.md) |
 | U-20261021-12 | 2026-10-21 | Run cancellable diagnostics through owned GUI tasks and scoped I/O | #done #diagnostics #D1 #F3 | [2026-10-b](2026-10-b.md) |
 | U-20261021-11 | 2026-10-21 | Add owner-bound cooperative task infrastructure without retaining widgets | #done #gui #workers #F3 | [2026-10-b](2026-10-b.md) |
 | U-20261021-10 | 2026-10-21 | Preserve explicit cancellation before later diagnostic checks | #done #diagnostics #cancellation #D1 | [2026-10-b](2026-10-b.md) |
@@ -431,7 +432,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 13 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 14 |
 | [2026-10.md](2026-10.md) | 2026-10 | 82 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
