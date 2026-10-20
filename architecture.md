@@ -13,10 +13,21 @@ macOS, Linux X11, Linux Wayland, Android and iOS.
 
 ## 2. Layers and directories
 
+wrapper/capabilities.py owns immutable caller contexts and independent
+input/capture metadata. Live collection reads a bounded set of environment/
+PATH facts and an already-loaded sender via a nonblocking local-state read.
+It never constructs a native backend or polls it. Dependency presence is
+unverified; observed native state may be stale and grants no authority.
+One headless adapter serializes the SDK contract for AC and read-only MCP;
+the Diagnostics view caches only inert snapshots and retranslates them
+without probing. Live defaults omit addresses, arguments, executable paths
+and native error text. XWayland scope is always limited; actual operations
+continue to enforce permission/revocation independently of this report.
+
 The Diagnostics panel starts idle and its Actions command owns active checks.
 Retranslation updates idle instructions and headers without invoking providers.
 The existing headless runner and executor/MCP diagnostic command remain active
-explicit operations; this GUI boundary does not implement capability probing.
+explicit operations. Passive capability inspection has its own Actions command.
 
 Screenshot portal requests retain their own predicted/returned handle and bus.
 Failure before Response attempts bounded Request.Close; completed interactions

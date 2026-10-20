@@ -1,5 +1,9 @@
 """Stable, headless AutoControl API façade."""
 
+from je_auto_control.wrapper.capabilities import (
+    BackendContext, CapabilitySnapshot, CapabilityStatus, probe_capabilities,
+)
+
 from je_auto_control.utils.codegen.codegen import generate_code
 from je_auto_control.utils.diagnostics import run_diagnostics
 from je_auto_control.utils.executor.action_executor import (
@@ -13,6 +17,7 @@ from je_auto_control.utils.failure_bundle import (
 )
 
 __all__ = [
+    "BackendContext", "CapabilitySnapshot", "CapabilityStatus", "probe_capabilities",
     "FailureBundleOptions", "create_failure_bundle", "execute_action",
     "execute_action_with_vars", "failure_bundle_on_error", "generate_code",
     "run_diagnostics",

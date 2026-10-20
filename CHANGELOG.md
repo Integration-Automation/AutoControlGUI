@@ -13,6 +13,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add passive input/capture capability snapshots to both SDK namespaces,
+  AC_probe_capabilities, read-only MCP, Builder and Diagnostics Actions.
+  Prerequisites remain unverified; local native state is not refreshed or
+  treated as a permission grant. XWayland scope is explicit, provider
+  refusals cannot imply CLI fallback, and default results omit environment
+  values, executable paths, command arguments and native error strings.
+
 - Diagnostics opens in a localized not-run state. Only its explicit Actions
   command starts the existing active checks; opening or retranslating the tab
   cannot implicitly capture the screen or request portal consent. Existing

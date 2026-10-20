@@ -2173,6 +2173,9 @@ def AC_press_keyboard_key(keycode: int | str, is_shift: bool = ..., skip_record:
 def AC_press_mouse(mouse_keycode: int | str, x: int | None = ..., y: int | None = ...) -> tuple[Any, int, int] | None:
     """按下滑鼠按鍵"""
 
+def AC_probe_capabilities() -> dict[str, object]:
+    """Inspect current prerequisites and existing local state without active diagnostics or caller-supplied grants."""
+
 def AC_profile_rows(rows: Any, columns: Any = ...) -> Dict[str, Any]:
     """Adapter: profile a row-set into per-column statistics."""
 

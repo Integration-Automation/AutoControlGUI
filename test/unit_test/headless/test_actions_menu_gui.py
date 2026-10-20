@@ -132,6 +132,8 @@ def test_hook_tab_actions_reach_the_menu(report):
 # lives here instead because counting tabs means constructing the widget, which
 # means Qt — and this module already runs it in a subprocess for that reason.
 TAB_CITATIONS = (
+    ("architecture_explore.md", r"GUI 分頁數（`main_widget` 註冊） \| (\d+)"),
+    ("architecture_explore.md", r"#### (\d+) 個分頁"),
     ("README.md", r"\((\d+) tabs\)"),
     ("README/README_zh-CN.md", r"（(\d+) 个标签页）"),
     ("README/README_zh-TW.md", r"（(\d+) 個分頁）"),

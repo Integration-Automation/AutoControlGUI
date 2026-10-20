@@ -216,6 +216,29 @@ class LibeiBackend:
         """Whether the handshake finished and a device is emulating."""
         return self._ei is not None and not self._revoked and self._has_required_devices()
 
+    def observed_state(self) -> str:
+        """Read cached local state without polling native events or waiting for an in-flight operation."""
+        # pylint: disable-next=consider-using-with  # reason: context-manager acquisition would block this passive read
+        if not self._lock.acquire(blocking=False):
+            return 'unverified'
+        try:
+            if self._revoked:
+                return 'revoked'
+            if self._ei is None or not self._handshake_complete:
+                return 'unverified'
+            return self._observed_devices_state()
+        finally:
+            self._lock.release()
+
+    def _observed_devices_state(self) -> str:
+        """A completed handshake alone cannot advertise optional button/scroll readiness."""
+        if any(capability not in self._devices for capability in _REQUIRED_CAPS):
+            return 'revoked'
+        if any(capability not in self._devices for capability in _WANTED_CAPS):
+            return 'unverified'
+        active = all(self._emulating.get(self._devices[capability], False) for capability in _WANTED_CAPS)
+        return 'available' if active else 'paused'
+
     @property
     def _api(self) -> BoundSymbols:
         """The resolved entry points, or a refusal if libei never resolved.
@@ -666,6 +689,17 @@ def connected_backend() -> Optional[LibeiBackend]:
             return None
         _DEFAULT_BACKEND = backend
         return _DEFAULT_BACKEND
+
+
+def _observed_input_state() -> tuple[Optional[str], bool]:
+    """Inert snapshot for passive diagnostics; never construct a backend or wait on the portal-probe lock."""
+    failure = _BLOCKED_PROBE
+    if failure is not None:
+        return failure.state, failure.fallback_allowed
+    backend = _DEFAULT_BACKEND
+    if backend is None:
+        return ('unavailable', True) if _PROBE_FAILED else (None, False)
+    return backend.observed_state(), False
 
 
 def get_default_backend() -> Optional[LibeiBackend]:

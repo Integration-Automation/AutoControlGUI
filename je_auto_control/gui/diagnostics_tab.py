@@ -8,10 +8,12 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui.diagnostics_capabilities import CapabilityView
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.utils.diagnostics.diagnostics import run_diagnostics
+from je_auto_control.wrapper.capabilities import BackendContext, probe_capabilities
 
 
 _SEVERITY_COLOR = {
@@ -34,6 +36,7 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
         self._has_run = False
         self._summary_label = QLabel(_t("diag_summary_idle"))
         self._summary_label.setWordWrap(True)
+        self._capability_view = CapabilityView()
         self._table = QTableWidget(0, 4)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.horizontalHeader().setSectionResizeMode(
@@ -46,12 +49,14 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
         # The run command runs from the Actions menu; the tab keeps only
         # the summary label and the results table.
         root = QVBoxLayout(self)
+        root.addWidget(self._capability_view)
         root.addWidget(self._summary_label)
         root.addWidget(self._table, stretch=1)
 
     def menu_actions(self) -> list[tuple[str, Callable[[], None]]]:
         """Expose tab commands to the window-level Actions menu."""
         return [
+            ("diag_probe", self._probe_capabilities),
             ("diag_run", self._refresh),
         ]
 
@@ -59,8 +64,13 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
         """Translate idle instructions and headers without starting a diagnostic run."""
         super().retranslate()
         self._apply_table_headers()
+        self._capability_view.retranslate()
         if not self._has_run:
             self._summary_label.setText(_t("diag_summary_idle"))
+
+    def _probe_capabilities(self) -> None:
+        snapshot = probe_capabilities(BackendContext.current())
+        self._capability_view.set_snapshot(snapshot)
 
     def _apply_table_headers(self) -> None:
         self._table.setHorizontalHeaderLabels([

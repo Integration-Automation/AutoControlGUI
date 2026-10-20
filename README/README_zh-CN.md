@@ -19,7 +19,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 809 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 810 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -221,7 +221,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 809 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 810 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -319,7 +319,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 709 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 710 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -438,10 +438,31 @@ Wayland 的屏幕截取需要合成器对应的工具，因为没有单一工具
 `je_auto_control.api.run_diagnostics()`（以及 GUI 的 Diagnostics 标签页）的 `screen_capture`
 检查会报告当前使用的是哪一层。
 
+**输入／截取能力**提供 `je_auto_control.api`（也由包根目录导出）的
+`BackendContext`、`CapabilityStatus`、`CapabilitySnapshot` 与 `probe_capabilities`。
+调用 `probe_capabilities(BackendContext.current()).to_dict()`、无参数的
+`AC_probe_capabilities`／只读 `ac_probe_capabilities`，或选择
+**Diagnostics → Actions → 查看输入与截取能力**；Builder 提供相同无参数命令。
+`python -m examples.capabilities` 显示本机前置条件与确定性的 XWayland 范围示例，不操作桌面。
+
+输入项描述按键／指针事件；现有 wtype 文字路径独立。探测只读环境、PATH 与不等待锁的现有原生状态，
+不加载可选原生库、不连接、不读取事件、不截取或请求授权。找到工具或 bus 地址只代表
+`unverified`，不等于可用。缓存 libei 须完成握手，且键盘、绝对指针、按钮与滚轮事件种类都在运行才报告可用；
+部分授权保持未验证，事件种类暂停或必要设备移除则报告暂停／撤销。八种状态为 `available`、`unverified`、`needs_permission`、
+`needs_dependency`、`unsupported`、`paused`、`revoked`、`failed`。
+`available` 仅是最近的本机观察，可能过时；实际操作仍重新验证权限。XWayland 一律
+`desktop_wide=False`，无法覆盖原生 Wayland 窗口；其他范围标记仍受授权区域限制，不代表已验证每个屏幕。
+
+Context 会复制环境／工具数据，可由拥有者提供无原生对象的输入／截取观察，但不授予权限。
+默认本机结果不含环境值、命令参数、可执行文件路径或原生错误文字；AC／MCP 不接受外部提供观察。
+显式选择 CLI 与观察到可选原生依赖缺失后的自动备用分开；拒绝、暂停、撤销与失败不表示改走 CLI。
+截取工具／portal 选择独立诊断，重绘与切换语言只使用现有快照。原生 portal 恢复、compositor 重启、
+截取结果与 context 的接合，以及可取消的主动诊断仍列于 `Progress.md`。
+
 打开 Diagnostics 只显示已翻译的「尚未运行」状态，不执行检查。
 选择 **Actions → 运行诊断** 才会启动现有主动检查，可能截取屏幕或需要 portal 同意；
 切换语言不启动检查。显式的 `run_diagnostics`、`AC_diagnose` 与 MCP 诊断调用保持主动行为；
-无副作用的能力探测仍列于 `Progress.md`。
+无副作用的能力查看使用下方独立操作。
 
 未完成的 screenshot portal 请求会在断开原始 bus 前尝试 `Request.Close`，
 使用独立的 0.25 秒 D-Bus I/O 预算。服务器返回替代 handle 时会跟随该 handle；
@@ -478,7 +499,7 @@ Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协�
 
 | 资源 | 内容 |
 |---|---|
-| [`examples/`](../examples/) | 41 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位、动作日志。 |
+| [`examples/`](../examples/) | 42 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位、动作日志。 |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 参考，含英文与中文。 |
 | [architecture_explore.md](../architecture_explore.md) | 逐层记录每个模块的职责。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台对照矩阵。 |

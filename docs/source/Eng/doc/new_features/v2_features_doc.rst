@@ -506,11 +506,45 @@ backend and preserve the original cancellation. The explicit wtype text path
 and screen-capture selection are unchanged.
 
 
+Passive capability snapshots use ``BackendContext``, ``CapabilityStatus``,
+``CapabilitySnapshot`` and ``probe_capabilities`` from ``je_auto_control.api``
+or the package root. Input covers key/pointer events, independently of wtype text.
+
+.. code-block:: python
+
+   from je_auto_control.api import BackendContext, probe_capabilities
+   snapshot = probe_capabilities(BackendContext.current())
+   print(snapshot.to_dict())
+
+No-argument ``AC_probe_capabilities`` and read-only ``ac_probe_capabilities``
+share that contract with Builder and **Diagnostics → Actions → Inspect input
+and capture capabilities**. ``python -m examples.capabilities`` is passive.
+The probe reads environment/PATH and cached local state without loading optional
+native libraries, connecting, polling, capturing or requesting consent.
+Prerequisites remain ``unverified``; ``available`` means last local observation,
+which can be stale. Other states are ``needs_permission``, ``needs_dependency``,
+``unsupported``, ``paused``, ``revoked`` and ``failed``. Actual operations still
+enforce authority. Cached libei availability requires completed handshake plus
+active keyboard/absolute-pointer/button/scroll families. Partial grants remain
+unverified; paused families and removed required devices report paused/revoked.
+XWayland is always ``desktop_wide=False``; other scope flags
+remain limited by grants/regions and do not verify every monitor.
+
+Contexts detach facts and allow owner-supplied inert observations without granting
+authority. AC/MCP accept no supplied observations; default live results omit
+environment values, command arguments, executable paths and native error text.
+Permission/pause/revocation/failure cannot imply CLI fallback. Only explicit CLI
+selection or observed optional native absence describes that alternative.
+Input/capture select independently. Rendering/language changes reuse metadata;
+native restore/restart, capture-result/context integration and cancelable active
+diagnostics remain pending in ``Progress.md``.
+
+
 The Diagnostics tab opens in a localized not-run state. Use **Actions → Run
 diagnostics** to start active checks, which can capture the screen or require
 portal consent. Opening or retranslating the tab does not start checks.
-Explicit headless/AC/MCP diagnostics retain their active behavior; passive
-capability probing remains pending in ``Progress.md``.
+Explicit headless/AC/MCP diagnostics retain their active behavior. Passive
+capability inspection uses its separate action described below.
 
 
 Abandoned screenshot requests attempt ``org.freedesktop.portal.Request.Close``

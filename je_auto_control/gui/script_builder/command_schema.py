@@ -2075,6 +2075,10 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
 def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_native_control_specs(specs)
     specs.append(CommandSpec(
+        "AC_probe_capabilities", "System", "Inspect Input and Capture Capabilities",
+        description="Passive prerequisites and last local authority state; no capture, input or permission request.",
+    ))
+    specs.append(CommandSpec(
         "AC_set_clipboard_html", "Data", "Set Clipboard HTML",
         fields=(
             FieldSpec("html", FieldType.STRING,

@@ -79,11 +79,25 @@ all-thread native backtraces through batch GDB; other platforms retain Python
 faulthandler output. This is diagnostic infrastructure, not native lifecycle
 acceptance or a root-cause correction; outstanding crashes remain in Progress.md.
 
+Passive capabilities are available through both SDK namespaces, one AC
+command, one read-only MCP tool, Builder and explicit Diagnostics Actions.
+Controlled checks cover independent input/capture prerequisites, denied/
+paused/revoked/failed native state, nonblocking cached observations,
+optional-absence-only CLI selection, invalid explicit capture commands,
+XWayland scope limits, detached contexts and default metadata privacy.
+Partial grants, paused optional button events and removed required pointer
+devices have separate regressions; cached availability requires all requested
+event families, rather than only the minimum handshake requirements.
+Viewer executor plus real JSON-RPC dispatch and all four catalogues are
+exercised. These are fake/offscreen metadata checks, not native device,
+permission, compositor restart or full-monitor acceptance. Available
+means last local observation; every actual operation still checks authority.
+
 Controlled offscreen Diagnostics checks cover idle construction, all four
 catalogues, retranslation without execution, explicit Actions rendering and
 original cancellation followed by deliberate retry. Providers are intercepted;
-these checks acquire no portal grant or desktop input. Passive capability
-probing and native consent behavior remain pending in Progress.md.
+these checks acquire no portal grant or desktop input. Native consent, restore
+and compositor-restart behavior remain pending in Progress.md.
 
 Controlled screenshot-portal lifecycle tests cover bounded Request.Close on the
 original bus, alternate/predicted handles, uncertain replies, direct/wrapped

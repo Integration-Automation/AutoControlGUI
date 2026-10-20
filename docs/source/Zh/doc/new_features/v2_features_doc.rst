@@ -443,9 +443,35 @@ Wayland libei native backend
 明確的 wtype 文字輸入路徑與螢幕擷取選擇不變。
 
 
+無副作用的能力快照提供 ``je_auto_control.api`` 與套件根目錄匯出的
+``BackendContext``、``CapabilityStatus``、``CapabilitySnapshot``、``probe_capabilities``。
+輸入項描述按鍵／指標事件，與 wtype 文字路徑獨立。
+
+.. code-block:: python
+
+   from je_auto_control.api import BackendContext, probe_capabilities
+   snapshot = probe_capabilities(BackendContext.current())
+   print(snapshot.to_dict())
+
+無參數 ``AC_probe_capabilities``、唯讀 ``ac_probe_capabilities``、Builder 與
+**Diagnostics → Actions → 檢視輸入與擷取能力** 共用相同契約。
+``python -m examples.capabilities`` 不操作桌面。探測只讀環境、PATH 與不等待鎖的既有原生狀態，
+不載入選用原生函式庫、不連線、不讀事件、不擷取或要求同意。前置條件僅為 ``unverified``；
+``available`` 僅代表最近的本機觀測，可能過時。其他狀態為 ``needs_permission``、
+``needs_dependency``、``unsupported``、``paused``、``revoked``、``failed``。
+實際操作仍重驗權限。快取 libei 須完成握手，且鍵盤／絕對指標／按鈕／滾輪種類都在運作才回報可用；
+部分授權維持未驗證，事件種類暫停或必要裝置移除則回報暫停／撤銷。XWayland 一律 ``desktop_wide=False``；其他範圍仍受授權區域限制，
+不代表已驗證每個螢幕。
+
+Context 複製前置資料，可由擁有者提供無原生物件的觀測，但不授權。AC／MCP 不接受外部觀測；
+預設本機結果不含環境值、命令參數、執行檔路徑或原生錯誤文字。拒絕／暫停／撤銷／失敗不代表改走 CLI；
+只有明確選擇 CLI 或觀測到選用原生依賴缺失才描述該替代路徑。輸入／擷取獨立診斷，重繪與切換語系
+不再探測。原生恢復／重啟、擷取結果與 context 的接合、可取消的主動診斷仍列於 ``Progress.md``。
+
+
 Diagnostics 開啟時先顯示已翻譯的「尚未執行」狀態。選擇 **Actions → 執行診斷**
 才會啟動既有主動檢查，可能擷取螢幕或要求 portal 同意。開啟或切換語系不啟動檢查。
-明確的 headless／AC／MCP 診斷維持主動行為，無副作用的能力探測仍列於 ``Progress.md``。
+明確的 headless／AC／MCP 診斷維持主動行為，無副作用的能力檢視使用下方獨立操作。
 
 
 未完成的 screenshot 請求會在原始 bus 上以獨立 0.25 秒 I/O 預算嘗試

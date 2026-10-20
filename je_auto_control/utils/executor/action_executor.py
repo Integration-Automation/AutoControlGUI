@@ -1,6 +1,7 @@
 import threading
 import types
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from je_auto_control.utils.diagnostics.capability_commands import probe_current_capabilities as _probe_capabilities
 
 from je_auto_control.utils.exception.exception_tags import (
     action_is_null_error_message, add_command_exception_error_message,
@@ -8116,6 +8117,7 @@ class Executor:
             "AC_usb_remote_open": _usb_remote_open,
 
             # System diagnostics
+            "AC_probe_capabilities": _probe_capabilities,
             "AC_diagnose": _diagnose,
 
             # Config bundle export / import

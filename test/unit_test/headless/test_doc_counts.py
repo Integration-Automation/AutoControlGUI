@@ -38,6 +38,15 @@ def _mcp_tools() -> int:
     return len(build_default_tool_registry(read_only=False, aliases=True))
 
 
+def _mcp_canonical() -> int:
+    from je_auto_control.utils.mcp_server.tools import build_default_tool_registry
+    return len(build_default_tool_registry(read_only=False, aliases=False))
+
+
+def _mcp_aliases() -> int:
+    return _mcp_tools() - _mcp_canonical()
+
+
 def _utils_subpackages() -> int:
     utils = ROOT / "je_auto_control" / "utils"
     return sum(1 for p in utils.iterdir()
@@ -75,6 +84,10 @@ CITATIONS: List[Tuple[str, str, str, Callable[[], int]]] = [
     ("architecture_explore.md",
      r"MCP 工具數（`build_default_tool_registry\(\)` 實測） \| (\d+) \|",
      "MCP tools", _mcp_tools),
+    ("architecture_explore.md", r"預設註冊 (\d+) 個工具", "MCP tools", _mcp_tools),
+    ("architecture_explore.md", r"行，(\d+) 個工具）", "MCP tools", _mcp_tools),
+    ("architecture_explore.md", r"工具＝(\d+) 個 `ac_\*`", "canonical MCP tools", _mcp_canonical),
+    ("architecture_explore.md", r"\+ (\d+) 個別名", "MCP aliases", _mcp_aliases),
     ("architecture_explore.md",
      r"### 5\.4 能力層 `utils/`（(\d+) 個子套件）",
      "utils/ subpackages", _utils_subpackages),

@@ -13,8 +13,9 @@
 `TODO` — 真機與付費 API 驗收暫緩，待明確恢復後執行；相關項目保留待驗證。
 
 `WIP` — 改版仍缺以下內容；原生平台與正式環境驗收缺口另列於後。
-計畫 D 仍缺 `wrapper/capabilities.py` 的無副作用公開探測、獨立輸入／擷取診斷與
-SDK／AC／MCP／Diagnostics GUI 介面，以及 portal 關閉／恢復與合成器重啟驗收。
+計畫 D1 仍缺 portal session 關閉／恢復、compositor 重啟的狀態與原生驗收、
+擷取結果與擁有者 context 的接合，以及主動診斷與原生 session 的重試／取消／停止控制。
+原生指標超出 EIS 區域的拒絕仍被誤分類為選用依賴缺失，須停止隱含的 CLI 備援。
 D2 的原生 EI 釋放驗證與 D3 的錄製／全域停止／Windows 原生崩潰證據仍缺，詳見計畫與下方生命週期待辦。
 計畫 E（Android／iOS）、G（MCP 逐步揭露）、H（型別深化與總驗收）尚未開始。F 還缺：
 

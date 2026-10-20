@@ -1,9 +1,31 @@
 # Public API lifecycle
 
+The additive public capability API is BackendContext, CapabilityStatus,
+CapabilitySnapshot and probe_capabilities(context), exported from the root
+and versioned je_auto_control.api/core namespaces. Contexts are detached and
+immutable; statuses contain name/state/backend/reason/recovery/desktop_wide.
+Snapshots serialize platform/display_server/passive/input/capture. Eight
+states distinguish unverified prerequisites from available last-local native
+observations, permission/dependency gaps, unsupported, paused, revoked and
+failed states. Cached libei availability requires a completed handshake plus
+active keyboard/absolute-pointer/button/scroll families; partial grants remain
+unverified, paused families report paused, and missing required devices revoke
+that readiness claim. A result grants no authority, does not poll native events,
+and cannot prove external freshness or full monitor coverage. The input
+item covers key/pointer events, separately from wtype text.
+
+AC_probe_capabilities and read-only ac_probe_capabilities share a no-argument
+adapter and reject caller-supplied context/authority metadata. Their Builder
+and Diagnostics surfaces use the same contract; viewer queries need
+read_screen. Rendering/language changes do not probe. Existing active
+diagnostics and input/capture operations retain their signatures, authority
+checks and failure families. Native restore/restart/context integration
+and cancelable active diagnostics remain open in Progress.md.
+
 Diagnostics construction and retranslation are passive UI operations. Its
 existing Actions command deliberately invokes run_diagnostics; the headless,
-AC and MCP signatures and active behavior are unchanged. No public surface is
-added, and wrapper/capabilities.py remains pending in Progress.md.
+AC and MCP signatures and active behavior are unchanged. The passive capability
+surface below is additive and separate from active checks.
 
 Screenshot portal signatures and the ordinary AutoControlScreenException family
 remain compatible. Abandoned requests attempt Request.Close on their originating
