@@ -30,6 +30,16 @@ without probing. Live defaults omit addresses, arguments, executable paths
 and native error text. XWayland scope is always limited; actual operations
 continue to enforce permission/revocation independently of this report.
 
+gui/task_controller.py composes the existing daemon-worker relay rather than
+introducing another thread registry. Weak handle delivery and independent
+task state prevent owner/handle callback retention. Owner destruction cancels
+only its token; controller retirement also cleans jobs after the controller
+has gone. Context/identity are refreshed on dispatch, without prescribing
+one capability for every task. Each work function authorizes its operation.
+Qt-free cancellation/progress live in utils/exception/cancellation.py.
+Legacy start_worker retains its API and now rolls back failed thread starts.
+Panel integration, backend cancellation/timeout and WebRTC splitting remain open.
+
 The active diagnostics runner separates ordinary failed probes from explicit
 direct/wrapped control signals. Controls propagate unchanged before logging
 or subsequent checks, across the existing SDK/CLI/GUI entry points. A failed

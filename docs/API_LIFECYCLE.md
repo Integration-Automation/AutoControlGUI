@@ -32,6 +32,25 @@ diagnostics and input/capture operations retain their signatures, authority
 checks and failure families. Native restore/restart/context integration
 and cancelable active diagnostics remain open in Progress.md.
 
+The GUI task infrastructure provides `gui.task_controller.TaskController`:
+`submit(work, owner=widget)` returns a caller-owned `TaskHandle` with
+typed `TaskOutcome` and `TaskProgress` observations. Work receives a
+Qt-free `CancellationToken` with checkpoints, bounded interruptible waits
+and progress reporting. Submission captures context; dispatch refreshes
+store-backed identity. Work must receive plain data, avoid widget references
+and authorize its own operation. Existing
+`DeferredAuthorization.scope()` still requires input privilege, while
+`context_scope()` only refreshes/binds identity for independently authorized work.
+
+Owner/handle/controller destruction requests cooperative stop and drops
+late delivery. Each task has a separate ID/token; callbacks run on the GUI
+thread. Cancellation does not forcibly interrupt an uncooperative call
+or relabel a successful committed return. Errors/progress use the captured
+secret scope; terminal errors retain no exception traceback. Failed thread
+starts roll back both registries and preserve the original failure.
+This is shared infrastructure: Diagnostics and other panels still await
+controller/timeout/stop integration, tracked in `Progress.md`.
+
 Active diagnostics stop immediately when a check raises explicit cancellation
 or a hard control signal, including an explicit exception cause chain.
 The original object propagates through the core, SDK, CLI and Diagnostics

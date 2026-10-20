@@ -212,5 +212,11 @@ def start_worker(owner: QObject, worker: QObject, *,
     thread = threading.Thread(target=_run, args=(handle, relay, reaper),
                               name=f"gui-worker-{type(worker).__name__}", daemon=True)
     handle._thread = thread  # noqa: SLF001  # reason: set once, before start
-    thread.start()
+    try:
+        thread.start()
+    except BaseException:  # reason: roll back ownership before preserving any failed thread-start control
+        _RUNNING.pop(handle, None)
+        relay.deleteLater()
+        worker.deleteLater()
+        raise
     return handle

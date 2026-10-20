@@ -101,6 +101,18 @@ exercised. These are fake/offscreen metadata checks, not native device,
 permission, compositor restart or full-monitor acceptance. Available
 means last local observation; every actual operation still checks authority.
 
+Offscreen shared-task checks exercise GUI responsiveness, GUI-thread delivery,
+cooperative session cleanup, owner/controller/handle destruction, collection
+without callback retention, independent owner tokens, task-ID/terminal fences,
+successful committed returns after a late stop, refreshed deletion/demotion/
+corrupt-user refusal, context/viewer propagation, secret masking and error
+formatter controls. Failed starts leave neither controller nor worker registry
+entries. Retired jobs disconnect owner destruction hooks; a ten-task check
+returns signal receivers to their primed baseline. These tests use events
+and controlled functions, not network or
+devices. Shared infrastructure is not evidence that every panel or native
+backend already supports cooperative stop; those migrations remain in Progress.md.
+
 Controlled diagnostic-interruption checks exercise six direct and explicitly
 wrapped controls through the core, root SDK, versioned SDK and CLI. No later
 check or ordinary error log occurs; the original control object propagates.

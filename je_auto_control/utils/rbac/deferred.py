@@ -38,10 +38,16 @@ class DeferredAuthorization:
         return AuthorizationContext(record.user_id, record.role, store_path=context.store_path)
 
     @contextmanager
-    def scope(self) -> Iterator[None]:
-        """Run as the current registrant, refusing revoked or read-only users."""
+    def context_scope(self) -> Iterator[Optional[AuthorizationContext]]:
+        """Refresh and bind the registrant; work must authorize its own operation's capability."""
         context = self._resolve()
         with authorization_scope(context):
+            yield context
+
+    @contextmanager
+    def scope(self) -> Iterator[None]:
+        """Run as the current registrant, refusing revoked or read-only users."""
+        with self.context_scope() as context:
             if context is not None and not context.allows(Capability.DRIVE_INPUT):
                 raise AuthorizationError(
                     f"deferred work needs {Capability.DRIVE_INPUT!r}; "

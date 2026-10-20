@@ -464,6 +464,18 @@ Context 会复制环境／工具数据，可由拥有者提供无原生对象的
 截取工具／portal 选择独立诊断，重绘与切换语言只使用现有快照。原生 portal 恢复、compositor 重启、
 截取结果与 context 的接合，以及可取消的主动诊断仍列于 `Progress.md`。
 
+GUI 工作基础提供 `gui.task_controller.TaskController`：
+`submit(work, owner=widget)` 返回调用者持有的 `TaskHandle`，通过
+`TaskOutcome`／`TaskProgress` 传递终态与进度。工作取得不依赖 Qt 的
+`CancellationToken`，提供 checkpoint、有界且可被取消唤醒的等待与进度报告。
+提交时捕获 context，执行前重新读取 store 用户；工作须持有数据、不引用 widget，并验证自身操作所需的 capability。
+现有 `DeferredAuthorization.scope()` 保持输入权限要求，`context_scope()` 仅更新并绑定身份。
+
+拥有者、handle 或 controller 销毁时会请求协作式停止并丢弃延迟结果；每项工作有独立 ID／token，
+回调在 GUI 线程执行。不强制中断不配合的调用，也不把已成功提交的结果改标为取消。
+错误与进度使用捕获的秘密遮罩 scope，终态不保留异常 traceback；线程启动失败会恢复两层登记并保留原失败。
+这是共用基础；Diagnostics 与其余面板的 controller／timeout／停止控制整合仍列于 `Progress.md`。
+
 主动诊断的检查若抛出显式取消或中断控制（含显式的异常原因链），立即停止，
 并由核心、SDK、CLI 与 Diagnostics 操作传递原始对象，不记录为普通错误或失败报告行，
 也不执行后续检查。普通检查错误仍产生失败行并继续其余项目；GUI 取消后可显式重试。

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261021-11 | 2026-10-21 | Add owner-bound cooperative task infrastructure without retaining widgets | #done #gui #workers #F3 | [2026-10-b](2026-10-b.md) |
 | U-20261021-10 | 2026-10-21 | Preserve explicit cancellation before later diagnostic checks | #done #diagnostics #cancellation #D1 | [2026-10-b](2026-10-b.md) |
 | U-20261021-09 | 2026-10-21 | Stop implicit CLI fallback after native pointer region refusal | #done #wayland #authority #D1 | [2026-10-b](2026-10-b.md) |
 | U-20261021-08 | 2026-10-21 | Expose passive input and capture capabilities across SDK, commands and Diagnostics | #done #capabilities #wayland #D1 | [2026-10-b](2026-10-b.md) |
@@ -429,7 +430,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 11 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 12 |
 | [2026-10.md](2026-10.md) | 2026-10 | 82 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |

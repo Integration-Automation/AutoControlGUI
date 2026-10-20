@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add owner-bound shared GUI task infrastructure with cooperative cancellation,
+  typed progress/outcomes, captured context and refreshed identity. Late owner
+  results are dropped, failures do not retain traceback objects, and a failed
+  thread start rolls back worker ownership. Panel migration remains pending.
+
 - Stop active diagnostics on direct or explicitly wrapped cancellation and
   hard controls, retaining the original signal before later checks or error
   reporting. Ordinary failed checks keep their existing report behavior.
