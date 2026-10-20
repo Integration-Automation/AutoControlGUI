@@ -261,6 +261,10 @@ MCP role decisions also apply explicit sensitive-read overrides independently
 of read-only hints; clipboard, local data, credential, external service and
 microphone operations require operator authority at both listing and dispatch.
 
+TCP client authentication marks rejection terminal before writing AUTH_FAIL. Admission
+reaping therefore releases its client slot before an immediate retry can arrive, while
+the separate handshake semaphore bounds outstanding cleanup and authentication threads.
+
 Delayed work captures registration authority through `utils/rbac/deferred.py`.
 Schedulers, triggers, hotkeys, watchdogs, webhooks, e-mail watchers and observers
 bind that owner at dispatch, independently of the worker's ambient context.

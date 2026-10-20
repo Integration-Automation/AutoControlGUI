@@ -424,3 +424,8 @@ blocks preference delivery. Captured contexts, stored-role revocation at core ch
 queued delivery, pre-cancellation, bounded/finite JSON and network-secret error masking have
 controlled tests. Headless API/AC/MCP/Builder share the exact reviewed preference operation.
 This covers synthetic/offscreen/loopback behavior; device and paid API acceptance stays deferred.
+
+Deterministic loopback tests pause a rejected TCP handler immediately after its AUTH_FAIL
+write and admit a replacement at max_clients=1 before releasing that handler. Bad tokens,
+wrong handshake phases and denied approval all cover the terminal-reply/capacity ordering.
+The Windows/Python 3.10 CI race is reproduced without timing sleeps, native input or capture.

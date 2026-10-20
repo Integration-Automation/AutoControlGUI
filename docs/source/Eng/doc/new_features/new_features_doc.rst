@@ -1789,3 +1789,13 @@ hard signal is already pending, diagnostic storage cannot replace that signal;
 the history row remains unfinished rather than being marked successful.
 MCP cancellation keeps its existing ``RuntimeError`` control-signal contract,
 separate from ordinary framework failures, and its JSON-RPC cancellation reply.
+
+
+Admission after rejected TCP authentication
+----------------------------------------------------------------
+
+A TCP handler is marked stopped before sending ``AUTH_FAIL`` for a bad token, wrong
+handshake phase or denied approval. The host can admit an immediate replacement even
+while rejection logging or socket cleanup is pending. This preserves the existing
+wire payloads and the separate bound on pending handshakes; it does not admit failed
+viewers or increase ``max_clients`` for active clients.

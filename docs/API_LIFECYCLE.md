@@ -218,3 +218,8 @@ missing/deleted keys. No source/network/credential reads or Qt imports are added
 Workspace Sync GUI exposes explicit reviewed application on its main window, separate from
 receipt/publication. Captured authority refreshes during work and before queued delivery;
 cancellation prevents late preference application while completed durable writes remain committed.
+
+TCP AUTH_FAIL is terminal for client admission: a rejected handler is marked stopped before
+the reply is sent, allowing an immediate replacement connection while cleanup finishes.
+Wire payloads, max_clients for active/pending clients and the independent pending-handshake
+budget remain unchanged. No public names or command schemas change.

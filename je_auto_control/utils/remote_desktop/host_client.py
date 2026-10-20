@@ -10,7 +10,7 @@ module does not import it.
 import collections
 import json
 import threading
-from typing import TYPE_CHECKING, Deque, Optional
+from typing import TYPE_CHECKING, Deque, NoReturn, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -192,11 +192,7 @@ class _ClientHandler:
         self._channel.send_typed(MessageType.AUTH_CHALLENGE, nonce)
         msg_type, payload = self._channel.read_typed()
         if msg_type is not MessageType.AUTH_RESPONSE:
-            self._channel.send_typed(MessageType.AUTH_FAIL,
-                                     b"expected AUTH_RESPONSE")
-            raise AuthenticationError(
-                f"expected AUTH_RESPONSE, got {msg_type.name}"
-            )
+            self._reject_auth(b"expected AUTH_RESPONSE", f"expected AUTH_RESPONSE, got {msg_type.name}")
         # Phase 6.6: a viewer reconnecting with a valid resume token
         # signs with that token directly — host short-circuits the
         # approval popup and reuses the saved permission.
@@ -205,17 +201,13 @@ class _ClientHandler:
             self.permission = resumed
         else:
             if not self._host._verify_token(nonce, payload):
-                self._channel.send_typed(MessageType.AUTH_FAIL, b"bad token")
-                raise AuthenticationError("bad token")
+                self._reject_auth(b"bad token", "bad token")
             # Host operator gates the session *before* AUTH_OK so the
             # viewer surfaces the rejection as an AuthenticationError
             # instead of connecting and then mysteriously disconnecting.
             permission = self._resolve_permission()
             if permission == PERMISSION_DENIED:
-                self._channel.send_typed(
-                    MessageType.AUTH_FAIL, b"rejected by host",
-                )
-                raise AuthenticationError("rejected by host")
+                self._reject_auth(b"rejected by host", "rejected by host")
             self.permission = permission
         # Issue a fresh resume token so the viewer can reconnect
         # within the store's TTL without the approval popup.
@@ -229,6 +221,12 @@ class _ClientHandler:
         ).encode("utf-8")
         self._channel.send_typed(MessageType.AUTH_OK, ok_payload)
         self._channel.settimeout(None)
+
+    def _reject_auth(self, payload: bytes, message: str) -> NoReturn:
+        """Release admission capacity before the terminal reply lets the viewer immediately reconnect."""
+        self._shutdown.set()
+        self._channel.send_typed(MessageType.AUTH_FAIL, payload)
+        raise AuthenticationError(message)
 
     def _send_loop(self) -> None:
         # Seed the viewer with the latest cursor + frame on this per-client

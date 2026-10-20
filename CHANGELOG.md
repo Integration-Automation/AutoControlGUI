@@ -13,6 +13,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Release rejected TCP authentication slots before AUTH_FAIL, so immediate retries do not
+  spuriously hit max_clients while earlier handler cleanup or logging is still pending.
+  Bad-token, wrong-phase and denied-approval replies keep their existing wire payloads.
+
 - Add the lazy Workspace Sync tab with Actions-menu status/capture/sync, peer controls,
   exact causal review/resolution, inert publication and explicit live GUI preference application.
   SyncWorkspace.preferences(observed=...) and the existing AC/MCP/Builder preferences operation

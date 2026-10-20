@@ -345,6 +345,8 @@ Delayed interval/cron jobs, triggers, hotkeys, watchdog rules, webhooks, e-mail 
 
 ### How the remote-desktop wire protocol works
 
+TCP hosts release a rejected authentication attempt’s client slot before sending `AUTH_FAIL`. A viewer can retry immediately, including after a bad token, wrong handshake message or denied approval, while socket cleanup/logging finishes. Pending handshakes retain their independent resource bound.
+
 Worth knowing before you expose a host, and described nowhere else in the
 docs. The default transport is length-prefixed framing over raw TCP — no extra
 dependencies — and it opens with an **HMAC-SHA256 challenge/response
