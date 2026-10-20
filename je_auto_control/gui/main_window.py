@@ -19,6 +19,7 @@ from je_auto_control.gui.theme import (
 from je_auto_control.gui.workspace_settings import WorkspacePreferences, default_settings
 from je_auto_control.utils.config_sync.contract import ConfigSyncError
 from je_auto_control.utils.config_sync.workspace_preferences import _DEFAULTS, _validate_workspace_record
+from je_auto_control.utils.rbac.policy import authorize_command
 
 
 def _t(key: str, default: str = "") -> str:
@@ -255,6 +256,13 @@ class AutoControlGUIUI(QMainWindow):
                 action.setChecked(data == self._theme_name)
             elif isinstance(data, int) and not isinstance(data, bool) and data in {0, 10, 12, 14, 16, 20}:
                 action.setChecked(data == self._user_font_pt)
+
+    def import_sync_script(self, actions: list[object], source_path: str) -> None:
+        """Open one explicitly loaded native script snapshot in Builder without invoking Run."""
+        authorize_command('AC_sync_profile_load')
+        self.auto_control_gui_widget.activate_tab('script_builder')
+        builder = self.auto_control_gui_widget.tab_registry.open('script_builder')
+        builder.import_sync_script(actions, source_path)
 
     def _rebuild_tabs_menu(self) -> None:
         if self._view_menu is None:

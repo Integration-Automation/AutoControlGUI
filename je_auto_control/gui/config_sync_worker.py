@@ -11,6 +11,9 @@ from typing import Callable, Literal, Optional, cast
 from PySide6.QtCore import QObject, Signal, Slot
 
 from je_auto_control.utils.config_sync.contract import ConfigSyncError, _encoded
+from je_auto_control.utils.config_sync.profile_commands import profile_parameters
+from je_auto_control.utils.config_sync.profile_load import load_sync_profile
+from je_auto_control.utils.config_sync.profile_models import LoadedSyncProfile
 from je_auto_control.utils.config_sync.workspace_commands import _sync_workspace
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.secret_scope import remember_secret, scrub_secret_text, secret_log_scope
@@ -39,6 +42,7 @@ class SyncUIOutcome:
     status: Literal['ok', 'cancelled', 'error']
     data: Optional[dict[str, object]] = None
     error: str = ''
+    profile: Optional[LoadedSyncProfile] = None
 
 
 def _object(text: str) -> dict[str, object]:
@@ -73,8 +77,11 @@ class ConfigSyncWorker(QObject):
         if self._stop.is_set():
             raise CancelledError()
         with self._authority.scope():
-            authorize_command('AC_sync_workspace')
+            authorize_command(self._command())
         return False
+
+    def _command(self) -> str:
+        return 'AC_sync_profile_load' if self._request.operation == 'load_profile' else 'AC_sync_workspace'
 
     def deliver(self, callback: Callable[[], None], *, require_active: bool = False) -> None:
         """Deliver on the GUI thread under refreshed captured authority, after the worker context exits."""
@@ -82,7 +89,7 @@ class ConfigSyncWorker(QObject):
             if require_active and self._stop.is_set():
                 raise CancelledError()
             with self._authority.scope():
-                authorize_command('AC_sync_workspace')
+                authorize_command(self._command())
                 callback()
         self._context.run(apply)
 
@@ -96,14 +103,14 @@ class ConfigSyncWorker(QObject):
         with secret_log_scope():
             try:
                 self._poll()
-                configuration, options = _object(request.configuration_json), _object(request.options_json)
+                configuration = {} if request.operation == 'load_profile' else _object(request.configuration_json)
+                options = _object(request.options_json)
                 if request.operation in {'sync', 'register', 'ack', 'retire', 'collect', 'full_resync'}:
                     environment = options.get('secret_env')
                     if isinstance(environment, str):
                         remember_secret(os.environ.get(environment, ''))
                 with self._authority.scope():
-                    data = _sync_workspace(configuration, request.operation, options,
-                                           path_policy=self._policy, cancelled=self._poll)
+                    data, profile = self._operate(configuration, options)
             except (CancelledError, AsyncCancelledError):
                 return SyncUIOutcome(request.request_id, request.operation, 'cancelled')
             except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
@@ -111,4 +118,14 @@ class ConfigSyncWorker(QObject):
                     return SyncUIOutcome(request.request_id, request.operation, 'cancelled')
                 return SyncUIOutcome(request.request_id, request.operation, 'error',
                                      error=scrub_secret_text(_ordinary_error_text(error)))
-        return SyncUIOutcome(request.request_id, request.operation, 'ok', data)
+        return SyncUIOutcome(request.request_id, request.operation, 'ok', data, profile=profile)
+
+    def _operate(self, configuration: dict[str, object], options: dict[str, object]
+                 ) -> tuple[dict[str, object], Optional[LoadedSyncProfile]]:
+        if self._request.operation == 'load_profile':
+            directory, target, digest = profile_parameters(options)
+            profile = load_sync_profile(directory, target, expected_digest=digest,
+                                        path_policy=self._policy, cancelled=self._poll)
+            return profile.to_dict(), profile
+        return (_sync_workspace(configuration, self._request.operation, options,
+                                 path_policy=self._policy, cancelled=self._poll), None)

@@ -13,6 +13,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add experimental load_sync_profile/LoadedSyncProfile and private AC_sync_profile_load,
+  MCP and Builder routing for exact reviewed generations. Each load creates an independent
+  editable native working copy with disabled hotkeys/trigger nodes and rebound typed assets.
+  Sync Actions inspect native definitions, import script snapshots into Builder and apply
+  loaded GUI preference snapshots explicitly; caller/owner authority is rechecked for each.
+  Builder displays imported command names and positional values as literal text.
+
 - Release rejected TCP authentication slots before AUTH_FAIL, so immediate retries do not
   spuriously hit max_clients while earlier handler cleanup or logging is still pending.
   Bad-token, wrong-phase and denied-approval replies keep their existing wire payloads.

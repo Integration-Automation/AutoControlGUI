@@ -371,8 +371,8 @@ profile generation. AC/MCP/Builder share private DRIVE and live root/cancellatio
 Missing references and native binding type mismatches persist for review but block complete
 publication. This establishes local capture/inert materialization, with no script execution,
 vault lookup or listener startup; coordinated loopback convergence is covered below.
-Explicit disabled native profile loading and folder/clipboard/disconnection
-regression remain in Progress.md; live GUI preference application is covered below.
+Native working-copy loading is covered below; folder/clipboard/disconnection
+regression remains in Progress.md; live GUI preference application is covered below.
 
 Controlled native-definition numeric tests refuse positive and negative 401-digit
 JSON integers with ConfigSyncError before creating adapter storage.
@@ -429,3 +429,20 @@ Deterministic loopback tests pause a rejected TCP handler immediately after its 
 write and admit a replacement at max_clients=1 before releasing that handler. Bad tokens,
 wrong handshake phases and denied approval all cover the terminal-reply/capacity ordering.
 The Windows/Python 3.10 CI race is reproduced without timing sleeps, native input or capture.
+
+Native-load controlled tests construct real HotkeyBinding and all eight supported native
+trigger classes/composites, with every node disabled and no polling/listener startup.
+Independent mutable locator repositories, address books, settings, scripts and GUI preference
+snapshots retain an unchanged immutable source. Typed assets rebase while literal strings and
+secret placeholders keep their meaning. Exact digest, corrupt/resealed native files, enabled
+children, literal/head disagreement, unreferenced files, source changes after initial review,
+root revocation, mid-copy cancellation, wrapped hard signals and late committed stops are covered.
+AC/MCP/Builder share private routing and prestart guards. Offscreen tests load without a source
+configuration, inspect native kinds and explicitly open scripts/apply preferences with zero
+script dispatch. Revoked owners and current viewers cannot perform later GUI actions.
+The temporary example loads seven domains plus a real PNG without network/device/API calls;
+this is controlled native-data integration and keeps physical/paid acceptance deferred.
+
+Offscreen rendering regressions import unknown command names and positional values containing
+HTML-like text. Selected displayed text must equal the complete original literal; both cases
+fail with automatic rich-text interpretation and pass with literal text labels.

@@ -81,7 +81,7 @@ provides binary streams and a live local generation root; DirectoryAssetTranspor
 the built-in local-only source. sync_assets stages all files, verifies their content,
 then publishes one immutable generation directory. Reuse verifies metadata, exact tree
 and all hashes; corruption preserves evidence and aborts. Private AC/MCP/Builder paths
-share current root/cancellation checkpoints. Causal bundle coordination is described below; explicit disabled native profile loading remains C3. This layer never replaces active workspace files or runs scripts.
+share current root/cancellation checkpoints. Causal bundle coordination is described below; explicit native working-copy loading is described below. This layer never replaces active workspace files or runs scripts.
 
 Seven dependency-free source adapters capture selected scripts, locator repositories,
 hotkey/trigger metadata, address-book entries, JSON settings and saved native workspace preferences. A lazy owned SQLite
@@ -115,7 +115,7 @@ the durable control-intent transaction. Adapter ledger schema 2 adopts each conf
 new-generation baseline once, retaining later local edits and compact deletion fences.
 Source/asset-cache/state/outbox roles cannot overlap; selected kind/state bindings remain fixed.
 Private API/AC/MCP/Builder use live roots/cancellation and per-RPC environment credentials.
-Materialization remains inert; explicit disabled native loading remains open C3 work. The two-source example and regressions use temporary loopback only.
+Materialization remains inert; explicit native working-copy loading is described below. The two-source example and regressions use temporary loopback only.
 
 The lazy config_sync_tab uses immutable JSON requests and the shared GUI-thread relay.
 config_sync_worker captures context/authority, refreshes DRIVE at core checkpoints and queued
@@ -125,6 +125,19 @@ application. Qt-free workspace_review compares the exact reviewed head set, refu
 conflicts and returns four canonical defaults/values without observing source files.
 MainWindow validates all values before live theme/font/navigation mutation; normal close
 persists them. Receipt never changes a running window or activates native definitions.
+
+Native loading is a separate explicit boundary: profile_load verifies the exact source
+manifest, streams/hash-checks into owned staging, and profile_native compares canonical
+native files with sealed heads before one atomic fresh working-copy publication.
+profile_bindings resolves only typed assets and native file fields against that root.
+profile_runtime looks up native subsystem factories only for explicit nonempty loading,
+avoiding engine-default initialization from the config_sync import path. LoadedSyncProfile
+owns the initial native snapshot and disabled hotkey/trigger objects; repository/book
+handles open working files explicitly. Private API/AC/MCP/Builder share DRIVE and live
+roots/cancellation. Sync UI retains the loaded snapshot for kind inspection, explicit
+Builder import and preference application, checking both current caller and captured owner.
+Existing source selection and global engines retain their own ownership; received data
+does not register listeners, connect saved hosts, resolve vaults or execute scripts.
 
 Referenced assets add explicit private alias/destination bindings and portable full/chunk
 SHA-256 descriptors. Source capture freezes bytes in an account/endpoint-scoped sibling

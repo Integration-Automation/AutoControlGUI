@@ -142,6 +142,13 @@ API/AC/MCP/Builder, to refuse stale or conflicted heads before changing the runn
 Status/capture/review/publication never apply preferences automatically. Workers preserve
 context, refresh captured DRIVE authority and discard cancelled/stale preference results.
 
+load_sync_profile/LoadedSyncProfile and private AC_sync_profile_load/ac_sync_profile_load
+(Builder Data) explicitly load the reviewed published files directory and manifest digest
+into a fresh editable native workspace. Hotkeys/trigger nodes stay disabled; typed asset
+paths rebase into that copy. Sync Actions inspect native kinds and explicitly import script
+snapshots/apply loaded preferences after current-caller and captured-owner checks.
+The causal guide describes the complete native format/integrity boundary and temporary example.
+
 Referenced assets use a separate lazy SyncAssetStore selected by signaling --asset-store
 and version-one authenticated chunk/blob routes. SyncWorkspace pins its asset_cache_path,
 uploads frozen content before new causal definitions and publishes native metadata/assets

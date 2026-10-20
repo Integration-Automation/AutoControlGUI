@@ -48,6 +48,7 @@ from je_auto_control.utils.self_healing.template_commands import (
 from je_auto_control.utils.codegen.journal_commands import _generate_candidate_command
 from je_auto_control.utils.config_sync.commands import _commit_config_store, _get_config_store
 from je_auto_control.utils.config_sync.workspace_commands import _sync_workspace
+from je_auto_control.utils.config_sync.profile_commands import _load_sync_profile
 from je_auto_control.utils.config_sync.asset_commands import _build_sync_asset_manifest, _sync_asset_generation
 from je_auto_control.utils.config_sync.adapter_commands import (
     _apply_sync_adapter, _materialize_sync_profile, _resolve_sync_adapter, _snapshot_sync_adapter,
@@ -7286,6 +7287,7 @@ class Executor:
             "AC_sync_adapter_apply": _apply_sync_adapter,
             "AC_sync_adapter_resolve": _resolve_sync_adapter,
             "AC_sync_profile_materialize": _materialize_sync_profile,
+            "AC_sync_profile_load": _load_sync_profile,
             "AC_sync_entry_merge": _merge_sync_entry,
             "AC_sync_outbox_enqueue": _enqueue_sync_outbox,
             "AC_sync_outbox_status": _status_sync_outbox,

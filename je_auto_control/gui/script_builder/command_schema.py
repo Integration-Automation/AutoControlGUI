@@ -155,6 +155,11 @@ def _add_sync_adapter_specs(specs: List[CommandSpec]) -> None:
                     fields=(FieldSpec("profiles", FieldType.JSON), FieldSpec("target_root", FieldType.STRING)),
                     description="Publish complete ready local profiles as one verified generation. "
                     "No scripts run and received hotkeys/triggers stay disabled."),
+        CommandSpec("AC_sync_profile_load", "Data", "Load Reviewed Native Sync Profile",
+                    fields=(FieldSpec("directory", FieldType.STRING), FieldSpec("target_root", FieldType.STRING),
+                            FieldSpec("expected_digest", FieldType.STRING)),
+                    description="Create a separate editable native working copy from the exact reviewed generation. "
+                    "Received hotkeys and all trigger nodes stay disabled; global engines remain untouched."),
     ])
 
 

@@ -1410,3 +1410,23 @@ traditional_chinese_word_dict.update({
     'config_sync_error': '操作失敗',
     'config_sync_interrupted': '操作中斷；重試前請檢查本機狀態。',
 })
+
+traditional_chinese_word_dict.update({
+    'config_sync_generation_directory': '已發布的 files 資料夾',
+    'config_sync_manifest_digest': '已檢視的 manifest 摘要',
+    'config_sync_working_root': '新工作副本的存放資料夾',
+    'config_sync_loaded_script': '已載入的腳本快照',
+    'config_sync_profile_notice': (
+        '每次載入都建立獨立且可編輯的工作區。熱鍵及每個觸發器節點維持停用；腳本須另行明確執行。'
+    ),
+    'config_sync_load_profile': '載入已檢視的原生 profile',
+    'config_sync_open_loaded_script': '在 Builder 開啟已載入腳本快照',
+    'config_sync_apply_loaded_preferences': '套用已載入的偏好快照',
+    'config_sync_inspect_loaded': '檢查已載入的所選類別定義',
+    'config_sync_profile_required': '請先載入已檢視的原生 profile。',
+    'config_sync_script_required': '請先選取已載入的腳本快照。',
+    'config_sync_builder_required': '請從主視窗開啟同步分頁以匯入腳本快照。',
+    'config_sync_workspace_required': '載入的 profile 沒有 GUI 偏好設定。',
+    'config_sync_script_opened': '已在 Builder 開啟腳本快照；仍須明確執行 Run。',
+    'config_sync_loaded_preferences_applied': '已套用載入的 GUI 偏好快照',
+})

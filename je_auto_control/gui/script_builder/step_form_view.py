@@ -2,7 +2,7 @@
 import json
 from typing import Any, Callable, Dict, Optional
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
     QLineEdit, QPushButton, QWidget,
@@ -25,6 +25,12 @@ def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
 
 
+def _plain_label(text: str) -> QLabel:
+    label = QLabel(text)
+    label.setTextFormat(Qt.TextFormat.PlainText)
+    return label
+
+
 class StepFormView(QWidget):
     """Right-pane editor for a single Step."""
 
@@ -43,7 +49,7 @@ class StepFormView(QWidget):
         # form, overwriting params from fields that have not been set yet.
         self._populating = False
         self._layout = QFormLayout(self)
-        self._title = QLabel(_t("sb_no_step_selected"))
+        self._title = _plain_label(_t("sb_no_step_selected"))
         self._layout.addRow(self._title)
 
     def retranslate(self) -> None:
@@ -67,7 +73,7 @@ class StepFormView(QWidget):
         self._title.setText(f"{spec.label}  ({spec.command})")
         if step.args is not None:
             # Positional arguments have no field names to edit by.
-            self._layout.addRow(QLabel(_t("sb_positional_args")), QLabel(repr(step.args)))
+            self._layout.addRow(QLabel(_t("sb_positional_args")), _plain_label(repr(step.args)))
             return
         for field_spec in spec.fields:
             editor = self._build_editor(field_spec)

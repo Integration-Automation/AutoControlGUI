@@ -423,6 +423,15 @@ def sync_adapter_resolve(profile: dict[str, object], entry_id: str, value: dict[
                                   cancelled=lambda: _causal_cancelled(ctx))
 
 
+def sync_profile_load(directory: str, target_root: str, expected_digest: str, *,
+                        ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Load an exact reviewed native generation into a separate workspace with no runtime activation."""
+    # pylint: disable-next=import-outside-toplevel  # reason: private native loading runs only for the invoked tool
+    from je_auto_control.utils.config_sync.profile_commands import _load_sync_profile
+    return _load_sync_profile(directory, target_root, expected_digest, path_policy=ctx.path_policy if ctx else None,
+                               cancelled=lambda: _causal_cancelled(ctx))
+
+
 def sync_profile_materialize(profiles: list[dict[str, object]], target_root: str, *,
                                ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
     """Publish a complete inert generation while retaining every selected profile's live authority."""

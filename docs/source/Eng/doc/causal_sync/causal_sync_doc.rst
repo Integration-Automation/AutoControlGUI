@@ -596,7 +596,7 @@ Controls additionally accept operation_id/peer_id/discard_pending under their us
 ``python -m examples.sync_workspace_http`` uses two real temporary source selections and
 loopback HTTP to demonstrate offline concurrency, exact resolution, restart, inert
 publication and no retired replay. Referenced assets and live GUI application are described below.
-Explicit disabled native profile loading and folder/clipboard/disconnection regression remain
+Explicit native working-copy loading is described below. Folder/clipboard/disconnection regression remains
 open in Progress.md. No device or paid API acceptance is implied.
 
 
@@ -637,7 +637,64 @@ authority at core checkpoints and queued GUI delivery. Actions remain responsive
 requests stop at a checkpoint, and closing discards delayed results. Late cancellation
 blocks preference application, while already committed durable operations remain committed.
 No native script execution, hotkey/trigger activation, device or paid API acceptance is added.
-Explicit disabled native profile loading remains in Progress.md.
+Explicit disabled native working-copy loading is described below.
+
+
+Explicit native working profiles
+----------------------------------------------------------------
+
+``load_sync_profile(directory, target_root, expected_digest=..., path_policy=None,
+cancelled=None)`` accepts the published ``AssetSyncResult.directory`` (the ``files``
+directory) and its exact reviewed lowercase SHA-256 ``manifest_digest``. It creates
+a fresh ``workspace-...`` directory below the explicit working-copy container::
+
+    from je_auto_control import load_sync_profile
+
+    workspace.capture()
+    generation = workspace.materialize("immutable-cache")
+    loaded = load_sync_profile(generation.directory, "workspaces",
+                               expected_digest=generation.manifest_digest)
+    print(loaded.directory, loaded.scripts, loaded.preferences)
+    assert all(not binding.enabled for binding in loaded.hotkeys)
+    assert all(not trigger.enabled for trigger in loaded.triggers)
+
+``LoadedSyncProfile`` owns actual native HotkeyBinding/trigger objects, disabled at
+every composite depth. Its explicitly accessed ``locators`` and ``address_book``
+properties open native stores in the editable copy. ``scripts`` maps names to those
+working files; ``script_actions(name)``, ``settings``, ``preferences`` and
+``definitions(kind)`` copy the initial loaded snapshot. Each load gets an independent
+directory. The local schema-1 ``.sync-profile.json`` receipt retains the source manifest
+and digest. Existing source selection, causal ledgers and global engines keep their ownership.
+
+Before publication, all source files pass full SHA-256/size verification again while
+streaming into owned staging. Canonical native formats must match their sealed portable
+heads, including exact literals, safe workspace defaults and disabled runtime flags.
+Conflicting heads, missing/unreferenced files, unsafe child flags or changed source bytes
+refuse the entire load. Typed asset markers must match manifest content; their native
+paths become absolute working-copy paths. Native hotkey/trigger script and condition
+paths resolve against that root; relative paths cannot escape it. Absolute explicit
+local bindings still require current root authority. Arbitrary script literal strings
+keep their meaning and secret references remain interpolation placeholders without vault lookup.
+
+The private ``AC_sync_profile_load`` / ``ac_sync_profile_load`` / Builder Data command
+takes directory/target_root/expected_digest and requires DRIVE/current roots. Cancellation
+or root revocation before publication cleans owned staging. Wrapped cancellation/hard
+signals retain their original carrier; an already committed working copy survives late stop.
+
+In **Workspace Sync**, materialization fills the published-directory/digest inputs.
+Choose a working-copy container and use **Load reviewed native profile**; a previously
+published snapshot can also load without a source configuration. Separate Actions
+**Inspect loaded definitions for selected kind**, **Open loaded script snapshot in
+Builder** and **Apply loaded preference snapshot** use the retained loaded object.
+These later operations check both the current caller and the captured load owner's
+current DRIVE authority. Opening imports editor data; Run remains explicit. Imported command names and
+positional values render as literal text, including HTML-like input. Applying
+validates all four native GUI values before changing the window. Closing discards stale
+worker results. Loading does not register listeners, connect saved hosts, execute scripts
+or automatically apply preferences.
+
+``python -m examples.sync_profile_load`` demonstrates seven temporary domains and a real
+PNG, editable locator storage and unchanged source hashes, without Qt/network/device/API calls.
 
 
 Referenced asset synchronization
@@ -717,6 +774,6 @@ root; explicitly loaded working copies must resolve them against that root. Rece
 does not execute scripts, register hotkeys, arm triggers or replace current preferences.
 ``python -m examples.sync_referenced_assets`` transfers an actual multi-chunk PNG/script
 over temporary stdlib loopback HTTP and publishes three inert files. It needs no optional
-web framework or external service. Sync UI/live application is described above; explicit disabled native loading and separate
+web framework or external service. Sync UI/live application/native working-copy loading is described above; separate
 folder/clipboard/disconnection regression remain in Progress.md; native/paid acceptance
 remains deferred.

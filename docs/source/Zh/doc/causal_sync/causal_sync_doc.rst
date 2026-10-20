@@ -389,7 +389,7 @@ schema-1 熱鍵／觸發器陣列或一般設定物件。描述內含本機路�
 只有可攜 entries 才放上 wire。``python -m examples.sync_adapters`` 使用六種真實來源產生
 十二個暫存原生／中繼檔，不執行腳本、不註冊接收熱鍵／觸發器、不讀 vault、不連網。
 來源／outbox 與完整重同步基準協調、GUI 即時偏好套用及 Sync UI 見下方。
-明確停用原生 profile 載入與 folder／clipboard／斷線回歸仍列於 Progress.md 的 C3。
+明確停用原生 profile 載入見下方；folder／clipboard／斷線回歸仍列於 Progress.md 的 C3。
 
 日誌沿用既有的保守秘密欄位政策：內嵌定義只要包含 password 欄位，即使值為參照也會遮罩，
 候選產生器因此排除該動作，不重建不完整的 apply／resolve。私有參照描述與發布命令仍可
@@ -491,8 +491,8 @@ observed／is_deleted；preferences 使用 observed；materialize 使用 target_
 retire／full_resync 接受 secret_env／timeout_s／policy／max_rebases；控制另依規則接受
 operation_id／peer_id／discard_pending。
 ``python -m examples.sync_workspace_http`` 以兩組真實暫存來源與 loopback HTTP 示範離線並行、
-精確解決、重啟、未啟用發布與退休編輯不重播。引用資產及 GUI 即時套用見下方；明確停用原生
-profile 載入與 folder／clipboard／斷線回歸仍在 Progress.md；不代表真機或付費 API 驗收。
+精確解決、重啟、未啟用發布與退休編輯不重播。引用資產、GUI 即時套用與原生工作副本載入
+見下方；folder／clipboard／斷線回歸仍在 Progress.md；不代表真機或付費 API 驗收。
 
 
 明確的 Sync UI 與即時偏好套用
@@ -522,7 +522,55 @@ theme／font_pt／navigation_visible／navigation_width。明確檢視的空集�
 Worker 保留不可變 JSON 輸入與呼叫者 context，在 core 檢查點與排隊 GUI 結果交付時重驗
 擷取的 DRIVE 權限。Actions 保持可回應；取消在檢查點停止，關閉後捨棄延遲結果。
 過晚的取消仍阻止偏好套用，但已提交的持久操作維持已提交。不新增原生腳本執行、熱鍵／觸發器
-啟用、真機或付費 API 驗收；明確停用原生 profile 載入仍列於 Progress.md。
+啟用、真機或付費 API 驗收；明確停用原生 profile 工作副本載入見下方。
+
+
+明確的原生工作 profile
+----------------------------------------------------------------
+
+``load_sync_profile(directory, target_root, expected_digest=..., path_policy=None,
+cancelled=None)`` 接受已發布的 ``AssetSyncResult.directory``（``files`` 資料夾）及精確
+檢視的 SHA-256 小寫 ``manifest_digest``，在明確的工作副本存放資料夾下建立全新
+``workspace-...`` 資料夾::
+
+    from je_auto_control import load_sync_profile
+
+    workspace.capture()
+    generation = workspace.materialize("immutable-cache")
+    loaded = load_sync_profile(generation.directory, "workspaces",
+                               expected_digest=generation.manifest_digest)
+    print(loaded.directory, loaded.scripts, loaded.preferences)
+    assert all(not binding.enabled for binding in loaded.hotkeys)
+    assert all(not trigger.enabled for trigger in loaded.triggers)
+
+``LoadedSyncProfile`` 持有真實原生 HotkeyBinding／trigger 物件，每層 composite 都停用。
+明確存取 ``locators``、``address_book`` 屬性時，會開啟可編輯副本中的原生資料庫。
+``scripts`` 對應工作檔案；``script_actions(name)``、``settings``、``preferences`` 與
+``definitions(kind)`` 複製初始載入快照。每次載入都有獨立資料夾；本機 schema-1
+``.sync-profile.json`` 收據保留來源 manifest 與摘要。來源選取、因果 ledger 與全域引擎
+各自保有原有擁有權。
+
+發布前，所有來源檔案在串流到自有 staging 時再次驗證完整 SHA-256／大小。標準原生格式
+必須與封存的可攜 heads 一致，包括精確字面值、工作區安全預設及停用旗標。
+衝突 heads、缺失／未引用檔案、不安全子節點旗標或來源 bytes 改變，都拒絕整次載入。
+型別化資產標記必須符合 manifest 內容，原生路徑轉為工作副本的絕對路徑；原生熱鍵／觸發器
+腳本與條件路徑依工作根目錄解析，相對路徑不可逃離根目錄。明確絕對本機綁定仍須通過目前
+roots 權限。腳本的一般字面文字保留原意，秘密參照維持 interpolation placeholder，不查 vault。
+
+私有 ``AC_sync_profile_load``／``ac_sync_profile_load``／Builder Data 接受
+directory／target_root／expected_digest，並要求 DRIVE／目前 roots。發布前取消或撤銷 roots
+會清理自有 staging；包裝的取消／硬中止訊號保留原始 carrier，已提交工作副本不因過晚停止而回滾。
+
+「工作區同步」發布後會填入資料夾／摘要欄位；選擇工作副本存放資料夾，再執行
+「載入已檢視的原生 profile」。已發布的快照也能在沒有來源設定時載入。
+其他明確 Actions 可「檢查已載入的所選類別定義」、「在 Builder 開啟已載入腳本快照」，或
+「套用已載入的偏好快照」。這些後續操作同時檢查目前呼叫者與擷取載入者的目前 DRIVE 權限。
+開啟只匯入編輯器資料，仍須明確 Run；命令名稱與位置參數包含 HTML 樣式文字時也以字面文字顯示。
+套用先驗證四項原生 GUI 值，才會改動視窗。
+關閉會捨棄舊 worker 結果；載入不註冊 listener、不連線已存 host、不執行腳本，也不自動套用偏好。
+
+``python -m examples.sync_profile_load`` 示範七種暫存來源與真實 PNG、可編輯定位器儲存
+及來源 hash 不變，不呼叫 Qt／網路／裝置／API。
 
 
 引用資產同步
@@ -587,5 +635,5 @@ unresolved，不產生只有腳本的版本。完整重同步基準採用會抑�
 註冊熱鍵、啟用觸發器或替換目前偏好。
 ``python -m examples.sync_referenced_assets`` 經暫存 stdlib loopback HTTP 傳送真實的
 多分塊 PNG／腳本並發布三個未啟用檔案，不需可選 web framework 或外部服務。Sync UI／
-即時套用見上方；明確停用原生載入與獨立 folder／clipboard／斷線回歸仍在 Progress.md；真機與付費
+即時套用與原生工作副本載入見上方；獨立 folder／clipboard／斷線回歸仍在 Progress.md；真機與付費
 驗收維持暫緩。

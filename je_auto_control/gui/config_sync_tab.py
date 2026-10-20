@@ -15,14 +15,17 @@ from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
 from je_auto_control.gui.config_sync_worker import ConfigSyncWorker, SyncUIOutcome, SyncUIRequest
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
-from je_auto_control.utils.config_sync.adapter_schema import KINDS
+from je_auto_control.utils.config_sync.adapter_schema import AdapterKind, KINDS
 from je_auto_control.utils.config_sync.contract import ConfigSyncError
+from je_auto_control.utils.config_sync.profile_models import LoadedSyncProfile
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.secret_scope import scrub_secret_text
 from je_auto_control.utils.path_guard import PathPolicy
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
+from je_auto_control.utils.rbac.policy import authorize_command
 
 _OPERATIONS = ('status', 'capture', 'sync', 'register', 'ack', 'review', 'resolve', 'materialize',
-               'preferences', 'retire', 'collect', 'full_resync')
+               'load_profile', 'preferences', 'retire', 'collect', 'full_resync')
 _NETWORK = frozenset({'sync', 'register', 'ack', 'retire', 'collect', 'full_resync'})
 
 
@@ -47,7 +50,10 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
         self._metrics: dict[str, object] = {}
         self._status_key = 'idle'
         self._status_detail = ''
+        self._native_profile: Optional[LoadedSyncProfile] = None
+        self._profile_authority: Optional[DeferredAuthorization] = None
         layout = self._build_form()
+        self._build_profile_inputs(layout)
         self._build_review(layout)
         # pylint: disable-next=no-member  # reason: PySide6 bound signals expose connect at runtime
         self._configuration.textChanged.connect(self._invalidate)
@@ -92,6 +98,22 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
         layout.addWidget(self._form)
         return layout
 
+    def _build_profile_inputs(self, layout: QVBoxLayout) -> None:
+        self._load_form = QWidget(self)
+        form = QFormLayout(self._load_form)
+        self._generation_directory = QLineEdit(self)
+        form.addRow(self._label('generation_directory'), self._generation_directory)
+        self._manifest_digest = QLineEdit(self)
+        form.addRow(self._label('manifest_digest'), self._manifest_digest)
+        self._working_root = QLineEdit(self)
+        form.addRow(self._label('working_root'), self._working_root)
+        self._loaded_scripts = QComboBox(self)
+        form.addRow(self._label('loaded_script'), self._loaded_scripts)
+        layout.addWidget(self._load_form)
+        notice = self._label('profile_notice')
+        notice.setWordWrap(True)
+        layout.addWidget(notice)
+
     def _build_review(self, layout: QVBoxLayout) -> None:
         self._summary = QLabel(self)
         self._summary.setTextFormat(Qt.TextFormat.PlainText)
@@ -122,7 +144,10 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
     def menu_actions(self) -> tuple[tuple[str, Callable[[], None]], ...]:
         """Expose explicit operations through the window's Actions menu."""
         return tuple(('config_sync_' + operation, partial(self.begin, operation)) for operation in _OPERATIONS) + (
-            ('config_sync_cancel', self.cancel),)
+            ('config_sync_open_loaded_script', self._open_loaded_script),
+            ('config_sync_apply_loaded_preferences', self._apply_loaded_preferences),
+            ('config_sync_inspect_loaded', self._inspect_loaded),
+            ('config_sync_cancel', self.cancel))
 
     def retranslate(self) -> None:
         """Refresh labels without changing the private configuration or causal review."""
@@ -136,6 +161,8 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
         self._invalidate_review()
         self._metrics.clear()
         self._last_sync = None
+        self._native_profile = self._profile_authority = None
+        self._loaded_scripts.clear()
         self._show_metrics()
 
     def _invalidate_review(self) -> None:
@@ -163,6 +190,11 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
         if operation == 'resolve':
             return self._resolution_options()
         return {}
+
+    def _native_load_options(self) -> dict[str, object]:
+        return {'directory': self._generation_directory.text().strip(),
+                'target_root': self._working_root.text().strip(),
+                'expected_digest': self._manifest_digest.text().strip()}
 
     def _network_options(self, operation: str) -> dict[str, object]:
         options: dict[str, object] = {'timeout_s': self._timeout.value()}
@@ -192,12 +224,13 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
             self._set_status('busy')
             return
         try:
-            options = self._options(operation)
+            options = self._native_load_options() if operation == 'load_profile' else self._options(operation)
             self._generation += 1
             request = SyncUIRequest(self._generation, operation, self._configuration.toPlainText(),
                                     json.dumps(options, allow_nan=False))
             self._worker = ConfigSyncWorker(request, path_policy=self._policy)
             self._form.setEnabled(False)
+            self._load_form.setEnabled(False)
             self._heads.setEnabled(False)
             self._value.setEnabled(False)
             self._deleted.setEnabled(False)
@@ -244,8 +277,75 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
             self._reviewed = None
             self._row_ids.clear()
             self._heads.setRowCount(0)
+        elif outcome.operation == 'materialize':
+            self._generation_directory.setText(cast(str, data['directory']))
+            self._manifest_digest.setText(cast(str, data['manifest_digest']))
+        elif outcome.operation == 'load_profile':
+            self._show_loaded(outcome.profile)
         self._update_metrics(outcome.operation, data)
         self._set_status('applied' if outcome.operation == 'preferences' else 'done')
+
+    def _show_loaded(self, profile: Optional[LoadedSyncProfile]) -> None:
+        if profile is None:
+            raise ConfigSyncError(_t('profile_required'))
+        self._native_profile = profile
+        self._profile_authority = DeferredAuthorization.capture()
+        self._loaded_scripts.clear()
+        self._loaded_scripts.addItems(sorted(profile.scripts))
+        self._reviewed = None
+        self._row_ids.clear()
+        self._heads.setRowCount(0)
+        self._value.clear()
+        self._deleted.setChecked(False)
+
+    def _open_loaded_script(self) -> None:
+        self._use_loaded_profile(self._import_loaded_script)
+
+    def _apply_loaded_preferences(self) -> None:
+        self._use_loaded_profile(self._apply_loaded_snapshot)
+
+    def _inspect_loaded(self) -> None:
+        self._use_loaded_profile(self._inspect_loaded_kind)
+
+    def _inspect_loaded_kind(self, profile: LoadedSyncProfile) -> None:
+        kind = cast(AdapterKind, self._kind.currentText())
+        data = {'directory': str(profile.directory), 'kind': kind, 'definitions': profile.definitions(kind)}
+        self._details.setPlainText(json.dumps(data, ensure_ascii=False, indent=2)[:200000])
+        self._set_status('done')
+
+    def _use_loaded_profile(self, operation: Callable[[LoadedSyncProfile], None]) -> None:
+        if self._handle is not None:
+            self._set_status('busy')
+            return
+        try:
+            authorize_command('AC_sync_profile_load')
+            if self._native_profile is None or self._profile_authority is None:
+                raise ConfigSyncError(_t('profile_required'))
+            with self._profile_authority.scope():
+                authorize_command('AC_sync_profile_load')
+                operation(self._native_profile)
+        except (AutoControlException, ValueError, TypeError, RuntimeError) as error:
+            self._failed(scrub_secret_text(str(error)))
+
+    def _import_loaded_script(self, profile: LoadedSyncProfile) -> None:
+        name = self._loaded_scripts.currentText()
+        if not name:
+            raise ConfigSyncError(_t('script_required'))
+        import_script = getattr(self.window(), 'import_sync_script', None)
+        if not callable(import_script):
+            raise ConfigSyncError(_t('builder_required'))
+        import_script(profile.script_actions(name), str(profile.scripts[name]))
+        self._set_status('script_opened')
+
+    def _apply_loaded_snapshot(self, profile: LoadedSyncProfile) -> None:
+        values = profile.preferences
+        if not values:
+            raise ConfigSyncError(_t('workspace_required'))
+        apply = getattr(self.window(), 'apply_workspace_preferences', None)
+        if not callable(apply):
+            raise ConfigSyncError(_t('window_required'))
+        apply(values)
+        self._set_status('loaded_preferences_applied')
 
     def _update_metrics(self, operation: str, data: dict[str, object]) -> None:
         if operation not in {'status', 'sync'}:
@@ -297,7 +397,7 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
 
     def _thread_done(self) -> None:
         self._handle = self._worker = None
-        for control in (self._form, self._heads, self._value, self._deleted):
+        for control in (self._form, self._load_form, self._heads, self._value, self._deleted):
             control.setEnabled(True)
         if self._status_key in {'running', 'cancelling'}:
             self._set_status('interrupted')

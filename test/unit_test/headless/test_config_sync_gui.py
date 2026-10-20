@@ -58,7 +58,7 @@ def run(worker):
 
 def test_constructing_sync_is_inert_and_local_actions_run_off_the_gui_thread(panel, app, tmp_path, monkeypatch):
     assert not list(tmp_path.iterdir()) and panel.findChildren(QPushButton) == []
-    assert len(panel.menu_actions()) == 13
+    assert len(panel.menu_actions()) == 17
     config = configuration(tmp_path)
     panel._configuration.setPlainText(json.dumps(config))
     gui_thread = get_ident()

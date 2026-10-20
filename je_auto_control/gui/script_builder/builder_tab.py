@@ -26,6 +26,7 @@ from je_auto_control.utils.codegen.candidate_models import CandidateGenerationEr
 from je_auto_control.utils.codegen.candidate_validation import validate_candidate_actions
 from je_auto_control.utils.rbac.policy import authorize_command
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.config_sync.adapter_schema import validate_record
 from je_auto_control.utils.executor.action_executor import execute_action
 
 
@@ -177,6 +178,16 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             self._result.setPlainText(f"Saved: {path}")
         except (AutoControlException, OSError, ValueError, TypeError) as error:
             QMessageBox.warning(self, "Error", str(error))
+
+    def import_sync_script(self, actions: list[object], source_path: str) -> None:
+        """Explicitly replace editor data with one validated loaded native snapshot, without dispatching it."""
+        authorize_command('AC_sync_profile_load')
+        validate_record('scripts', 'loaded.json', {'actions': actions})
+        self._tree.load_steps(actions_to_steps(actions))
+        self._form.load_step(None)
+        self._file_extras = None
+        self._source_path = source_path
+        self._result.setPlainText(_t('config_sync_script_opened'))
 
     def _on_load(self) -> None:
         path, _ = QFileDialog.getOpenFileName(

@@ -123,6 +123,12 @@ SyncWorkspace 與 AC_sync_workspace／ac_sync_workspace（Builder Data）協調�
 的版本，才會改動目前視窗。Status／capture／review／發布不會自動套用偏好。Worker 保留
 context、重驗擷取的 DRIVE 權限，並捨棄已取消或過期的偏好結果。
 
+load_sync_profile／LoadedSyncProfile 與私有 AC_sync_profile_load／ac_sync_profile_load
+（Builder Data）以已檢視的 files 資料夾及 manifest 摘要，明確建立全新可編輯原生工作區。
+熱鍵／每個觸發器節點維持停用，型別化資產路徑依副本解析。Sync Actions 在檢查目前呼叫者
+及擷取擁有者後，檢視原生類別或明確匯入腳本快照／套用載入偏好。
+完整的原生格式／完整性邊界與暫存範例見因果指南。
+
 引用資產使用獨立的延遲 SyncAssetStore，由 signaling --asset-store 與第一版具驗證
 chunk／blob 路由提供。SyncWorkspace 固定 asset_cache_path，在新因果定義前上傳封存
 內容，再原子發布原生中繼資料／資產。既有 AC／MCP／Builder 描述加入明確 bindings.assets

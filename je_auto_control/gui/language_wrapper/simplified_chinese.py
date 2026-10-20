@@ -1409,3 +1409,23 @@ simplified_chinese_word_dict.update({
     'config_sync_error': '操作失败',
     'config_sync_interrupted': '操作中断；重试前请检查本机状态。',
 })
+
+simplified_chinese_word_dict.update({
+    'config_sync_generation_directory': '已发布的 files 文件夹',
+    'config_sync_manifest_digest': '已查看的 manifest 摘要',
+    'config_sync_working_root': '新工作副本的存放文件夹',
+    'config_sync_loaded_script': '已加载的脚本快照',
+    'config_sync_profile_notice': (
+        '每次加载都创建独立且可编辑的工作区。热键及每个触发器节点保持停用；脚本须另外明确执行。'
+    ),
+    'config_sync_load_profile': '加载已查看的原生 profile',
+    'config_sync_open_loaded_script': '在 Builder 打开已加载脚本快照',
+    'config_sync_apply_loaded_preferences': '应用已加载的偏好快照',
+    'config_sync_inspect_loaded': '检查已加载的所选类别定义',
+    'config_sync_profile_required': '请先加载已查看的原生 profile。',
+    'config_sync_script_required': '请先选择已加载的脚本快照。',
+    'config_sync_builder_required': '请从主窗口打开同步页以导入脚本快照。',
+    'config_sync_workspace_required': '加载的 profile 没有 GUI 偏好设置。',
+    'config_sync_script_opened': '已在 Builder 打开脚本快照；仍须明确执行 Run。',
+    'config_sync_loaded_preferences_applied': '已应用加载的 GUI 偏好快照',
+})

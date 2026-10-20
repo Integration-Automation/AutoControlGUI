@@ -150,7 +150,7 @@ compact historical receipts without new effects. Full resync requires explicit p
 retirement consent and adopts identity/cache/retirement atomically after confirmation.
 Owned outbox SQLite schemas 1/2 migrate to 3 without changing existing edit wire version 1;
 control wire is version 1. Status remains private, local-only and credential-free.
-Source coordination is described below; referenced assets are described below; sync UI remains C3 work.
+Source coordination is described below; referenced assets are described below; Sync UI and native working-copy loading are described below.
 
 AssetFile, AssetManifest, AssetSyncResult, AssetTransport, DirectoryAssetTransport,
 build_asset_manifest and sync_assets are experimental. Asset manifest wire is version 1.
@@ -171,7 +171,7 @@ disabled. Secret references remain vault placeholders without vault lookup; nati
 machine fields accept local references; native script/image file fields also accept typed assets. Workspace
 preferences require literal values. The separate workspace adapter bridges saved native
 GUI preferences; live GUI application remains explicit. Full-resync adapter baselines
-and referenced assets are coordinated below; Sync UI remains C3.
+and referenced assets are coordinated below; Sync UI and native working-copy loading are described below.
 
 Native sync definition numeric bounds are checked before floating-point finite
 conversion. Out-of-range arbitrary-precision JSON integers raise ConfigSyncError
@@ -223,3 +223,19 @@ TCP AUTH_FAIL is terminal for client admission: a rejected handler is marked sto
 the reply is sent, allowing an immediate replacement connection while cleanup finishes.
 Wire payloads, max_clients for active/pending clients and the independent pending-handshake
 budget remain unchanged. No public names or command schemas change.
+
+load_sync_profile and LoadedSyncProfile are experimental. The published files directory
+requires an exact lowercase SHA-256 expected_digest and a separate working-copy container.
+Each successful load returns a fresh mutable directory with a schema-1 .sync-profile.json
+source-manifest receipt; source cache and existing native/global runtime ownership stay separate.
+Native canonical formats and sealed heads must agree; all hotkeys/trigger nodes load disabled.
+Only explicit asset markers and native hotkey/trigger paths are rebound; secret placeholders
+and literal script strings keep their meaning. Repository/book handles access working files;
+script_actions/settings/preferences/definitions describe the loaded snapshot.
+The private AC_sync_profile_load/ac_sync_profile_load/Builder Data command shares current
+roots/cancellation and requires DRIVE. The GUI exposes load, selected-kind inspection,
+explicit script-snapshot import and preference-snapshot application. Later GUI actions check
+both the current caller and the captured load owner; completed copies survive late cancellation.
+
+Builder renders imported command names and positional values as literal text, preserving
+HTML-like data without rich-text interpretation. Script data remains data until explicit Run.

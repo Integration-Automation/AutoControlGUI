@@ -8821,6 +8821,14 @@ def sync_adapter_tools() -> List[MCPTool]:
                                      "target_root": {"type": "string", "format": "path"}},
                                     required=["profiles", "target_root"]),
                 handler=hq.sync_profile_materialize, annotations=SIDE_EFFECT_ONLY),
+        MCPTool(name="ac_sync_profile_load", description="Load an exact reviewed published files directory into "
+                "a separate editable native workspace. Requires DRIVE/current roots. No scripts execute, global "
+                "engines remain untouched and native hotkeys/trigger nodes are loaded disabled.",
+                input_schema=schema({"directory": {"type": "string", "format": "path"},
+                    "target_root": {"type": "string", "format": "path"},
+                    "expected_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}},
+                    required=["directory", "target_root", "expected_digest"]),
+                handler=hq.sync_profile_load, annotations=SIDE_EFFECT_ONLY),
     ]
 
 

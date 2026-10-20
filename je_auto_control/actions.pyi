@@ -2979,6 +2979,16 @@ def AC_sync_peer_state(
 ) -> dict[str, object]:
     ...
 
+def AC_sync_profile_load(
+    directory: str,
+    target_root: str,
+    expected_digest: str,
+    *,
+    path_policy: Any = ...,
+    cancelled: Callable[[], bool] | None = ...,
+) -> dict[str, object]:
+    """Load one completely verified native working snapshot without registering or enabling received work."""
+
 def AC_sync_profile_materialize(
     profiles: list[dict[str, object]],
     target_root: str,

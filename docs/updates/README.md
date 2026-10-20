@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261020-03 | 2026-10-20 | Load reviewed native profiles without activating engines | #done #config-sync #native #C3 | [2026-10](2026-10.md) |
 | U-20261020-02 | 2026-10-20 | Release rejected authentication slots before terminal replies | #done #remote-desktop #auth #ci | [2026-10](2026-10.md) |
 | U-20261020-01 | 2026-10-20 | Add reviewed workspace Sync UI with explicit live GUI preferences | #done #config-sync #gui #C3 | [2026-10](2026-10.md) |
 | U-20261019-25 | 2026-10-19 | Synchronize referenced assets with causal definitions and complete inert profiles | #done #config-sync #assets #C3 | [2026-10](2026-10.md) |
@@ -409,7 +410,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 73 |
+| [2026-10.md](2026-10.md) | 2026-10 | 74 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

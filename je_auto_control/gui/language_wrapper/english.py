@@ -1557,3 +1557,26 @@ english_word_dict.update({
     'config_sync_error': 'Operation failed',
     'config_sync_interrupted': 'Worker interrupted; inspect local status before retrying.',
 })
+
+english_word_dict.update({
+    'config_sync_generation_directory': 'Published files directory',
+    'config_sync_manifest_digest': 'Reviewed manifest digest',
+    'config_sync_working_root': 'New working-copy container',
+    'config_sync_loaded_script': 'Loaded script snapshot',
+    'config_sync_profile_notice': (
+        'Each load creates a separate editable '
+        'workspace. Hotkeys and every trigger node '
+        'stay disabled; scripts run only through a '
+        'separate explicit action.'
+    ),
+    'config_sync_load_profile': 'Load reviewed native profile',
+    'config_sync_open_loaded_script': 'Open loaded script snapshot in Builder',
+    'config_sync_apply_loaded_preferences': 'Apply loaded preference snapshot',
+    'config_sync_inspect_loaded': 'Inspect loaded definitions for selected kind',
+    'config_sync_profile_required': 'Load a reviewed native profile first.',
+    'config_sync_script_required': 'Select a loaded script snapshot first.',
+    'config_sync_builder_required': 'Open Sync inside the main window to import a script snapshot.',
+    'config_sync_workspace_required': 'The loaded profile contains no GUI preferences.',
+    'config_sync_script_opened': 'Script snapshot opened in Builder; Run remains explicit.',
+    'config_sync_loaded_preferences_applied': 'Loaded GUI preference snapshot applied',
+})

@@ -1442,3 +1442,28 @@ japanese_word_dict.update({
         '処理が中断しました。再試行の前にローカル状態を確認してください。'
     ),
 })
+
+japanese_word_dict.update({
+    'config_sync_generation_directory': '公開済み files ディレクトリ',
+    'config_sync_manifest_digest': '確認済み manifest ダイジェスト',
+    'config_sync_working_root': '新しい作業コピーの保存先',
+    'config_sync_loaded_script': '読み込み済みスクリプト',
+    'config_sync_profile_notice': (
+        '読み込むたびに独立した編集可能な作業コピーを作成します。ホットキーとすべてのトリガーは無効'
+        'のままで、スクリプトの実行には別の明示的な操作が必要です。'
+    ),
+    'config_sync_load_profile': '確認済みのネイティブ設定を読み込む',
+    'config_sync_open_loaded_script': '読み込み済みスクリプトを Builder で開く',
+    'config_sync_apply_loaded_preferences': '読み込み済み設定を適用',
+    'config_sync_inspect_loaded': '選択した種類の読み込み済み定義を確認',
+    'config_sync_profile_required': '先に確認済みのネイティブ設定を読み込んでください。',
+    'config_sync_script_required': '読み込み済みスクリプトを選択してください。',
+    'config_sync_builder_required': (
+        'スクリプトを読み込むにはメインウィンドウから同期を開いてください。'
+    ),
+    'config_sync_workspace_required': '読み込んだ設定には GUI 設定がありません。',
+    'config_sync_script_opened': (
+        'Builder で開きました。実行には明示的な Run 操作が必要です。'
+    ),
+    'config_sync_loaded_preferences_applied': '読み込み済み GUI 設定を適用しました',
+})

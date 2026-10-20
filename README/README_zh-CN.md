@@ -19,7 +19,7 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 808 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 809 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -221,7 +221,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 808 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 809 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -249,9 +249,11 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 已捕获的自愈记录新增可选的 `journal_path`，搭配 run／step ID。实验性 `inspect_heal_source(path, run_id, step_id)`、`AC_self_heal_source` 与 MCP `ac_self_heal_source` 只读取原始步骤经清理的生命周期快照。在 **Self-Healing** 选取记录后，使用 **动作 → 查看原始步骤** 打开后台读取器；切换目标时会等待旧读取停止并保留请求者上下文，关闭则取消待处理工作；Run History 读取器也可选填步骤 ID。先筛选 run／step 再应用输出上限，整份日志仍会验证，进度通知前后重查路径根目录，取消不返回部分结果。旧记录或未经动作日志捕获的操作没有来源链接；查阅不会重放命令。
 
-实验性因果同步提供 `CausalBucket`、`CausalConfigStore`、`SyncActor`、保留冲突的 entry 版本与持久化本机 `SyncOutbox`。独立且经过验证的 `GET/PUT /config/{user_id}/causal` 第三版协议，在保存重发收据的同一个 CAS 事务内验证设备注册、确认、退休／完整同步 epoch 与删除回收。回收后保留永久的最小删除凭据；旧版写入不能覆盖已升级账号。私有 `AC_config_store_get`／`AC_config_store_commit` 与对应 MCP／Builder 命令可读取及提交带显式 `_actor` 的因果 JSON；纯数据合并／peer 与私有 outbox 命令仍可使用。显式的 `CausalSyncClient` 与 `AC_config_causal_fetch`、`AC_config_causal_commit`、`AC_sync_outbox_flush`（含 MCP／Builder）已提供第三版 HTTP 投递：结果不明时重发固定请求，只有明确的过期版本才在有界预算内重新合并。`CausalReceipt` 在 outbox 原子确认原收据与最新完整快照；命令凭据使用实时的 `options.secret_env` 引用。`CausalSyncClient.control` 与私有 `AC_sync_peer_control`／`ac_sync_peer_control`／Builder Data 命令可持久化注册、确认、回收、退休与完整重同步。`SyncControlRequest(operation_id=...)` 让已完成 RPC 的重试保持幂等；完整重同步须明确提供 `discard_pending=True`，收到收据后才原子采用新世代并归档待送旧编辑。本机 `status` 不读取凭据或网络。`python -m examples.causal_peer_control` 提供暂存 loopback 工作流；明确的本机资产版本可通过 `AssetManifest`、`DirectoryAssetTransport`、`build_asset_manifest`、`sync_assets` 与私有 `AC_sync_asset_manifest`／`AC_sync_assets`（MCP／Builder）操作。全部资产先暂存并通过 SHA-256／大小验证，再一次发布完整目录；受损缓存拒绝使用，脚本保持未执行。`python -m examples.sync_assets` 只使用暂存目录。七种实验性 adapter 已将显式选定的脚本、locator、热键、触发器、通讯录、JSON 设置与已保存的原生 GUI 偏好设置保存为持久化因果 profile。`SyncBindings` 将显式指定的秘密与机器值换成具名引用；`materialize_sync_profile` 发布完整且未启用的原生格式版本。私有 `AC_sync_adapter_snapshot`、`AC_sync_adapter_apply`、`AC_sync_adapter_resolve`、`AC_sync_profile_materialize` 与对应 MCP／Builder 命令提供相同流程。`python -m examples.sync_adapters` 仅使用临时文件。私有绝对路径绑定接受高熵目录名称，仍拒绝可识别的凭证格式。原生数值定义会在存储前以分类错误拒绝超出范围的值，包括超大 JSON 整数。`WorkspaceSettingsSyncAdapter` 仅读取原生 GUI INI 的主题、字号、导航显示／宽度，并发布未启用的 `workspace.ini`；显式复制为独立工作文件后，才能交给新 GUI 使用。`python -m examples.sync_workspace` 不导入 Qt。`SyncWorkspace` 已整合明确来源、持久离线捕捉、因果 HTTP、精确冲突审阅与完整重同步来源基线。私有 `AC_sync_workspace`／`ac_sync_workspace`／Builder Data 共用 status／capture／sync／review／resolve／preferences／materialize 与明确 peer 控制，全部需要 DRIVE；网络凭据使用 `options.secret_env`。`python -m examples.sync_workspace_http` 以两组临时来源与 loopback 演示冲突解决、重启及退休编辑不重放。接收数据保持未启用。引用资产传输见下方；明确的停用原生 profile 加载仍属 C3，`ConfigSyncClient` 保留时间戳合并。参阅[因果／outbox 指南](../docs/source/Zh/doc/causal_sync/causal_sync_doc.rst)与 `python -m examples.causal_sync`。
+实验性因果同步提供 `CausalBucket`、`CausalConfigStore`、`SyncActor`、保留冲突的 entry 版本与持久化本机 `SyncOutbox`。独立且经过验证的 `GET/PUT /config/{user_id}/causal` 第三版协议，在保存重发收据的同一个 CAS 事务内验证设备注册、确认、退休／完整同步 epoch 与删除回收。回收后保留永久的最小删除凭据；旧版写入不能覆盖已升级账号。私有 `AC_config_store_get`／`AC_config_store_commit` 与对应 MCP／Builder 命令可读取及提交带显式 `_actor` 的因果 JSON；纯数据合并／peer 与私有 outbox 命令仍可使用。显式的 `CausalSyncClient` 与 `AC_config_causal_fetch`、`AC_config_causal_commit`、`AC_sync_outbox_flush`（含 MCP／Builder）已提供第三版 HTTP 投递：结果不明时重发固定请求，只有明确的过期版本才在有界预算内重新合并。`CausalReceipt` 在 outbox 原子确认原收据与最新完整快照；命令凭据使用实时的 `options.secret_env` 引用。`CausalSyncClient.control` 与私有 `AC_sync_peer_control`／`ac_sync_peer_control`／Builder Data 命令可持久化注册、确认、回收、退休与完整重同步。`SyncControlRequest(operation_id=...)` 让已完成 RPC 的重试保持幂等；完整重同步须明确提供 `discard_pending=True`，收到收据后才原子采用新世代并归档待送旧编辑。本机 `status` 不读取凭据或网络。`python -m examples.causal_peer_control` 提供暂存 loopback 工作流；明确的本机资产版本可通过 `AssetManifest`、`DirectoryAssetTransport`、`build_asset_manifest`、`sync_assets` 与私有 `AC_sync_asset_manifest`／`AC_sync_assets`（MCP／Builder）操作。全部资产先暂存并通过 SHA-256／大小验证，再一次发布完整目录；受损缓存拒绝使用，脚本保持未执行。`python -m examples.sync_assets` 只使用暂存目录。七种实验性 adapter 已将显式选定的脚本、locator、热键、触发器、通讯录、JSON 设置与已保存的原生 GUI 偏好设置保存为持久化因果 profile。`SyncBindings` 将显式指定的秘密与机器值换成具名引用；`materialize_sync_profile` 发布完整且未启用的原生格式版本。私有 `AC_sync_adapter_snapshot`、`AC_sync_adapter_apply`、`AC_sync_adapter_resolve`、`AC_sync_profile_materialize` 与对应 MCP／Builder 命令提供相同流程。`python -m examples.sync_adapters` 仅使用临时文件。私有绝对路径绑定接受高熵目录名称，仍拒绝可识别的凭证格式。原生数值定义会在存储前以分类错误拒绝超出范围的值，包括超大 JSON 整数。`WorkspaceSettingsSyncAdapter` 仅读取原生 GUI INI 的主题、字号、导航显示／宽度，并发布未启用的 `workspace.ini`；显式复制为独立工作文件后，才能交给新 GUI 使用。`python -m examples.sync_workspace` 不导入 Qt。`SyncWorkspace` 已整合明确来源、持久离线捕捉、因果 HTTP、精确冲突审阅与完整重同步来源基线。私有 `AC_sync_workspace`／`ac_sync_workspace`／Builder Data 共用 status／capture／sync／review／resolve／preferences／materialize 与明确 peer 控制，全部需要 DRIVE；网络凭据使用 `options.secret_env`。`python -m examples.sync_workspace_http` 以两组临时来源与 loopback 演示冲突解决、重启及退休编辑不重放。接收数据保持未启用。引用资产传输见下方；明确的原生工作副本加载见下方，`ConfigSyncClient` 保留时间戳合并。参阅[因果／outbox 指南](../docs/source/Zh/doc/causal_sync/causal_sync_doc.rst)与 `python -m examples.causal_sync`。
 
 延迟创建的 **工作区同步** 页面通过 **Actions** 提供本机状态／采集、网络同步与设备控制、精确因果查看／解决冲突，以及完整未启用发布。粘贴明确的私有工作区配置，凭据只填环境变量名称。同步不会自动应用收到的偏好设置。选择 `workspace`、查看当前版本后，再执行“应用已查看的 GUI 偏好设置”，才会更新当前窗口的主题、字号及导航面板。`SyncWorkspace.preferences(observed=change_ids)` 与现有 AC／MCP／Builder 的 `preferences` 操作，仅在已查看版本完全匹配且无冲突时返回四个标准值；缺少或删除的值采用安全默认值。Worker 保留调用者 context、重新验证 DRIVE 权限，支持取消并在关闭后丢弃旧结果。页面显示修订版、待发送／冲突／引用数与最近成功同步版本；打开页面不会启动连接。
+
+明确的原生加载使用 `load_sync_profile(directory, target_root, expected_digest=...)` 与 `LoadedSyncProfile`，并提供私有 `AC_sync_profile_load`／`ac_sync_profile_load`／Builder Data。以已发布的 `files` 文件夹及精确查看的 manifest 摘要创建全新可编辑工作区，先验证全部 bytes、标准原生文件及封存 heads 一致，再原子发布。加载的热键及每个触发器节点都是停用的原生对象；定位器与通讯录 handle 使用工作副本。类型化资产引用及原生热键／触发器路径按工作根目录解析，脚本文字保留原意，秘密保持 placeholder。在“工作区同步”发布后，文件夹／摘要字段会填入结果；选择工作副本存放文件夹，再执行“加载已查看的原生 profile”。其他明确 Actions 可检查所选原生类别、在 Builder 打开已加载脚本快照，或应用其偏好快照。每次操作都重新验证当前调用者与捕获所有者的权限；打开脚本后仍须明确执行 Run；Builder 将导入的命令名称与位置参数显示为字面文字。`python -m examples.sync_profile_load` 使用七种临时来源与真实 PNG，不调用网络或设备。
 
 实验性引用资产使用 `SyncAssetBlob`、`SyncAssetReference`、`SyncAssetStore` 与 `SyncAssetHTTPClient`。明确的 `SyncBindings.assets` 别名将选定文件封存为不可变 SHA-256 引用；只改资产也会建立新的因果版本。`SyncWorkspace` 在准备新定义请求前上传已验证分块，支持中断续传，并在完整且未启用的发布前下载引用内容。现有私有 AC／MCP／Builder 工作区／profile 命令共用这些字段。`asset_cache_path` 选择 client cache；signaling 的 `--asset-store`／`AUTOCONTROL_SYNC_ASSET_STORE` 选择独立 server 数据库。带验证的第一版资产路由使用 256-KiB 分块、每文件 64 MiB 上限，每账户默认限制 256 MiB、8,192 块与 4,096 条 blob 收据。超过配额会明确失败；不可变历史不自动回收。原生输出路径相对于 generation 根目录。`python -m examples.sync_referenced_assets` 经临时 loopback HTTP 传送真实 PNG 与脚本，不执行脚本或改当前工作区。
 
@@ -303,7 +305,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 708 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 709 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -442,7 +444,7 @@ Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协�
 
 | 资源 | 内容 |
 |---|---|
-| [`examples/`](../examples/) | 40 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位、动作日志。 |
+| [`examples/`](../examples/) | 41 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位、动作日志。 |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 参考，含英文与中文。 |
 | [architecture_explore.md](../architecture_explore.md) | 逐层记录每个模块的职责。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台对照矩阵。 |
