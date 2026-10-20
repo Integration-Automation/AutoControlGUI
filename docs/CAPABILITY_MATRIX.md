@@ -101,6 +101,15 @@ exercised. These are fake/offscreen metadata checks, not native device,
 permission, compositor restart or full-monitor acceptance. Available
 means last local observation; every actual operation still checks authority.
 
+Controlled diagnostic-interruption checks exercise six direct and explicitly
+wrapped controls through the core, root SDK, versioned SDK and CLI. No later
+check or ordinary error log occurs; the original control object propagates.
+Ordinary RuntimeError/ValueError/OSError, including cyclic cause chains,
+retain their failed-row and continuation behavior. An offscreen GUI test
+uses the real runner with controlled checks, verifies cancellation leaves
+the idle state, then performs a deliberate successful retry. No desktop
+capture, native grant or cooperative worker-stop acceptance is implied.
+
 Controlled offscreen Diagnostics checks cover idle construction, all four
 catalogues, retranslation without execution, explicit Actions rendering and
 original cancellation followed by deliberate retry. Providers are intercepted;

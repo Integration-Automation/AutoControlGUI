@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QApplication
 
 from je_auto_control.gui import diagnostics_tab
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import LanguageWrapper
+from je_auto_control.utils.diagnostics import diagnostics
 from je_auto_control.utils.diagnostics.diagnostics import Check, DiagnosticsReport
 from je_auto_control.utils.exception.control_signals import OperationCancelledError
 
@@ -81,3 +82,33 @@ def test_explicit_cancellation_stays_original_and_allows_a_later_deliberate_retr
     action()
     expected = wrapper.translate('diag_summary_ok').format(count=0)
     assert panel._summary_label.text() == expected
+
+
+def test_a_real_check_cancellation_stops_the_gui_run_and_allows_an_explicit_retry(tab, monkeypatch):
+    panel, wrapper, _calls = tab
+    original = OperationCancelledError('real diagnostic check')
+    events = []
+
+    def cancelled():
+        events.append('cancelled')
+        raise original
+
+    def later():
+        events.append('later')
+        return Check('later', True, 'info', 'controlled')
+
+    monkeypatch.setattr(diagnostics, '_ALL_CHECKS', (cancelled, later))
+    monkeypatch.setattr(diagnostics_tab, 'run_diagnostics', diagnostics.run_diagnostics)
+    action = dict(panel.menu_actions())['diag_run']
+    try:
+        with pytest.raises(OperationCancelledError):
+            action()
+    finally:
+        original.__traceback__ = None  # release GUI frames before queued widget destruction
+    assert events == ['cancelled'] and panel._table.rowCount() == 0
+    panel.retranslate()
+    assert panel._summary_label.text() == wrapper.translate('diag_summary_idle')
+    monkeypatch.setattr(diagnostics, '_ALL_CHECKS', (later,))
+    action()
+    assert events == ['cancelled', 'later'] and panel._table.rowCount() == 1
+    assert panel._summary_label.text() == wrapper.translate('diag_summary_ok').format(count=1)

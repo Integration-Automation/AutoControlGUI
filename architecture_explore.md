@@ -20,13 +20,13 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,215 |
-| 程式碼總行數 | 181,186 |
+| 程式碼總行數 | 181,188 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 810 |
 | 套件門面 `__all__` 公開名稱數 | 1377 |
 | GUI 分頁數（`main_widget` 註冊） | 49 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 710 |
-| `test_*.py` 測試檔／測試函式 | 837 / 8,748 |
+| `test_*.py` 測試檔／測試函式 | 838 / 8,751 |
 | 範例腳本 | 42 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -306,14 +306,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 3,522 行。
+> 14 個套件、約 3,524 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/callback/` | 214 | Observer 模式：`callback_executor` 以字串名觸發功能；trigger 與 callback 共用秘密遮罩至錯誤處理結束 |
 | `utils/config_bundle/` | 424 | 使用者設定的單檔匯出／匯入 |
 | `utils/critical_exit/` | 132 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
-| `utils/diagnostics/` | 337 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
+| `utils/diagnostics/` | 339 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
 | `utils/dbus_client/` | 742 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
 | `utils/exception/` | 263 | **例外階層根**。框架錯誤繼承 `AutoControlException`；`control_signals.py` 共用無 executor 相依的取消載體／分類，保留 MCP 與 history 舊匯入別名；另有集中式錯誤訊息（`exception_tags`）。 |
 | `utils/failure_bundle/` | 229 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
@@ -1010,7 +1010,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `scheduler/` | `scheduler.py`、`cron.py` |
 | `stubs/` | `generator.py`、`__main__.py` |
 | `config_bundle/` | `config_bundle.py`、`__main__.py` |
-| `diagnostics/` | `diagnostics.py`、`__main__.py`、`capability_commands.py`（AC／MCP 共用唯讀能力序列化） |
+| `diagnostics/` | `diagnostics.py`、`__main__.py`、`capability_commands.py`（AC／MCP 共用唯讀能力序列化）；主動檢查保留明確取消／中斷，普通錯誤仍列報告。 |
 | `xml/` | `xml_file/xml_file.py`、`change_xml_structure/change_xml_structure.py` |
 | `generate_report/` | `generate_html_report.py`、`generate_json_report.py`、`generate_xml_report.py` |
 
@@ -1161,7 +1161,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，只需要 PySide6
 | `scripts/dev_release.py` | 只用標準函式庫的發佈輔助腳本 | dev 通道（PyPI 的 `je_auto_control_dev`）的版本與比對：`prepare` 把 `dev.toml` 寫成 `pyproject.toml`，版本取 PyPI 最新一版加一個 patch（`dev.toml` 的版本只是下限，不回寫 repo）；`changed dist` 把建好的 wheel 跟 PyPI 最新一版逐檔比對，內容沒變就不上傳。只給 `dev.yml` 的 `publish-dev` job 與拋棄式的 checkout 用，因為 `prepare` 會蓋掉 `pyproject.toml`。 |
 | `docs/` | Sphinx（`API`／`Eng`／`Zh`／`getting_started`） | Read the Docs 文件。 |
 | `architecture_diagram/` | drawio + png | 既有的架構圖原始檔。 |
-| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 837 個 `test_*.py`／8,748 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
+| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 838 個 `test_*.py`／8,751 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
 
 ---
 
@@ -1263,6 +1263,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 794 | 71,242 |
-| **總計** | **1,208** | **181,099** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 794 | 71,244 |
+| **總計** | **1,208** | **181,101** |
 

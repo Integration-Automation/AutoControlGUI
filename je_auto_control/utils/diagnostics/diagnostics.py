@@ -1,9 +1,9 @@
 """Run a battery of small subsystem checks and report status.
 
 Each check is a small function returning a :class:`Check`. The runner
-catches *every* exception per-check so one broken probe never poisons
-the rest — diagnostics that fail to run are themselves diagnostic
-information, so we surface them as a check with ``ok=False``.
+catches ordinary exceptions per-check so one broken probe never poisons
+the rest. Explicit direct or wrapped cancellation and hard controls stop the
+run unchanged; ordinary failures become a check with ``ok=False``.
 """
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ import shutil
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Tuple
 
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -69,12 +70,13 @@ CheckFn = Callable[[], Check]
 
 
 def run_diagnostics() -> DiagnosticsReport:
-    """Run every registered check; return a :class:`DiagnosticsReport`."""
+    """Run registered checks; preserve explicit interruption before any later check."""
     checks: List[Check] = []
     for runner in _ALL_CHECKS:
         try:
             checks.append(runner())
         except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: never let one probe poison the rest
+            raise_caused_run_interruption(error)
             autocontrol_logger.warning(
                 "diagnostics check %s crashed: %r", runner.__name__, error,
             )

@@ -514,6 +514,14 @@ language changes reuse the snapshot without probing. Native portal restore,
 compositor restart, capture-result/context integration and cancelable active
 diagnostics remain in `Progress.md`.
 
+Active diagnostics stop immediately when a check raises explicit cancellation
+or a hard control signal, including an explicit exception cause chain.
+The original object propagates through the core, SDK, CLI and Diagnostics
+action; it is not logged or converted into a failed report row, and later
+checks do not run. Ordinary probe errors still produce failed rows and
+allow remaining checks. A canceled GUI run can be retried explicitly.
+Background workers and cooperative stop controls remain pending.
+
 Opening Diagnostics displays a localized not-run state and performs no checks.
 Choose **Actions → Run diagnostics** to start the existing active checks, which
 can capture the screen or require portal consent. Changing the display language

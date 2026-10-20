@@ -13,6 +13,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Stop active diagnostics on direct or explicitly wrapped cancellation and
+  hard controls, retaining the original signal before later checks or error
+  reporting. Ordinary failed checks keep their existing report behavior.
+
 - Refuse native Wayland pointer coordinates outside all EIS regions with
   failed state and no automatic CLI fallback. A rejected move cannot emit
   a subsequent click; valid mapping and explicit CLI selection are preserved.

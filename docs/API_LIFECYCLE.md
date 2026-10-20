@@ -32,6 +32,14 @@ diagnostics and input/capture operations retain their signatures, authority
 checks and failure families. Native restore/restart/context integration
 and cancelable active diagnostics remain open in Progress.md.
 
+Active diagnostics stop immediately when a check raises explicit cancellation
+or a hard control signal, including an explicit exception cause chain.
+The original object propagates through the core, SDK, CLI and Diagnostics
+action; it is not logged or converted into a failed report row, and later
+checks do not run. Ordinary probe errors still produce failed rows and
+allow remaining checks. A canceled GUI run can be retried explicitly.
+Background workers and cooperative stop controls remain pending.
+
 Diagnostics construction and retranslation are passive UI operations. Its
 existing Actions command deliberately invokes run_diagnostics; the headless,
 AC and MCP signatures and active behavior are unchanged. The passive capability
