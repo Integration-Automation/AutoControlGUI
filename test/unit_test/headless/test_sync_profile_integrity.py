@@ -13,7 +13,7 @@ from je_auto_control.utils.config_sync import profile_load
 from je_auto_control.utils.config_sync.adapter_commands import _materialize_sync_profile
 from je_auto_control.utils.config_sync.adapter_factory import adapter_from_profile
 from je_auto_control.utils.config_sync.contract import _encoded
-from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.path_guard import PathNotAllowedError, PathPolicy
 
 
 def reseal(result, changes):
@@ -82,18 +82,28 @@ def test_resealed_hashes_cannot_bypass_native_disable_or_head_consistency(tmp_pa
     no_workspace(tmp_path)
 
 
-def test_root_revocation_during_verified_copy_cleans_its_owned_staging_directory(tmp_path, monkeypatch):
+@pytest.mark.parametrize('inside_default_temp', [False, True])
+def test_root_revocation_during_verified_copy_cleans_its_owned_staging_directory(tmp_path, monkeypatch,
+                                                                               inside_default_temp):
+    if inside_default_temp:
+        monkeypatch.setattr('tempfile.gettempdir', lambda: str(tmp_path))
     monkeypatch.setenv('AUTOCONTROL_ALLOWED_PATH_ROOTS', str(tmp_path))
     result = materialized(tmp_path)
+    policy = PathPolicy(use_client_roots=True)
+    policy.set_client_roots([tmp_path])
     copy = profile_load._copy_stream
+    revoked = []
 
     def revoke(*args, **kwargs):
         copy(*args, **kwargs)
-        monkeypatch.setenv('AUTOCONTROL_ALLOWED_PATH_ROOTS', str(tmp_path / 'different-root'))
+        policy.set_client_roots([tmp_path / 'different-root'])
+        revoked.append(True)
 
     monkeypatch.setattr(profile_load, '_copy_stream', revoke)
-    with pytest.raises(AutoControlException):
-        ac.load_sync_profile(result['directory'], tmp_path / 'workspaces', expected_digest=result['manifest_digest'])
+    with pytest.raises(PathNotAllowedError, match='outside the allowed roots'):
+        ac.load_sync_profile(result['directory'], tmp_path / 'workspaces',
+                             expected_digest=result['manifest_digest'], path_policy=policy)
+    assert revoked == [True]
     no_workspace(tmp_path)
 
 
