@@ -70,6 +70,12 @@ From the repository, run::
 
    python scripts/ci_native_diagnostics.py --artifact-dir test-artifacts -- python -m pytest -v --tb=short --timeout=120
 
+Linux first verifies the diagnostics runner outside the suite's debugger;
+those logs are retained under ``preflight/`` in the same artifact. Original
+argv, including whitespace, Unicode, quotes and shell characters, stays
+literal. ``SIGINT`` reaches the child's handler instead of stopping GDB;
+fatal native signals still stop for a backtrace.
+
 On Linux, install GDB and add ``--native`` before ``--`` to collect native
 backtraces. The wrapper never opens a display or obtains device permissions;
 the selected test command still requires its normal Xvfb/backend setup.

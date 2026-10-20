@@ -542,6 +542,9 @@ Python faulthandler output. Test failures remain failures. From a repository
 checkout, reproduce collection with `python scripts/ci_native_diagnostics.py
 --artifact-dir test-artifacts -- python -m pytest -v --tb=short --timeout=120`
 (one command); add `--native` before `--` on Linux with GDB installed.
+Literal argv (including whitespace/quotes) and handled `SIGINT` reach the
+child unchanged. Linux first verifies the runner outside the suite's debugger;
+its preflight logs are included in the same artifact.
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Two rules the CI enforces: `import

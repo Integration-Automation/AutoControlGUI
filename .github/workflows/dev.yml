@@ -81,6 +81,16 @@ jobs:
       # No path argument: the paths come from `testpaths` in pyproject.toml,
       # and an argument would drop the flow_control tests. Linux runs under a
       # real Xvfb because the X11 backend opens a display at import time.
+      - name: Verify native diagnostics runner (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: >-
+          xvfb-run -a -s "-screen 0 1280x800x24"
+          python scripts/ci_native_diagnostics.py
+          --artifact-dir "${{ runner.temp }}/autocontrol-native/preflight" --
+          python -m pytest -v --tb=short --timeout=30
+          test/unit_test/headless/test_ci_native_diagnostics.py
+
       - name: Run headless pytest suite
         shell: bash
         run: >-

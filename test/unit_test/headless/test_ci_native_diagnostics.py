@@ -28,7 +28,7 @@ def test_child_result_output_and_runtime_versions_survive_the_wrapper(tmp_path, 
     directory = tmp_path / 'evidence'
     result = run_child(directory, f"print('controlled child evidence');raise SystemExit({exit_code})",
                        *(['--native'] if native else []))
-    assert result.returncode == exit_code
+    assert result.returncode == exit_code, result.stdout + result.stderr
     assert 'controlled child evidence' in result.stdout
     log = (directory / 'process.log').read_text(encoding='utf-8')
     raw = (directory / 'runtime.json').read_text(encoding='utf-8')
@@ -50,6 +50,30 @@ def test_real_native_abort_retains_a_backtrace_and_fails(tmp_path):
     assert 'before native abort' in log and 'SIGABRT' in log
     assert '#0 ' in log and ('abort' in log or 'raise' in log)
     assert record['returncode'] != 0 and record['debugger']
+
+
+@pytest.mark.skipif(sys.platform != 'linux' or shutil.which('gdb') is None, reason='requires Linux GDB')
+def test_handled_sigint_continues_the_native_child(tmp_path):
+    code = ('import signal\ntry: signal.raise_signal(signal.SIGINT)\n'
+            "except KeyboardInterrupt: print('original interruption handled')\n")
+    result = run_child(tmp_path / 'handled-sigint', code, '--native')
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'original interruption handled' in result.stdout
+
+
+@pytest.mark.parametrize('native', [False, True])
+def test_whitespace_unicode_quotes_and_shell_characters_remain_literal_argv(tmp_path, native):
+    if native and (sys.platform != 'linux' or shutil.which('gdb') is None):
+        pytest.skip('requires Linux GDB')
+    values = ['two words', '中 文', 'literal"quote', "literal'quote", '$HOME;$(false)', r'a\b']
+    directory = tmp_path / 'argv'
+    result = subprocess.run([sys.executable, str(SCRIPT), '--artifact-dir', str(directory),
+                             *(['--native'] if native else []), '--', sys.executable, '-c',
+                             'import json,sys;print(json.dumps(sys.argv[1:]))', *values],
+                            capture_output=True, text=True, encoding='utf-8', errors='replace',
+                            timeout=30, check=False)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert json.dumps(values) in result.stdout
 
 
 def test_requested_native_debugging_never_silently_runs_without_the_debugger(tmp_path, monkeypatch):
@@ -76,7 +100,12 @@ def test_ci_workflows_keep_native_diagnostics_after_failure(name):
     steps = workflow['jobs']['pytest-headless']['steps']
     upload = next(step for step in steps if step.get('with', {}).get('name', '').startswith('native-'))
     assert upload['if'] == 'always()' and upload['uses'].startswith('actions/upload-artifact@')
-    runner = next(step for step in steps if 'scripts/ci_native_diagnostics.py' in step.get('run', ''))
+    runner = next(step for step in steps if step.get('name', '').startswith('Run headless pytest'))
+    preflight = next(step for step in steps if step.get('name') == 'Verify native diagnostics runner (Linux)')
+    assert steps.index(preflight) < steps.index(runner)
+    assert preflight['if'] == "runner.os == 'Linux'"
+    assert 'test/unit_test/headless/test_ci_native_diagnostics.py' in preflight['run']
+    assert '--timeout=30' in preflight['run'] and '/preflight' in preflight['run']
     assert '--native' in runner['run'] and '--artifact-dir' in runner['run']
     assert upload['with']['path'] in runner['run']
     assert ('python -m coverage run -m pytest' if name == 'quality.yml' else 'python -m pytest') in runner['run']

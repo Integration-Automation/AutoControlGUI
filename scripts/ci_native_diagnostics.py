@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from importlib import metadata
 import json
@@ -10,8 +11,9 @@ from pathlib import Path
 import shutil
 import subprocess  # nosec B404  # reason: intentional child-process CI runner
 import sys
+import tempfile
 import time
-from typing import Sequence
+from typing import Iterator, Sequence
 
 
 def _debugger_command(command: Sequence[str], debugger: str) -> list[str]:
@@ -19,8 +21,25 @@ def _debugger_command(command: Sequence[str], debugger: str) -> list[str]:
     return [debugger, '-nx', '-batch', '-return-child-result',
             '-ex', 'set print thread-events off',
             '-ex', 'set startup-with-shell off',
-            '-ex', 'handle SIGPIPE nostop noprint pass',
+            '-ex', 'handle SIGPIPE SIGINT nostop noprint pass',
             '-ex', 'run', '-ex', 'thread apply all bt', '--args', *command]
+
+
+@contextmanager
+def _debugger_argv(command: Sequence[str], debugger: str | None) -> Iterator[list[str]]:
+    """Preserve original argv on older shell-free GDB, which splits inferior arguments on whitespace."""
+    if debugger is None:
+        yield list(command)
+        return
+    if sys.platform != 'linux':
+        raise RuntimeError('native diagnostics is supported only on Linux')
+    # A secure ASCII path avoids old GDB's whitespace parser; JSON preserves the original command as data.
+    with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', prefix='ac-native-', suffix='.py',
+                                     dir='/tmp') as launcher:  # nosec B108  # reason: secure NamedTemporaryFile
+        launcher.write(f'import json,os\ncommand=json.loads({json.dumps(list(command))!r})\n'
+                       'os.execvp(command[0],command)\n')
+        launcher.flush()
+        yield _debugger_command([sys.executable, launcher.name], debugger)
 
 
 def _versions() -> dict[str, str]:
@@ -39,7 +58,6 @@ def run(command: Sequence[str], directory: Path, *, native: bool = False) -> int
     debugger = shutil.which('gdb') if native else None
     if native and debugger is None:
         raise RuntimeError('native diagnostics requires gdb; install it before running the suite')
-    actual = _debugger_command(command, debugger) if debugger else list(command)
     record: dict[str, object] = {
         'command': list(command), 'python': sys.version, 'platform': sys.platform,
         'packages': _versions(), 'debugger': debugger,
@@ -49,7 +67,7 @@ def run(command: Sequence[str], directory: Path, *, native: bool = False) -> int
     report.write_text(json.dumps(record, indent=2), encoding='utf-8')
     environment = dict(os.environ, PYTHONFAULTHANDLER='1', PYTHONUNBUFFERED='1')
     started = time.monotonic()
-    with (directory / 'process.log').open('w', encoding='utf-8') as output:
+    with _debugger_argv(command, debugger) as actual, (directory / 'process.log').open('w', encoding='utf-8') as output:
         with subprocess.Popen(  # nosec B603  # reason: explicit CI child argv; shell remains disabled
             actual, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             env=environment, text=True, encoding='utf-8', errors='replace',

@@ -16,7 +16,10 @@ macOS, Linux X11, Linux Wayland, Android and iOS.
 The repository-only CI diagnostics runner wraps the existing pytest/coverage
 command, streams stdout/stderr to a retained log and records runtime versions
 and child exit status without an environment dump. Linux uses batch GDB with
-user initialization and shell startup disabled; native aborts retain all-thread
+user initialization and shell startup disabled. A secure temporary Python
+launcher execs JSON-decoded argv so older GDB whitespace parsing cannot alter
+arguments. SIGINT reaches the child; an independent Linux preflight verifies
+the runner before tracing the suite. Native aborts retain all-thread
 backtraces and a failing exit. Dev/main upload diagnostics on success or failure.
 It does not import the framework, open devices or change SDK/GUI behavior.
 

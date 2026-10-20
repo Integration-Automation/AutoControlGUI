@@ -162,6 +162,16 @@ jobs:
       # worst-hit files were the biggest ones (`action_executor` +786,
       # `_handlers` +684). A package that registers a pytest plugin cannot
       # measure itself with `pytest --cov`; `coverage run` starts first.
+      - name: Verify native diagnostics runner (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: >-
+          xvfb-run -a -s "-screen 0 1280x800x24"
+          python scripts/ci_native_diagnostics.py
+          --artifact-dir "${{ runner.temp }}/autocontrol-native/preflight" --
+          python -m pytest -v --tb=short --timeout=30
+          test/unit_test/headless/test_ci_native_diagnostics.py
+
       - name: Run headless pytest suite under coverage
         shell: bash
         run: >-

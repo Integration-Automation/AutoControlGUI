@@ -500,6 +500,8 @@ dev／main 的無頭工作會保留七天的 `native-<os>-<python>` artifact，�
 faulthandler 輸出，測試失敗仍會使工作失敗。可在 repo 執行單一指令
 `python scripts/ci_native_diagnostics.py --artifact-dir test-artifacts -- python -m pytest -v --tb=short --timeout=120`；
 Linux 安裝 GDB 後，可在 `--` 前加入 `--native`。
+含空白／引號的 argv 仍是原始參數，已處理的 `SIGINT` 會傳給子行程。
+Linux 先在完整套件的 debugger 外驗證診斷工具；前置檢查紀錄也收在同一 artifact。
 
 歡迎貢獻——請見 [CONTRIBUTING.md](../CONTRIBUTING.md) 與
 [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)。CI 會強制兩條規則：`import je_auto_control`
