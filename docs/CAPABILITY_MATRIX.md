@@ -79,6 +79,13 @@ all-thread native backtraces through batch GDB; other platforms retain Python
 faulthandler output. This is diagnostic infrastructure, not native lifecycle
 acceptance or a root-cause correction; outstanding crashes remain in Progress.md.
 
+Controlled screenshot-portal lifecycle tests cover bounded Request.Close on the
+original bus, alternate/predicted handles, uncertain replies, direct/wrapped
+controls, completed responses and partial connection cleanup. A real socketpair
+with a full send buffer proves the call timeout also bounds a stalled write;
+native descriptors close after interrupted connect/authentication/Hello. These
+tests do not replace native compositor/consent-dialog acceptance in Progress.md.
+
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
 

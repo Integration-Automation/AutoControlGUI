@@ -443,6 +443,13 @@ Wayland libei native backend
 明確的 wtype 文字輸入路徑與螢幕擷取選擇不變。
 
 
+未完成的 screenshot 請求會在原始 bus 上以獨立 0.25 秒 I/O 預算嘗試
+``org.freedesktop.portal.Request.Close``，跟隨替代 handle，回覆不確定時使用預測 handle。
+已完成的 Response 不重複關閉；原始取消與強制中斷物件穿過包裝及清理繼續傳播。
+D-Bus 寫入與回覆共用預算，connect／驗證／Hello 中斷時，即使 ``__enter__`` 未完成
+也會釋放描述元。原生合成器／對話框、restore 與重啟驗收仍列於 Progress.md。
+
+
 repo 的 dev／main 無頭工作在原生失敗後仍保留合併測試輸出與執行環境版本。
 Linux 經 GDB 擷取各執行緒原生堆疊，其他平台保留 Python faulthandler 輸出。
 ``native-<os>-<python>`` artifact 保留七天；子行程失敗仍使 CI 失敗。

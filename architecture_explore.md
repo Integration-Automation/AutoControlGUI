@@ -20,13 +20,13 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,211 |
-| 程式碼總行數 | 180,601 |
+| 程式碼總行數 | 180,653 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 809 |
 | 套件門面 `__all__` 公開名稱數 | 1373 |
 | GUI 分頁數（`main_widget` 註冊） | 49 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 709 |
-| `test_*.py` 測試檔／測試函式 | 831 / 8,698 |
+| `test_*.py` 測試檔／測試函式 | 832 / 8,709 |
 | 範例腳本 | 41 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -233,7 +233,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `uinput/keyboard.py` | 44 | uinput 鍵盤後端，介面與 X11 版一致。 |
 | `uinput/mouse.py` | 130 | uinput 滑鼠後端。 |
 
-#### Linux Wayland（`linux_wayland/`，18 檔／3,080 行）
+#### Linux Wayland（`linux_wayland/`，18 檔／3,104 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -250,7 +250,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `keyboard.py` | 206 | 鍵盤後端：按鍵／組合鍵 libei 優先，權限拒絕不改走 CLI；中斷時逐一釋放原後端已按下的鍵。文字仍用 wtype。 |
 | `keymap.py` | 155 | 友善鍵名 → evdev key code。 |
 | `capture.py` | 246 | 擷取分層：操作者自訂指令 → grim → gnome-screenshot → spectacle → portal。 |
-| `portal.py` | 207 | `org.freedesktop.portal.Screenshot` 最後備援,經 `_dbus_client` 直接講 D-Bus（不再需要安裝 `gdbus`,只要有 session bus）。 |
+| `portal.py` | 231 | `org.freedesktop.portal.Screenshot` 最後備援，直接講 D-Bus；未完成請求在原始 bus 上限時 Request.Close，保留原始控制，已完成 Response 不重複關閉。只需 session bus，不需 gdbus。 |
 | `screen.py` | 296 | 螢幕後端；發布 `grab_image` 與 `layout_origin`（擷取畫面左上角的版面座標，有螢幕在主螢幕左側／上方時為負），全框架的擷取都經由它。 |
 | `listener.py` / `record.py` | 48 / 34 | 監聽與錄製 stub（Wayland 限制）。 |
 
@@ -305,7 +305,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 3,487 行。
+> 14 個套件、約 3,515 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -313,7 +313,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_bundle/` | 424 | 使用者設定的單檔匯出／匯入 |
 | `utils/critical_exit/` | 132 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
 | `utils/diagnostics/` | 330 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
-| `utils/dbus_client/` | 714 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
+| `utils/dbus_client/` | 742 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
 | `utils/exception/` | 263 | **例外階層根**。框架錯誤繼承 `AutoControlException`；`control_signals.py` 共用無 executor 相依的取消載體／分類，保留 MCP 與 history 舊匯入別名；另有集中式錯誤訊息（`exception_tags`）。 |
 | `utils/failure_bundle/` | 229 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
 | `utils/file_process/` | 40 | 目錄檔案列舉（`execute_dir` 的後端） |
@@ -1153,7 +1153,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，只需要 PySide6
 | `scripts/dev_release.py` | 只用標準函式庫的發佈輔助腳本 | dev 通道（PyPI 的 `je_auto_control_dev`）的版本與比對：`prepare` 把 `dev.toml` 寫成 `pyproject.toml`，版本取 PyPI 最新一版加一個 patch（`dev.toml` 的版本只是下限，不回寫 repo）；`changed dist` 把建好的 wheel 跟 PyPI 最新一版逐檔比對，內容沒變就不上傳。只給 `dev.yml` 的 `publish-dev` job 與拋棄式的 checkout 用，因為 `prepare` 會蓋掉 `pyproject.toml`。 |
 | `docs/` | Sphinx（`API`／`Eng`／`Zh`／`getting_started`） | Read the Docs 文件。 |
 | `architecture_diagram/` | drawio + png | 既有的架構圖原始檔。 |
-| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 831 個 `test_*.py`／8,698 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
+| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 832 個 `test_*.py`／8,709 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
 
 ---
 
@@ -1247,7 +1247,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/rest_api/` | 8 | 2,064 |
 | `utils/agent/` | 9 | 2,142 |
 | `linux_with_x11/` | 19 | 1,281 |
-| `linux_wayland/` | 18 | 3,080 |
+| `linux_wayland/` | 18 | 3,104 |
 | `utils/triggers/` | 4 | 1,401 |
 | `utils/ocr/` | 10 | 1,381 |
 | `utils/usbip/` | 5 | 1,008 |
@@ -1255,6 +1255,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 793 | 71,199 |
-| **總計** | **1,204** | **180,514** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 793 | 71,227 |
+| **總計** | **1,204** | **180,566** |
 

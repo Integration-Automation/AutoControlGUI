@@ -13,6 +13,13 @@ macOS, Linux X11, Linux Wayland, Android and iOS.
 
 ## 2. Layers and directories
 
+Screenshot portal requests retain their own predicted/returned handle and bus.
+Failure before Response attempts bounded Request.Close; completed interactions
+are not closed again. Cleanup prioritizes original controls. The shared D-Bus
+client budgets writes plus remaining replies, applies an explicit connect timeout
+and retires descriptor ownership before closing partial __enter__ state. This
+path neither selects a different capture provider nor acquires input permission.
+
 The repository-only CI diagnostics runner wraps the existing pytest/coverage
 command, streams stdout/stderr to a retained log and records runtime versions
 and child exit status without an environment dump. Linux uses batch GDB with

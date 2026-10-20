@@ -506,6 +506,15 @@ backend and preserve the original cancellation. The explicit wtype text path
 and screen-capture selection are unchanged.
 
 
+Abandoned screenshot requests attempt ``org.freedesktop.portal.Request.Close``
+on their originating bus with a separate 0.25-second I/O budget. Returned
+alternate handles are followed; uncertain replies use the predicted handle.
+Completed responses are not closed twice. Original controls survive wrappers
+and cleanup. D-Bus writes and reply waits share one budget; interrupted bus
+connect/authentication/Hello releases its descriptor even before ``__enter__``
+returns. Native compositor/dialog, restore and restart acceptance remain open.
+
+
 The repository's dev/main headless jobs retain merged test output and runtime
 versions even after a native failure. Linux runs under GDB for all-thread
 native backtraces; other platforms retain Python faulthandler output. The

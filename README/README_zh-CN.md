@@ -433,10 +433,17 @@ libinput 的默认 profile 让光标走的距离正好是请求的两倍。ydoto
 Wayland 的屏幕截取需要合成器对应的工具，因为没有单一工具能覆盖全部：wlroots 系
 （sway、Hyprland、river）用 `grim`，GNOME 用 `gnome-screenshot`，KDE 用 `spectacle`。
 装好其中一个之后，所有截取路径——截图、图像与锚点定位、OCR、屏幕录制、远程桌面——都会
-经由它。三个都没装也还有 `gdbus`：最后会尝试 `xdg-desktop-portal`，只是第一次可能会弹
+经由它。三个都没装时，内置 D-Bus client 会通过 session bus 尝试 `xdg-desktop-portal`，第一次可能会弹
 同意对话框。再不行，截取会带着安装提示明确失败，而不是返回空白的 XWayland root；
 `je_auto_control.api.run_diagnostics()`（以及 GUI 的 Diagnostics 标签页）的 `screen_capture`
 检查会报告当前使用的是哪一层。
+
+未完成的 screenshot portal 请求会在断开原始 bus 前尝试 `Request.Close`，
+使用独立的 0.25 秒 D-Bus I/O 预算。服务器返回替代 handle 时会跟随该 handle；
+方法回复不确定时则使用预测 handle，已完成的 Response 不重复关闭。
+普通清理错误不覆盖主要截取失败；原始取消与强制中断对象会穿过包装及清理继续传播。
+D-Bus 写入与回复共用调用预算，连接建立有明确时限，connect／认证／Hello 中断时，
+即使 `__enter__` 失败也会释放自己拥有的描述符。实际合成器／对话框取消仍待平台验收。
 
 有一件只在 Wayland 出现、需要事先规划的事：**截取回来的图里可能有鼠标光标。**
 这里没有任何一条截取请求光标，但只要 backend 没有光标平面（包含任何以

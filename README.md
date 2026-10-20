@@ -466,12 +466,22 @@ Wayland screen capture needs the tool your compositor supports, because no
 single one covers them all: `grim` on wlroots compositors (sway, Hyprland,
 river), `gnome-screenshot` on GNOME, `spectacle` on KDE. Install one and every
 capture path — screenshots, image and anchor locators, OCR, screen recording,
-remote desktop — goes through it. With none of them installed, `gdbus` is
-enough: `xdg-desktop-portal` is tried last, though it may ask for consent the
+remote desktop — goes through it. With none installed, a session bus is
+enough: the built-in D-Bus client tries `xdg-desktop-portal` last, though it may ask for consent the
 first time. Failing that, capture fails loudly with an install hint rather than
 returning the blank XWayland root. The `screen_capture` check in
 `je_auto_control.api.run_diagnostics()` (and the GUI Diagnostics tab) reports
 which tier is in use.
+
+Abandoned screenshot portal requests attempt `Request.Close` on the originating
+bus before disconnect, using a separate 0.25-second D-Bus I/O budget. A returned
+alternate handle is followed; after an uncertain method reply, the predicted
+handle is used. Completed responses are not closed again. Ordinary cleanup
+errors do not replace the primary capture failure; original cancellation and
+hard-control objects survive wrappers and cleanup. D-Bus writes and reply waits
+share the call budget, connection setup has an explicit timeout, and interrupted
+connect/authentication/Hello releases its owned descriptor even when `__enter__`
+fails. Actual compositor/dialog cancellation remains platform acceptance work.
 
 One Wayland-only difference to plan around: **a capture may contain the mouse
 cursor.** Nothing here asks for it, but wlroots composites a *software* cursor

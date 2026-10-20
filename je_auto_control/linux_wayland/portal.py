@@ -27,8 +27,9 @@ uses this: the portal may show a consent dialog the first time (so the wait is
 bounded by :data:`DEFAULT_TIMEOUT`, not instant), and it always captures the
 whole screen, so a region is cropped afterwards.
 
-Every failure here is an ordinary capture failure — the caller reports the
-install hint for the CLI helpers, which is the actionable advice.
+Abandoned requests attempt a bounded Request.Close on the original connection
+before it is dropped. Ordinary capture failures retain their framework error;
+original request cancellation and hard-control objects propagate through D-Bus wrappers.
 """
 from __future__ import annotations
 
@@ -40,6 +41,8 @@ from typing import Any, Dict, List, Tuple
 
 from je_auto_control.linux_wayland import _dbus_client
 from je_auto_control.utils.exception.exceptions import AutoControlScreenException
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 PORTAL_BUS = "org.freedesktop.portal.Desktop"
@@ -52,6 +55,7 @@ PORTAL_METHOD = f"{SCREENSHOT_INTERFACE}.Screenshot"
 # so this is a human-scale wait, not a machine-scale one.
 DEFAULT_TIMEOUT = 30.0
 _CALL_TIMEOUT = 10.0
+_CLOSE_TIMEOUT = 0.25
 
 # 0 success, 1 cancelled by the user, 2 ended some other way.
 _RESPONSE_MEANING = {
@@ -70,12 +74,14 @@ def capture_png(timeout: float = DEFAULT_TIMEOUT) -> bytes:
 
     :param timeout: seconds to wait for the portal's Response signal,
         including any time the user spends on a consent dialog.
+        Abandoning a pending request adds at most a separate bounded Close call.
     :return: the captured image file's bytes.
     """
     try:
         with _dbus_client.SessionBus() as bus:
             uri = _request_and_await(bus, timeout)
     except _dbus_client.DBusError as error:
+        raise_caused_run_interruption(error)
         raise AutoControlScreenException(
             f"the desktop portal could not be reached: {error}",
         ) from error
@@ -87,24 +93,42 @@ def _request_and_await(bus: "_dbus_client.SessionBus", timeout: float) -> str:
     token = _handle_token()
     predicted = _request_path(bus.sender_token, token)
     bus.add_match(_match_rule(predicted))
-    handle = _screenshot(bus, token)
-    paths = [predicted]
-    # A portal that ignores handle_token answers on a path of its own choosing.
-    # The specification tells clients to follow the returned handle, and the
-    # subscription for it can only be added once the call has returned it —
-    # which is exactly why the predicted one is subscribed to first.
-    if handle and handle != predicted:
-        bus.add_match(_match_rule(handle))
-        paths.append(handle)
+    handle = predicted
     try:
-        body = bus.wait_for_signal(paths, REQUEST_INTERFACE, "Response",
-                                   timeout)
-    except _dbus_client.DBusError as error:
-        raise AutoControlScreenException(
-            f"desktop portal did not answer within {timeout:g}s "
-            f"(a consent dialog may be waiting)",
-        ) from error
+        handle = _screenshot(bus, token) or predicted
+        paths = [predicted]
+        # Subscribe to the returned path too when the portal ignores handle_token.
+        if handle != predicted:
+            bus.add_match(_match_rule(handle))
+            paths.append(handle)
+        body = _await_response(bus, paths, timeout)
+    except BaseException as error:  # reason: abandon pending consent before preserving the original control
+        _close_request(bus, handle, error)
+        raise
     return _uri_from_response(body)
+
+
+def _await_response(bus: "_dbus_client.SessionBus", paths: List[str], timeout: float) -> List[Any]:
+    """Keep the established timeout diagnostic while extracting original wrapped controls."""
+    try:
+        return bus.wait_for_signal(paths, REQUEST_INTERFACE, 'Response', timeout)
+    except _dbus_client.DBusError as error:
+        raise_caused_run_interruption(error)
+        raise AutoControlScreenException(
+            f'desktop portal did not answer within {timeout:g}s (canceling the pending request)',
+        ) from error
+
+
+def _close_request(bus: "_dbus_client.SessionBus", handle: str, failure: BaseException) -> None:
+    """Abandon only this request on its originating bus; cleanup cannot replace its primary interruption."""
+    try:
+        bus.call(PORTAL_BUS, handle, REQUEST_INTERFACE, 'Close', '', [], timeout=_CLOSE_TIMEOUT)
+    # pylint: disable-next=broad-exception-caught  # reason: retain the primary control after all cleanup outcomes
+    except BaseException as error:  # reason: choose controls only after the bounded cleanup attempt
+        raise_caused_run_interruption(failure)
+        raise_caused_run_interruption(error)
+        autocontrol_logger.debug('desktop portal request cleanup failed: %r', error)
+    raise_caused_run_interruption(failure)
 
 
 def _screenshot(bus: "_dbus_client.SessionBus", token: str) -> str:

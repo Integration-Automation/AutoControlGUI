@@ -13,6 +13,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Abandoned screenshot portal calls attempt bounded `Request.Close` on their
+  originating connection before disconnect. Wrapped and direct controls survive
+  cleanup; completed responses are not closed twice. D-Bus call budgets now
+  cover writes and the remaining reply wait, and canceled connect/authentication/
+  Hello releases partial connections. Existing APIs and ordinary failure families
+  remain compatible; live compositor/dialog acceptance is tracked in Progress.md.
+
 - Remove the GUI clipboard callback's strong reference to its own viewer.
   Disconnect no longer leaves that viewer and its native Qt panel waiting for
   cyclic GC. Registration binds the original peer weakly once; queued delivery

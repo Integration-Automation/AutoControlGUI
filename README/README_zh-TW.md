@@ -433,10 +433,17 @@ libinput 的預設 profile 讓游標走的距離正好是要求的兩倍。ydoto
 Wayland 的螢幕擷取需要合成器對應的工具，因為沒有單一工具能涵蓋全部：wlroots 系
 （sway、Hyprland、river）用 `grim`，GNOME 用 `gnome-screenshot`，KDE 用 `spectacle`。
 裝好其中一個之後，所有擷取路徑——截圖、影像與錨點定位、OCR、螢幕錄影、遠端桌面——都會
-經由它。三個都沒裝也還有 `gdbus`：最後會嘗試 `xdg-desktop-portal`，只是第一次可能會跳
+經由它。三個都沒裝時，內建 D-Bus client 會透過 session bus 嘗試 `xdg-desktop-portal`，第一次可能會跳
 同意對話框。再不行，擷取會帶著安裝提示明確失敗，而不是回傳空白的 XWayland root；
 `je_auto_control.api.run_diagnostics()`（以及 GUI 的 Diagnostics 分頁）的 `screen_capture`
 檢查會回報目前使用哪一層。
+
+未完成的 screenshot portal 請求會在斷開原始 bus 前嘗試 `Request.Close`，
+使用獨立的 0.25 秒 D-Bus I/O 預算。伺服器回傳替代 handle 時會跟隨該 handle；
+方法回覆不確定時則使用預測 handle，已完成的 Response 不重複關閉。
+一般清理錯誤不覆蓋主要擷取失敗；原始取消與強制中斷物件會穿過包裝及清理繼續傳播。
+D-Bus 寫入與回覆共用呼叫預算，連線建立有明確時限，connect／驗證／Hello 中斷時，
+即使 `__enter__` 失敗也會釋放自己擁有的描述元。實際合成器／對話框取消仍待平台驗收。
 
 有一件只在 Wayland 出現、需要事先規劃的事：**擷取回來的圖裡可能有滑鼠游標。**
 這裡沒有任何一條擷取要求游標，但只要 backend 沒有游標平面（包含任何以

@@ -1,5 +1,14 @@
 # Public API lifecycle
 
+Screenshot portal signatures and the ordinary AutoControlScreenException family
+remain compatible. Abandoned requests attempt Request.Close on their originating
+bus with a separate 0.25-second I/O budget; completed Response interactions are
+already over. Original controls survive D-Bus wrappers and cleanup. SessionBus
+retains its signatures while bounding writes and the remaining reply wait and
+closing partial connect/authentication/Hello state before failed __enter__ exits.
+No facade, AC, MCP, Builder or wire surface is added. Live portal cancellation,
+restore and compositor-restart acceptance remain open in Progress.md.
+
 Wayland native input preserves the existing exception families and signatures.
 LibeiUnavailable/OeffisUnavailable carry internal inert state distinguishing
 optional absence from permission, pause, revocation and protocol failures.

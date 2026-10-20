@@ -101,6 +101,9 @@ def test_a_failed_dbus_handshake_closes_the_socket(monkeypatch):
     monkeypatch.setattr(session_bus, "_socket_target", lambda _a: ("/tmp/x", False))
 
     class _Sock:
+        def settimeout(self, timeout):
+            assert 0 < timeout <= 10
+
         def connect(self, _target):
             return None
 

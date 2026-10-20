@@ -37,6 +37,8 @@ import urllib.parse
 from typing import Any, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 #: Message types, from the D-Bus specification.
@@ -85,6 +87,7 @@ BUS_PATH = "/org/freedesktop/DBus"
 BUS_INTERFACE = "org.freedesktop.DBus"
 
 _ADDRESS_ENV = "DBUS_SESSION_BUS_ADDRESS"
+_CONNECT_TIMEOUT = 10.0
 _MAX_MESSAGE = 128 * 1024 * 1024  # the specification's own ceiling
 _ALIGNMENT = {"y": 1, "b": 4, "n": 2, "q": 2, "i": 4, "u": 4,
               "x": 8, "t": 8, "d": 8, "s": 4, "o": 4, "g": 1,
@@ -481,26 +484,40 @@ class SessionBus:
                 socket.AF_UNIX,  # type: ignore[attr-defined]  # reason: POSIX-only
                 socket.SOCK_STREAM,
             )
+            self._socket.settimeout(_CONNECT_TIMEOUT)
             self._socket.connect(("\0" + path) if abstract else path)
-        except OSError as error:
-            self.close()
-            raise DBusError(f"cannot reach the session bus: {error}") from error
+        except BaseException as error:  # reason: failed __enter__ must release its descriptor before controls escape
+            self._close_failed_open(error)
+            if isinstance(error, OSError):
+                raise DBusError(f"cannot reach the session bus: {error}") from error
+            raise
         try:
             self._authenticate()
             self.unique_name = self.call(
                 BUS_NAME, BUS_PATH, BUS_INTERFACE, "Hello", "", [])[0]
-        except (DBusError, OSError):
+        except BaseException as error:  # reason: auth/Hello cancellation also happens before __exit__ can run
             # The socket stayed open when authentication or Hello failed,
             # and inside ``with SessionBus()`` __exit__ never ran.
-            self.close()
+            self._close_failed_open(error)
             raise
 
+    def _close_failed_open(self, failure: BaseException) -> None:
+        """Release a partial connection without replacing its original control with a cleanup error."""
+        try:
+            self.close()
+        # pylint: disable-next=broad-exception-caught  # reason: preserve primary controls after cleanup outcomes
+        except BaseException as error:  # reason: secondary cleanup failures cannot replace the primary control
+            raise_caused_run_interruption(failure)
+            raise_caused_run_interruption(error)
+            autocontrol_logger.debug('partial session bus cleanup failed: %r', error)
+        raise_caused_run_interruption(failure)
+
     def close(self) -> None:
-        """Drop the connection; never raise from teardown."""
-        if self._socket is not None:
+        """Retire connection ownership before closing; ordinary socket close errors remain contained."""
+        owned, self._socket = self._socket, None
+        if owned is not None:
             with contextlib.suppress(OSError):
-                self._socket.close()
-            self._socket = None
+                owned.close()
 
     @property
     def sender_token(self) -> str:
@@ -596,10 +613,22 @@ class SessionBus:
         self._send_raw(header.data + payload.data)
         return serial
 
+    def _call_deadline(self, timeout: float) -> float:
+        """Bound writes as well as replies, including a connection left with a previous read timeout."""
+        deadline = time.monotonic() + max(0.0, timeout)
+        if self._socket is not None:
+            try:
+                self._socket.settimeout(max(0.0, deadline - time.monotonic()))
+            except (OSError, ValueError, OverflowError) as error:
+                raise_caused_run_interruption(error)
+                raise DBusError(f'setting the session bus call timeout failed: {error}') from error
+        return deadline
+
     def call(self, destination: str, path: str, interface: str, member: str,
              signature: str, body: List[Any],
              timeout: float = 25.0) -> List[Any]:
-        """Make a method call and return the reply body."""
+        """Make a method call with a bounded write and the remaining reply budget."""
+        deadline = self._call_deadline(timeout)
         fields = {
             FIELD_PATH: ("o", path),
             FIELD_INTERFACE: ("s", interface),
@@ -609,7 +638,6 @@ class SessionBus:
         if signature:
             fields[FIELD_SIGNATURE] = ("g", signature)
         serial = self.send(METHOD_CALL, fields, signature, body)
-        deadline = time.monotonic() + timeout
         while True:
             message = self.read_message(deadline)
             if message.reply_serial != serial:
