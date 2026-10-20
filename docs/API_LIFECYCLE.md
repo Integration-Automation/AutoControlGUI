@@ -1,5 +1,10 @@
 # Public API lifecycle
 
+Diagnostics construction and retranslation are passive UI operations. Its
+existing Actions command deliberately invokes run_diagnostics; the headless,
+AC and MCP signatures and active behavior are unchanged. No public surface is
+added, and wrapper/capabilities.py remains pending in Progress.md.
+
 Screenshot portal signatures and the ordinary AutoControlScreenException family
 remain compatible. Abandoned requests attempt Request.Close on their originating
 bus with a separate 0.25-second I/O budget; completed Response interactions are

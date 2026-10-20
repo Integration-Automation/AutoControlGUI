@@ -59,6 +59,7 @@ japanese_word_dict = {
 
     # 診断タブ
     "diag_run": "診断を実行",
+    "diag_summary_idle": "診断はまだ実行されていません。アクションメニューから診断を実行してください。",
     "diag_summary_ok": "{count} 件すべて合格。",
     "diag_summary_failed": "{count} 件中 {failed} 件失敗。",
     "diag_col_name": "チェック",

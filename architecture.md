@@ -13,6 +13,11 @@ macOS, Linux X11, Linux Wayland, Android and iOS.
 
 ## 2. Layers and directories
 
+The Diagnostics panel starts idle and its Actions command owns active checks.
+Retranslation updates idle instructions and headers without invoking providers.
+The existing headless runner and executor/MCP diagnostic command remain active
+explicit operations; this GUI boundary does not implement capability probing.
+
 Screenshot portal requests retain their own predicted/returned handle and bus.
 Failure before Response attempts bounded Request.Close; completed interactions
 are not closed again. Cleanup prioritizes original controls. The shared D-Bus

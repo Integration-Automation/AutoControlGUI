@@ -170,6 +170,7 @@ english_word_dict = {
 
     # Diagnostics tab
     "diag_run": "Run diagnostics",
+    "diag_summary_idle": "No diagnostics run yet. Use the Actions menu to run diagnostics.",
     "diag_summary_ok": "All {count} checks passed.",
     "diag_summary_failed": "{failed} of {count} checks failed.",
     "diag_col_name": "Check",

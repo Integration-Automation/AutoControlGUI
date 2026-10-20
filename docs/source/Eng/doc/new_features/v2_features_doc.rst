@@ -506,6 +506,13 @@ backend and preserve the original cancellation. The explicit wtype text path
 and screen-capture selection are unchanged.
 
 
+The Diagnostics tab opens in a localized not-run state. Use **Actions → Run
+diagnostics** to start active checks, which can capture the screen or require
+portal consent. Opening or retranslating the tab does not start checks.
+Explicit headless/AC/MCP diagnostics retain their active behavior; passive
+capability probing remains pending in ``Progress.md``.
+
+
 Abandoned screenshot requests attempt ``org.freedesktop.portal.Request.Close``
 on their originating bus with a separate 0.25-second I/O budget. Returned
 alternate handles are followed; uncertain replies use the predicted handle.

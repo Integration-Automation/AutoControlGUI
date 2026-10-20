@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261021-07 | 2026-10-21 | Keep Diagnostics idle until its explicit Actions command | #done #diagnostics #gui #D1 | [2026-10-b](2026-10-b.md) |
 | U-20261021-06 | 2026-10-21 | Close abandoned screenshot requests and partial D-Bus connections within I/O budgets | #done #wayland #portal #D1 | [2026-10-b](2026-10-b.md) |
 | U-20261021-05 | 2026-10-21 | Release disconnected clipboard viewers without cyclic Qt garbage collection | #done #clipboard #qt-lifetime #F3 | [2026-10-b](2026-10-b.md) |
 | U-20261021-04 | 2026-10-21 | Preserve native diagnostic argv and handled interrupts before tracing the suite | #done #ci #native-diagnostics | [2026-10-b](2026-10-b.md) |
@@ -425,7 +426,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 7 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 8 |
 | [2026-10.md](2026-10.md) | 2026-10 | 82 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |

@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Diagnostics opens in a localized not-run state. Only its explicit Actions
+  command starts the existing active checks; opening or retranslating the tab
+  cannot implicitly capture the screen or request portal consent. Existing
+  headless/AC/MCP diagnostic signatures and active behavior remain compatible.
+
 - Abandoned screenshot portal calls attempt bounded `Request.Close` on their
   originating connection before disconnect. Wrapped and direct controls survive
   cleanup; completed responses are not closed twice. D-Bus call budgets now

@@ -438,6 +438,11 @@ Wayland 的屏幕截取需要合成器对应的工具，因为没有单一工具
 `je_auto_control.api.run_diagnostics()`（以及 GUI 的 Diagnostics 标签页）的 `screen_capture`
 检查会报告当前使用的是哪一层。
 
+打开 Diagnostics 只显示已翻译的「尚未运行」状态，不执行检查。
+选择 **Actions → 运行诊断** 才会启动现有主动检查，可能截取屏幕或需要 portal 同意；
+切换语言不启动检查。显式的 `run_diagnostics`、`AC_diagnose` 与 MCP 诊断调用保持主动行为；
+无副作用的能力探测仍列于 `Progress.md`。
+
 未完成的 screenshot portal 请求会在断开原始 bus 前尝试 `Request.Close`，
 使用独立的 0.25 秒 D-Bus I/O 预算。服务器返回替代 handle 时会跟随该 handle；
 方法回复不确定时则使用预测 handle，已完成的 Response 不重复关闭。

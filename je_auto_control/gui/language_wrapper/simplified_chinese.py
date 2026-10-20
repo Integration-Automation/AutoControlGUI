@@ -50,6 +50,7 @@ simplified_chinese_word_dict = {
 
     # 诊断分页
     "diag_run": "运行诊断",
+    "diag_summary_idle": "尚未运行诊断。请从操作菜单运行诊断。",
     "diag_summary_ok": "{count} 项检查全部通过。",
     "diag_summary_failed": "{count} 项检查中有 {failed} 项失败。",
     "diag_col_name": "检查项",

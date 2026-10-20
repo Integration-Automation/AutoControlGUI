@@ -51,6 +51,7 @@ traditional_chinese_word_dict = {
 
     # 診斷分頁
     "diag_run": "執行診斷",
+    "diag_summary_idle": "尚未執行診斷。請從動作選單執行診斷。",
     "diag_summary_ok": "{count} 項檢查全部通過。",
     "diag_summary_failed": "{count} 項檢查中有 {failed} 項失敗。",
     "diag_col_name": "檢查項目",

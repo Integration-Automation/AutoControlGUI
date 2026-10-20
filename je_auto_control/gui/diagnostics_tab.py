@@ -1,5 +1,5 @@
-"""System diagnostics tab: run subsystem checks and display results."""
-from typing import Optional
+"""System diagnostics tab: show idle state until its explicit Actions command runs checks."""
+from typing import Callable, Optional
 
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
@@ -31,7 +31,9 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
-        self._summary_label = QLabel("-")
+        self._has_run = False
+        self._summary_label = QLabel(_t("diag_summary_idle"))
+        self._summary_label.setWordWrap(True)
         self._table = QTableWidget(0, 4)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.horizontalHeader().setSectionResizeMode(
@@ -39,7 +41,6 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
         )
         self._build_layout()
         self._apply_table_headers()
-        self._refresh()
 
     def _build_layout(self) -> None:
         # The run command runs from the Actions menu; the tab keeps only
@@ -48,11 +49,18 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
         root.addWidget(self._summary_label)
         root.addWidget(self._table, stretch=1)
 
-    def menu_actions(self) -> list:
+    def menu_actions(self) -> list[tuple[str, Callable[[], None]]]:
         """Expose tab commands to the window-level Actions menu."""
         return [
             ("diag_run", self._refresh),
         ]
+
+    def retranslate(self) -> None:
+        """Translate idle instructions and headers without starting a diagnostic run."""
+        super().retranslate()
+        self._apply_table_headers()
+        if not self._has_run:
+            self._summary_label.setText(_t("diag_summary_idle"))
 
     def _apply_table_headers(self) -> None:
         self._table.setHorizontalHeaderLabels([
@@ -62,6 +70,7 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
 
     def _refresh(self) -> None:
         report = run_diagnostics()
+        self._has_run = True
         summary = report.to_dict()
         if report.ok:
             self._summary_label.setText(_t("diag_summary_ok").format(

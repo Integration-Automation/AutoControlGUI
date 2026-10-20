@@ -473,6 +473,13 @@ returning the blank XWayland root. The `screen_capture` check in
 `je_auto_control.api.run_diagnostics()` (and the GUI Diagnostics tab) reports
 which tier is in use.
 
+Opening Diagnostics displays a localized not-run state and performs no checks.
+Choose **Actions → Run diagnostics** to start the existing active checks, which
+can capture the screen or require portal consent. Changing the display language
+does not start checks. The explicit `run_diagnostics`, `AC_diagnose` and MCP
+diagnostic calls retain their active behavior; passive capability probing is
+still pending in `Progress.md`.
+
 Abandoned screenshot portal requests attempt `Request.Close` on the originating
 bus before disconnect, using a separate 0.25-second D-Bus I/O budget. A returned
 alternate handle is followed; after an uncertain method reply, the predicted

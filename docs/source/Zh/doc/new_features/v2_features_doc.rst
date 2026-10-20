@@ -443,6 +443,11 @@ Wayland libei native backend
 明確的 wtype 文字輸入路徑與螢幕擷取選擇不變。
 
 
+Diagnostics 開啟時先顯示已翻譯的「尚未執行」狀態。選擇 **Actions → 執行診斷**
+才會啟動既有主動檢查，可能擷取螢幕或要求 portal 同意。開啟或切換語系不啟動檢查。
+明確的 headless／AC／MCP 診斷維持主動行為，無副作用的能力探測仍列於 ``Progress.md``。
+
+
 未完成的 screenshot 請求會在原始 bus 上以獨立 0.25 秒 I/O 預算嘗試
 ``org.freedesktop.portal.Request.Close``，跟隨替代 handle，回覆不確定時使用預測 handle。
 已完成的 Response 不重複關閉；原始取消與強制中斷物件穿過包裝及清理繼續傳播。

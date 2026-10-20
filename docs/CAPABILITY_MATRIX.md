@@ -79,6 +79,12 @@ all-thread native backtraces through batch GDB; other platforms retain Python
 faulthandler output. This is diagnostic infrastructure, not native lifecycle
 acceptance or a root-cause correction; outstanding crashes remain in Progress.md.
 
+Controlled offscreen Diagnostics checks cover idle construction, all four
+catalogues, retranslation without execution, explicit Actions rendering and
+original cancellation followed by deliberate retry. Providers are intercepted;
+these checks acquire no portal grant or desktop input. Passive capability
+probing and native consent behavior remain pending in Progress.md.
+
 Controlled screenshot-portal lifecycle tests cover bounded Request.Close on the
 original bus, alternate/predicted handles, uncertain replies, direct/wrapped
 controls, completed responses and partial connection cleanup. A real socketpair
