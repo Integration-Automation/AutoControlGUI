@@ -777,3 +777,25 @@ over temporary stdlib loopback HTTP and publishes three inert files. It needs no
 web framework or external service. Sync UI/live application/native working-copy loading is described above; separate
 folder/clipboard/disconnection regression remain in Progress.md; native/paid acceptance
 remains deferred.
+
+Folder content and stopped-worker ownership
+-------------------------------------------
+
+The existing ``utils.remote_desktop.file_sync.FolderSyncEngine`` compares streamed
+SHA-256 values on each poll. Modifying only timestamps does not resend bytes; equal or
+older timestamps do not hide real edits. Scanning reads selected regular files in 64 KiB
+chunks and checks cancellation between chunks/files. Failed or changing scans retain the
+last complete baseline. Deletions do not propagate.
+
+The first successful baseline ignores pre-existing files. Restarting the same engine
+retains delivery state, including failed and offline edits. A synchronous sender must raise
+on failure; enqueueing alone is not delivery confirmation. Stop is checked between files,
+self-stop never joins its own thread, and a blocked sender remains owned until it exits.
+Start cannot overlap that worker, and readiness clears when stopping or exiting.
+
+After atomically publishing received bytes, an owning transport may explicitly call
+``record_received(path)``. It returns false for outside, excluded, missing or changing paths.
+Successful receipts suppress echo without suppressing later local edits; newer receipts win
+over older sender completions and scans. This core seam is covered by local fake-sender
+regressions. WebRTC receipt wiring, queued disconnect reporting and clipboard loop handling
+are still tracked in ``Progress.md``; this section does not claim those integrations complete.

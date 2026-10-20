@@ -239,3 +239,13 @@ both the current caller and the captured load owner; completed copies survive la
 
 Builder renders imported command names and positional values as literal text, preserving
 HTML-like data without rich-text interpretation. Script data remains data until explicit Run.
+
+FolderSyncEngine retains its existing import path and start/stop/is_running/wait_until_ready
+surface. Content SHA-256 values replace increasing mtime as the change criterion. Only the
+first successful baseline ignores existing files; subsequent runs retain failed/offline edits.
+stop signals cancellation, skips self-join and retains a blocked worker until it really ends;
+start is a no-op while that worker lives, and readiness clears on stop/exit.
+record_received(path) explicitly marks a complete regular file inside the selected watch as
+received, returning False for missing/outside/excluded/changing paths. Callers publish first;
+receipt updates win over older send/scan completions. This does not change any wire schema.
+Native WebRTC receipt integration and queued transport failures remain in Progress.md.

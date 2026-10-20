@@ -446,3 +446,11 @@ this is controlled native-data integration and keeps physical/paid acceptance de
 Offscreen rendering regressions import unknown command names and positional values containing
 HTML-like text. Selected displayed text must equal the complete original literal; both cases
 fail with automatic rich-text interpretation and pass with literal text labels.
+
+Controlled folder-core tests exercise same/older-mtime content edits, unchanged-content
+touches, stopped multi-file sends, sender-initiated stop, blocked-worker ownership, restart
+retry of pending/offline bytes and transient scan failure. Explicit receive receipts cover
+no-echo behavior and races with older send, baseline and pruning operations. Wrapped
+cancellation/KeyboardInterrupt/SystemExit carriers retain their original identities at scan,
+send and receipt boundaries. These are local filesystem/fake-sender checks; native WebRTC
+receipt wiring, queued-disconnect propagation and clipboard loop tests remain C3 work.

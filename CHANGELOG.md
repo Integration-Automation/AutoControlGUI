@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Compare folder mirror content using SHA-256, preserving same/older timestamp edits
+  without resending timestamp-only changes. Retain pending/offline changes across restarts,
+  stop between files and retain blocked worker ownership instead of overlapping runs.
+  Explicit receive receipts suppress returned bytes and survive concurrent send/scan completion.
+  Transport receipt wiring and queued-disconnect handling remain C3 follow-ups in Progress.md.
+
 - Add experimental load_sync_profile/LoadedSyncProfile and private AC_sync_profile_load,
   MCP and Builder routing for exact reviewed generations. Each load creates an independent
   editable native working copy with disabled hotkeys/trigger nodes and rebound typed assets.
