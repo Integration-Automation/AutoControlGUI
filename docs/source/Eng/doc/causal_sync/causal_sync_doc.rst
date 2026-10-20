@@ -797,7 +797,7 @@ After atomically publishing received bytes, an owning transport may explicitly c
 ``record_received(path)``. It returns false for outside, excluded, missing or changing paths.
 Successful receipts suppress echo without suppressing later local edits; newer receipts win
 over older sender completions and scans. This core seam is covered by local fake-sender
-regressions. WebRTC receive receipt wiring, receive-close cleanup and clipboard loop handling
+regressions. WebRTC receive receipt wiring, clipboard loop handling
 are still tracked in ``Progress.md``; this section does not claim those integrations complete.
 
 Observable file sends and connection ownership
@@ -815,4 +815,22 @@ They stop scanning and writing after ownership changes, including reconnection o
 Inbox pulls run outside the bridge event loop and serialize up to 32 requests per channel.
 Shutdown cancels owned file jobs; error replies stay on the original control channel and loop.
 These behaviors are covered with local bridge/fake-channel regressions. Receive receipts,
-receive-close cleanup and clipboard loop/disconnect coverage remain in ``Progress.md``.
+clipboard loop/disconnect coverage remain in ``Progress.md``.
+
+Native receive ownership and disconnect cleanup
+-----------------------------------------------
+
+``FileTransferReceiver.close()`` permanently refuses later frames and discards partial
+bytes. ``abort()`` discards the active partial only, so permission can later be granted on
+the same channel. Write, publication and cleanup share one lock; callbacks run outside it.
+Both close and unlink are attempted during cleanup. Ordinary filesystem failures are logged;
+original cancellation and hard-interruption objects propagate unchanged.
+
+Native host/viewer endpoints attach a fresh receiver to their concrete authenticated peer
+and files channel. Stop, file/control close, terminal connection states, replacement and
+permission loss clean unfinished bytes without another inbound frame. A stale callback cannot
+affect the replacement receiver. Terminal cleanup precedes state notification, including a
+callback that immediately reconnects. Native file/audit/state callbacks preserve wrapped
+interruption identity. Existing Remote Desktop controls use this same lifecycle.
+Completed targets and the wire format remain unchanged. Native folder receive receipts and
+clipboard loop/disconnect coverage remain in ``Progress.md``.

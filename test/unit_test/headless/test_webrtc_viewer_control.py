@@ -488,6 +488,7 @@ def viewer_inbox(tmp_path, monkeypatch):
 
 def test_a_file_pushed_by_the_host_lands_and_is_announced(viewer,
                                                           viewer_inbox):
+    viewer._authenticated = True
     seen = []
     viewer.set_file_received_callback(seen.append)
     channel = Channel("files")
@@ -503,6 +504,7 @@ def test_a_file_pushed_by_the_host_lands_and_is_announced(viewer,
 
 def test_a_file_arriving_with_no_listener_is_still_written(viewer,
                                                            viewer_inbox):
+    viewer._authenticated = True
     channel = Channel("files")
     viewer._wire_files_channel(channel)
     channel.fire("message", json.dumps({"type": "file_begin",
@@ -520,8 +522,11 @@ def test_a_raising_file_callback_does_not_lose_the_file(viewer):
     viewer._on_viewer_file_done("C:/inbox/pushed.txt")
 
 
-def test_the_files_receiver_is_built_once_and_reused(viewer, viewer_inbox):
+def test_a_replacement_files_channel_gets_a_fresh_receiver(viewer, viewer_inbox):
     viewer._wire_files_channel(Channel("files"))
     first = viewer._files_receiver
     viewer._wire_files_channel(Channel("files"))
-    assert viewer._files_receiver is first
+    assert viewer._files_receiver is not first
+    first.handle_message(json.dumps({'type': 'file_begin', 'name': 'stale.txt', 'size': 0}))
+    first.handle_message(json.dumps({'type': 'file_end'}))
+    assert list(viewer_inbox.iterdir()) == []

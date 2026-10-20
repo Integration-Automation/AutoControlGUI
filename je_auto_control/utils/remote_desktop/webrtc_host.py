@@ -19,9 +19,13 @@ import json
 import threading
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, Tuple
 
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.audit_log import default_audit_log
 from je_auto_control.utils.remote_desktop.input_dispatch import dispatcher_at
+from je_auto_control.utils.remote_desktop.webrtc_file_receive import (
+    abort_file_receiver, bind_file_receiver, close_file_receiver,
+)
 from je_auto_control.utils.remote_desktop.webrtc_file_tasks import (
     cancel_file_requests, file_request_failure, start_file_request,
 )
@@ -241,6 +245,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
 
     async def _async_stop(self) -> None:
         self._closed.set()
+        close_file_receiver(self._files_receiver)
         await cancel_file_requests(self._background_tasks)
         self._stop_quietly(self._host_voice_track, "host voice")
         self._host_voice_track = None
@@ -260,8 +265,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
             self._pc = None
         self._control_channel = None
         self._mic_channel = None
-        self._files_channel = None
-        self._files_receiver = None
+        self._files_channel = self._files_receiver = None
         self._release_usb_claims()
         self._authenticated = False
         if self._auth_deadline_handle is not None:
@@ -334,17 +338,22 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
 
         @pc.on("connectionstatechange")
         async def _on_state() -> None:
-            state = pc.connectionState
+            current = self._pc
+            if current is None or current is not pc:
+                return
+            state = current.connectionState
             autocontrol_logger.info("webrtc host: connection %s", state)
+            if state in ("failed", "closed", "disconnected"):
+                self._authenticated = False
+                close_file_receiver(self._files_receiver)
             if state == "connected":
                 await self._snapshot_remote_ip()
             if cb is not None:
                 try:
                     cb(state)
                 except (RuntimeError, OSError) as error:
+                    raise_caused_run_interruption(error)
                     autocontrol_logger.warning("state cb: %r", error)
-            if state in ("failed", "closed", "disconnected"):
-                self._authenticated = False
 
     async def _snapshot_remote_ip(self) -> None:
         if self._pc is None:
@@ -383,29 +392,23 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
             self._mic_receiver.on_chunk(message)
 
     def _wire_files_channel(self, channel) -> None:
-        from je_auto_control.utils.remote_desktop.webrtc_files import (
-            FileTransferReceiver,
-        )
-        receiver = self._files_receiver
-        if receiver is None:
-            receiver = FileTransferReceiver(inbox_dir=self._inbox_dir)
-            self._files_receiver = receiver
+        from je_auto_control.utils.remote_desktop.webrtc_files import FileTransferReceiver
+        close_file_receiver(self._files_receiver)
+        receiver = self._files_receiver = FileTransferReceiver(self._inbox_dir)
+        self._files_channel, connection = channel, self._pc
 
-        @channel.on("message")
-        def _on_message(message) -> None:
-            if not self._authenticated or not self._permissions.allow_files:
-                return
-            # Rate limit file_begin envelopes; binary chunks pass through
-            # since they belong to an already-allowed transfer.
-            if isinstance(message, str) and "file_begin" in message:
-                if not self._rate_limiter.allow_file():
-                    if self._rate_limiter.should_warn_files():
-                        self._safe_audit_log("rate_limit_files")
-                    return
-            receiver.handle_message(
-                message,
-                on_done=self._on_file_done,
-            )
+        def active() -> bool:
+            return (self._files_channel is channel and self._pc is connection and self._files_receiver is receiver
+                    and self._authenticated and self._permissions.allow_files and not self._closed.is_set())
+
+        def accept_begin() -> bool:
+            if self._rate_limiter.allow_file():
+                return True
+            if self._rate_limiter.should_warn_files():
+                self._safe_audit_log('rate_limit_files')
+            return False
+
+        bind_file_receiver(channel, receiver, active, self._on_file_done, accept_begin)
 
     def _wire_usb_channel(self, channel) -> None:
         """Carry USB passthrough over the ``usb`` DataChannel.
@@ -470,11 +473,13 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
                 detail=str(path),
             )
         except (RuntimeError, OSError) as error:
+            raise_caused_run_interruption(error)
             autocontrol_logger.debug("audit log file: %r", error)
         if self._on_file_received is not None:
             try:
                 self._on_file_received(path)
             except (RuntimeError, OSError) as error:
+                raise_caused_run_interruption(error)
                 autocontrol_logger.debug("file done cb: %r", error)
 
     def enable_mic_receive(self) -> None:
@@ -507,7 +512,9 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
 
         @channel.on("close")
         def _on_close() -> None:
-            self._authenticated = False
+            if self._control_channel is channel:
+                self._authenticated = False
+                abort_file_receiver(self._files_receiver)
 
     def _handle_ctrl_message(self, message: Any) -> None:
         data = self._parse_ctrl_envelope(message)
@@ -701,6 +708,8 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
     def set_permissions(self, permissions: SessionPermissions) -> None:
         """Update the granular permissions at runtime."""
         self._permissions = permissions
+        if not permissions.allow_files:
+            abort_file_receiver(self._files_receiver)
         self._send_ctrl({"type": "permissions", "value": permissions.to_dict()})
 
     @property

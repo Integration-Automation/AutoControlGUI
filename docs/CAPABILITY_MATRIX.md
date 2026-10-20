@@ -453,7 +453,7 @@ retry of pending/offline bytes and transient scan failure. Explicit receive rece
 no-echo behavior and races with older send, baseline and pruning operations. Wrapped
 cancellation/KeyboardInterrupt/SystemExit carriers retain their original identities at scan,
 send and receipt boundaries. These are local filesystem/fake-sender checks; native WebRTC
-receive receipt wiring, receive-close cleanup and clipboard loop tests remain C3 work.
+receive receipt wiring and clipboard loop tests remain C3 work.
 
 Local bridge/fake-channel regressions verify observable callback failure, folder retry,
 bounded buffering, queued cancellation, pending-abort ownership, completed-end cancellation
@@ -465,4 +465,14 @@ Queue overflow and cancellation before the first task step release capacity; sta
 replies are suppressed and wrapped interruption objects survive error-reply callbacks.
 These checks use local threads/files/fake channels, without real devices or paid APIs.
 They do not establish remote publication acknowledgement, receive SHA-256 validation,
-receive-close cleanup or clipboard no-echo/disconnect behavior, which remain in Progress.md.
+clipboard no-echo/disconnect behavior, which remain in Progress.md.
+
+Native receive lifecycle evidence covers deterministic close/write overlap, repeated close,
+late frames, host/viewer stop, file/control channel close, all three terminal connection states,
+replacement peer/channel, unauthenticated viewer refusal, permission revoke/regrant and stale
+callbacks. A callback-driven immediate reconnect remains authenticated and publishes its new
+transfer. Wrapped cancellation and hard signals retain object identity at write/cleanup and
+native file/audit/state callback boundaries. Tests use fake peer/channel objects and local files;
+published targets survive failed receives. Receive-close behavior is shared by existing GUI and
+SDK endpoints. These checks do not establish remote publication acknowledgement, file-wire
+checksums, native folder receive receipts or clipboard no-echo; open C3 work stays in Progress.md.

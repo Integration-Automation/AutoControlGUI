@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Retire unfinished native file receives on close, disconnect, replacement and permission loss.
+  Serialize cleanup with writes, refuse unauthenticated viewer receives and isolate stale
+  peer/channel callbacks. Clean terminal state before notifying callbacks so reconnecting
+  inside a callback is safe. Preserve wrapped file/audit/state cancellation and hard signals.
+
 - Wait for bounded DataChannel file writes and expose callback errors, source-size changes
   and cooperative cancellation to callers. Prevent overlapping producers and stale loop writes.
   Bind GUI folder jobs to their original authorization and concrete peer connection.

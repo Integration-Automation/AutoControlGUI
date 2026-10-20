@@ -19,14 +19,14 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,204 |
-| 程式碼總行數 | 179,497 |
+| Python 模組總數（含周邊子專案） | 1,205 |
+| 程式碼總行數 | 179,607 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 809 |
 | 套件門面 `__all__` 公開名稱數 | 1373 |
 | GUI 分頁數（`main_widget` 註冊） | 49 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 709 |
-| `test_*.py` 測試檔／測試函式 | 820 / 8,592 |
+| `test_*.py` 測試檔／測試函式 | 821 / 8,607 |
 | 範例腳本 | 41 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -515,14 +515,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 28,641 行。
+> 6 個套件、約 28,751 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 418 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 8,447 | 持久化設定與條件交易：`contract.py` 管理有限 JSON 與協定例外；`store.py` 以 SQLite 原子比較版本／記錄重送收據；`routes.py` 提供第二版 HTTP 與明確盲寫相容；`commands.py` 共用 AC／MCP／Builder；`client.py` 條件提交，另有因果模型、peer ledger 與本機 SQLite outbox；第三版 /causal 交易已接上確認／退休／回收與刪除憑證；client／outbox 已接上原請求重送、有界 CAS 重合併及原子快照確認；持久化控制、原子本機 full-resync／舊待送退役與歷史收據已接上。本機資產工具另提供 manifest、整版雜湊驗證與不可變目錄發布；七種來源 adapters 保存可攜因果 profiles；workspace INI 與 GUI 共用偏好正規化。來源／outbox 與原子 full-resync 基準已由 SyncWorkspace 協調；引用資產以不可變分塊／完整 hash 收據、具驗證 HTTP 與完整 profile 串流發布接上；Sync UI 仍屬 C3。 |
 | `utils/device_matrix/` | 143 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 13,809 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/remote_desktop/` | 13,919 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,816 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 1,008 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
@@ -752,14 +752,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 92 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（13,809 行／58 檔）
+#### `utils/remote_desktop/`（13,919 行／59 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `webrtc_host.py` | 741 | WebRTC 主機：串流螢幕視訊並接受檢視端輸入;session 生命週期、DataChannel 接線、檔案收發。 |
-| `webrtc_viewer.py` | 684 | WebRTC 檢視端：接收視訊並送出輸入。 |
+| `webrtc_host.py` | 750 | WebRTC 主機：串流螢幕視訊並接受檢視端輸入;session 生命週期、DataChannel 接線、檔案收發。 |
+| `webrtc_viewer.py` | 694 | WebRTC 檢視端：接收視訊並送出輸入。 |
 | `host.py` | 676 | TCP 主機：接受迴圈、TLS 包裝、連線／認證握手、音訊與剪貼簿廣播、檔案推送、單次 token。 |
 | `viewer.py` | 641 | TCP 檢視端。 |
 | `host_service.py` | 562 | 無頭 WebRTC 主機執行器 + 多平台服務安裝器。 |
@@ -779,9 +779,10 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `jpeg_recorder_encrypted.py` | 239 | AES-GCM 加密版 session 錄影。 |
 | `address_book.py` | 229 | 檢視端的主機通訊錄。 |
 | `audio.py` / `webrtc_audio.py` / `webrtc_mic.py` | 243 / 207 / 155 | 音訊擷取播放、音訊軌、麥克風上行。 |
+| `webrtc_file_receive.py` | 56 | Bind file receivers to one authenticated peer and channel, retiring partial bytes when ownership ends. |
 | `webrtc_file_write.py` | 204 | Bounded observable DataChannel writes preserve caller cancellation and serialize file producers. |
 | `webrtc_file_tasks.py` | 117 | Run remote inbox pushes outside the event loop while preserving connection ownership and cooperative cancellation. |
-| `webrtc_files.py` | 303 | 專屬 DataChannel 的分塊檔案傳輸。 |
+| `webrtc_files.py` | 338 | 專屬 DataChannel 的分塊檔案傳輸。 |
 | `webrtc_host_auth.py` | 239 | 檢視端認證與核准：token 檢查、信任清單／IP 白名單自動放行、手動接受／拒絕、SAS、逾時關閉。 |
 | `lan_discovery.py` | 204 | mDNS／Zeroconf 區網探索。 |
 | `video_codec.py` | 197 | TCP／WS 路徑的可插拔視訊編解碼。 |
@@ -1229,7 +1230,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | --- | ---: | ---: |
 | `gui/` | 113 | 32,243 |
 | `utils/mcp_server/` | 42 | 19,894 |
-| `utils/remote_desktop/` | 58 | 13,809 |
+| `utils/remote_desktop/` | 59 | 13,919 |
 | `utils/executor/` | 8 | 9,755 |
 | `utils/usb/` | 17 | 4,816 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,627 |
@@ -1248,5 +1249,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 793 | 71,199 |
-| **總計** | **1,197** | **179,410** |
+| **總計** | **1,198** | **179,520** |
 

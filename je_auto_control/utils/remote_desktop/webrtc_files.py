@@ -95,21 +95,44 @@ class FileTransferReceiver:
         self._inbox.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
         self._current: Optional[dict] = None
+        self._closed = False
+
+    def abort(self, reason: str = 'receive permission ended') -> None:
+        """Discard the active partial file while keeping this receiver available for a later allowed transfer."""
+        self._abort_locked(reason)
+
+    def close(self) -> None:
+        """Permanently refuse further frames and discard any partial file; safe to repeat or race with a write."""
+        with self._lock:
+            self._closed = True
+        self._abort_locked('receiver closed')
 
     def handle_message(self, message,
                        on_progress: Optional[Callable[[int, int], None]] = None,
                        on_done: Optional[Callable[[Path], None]] = None,
                        on_error: Optional[Callable[[str], None]] = None) -> None:
         """Consume one envelope or chunk; publish complete files before notifying completion."""
+        with self._lock:
+            if self._closed:
+                return
         try:
             if isinstance(message, str):
                 self._handle_envelope(message, on_done, on_error)
             elif isinstance(message, (bytes, bytearray, memoryview)):
                 self._handle_chunk(bytes(message), on_progress)
         except FileTransferError as error:
-            self._abort_locked(reason=str(error))
+            try:
+                self._abort_locked(reason=str(error))
+            finally:
+                raise_caused_run_interruption(error)
             if on_error is not None:
                 on_error(str(error))
+        except BaseException as error:  # reason: clean partial bytes before propagating callback or write signals
+            try:
+                self._abort_locked(reason='receive callback failed')
+            finally:
+                raise_caused_run_interruption(error)
+            raise
 
     def _handle_envelope(self, raw: str,
                          on_done, on_error) -> None:
@@ -133,21 +156,24 @@ class FileTransferReceiver:
     def _handle_chunk(self, chunk: bytes, on_progress) -> None:
         with self._lock:
             current = self._current
-        if current is None:
-            return  # silently drop stray chunk
-        if current["written"] + len(chunk) > current["size"]:
-            raise FileTransferError(
-                f"more data than the {current['size']} bytes announced")
-        try:
-            current["fh"].write(chunk)
-        except OSError as error:
-            raise FileTransferError(f"write failed: {error}") from error
-        current["written"] += len(chunk)
+            if self._closed or current is None:
+                return  # silently drop stray or closed-owner chunks
+            if current["written"] + len(chunk) > current["size"]:
+                raise FileTransferError(
+                    f"more data than the {current['size']} bytes announced")
+            try:
+                current["fh"].write(chunk)
+            except OSError as error:
+                raise FileTransferError(f"write failed: {error}") from error
+            current["written"] += len(chunk)
+            written, size = current['written'], current['size']
         if on_progress is not None:
-            on_progress(current["written"], current["size"])
+            on_progress(written, size)
 
     def _begin(self, data: dict) -> None:
         with self._lock:
+            if self._closed:
+                return
             if self._current is not None:
                 raise FileTransferError("transfer already in progress")
             name = _safe_basename(data.get("name", ""))
@@ -170,20 +196,19 @@ class FileTransferReceiver:
     def _finish(self, on_done) -> None:
         with self._lock:
             current = self._current
-            if current is not None and current["written"] != current["size"]:
+            if self._closed or current is None:
+                return
+            if current["written"] != current["size"]:
                 # Raised with the transfer still current, so handle_message
                 # aborts it; a truncated file used to be reported received.
                 raise FileTransferError(
                     f"received {current['written']} of {current['size']} bytes")
+            try:
+                current["fh"].close()
+                os.replace(current["part"], current["path"])
+            except OSError as error:
+                raise FileTransferError(f"cannot finish {current['path'].name}: {error}") from error
             self._current = None
-        if current is None:
-            return
-        try:
-            current["fh"].close()
-            os.replace(current["part"], current["path"])
-        except OSError as error:
-            current["part"].unlink(missing_ok=True)
-            raise FileTransferError(f"cannot finish {current['path'].name}: {error}") from error
         autocontrol_logger.info(
             "file transfer: complete %s (%d bytes)",
             current["path"], current["written"],
@@ -195,14 +220,24 @@ class FileTransferReceiver:
         with self._lock:
             current = self._current
             self._current = None
-        if current is None:
-            return
-        try:
-            current["fh"].close()
-            current["part"].unlink(missing_ok=True)
-        except OSError:
-            pass
+            if current is None:
+                return
+            _discard_partial(current)
         autocontrol_logger.warning("file transfer aborted: %s", reason)
+
+
+def _discard_partial(current: dict) -> None:
+    """Attempt both cleanup operations before preserving the first original interruption."""
+    failures = []
+    for operation in (current['fh'].close, lambda: current['part'].unlink(missing_ok=True)):
+        try:
+            operation()
+        # pylint: disable-next=broad-exception-caught  # reason: finish both cleanup operations before selecting a signal
+        except BaseException as error:  # reason: defer cleanup signals until unlink has also been attempted
+            failures.append(error)
+    for failure in failures:
+        raise_caused_run_interruption(failure)
+        autocontrol_logger.warning('file receive cleanup failed: %r', failure)
 
 
 class FileTransferSender:

@@ -256,7 +256,9 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 資料夾鏡像改以 SHA-256 內容比對，不再依賴修改時間遞增：只改時間不重送，時間相同或較舊的內容修改仍會送出。FolderSyncEngine 重啟時保留待送與離線修改，逐檔檢查停止要求，並持續擁有尚未結束的傳送工作。傳輸擁有者可在發布檔案後明確呼叫 record_received(path)，避免回送收到的內容。WebRTC 原生接收收據串接仍列於 Progress.md。
 
-檔案傳送現在會等待每個 DataChannel callback，將緩衝資料限制在 1 MiB，並將通道失敗回報給呼叫端。可選的 `cancelled` 判斷會停止排隊寫入；宣告的位元組數可偵測來源截短或增長。原生資料夾工作綁定授權、引擎、viewer 與 peer connection，擁有權變更時停止。收件匣下載移至事件迴圈之外，透過每個通道最多 32 筆請求的佇列依序傳送。通道接受資料不代表遠端已發布檔案；線上格式不變。原生接收收據／清理及剪貼簿迴圈／斷線驗證仍列於 Progress.md。
+檔案傳送現在會等待每個 DataChannel callback，將緩衝資料限制在 1 MiB，並將通道失敗回報給呼叫端。可選的 `cancelled` 判斷會停止排隊寫入；宣告的位元組數可偵測來源截短或增長。原生資料夾工作綁定授權、引擎、viewer 與 peer connection，擁有權變更時停止。收件匣下載移至事件迴圈之外，透過每個通道最多 32 筆請求的佇列依序傳送。通道接受資料不代表遠端已發布檔案；線上格式不變。原生接收收據及剪貼簿迴圈／斷線驗證仍列於 Progress.md。
+
+原生檔案接收器現在會在關閉、檔案／控制通道關閉、連線進入終止狀態、更換通道或撤銷檔案權限時清除未完成內容。已關閉的接收器拒絕延遲資料；具體 peer／通道與授權檢查會保護替換後的傳輸，也會拒絕 viewer 在驗證前接收檔案。狀態清理先於使用者 callback，避免舊失敗影響 callback 建立的新連線。檔案／稽核／狀態 callback 保留原始取消及強制中斷物件。清理會嘗試關檔及刪除暫存檔，檔案系統失敗寫入日誌。既有 Remote Desktop 控制自動使用此生命週期；已完成的目標與線上格式不變。
 
 實驗性引用資產使用 `SyncAssetBlob`、`SyncAssetReference`、`SyncAssetStore` 與 `SyncAssetHTTPClient`。明確的 `SyncBindings.assets` 別名將選定檔案封存為不可變 SHA-256 參照；只改資產也會建立新的因果版本。`SyncWorkspace` 在準備新定義請求前上傳已驗證分塊，支援中斷續傳，並在完整且未啟用的發布前下載引用內容。既有私有 AC／MCP／Builder 工作區／profile 命令共用這些欄位。`asset_cache_path` 選取 client cache；signaling 的 `--asset-store`／`AUTOCONTROL_SYNC_ASSET_STORE` 選取獨立 server 資料庫。具驗證的第一版資產路由使用 256-KiB 分塊、每檔 64 MiB 上限，每帳號預設限制 256 MiB、8,192 塊與 4,096 筆 blob 收據。超過配額會明確失敗；不可變歷史不自動回收。原生輸出路徑相對於 generation 根目錄。`python -m examples.sync_referenced_assets` 經暫存 loopback HTTP 傳送真實 PNG 與腳本，不執行腳本或改目前工作區。
 

@@ -248,7 +248,7 @@ start is a no-op while that worker lives, and readiness clears on stop/exit.
 record_received(path) explicitly marks a complete regular file inside the selected watch as
 received, returning False for missing/outside/excluded/changing paths. Callers publish first;
 receipt updates win over older send/scan completions. This does not change any wire schema.
-Native WebRTC receive receipt integration and receive-close cleanup remain in Progress.md.
+Native WebRTC receive receipt integration remains in Progress.md.
 
 FileTransferSender.send, WebRTCDesktopViewer.send_file and WebRTCDesktopHost.push_file
 accept an optional keyword-only cancelled predicate. Writes now synchronously confirm
@@ -263,5 +263,19 @@ request_stop plus stop_requested. GUI folder jobs capture authority and peer ide
 loss of ownership stops scans and queued writes. Viewer connection_identity is opaque.
 Native inbox pulls use a per-channel queue of at most 32 jobs on the original loop,
 perform blocking sends in a worker and cancel owned jobs on host shutdown. Failure replies
-remain bound to their original control channel. Receive-side cleanup/receipts and clipboard
+remain bound to their original control channel. Receive-side receipts and clipboard
 coverage remain C3 follow-ups in Progress.md.
+
+FileTransferReceiver.close is idempotent and terminal: it refuses subsequent frames and
+discards unfinished bytes while preserving any earlier published target. abort discards
+only the active partial transfer, allowing a later allowed transfer on the same channel.
+Writes, publication and cleanup share a lock; callbacks run outside it. Cleanup attempts
+both close and unlink, logs ordinary filesystem failures and preserves original interruption
+objects. Native host/viewer receives bind to a fresh receiver and their concrete authenticated
+peer/channel. Stop, files/control close, terminal connection state and file permission loss
+clean partial bytes without waiting for another frame. Stale channels and state callbacks
+cannot retire a replacement transfer. Terminal cleanup precedes state callbacks, including
+callbacks that reconnect immediately. File/audit/state callback interruption carriers propagate
+unchanged; ordinary native callback failures retain their existing logging/containment behavior.
+The Remote Desktop GUI uses the same endpoints. No wire, facade, command or MCP schema changes.
+Native folder receive receipts and clipboard loop/disconnect coverage remain in Progress.md.
