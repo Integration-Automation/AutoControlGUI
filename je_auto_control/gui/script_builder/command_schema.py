@@ -136,8 +136,8 @@ def _add_sync_adapter_specs(specs: List[CommandSpec]) -> None:
         CommandSpec("AC_sync_workspace", "Data", "Coordinate Sync Workspace",
                     fields=(FieldSpec("configuration", FieldType.JSON),
                             FieldSpec("operation", FieldType.ENUM, optional=True, default="status",
-                                      choices=("status", "capture", "sync", "review", "resolve", "materialize",
-                                               "register", "ack", "retire", "collect", "full_resync")),
+                                      choices=("status", "capture", "sync", "review", "resolve", "preferences",
+                                               "materialize", "register", "ack", "retire", "collect", "full_resync")),
                             FieldSpec("options", FieldType.JSON, optional=True)),
                     description="Coordinate sources, referenced assets and causal delivery with recovery baselines. "
                     "Received profiles remain inert until separately loaded."),

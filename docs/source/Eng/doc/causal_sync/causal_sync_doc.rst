@@ -473,7 +473,7 @@ paths and binding values and remain private; only portable entries belong on the
 ``python -m examples.sync_adapters`` captures all six actual sources and materializes
 twelve temporary native/metadata files, with zero execution, registration, vault reads
 or network calls. Source/outbox coordination and full-resync baselines are described below.
-Live GUI preference application, explicit native loading, Sync UI and
+Explicit disabled native loading and
 folder/clipboard/disconnection regression remain C3 work in Progress.md.
 
 Journal capture keeps the existing conservative secret-field policy. An inline
@@ -525,8 +525,8 @@ For explicit new-GUI loading, copy the generated workspace.ini to a separate mut
 working file, then pass ``QSettings(working_file, QSettings.Format.IniFormat)`` to
 ``AutoControlGUIUI(settings=...)``. Do not open the immutable cache itself for GUI
 writes: the GUI saves its preferences on close. Capture reads saved preferences;
-receiving versions does not reload a running window. The dedicated Sync UI and live
-preference application remain separate C3 work. ``python -m examples.sync_workspace``
+receiving versions does not reload a running window. Explicit live application through
+the dedicated Sync UI is described below. ``python -m examples.sync_workspace``
 demonstrates capture, inert publication and the explicit working copy without Qt,
 network/device/API calls or an existing workspace change.
 
@@ -590,14 +590,54 @@ heads, source fingerprints, edit wire and compact control receipts. Wire schemas
 Private ``AC_sync_workspace`` / ``ac_sync_workspace`` / Builder Data take configuration,
 operation (default status) and optional options. All modes require DRIVE/current roots.
 Local status/capture accept no options; review takes kind; resolve takes kind/entry_id/
-value/observed/is_deleted; materialize takes target_root. Network operations sync and
+value/observed/is_deleted; preferences takes observed; materialize takes target_root. Network operations sync and
 register/ack/collect/retire/full_resync accept secret_env/timeout_s/policy/max_rebases.
 Controls additionally accept operation_id/peer_id/discard_pending under their usual rules.
 ``python -m examples.sync_workspace_http`` uses two real temporary source selections and
 loopback HTTP to demonstrate offline concurrency, exact resolution, restart, inert
-publication and no retired replay. Referenced assets are described below. Live GUI application,
-explicit native loading, Sync UI and folder/clipboard/disconnection regression remain
+publication and no retired replay. Referenced assets and live GUI application are described below.
+Explicit disabled native profile loading and folder/clipboard/disconnection regression remain
 open in Progress.md. No device or paid API acceptance is implied.
+
+
+Explicit Sync UI and live preferences
+----------------------------------------------------------------
+
+Open **Workspace Sync** from feature navigation or View → Tabs. Opening the lazy tab
+does not read source files or credentials, open databases, capture changes or connect.
+Paste an explicit private schema-1 workspace descriptor, as above. All operations live
+in **Actions**; network controls take an environment variable name, never a secret value.
+The target directory is used only by **Publish an inert generation**. Peer retirement
+uses the explicitly specified peer, and full resync requires the discard-pending checkbox.
+
+**Inspect local status** reads local metadata; **Capture local changes offline** durably
+queues edits; **Synchronize selected profiles** performs the coordinated network workflow.
+The view shows revision, pending operations, conflicts, unresolved references and the last
+successful sync revision. Only a ready synchronization with no pending work updates the
+last-successful marker; status/capture/review do not imply a successful delivery.
+
+Select a profile kind and use **Review current profile heads**. Each row retains its
+entry, origin, change ID, version vector, deletion flag and value. Select one alternative,
+edit the resolution JSON or deletion checkbox, then use **Resolve selected entry**. The
+request observes all reviewed heads for that entry. No timestamp chooses a winner.
+Changing configuration/kind, resolving or closing invalidates the corresponding review.
+
+To change the running GUI, select ``workspace``, review its heads and choose **Apply
+reviewed GUI preferences**. ``SyncWorkspace.preferences(observed=change_ids)`` and the
+AC/MCP/Builder ``preferences`` operation compare the complete exact reviewed workspace
+head set, refuse stale reviews or unresolved alternatives and return only theme/font_pt/
+navigation_visible/navigation_width. Empty reviewed heads are valid; absent/deleted keys
+use dark/0/true/260 defaults. This read never observes source files or looks up credentials.
+The main window validates every value before applying theme, font and navigation; normal
+window close persists them through its injected QSettings. Other/private settings are untouched.
+Receiving, reviewing or publishing data never applies preferences automatically.
+
+Workers snapshot immutable JSON input, retain caller context and refresh captured DRIVE
+authority at core checkpoints and queued GUI delivery. Actions remain responsive; cancel
+requests stop at a checkpoint, and closing discards delayed results. Late cancellation
+blocks preference application, while already committed durable operations remain committed.
+No native script execution, hotkey/trigger activation, device or paid API acceptance is added.
+Explicit disabled native profile loading remains in Progress.md.
 
 
 Referenced asset synchronization
@@ -677,6 +717,6 @@ root; explicitly loaded working copies must resolve them against that root. Rece
 does not execute scripts, register hotkeys, arm triggers or replace current preferences.
 ``python -m examples.sync_referenced_assets`` transfers an actual multi-chunk PNG/script
 over temporary stdlib loopback HTTP and publishes three inert files. It needs no optional
-web framework or external service. Sync UI/live application/native loading and separate
+web framework or external service. Sync UI/live application is described above; explicit disabled native loading and separate
 folder/clipboard/disconnection regression remain in Progress.md; native/paid acceptance
 remains deferred.

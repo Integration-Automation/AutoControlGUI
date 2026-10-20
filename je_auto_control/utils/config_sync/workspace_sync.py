@@ -32,6 +32,7 @@ from je_auto_control.utils.config_sync.workspace_models import (
     SyncWorkspaceError, WorkspaceSyncResult, WorkspaceState, validate_workspace_snapshot,
 )
 from je_auto_control.utils.config_sync.workspace_store import WorkspaceStore
+from je_auto_control.utils.config_sync.workspace_review import reviewed_ids, reviewed_preferences
 from je_auto_control.utils.config_sync.workspace_transport import WorkspaceClient, network_options
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.logging.secret_scope import remember_secret, secret_log_scope
@@ -173,6 +174,19 @@ class SyncWorkspace:
             self._queue.enqueue(SyncOperation('workspace-' + entry.change_id, identity.endpoint, identity.user_id,
                                               identity.origin, (entry,), identity.epoch))
             return entry
+
+    def preferences(self, *, observed: Iterable[str]) -> dict[str, object]:
+        """Read four exact reviewed preferences without source reads, credentials, networking or GUI mutation."""
+        selected = reviewed_ids(observed)
+        with self._operation():
+            self._pending_reset_guard()
+            identity, adapters = self._reconcile()
+            snapshot = self._snapshot()
+            if snapshot is not None:
+                snapshot.peers.require_active(identity.origin, epoch=identity.epoch)
+            if 'workspace' not in adapters:
+                raise ConfigSyncError('workspace does not select the workspace profile kind')
+            return reviewed_preferences(adapters['workspace'].review(), selected)
 
     def materialize(self, target_root: str | Path) -> AssetSyncResult:
         """Publish only a complete ready inert generation; a pending full reset cannot publish retired definitions."""

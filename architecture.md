@@ -74,14 +74,14 @@ compact receipt history. Controls drain before edits; uncertain payloads retry u
 Only confirmed full-resync receipts atomically adopt local identity/cache and retire old
 pending work with explicit consent. Schema 1/2-to-3 migration validates owned tables and
 preserves edit wire. AC/MCP/Builder control status is private and local-only. Applications
-choose ack/collection timing; C3 Sync UI remains open; referenced assets are described below. Shared-secret access is service-wide.
+choose ack/collection timing; Sync UI and referenced assets are described below. Shared-secret access is service-wide.
 
 Asset manifests contain portable relative paths, sizes and SHA-256 only. AssetTransport
 provides binary streams and a live local generation root; DirectoryAssetTransport is
 the built-in local-only source. sync_assets stages all files, verifies their content,
 then publishes one immutable generation directory. Reuse verifies metadata, exact tree
 and all hashes; corruption preserves evidence and aborts. Private AC/MCP/Builder paths
-share current root/cancellation checkpoints. Causal bundle coordination and explicit native profile loading remain C3; this layer never replaces active workspace files or runs scripts.
+share current root/cancellation checkpoints. Causal bundle coordination is described below; explicit disabled native profile loading remains C3. This layer never replaces active workspace files or runs scripts.
 
 Seven dependency-free source adapters capture selected scripts, locator repositories,
 hotkey/trigger metadata, address-book entries, JSON settings and saved native workspace preferences. A lazy owned SQLite
@@ -94,7 +94,7 @@ are resolved (absolute path entropy is not a credential classification), and vau
 through the verified asset generation layer with hotkeys/triggers disabled. Four private
 AC/MCP/Builder commands use the same lazy descriptor factory and live root/cancellation
 checks. Source/outbox/full-resync coordination is described below;
-live GUI preference application and Sync UI remain C3.
+explicit live GUI preference application and Sync UI are described below.
 
 WorkspaceSettingsSyncAdapter adds the workspace causal section for saved native GUI
 INI preferences. Only theme/font_pt/navigation_visible/navigation_width are captured;
@@ -115,7 +115,16 @@ the durable control-intent transaction. Adapter ledger schema 2 adopts each conf
 new-generation baseline once, retaining later local edits and compact deletion fences.
 Source/asset-cache/state/outbox roles cannot overlap; selected kind/state bindings remain fixed.
 Private API/AC/MCP/Builder use live roots/cancellation and per-RPC environment credentials.
-Materialization remains inert; GUI application and native loading remain open C3 work. The two-source example and regressions use temporary loopback only.
+Materialization remains inert; explicit disabled native loading remains open C3 work. The two-source example and regressions use temporary loopback only.
+
+The lazy config_sync_tab uses immutable JSON requests and the shared GUI-thread relay.
+config_sync_worker captures context/authority, refreshes DRIVE at core checkpoints and queued
+delivery, and cooperatively cancels without relabelling committed writes. Actions expose
+status/capture/sync/controls/review/resolve/materialize and explicit reviewed preference
+application. Qt-free workspace_review compares the exact reviewed head set, refuses
+conflicts and returns four canonical defaults/values without observing source files.
+MainWindow validates all values before live theme/font/navigation mutation; normal close
+persists them. Receipt never changes a running window or activates native definitions.
 
 Referenced assets add explicit private alias/destination bindings and portable full/chunk
 SHA-256 descriptors. Source capture freezes bytes in an account/endpoint-scoped sibling

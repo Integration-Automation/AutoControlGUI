@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add the lazy Workspace Sync tab with Actions-menu status/capture/sync, peer controls,
+  exact causal review/resolution, inert publication and explicit live GUI preference application.
+  SyncWorkspace.preferences(observed=...) and the existing AC/MCP/Builder preferences operation
+  require the exact conflict-free reviewed workspace heads. Received preferences stay inert
+  until explicit application; workers preserve captured authority, cancellation and close safety.
+
 - Add experimental content-addressed referenced assets through SyncAssetBlob/SyncAssetReference,
   durable account-isolated SyncAssetStore and resumable SyncAssetHTTPClient. Private bindings.assets
   and asset_cache_path connect real source files to causal versions and existing AC/MCP/Builder

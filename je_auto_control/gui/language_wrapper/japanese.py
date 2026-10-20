@@ -1379,3 +1379,66 @@ japanese_word_dict.update({
         "じて開き直してから置き換えてください。"
     ),
 })
+
+japanese_word_dict.update({
+    'tab_config_sync': 'ワークスペース同期',
+    'config_sync_notice': (
+        '各操作は Actions メニューから明示的に実行します。設定を適用する前にワークスペース'
+        'のバージョンを確認してください。公開されたファイルは自動起動しません。'
+    ),
+    'config_sync_configuration': 'プライベート設定 JSON',
+    'config_sync_configuration_hint': (
+        'endpoint、user_id、outbox_path、profiles を含む '
+        'schema_version 1 の設定を貼り付けます。パスはローカルに保持されます。'
+    ),
+    'config_sync_secret_env': 'シークレットの環境変数名',
+    'config_sync_timeout': 'リクエストのタイムアウト（秒）',
+    'config_sync_peer': '無効にするピア',
+    'config_sync_discard': '完全再同期で未送信の編集を破棄することを許可',
+    'config_sync_target': '未起動ファイルの出力先ディレクトリ',
+    'config_sync_kind': '設定の種類',
+    'config_sync_resolution_value': '競合の解決値 JSON',
+    'config_sync_deleted': '削除として解決',
+    'config_sync_entry': '項目',
+    'config_sync_origin': '発生元',
+    'config_sync_change': '変更 ID',
+    'config_sync_version': 'バージョンベクトル',
+    'config_sync_deleted_column': '削除済み',
+    'config_sync_value': '値',
+    'config_sync_status': 'ローカル状態を確認',
+    'config_sync_capture': 'ローカル変更をオフラインで記録',
+    'config_sync_sync': '選択した設定を同期',
+    'config_sync_register': 'このピアを登録',
+    'config_sync_ack': '受信したリビジョンを確認',
+    'config_sync_review': '現在の設定バージョンを確認',
+    'config_sync_resolve': '選択した項目を解決',
+    'config_sync_materialize': '未起動ファイルを出力',
+    'config_sync_preferences': '確認済みの GUI 設定を適用',
+    'config_sync_retire': '指定したピアを無効化',
+    'config_sync_collect': '確認済みの削除記録を回収',
+    'config_sync_full_resync': '完全再同期を実行',
+    'config_sync_cancel': '現在の操作をキャンセル',
+    'config_sync_review_preferences_first': '設定を適用する前に workspace を確認してください。',
+    'config_sync_select_head_first': '設定を確認して項目を選択してください。',
+    'config_sync_value_too_large': '解決値の JSON が 1 MiB を超えています。',
+    'config_sync_window_required': (
+        'GUI 設定を適用するにはメインウィンドウから同期を開いてください。'
+    ),
+    'config_sync_last_sync': '最後に同期が成功したリビジョン',
+    'config_sync_state': '状態',
+    'config_sync_revision': 'リビジョン',
+    'config_sync_pending': '未送信の操作',
+    'config_sync_conflicts': '競合数',
+    'config_sync_unresolved': '未解決の参照数',
+    'config_sync_idle': '操作待ち',
+    'config_sync_busy': '現在の処理が終了するまでお待ちください。',
+    'config_sync_running': '処理中…',
+    'config_sync_cancelling': 'キャンセル要求済み…',
+    'config_sync_cancelled': 'キャンセル済み',
+    'config_sync_done': '操作が完了しました。結果を確認してください。',
+    'config_sync_applied': '確認済みの GUI 設定を適用しました',
+    'config_sync_error': '操作に失敗しました',
+    'config_sync_interrupted': (
+        '処理が中断しました。再試行の前にローカル状態を確認してください。'
+    ),
+})

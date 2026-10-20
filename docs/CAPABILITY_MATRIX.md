@@ -71,7 +71,7 @@ HTTP route now validate authoritative membership/epoch transitions, explicit pee
 acknowledgements and payload collection with permanent deletion fences. Tests cover
 stale CAS, historical retries, forbidden legacy overwrites, retained alternatives,
 fabricated acknowledgements, obsolete epochs and explicit restoration after GC.
-Explicit CausalSyncClient/outbox HTTP delivery now has controlled tests for uncertain accepted sends, exact restart retry before fetch, bounded definite-rejection rebasing, operation-ID conflicts, retired peers, credentials, stale leases and atomic snapshot rollback/fork refusal. Durable explicit peer controls and atomic local full-resync now cover registration, ack/collection, retirement, uncertain restart retries, compact historical receipts, leases, pending-retirement consent and generation adoption. AC/MCP/Builder share the private control/status surface; the loopback example needs no optional web framework. Coordinated source workspaces are covered below; referenced assets are covered below; sync UI remains C3 work.
+Explicit CausalSyncClient/outbox HTTP delivery now has controlled tests for uncertain accepted sends, exact restart retry before fetch, bounded definite-rejection rebasing, operation-ID conflicts, retired peers, credentials, stale leases and atomic snapshot rollback/fork refusal. Durable explicit peer controls and atomic local full-resync now cover registration, ack/collection, retirement, uncertain restart retries, compact historical receipts, leases, pending-retirement consent and generation adoption. AC/MCP/Builder share the private control/status surface; the loopback example needs no optional web framework. Coordinated source workspaces are covered below; referenced assets are covered below; Sync UI controlled coverage is described below.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
@@ -359,7 +359,7 @@ Explicit local asset-generation API/AC/MCP/Builder paths have controlled size/ha
 late-file failure, cancellation, live-root revocation, concurrent publication and cache
 tampering coverage. Whole bundles publish only after every file is verified. The example
 uses temporary local files and zero network/device calls. Configuration adapters and
-referenced assets are covered below; synchronization UI remains C3. Windows symlink creation may skip
+referenced assets are covered below; controlled synchronization UI is covered below. Windows symlink creation may skip
 locally when the account lacks that filesystem capability.
 
 Seven local configuration adapters have controlled tests against actual JSON script files,
@@ -371,8 +371,8 @@ profile generation. AC/MCP/Builder share private DRIVE and live root/cancellatio
 Missing references and native binding type mismatches persist for review but block complete
 publication. This establishes local capture/inert materialization, with no script execution,
 vault lookup or listener startup; coordinated loopback convergence is covered below.
-Live GUI preference application and explicit native profile loading,
-Sync UI and folder/clipboard/disconnection regression remain in Progress.md.
+Explicit disabled native profile loading and folder/clipboard/disconnection
+regression remain in Progress.md; live GUI preference application is covered below.
 
 Controlled native-definition numeric tests refuse positive and negative 401-digit
 JSON integers with ConfigSyncError before creating adapter storage.
@@ -387,8 +387,7 @@ concurrent values, gates exact reviewed resolution and emits versioned removals.
 keys, wrong native types, extreme bounds, malformed/oversized INI fail before state I/O.
 Tests compare native group/key case, exclude Python DEFAULT inheritance and confirm that
 explicit new-GUI loading from a working copy preserves the immutable generation and the
-current workspace. Seven domains publish together through AC/MCP/Builder. Current live-GUI
-application and Sync UI coordination remain open; no native device acceptance is added.
+current workspace. Seven domains publish together through AC/MCP/Builder. Explicit live-GUI application and Sync UI coordination are covered below; no native device acceptance is added.
 
 Coordinated SyncWorkspace tests cover offline idempotent capture, two-source concurrent
 conflicts/exact resolution, immutable generation publication, uncertain exact PUT retries,
@@ -401,7 +400,7 @@ coordinator leases, credential rotation/short masks and private INI error lines 
 controlled regressions. AC/MCP/Builder round-trip and DRIVE/prestart refusal are covered.
 The real temporary two-source loopback example converges without executing scripts or
 changing active preferences. This establishes local HTTP integration, not device or paid
-API acceptance. Referenced assets are covered below; Sync UI remains tracked in Progress.md.
+API acceptance. Referenced assets are covered below; controlled Sync UI integration is covered below.
 
 Referenced asset tests verify durable per-account chunks/full-hash publication, exact
 retries, late SQL receipt rollback, foreign/future database refusal, byte/object/user
@@ -415,3 +414,13 @@ fix relative asset paths following later cwd changes and resolution before local
 The actual temporary stdlib loopback example transfers a real multi-chunk PNG and script
 without execution, GUI starts, native device calls or active preference changes. Optional
 FastAPI route tests skip when its extra is absent; local controlled routes are exercised.
+
+Offscreen Sync UI tests run local capture/status on a background worker and real stdlib
+loopback registration/synchronization. Receipt leaves the active window unchanged; exact
+workspace review followed by explicit application updates theme/font/navigation and normal
+close persists only the native preference whitelist. Concurrent alternatives resolve against
+all reviewed entry heads. Source selection and close invalidate old results; late cancellation
+blocks preference delivery. Captured contexts, stored-role revocation at core checkpoints and
+queued delivery, pre-cancellation, bounded/finite JSON and network-secret error masking have
+controlled tests. Headless API/AC/MCP/Builder share the exact reviewed preference operation.
+This covers synthetic/offscreen/loopback behavior; device and paid API acceptance stays deferred.

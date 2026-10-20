@@ -1,5 +1,6 @@
 """Top-level window: menu bar, feature navigation, tabbed workspace, themes, live language switching."""
 import sys
+from typing import cast
 
 from PySide6.QtCore import QEvent, QObject, QSettings, Qt
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QKeySequence
@@ -16,6 +17,8 @@ from je_auto_control.gui.theme import (
     THEMES, apply_theme, font_rule, prepare_application, theme_named,
 )
 from je_auto_control.gui.workspace_settings import WorkspacePreferences, default_settings
+from je_auto_control.utils.config_sync.contract import ConfigSyncError
+from je_auto_control.utils.config_sync.workspace_preferences import _DEFAULTS, _validate_workspace_record
 
 
 def _t(key: str, default: str = "") -> str:
@@ -232,6 +235,26 @@ class AutoControlGUIUI(QMainWindow):
         self._theme_name = tokens.name
         self._theme_stylesheet = apply_theme(self, tokens)
         self._apply_font_pt(self._user_font_pt)
+
+    def apply_workspace_preferences(self, values: dict[str, object]) -> None:
+        """Explicitly apply all four canonical preferences on the GUI thread; persist through normal window close."""
+        if set(values) != set(_DEFAULTS):
+            raise ConfigSyncError('applying workspace preferences requires all four supported keys')
+        for key, value in values.items():
+            _validate_workspace_record(key, {'value': value})
+        self._user_font_pt = cast(int, values['font_pt'])
+        self.set_theme(cast(str, values['theme']))
+        self.resizeDocks([self._navigation_dock], [cast(int, values['navigation_width'])], Qt.Orientation.Horizontal)
+        self._navigation_width = cast(int, values['navigation_width'])
+        self._navigation_dock.setVisible(cast(bool, values['navigation_visible']))
+        for action in self.findChildren(QAction):
+            data = action.data()
+            if not action.isCheckable():
+                continue
+            if isinstance(data, str) and data in THEMES:
+                action.setChecked(data == self._theme_name)
+            elif isinstance(data, int) and not isinstance(data, bool) and data in {0, 10, 12, 14, 16, 20}:
+                action.setChecked(data == self._user_font_pt)
 
     def _rebuild_tabs_menu(self) -> None:
         if self._view_menu is None:

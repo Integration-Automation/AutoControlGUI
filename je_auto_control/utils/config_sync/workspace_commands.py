@@ -6,6 +6,7 @@ from je_auto_control.utils.config_sync.adapter_schema import AdapterKind, KINDS
 from je_auto_control.utils.config_sync.contract import ConfigSyncError
 from je_auto_control.utils.config_sync.control_models import ControlKind, SyncControlRequest
 from je_auto_control.utils.config_sync.workspace_sync import SyncWorkspace
+from je_auto_control.utils.config_sync.workspace_review import reviewed_ids
 from je_auto_control.utils.config_sync.workspace_transport import network_options
 from je_auto_control.utils.config_sync.versions import _key_text
 from je_auto_control.utils.path_guard import PathPolicy
@@ -13,7 +14,8 @@ from je_auto_control.utils.path_guard import PathPolicy
 _NETWORK = {'secret_env', 'timeout_s', 'policy', 'max_rebases'}
 _CONTROLS = {'register', 'ack', 'retire', 'collect', 'full_resync'}
 _FIELDS = {'status': set(), 'capture': set(), 'sync': _NETWORK, 'review': {'kind'},
-           'resolve': {'kind', 'entry_id', 'value', 'observed', 'is_deleted'}, 'materialize': {'target_root'}}
+           'resolve': {'kind', 'entry_id', 'value', 'observed', 'is_deleted'}, 'materialize': {'target_root'},
+           'preferences': {'observed'}}
 
 
 def _sync_workspace(configuration: dict[str, object], operation: str = 'status',
@@ -34,6 +36,8 @@ def _sync_workspace(configuration: dict[str, object], operation: str = 'status',
 
 
 def _profile_operation(workspace: SyncWorkspace, operation: str, settings: dict[str, object]) -> dict[str, object]:
+    if operation == 'preferences':
+        return workspace.preferences(observed=cast(list[str], settings['observed']))
     if operation == 'materialize':
         result = workspace.materialize(cast(str, settings['target_root']))
         return dict(asdict(result), directory=str(result.directory))
@@ -70,6 +74,11 @@ def _settings(operation: str, options: Optional[dict[str, object]]) -> dict[str,
 
 
 def _local_arguments(operation: str, settings: dict[str, object]) -> None:
+    if operation == 'preferences':
+        observed = settings.get('observed')
+        if not isinstance(observed, list):
+            raise ConfigSyncError('workspace preferences require an explicit reviewed identifier list')
+        reviewed_ids(observed)
     if operation == 'materialize':
         target = settings.get('target_root')
         if not isinstance(target, str) or not target.strip():

@@ -8794,7 +8794,8 @@ def sync_adapter_tools() -> List[MCPTool]:
                 "Requires DRIVE/current roots even for status; received work is never activated.",
                 input_schema=schema({"configuration": {"type": "object"},
                     "operation": {"type": "string", "default": "status", "enum": ["status", "capture", "sync",
-                        "review", "resolve", "materialize", "register", "ack", "retire", "collect", "full_resync"]},
+                        "review", "resolve", "preferences", "materialize", "register", "ack", "retire", "collect",
+                        "full_resync"]},
                     "options": {"type": "object"}}, required=["configuration"]),
                 handler=hq.sync_workspace, annotations=SIDE_EFFECT_ONLY),
         MCPTool(name="ac_sync_adapter_snapshot", description="Capture explicit script/locator/hotkey/trigger/"

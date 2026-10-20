@@ -1495,3 +1495,65 @@ english_word_dict.update({
         "Script Builder changed after the diff baseline. Close and reopen "
         "journal review before replacing its actions."),
 })
+
+english_word_dict.update({
+    'tab_config_sync': 'Workspace Sync',
+    'config_sync_notice': (
+        'Actions menu runs each operation explicitly. '
+        'Review workspace heads before applying '
+        'preferences. Published generations remain '
+        'inert.'
+    ),
+    'config_sync_configuration': 'Private configuration JSON',
+    'config_sync_configuration_hint': (
+        'Paste a schema_version 1 workspace descriptor'
+        ' with endpoint, user_id, outbox_path and '
+        'selected profiles. Paths stay local.'
+    ),
+    'config_sync_secret_env': 'Secret environment variable name',
+    'config_sync_timeout': 'Request timeout (seconds)',
+    'config_sync_peer': 'Peer to retire',
+    'config_sync_discard': 'Allow full resync to discard pending edits',
+    'config_sync_target': 'Inert generation target directory',
+    'config_sync_kind': 'Selected profile kind',
+    'config_sync_resolution_value': 'Resolution value JSON',
+    'config_sync_deleted': 'Resolve as deleted',
+    'config_sync_entry': 'Entry',
+    'config_sync_origin': 'Origin',
+    'config_sync_change': 'Change identifier',
+    'config_sync_version': 'Version vector',
+    'config_sync_deleted_column': 'Deleted',
+    'config_sync_value': 'Value',
+    'config_sync_status': 'Inspect local status',
+    'config_sync_capture': 'Capture local changes offline',
+    'config_sync_sync': 'Synchronize selected profiles',
+    'config_sync_register': 'Register this peer',
+    'config_sync_ack': 'Acknowledge received revision',
+    'config_sync_review': 'Review current profile heads',
+    'config_sync_resolve': 'Resolve selected entry',
+    'config_sync_materialize': 'Publish an inert generation',
+    'config_sync_preferences': 'Apply reviewed GUI preferences',
+    'config_sync_retire': 'Retire specified peer',
+    'config_sync_collect': 'Collect acknowledged deletions',
+    'config_sync_full_resync': 'Perform full resync',
+    'config_sync_cancel': 'Cancel current operation',
+    'config_sync_review_preferences_first': 'Review the workspace profile before applying its preferences.',
+    'config_sync_select_head_first': 'Review a profile and select an entry first.',
+    'config_sync_value_too_large': 'Resolution JSON exceeds one MiB.',
+    'config_sync_window_required': 'Open Sync inside the main window to apply GUI preferences.',
+    'config_sync_last_sync': 'Last successful sync revision',
+    'config_sync_state': 'State',
+    'config_sync_revision': 'Revision',
+    'config_sync_pending': 'Pending operations',
+    'config_sync_conflicts': 'Conflicts',
+    'config_sync_unresolved': 'Unresolved references',
+    'config_sync_idle': 'Ready for an explicit operation',
+    'config_sync_busy': 'Wait for the current worker to finish.',
+    'config_sync_running': 'Working…',
+    'config_sync_cancelling': 'Cancellation requested…',
+    'config_sync_cancelled': 'Cancelled',
+    'config_sync_done': 'Operation completed; review the result.',
+    'config_sync_applied': 'Reviewed GUI preferences applied',
+    'config_sync_error': 'Operation failed',
+    'config_sync_interrupted': 'Worker interrupted; inspect local status before retrying.',
+})

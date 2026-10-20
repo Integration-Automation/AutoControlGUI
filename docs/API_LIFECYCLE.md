@@ -191,7 +191,7 @@ working file. No existing active workspace is overwritten or reloaded on receipt
 
 SyncWorkspace, SyncWorkspaceError and WorkspaceSyncResult are experimental. The private
 workspace descriptor is schema 1. AC_sync_workspace/ac_sync_workspace/Builder Data share
-local capture/status/review/resolve/materialize and explicit network sync/peer controls.
+local capture/status/review/resolve/preferences/materialize and explicit network sync/peer controls.
 All server modes require DRIVE. A short workspace lease, atomic reset intent/source
 fingerprints and idempotent adapter-generation adoption preserve uncertain retries and
 prevent retired source replay. Missing legacy reset baselines require a new coordinated
@@ -210,3 +210,11 @@ Signaling adds optional create_app asset_store_path and --asset-store, with the 
 authentication/pre-body size guard. Server/client stores have explicit byte/object/user
 quotas; immutable content has no automatic garbage collection. Older asset-unaware
 participants require upgrade before processing new typed references.
+
+The experimental preferences operation requires an explicit bounded observed change-ID list
+(empty is a valid reviewed empty profile). It compares the exact current workspace heads,
+refuses concurrent alternatives and returns four canonical values using safe defaults for
+missing/deleted keys. No source/network/credential reads or Qt imports are added. The lazy
+Workspace Sync GUI exposes explicit reviewed application on its main window, separate from
+receipt/publication. Captured authority refreshes during work and before queued delivery;
+cancellation prevents late preference application while completed durable writes remain committed.

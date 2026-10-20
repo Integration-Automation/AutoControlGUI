@@ -118,6 +118,11 @@ SyncWorkspace 與 AC_sync_workspace／ac_sync_workspace（Builder Data）協調�
 持久捕捉／投遞與完整重同步來源基準。Status 只讀本機；所有 server 模式需要 DRIVE。
 接收資料保持未啟用；私有 schema-1 描述、精確檢視／解決、lease 與遷移邊界見因果指南。
 
+延遲建立的「工作區同步」分頁透過 Actions 提供相同操作。「套用已檢視的 GUI 偏好設定」
+使用 API／AC／MCP／Builder 共用的 preferences(observed=change_ids)，先拒絕過期或有衝突
+的版本，才會改動目前視窗。Status／capture／review／發布不會自動套用偏好。Worker 保留
+context、重驗擷取的 DRIVE 權限，並捨棄已取消或過期的偏好結果。
+
 引用資產使用獨立的延遲 SyncAssetStore，由 signaling --asset-store 與第一版具驗證
 chunk／blob 路由提供。SyncWorkspace 固定 asset_cache_path，在新因果定義前上傳封存
 內容，再原子發布原生中繼資料／資產。既有 AC／MCP／Builder 描述加入明確 bindings.assets

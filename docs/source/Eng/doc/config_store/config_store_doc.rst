@@ -116,7 +116,7 @@ native profiles through the asset layer (API/AC/MCP/Builder). Named local/vault
 references avoid selected machine values and recognized credentials in portable
 entries. Apply never changes active sources; hotkeys/triggers remain disabled.
 See the causal guide for private schema-1 profiles, exact conflict resolution and
-coordinated source/outbox/asset recovery and remaining live GUI integration.
+coordinated source/outbox/asset recovery and explicit live GUI integration.
 
 Native numeric definitions check supported ranges before finite conversion.
 Extreme JSON integers fail with ConfigSyncError before adapter storage is opened.
@@ -135,6 +135,12 @@ SyncWorkspace and AC_sync_workspace/ac_sync_workspace (Builder Data) coordinate 
 profiles, durable capture/delivery and prepared full-resync baselines. Status is local;
 all server modes require DRIVE. Incoming data stays inert. See the causal guide for the
 private schema-1 descriptor, exact review/resolution, lease and migration boundaries.
+
+The lazy Workspace Sync tab exposes the same operations through Actions. Its explicit
+Apply reviewed GUI preferences action uses preferences(observed=change_ids), shared by
+API/AC/MCP/Builder, to refuse stale or conflicted heads before changing the running window.
+Status/capture/review/publication never apply preferences automatically. Workers preserve
+context, refresh captured DRIVE authority and discard cancelled/stale preference results.
 
 Referenced assets use a separate lazy SyncAssetStore selected by signaling --asset-store
 and version-one authenticated chunk/blob routes. SyncWorkspace pins its asset_cache_path,

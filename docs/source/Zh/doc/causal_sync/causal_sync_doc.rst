@@ -388,8 +388,8 @@ hotkeys／triggers／address_book／settings／workspace。Source 擇一使用�
 schema-1 熱鍵／觸發器陣列或一般設定物件。描述內含本機路徑與綁定值，必須保持私有；
 只有可攜 entries 才放上 wire。``python -m examples.sync_adapters`` 使用六種真實來源產生
 十二個暫存原生／中繼檔，不執行腳本、不註冊接收熱鍵／觸發器、不讀 vault、不連網。
-來源／outbox 與完整重同步基準協調見下方。GUI 即時偏好套用、明確原生載入、
-Sync UI 與 folder／clipboard／斷線回歸仍列於 Progress.md 的 C3。
+來源／outbox 與完整重同步基準協調、GUI 即時偏好套用及 Sync UI 見下方。
+明確停用原生 profile 載入與 folder／clipboard／斷線回歸仍列於 Progress.md 的 C3。
 
 日誌沿用既有的保守秘密欄位政策：內嵌定義只要包含 password 欄位，即使值為參照也會遮罩，
 候選產生器因此排除該動作，不重建不完整的 apply／resolve。私有參照描述與發布命令仍可
@@ -433,8 +433,8 @@ JSON boolean、navigation_width 為 200–1200 的整數；不接受參照或未
 明確交給新 GUI 載入前，先將產生的 workspace.ini 複製為獨立且可寫的工作檔，再以
 ``QSettings(working_file, QSettings.Format.IniFormat)`` 傳給
 ``AutoControlGUIUI(settings=...)``。不要讓 GUI 直接寫入不可變快取；GUI 關閉時會保存
-偏好。Capture 讀已保存值，接收版本不會重載執行中的視窗。專用 Sync UI 與即時偏好套用
-仍屬 C3 待辦。``python -m examples.sync_workspace`` 示範捕捉、未啟用發布與明確工作副本，
+偏好。Capture 讀已保存值，接收版本不會重載執行中的視窗。專用 Sync UI 的明確即時套用
+見下方。``python -m examples.sync_workspace`` 示範捕捉、未啟用發布與明確工作副本，
 不匯入 Qt、不呼叫網路／裝置／API，也不修改既有工作區。
 
 
@@ -487,12 +487,42 @@ observed=change_ids, is_deleted=False)`` 依精確檢視集合建立並排入明
 私有 ``AC_sync_workspace``／``ac_sync_workspace``／Builder Data 接受 configuration、
 operation（預設 status）與可選 options；所有模式都需要 DRIVE／目前 roots。
 status／capture 不接受 options；review 使用 kind；resolve 使用 kind／entry_id／value／
-observed／is_deleted；materialize 使用 target_root。網路操作 sync 與 register／ack／collect／
+observed／is_deleted；preferences 使用 observed；materialize 使用 target_root。網路操作 sync 與 register／ack／collect／
 retire／full_resync 接受 secret_env／timeout_s／policy／max_rebases；控制另依規則接受
 operation_id／peer_id／discard_pending。
 ``python -m examples.sync_workspace_http`` 以兩組真實暫存來源與 loopback HTTP 示範離線並行、
-精確解決、重啟、未啟用發布與退休編輯不重播。引用資產見下方；GUI 即時套用、明確原生載入、
-Sync UI 與 folder／clipboard／斷線回歸仍在 Progress.md；不代表真機或付費 API 驗收。
+精確解決、重啟、未啟用發布與退休編輯不重播。引用資產及 GUI 即時套用見下方；明確停用原生
+profile 載入與 folder／clipboard／斷線回歸仍在 Progress.md；不代表真機或付費 API 驗收。
+
+
+明確的 Sync UI 與即時偏好套用
+----------------------------------------------------------------
+
+從功能導覽或 View → Tabs 開啟「工作區同步」。這個延遲建立的分頁在開啟時不讀來源或
+憑證、不開資料庫、不捕捉變更也不連線。貼上上述明確的私人 schema-1 工作區設定。
+所有操作都在 Actions；網路憑證只填環境變數名稱，不填秘密值。目標資料夾僅供
+「發布未啟用的檔案」使用；停用裝置須明確指定識別碼，完整重同步須勾選丟棄待送編輯。
+
+「檢查本機狀態」只讀本機中繼資料；「離線擷取本機變更」持久排入編輯；「同步所選設定」
+執行完整網路協調。畫面顯示修訂版、待送操作、衝突、未解析參照與最近成功同步版本。
+只有 ready 且沒有待送操作的 sync 更新最近成功標記；status／capture／review 不代表投遞成功。
+
+選取設定類別後執行「檢視目前設定版本」。每列保留項目、來源、變更識別碼、版本向量、
+刪除旗標與值。選取其中一個版本、編輯解決值 JSON 或刪除旗標，再執行「解決所選項目」。
+請求會觀察該項目所有已檢視版本，不以時間戳選勝者。變更設定／類別、解決或關閉會作廢對應檢視。
+
+要改動目前 GUI，選取 ``workspace``、檢視版本，再執行「套用已檢視的 GUI 偏好設定」。
+``SyncWorkspace.preferences(observed=change_ids)`` 與 AC／MCP／Builder 的 ``preferences``
+操作比對完整且精確的已檢視 workspace head 集合，拒絕過期檢視或未解並行版本，只回傳
+theme／font_pt／navigation_visible／navigation_width。明確檢視的空集合有效；缺少或
+刪除的值採 dark／0／true／260 預設。此讀取不觀察來源檔案，也不查憑證。主視窗在套用
+主題、字級與導覽面板前先驗證所有值；正常關閉才透過注入的 QSettings 保存，其他私有值不受影響。
+接收、檢視或發布資料都不會自動套用偏好設定。
+
+Worker 保留不可變 JSON 輸入與呼叫者 context，在 core 檢查點與排隊 GUI 結果交付時重驗
+擷取的 DRIVE 權限。Actions 保持可回應；取消在檢查點停止，關閉後捨棄延遲結果。
+過晚的取消仍阻止偏好套用，但已提交的持久操作維持已提交。不新增原生腳本執行、熱鍵／觸發器
+啟用、真機或付費 API 驗收；明確停用原生 profile 載入仍列於 Progress.md。
 
 
 引用資產同步
@@ -557,5 +587,5 @@ unresolved，不產生只有腳本的版本。完整重同步基準採用會抑�
 註冊熱鍵、啟用觸發器或替換目前偏好。
 ``python -m examples.sync_referenced_assets`` 經暫存 stdlib loopback HTTP 傳送真實的
 多分塊 PNG／腳本並發布三個未啟用檔案，不需可選 web framework 或外部服務。Sync UI／
-即時套用／原生載入，以及獨立 folder／clipboard／斷線回歸仍在 Progress.md；真機與付費
+即時套用見上方；明確停用原生載入與獨立 folder／clipboard／斷線回歸仍在 Progress.md；真機與付費
 驗收維持暫緩。
