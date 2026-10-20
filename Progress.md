@@ -20,6 +20,7 @@
 - **F2 其餘**：計畫指定的 `WorkspaceShell` 介面、右側可收合詳情，以及各面板的空白／錯誤／permission states 還沒全面交付。
 - **F3**（共用 worker、取消、關閉時不碰已銷毀物件、`webrtc_panel.py` 拆分）與 **F4**（啟動／記憶體基準、mixed-DPI、
   功能對等測試）尚未開始。
+- **F3 Qt 原生釋放驗收**：`test/unit_test/headless/test_remote_desktop_host_lifecycle.py:118` 的 Linux `QPaintDevice` 崩潰仍需以修正後的 CI 驗證。
 
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
 索引與查詢指令在它的 README），相容性變更寫進 [CHANGELOG.md](CHANGELOG.md)；完成的項目

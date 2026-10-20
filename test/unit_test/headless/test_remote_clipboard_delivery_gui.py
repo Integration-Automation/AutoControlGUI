@@ -1,6 +1,8 @@
 """Actual queued Qt clipboard callbacks retain their concrete viewer and original local authority."""
 from threading import Thread
 from types import SimpleNamespace
+import gc
+import weakref
 
 import pytest
 
@@ -171,6 +173,11 @@ def test_gui_clipboard_boundary_retains_wrapped_original_controls(qapp, applied,
     finally:
         panel._disconnect()
         panel.deleteLater()
+        # Parametrized exception instances outlive this test; their frames must not own retired Qt wrappers.
+        original.__traceback__ = None
+        original.__context__ = None
+        original.__cause__ = None
+        caught = delivery = None
 
 
 def test_gui_delivery_runs_as_its_registrant_and_restores_the_ambient_user(qapp, tmp_path, monkeypatch):
@@ -216,3 +223,23 @@ def test_gui_delivery_rechecks_ownership_after_refreshing_the_user_store(qapp, a
     finally:
         panel._disconnect()
         panel.deleteLater()
+
+
+def test_control_exception_fixtures_do_not_retain_deleted_qt_panels(qapp, applied, monkeypatch):
+    from PySide6.QtCore import QCoreApplication, QEvent
+    from je_auto_control.utils.exception.control_signals import OperationCancelledError
+
+    created = []
+    initialise = viewer_panel._ViewerPanel.__init__
+
+    def registered(panel, *args, **kwargs):
+        initialise(panel, *args, **kwargs)
+        created.append(weakref.ref(panel))
+
+    monkeypatch.setattr(viewer_panel._ViewerPanel, '__init__', registered)
+    original = OperationCancelledError('fixture lifetime')
+    test_gui_clipboard_boundary_retains_wrapped_original_controls(qapp, applied, monkeypatch, original)
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    qapp.processEvents()
+    gc.collect()
+    assert created and created[0]() is None, 'the parametrized exception retained a deleted native Qt panel'
