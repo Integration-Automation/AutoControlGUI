@@ -93,6 +93,62 @@ def controls():
             OperationCancelledError('clipboard')]
 
 
+def test_clipboard_receiver_does_not_own_its_peer_without_a_queued_delivery():
+    import weakref
+    from je_auto_control.utils.rbac.deferred import DeferredAuthorization
+    from je_auto_control.utils.remote_desktop.clipboard_delivery import ClipboardReceiver
+
+    pending = []
+    receiver = ClipboardReceiver(DeferredAuthorization.capture(), pending.append)
+    # A normal weak-referenceable peer with its own callback models the SDK's ownership graph.
+    peer = type('Peer', (), {})()
+    peer.callback = receiver
+    receiver.bind(peer)
+    reference = weakref.ref(peer)
+    del peer
+    assert reference() is None and pending == []
+    receiver('text', 'retired')
+    assert pending == []
+
+
+def test_queued_clipboard_receiver_keeps_the_original_peer_and_authority_until_delivery_is_released():
+    import weakref
+    from je_auto_control.utils.rbac.deferred import DeferredAuthorization
+    from je_auto_control.utils.remote_desktop.clipboard_delivery import ClipboardReceiver
+
+    pending = []
+    authority = DeferredAuthorization.capture()
+    receiver = ClipboardReceiver(authority, pending.append)
+    peer = type('Peer', (), {})()
+    receiver.bind(peer)
+    reference = weakref.ref(peer)
+    receiver('text', 'original')
+    assert pending[0].peer is peer and pending[0].authority is authority
+    del peer
+    assert reference() is not None and pending[0].data == 'original'
+    pending.clear()
+    assert reference() is None
+
+
+def test_clipboard_receiver_cannot_retarget_a_dead_original_peer_or_accept_unowned_values():
+    from je_auto_control.utils.rbac.deferred import DeferredAuthorization
+    from je_auto_control.utils.remote_desktop.clipboard_delivery import ClipboardReceiver
+    from je_auto_control.utils.remote_desktop.clipboard_sync import ClipboardSyncError
+
+    pending = []
+    receiver = ClipboardReceiver(DeferredAuthorization.capture(), pending.append)
+    receiver('text', 'before binding')
+    assert pending == []
+    peer = type('Peer', (), {})()
+    receiver.bind(peer)
+    del peer
+    with pytest.raises(ClipboardSyncError, match='already bound'):
+        receiver.bind(type('Replacement', (), {})())
+    receiver = ClipboardReceiver(DeferredAuthorization.capture(), pending.append)
+    with pytest.raises(ClipboardSyncError, match='weak references'):
+        receiver.bind(object())
+
+
 @pytest.mark.parametrize('original', controls(), ids=lambda value: type(value).__name__)
 @pytest.mark.parametrize('boundary', ['viewer', 'host'])
 @pytest.mark.parametrize('wrapped', [False, True])

@@ -15,7 +15,7 @@
 `WIP` — 改版仍缺以下內容；原生平台與正式環境驗收缺口另列於後。
 計畫 D 仍缺 `wrapper/capabilities.py` 的無副作用公開探測、獨立輸入／擷取診斷與
 SDK／AC／MCP／Diagnostics GUI 介面，以及 portal 關閉／恢復與合成器重啟驗收。
-D2 的原生 EI 釋放驗證與 D3 的錄製／全域停止／原生崩潰證據仍缺，詳見計畫與下方生命週期待辦。
+D2 的原生 EI 釋放驗證與 D3 的錄製／全域停止／Windows 原生崩潰證據仍缺，詳見計畫與下方生命週期待辦。
 計畫 E（Android／iOS）、G（MCP 逐步揭露）、H（型別深化與總驗收）尚未開始。F 還缺：
 
 - **Remote Desktop 與 Script Builder 仍在啟動時建立**（預設開啟），啟動時間 2.6–2.7 秒裡大半是它們與門面匯入。
@@ -23,7 +23,7 @@ D2 的原生 EI 釋放驗證與 D3 的錄製／全域停止／原生崩潰證據
 - **F2 其餘**：計畫指定的 `WorkspaceShell` 介面、右側可收合詳情，以及各面板的空白／錯誤／permission states 還沒全面交付。
 - **F3**（共用 worker、取消、關閉時不碰已銷毀物件、`webrtc_panel.py` 拆分）與 **F4**（啟動／記憶體基準、mixed-DPI、
   功能對等測試）尚未開始。
-- **F3 原生釋放驗收**：`test/unit_test/headless/test_remote_desktop_host_lifecycle.py:118,160` 的 Linux segfault 與 `test_remote_desktop_host_id.py` 的 Windows freed-thread-state abort 尚待 Linux GDB artifact 驗收、Windows 原生堆疊與根因修正；需驗證 Qt／背景工作生命週期。
+- **F3 原生釋放驗收**：`test/unit_test/headless/test_remote_desktop_host_lifecycle.py:118,160` 的 Linux Shiboken `runDeletionInMainThread` SIGSEGV 與 `test_remote_desktop_host_id.py` 的 Windows freed-thread-state abort 尚待回呼生命週期修正後的 CI 驗證與根因確認；Windows 原生堆疊仍缺。
 
 **只記未完成的事。** 完成的工作記在 [docs/updates/](docs/updates/README.md)（每月一個批次檔，
 索引與查詢指令在它的 README），相容性變更寫進 [CHANGELOG.md](CHANGELOG.md)；完成的項目

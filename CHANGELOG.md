@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Remove the GUI clipboard callback's strong reference to its own viewer.
+  Disconnect no longer leaves that viewer and its native Qt panel waiting for
+  cyclic GC. Registration binds the original peer weakly once; queued delivery
+  still retains its original peer/authority for ownership checks. Public API,
+  wire data and explicit clipboard behavior remain compatible.
+
 - Wayland native key/button/pointer input stops on portal refusal/timeout,
   incomplete handshake, device pause or revocation instead of implicitly replaying
   through CLI. Forced `libei` also refuses optional absence. Auto mode retains

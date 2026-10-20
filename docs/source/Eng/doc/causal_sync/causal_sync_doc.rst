@@ -924,6 +924,10 @@ while original cancellation and hard-control objects propagate through wrappers 
 Queued GUI delivery captures its concrete viewer and connecting user's authority. Before native
 clipboard writes, explicit reads and subsequent sends, it refreshes permission and ownership.
 Old queued data cannot adopt a replacement viewer, and worker ambient users cannot supply rights.
+Callback registration binds the original viewer weakly once before it starts, so a
+disconnected viewer cannot keep itself and its Qt panel alive until cyclic GC.
+Actual queued deliveries retain the original peer and authority until consumed or
+discarded. A dead registration cannot be rebound to a replacement peer.
 No OS clipboard watcher or automatic reconnection replay is introduced.
 
 Controlled two-viewer channels verify explicit send/broadcast counts with no echo for text and

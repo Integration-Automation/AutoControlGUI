@@ -1,6 +1,7 @@
 """Deliver clipboard data under its captured local authority and concrete connection owner."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable
+import weakref
 
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.remote_desktop.clipboard_sync import ClipboardSyncError
@@ -35,3 +36,27 @@ class ClipboardDelivery:
                 return False
             apply(self.kind, self.data)
         return True
+
+
+@dataclass(frozen=True, eq=False)
+class ClipboardReceiver:
+    """Bind once before starting a peer; callbacks must not make that peer own itself or its Qt panel."""
+    authority: DeferredAuthorization
+    deliver: Callable[[ClipboardDelivery], object]
+    _peer_ref: weakref.ReferenceType[object] | None = field(default=None, init=False, repr=False)
+
+    def bind(self, peer: object) -> None:
+        """Pin the original identity weakly, refusing any later retargeting even after that peer is gone."""
+        if self._peer_ref is not None:
+            raise ClipboardSyncError('the clipboard receiver is already bound to its original peer')
+        try:
+            reference = weakref.ref(peer)
+        except TypeError as error:
+            raise ClipboardSyncError('the clipboard peer must support weak references') from error
+        object.__setattr__(self, '_peer_ref', reference)
+
+    def __call__(self, kind: str, data: Any) -> None:
+        """Keep the concrete origin alive only in an actual queued delivery; retain its original authority."""
+        peer = self._peer_ref() if self._peer_ref is not None else None
+        if peer is not None:
+            self.deliver(ClipboardDelivery(peer, kind, data, self.authority))

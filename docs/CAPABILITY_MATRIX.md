@@ -546,6 +546,11 @@ receiving never triggers push, while two deliberate identical pushes both send. 
 deleted/downgraded users, recheck peer changes during user-store access, preserve the registrant
 instead of an ambient user, and recheck role changes between native read and send. Callback and
 GUI boundaries preserve original wrapped controls; ordinary failures remain logged/contained.
+A forced-GC-disabled offscreen regression requires a disconnected clipboard viewer
+to disappear by ordinary reference release. Callback registration binds weakly once;
+queued delivery retains its original peer/authority and cannot retarget a replacement.
+Controlled TCP frame/input checks no longer leave their viewer panels waiting for GC.
+This lifetime evidence does not by itself identify or accept the outstanding native crashes.
 Existing loopback clipboard and GUI/registry/host-access cases remain passing. Controlled channels
 do not claim new WS framing or real native-clipboard acceptance: framing has its existing tests,
 native clipboard providers are replaced, and physical/paid acceptance stays deferred.

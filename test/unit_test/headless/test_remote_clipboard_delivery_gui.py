@@ -243,3 +243,20 @@ def test_control_exception_fixtures_do_not_retain_deleted_qt_panels(qapp, applie
     qapp.processEvents()
     gc.collect()
     assert created and created[0]() is None, 'the parametrized exception retained a deleted native Qt panel'
+
+
+def test_disconnected_clipboard_callback_does_not_retain_its_own_viewer_until_gc(qapp):
+    panel = _tab()
+    enabled = gc.isenabled()
+    gc.disable()
+    try:
+        peer = panel._own_viewer()
+        reference = weakref.ref(peer)
+        panel._disconnect()
+        del peer
+        assert reference() is None, 'the clipboard callback retained its own viewer and native panel until arbitrary GC'
+    finally:
+        panel._disconnect()
+        panel.deleteLater()
+        if enabled:
+            gc.enable()

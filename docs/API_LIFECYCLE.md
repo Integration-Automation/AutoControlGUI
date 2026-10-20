@@ -360,7 +360,10 @@ Ordinary clipboard callback/provider failures keep their logging/containment beh
 wrapped cancellation/hard signals preserve the original object at SDK/native GUI boundaries.
 
 The Qt-free clipboard_delivery module shares lazy native application and captured ClipboardDelivery
-metadata. GUI callbacks carry the concrete viewer and DeferredAuthorization captured at connect;
+metadata. ClipboardReceiver binds the original peer weakly once before it starts,
+preventing a callback from keeping its own viewer and Qt panel alive until cyclic GC.
+Only actual queued deliveries retain the peer strongly until consumed or discarded.
+GUI callbacks carry the concrete viewer and DeferredAuthorization captured at connect;
 the queued slot checks its current owned viewer and live connection, refreshes the original user
 and rechecks ownership before applying data. Explicit GUI push refreshes before native clipboard
 read and again before network send. Ambient callback-thread users never supply authority.
