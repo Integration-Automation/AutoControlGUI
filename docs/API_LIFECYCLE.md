@@ -1,5 +1,15 @@
 # Public API lifecycle
 
+Wayland native input preserves the existing exception families and signatures.
+LibeiUnavailable/OeffisUnavailable carry internal inert state distinguishing
+optional absence from permission, pause, revocation and protocol failures.
+Auto mode only falls back for optional absence/unclassified legacy adapters;
+explicit libei selection and classified refusals propagate. Cached refusals
+require explicit reset before a fresh permission request; native chord cleanup
+uses its original backend and preserves cancellation. This safety behavior
+adds no facade, AC or MCP command. Public capability probes and independent
+input/capture diagnosis remain open in Progress.md.
+
 The supported entry point for new integrations is `je_auto_control.api`.
 Everything reachable only through `je_auto_control.utils` is internal unless a
 document explicitly says otherwise. The historical top-level package remains

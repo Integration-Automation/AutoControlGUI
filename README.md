@@ -428,8 +428,18 @@ packaging rather than the platform: it goes through Pillow/mss and OpenCV, and
 those from ports and capture, image matching, OCR and action encryption work
 too — `import je_auto_control` no longer requires any of them.
 
-Wayland input falls back to the `ydotool` CLI wherever libei is not
-reachable, and that fallback needs **ydotool 1.0 or newer**. Every argument
+Wayland key/button/pointer input in `auto` mode uses CLI when the optional native
+backend is absent. Once a portal request starts, refusal, timeout, handshake
+failure, device pause or revocation stops input; it never silently switches
+providers. Repeated refused calls retain inert failure state without reopening
+consent. `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei` requires native input;
+`=cli` explicitly selects CLI. After resolving permission, an explicit
+`je_auto_control.linux_wayland.libei.reset_default_backend()` allows a fresh
+request. Interrupted native chords attempt all owned key releases on the same
+backend and preserve the original cancellation. This does not change the
+explicit wtype text path or screen-capture selection.
+
+The `ydotool` fallback needs **ydotool 1.0 or newer**. Every argument
 AutoControl builds arrived in that release; 0.1.x — which is what Debian
 bookworm and every current Ubuntu still ship under that name, and Debian
 trixie ships not at all — answers the same arguments with exit code 0 and no

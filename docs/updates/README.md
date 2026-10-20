@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261021-02 | 2026-10-21 | Keep Wayland native permission and session refusals from selecting CLI | #done #wayland #input #D1 | [2026-10-b](2026-10-b.md) |
 | U-20261021-01 | 2026-10-21 | Release retained Qt clipboard fixture tracebacks | #done #validation-only #qt-lifetime | [2026-10-b](2026-10-b.md) |
 | U-20261020-12 | 2026-10-20 | Bind explicit clipboard transfers to original connections and authority | #done #remote-desktop #clipboard #C3 | [2026-10-b](2026-10-b.md) |
 | U-20261020-11 | 2026-10-20 | Retain folder pending and offline changes through explicit GUI reconnect | #done #remote-desktop #folder-sync #C3 | [2026-10](2026-10.md) |
@@ -420,7 +421,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 2 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 3 |
 | [2026-10.md](2026-10.md) | 2026-10 | 82 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |

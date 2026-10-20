@@ -18,18 +18,18 @@ context and passed it to entry points that take a ``struct ei_device *`` —
 pointer type confusion in a C library — and without ``frame()`` no event
 would have arrived even had the pointers been right.
 
-**Fail-closed by construction.** Every failure below raises
-:class:`LibeiUnavailable`, which ``keyboard`` / ``mouse`` already treat as
-"use the ydotool CLI". The handshake is bounded by a deadline and the result
-is cached per process (:func:`connected_backend`), so a host where libei is
-installed but unusable pays the probe once, not once per keystroke.
+Failures raise :class:`LibeiUnavailable` with explicit state. Optional
+library absence may select CLI in auto mode; permission, pause, revocation
+and protocol failures stop input. The bounded handshake result is cached per
+process (:func:`connected_backend`), including inert refusal metadata, so
+repeated calls neither reopen consent dialogs nor switch input providers.
 
 The enum values are libei's, from ``libei.h``. They are the one part of this
 module that a wrong guess would silently change, so the ``eis-verification``
 job reads them back off a real ``libeis`` server rather than trusting the
 header. A mismatch degrades safely rather than misfiring: capabilities that
-do not match mean no device ever reports them, the handshake times out, and
-the CLI takes over.
+do not match mean no device ever reports them, and the handshake times out
+with a protocol failure instead of implicitly selecting CLI input.
 """
 from __future__ import annotations
 
@@ -43,6 +43,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple
 
 from je_auto_control.linux_wayland import oeffis
 from je_auto_control.linux_wayland._ctypes_bind import BoundSymbols, bind
+from je_auto_control.linux_wayland._input_state import InputFailure, blocked_input
 from je_auto_control.linux_wayland._layout import layout_origin
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -141,6 +142,15 @@ class LibeiUnavailable(AutoControlException, RuntimeError):
     environment fact rather than a caller mistake.
     """
 
+    def __init__(self, *args: object, state: str = 'unavailable', fallback_allowed: bool = True) -> None:
+        super().__init__(*args)
+        self.status = InputFailure(state, 'libei', str(self), fallback_allowed=fallback_allowed)
+
+    @property
+    def state(self) -> str:
+        """Structured authority/protocol refusal, without changing the established exception family."""
+        return self.status.state
+
 
 def _load_symbols() -> Optional[BoundSymbols]:
     """Resolve every libei entry point, or None if one is missing.
@@ -193,6 +203,7 @@ class LibeiBackend:
         self._refs: Set[int] = set()
         self._emulating: Dict[int, bool] = {}
         self._sequence = 0
+        self._revoked = False
         self._lock = threading.RLock()
 
     @property
@@ -203,7 +214,7 @@ class LibeiBackend:
     @property
     def is_connected(self) -> bool:
         """Whether the handshake finished and a device is emulating."""
-        return self._ei is not None and self._has_required_devices()
+        return self._ei is not None and not self._revoked and self._has_required_devices()
 
     @property
     def _api(self) -> BoundSymbols:
@@ -233,6 +244,9 @@ class LibeiBackend:
         with self._lock:
             if self.is_connected:
                 return
+            if self._ei is not None:
+                self._teardown()
+            self._revoked = False
             sender = self._api.ei_new_sender(None)
             if not sender:
                 raise LibeiUnavailable("ei_new_sender returned NULL")
@@ -243,14 +257,17 @@ class LibeiBackend:
                 # Reaching a live device is what makes ei_unref safe on this
                 # libei, so _teardown reads this rather than guessing.
                 self._handshake_complete = True
-            except BaseException:
+            except BaseException as error:
+                authority_started = self._backend_open or self._session is not None
                 self._teardown()
+                _raise_connection_refusal(error, authority_started)
                 raise
 
     def disconnect(self) -> None:
         """Release the devices, the sender, and the portal session."""
         with self._lock:
             self._teardown()
+            self._revoked = True
 
     # --- emission ---------------------------------------------------------
 
@@ -329,7 +346,8 @@ class LibeiBackend:
         try:
             eis_fd, session = self._portal_connect()
         except oeffis.OeffisUnavailable as error:
-            raise LibeiUnavailable(str(error)) from error
+            raise LibeiUnavailable(str(error), state=error.state,
+                                   fallback_allowed=error.status.fallback_allowed) from error
         self._session = session
         code = self._api.ei_setup_backend_fd(self._ei, int(eis_fd))
         if code != 0:
@@ -343,7 +361,7 @@ class LibeiBackend:
             if remaining <= 0:
                 raise LibeiUnavailable(
                     "libei connected but no seat offered both a keyboard and "
-                    "an absolute pointer within the handshake timeout",
+                    "an absolute pointer within the handshake timeout", state='failed',
                 )
             self._pump(min(remaining, 0.25))
 
@@ -368,6 +386,8 @@ class LibeiBackend:
 
     def _on_event(self, event: int) -> None:
         """Answer one libei event."""
+        if self._revoked:
+            return
         event_type = int(self._api.ei_event_get_type(event))
         if event_type == EI_EVENT_SEAT_ADDED:
             self._bind_seat(self._api.ei_event_get_seat(event))
@@ -380,7 +400,8 @@ class LibeiBackend:
         elif event_type == EI_EVENT_DEVICE_REMOVED:
             self._forget_device(self._api.ei_event_get_device(event))
         elif event_type == EI_EVENT_DISCONNECT:
-            raise LibeiUnavailable("the compositor disconnected the sender")
+            self._revoked = True
+            raise LibeiUnavailable("the compositor disconnected the sender", state='revoked')
 
     def _bind_seat(self, seat: int) -> None:
         """Ask a seat for the capabilities this sender emits.
@@ -516,8 +537,10 @@ class LibeiBackend:
         the compositor never sees it, so the two belong in one place.
         """
         with self._lock:
+            if self._revoked:
+                raise LibeiUnavailable('the compositor session was revoked', state='revoked')
             if self._ei is None:
-                raise LibeiUnavailable("libei sender is not connected")
+                raise LibeiUnavailable("libei sender is not connected", state='needs_permission')
             # Pause / resume arrive asynchronously; read them before deciding
             # the device is still usable.
             self._pump(0.0)
@@ -525,6 +548,7 @@ class LibeiBackend:
             if not device or not self._emulating.get(device, False):
                 raise LibeiUnavailable(
                     f"no libei device is emulating capability {capability}",
+                    state='paused' if device else 'revoked',
                 )
             send(device)
             self._api.ei_device_frame(device, self._api.ei_now(self._ei))
@@ -589,6 +613,13 @@ class LibeiBackend:
         return not self._backend_open or self._handshake_complete
 
 
+def _raise_connection_refusal(error: BaseException, authority_started: bool) -> None:
+    """Preserve controls and classify failures after a grant without retaining native resources."""
+    blocked = blocked_input(error)
+    if authority_started and blocked is None and isinstance(error, (RuntimeError, OSError, ValueError, AttributeError)):
+        raise LibeiUnavailable(str(error), state='failed') from error
+
+
 def _quietly(action: Callable[[], object]) -> None:
     """Run a cleanup step; a failing one must not mask the real error."""
     try:
@@ -599,6 +630,7 @@ def _quietly(action: Callable[[], object]) -> None:
 
 _DEFAULT_BACKEND: Optional[LibeiBackend] = None
 _PROBE_FAILED = False
+_BLOCKED_PROBE: Optional[InputFailure] = None
 _DEFAULT_LOCK = threading.Lock()
 
 
@@ -607,10 +639,14 @@ def connected_backend() -> Optional[LibeiBackend]:
 
     The probe involves a portal round trip and a consent dialog, so a host
     where libei cannot be used must pay for that discovery once rather than
-    on every keystroke. Callers treat None as "use the ydotool CLI".
+    on every keystroke. Only optional absence returns None. Authority/protocol
+    refusals retain inert metadata and raise until an explicit reset/retry.
     """
-    global _DEFAULT_BACKEND, _PROBE_FAILED
+    global _DEFAULT_BACKEND, _PROBE_FAILED, _BLOCKED_PROBE
     with _DEFAULT_LOCK:
+        if _BLOCKED_PROBE is not None:
+            raise LibeiUnavailable(_BLOCKED_PROBE.message, state=_BLOCKED_PROBE.state,
+                                   fallback_allowed=_BLOCKED_PROBE.fallback_allowed)
         if _DEFAULT_BACKEND is not None:
             return _DEFAULT_BACKEND
         if _PROBE_FAILED:
@@ -621,8 +657,12 @@ def connected_backend() -> Optional[LibeiBackend]:
             return None
         try:
             backend.connect()
-        except (LibeiUnavailable, OSError, ValueError, AttributeError):
+        except (LibeiUnavailable, OSError, ValueError, AttributeError) as error:
+            blocked = blocked_input(error)
             _PROBE_FAILED = True
+            if blocked is not None:
+                _BLOCKED_PROBE = blocked[1]
+                raise blocked[0]
             return None
         _DEFAULT_BACKEND = backend
         return _DEFAULT_BACKEND
@@ -638,13 +678,14 @@ def get_default_backend() -> Optional[LibeiBackend]:
 
 
 def reset_default_backend() -> None:
-    """Test hook — drop the cached backend so the probe runs fresh."""
-    global _DEFAULT_BACKEND, _PROBE_FAILED
+    """Explicitly retire the cached sender/refusal so a later request may seek a fresh grant."""
+    global _DEFAULT_BACKEND, _PROBE_FAILED, _BLOCKED_PROBE
     with _DEFAULT_LOCK:
         if _DEFAULT_BACKEND is not None:
             _quietly(_DEFAULT_BACKEND.disconnect)
         _DEFAULT_BACKEND = None
         _PROBE_FAILED = False
+        _BLOCKED_PROBE = None
 
 
 __all__ = [

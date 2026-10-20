@@ -403,7 +403,15 @@ OpenCV，而 `opencv-python`、`pillow`、`cryptography` 都没有发 FreeBSD wh
 从 ports 构建之后，截取、图像匹配、OCR 与动作加密也都能用——
 `import je_auto_control` 本身已经不需要它们任何一个。
 
-Wayland 的输入在 libei 走不通时会退回 `ydotool` CLI，而这条退路需要
+Wayland 的按键、按钮与指针输入在 `auto` 模式下，仅在可选原生后端缺失时改用 CLI。
+portal 请求开始后，拒绝、超时、握手失败、设备暂停或权限撤销都会停止输入，
+不会自动切换提供者；重复调用保留不含原生资源的失败状态，不重开同意对话框。
+`JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei` 强制原生输入，`=cli` 明确选择 CLI。
+解决权限问题后，可明确调用 `je_auto_control.linux_wayland.libei.reset_default_backend()`
+以允许重新请求。原生组合键中断时会在同一后端尝试释放所有已按下的按键，并保留原始取消。
+此行为不改变明确的 wtype 文本输入路径或屏幕截取选择。
+
+`ydotool` 退路需要
 **ydotool 1.0 以上**。AutoControl 送的每一个参数都是那一版才有的；0.1.x
 （Debian bookworm 与目前所有 Ubuntu 仍以这个名字提供，Debian trixie 则根本没有）
 对同一批参数返回 0 却不送出任何事件。AutoControl 会检测并直接拒绝，

@@ -1,12 +1,15 @@
 """Wayland keyboard backend (ydotool + wtype CLI bridges).
 
-Each function delegates to one of the two Wayland-native helpers:
+Key presses, releases and chords prefer a granted libei sender. Optional
+absence in auto mode or explicit CLI selection uses these helpers:
 
 * **wtype** for ``type_text`` (Unicode-aware, no key-code juggling);
 * **ydotool** for per-key press / release / hotkey since wtype lacks a
   hold-mode API.
 
-Subprocess invocations are validated and never touch a shell. Missing
+Permission/session refusal never implicitly selects CLI. Interrupted chords
+attempt every owned release on their original backend. Subprocess invocations
+are validated and never touch a shell. Missing
 binaries surface as :class:`AutoControlException` with an actionable
 install hint, so the operator can either install the tool or set
 ``JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11`` to fall back to XWayland.
@@ -21,8 +24,11 @@ from je_auto_control.linux_wayland._detect import (
     WAYLAND_WTYPE, WAYLAND_YDOTOOL, binary_path,
 )
 from je_auto_control.linux_wayland._select_input import emitted
+from je_auto_control.linux_wayland._input_state import raise_if_input_blocked
 from je_auto_control.linux_wayland._ydotool_cli import reject_legacy_cli
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 _INSTALL_HINT_WTYPE = (
@@ -96,7 +102,8 @@ def _try_libei():
     try:
         from je_auto_control.linux_wayland._select_input import active_backend
         return active_backend()
-    except (ImportError, RuntimeError, OSError):
+    except (ImportError, RuntimeError, OSError) as error:
+        raise_if_input_blocked(error)
         return None
 
 
@@ -123,23 +130,49 @@ def hotkey(keycodes: Iterable[int]) -> None:
 def _libei_chord(libei, codes: list) -> bool:
     """Send a whole chord through libei; False means the CLI has to redo it.
 
-    Whatever went down is released in reverse before giving up, so a refusal
-    part-way through cannot leave a modifier held. The CLI then replays the
-    chord from a clean state — and if it was a *release* that was refused,
-    replaying is also what unsticks the key.
+    Attempt every owned release on the same backend before propagating a
+    primary interruption. Revoked devices still refuse releases; that never
+    authorises a CLI replay. Generic optional misses retain legacy fallback.
     """
     pressed = []
     taken = True
-    for code in codes:
-        if not emitted(libei, lambda device, key=code: device.press_key(key)):
-            taken = False
-            break
-        pressed.append(code)
-    for code in reversed(pressed):
-        if not emitted(libei,
-                       lambda device, key=code: device.release_key(key)):
-            taken = False
+    failure = None
+    try:
+        for code in codes:
+            if not emitted(libei, lambda device, key=code: device.press_key(key)):
+                taken = False
+                break
+            pressed.append(code)
+    except BaseException as error:  # reason: release owned keys before propagating the original control/refusal
+        failure = error
+        raise
+    finally:
+        taken = _release_chord(libei, pressed, failure) and taken
     return taken
+
+
+def _release_chord(libei, pressed: list, failure: BaseException | None) -> bool:
+    released = True
+    errors: list[BaseException] = []
+    for code in reversed(pressed):
+        try:
+            released = emitted(libei, lambda device, key=code: device.release_key(key)) and released
+        # pylint: disable-next=broad-exception-caught  # reason: collect controls too so every owned release is attempted
+        except BaseException as error:  # reason: attempt every owned release before choosing the primary interruption
+            errors.append(error)
+    _chord_cleanup_failure(failure, errors)
+    return released
+
+
+def _chord_cleanup_failure(failure: BaseException | None, errors: list[BaseException]) -> None:
+    if failure is not None:
+        raise_caused_run_interruption(failure)
+    for error in errors:
+        raise_caused_run_interruption(error)
+    if errors and failure is None:
+        raise errors[0]
+    for error in errors:
+        autocontrol_logger.debug('native chord release refused: %r', error)
 
 
 def write(text: str) -> None:

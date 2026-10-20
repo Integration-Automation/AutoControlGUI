@@ -76,6 +76,15 @@ Explicit CausalSyncClient/outbox HTTP delivery now has controlled tests for unce
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
 
+Controlled native-library tests cover portal refusal/timeout, incomplete
+handshake, device pause/removal/disconnect, explicit reset/regrant and interrupted
+chord cleanup. These states never implicitly replay key/button/pointer input
+through CLI. Auto fallback remains for optional absence; forced libei refuses
+absence as well. Cached refusal does not reopen consent. Explicit CLI selection
+and the wtype text path remain available. These tests are not acceptance of a
+real consent dialog, compositor restart or native teardown; those gaps and the
+public input/capture capability probe remain in Progress.md.
+
 Linux X11 said `CI/Xvfb` for a long time on the strength of a job that
 imported the package under `xvfb-run` and generated two lines of code. Nothing
 moved a pointer, and every X11 assertion in the suite is made against a mock

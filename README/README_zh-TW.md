@@ -403,7 +403,15 @@ runner。唯一的例外是螢幕擷取，而卡的是打包不是平台：它�
 建起來之後，擷取、影像比對、OCR 與動作加密也都能用——`import je_auto_control`
 本身已經不需要它們任何一個。
 
-Wayland 的輸入在 libei 走不通時會退回 `ydotool` CLI，而這條退路需要
+Wayland 的按鍵、按鈕與指標輸入在 `auto` 模式下，僅於選用原生後端缺席時改用 CLI。
+portal 請求開始後，拒絕、逾時、握手失敗、裝置暫停或權限撤銷都會停止輸入，
+不會自動切換提供者；重複呼叫保留不含原生資源的失敗狀態，不重開同意對話框。
+`JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei` 強制原生輸入，`=cli` 明確選擇 CLI。
+解決權限問題後，可明確呼叫 `je_auto_control.linux_wayland.libei.reset_default_backend()`
+以允許重新請求。原生組合鍵中斷時會在同一後端嘗試釋放所有已按下的按鍵，並保留原始取消。
+此行為不改變明確的 wtype 文字輸入路徑或螢幕擷取選擇。
+
+`ydotool` 退路需要
 **ydotool 1.0 以上**。AutoControl 送的每一個參數都是那一版才有的；0.1.x
 （Debian bookworm 與目前所有 Ubuntu 仍以這個名字提供，Debian trixie 則根本沒有）
 對同一批參數回傳 0 卻不送出任何事件。AutoControl 會偵測並直接拒絕，

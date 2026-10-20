@@ -495,8 +495,15 @@ Wayland libei native backend
 ctypes binding to ``libei.so.*`` that bypasses the CLI shims for
 microsecond-latency input. Opt-in via
 ``JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei|cli|auto``; the
-``auto`` default uses libei when loadable and CLI otherwise, so
-existing deployments keep working.
+``auto`` default uses CLI only for optional native-backend absence. Portal
+refusal/timeout, failed handshake, device pause or revocation stops native
+key/button/pointer input without implicit CLI replay. Repeated refused calls
+do not reopen consent. ``libei`` requires native input; ``cli`` explicitly
+selects the helpers. After resolving permission, explicitly call
+``je_auto_control.linux_wayland.libei.reset_default_backend()`` to permit a
+fresh request. Interrupted chords attempt every owned release on the same
+backend and preserve the original cancellation. The explicit wtype text path
+and screen-capture selection are unchanged.
 
 
 macOS Accessibility: tree dump + recorder

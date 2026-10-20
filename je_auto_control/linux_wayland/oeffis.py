@@ -13,9 +13,9 @@ SCM_RIGHTS.
 that. It performs the whole portal dance and hands back the EIS fd, which is
 what :mod:`libei` then passes to ``ei_setup_backend_fd``.
 
-Everything here is fail-closed: if the library is missing, the portal denies
-the request, or the user dismisses the consent dialog, the caller gets None
-or an exception and falls back to the ydotool CLI.
+Optional library absence is distinct from authority/protocol refusal. Once
+a portal request starts, cancellation, timeout and failed setup carry explicit
+state and must not trigger an implicit switch to the ydotool CLI.
 """
 from __future__ import annotations
 
@@ -25,6 +25,8 @@ import time
 from typing import Optional, Tuple
 
 from je_auto_control.linux_wayland._ctypes_bind import BoundSymbols, bind
+from je_auto_control.linux_wayland._input_state import InputFailure
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
@@ -66,6 +68,15 @@ _PROTOTYPES = (
 
 class OeffisUnavailable(AutoControlException, RuntimeError):
     """liboeffis is missing, or the portal refused to hand over an EIS fd."""
+
+    def __init__(self, *args: object, state: str = 'unavailable', fallback_allowed: bool = True) -> None:
+        super().__init__(*args)
+        self.status = InputFailure(state, 'portal', str(self), fallback_allowed=fallback_allowed)
+
+    @property
+    def state(self) -> str:
+        """Structured refusal state, separate from absence of an optional library."""
+        return self.status.state
 
 
 def load_symbols() -> Optional[BoundSymbols]:
@@ -138,8 +149,14 @@ def connect_eis_fd(devices: int = OEFFIS_DEVICE_DEFAULT,
             raise OeffisUnavailable(
                 "the portal reported success but handed over no EIS fd",
             )
-    except BaseException:
+    except BaseException as error:
         _release(resolved, handle)
+        raise_caused_run_interruption(error)
+        # pylint: disable-next=no-member  # reason: isinstance below narrows to the declared typed state property
+        if isinstance(error, OeffisUnavailable) and error.state == 'unavailable':
+            raise OeffisUnavailable(str(error), state='failed') from error
+        if isinstance(error, (OSError, RuntimeError, ValueError)) and not isinstance(error, OeffisUnavailable):
+            raise OeffisUnavailable(str(error), state='failed') from error
         raise
     return eis_fd, _Session(resolved, handle)
 
@@ -152,13 +169,13 @@ def _require_connected(symbols: BoundSymbols, handle: int, event: int,
     if event == OEFFIS_EVENT_NONE:
         raise OeffisUnavailable(
             f"the desktop portal did not answer within {timeout:g}s "
-            f"(a consent dialog may be waiting)",
+            f"(a consent dialog may be waiting)", state='needs_permission',
         )
     detail = _describe(symbols, handle)
     reason = ("the desktop portal closed the remote-desktop session"
               if event == OEFFIS_EVENT_CLOSED
               else "the desktop portal disconnected the remote-desktop session")
-    raise OeffisUnavailable(f"{reason}{': ' + detail if detail else ''}")
+    raise OeffisUnavailable(f"{reason}{': ' + detail if detail else ''}", state='needs_permission')
 
 
 def _release(symbols: BoundSymbols, handle: int) -> None:

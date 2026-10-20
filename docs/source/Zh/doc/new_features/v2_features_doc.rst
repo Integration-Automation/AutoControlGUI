@@ -434,8 +434,13 @@ Wayland libei native backend
 
 對 ``libei.so.*`` 的 ctypes 綁定，繞過 CLI shim 取得微秒級延遲。
 以 ``JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei|cli|auto`` 啟用；
-``auto`` （預設）在 libei 可載入時用 libei，否則用 CLI，現有
-部署不會中斷。
+``auto`` （預設）只在選用原生後端缺席時改用 CLI。portal 拒絕／逾時、
+握手失敗、裝置暫停或權限撤銷會停止原生按鍵／按鈕／指標輸入，不會自動改走 CLI。
+重複失敗呼叫不重開同意對話框。``libei`` 強制原生輸入，``cli`` 明確選擇工具。
+解決權限問題後，明確呼叫
+``je_auto_control.linux_wayland.libei.reset_default_backend()`` 才允許重新請求。
+組合鍵中斷會在同一後端嘗試釋放每個已按下的按鍵，並保留原始取消。
+明確的 wtype 文字輸入路徑與螢幕擷取選擇不變。
 
 
 macOS Accessibility：tree dump + recorder

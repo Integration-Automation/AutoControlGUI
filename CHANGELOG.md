@@ -13,6 +13,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Wayland native key/button/pointer input stops on portal refusal/timeout,
+  incomplete handshake, device pause or revocation instead of implicitly replaying
+  through CLI. Forced `libei` also refuses optional absence. Auto mode retains
+  fallback for optional absence and unclassified legacy adapters. Refused calls
+  do not reopen consent; after resolving permission, explicitly reset with
+  `je_auto_control.linux_wayland.libei.reset_default_backend()` before retrying,
+  or deliberately select `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli`.
+  Interrupted native chords attempt every owned release and preserve cancellation.
+  The explicit wtype text path and screen-capture selection retain their behavior.
+
 - Bind TCP/WebSocket clipboard reads, decoded data and sends to their original connection.
   Reject stopped, unauthenticated or non-full-control host writes; queued GUI clipboard
   delivery and explicit push refresh the connecting user's authority before native I/O.

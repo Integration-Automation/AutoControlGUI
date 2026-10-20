@@ -13,6 +13,14 @@ macOS, Linux X11, Linux Wayland, Android and iOS.
 
 ## 2. Layers and directories
 
+Wayland input uses Qt-free `_input_state` metadata to distinguish optional
+absence from authority/protocol refusal through portal, libei cache, selector
+and keyboard/mouse layers. Refusal caches hold no traceback or native handle.
+Disconnect latches sender revocation; explicit reset permits a fresh grant.
+Native chord cleanup attempts all owned releases before choosing the primary
+control/error. Neither revocation nor forced-native absence selects CLI.
+This path leaves capture selection and the explicit wtype text path independent.
+
 Each layer calls only the one below it:
 entry points → execution core (`utils/executor/`) → headless capabilities (`utils/`) → `wrapper/` → one OS backend.
 
