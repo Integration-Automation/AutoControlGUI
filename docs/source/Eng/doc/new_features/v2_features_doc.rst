@@ -543,8 +543,8 @@ environment values, command arguments, executable paths and native error text.
 Permission/pause/revocation/failure cannot imply CLI fallback. Only explicit CLI
 selection or observed optional native absence describes that alternative.
 Input/capture select independently. Rendering/language changes reuse metadata;
-native restore/restart, capture-result/context integration and cancelable active
-diagnostics remain pending in ``Progress.md``.
+native restore/restart, capture-result/context integration and native session
+controls remain pending in ``Progress.md``.
 
 
 The GUI task infrastructure provides ``gui.task_controller.TaskController``:
@@ -563,16 +563,43 @@ thread. Cancellation does not forcibly interrupt an uncooperative call
 or relabel a successful committed return. Errors/progress use the captured
 secret scope; terminal errors retain no exception traceback. Failed thread
 starts roll back both registries and preserve the original failure.
-This is shared infrastructure: Diagnostics and other panels still await
-controller/timeout/stop integration, tracked in ``Progress.md``.
+Diagnostics now adopts this controller. Remaining panel/backend migrations
+and native session operations stay in ``Progress.md``.
 
-Active diagnostics stop immediately when a check raises explicit cancellation
-or a hard control signal, including an explicit exception cause chain.
-The original object propagates through the core, SDK, CLI and Diagnostics
-action; it is not logged or converted into a failed report row, and later
-checks do not run. Ordinary probe errors still produce failed rows and
-allow remaining checks. A canceled GUI run can be retried explicitly.
-Background workers and cooperative stop controls remain pending.
+Active **Diagnostics → Actions → Run diagnostics** uses the shared task
+controller off the GUI thread. **Stop diagnostics** requests cooperative stop;
+the view distinguishes running, stopping, canceled and failed states in four
+languages. Progress counts completed checks. Duplicate runs are ignored, close
+abandons late progress/results, and a deliberate retry starts a new owned run.
+GUI cancellation is a typed outcome without retained exception tracebacks;
+headless core/SDK/CLI and the MCP handler preserve original direct/wrapped controls.
+Ordinary probe failures still become report rows and allow remaining checks.
+
+``CancellationToken``, ``TaskProgress`` and ``cancellation_scope`` are exported by both
+SDK namespaces. Bind ``with cancellation_scope(token): report = run_diagnostics()``;
+the owning caller can call ``token.cancel()`` from another thread. The existing
+no-argument diagnostics signature remains. Scope binding grants no authority;
+``cancellation_scope(None)`` only suspends cancellation for bounded owned cleanup.
+``AC_diagnose`` and the new read-only ``ac_diagnose`` share the report. The MCP tool
+accepts no arguments, uses request cancellation/progress and requires
+``read_screen``, as does the explicit GUI action. Caller-supplied tokens or
+authority metadata are rejected. These are active checks: capture may request
+consent. ``ac_probe_capabilities`` remains the separate passive alternative.
+
+Scoped Wayland D-Bus connect/read/partial-write waits poll at intervals capped
+at 0.1s within the original total deadline. Cancellation attempts Request.Close
+on the originating bus with its separate 0.25s budget, then releases that
+connection; a canceled returned image is discarded. Scoped CLI captures stop
+and reap their newly owned helper/process group with bounded cleanup, preserving
+the original control even if pipe close fails; reaped numeric PIDs are never
+signaled. liboeffis acquisition observes scoped stop and releases its own context.
+Uncooperative/native calls are not forcibly preempted; the GUI remains responsive
+while cleanup completes. Restore/restart, native session controls, capture-owner
+metadata and remaining panel/backend migrations stay in ``Progress.md``.
+
+``python -m examples.cancellable_diagnostics`` runs a controlled cancellation demo
+without providers. ``--active --cancel-after 2`` explicitly runs diagnostics and
+requests stop after two seconds; native/device/API acceptance remains separate.
 
 The Diagnostics tab opens in a localized not-run state. Use **Actions → Run
 diagnostics** to start active checks, which can capture the screen or require

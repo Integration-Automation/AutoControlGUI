@@ -38,11 +38,26 @@ has gone. Context/identity are refreshed on dispatch, without prescribing
 one capability for every task. Each work function authorizes its operation.
 Qt-free cancellation/progress live in utils/exception/cancellation.py.
 Legacy start_worker retains its API and now rolls back failed thread starts.
-Panel integration, backend cancellation/timeout and WebRTC splitting remain open.
+Remaining panel/backend integration and WebRTC splitting remain open.
+
+Diagnostics now adopts TaskController with a plain-data runner snapshot and
+READ_SCREEN revalidation. Its run/stop Actions and cached four-language
+state never operate widgets from the worker or reaccept closed-run data.
+The worker binds cancellation_scope; SDK/AC and the additive active MCP
+handler share the same diagnostic core and scoped checkpoints/progress.
+The MCP token bridges only its own request event, preserving connection
+identity and the established OperationCancelledError protocol.
+
+utils/dbus_client/cancellable_io.py retains socket deadlines and partial
+write offsets; utils/cancellable_process.py owns only newly launched
+capture helpers/groups. Cleanup temporarily suspends cancellation, retains
+primary controls and never signals an already reaped PID. Portal Close
+remains separately bounded; liboeffis acquisition releases its own context.
+Uncooperative extensions and remaining backends require separate migration.
 
 The active diagnostics runner separates ordinary failed probes from explicit
-direct/wrapped control signals. Controls propagate unchanged before logging
-or subsequent checks, across the existing SDK/CLI/GUI entry points. A failed
+direct/wrapped control signals. Headless controls propagate unchanged before
+logging or subsequent checks; the GUI receives typed cancellation metadata. A failed
 ordinary probe still contributes a report row and allows other probes.
 
 The Diagnostics panel starts idle and its Actions command owns active checks.
@@ -274,7 +289,7 @@ safe source strings/references and masks resolved input strings/dynamic keys.
 | Surface | Exact name | Notes |
 | --- | --- | --- |
 | Python facade | `import je_auto_control` | Broad historical surface (`__all__`). |
-| Stable API | `je_auto_control.api` → `api/core.py` | `execute_action`, `execute_action_with_vars`, `generate_code`, `run_diagnostics`, `create_failure_bundle`, `failure_bundle_on_error`, `FailureBundleOptions`. |
+| Stable API | `je_auto_control.api` → `api/core.py` | `CancellationToken`, `TaskProgress`, `cancellation_scope`, `BackendContext`, `CapabilitySnapshot`, `CapabilityStatus`, `probe_capabilities`, `FailureBundleOptions`, `create_failure_bundle`, `execute_action`, `execute_action_with_vars`, `failure_bundle_on_error`, `generate_code`, `run_diagnostics`. |
 | Main CLI | `je_auto_control` → `je_auto_control.cli:main` | Subcommands `run` (`--var`, `--dry-run`), `validate` / `lint`, `fmt`, `list-commands`, `record`, `codegen`, `failure-bundle`, `list-jobs`, `start-server`, `start-rest`, `version`. |
 | Legacy CLI | `python -m je_auto_control` (`__main__.py`) | Private `_main()` owns dispatch and error conversion. `-e/--execute_file FILE`, `-d/--execute_dir DIR`, `-c/--create_project PATH`, `--execute_str JSON`. `--execute_str` also accepts a double-encoded JSON string. Any error exits 1 with a log line rather than a traceback, and a `-d` path that is not a directory is an error. |
 | MCP server | `je_auto_control_mcp` → `utils/mcp_server/__main__.py:main` | stdio; `start_mcp_stdio_server()`; HTTP transport via the `AC_start_mcp_http_server` command. |

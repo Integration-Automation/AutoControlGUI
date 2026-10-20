@@ -31,6 +31,8 @@ from je_auto_control.linux_wayland._detect import (
     WAYLAND_GNOME_SCREENSHOT, WAYLAND_GRIM, WAYLAND_SPECTACLE, binary_path,
 )
 from je_auto_control.utils.exception.exceptions import AutoControlScreenException
+from je_auto_control.utils.exception.cancellation import current_cancellation_token
+from je_auto_control.utils.cancellable_process import run_capture_helper
 
 
 CAPTURE_TIMEOUT = 15.0
@@ -80,6 +82,8 @@ def run_tool(argv: List[str], *, timeout: float = CAPTURE_TIMEOUT) -> bytes:
     # spectacle / wlr-randr resolved through shutil.which), never user
     # input; no shell=True.
     try:
+        if current_cancellation_token() is not None:
+            return run_capture_helper(argv, timeout).stdout or b''
         completed = subprocess.run(argv, check=True,  # nosec B603  # nosemgrep
                                    timeout=timeout,
                                    stdout=subprocess.PIPE,

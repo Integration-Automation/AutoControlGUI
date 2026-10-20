@@ -60,6 +60,12 @@ japanese_word_dict = {
     # 診断タブ
     "diag_run": "診断を実行",
     "diag_probe": "入力・画面取得の機能を確認",
+    "diag_stop": "診断を停止",
+    "diag_summary_running": "診断を実行中です。",
+    "diag_summary_stopping": "診断を停止し、この要求を後片付けしています…",
+    "diag_summary_cancelled": "診断をキャンセルしました。Actions → 診断実行で再試行できます。",
+    "diag_summary_error": "診断を完了できませんでした: {error}",
+    "diag_progress": "完了した検査: {completed}/{total}",
     "diag_cap_title": "入力・画面取得の機能",
     "diag_cap_idle": "アクションメニューから確認できます。権限要求やデスクトップ操作は行いません。",
     "diag_cap_snapshot": "{platform} / {display}。受動スナップショット。ネイティブ状態は直近のローカル観測です。",

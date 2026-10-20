@@ -15,6 +15,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Tuple
 
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
+from je_auto_control.utils.exception.cancellation import cancellation_checkpoint, cancellation_progress
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -72,11 +73,14 @@ CheckFn = Callable[[], Check]
 def run_diagnostics() -> DiagnosticsReport:
     """Run registered checks; preserve explicit interruption before any later check."""
     checks: List[Check] = []
-    for runner in _ALL_CHECKS:
+    cancellation_progress(0, len(_ALL_CHECKS), 'diagnostics')
+    for index, runner in enumerate(_ALL_CHECKS, 1):
+        cancellation_checkpoint()
         try:
             checks.append(runner())
         except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: never let one probe poison the rest
             raise_caused_run_interruption(error)
+            cancellation_checkpoint()
             autocontrol_logger.warning(
                 "diagnostics check %s crashed: %r", runner.__name__, error,
             )
@@ -85,6 +89,7 @@ def run_diagnostics() -> DiagnosticsReport:
                 ok=False, severity=_SEVERITY_ERROR,
                 detail=f"check raised: {error!r}",
             ))
+        cancellation_progress(index, len(_ALL_CHECKS), 'diagnostics')
     return DiagnosticsReport(checks=checks)
 
 

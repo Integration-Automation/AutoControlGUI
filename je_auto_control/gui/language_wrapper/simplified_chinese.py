@@ -51,6 +51,12 @@ simplified_chinese_word_dict = {
     # 诊断分页
     "diag_run": "运行诊断",
     "diag_probe": "查看输入与截取能力",
+    "diag_stop": "停止诊断",
+    "diag_summary_running": "诊断运行中。",
+    "diag_summary_stopping": "正在停止诊断并清理本次请求…",
+    "diag_summary_cancelled": "诊断已取消。可从 Actions → 运行诊断显式重试。",
+    "diag_summary_error": "诊断未能完成：{error}",
+    "diag_progress": "已完成检查：{completed}/{total}",
     "diag_cap_title": "输入与截取能力",
     "diag_cap_idle": "从操作菜单查看能力，不会请求授权或操作桌面。",
     "diag_cap_snapshot": "{platform} / {display}。无主动操作的快照；原生状态仅为最近的本机观察。",

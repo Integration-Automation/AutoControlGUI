@@ -35,9 +35,11 @@ import struct
 import time
 import urllib.parse
 from typing import Any, Dict, List, Optional, Tuple
-
+# A direct sibling import avoids the partially initialized facade's import cycle.
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
+from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
+import je_auto_control.utils.dbus_client.cancellable_io as cancellable_io  # pylint: disable=consider-using-from-import
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -484,8 +486,7 @@ class SessionBus:
                 socket.AF_UNIX,  # type: ignore[attr-defined]  # reason: POSIX-only
                 socket.SOCK_STREAM,
             )
-            self._socket.settimeout(_CONNECT_TIMEOUT)
-            self._socket.connect(("\0" + path) if abstract else path)
+            cancellable_io.connect(self._socket, ("\0" + path) if abstract else path, _CONNECT_TIMEOUT)
         except BaseException as error:  # reason: failed __enter__ must release its descriptor before controls escape
             self._close_failed_open(error)
             if isinstance(error, OSError):
@@ -540,7 +541,7 @@ class SessionBus:
         if self._socket is None:
             raise DBusError("the session bus connection is closed")
         try:
-            self._socket.sendall(data)
+            cancellable_io.send(self._socket, data)
         except OSError as error:
             raise DBusError(f"writing to the session bus failed: {error}") from error
 
@@ -560,9 +561,8 @@ class SessionBus:
             raise DBusError("the session bus connection is closed")
         if timeout <= 0:
             raise DBusError("the session bus did not answer in time")
-        self._socket.settimeout(timeout)
         try:
-            chunk = self._socket.recv(65536)
+            chunk = cancellable_io.receive(self._socket, 65536, timeout)
         except socket.timeout as error:
             raise DBusError("the session bus did not answer in time") from error
         except OSError as error:
@@ -573,6 +573,7 @@ class SessionBus:
 
     def read_message(self, deadline: float) -> Message:
         """Read one whole message, or fail when the deadline passes."""
+        cancellation_checkpoint()
         while len(self._buffer) < 16:
             self._fill(deadline - time.monotonic())
         endian, message_type, _flags, _version = struct.unpack(

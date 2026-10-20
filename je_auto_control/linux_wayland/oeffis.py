@@ -27,6 +27,9 @@ from typing import Optional, Tuple
 from je_auto_control.linux_wayland._ctypes_bind import BoundSymbols, bind
 from je_auto_control.linux_wayland._input_state import InputFailure
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
+from je_auto_control.utils.exception.cancellation import (
+    cancellation_checkpoint, cancellation_scope, cancellation_timeout, current_cancellation_token,
+)
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
@@ -108,12 +111,16 @@ def _pump(symbols: BoundSymbols, handle: int, deadline: float) -> int:
     if poll_fd < 0:
         raise OeffisUnavailable("oeffis_get_fd returned no pollable fd")
     while True:
+        cancellation_checkpoint()
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             return OEFFIS_EVENT_NONE
-        ready, _, _ = select.select([poll_fd], [], [], remaining)
+        ready, _, _ = select.select([poll_fd], [], [], cancellation_timeout(remaining))
         if not ready:
-            return OEFFIS_EVENT_NONE
+            cancellation_checkpoint()
+            if current_cancellation_token() is None:
+                return OEFFIS_EVENT_NONE
+            continue
         symbols.oeffis_dispatch(handle)
         event = int(symbols.oeffis_get_event(handle))
         if event != OEFFIS_EVENT_NONE:
@@ -134,6 +141,7 @@ def connect_eis_fd(devices: int = OEFFIS_DEVICE_DEFAULT,
     :param symbols: injected entry points, for tests.
     :return: the EIS file descriptor and the handle owning the session.
     """
+    cancellation_checkpoint()
     resolved = symbols if symbols is not None else load_symbols()
     if resolved is None:
         raise OeffisUnavailable("liboeffis.so.* not found on the loader path")
@@ -181,7 +189,8 @@ def _require_connected(symbols: BoundSymbols, handle: int, event: int,
 def _release(symbols: BoundSymbols, handle: int) -> None:
     """Drop the oeffis context; never raise from cleanup."""
     try:
-        symbols.oeffis_unref(handle)
+        with cancellation_scope(None):
+            symbols.oeffis_unref(handle)
     except (AttributeError, OSError, ValueError):
         pass
 

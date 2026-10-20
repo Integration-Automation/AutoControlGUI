@@ -171,6 +171,12 @@ english_word_dict = {
     # Diagnostics tab
     "diag_run": "Run diagnostics",
     "diag_probe": "Inspect input and capture capabilities",
+    "diag_stop": "Stop diagnostics",
+    "diag_summary_running": "Diagnostics are running.",
+    "diag_summary_stopping": "Stopping diagnostics and cleaning up this request…",
+    "diag_summary_cancelled": "Diagnostics canceled. Use Actions → Run diagnostics to retry.",
+    "diag_summary_error": "Diagnostics could not finish: {error}",
+    "diag_progress": "Checks completed: {completed}/{total}",
     "diag_cap_title": "Input and capture capabilities",
     "diag_cap_idle": "Use Actions to inspect capabilities without requesting permission or operating the desktop.",
     "diag_cap_snapshot": "{platform} / {display}. Passive snapshot; native state is the last local observation.",

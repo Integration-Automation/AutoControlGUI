@@ -52,6 +52,12 @@ traditional_chinese_word_dict = {
     # 診斷分頁
     "diag_run": "執行診斷",
     "diag_probe": "檢視輸入與擷取能力",
+    "diag_stop": "停止診斷",
+    "diag_summary_running": "診斷執行中。",
+    "diag_summary_stopping": "正在停止診斷並清理本次請求…",
+    "diag_summary_cancelled": "診斷已取消。可從 Actions → 執行診斷明確重試。",
+    "diag_summary_error": "診斷未能完成：{error}",
+    "diag_progress": "已完成檢查：{completed}/{total}",
     "diag_cap_title": "輸入與擷取能力",
     "diag_cap_idle": "從動作選單檢視能力，不會要求授權或操作桌面。",
     "diag_cap_snapshot": "{platform} / {display}。無主動操作的快照；原生狀態僅為最近的本機觀測。",

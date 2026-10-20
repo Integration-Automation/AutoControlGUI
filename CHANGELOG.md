@@ -13,6 +13,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Run Diagnostics through the shared owner-bound controller with localized
+  progress/stop/retry states and no late updates after close. Add scoped
+  cancellation primitives to both SDK namespaces and the previously absent
+  active ac_diagnose MCP entry point. Supported Wayland socket/helper/native
+  waits observe scoped cancellation and retain bounded owned cleanup;
+  unscoped calls and existing diagnostic signatures remain compatible.
+
 - Add owner-bound shared GUI task infrastructure with cooperative cancellation,
   typed progress/outcomes, captured context and refreshed identity. Late owner
   results are dropped, failures do not retain traceback objects, and a failed

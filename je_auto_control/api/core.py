@@ -6,6 +6,7 @@ from je_auto_control.wrapper.capabilities import (
 
 from je_auto_control.utils.codegen.codegen import generate_code
 from je_auto_control.utils.diagnostics import run_diagnostics
+from je_auto_control.utils.exception.cancellation import CancellationToken, TaskProgress, cancellation_scope
 from je_auto_control.utils.executor.action_executor import (
     execute_action,
     execute_action_with_vars,
@@ -17,6 +18,7 @@ from je_auto_control.utils.failure_bundle import (
 )
 
 __all__ = [
+    "CancellationToken", "TaskProgress", "cancellation_scope",
     "BackendContext", "CapabilitySnapshot", "CapabilityStatus", "probe_capabilities",
     "FailureBundleOptions", "create_failure_bundle", "execute_action",
     "execute_action_with_vars", "failure_bundle_on_error", "generate_code",

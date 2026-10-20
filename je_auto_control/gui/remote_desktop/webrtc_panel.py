@@ -42,9 +42,7 @@ from je_auto_control.gui.remote_desktop.annotation_overlay import (
     HostAnnotationOverlay,
 )
 from je_auto_control.gui.remote_desktop.tray_icon import install_host_tray
-from je_auto_control.gui.remote_desktop.trusted_group import (
-    build_trusted_group,
-)
+from je_auto_control.gui.remote_desktop.trusted_group import build_trusted_group
 from je_auto_control.gui.remote_desktop.viewer_screen_window import (
     ViewerScreenWindow,
 )
@@ -58,9 +56,7 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
-    MultiViewerHost, SessionRecorder, WebRTCConfig, WebRTCDesktopViewer,
-    default_address_book,
-    default_trust_list, install_hardware_codec, is_webrtc_available,
+    default_address_book, default_trust_list, install_hardware_codec, is_webrtc_available,
     load_or_create_viewer_id, send_magic_packet, uninstall_hardware_codec,
 )
 from je_auto_control.utils.remote_desktop.adaptive_bitrate import (
@@ -80,11 +76,15 @@ from je_auto_control.utils.remote_desktop.webrtc_transport import (
 )
 
 if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
-    from je_auto_control.utils.remote_desktop.file_sync import (
-        FolderSyncEngine,
-    )
-    from je_auto_control.utils.remote_desktop.lan_discovery import (
-        HostAdvertiser,
+    from je_auto_control.utils.remote_desktop.multi_viewer import MultiViewerHost
+    from je_auto_control.utils.remote_desktop.session_recorder import SessionRecorder
+    from je_auto_control.utils.remote_desktop.webrtc_transport import WebRTCConfig
+    from je_auto_control.utils.remote_desktop.webrtc_viewer import WebRTCDesktopViewer
+    from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
+    from je_auto_control.utils.remote_desktop.lan_discovery import HostAdvertiser
+else:
+    from je_auto_control.utils.remote_desktop import (
+        MultiViewerHost, SessionRecorder, WebRTCConfig, WebRTCDesktopViewer,
     )
 
 

@@ -101,6 +101,22 @@ exercised. These are fake/offscreen metadata checks, not native device,
 permission, compositor restart or full-monitor acceptance. Available
 means last local observation; every actual operation still checks authority.
 
+Active diagnostics now have controlled SDK/AC/MCP/GUI cancellation and
+progress coverage. A real JSON-RPC server with two connection-scoped calls
+using the same request ID cancels only the requested connection and uses
+the existing -32800 response without ordinary error screenshots. The
+window Actions provider exposes run/stop/passive inspection; GUI cases
+cover duplicate runs, stop/retry, late closed results, destruction,
+four-language state updates, plain-text errors and failed submissions.
+
+Real socketpair waits and an owned temporary Python helper exercise
+cancellation and reaping. Controlled protocol/native fakes verify partial
+frames/writes, unchanged total deadlines, bounded Request.Close outside
+the canceled scope, owned PNG removal, liboeffis unref and cleanup-error
+priority. Native compositor consent UI, restore/restart, capture-owner
+metadata and uncooperative extension cancellation are not established
+by these tests and remain in Progress.md. Physical/API acceptance stays deferred.
+
 Offscreen shared-task checks exercise GUI responsiveness, GUI-thread delivery,
 cooperative session cleanup, owner/controller/handle destruction, collection
 without callback retention, independent owner tokens, task-ID/terminal fences,

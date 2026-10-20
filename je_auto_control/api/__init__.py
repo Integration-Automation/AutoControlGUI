@@ -7,6 +7,9 @@ hundreds of optional integrations.
 
 # pylint: disable-next=useless-import-alias  # reason: PEP 484 re-exports share core's public list without duplicating it
 from je_auto_control.api.core import (
+    CancellationToken as CancellationToken,
+    TaskProgress as TaskProgress,
+    cancellation_scope as cancellation_scope,
     BackendContext as BackendContext,
     CapabilitySnapshot as CapabilitySnapshot,
     CapabilityStatus as CapabilityStatus,

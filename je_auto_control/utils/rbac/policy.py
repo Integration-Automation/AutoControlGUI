@@ -73,6 +73,7 @@ REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
 #: covered by the capability of the surface that submitted the action list.
 COMMAND_CAPABILITIES: Dict[str, str] = {
     "AC_probe_capabilities": _READ,
+    "AC_diagnose": _READ,
     "AC_history_capture": _DRIVE,
     "AC_self_heal_evaluate": _DRIVE,
     "AC_self_heal_run": _DRIVE,

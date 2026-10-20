@@ -1128,6 +1128,7 @@ from je_auto_control.utils.usb import (
     enable_usb_passthrough, is_usb_passthrough_enabled, list_usb_devices,
 )
 # System diagnostics (headless self-test)
+from je_auto_control.utils.exception.cancellation import CancellationToken, TaskProgress, cancellation_scope
 from je_auto_control.wrapper.capabilities import (
     BackendContext, CapabilitySnapshot, CapabilityStatus, probe_capabilities,
 )
@@ -1854,6 +1855,7 @@ __all__ = [
     "enable_usb_passthrough", "is_usb_passthrough_enabled",
     # System diagnostics
     "BackendContext", "CapabilitySnapshot", "CapabilityStatus", "probe_capabilities",
+    "CancellationToken", "TaskProgress", "cancellation_scope",
     "Check", "DiagnosticsReport", "run_diagnostics",
     # Config bundle
     "ConfigBundleExporter", "ConfigBundleImporter", "ImportReport",

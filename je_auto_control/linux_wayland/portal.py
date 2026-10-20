@@ -42,6 +42,7 @@ from typing import Any, Dict, List, Tuple
 from je_auto_control.linux_wayland import _dbus_client
 from je_auto_control.utils.exception.exceptions import AutoControlScreenException
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
+from je_auto_control.utils.exception.cancellation import cancellation_checkpoint, cancellation_scope
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -122,7 +123,8 @@ def _await_response(bus: "_dbus_client.SessionBus", paths: List[str], timeout: f
 def _close_request(bus: "_dbus_client.SessionBus", handle: str, failure: BaseException) -> None:
     """Abandon only this request on its originating bus; cleanup cannot replace its primary interruption."""
     try:
-        bus.call(PORTAL_BUS, handle, REQUEST_INTERFACE, 'Close', '', [], timeout=_CLOSE_TIMEOUT)
+        with cancellation_scope(None):
+            bus.call(PORTAL_BUS, handle, REQUEST_INTERFACE, 'Close', '', [], timeout=_CLOSE_TIMEOUT)
     # pylint: disable-next=broad-exception-caught  # reason: retain the primary control after all cleanup outcomes
     except BaseException as error:  # reason: choose controls only after the bounded cleanup attempt
         raise_caused_run_interruption(failure)
@@ -212,6 +214,7 @@ def _path_from_uri(uri: str) -> str:
 def _read_and_discard(path: str) -> bytes:
     """Read the portal's file, then remove it — it is ours to clean up."""
     try:
+        cancellation_checkpoint()
         with open(path, "rb") as captured:
             data = captured.read()
     except OSError as error:

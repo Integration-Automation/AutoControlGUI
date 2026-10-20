@@ -11,7 +11,7 @@ import weakref
 from PySide6.QtCore import QCoreApplication, QMetaObject, QObject, QThread, Signal, SignalInstance
 
 from je_auto_control.gui._worker_thread import WorkerHandle, start_worker
-from je_auto_control.utils.exception.cancellation import CancellationToken, TaskProgress
+from je_auto_control.utils.exception.cancellation import CancellationToken, TaskProgress, cancellation_scope
 from je_auto_control.utils.exception.control_signals import is_run_interruption, raise_caused_run_interruption
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.secret_scope import scrub_secret_text
@@ -149,6 +149,10 @@ class _TaskWorker(QObject):
         self.finished.emit(self._context.run(self._perform))
 
     def _perform(self) -> TaskOutcome:
+        with cancellation_scope(self.token):
+            return self._run_work()
+
+    def _run_work(self) -> TaskOutcome:
         try:
             self.token.checkpoint()
             with self._authority.context_scope():

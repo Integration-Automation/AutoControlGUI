@@ -82,6 +82,11 @@ report["variables_menu_matches"] = (
 )
 report["variables_has_actions"] = bool(menu_actions)
 
+widget.show_tab("diagnostics")
+diagnostic_entry = next(e for e in widget._tab_entries if e.key == "diagnostics")
+widget.tabs.setCurrentWidget(diagnostic_entry.widget)
+report["diagnostic_menu_keys"] = [key for key, _handler in widget.current_tab_menu_actions()]
+
 sys.stdout.write(json.dumps(report))
 sys.stdout.flush()
 # Skip Qt/native-thread teardown entirely: some tabs start helper threads
@@ -126,6 +131,10 @@ def test_hook_tab_actions_reach_the_menu(report):
     assert report["variables_has_actions"], (
         "hook-based tab should surface its actions"
     )
+
+
+def test_diagnostic_run_stop_and_passive_inspection_reach_the_window_actions_menu(report):
+    assert report['diagnostic_menu_keys'] == ['diag_probe', 'diag_run', 'diag_stop']
 
 
 # The other documented counts are guarded by test_doc_counts.py. The tab count

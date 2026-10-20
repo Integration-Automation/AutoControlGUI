@@ -1,6 +1,8 @@
 """Opening or translating Diagnostics never starts active checks; its action remains explicit."""
 # ruff: noqa: E402  # reason: optional Qt guard and offscreen setup must precede GUI imports
 import os
+import threading
+import time
 
 import pytest
 
@@ -16,6 +18,16 @@ from je_auto_control.utils.diagnostics.diagnostics import Check, DiagnosticsRepo
 from je_auto_control.utils.exception.control_signals import OperationCancelledError
 
 _APP = None
+
+
+def _finished(panel, timeout=3.0):
+    deadline = time.monotonic()+timeout
+    while time.monotonic() < deadline:
+        _APP.processEvents()
+        if panel._active_task is None:
+            return True
+        threading.Event().wait(0.001)
+    return panel._active_task is None
 
 
 @pytest.fixture
@@ -35,6 +47,8 @@ def tab(monkeypatch):
     try:
         yield panel, language, calls
     finally:
+        panel.close()
+        assert _finished(panel)
         panel.deleteLater()
 
 
@@ -54,6 +68,7 @@ def test_actions_menu_runs_the_existing_diagnostic_runner_once_and_displays_its_
     panel, wrapper, calls = tab
     assert calls == []
     dict(panel.menu_actions())['diag_run']()
+    assert _finished(panel)
     assert calls == ['explicit run'] and panel._table.rowCount() == 1
     assert panel._table.item(0, 0).text() == 'controlled'
     assert panel._table.item(0, 3).text() == 'controlled subsystem'
@@ -63,7 +78,7 @@ def test_actions_menu_runs_the_existing_diagnostic_runner_once_and_displays_its_
     assert calls == ['explicit run'] and panel._summary_label.text() == expected
 
 
-def test_explicit_cancellation_stays_original_and_allows_a_later_deliberate_retry(tab, monkeypatch):
+def test_async_cancellation_is_displayed_without_an_ordinary_error_and_allows_deliberate_retry(tab, monkeypatch):
     panel, wrapper, calls = tab
     assert calls == []
     original = OperationCancelledError('diagnostics action')
@@ -73,13 +88,16 @@ def test_explicit_cancellation_stays_original_and_allows_a_later_deliberate_retr
 
     action = dict(panel.menu_actions())['diag_run']
     monkeypatch.setattr(diagnostics_tab, 'run_diagnostics', canceled)
-    with pytest.raises(OperationCancelledError) as caught:
-        action()
-    assert caught.value is original and calls == [] and panel._table.rowCount() == 0
+    action()
+    handle = panel._active_task
+    assert _finished(panel)
+    assert handle.outcome.status == 'cancelled' and handle.outcome.control == type(original).__name__
+    assert calls == [] and panel._table.rowCount() == 0
     panel.retranslate()
-    assert panel._summary_label.text() == wrapper.translate('diag_summary_idle')
+    assert panel._summary_label.text() == wrapper.translate('diag_summary_cancelled')
     monkeypatch.setattr(diagnostics_tab, 'run_diagnostics', lambda: DiagnosticsReport([]))
     action()
+    assert _finished(panel)
     expected = wrapper.translate('diag_summary_ok').format(count=0)
     assert panel._summary_label.text() == expected
 
@@ -100,15 +118,15 @@ def test_a_real_check_cancellation_stops_the_gui_run_and_allows_an_explicit_retr
     monkeypatch.setattr(diagnostics, '_ALL_CHECKS', (cancelled, later))
     monkeypatch.setattr(diagnostics_tab, 'run_diagnostics', diagnostics.run_diagnostics)
     action = dict(panel.menu_actions())['diag_run']
-    try:
-        with pytest.raises(OperationCancelledError):
-            action()
-    finally:
-        original.__traceback__ = None  # release GUI frames before queued widget destruction
+    action()
+    handle = panel._active_task
+    assert _finished(panel)
+    assert handle.outcome.status == 'cancelled' and handle.outcome.control == type(original).__name__
     assert events == ['cancelled'] and panel._table.rowCount() == 0
     panel.retranslate()
-    assert panel._summary_label.text() == wrapper.translate('diag_summary_idle')
+    assert panel._summary_label.text() == wrapper.translate('diag_summary_cancelled')
     monkeypatch.setattr(diagnostics, '_ALL_CHECKS', (later,))
     action()
+    assert _finished(panel)
     assert events == ['cancelled', 'later'] and panel._table.rowCount() == 1
     assert panel._summary_label.text() == wrapper.translate('diag_summary_ok').format(count=1)

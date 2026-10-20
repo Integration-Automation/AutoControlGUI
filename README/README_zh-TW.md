@@ -318,7 +318,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 710 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用：完整的 `ac_*` 工具介面，以及常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 711 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用：完整的 `ac_*` 工具介面，以及常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 提供 fixture 與供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -462,7 +462,7 @@ Context 會複製環境／工具資料，可由擁有者提供無原生物件的
 預設本機結果不含環境值、命令參數、執行檔路徑或原生錯誤文字；AC／MCP 不接受外部提供觀測。
 明確選擇 CLI 與觀測到選用原生依賴缺失後的自動備援分開；拒絕、暫停、撤銷與失敗不表示改走 CLI。
 擷取工具／portal 選擇獨立診斷，重繪與切換語系只使用既有快照。原生 portal 恢復、compositor 重啟、
-擷取結果與 context 的接合，以及可取消的主動診斷仍列於 `Progress.md`。
+擷取結果與 context 的接合，以及原生 session 的重試／取消／停止控制仍列於 `Progress.md`。
 
 GUI 工作基礎提供 `gui.task_controller.TaskController`：
 `submit(work, owner=widget)` 回傳呼叫者持有的 `TaskHandle`，透過
@@ -474,12 +474,30 @@ GUI 工作基礎提供 `gui.task_controller.TaskController`：
 擁有者、handle 或 controller 銷毀時會要求協作式停止並丟棄延遲結果；每項工作有獨立 ID／token，
 回呼在 GUI 執行緒執行。不強制中斷不合作的呼叫，也不把已成功提交的結果改標為取消。
 錯誤與進度使用捕捉的秘密遮罩 scope，終態不保留例外 traceback；執行緒啟動失敗會回復兩層登記並保留原失敗。
-這是共用基礎；Diagnostics 與其餘面板的 controller／timeout／停止控制整合仍列於 `Progress.md`。
+Diagnostics 已接入此共用控制器；其餘面板／backend 遷移與原生 session 操作仍列於 `Progress.md`。
 
-主動診斷的檢查若拋出明確取消或中斷控制（含明確的例外原因鏈），立即停止，
-並由核心、SDK、CLI 與 Diagnostics 操作傳遞原始物件，不記錄成普通錯誤或失敗報告列，
-也不執行後續檢查。普通檢查錯誤仍產生失敗列並繼續其餘項目；GUI 取消後可明確重試。
-背景 worker 與協作式停止控制仍待完成。
+主動 **Diagnostics → Actions → 執行診斷** 以共用控制器在 GUI 執行緒外執行。
+**停止診斷** 要求協作式停止；四語狀態區分執行中、清理中、已取消與失敗，並顯示已完成檢查數。
+重複執行不另開工作，關閉後丟棄延遲進度／結果，明確重試會建立新的擁有者工作。
+GUI 以不保留例外 traceback 的 typed outcome 呈現取消；核心／SDK／CLI 與 MCP handler
+維持原始直接／包裝取消物件。普通檢查錯誤仍列入報告並繼續其餘項目。
+
+兩個 SDK namespace 匯出 `CancellationToken`、`TaskProgress`、`cancellation_scope`。
+使用 `with cancellation_scope(token): report = run_diagnostics()`，擁有者可由另一執行緒呼叫
+`token.cancel()`；既有無參數診斷簽章不變。Scope 不授予權限，`cancellation_scope(None)`
+只在有時限的自有資源清理期間暫停取消。`AC_diagnose` 與新增的唯讀 `ac_diagnose` 共用報告；
+MCP 不接受參數，使用請求取消／進度，與明確 GUI 操作同樣需要 `read_screen`，拒絕外部 token／授權資料。
+這些是主動檢查，擷取可能要求同意；`ac_probe_capabilities` 維持獨立的被動選項。
+
+Scoped Wayland D-Bus 的連線／讀取／部分寫入，以至多 0.1 秒的區間輪詢，維持原本總時限。
+取消時在原 bus 以獨立 0.25 秒預算嘗試 Request.Close，再釋放連線；取消的已回傳圖片會刪除。
+Scoped CLI 擷取會停止並回收自己建立的 helper／process group，清理有時限，pipe close 失敗也不蓋掉原取消，
+已回收的數字 PID 不再作為訊號目標。liboeffis 取得 session 時會觀察停止並釋放自身 context。
+不強制中斷不合作或原生呼叫，清理期間 GUI 仍可操作；restore／重啟、原生 session 控制、
+擷取擁有者 metadata 與其餘面板／backend 遷移保留於 `Progress.md`。
+
+`python -m examples.cancellable_diagnostics` 預設只做受控取消示範，不呼叫 provider。
+`--active --cancel-after 2` 才明確執行診斷並在兩秒後要求停止；真機／裝置／API 驗收另外列管。
 
 開啟 Diagnostics 只顯示已翻譯的「尚未執行」狀態，不執行檢查。
 選擇 **Actions → 執行診斷** 才會啟動既有主動檢查，可能擷取螢幕或需要 portal 同意；
@@ -521,7 +539,7 @@ Windows、macOS（pyobjc）與 X11（含 XWayland）；純 Wayland session 的�
 
 | 資源 | 內容 |
 |---|---|
-| [`examples/`](../examples/) | 42 個自足腳本：截圖點擊、OCR、排程器、遠端桌面、agent loop、可觀測性、錄製、變數、熱鍵、觸發器、報表、MCP、REST、機密、外掛、computer use、Wayland、跨主機 DAG、chat-ops、pytest/BDD、錨點定位、動作日誌、因果 peer 控制。 |
+| [`examples/`](../examples/) | 43 個自足腳本：截圖點擊、OCR、排程器、遠端桌面、agent loop、可觀測性、錄製、變數、熱鍵、觸發器、報表、MCP、REST、機密、外掛、computer use、Wayland、跨主機 DAG、chat-ops、pytest/BDD、錨點定位、動作日誌、因果 peer 控制。 |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 參考，含英文與中文。 |
 | [architecture_explore.md](../architecture_explore.md) | 逐層記錄每個模組的職責。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台對照矩陣。 |

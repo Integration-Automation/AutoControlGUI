@@ -1,9 +1,11 @@
 """Cooperative task cancellation and inert progress data without Qt dependencies."""
 from concurrent.futures import CancelledError
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 import math
 from threading import Event, TIMEOUT_MAX
-from typing import Callable, Optional
+from typing import Callable, Iterator, Optional
 
 
 @dataclass(frozen=True)
@@ -19,10 +21,11 @@ class TaskProgress:
 class CancellationToken:
     """Thread-safe cooperative cancellation; work owns and releases its own resources."""
 
-    def __init__(self, task_id: int, notify: Optional[Callable[[TaskProgress], None]] = None) -> None:
+    def __init__(self, task_id: int, notify: Optional[Callable[[TaskProgress], None]] = None,
+                 *, event: Optional[Event] = None) -> None:
         self._task_id = task_id
         self._notify = notify
-        self._stop = Event()
+        self._stop = event if event is not None else Event()
 
     @property
     def is_cancelled(self) -> bool:
@@ -55,3 +58,46 @@ class CancellationToken:
             raise TypeError('progress detail must be text')
         if self._notify is not None:
             self._notify(TaskProgress(self._task_id, completed, total, detail))
+
+
+_CURRENT: ContextVar[Optional[CancellationToken]] = ContextVar('je_auto_control_cancellation', default=None)
+_POLL_SECONDS = 0.1
+
+
+def current_cancellation_token() -> Optional[CancellationToken]:
+    """Return only this context's token; its presence grants no authority."""
+    return _CURRENT.get()
+
+
+@contextmanager
+def cancellation_scope(token: Optional[CancellationToken]) -> Iterator[None]:
+    """Bind one operation's token, or temporarily suspend it for bounded owned cleanup."""
+    if token is not None and not isinstance(token, CancellationToken):
+        raise TypeError('cancellation scope requires a CancellationToken or None')
+    binding = _CURRENT.set(token)
+    try:
+        yield
+    finally:
+        _CURRENT.reset(binding)
+
+
+def cancellation_checkpoint() -> None:
+    """Observe cancellation at a safe boundary, without changing unscoped calls."""
+    token = current_cancellation_token()
+    if token is not None:
+        token.checkpoint()
+
+
+def cancellation_timeout(timeout_s: float) -> float:
+    """Limit one poll interval within the caller's existing total deadline."""
+    return min(timeout_s, _POLL_SECONDS) if current_cancellation_token() is not None else timeout_s
+
+
+def cancellation_progress(completed: int, total: int, detail: str = '') -> None:
+    """Report a scoped checkpoint without requiring progress machinery for ordinary calls."""
+    token = current_cancellation_token()
+    if token is not None:
+        token.report(completed, total, detail)
+
+
+__all__ = ['CancellationToken', 'TaskProgress', 'cancellation_scope']
