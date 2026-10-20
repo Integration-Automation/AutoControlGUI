@@ -438,6 +438,11 @@ Wayland 的屏幕截取需要合成器对应的工具，因为没有单一工具
 `je_auto_control.api.run_diagnostics()`（以及 GUI 的 Diagnostics 标签页）的 `screen_capture`
 检查会报告当前使用的是哪一层。
 
+原生 Wayland 指针坐标在原始坐标与布局原点换算后仍不属于任何授权 EIS 区域时，
+会以 `state="failed"` 的 `LibeiUnavailable` 拒绝，停止自动 CLI 备用，
+不发送移动、frame 或后续点击。有效坐标、未提供区域的设备、同一 sender 的后续有效请求，
+以及显式选择 CLI 的现有行为保持不变。
+
 **输入／截取能力**提供 `je_auto_control.api`（也由包根目录导出）的
 `BackendContext`、`CapabilityStatus`、`CapabilitySnapshot` 与 `probe_capabilities`。
 调用 `probe_capabilities(BackendContext.current()).to_dict()`、无参数的

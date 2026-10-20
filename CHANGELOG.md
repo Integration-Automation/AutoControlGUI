@@ -13,6 +13,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Refuse native Wayland pointer coordinates outside all EIS regions with
+  failed state and no automatic CLI fallback. A rejected move cannot emit
+  a subsequent click; valid mapping and explicit CLI selection are preserved.
+
 - Add passive input/capture capability snapshots to both SDK namespaces,
   AC_probe_capabilities, read-only MCP, Builder and Diagnostics Actions.
   Prerequisites remain unverified; local native state is not refreshed or

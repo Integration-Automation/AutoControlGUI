@@ -79,6 +79,14 @@ all-thread native backtraces through batch GDB; other platforms retain Python
 faulthandler output. This is diagnostic infrastructure, not native lifecycle
 acceptance or a root-cause correction; outstanding crashes remain in Progress.md.
 
+Controlled region-authority checks cover automatic and native input selection,
+exclusive region edges, gaps, raw-first/origin mapping, no-region devices,
+same-sender retry, explicit CLI and original direct/wrapped control signals.
+A refused native coordinate is failed and emits neither CLI input nor native
+motion/frame/click. These are fake-backend checks. The real-EIS verifier now
+requires the same failure contract, but was not executed for this change;
+physical and multi-monitor acceptance remain deferred.
+
 Passive capabilities are available through both SDK namespaces, one AC
 command, one read-only MCP tool, Builder and explicit Diagnostics Actions.
 Controlled checks cover independent input/capture prerequisites, denied/
@@ -329,10 +337,12 @@ where the negative-origin layout above reaches the input half: a region's
 offset is part of the coordinate rather than something to subtract, and a
 motion landing outside every region is dropped by libei without a return code,
 an event or an error — so the sender maps the point into region space and
-refuses what no region covers, which is what lets the `ydotool` path take it.
+refuses what no region covers. That refusal now carries failed state and stops
+implicit CLI fallback; the updated real-EIS assertion still needs a native run.
 
-The `ydotool-verification` job covers the CLI fallback, which the `libei` path
-drops to at every failure point. A seat is what makes an injected event arrive
+The `ydotool-verification` job covers the separate CLI provider. Automatic
+selection permits it only for optional native absence; native authority,
+device and region refusals stop the request. A seat makes an injected event arrive
 somewhere; it is not what makes one observable, so no compositor is needed:
 `ydotoold` creates an ordinary uinput device, the kernel publishes it as
 `/dev/input/eventN`, and the job reads the `input_event` structs back off it.

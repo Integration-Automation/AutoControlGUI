@@ -473,6 +473,13 @@ returning the blank XWayland root. The `screen_capture` check in
 `je_auto_control.api.run_diagnostics()` (and the GUI Diagnostics tab) reports
 which tier is in use.
 
+A native Wayland pointer coordinate outside every granted EIS region, after
+raw-coordinate and layout-origin mapping, raises `LibeiUnavailable` with
+`state="failed"` and disables automatic CLI fallback. A rejected move emits
+no motion/frame or subsequent click. Valid coordinates, devices without
+regions, later valid requests on the same sender and explicit CLI selection
+retain their existing behavior.
+
 Passive **input/capture capabilities** use `BackendContext`, `CapabilityStatus`,
 `CapabilitySnapshot` and `probe_capabilities` from `je_auto_control.api` (also
 exported at the package root). Call

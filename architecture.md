@@ -13,6 +13,12 @@ macOS, Linux X11, Linux Wayland, Android and iOS.
 
 ## 2. Layers and directories
 
+Native pointer region validation preserves raw-first then layout-origin
+mapping. A miss raises a failed LibeiUnavailable before motion/frame or
+a following click. The input selector propagates that refusal and cannot
+interpret it as optional dependency absence or switch automatically to CLI.
+The cached sender remains usable for later valid coordinates.
+
 wrapper/capabilities.py owns immutable caller contexts and independent
 input/capture metadata. Live collection reads a bounded set of environment/
 PATH facts and an already-loaded sender via a nonblocking local-state read.

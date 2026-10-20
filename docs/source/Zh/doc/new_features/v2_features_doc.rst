@@ -443,6 +443,11 @@ Wayland libei native backend
 明確的 wtype 文字輸入路徑與螢幕擷取選擇不變。
 
 
+原生 Wayland 指標座標在原始座標與版面原點換算後仍不屬於任何授權 EIS 區域時，
+會以 ``state="failed"`` 的 ``LibeiUnavailable`` 拒絕，停止自動 CLI 備援，
+不送出移動、frame 或後續點擊。有效座標、未提供區域的裝置、同一 sender 的後續有效請求，
+以及明確選擇 CLI 的既有行為維持不變。
+
 無副作用的能力快照提供 ``je_auto_control.api`` 與套件根目錄匯出的
 ``BackendContext``、``CapabilityStatus``、``CapabilitySnapshot``、``probe_capabilities``。
 輸入項描述按鍵／指標事件，與 wtype 文字路徑獨立。

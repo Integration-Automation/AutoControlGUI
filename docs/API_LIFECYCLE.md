@@ -1,5 +1,15 @@
 # Public API lifecycle
 
+A native Wayland pointer coordinate outside every granted EIS region, after
+raw-coordinate and layout-origin mapping, raises `LibeiUnavailable` with
+`state="failed"` and disables automatic CLI fallback. A rejected move emits
+no motion/frame or subsequent click. Valid coordinates, devices without
+regions, later valid requests on the same sender and explicit CLI selection
+retain their existing behavior.
+
+This correction adds no public names or signatures and retains the existing
+exception family. It does not revoke an otherwise valid sender or its grant.
+
 The additive public capability API is BackendContext, CapabilityStatus,
 CapabilitySnapshot and probe_capabilities(context), exported from the root
 and versioned je_auto_control.api/core namespaces. Contexts are detached and

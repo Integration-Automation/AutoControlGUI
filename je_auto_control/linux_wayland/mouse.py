@@ -296,8 +296,8 @@ def click_mouse(mouse_keycode: int, x: Optional[int] = None,
     if x is not None and y is not None:
         set_position(int(x), int(y))
     if _emit_button(mouse_keycode, press=True):
-        # Not _emit_button: a refused release has to reach the CLI, or the
-        # button stays down for the rest of the session.
+        # Use the normal release path so authority/device refusals propagate;
+        # a native press must not be released through a different provider.
         release_mouse(mouse_keycode)
         return
     time.sleep(0.01)

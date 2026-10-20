@@ -506,6 +506,13 @@ backend and preserve the original cancellation. The explicit wtype text path
 and screen-capture selection are unchanged.
 
 
+A native Wayland pointer coordinate outside every granted EIS region, after
+raw-coordinate and layout-origin mapping, raises ``LibeiUnavailable`` with
+``state="failed"`` and disables automatic CLI fallback. A rejected move emits
+no motion/frame or subsequent click. Valid coordinates, devices without
+regions, later valid requests on the same sender and explicit CLI selection
+retain their existing behavior.
+
 Passive capability snapshots use ``BackendContext``, ``CapabilityStatus``,
 ``CapabilitySnapshot`` and ``probe_capabilities`` from ``je_auto_control.api``
 or the package root. Input covers key/pointer events, independently of wtype text.

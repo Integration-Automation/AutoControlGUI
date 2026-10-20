@@ -501,18 +501,19 @@ def _check_libei_drops_out_of_region_motion(backend, server, libei) -> str:
 
 
 def _check_out_of_region_move_is_refused(backend, server, libei) -> str:
-    """AutoControl turns that silence into something the CLI path can act on."""
+    """AutoControl refuses an invalid native coordinate without selecting another provider."""
     before = len(server.recording.absolute_motions)
     try:
         backend.set_position(9000, 9000)
     except libei.LibeiUnavailable as error:
         _require("outside every region" in str(error),
                  f"refused, but with an unhelpful message: {error}")
+        _require(error.state == 'failed' and not error.status.fallback_allowed,
+                 "a region refusal was misclassified as optional backend absence")
         time.sleep(0.3)
         _require(len(server.recording.absolute_motions) == before,
                  "the refusal still put a motion on the wire")
-        return f"refused with {str(error)[:60]}... — _select_input.emitted "\
-               "hands it to ydotool"
+        return f"refused with {str(error)[:60]}... — native request stopped without CLI fallback"
     raise AssertionError(
         "set_position(9000, 9000) returned as though the pointer had moved; "
         "libei dropped it and nobody was told")

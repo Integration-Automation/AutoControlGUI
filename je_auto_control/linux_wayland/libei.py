@@ -535,8 +535,8 @@ class LibeiBackend:
         exact layout ``docker/wayland_verify.py`` exercises on the capture
         side. Where the raw point misses, the origin-normalised one is tried,
         which is the translation that keeps input and capture addressing the
-        same pixel. If that misses too, the caller gets a refusal and
-        ``_select_input.emitted`` hands the move to the ydotool path.
+        same pixel. If that misses too, the native request fails without
+        selecting a different input provider.
         """
         regions = self._device_regions(device)
         if not regions or _in_any_region(regions, x, y):
@@ -548,7 +548,8 @@ class LibeiBackend:
         raise LibeiUnavailable(
             f"({x}, {y}) lies outside every region this pointer accepts "
             f"{regions}; libei drops such a motion without reporting it, so "
-            "the move is refused here for the CLI path to take",
+            "this native move was refused without changing input provider",
+            state='failed',
         )
 
     # --- plumbing ---------------------------------------------------------
