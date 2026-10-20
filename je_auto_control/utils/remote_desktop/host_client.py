@@ -13,6 +13,7 @@ import threading
 from typing import TYPE_CHECKING, Deque, NoReturn, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.auth import make_nonce
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
@@ -22,7 +23,7 @@ from je_auto_control.utils.remote_desktop.file_transfer import (
     FileTransferError, decode_begin,
 )
 from je_auto_control.utils.remote_desktop.host_access import (
-    PERMISSION_DENIED, PERMISSION_FULL, PERMISSION_VIEW_ONLY,
+    PERMISSION_DENIED, PERMISSION_FULL,
     PendingViewer, _AUTH_TIMEOUT_S, _interpret_approval,
 )
 from je_auto_control.utils.remote_desktop.input_dispatch import (
@@ -292,6 +293,9 @@ class _ClientHandler:
                     )
                 self.stop()
                 return
+            if self._shutdown.is_set() or not self.authenticated:
+                self.stop()
+                return
             try:
                 self._route_incoming(msg_type, payload)
             except BaseException:
@@ -308,15 +312,15 @@ class _ClientHandler:
         if msg_type is MessageType.INPUT:
             # Phase 5.3: drop input from view-only viewers so they can
             # watch but cannot drive the mouse / keyboard.
-            if self.permission != PERMISSION_VIEW_ONLY:
+            if self.permission == PERMISSION_FULL:
                 self._handle_input_payload(payload)
             return
-        if msg_type in _CONTROL_MSG_TYPES and self.permission == PERMISSION_VIEW_ONLY:
+        if msg_type in _CONTROL_MSG_TYPES and self.permission != PERMISSION_FULL:
             # Setting the host clipboard or writing files on it is control,
             # not viewing: a file dropped in the Startup folder is full
             # control at the next logon.
             autocontrol_logger.info(
-                "remote_desktop view-only viewer %s sent %s; dropped",
+                "remote_desktop unprivileged viewer %s sent %s; dropped",
                 self._address, msg_type.name,
             )
             return
@@ -409,14 +413,18 @@ class _ClientHandler:
         try:
             kind, data = decode_clipboard(payload)
         except ClipboardSyncError as error:
+            raise_caused_run_interruption(error)
             autocontrol_logger.info(
                 "remote_desktop bad CLIPBOARD from %s: %r",
                 self._address, error,
             )
             return
+        if self._shutdown.is_set() or not self.authenticated or self.permission != PERMISSION_FULL:
+            return
         try:
             self._host._apply_clipboard(kind, data)
         except (OSError, RuntimeError, TypeError, ValueError) as error:
+            raise_caused_run_interruption(error)
             autocontrol_logger.warning(
                 "remote_desktop clipboard apply failed for %s: %r",
                 self._address, error,

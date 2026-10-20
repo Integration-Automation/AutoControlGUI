@@ -474,7 +474,7 @@ paths and binding values and remain private; only portable entries belong on the
 twelve temporary native/metadata files, with zero execution, registration, vault reads
 or network calls. Source/outbox coordination and full-resync baselines are described below.
 Explicit disabled native loading and
-folder/clipboard/disconnection regression remain C3 work in Progress.md.
+Folder and explicit clipboard lifecycle coverage is described below.
 
 Journal capture keeps the existing conservative secret-field policy. An inline
 definition containing a password field is masked even when its value is a reference,
@@ -596,8 +596,8 @@ Controls additionally accept operation_id/peer_id/discard_pending under their us
 ``python -m examples.sync_workspace_http`` uses two real temporary source selections and
 loopback HTTP to demonstrate offline concurrency, exact resolution, restart, inert
 publication and no retired replay. Referenced assets and live GUI application are described below.
-Explicit native working-copy loading is described below. Folder/clipboard/disconnection regression remains
-open in Progress.md. No device or paid API acceptance is implied.
+Explicit native working-copy loading, folder and explicit clipboard lifecycle coverage are described
+below. No device or paid API acceptance is implied.
 
 
 Explicit Sync UI and live preferences
@@ -775,7 +775,7 @@ does not execute scripts, register hotkeys, arm triggers or replace current pref
 ``python -m examples.sync_referenced_assets`` transfers an actual multi-chunk PNG/script
 over temporary stdlib loopback HTTP and publishes three inert files. It needs no optional
 web framework or external service. Sync UI/live application/native working-copy loading is described above; separate
-folder/clipboard/disconnection regression remain in Progress.md; native/paid acceptance
+folder and explicit clipboard lifecycle coverage is described below; native/paid acceptance
 remains deferred.
 
 Folder content and stopped-worker ownership
@@ -797,8 +797,7 @@ After atomically publishing received bytes, an owning transport may explicitly c
 ``record_received(path)``. It returns false for outside, excluded, missing or changing paths.
 Successful receipts suppress echo without suppressing later local edits; newer receipts win
 over older sender completions and scans. This core seam is covered by local fake-sender
-regressions. GUI reconnect state retention and clipboard loop handling
-are still tracked in ``Progress.md``; this section does not claim those integrations complete.
+regressions. Native GUI reconnect and explicit clipboard lifecycle integrations are described below.
 
 Observable file sends and connection ownership
 ----------------------------------------------
@@ -815,7 +814,7 @@ They stop scanning and writing after ownership changes, including reconnection o
 Inbox pulls run outside the bridge event loop and serialize up to 32 requests per channel.
 Shutdown cancels owned file jobs; error replies stay on the original control channel and loop.
 These behaviors are covered with local bridge/fake-channel regressions. Explicit GUI reconnect/resume is described below;
-clipboard loop/disconnect coverage remains in ``Progress.md``.
+explicit clipboard lifecycle coverage is described below.
 
 Native receive ownership and disconnect cleanup
 -----------------------------------------------
@@ -833,7 +832,7 @@ affect the replacement receiver. Terminal cleanup precedes state notification, i
 callback that immediately reconnects. Native file/audit/state callbacks preserve wrapped
 interruption identity. Existing Remote Desktop controls use this same lifecycle.
 Completed targets and legacy manual wire remain available. Native folder receipts, confirmed
-publication and explicit reconnect/resume are described below; clipboard coverage remains in ``Progress.md``.
+publication and explicit reconnect/resume and explicit clipboard lifecycle coverage are described below.
 
 Frozen local receive receipts and native folder echo suppression
 ----------------------------------------------------------------
@@ -856,7 +855,7 @@ role authorization and refuses stopped/auth-lost/replaced peers before touching 
 Controlled native host/viewer tests converge with two edits and zero echoes, including a reply
 arriving before the first send completes. This is connected local receipt bookkeeping, not a
 remote commit acknowledgement or a sender checksum. Confirmed mode and explicit reconnect/resume
-are described below; clipboard coverage remains in ``Progress.md``.
+and explicit clipboard lifecycle coverage are described below.
 
 Authenticated native publication confirmation
 ---------------------------------------------
@@ -882,8 +881,7 @@ retain identity. Native callbacks still receive local immutable receipts and leg
 
 Controlled native pairs cover dropped bytes, delayed publication, corrupted content,
 replayed receipts with reused transfer IDs, permission changes, source cwd changes and
-two-way GUI folder sends. Explicit GUI reconnect/resume is described below; clipboard regressions
-remain in ``Progress.md``.
+two-way GUI folder sends. Explicit GUI reconnect/resume and clipboard lifecycle coverage are described below.
 
 Explicit folder resume after viewer reconnect
 ---------------------------------------------
@@ -908,5 +906,28 @@ metadata or an active old worker raises ``FolderSyncStateError``. The baseline i
 ignored files, received bytes and successful sends; it is not a remote acknowledgement list.
 
 Controlled native GUI stop/toggle tests cover pending/offline retry, ownership changes,
-permission revocation, failed starts, blocked handoffs and late receipts. Clipboard loop and
-disconnect regressions remain in ``Progress.md``.
+permission revocation, failed starts, blocked handoffs and late receipts. Explicit clipboard lifecycle coverage is described below.
+
+Explicit clipboard transfers and connection ownership
+-----------------------------------------------------
+
+Use the existing TCP/WebSocket SDK clipboard methods and GUI Push clipboard button.
+Received text/images do not automatically send or broadcast onward. Deliberate repeated
+transfers of identical values remain valid; the legacy JSON envelope is unchanged.
+
+Viewer sends capture the original channel before encoding and refuse a replacement before
+writing. Buffered reads reject stopped/replaced connections; decoded clipboard data rechecks
+the original channel before invoking callbacks. Host clients recheck stop/authentication and
+full-control permission before application. Ordinary provider/callback failures remain contained,
+while original cancellation and hard-control objects propagate through wrappers unchanged.
+
+Queued GUI delivery captures its concrete viewer and connecting user's authority. Before native
+clipboard writes, explicit reads and subsequent sends, it refreshes permission and ownership.
+Old queued data cannot adopt a replacement viewer, and worker ambient users cannot supply rights.
+No OS clipboard watcher or automatic reconnection replay is introduced.
+
+Controlled two-viewer channels verify explicit send/broadcast counts with no echo for text and
+images. Offscreen Qt tests use real queued signals and fake native change notifications, covering
+reconnect, revoked/deleted users, peer changes during authority refresh and deliberate repeated
+pushes. Existing loopback cases stay passing; native clipboard providers are replaced in tests.
+Physical-device and paid-API acceptance remain deferred.

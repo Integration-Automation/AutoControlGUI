@@ -263,7 +263,7 @@ request_stop plus stop_requested. GUI folder jobs capture authority and peer ide
 loss of ownership stops scans and queued writes. Viewer connection_identity is opaque.
 Native inbox pulls use a per-channel queue of at most 32 jobs on the original loop,
 perform blocking sends in a worker and cancel owned jobs on host shutdown. Failure replies
-remain bound to their original control channel. Explicit GUI reconnect/resume is described below; clipboard coverage remains in Progress.md.
+remain bound to their original control channel. Explicit GUI reconnect/resume and clipboard lifecycle coverage are described below.
 
 FileTransferReceiver.close is idempotent and terminal: it refuses subsequent frames and
 discards unfinished bytes while preserving any earlier published target. abort discards
@@ -277,7 +277,7 @@ cannot retire a replacement transfer. Terminal cleanup precedes state callbacks,
 callbacks that reconnect immediately. File/audit/state callback interruption carriers propagate
 unchanged; ordinary native callback failures retain their existing logging/containment behavior.
 The Remote Desktop GUI uses the same endpoints. No wire, facade, command or MCP schema changes.
-Explicit GUI reconnect/resume is described below; clipboard loop/disconnect coverage remains in Progress.md.
+Explicit GUI reconnect/resume and clipboard lifecycle coverage are described below.
 
 FileReceiveReceipt (utils.remote_desktop.file_receipts) is frozen local metadata with an
 absolute path, lowercase SHA-256 and nonnegative byte size; malformed metadata raises the
@@ -295,7 +295,7 @@ hashes current content. Receipt state wins older scans/sender completions; owner
 filesystem access and repeat before state mutation with consistent lifecycle/content lock order.
 The GUI folder toggle binds receipts to its captured viewer and engine; live role/auth/peer
 checks retain the original authority. Local receipt metadata does not acknowledge remote
-publication or verify a sender-provided checksum in legacy mode. GUI explicit reconnect/resume is described below; clipboard regressions remain in Progress.md.
+publication or verify a sender-provided checksum in legacy mode. GUI explicit reconnect/resume is described below; explicit clipboard lifecycle coverage is described below.
 
 Publication-confirmed native sends use keyword-only require_commit=True on the existing
 FileTransferSender.send, WebRTCDesktopViewer.send_file and WebRTCDesktopHost.push_file.
@@ -316,8 +316,7 @@ is bounded to 4 KiB before decoding. FileCommitError stays in the flat framework
 native sender boundaries expose FileTransferError with original interruption identities.
 Legacy manual envelopes and path/receipt listeners remain available. GUI folder delivery now
 requires compatible support on both peers. Same-engine uncertain sends retry without advancing
-the confirmed digest. Explicit GUI reconnect/resume is described below; clipboard regressions
-remain in Progress.md.
+the confirmed digest. Explicit GUI reconnect/resume and clipboard lifecycle coverage are described below.
 
 FolderSyncEngine.checkpoint() exports a frozen FolderSyncCheckpoint only after request_stop/stop
 and actual worker retirement; a live blocked sender raises flat-family FolderSyncStateError.
@@ -339,3 +338,22 @@ A still-running old worker refuses handoff, including a change of peer/root; ret
 Failed starts leave the retained baseline intact. Explicitly disabling folder sync forgets the
 baseline, but still owns a retiring worker. Viewer Stop/reconnect retains it until resume; panel
 destruction/application exit clears it. This state is memory-only and never auto-enables sync.
+
+TCP/WebSocket clipboard APIs and legacy text/image JSON envelopes remain compatible. Transfers
+are explicit: received values do not automatically forward/broadcast, and identical deliberate
+sends are not deduplicated. Viewer send_clipboard_text/image capture the original channel before
+encoding, recheck ownership before writing and propagate connection replacement as ConnectionError.
+Buffered receive dispatch rejects stopped/replaced channels; decoded clipboard data rechecks the
+same channel before invoking callbacks. Host receive checks shutdown/authentication after reads
+and again after decoding; input/clipboard/file control routes require PERMISSION_FULL.
+Ordinary clipboard callback/provider failures keep their logging/containment behavior. Explicit
+wrapped cancellation/hard signals preserve the original object at SDK/native GUI boundaries.
+
+The Qt-free clipboard_delivery module shares lazy native application and captured ClipboardDelivery
+metadata. GUI callbacks carry the concrete viewer and DeferredAuthorization captured at connect;
+the queued slot checks its current owned viewer and live connection, refreshes the original user
+and rechecks ownership before applying data. Explicit GUI push refreshes before native clipboard
+read and again before network send. Ambient callback-thread users never supply authority.
+No clipboard OS watcher, automatic forwarder or implicit reconnection replay is introduced.
+Existing SDK methods and the GUI Push clipboard button share these contracts without new root,
+AC, MCP, Builder or wire fields. Native providers remain lazy; controlled tests replace them.

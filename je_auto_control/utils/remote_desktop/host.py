@@ -14,6 +14,7 @@ from je_auto_control.utils.remote_desktop.audio import (
 from je_auto_control.utils.remote_desktop.auth import (
     verify_response,
 )
+from je_auto_control.utils.remote_desktop.clipboard_delivery import apply_clipboard
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
     encode_image, encode_text,
 )
@@ -485,15 +486,7 @@ class RemoteDesktopHost(FrameProductionMixin):
         Subclasses or tests may override; the default routes to the
         utils.clipboard helpers and accepts ``"text"`` / ``"image"`` kinds.
         """
-        from je_auto_control.utils.clipboard.clipboard import (
-            set_clipboard, set_clipboard_image,
-        )
-        if kind == "text":
-            set_clipboard(data)
-        elif kind == "image":
-            set_clipboard_image(data)
-        else:
-            raise ValueError(f"unsupported clipboard kind: {kind!r}")
+        apply_clipboard(kind, data)
 
     # internals -----------------------------------------------------------
 

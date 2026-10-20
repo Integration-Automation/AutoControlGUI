@@ -371,8 +371,8 @@ profile generation. AC/MCP/Builder share private DRIVE and live root/cancellatio
 Missing references and native binding type mismatches persist for review but block complete
 publication. This establishes local capture/inert materialization, with no script execution,
 vault lookup or listener startup; coordinated loopback convergence is covered below.
-Native working-copy loading is covered below; folder/clipboard/disconnection
-regression remains in Progress.md; live GUI preference application is covered below.
+Native working-copy loading, folder and explicit clipboard lifecycle coverage, and live
+GUI preference application are described below.
 
 Controlled native-definition numeric tests refuse positive and negative 401-digit
 JSON integers with ConfigSyncError before creating adapter storage.
@@ -453,7 +453,7 @@ retry of pending/offline bytes and transient scan failure. Explicit receive rece
 no-echo behavior and races with older send, baseline and pruning operations. Wrapped
 cancellation/KeyboardInterrupt/SystemExit carriers retain their original identities at scan,
 send and receipt boundaries. These are local filesystem/fake-sender checks; native WebRTC
-explicit GUI reconnect/resume is covered below; clipboard loop tests remain in Progress.md.
+explicit GUI reconnect/resume is covered below; explicit clipboard lifecycle tests are described below.
 
 Local bridge/fake-channel regressions verify observable callback failure, folder retry,
 bounded buffering, queued cancellation, pending-abort ownership, completed-end cancellation
@@ -465,7 +465,7 @@ Queue overflow and cancellation before the first task step release capacity; sta
 replies are suppressed and wrapped interruption objects survive error-reply callbacks.
 These checks use local threads/files/fake channels, without real devices or paid APIs.
 They do not establish remote publication acknowledgement, sender-checksum validation in legacy mode,
-clipboard no-echo/disconnect behavior, which remain in Progress.md.
+clipboard no-echo/disconnect behavior; the explicit clipboard coverage is described below.
 
 Native receive lifecycle evidence covers deterministic close/write overlap, repeated close,
 late frames, host/viewer stop, file/control channel close, all three terminal connection states,
@@ -476,7 +476,7 @@ native file/audit/state callback boundaries. Tests use fake peer/channel objects
 published targets survive failed receives. Receive-close behavior is shared by existing GUI and
 SDK endpoints. These checks do not establish remote publication acknowledgement, file-wire
 checksums or clipboard no-echo. Publication confirmation and GUI reconnect tests are described below;
-clipboard regressions remain in Progress.md.
+explicit clipboard lifecycle coverage is described below.
 
 Native GUI wiring initially reproduces received bytes being sent back before the next local edit.
 Immutable streamed receipts now suppress that echo and retain delayed/before-baseline local
@@ -488,7 +488,7 @@ transfers, including a reply delivered before the first sender completes. GUI to
 rejects stale viewer/engine/peer, stopped/auth-lost and live role-revoked receipts before watch I/O.
 These are local fake-channel/controlled-loop checks; they do not establish loss recovery or remote
 commit acknowledgement. Confirmed delivery and explicit reconnect/resume are covered below;
-clipboard regressions remain in Progress.md. No physical device or paid API acceptance is claimed.
+explicit clipboard lifecycle coverage is described below. No physical device or paid API acceptance is claimed.
 
 The native bridge pair first reproduces dropped binary chunks being marked delivered even
 though the remote target never appears. Publication-confirmed folder sends now leave that
@@ -502,8 +502,7 @@ cover source cwd changes during negotiation, malformed/bounded envelopes, channe
 and permission-generation cancellation, loop replacement, single-producer ownership, weak
 registry collection, wrapped original controls and completed-receipt/late-cancel ordering.
 Actual GUI folder wiring requests confirmation and connected two-way native tests use it in
-both directions. GUI reconnect/resume tests are described below; clipboard regressions remain
-explicitly in Progress.md.
+both directions. GUI reconnect/resume tests and explicit clipboard lifecycle coverage are described below.
 
 The actual GUI stop/toggle path first reproduces failed/offline files being ignored when a new
 engine establishes its initial baseline. Native paired channels now confirm both failed-send
@@ -518,4 +517,20 @@ pending file. Late old receipt callbacks cannot access/adopt either watch. Expli
 sync resets its baseline. Headless checkpoint tests cover immutability, no-I/O export/restore,
 path/recursion matching, initial/recursive semantics and native filename validation. These are
 controlled local filesystem/thread/fake-channel cases, without physical devices or paid APIs.
-Clipboard loop/disconnect regression work remains in Progress.md.
+Explicit clipboard lifecycle and no-reflection coverage are described below.
+
+Clipboard lifecycle reproduction initially shows buffered old text/images reaching a disconnected
+or replacement viewer, stopped/unprivileged host clients writing the host clipboard, queued old
+GUI deliveries changing native state and revoked GUI users retaining read/write permission.
+Separate reproductions show text/image encoding adopting a new TCP/WS channel and revoked GUI
+push reading the native clipboard. Fixes reject the original stale work while current deliveries
+and deliberate repeated values remain valid. The controlled two-viewer host/SDK pair verifies
+explicit text/image send/broadcast counts in TCP and WS viewer classes, with no automatic echo.
+Offscreen Qt tests emit real queued callbacks from another thread and fake native change signals;
+receiving never triggers push, while two deliberate identical pushes both send. Tests refresh
+deleted/downgraded users, recheck peer changes during user-store access, preserve the registrant
+instead of an ambient user, and recheck role changes between native read and send. Callback and
+GUI boundaries preserve original wrapped controls; ordinary failures remain logged/contained.
+Existing loopback clipboard and GUI/registry/host-access cases remain passing. Controlled channels
+do not claim new WS framing or real native-clipboard acceptance: framing has its existing tests,
+native clipboard providers are replaced, and physical/paid acceptance stays deferred.

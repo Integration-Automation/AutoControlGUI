@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Bind TCP/WebSocket clipboard reads, decoded data and sends to their original connection.
+  Reject stopped, unauthenticated or non-full-control host writes; queued GUI clipboard
+  delivery and explicit push refresh the connecting user's authority before native I/O.
+  Preserve original controls and contain ordinary provider errors. Received data does not
+  automatically echo; deliberate repeated sends and legacy text/image envelopes remain valid.
+
 - Retain GUI folder baselines across viewer stop/reconnect for explicit Start sync resume
   under the same authenticated host fingerprint, watch path and local principal. Refresh
   authorization and use a new sender; refuse handoff while an old worker remains alive.

@@ -256,15 +256,17 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 資料夾鏡像改以 SHA-256 內容比對，不再依賴修改時間遞增：只改時間不重送，時間相同或較舊的內容修改仍會送出。FolderSyncEngine 重啟時保留待送與離線修改，逐檔檢查停止要求，並持續擁有尚未結束的傳送工作。傳輸擁有者可在發布檔案後明確呼叫 record_received(path)，避免回送收到的內容。原生 GUI 的固定內容收據處理見下文。
 
-檔案傳送現在會等待每個 DataChannel callback，將緩衝資料限制在 1 MiB，並將通道失敗回報給呼叫端。可選的 `cancelled` 判斷會停止排隊寫入；宣告的位元組數可偵測來源截短或增長。原生資料夾工作綁定授權、引擎、viewer 與 peer connection，擁有權變更時停止。收件匣下載移至事件迴圈之外，透過每個通道最多 32 筆請求的佇列依序傳送。預設手動模式接受資料不代表遠端發布完成；確認模式見下文。GUI 重連交接見下文；剪貼簿迴圈／斷線驗證仍列於 Progress.md。
+檔案傳送現在會等待每個 DataChannel callback，將緩衝資料限制在 1 MiB，並將通道失敗回報給呼叫端。可選的 `cancelled` 判斷會停止排隊寫入；宣告的位元組數可偵測來源截短或增長。原生資料夾工作綁定授權、引擎、viewer 與 peer connection，擁有權變更時停止。收件匣下載移至事件迴圈之外，透過每個通道最多 32 筆請求的佇列依序傳送。預設手動模式接受資料不代表遠端發布完成；確認模式見下文。GUI 重連交接見下文。
 
 原生檔案接收器現在會在關閉、檔案／控制通道關閉、連線進入終止狀態、更換通道或撤銷檔案權限時清除未完成內容。已關閉的接收器拒絕延遲資料；具體 peer／通道與授權檢查會保護替換後的傳輸，也會拒絕 viewer 在驗證前接收檔案。狀態清理先於使用者 callback，避免舊失敗影響 callback 建立的新連線。檔案／稽核／狀態 callback 保留原始取消及強制中斷物件。清理會嘗試關檔及刪除暫存檔，檔案系統失敗寫入日誌。既有 Remote Desktop 控制自動使用此生命週期；已完成的目標與原有線上格式仍可使用。
 
-本機 `FileReceiveReceipt(path, sha256, size)` 現在會在原子發布後固定原始接收內容。`FileTransferReceiver.handle_message(on_receipt=...)` 與原生 host／viewer 的 `set_file_receipt_callback()` 提供收據，不必重讀已發布檔案。`FolderSyncEngine.record_receipt()` 避免回送並保留後續本機修改；既有 `record_received(path)` 則明確快照當前內容。GUI 資料夾開關綁定接收收據的引擎及 viewer，並在存取監看目錄前重新驗證原始授權。相對收件匣／監看路徑綁定建立時的工作目錄，既有路徑通知使用絕對路徑。這些本機收據供下文的原生確認模式使用；GUI 重連交接見下文；剪貼簿回歸仍列於 Progress.md。
+本機 `FileReceiveReceipt(path, sha256, size)` 現在會在原子發布後固定原始接收內容。`FileTransferReceiver.handle_message(on_receipt=...)` 與原生 host／viewer 的 `set_file_receipt_callback()` 提供收據，不必重讀已發布檔案。`FolderSyncEngine.record_receipt()` 避免回送並保留後續本機修改；既有 `record_received(path)` 則明確快照當前內容。GUI 資料夾開關綁定接收收據的引擎及 viewer，並在存取監看目錄前重新驗證原始授權。相對收件匣／監看路徑綁定建立時的工作目錄，既有路徑通知使用絕對路徑。這些本機收據供下文的原生確認模式使用；GUI 重連交接見下文。
 
-原生 `FileTransferSender.send`、viewer 的 `send_file` 與 host 的 `push_file` 現在接受僅限關鍵字的 `require_commit=True`。確認模式會先探測已驗證的原生對端，再讀來源中繼資料／內容；以第二版 begin／end 中繼資料傳送，並在原子發布後核對傳輸 ID、不可預測的結束 nonce、SHA-256 及位元組數。相對來源路徑會在交換前固定。每個檔案都重新確認支援與權限，等待有時限；取消、通道／事件迴圈替換或撤銷權限都保留失敗狀態。GUI 資料夾傳送一律要求此模式，因此只接受但遺失的資料不會推進投遞狀態；不確定的傳送會由同一引擎重試。手動傳送仍預設使用原有線上格式。GUI 資料夾投遞要求兩端都支援確認傳輸；不支援時會在送出檔案內容前失敗。GUI 明確重連／恢復見下文；剪貼簿回歸仍列於 Progress.md。
+原生 `FileTransferSender.send`、viewer 的 `send_file` 與 host 的 `push_file` 現在接受僅限關鍵字的 `require_commit=True`。確認模式會先探測已驗證的原生對端，再讀來源中繼資料／內容；以第二版 begin／end 中繼資料傳送，並在原子發布後核對傳輸 ID、不可預測的結束 nonce、SHA-256 及位元組數。相對來源路徑會在交換前固定。每個檔案都重新確認支援與權限，等待有時限；取消、通道／事件迴圈替換或撤銷權限都保留失敗狀態。GUI 資料夾傳送一律要求此模式，因此只接受但遺失的資料不會推進投遞狀態；不確定的傳送會由同一引擎重試。手動傳送仍預設使用原有線上格式。GUI 資料夾投遞要求兩端都支援確認傳輸；不支援時會在送出檔案內容前失敗。GUI 明確重連／恢復見下文。
 
-GUI 重連時會為每個面板保留一份記憶體內的資料夾基準。重新連線後再按開始同步：相同的已驗證 host 指紋、絕對監控路徑與本機使用者，會透過新授權的 sender 接續失敗／離線修改。缺少或更換 host 指紋、路徑或使用者時建立新基準；舊工作仍在執行時拒絕交接，待它退出後才能重試。明確關閉資料夾同步會重設基準；停止／重連 viewer 則保留，關閉應用程式後清除。指紋沿用既有已驗證 host 中繼資料的信任模型，沒有新增密碼學身份保證。SDK 可先停止 FolderSyncEngine，待工作確實退出後匯出 checkpoint()，將不可變的 FolderSyncCheckpoint 傳給路徑／遞迴設定相同且 sender 已明確授權的新引擎。基準包含初始略過檔案與收到的內容，並非遠端確認清單。剪貼簿迴圈／斷線回歸仍列於 Progress.md。
+GUI 重連時會為每個面板保留一份記憶體內的資料夾基準。重新連線後再按開始同步：相同的已驗證 host 指紋、絕對監控路徑與本機使用者，會透過新授權的 sender 接續失敗／離線修改。缺少或更換 host 指紋、路徑或使用者時建立新基準；舊工作仍在執行時拒絕交接，待它退出後才能重試。明確關閉資料夾同步會重設基準；停止／重連 viewer 則保留，關閉應用程式後清除。指紋沿用既有已驗證 host 中繼資料的信任模型，沒有新增密碼學身份保證。SDK 可先停止 FolderSyncEngine，待工作確實退出後匯出 checkpoint()，將不可變的 FolderSyncCheckpoint 傳給路徑／遞迴設定相同且 sender 已明確授權的新引擎。基準包含初始略過檔案與收到的內容，並非遠端確認清單。
+
+TCP／WebSocket 剪貼簿傳輸沿用明確的 SDK 呼叫與 GUI 推送剪貼簿按鈕。收到的文字／圖片不會自動傳回或廣播；使用者仍可明確重複傳送相同內容。Viewer／host 在讀到緩衝訊息後，會重新檢查原始連線、驗證及完整控制權限，再套用剪貼簿資料。Viewer 會在編碼前固定原通道，拒絕改送至替換後的連線。GUI 排隊中的傳輸保留具體 viewer 與連線發起使用者，寫入本機剪貼簿、明確讀取及送出前都會重新檢查權限與擁有權。過期或撤銷的工作會被略過或回報權限錯誤；一般 provider／callback 錯誤仍受控，原始取消與強制中斷物件繼續傳播。文字／圖片 JSON 格式及既有 API 不變。受控本機協定、loopback 與 offscreen 測試替換原生剪貼簿 provider；真機與付費 API 驗收仍暫緩。
 
 實驗性引用資產使用 `SyncAssetBlob`、`SyncAssetReference`、`SyncAssetStore` 與 `SyncAssetHTTPClient`。明確的 `SyncBindings.assets` 別名將選定檔案封存為不可變 SHA-256 參照；只改資產也會建立新的因果版本。`SyncWorkspace` 在準備新定義請求前上傳已驗證分塊，支援中斷續傳，並在完整且未啟用的發布前下載引用內容。既有私有 AC／MCP／Builder 工作區／profile 命令共用這些欄位。`asset_cache_path` 選取 client cache；signaling 的 `--asset-store`／`AUTOCONTROL_SYNC_ASSET_STORE` 選取獨立 server 資料庫。具驗證的第一版資產路由使用 256-KiB 分塊、每檔 64 MiB 上限，每帳號預設限制 256 MiB、8,192 塊與 4,096 筆 blob 收據。超過配額會明確失敗；不可變歷史不自動回收。原生輸出路徑相對於 generation 根目錄。`python -m examples.sync_referenced_assets` 經暫存 loopback HTTP 傳送真實 PNG 與腳本，不執行腳本或改目前工作區。
 
