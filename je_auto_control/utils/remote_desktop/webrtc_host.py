@@ -23,6 +23,9 @@ from je_auto_control.utils.exception.control_signals import raise_caused_run_int
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.audit_log import default_audit_log
 from je_auto_control.utils.remote_desktop.input_dispatch import dispatcher_at
+from je_auto_control.utils.remote_desktop.webrtc_file_callbacks import (
+    FileReceiveCallbacks, ReceiptCallback,
+)
 from je_auto_control.utils.remote_desktop.webrtc_file_receive import (
     abort_file_receiver, bind_file_receiver, close_file_receiver,
 )
@@ -125,7 +128,9 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         self._files_receiver: Optional[FileTransferReceiver] = None
         self._usb_channel: Any = None
         self._usb_host: Optional[UsbChannelHost] = None
-        self._on_file_received: Optional[Callable] = None
+        self._file_callbacks = FileReceiveCallbacks(
+            audit=lambda path: default_audit_log().log(
+                'file_received', viewer_id=self._pending_viewer_id, detail=str(path)))
         self._on_viewer_video_frame: Optional[Callable] = None
         self._viewer_video_task: Optional[asyncio.Task] = None
         self._opus_audio_receiver: Optional[OpusMicReceiver] = None
@@ -408,7 +413,8 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
                 self._safe_audit_log('rate_limit_files')
             return False
 
-        bind_file_receiver(channel, receiver, active, self._on_file_done, accept_begin)
+        bind_file_receiver(channel, receiver, active, self._on_file_done, accept_begin,
+                           received=self._file_callbacks.received)
 
     def _wire_usb_channel(self, channel) -> None:
         """Carry USB passthrough over the ``usb`` DataChannel.
@@ -452,7 +458,11 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
 
     def set_file_received_callback(self, callback) -> None:
         """Register a sync callback ``cb(path: Path)`` for completed transfers."""
-        self._on_file_received = callback
+        self._file_callbacks.on_file = callback
+
+    def set_file_receipt_callback(self, callback: Optional[ReceiptCallback]) -> None:
+        """Register an inert local publication-receipt listener; None clears it."""
+        self._file_callbacks.on_receipt = callback
 
     def push_file(self, local_path, remote_name=None, *,
                   cancelled: Optional[Callable[[], bool]] = None) -> None:
@@ -467,20 +477,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         )
 
     def _on_file_done(self, path) -> None:
-        try:
-            default_audit_log().log(
-                "file_received", viewer_id=self._pending_viewer_id,
-                detail=str(path),
-            )
-        except (RuntimeError, OSError) as error:
-            raise_caused_run_interruption(error)
-            autocontrol_logger.debug("audit log file: %r", error)
-        if self._on_file_received is not None:
-            try:
-                self._on_file_received(path)
-            except (RuntimeError, OSError) as error:
-                raise_caused_run_interruption(error)
-                autocontrol_logger.debug("file done cb: %r", error)
+        self._file_callbacks.published(path)
 
     def enable_mic_receive(self) -> None:
         """Start playing incoming mic PCM from the viewer."""

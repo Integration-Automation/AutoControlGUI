@@ -255,11 +255,13 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 
 明确的原生加载使用 `load_sync_profile(directory, target_root, expected_digest=...)` 与 `LoadedSyncProfile`，并提供私有 `AC_sync_profile_load`／`ac_sync_profile_load`／Builder Data。以已发布的 `files` 文件夹及精确查看的 manifest 摘要创建全新可编辑工作区，先验证全部 bytes、标准原生文件及封存 heads 一致，再原子发布。加载的热键及每个触发器节点都是停用的原生对象；定位器与通讯录 handle 使用工作副本。类型化资产引用及原生热键／触发器路径按工作根目录解析，脚本文字保留原意，秘密保持 placeholder。在“工作区同步”发布后，文件夹／摘要字段会填入结果；选择工作副本存放文件夹，再执行“加载已查看的原生 profile”。其他明确 Actions 可检查所选原生类别、在 Builder 打开已加载脚本快照，或应用其偏好快照。每次操作都重新验证当前调用者与捕获所有者的权限；打开脚本后仍须明确执行 Run；Builder 将导入的命令名称与位置参数显示为字面文字。`python -m examples.sync_profile_load` 使用七种临时来源与真实 PNG，不调用网络或设备。
 
-文件夹镜像改用 SHA-256 内容比对，不再依赖修改时间递增：只改时间不重发，时间相同或较旧的内容修改仍会发送。FolderSyncEngine 重启时保留待发与离线修改，逐文件检查停止请求，并持续拥有尚未结束的发送工作。传输所有者可在发布文件后明确调用 record_received(path)，避免回发收到的内容。WebRTC 原生接收回执接入仍列于 Progress.md。
+文件夹镜像改用 SHA-256 内容比对，不再依赖修改时间递增：只改时间不重发，时间相同或较旧的内容修改仍会发送。FolderSyncEngine 重启时保留待发与离线修改，逐文件检查停止请求，并持续拥有尚未结束的发送工作。传输所有者可在发布文件后明确调用 record_received(path)，避免回发收到的内容。原生 GUI 的固定内容回执处理见下文。
 
-文件发送现在会等待每个 DataChannel callback，将缓冲数据限制在 1 MiB，并将通道失败报告给调用方。可选的 `cancelled` 判断会停止排队写入；声明的字节数可检测来源截短或增长。原生文件夹任务绑定授权、引擎、viewer 与 peer connection，所有权变化时停止。收件箱下载移至事件循环之外，通过每个通道最多 32 个请求的队列依次发送。通道接受数据不代表远端已发布文件；线上格式不变。原生接收回执及剪贴板循环／断线验证仍列于 Progress.md。
+文件发送现在会等待每个 DataChannel callback，将缓冲数据限制在 1 MiB，并将通道失败报告给调用方。可选的 `cancelled` 判断会停止排队写入；声明的字节数可检测来源截短或增长。原生文件夹任务绑定授权、引擎、viewer 与 peer connection，所有权变化时停止。收件箱下载移至事件循环之外，通过每个通道最多 32 个请求的队列依次发送。通道接受数据不代表远端已发布文件；线上格式不变。远端发布确认／重试及剪贴板循环／断线验证仍列于 Progress.md。
 
 原生文件接收器现在会在关闭、文件／控制通道关闭、连接进入终止状态、更换通道或撤销文件权限时清除未完成内容。已关闭的接收器拒绝延迟数据；具体 peer／通道与认证检查会保护替换后的传输，也会拒绝 viewer 在认证前接收文件。状态清理先于用户 callback，避免旧失败影响 callback 建立的新连接。文件／审计／状态 callback 保留原始取消及强制中断对象。清理会尝试关闭文件及删除暂存文件，文件系统失败写入日志。现有 Remote Desktop 控件自动使用此生命周期；已完成的目标与线上格式不变。
+
+本机 `FileReceiveReceipt(path, sha256, size)` 现在会在原子发布后固定原始接收内容。`FileTransferReceiver.handle_message(on_receipt=...)` 与原生 host／viewer 的 `set_file_receipt_callback()` 提供回执，不必重读已发布文件。`FolderSyncEngine.record_receipt()` 避免回发并保留后续本机修改；现有 `record_received(path)` 则明确快照当前内容。GUI 文件夹开关绑定接收回执的引擎及 viewer，并在访问监控目录前重新验证原始授权。相对收件箱／监控路径绑定创建时的工作目录，现有路径通知使用绝对路径。回执只是本机元数据；远端发布确认、重新连接重试与剪贴板回归仍列于 Progress.md，线上格式不变。
 
 实验性引用资产使用 `SyncAssetBlob`、`SyncAssetReference`、`SyncAssetStore` 与 `SyncAssetHTTPClient`。明确的 `SyncBindings.assets` 别名将选定文件封存为不可变 SHA-256 引用；只改资产也会建立新的因果版本。`SyncWorkspace` 在准备新定义请求前上传已验证分块，支持中断续传，并在完整且未启用的发布前下载引用内容。现有私有 AC／MCP／Builder 工作区／profile 命令共用这些字段。`asset_cache_path` 选择 client cache；signaling 的 `--asset-store`／`AUTOCONTROL_SYNC_ASSET_STORE` 选择独立 server 数据库。带验证的第一版资产路由使用 256-KiB 分块、每文件 64 MiB 上限，每账户默认限制 256 MiB、8,192 块与 4,096 条 blob 收据。超过配额会明确失败；不可变历史不自动回收。原生输出路径相对于 generation 根目录。`python -m examples.sync_referenced_assets` 经临时 loopback HTTP 传送真实 PNG 与脚本，不执行脚本或改当前工作区。
 

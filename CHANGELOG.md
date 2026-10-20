@@ -13,6 +13,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Publish immutable local file receipts with streamed SHA-256/size metadata after atomic
+  replacement, exposing optional receipt callbacks through the receiver and native endpoints.
+  Native GUI folder watches consume captured receipts without rehashing or echoing received
+  bytes; delayed receipts retain later local edits and reject stale engine/viewer/peer/role owners.
+  Bind relative receive inboxes and folder watches to their creation cwd; legacy path notices
+  now use absolute paths for relative inbox configurations. File wire and legacy path callbacks
+  remain available; remote commit acknowledgement/reconnect retry remains C3 work.
+
 - Retire unfinished native file receives on close, disconnect, replacement and permission loss.
   Serialize cleanup with writes, refuse unauthenticated viewer receives and isolate stale
   peer/channel callbacks. Clean terminal state before notifying callbacks so reconnecting

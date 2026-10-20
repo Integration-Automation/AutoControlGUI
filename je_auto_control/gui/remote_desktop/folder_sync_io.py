@@ -1,4 +1,4 @@
-"""Bind folder polling and chunk cancellation to one viewer, engine and captured GUI owner."""
+"""Bind folder polling, cancellation and frozen receive receipts to one captured GUI owner."""
 from __future__ import annotations
 from concurrent.futures import CancelledError
 from pathlib import Path
@@ -8,6 +8,7 @@ from je_auto_control.utils.exception.control_signals import raise_caused_run_int
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
+from je_auto_control.utils.remote_desktop.file_receipts import FileReceiveReceipt
 
 
 class _Viewer(Protocol):
@@ -24,7 +25,31 @@ class _Viewer(Protocol):
                   cancelled: Optional[Callable[[], bool]] = None) -> None:
         """Send a file cooperatively under its owner's cancellation predicate."""
 
+    def set_file_received_callback(self, callback: Callable[[Path], None]) -> None:
+        """Attach the existing inert path/status listener."""
 
+    def set_file_receipt_callback(self, callback: Callable[[FileReceiveReceipt], None]) -> None:
+        """Attach the local received-content listener."""
+
+
+def bind_folder_receipts(viewer: _Viewer, current_viewer: Callable[[], object],
+                         current_engine: Callable[[], Optional[FolderSyncEngine]],
+                         notify: Optional[Callable[[Path], None]] = None) -> None:
+    """Route native receipts to the attached folder owner; delayed callbacks never adopt a replacement viewer."""
+    engine = current_engine()
+
+    def received(receipt: FileReceiveReceipt) -> None:
+        if current_viewer() is viewer and engine is not None and current_engine() is engine:
+            engine.record_receipt(receipt)
+
+    def published(path: Path) -> None:
+        if current_viewer() is viewer and notify is not None:
+            notify(path)
+
+    if engine is not None:
+        viewer.set_file_receipt_callback(received)
+    if notify is not None:
+        viewer.set_file_received_callback(published)
 
 
 def make_folder_engine(viewer: _Viewer, directory: str, current_viewer: Callable[[], object],

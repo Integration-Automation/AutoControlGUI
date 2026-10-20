@@ -32,7 +32,7 @@ from je_auto_control.gui.remote_desktop.advanced_group import (
 )
 from je_auto_control.gui.remote_desktop.blanking_overlay import BlankingOverlay
 from je_auto_control.gui.remote_desktop.frame_display import _FrameDisplay
-from je_auto_control.gui.remote_desktop.folder_sync_io import make_folder_engine
+from je_auto_control.gui.remote_desktop.folder_sync_io import bind_folder_receipts, make_folder_engine
 from je_auto_control.gui.remote_desktop.remote_screen_window import (
     RemoteScreenWindow,
 )
@@ -1431,6 +1431,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
                 viewer = self._require_viewer()
                 engine = make_folder_engine(viewer, path, lambda: self._viewer, lambda: self._sync_engine)
                 self._sync_engine = engine
+                bind_folder_receipts(viewer, lambda: self._viewer, lambda: self._sync_engine)
                 engine.start()
             except (RuntimeError, OSError) as error:  # FileNotFoundError is an OSError
                 QMessageBox.warning(self, "WebRTC", str(error))
@@ -2348,15 +2349,14 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             on_state_change=self._signals.state.emit,
             on_auth_result=self._signals.auth.emit,
         )
-        viewer.set_file_received_callback(self._on_received_file)
+        bind_folder_receipts(viewer, lambda: self._viewer, lambda: self._sync_engine,
+                             self._on_received_file)
         viewer.set_inbox_listing_callback(self._signals.inbox_listing.emit)
         viewer.set_inbox_op_result_callback(self._signals.inbox_op.emit)
         return viewer
 
     def _on_received_file(self, path) -> None:
-        # Called from the asyncio thread, which has no Qt event loop:
-        # QTimer.singleShot would never fire. Emit a signal — Qt queues the
-        # status update onto the GUI thread.
+        # Called on the asyncio thread; the signal queues status delivery onto the GUI thread.
         self._signals.file_received.emit(path)
 
     def _on_file_received_ui(self, path) -> None:

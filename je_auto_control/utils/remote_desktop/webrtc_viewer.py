@@ -13,6 +13,9 @@ from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional
 
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.remote_desktop.webrtc_file_callbacks import (
+    FileReceiveCallbacks, ReceiptCallback,
+)
 from je_auto_control.utils.remote_desktop.webrtc_file_receive import (
     abort_file_receiver, bind_file_receiver, close_file_receiver,
 )
@@ -79,7 +82,7 @@ class WebRTCDesktopViewer:
         self._files_receiver: Optional[FileTransferReceiver] = None
         self._usb_channel: Any = None
         self._usb_client: Optional[UsbChannelClient] = None
-        self._on_file_received: Optional[FileReceivedCallback] = None
+        self._file_callbacks = FileReceiveCallbacks()
         self._on_inbox_listing: Optional[InboxListingCallback] = None
         self._on_inbox_op_result: Optional[InboxOpResultCallback] = None
         self._viewer_screen_track: Optional[ScreenVideoTrack] = None
@@ -176,7 +179,11 @@ class WebRTCDesktopViewer:
 
     def set_file_received_callback(self, callback) -> None:
         """Register ``cb(path)`` for files the host pushes to the viewer."""
-        self._on_file_received = callback
+        self._file_callbacks.on_file = callback
+
+    def set_file_receipt_callback(self, callback: Optional[ReceiptCallback]) -> None:
+        """Register an inert local publication-receipt listener; None clears it."""
+        self._file_callbacks.on_receipt = callback
 
     def set_inbox_listing_callback(self, callback) -> None:
         """Register ``cb(files: list[dict])`` for list_inbox responses."""
@@ -298,7 +305,8 @@ class WebRTCDesktopViewer:
             return (self._files_channel is channel and self._pc is connection and self._files_receiver is receiver
                     and self._authenticated and not self._closed.is_set())
 
-        bind_file_receiver(channel, receiver, active, self._on_viewer_file_done)
+        bind_file_receiver(channel, receiver, active, self._on_viewer_file_done,
+                           received=self._file_callbacks.received)
 
     def _wire_usb_channel(self, channel) -> None:
         """Attach a USB passthrough client to the ``usb`` DataChannel.
@@ -314,12 +322,7 @@ class WebRTCDesktopViewer:
         return self._usb_client
 
     def _on_viewer_file_done(self, path) -> None:
-        if self._on_file_received is not None:
-            try:
-                self._on_file_received(path)
-            except (RuntimeError, OSError) as error:
-                raise_caused_run_interruption(error)
-                autocontrol_logger.debug("viewer file done cb: %r", error)
+        self._file_callbacks.published(path)
 
     def stop(self) -> None:
         if self._pc is None:

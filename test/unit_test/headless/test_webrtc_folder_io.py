@@ -90,6 +90,9 @@ def test_mid_file_stop_or_replacement_aborts_without_committing_partial_bytes(
         authenticated = True
         connection_identity = object()
 
+        def set_file_receipt_callback(self, callback):
+            self.received_callback = callback
+
         def send_file(self, path, remote_name=None, on_progress=None, *, cancelled=None):
             contexts.append(current_authorization().user_id)
 

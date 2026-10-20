@@ -797,7 +797,7 @@ After atomically publishing received bytes, an owning transport may explicitly c
 ``record_received(path)``. It returns false for outside, excluded, missing or changing paths.
 Successful receipts suppress echo without suppressing later local edits; newer receipts win
 over older sender completions and scans. This core seam is covered by local fake-sender
-regressions. WebRTC receive receipt wiring, clipboard loop handling
+regressions. Remote publication acknowledgement/retry and clipboard loop handling
 are still tracked in ``Progress.md``; this section does not claim those integrations complete.
 
 Observable file sends and connection ownership
@@ -814,7 +814,7 @@ Native folder jobs bind their original authorization, engine, viewer and concret
 They stop scanning and writing after ownership changes, including reconnection of the same viewer.
 Inbox pulls run outside the bridge event loop and serialize up to 32 requests per channel.
 Shutdown cancels owned file jobs; error replies stay on the original control channel and loop.
-These behaviors are covered with local bridge/fake-channel regressions. Receive receipts,
+These behaviors are covered with local bridge/fake-channel regressions. Remote publication acknowledgement/retry and
 clipboard loop/disconnect coverage remain in ``Progress.md``.
 
 Native receive ownership and disconnect cleanup
@@ -834,3 +834,26 @@ callback that immediately reconnects. Native file/audit/state callbacks preserve
 interruption identity. Existing Remote Desktop controls use this same lifecycle.
 Completed targets and the wire format remain unchanged. Native folder receive receipts and
 clipboard loop/disconnect coverage remain in ``Progress.md``.
+
+Frozen local receive receipts and native folder echo suppression
+----------------------------------------------------------------
+
+``FileReceiveReceipt(path, sha256, size)`` is immutable local publication metadata from
+``utils.remote_desktop.file_receipts``. The receiver builds SHA-256 from successful chunk
+writes and emits ``on_receipt`` only after atomic replacement, before the existing path notice.
+No published file reread is required. Short writes, aborts and failed publication emit no receipt.
+Native host/viewer ``set_file_receipt_callback`` installs or clears a listener while retaining
+existing path/audit notifications and original interruption objects. Relative inbox and watch
+paths bind to their construction working directory; path notices use absolute paths.
+
+Pass original receipts to ``FolderSyncEngine.record_receipt``. Later local edits still send,
+even if the receipt is processed after the edit or before the first scan. Missing/outside/excluded
+targets and detached/revoked owners are refused. Legacy ``record_received(path)`` deliberately
+hashes current bytes and remains available for callers explicitly recording current content.
+The GUI folder toggle captures its viewer and engine for receipt routing, refreshes original
+role authorization and refuses stopped/auth-lost/replaced peers before touching the watch.
+
+Controlled native host/viewer tests converge with two edits and zero echoes, including a reply
+arriving before the first send completes. This is connected local receipt bookkeeping, not a
+remote commit acknowledgement or a sender checksum. Remote publication confirmation,
+disconnect/reconnect retry and clipboard coverage remain in ``Progress.md``; wire is unchanged.

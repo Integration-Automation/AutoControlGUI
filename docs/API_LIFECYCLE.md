@@ -248,7 +248,7 @@ start is a no-op while that worker lives, and readiness clears on stop/exit.
 record_received(path) explicitly marks a complete regular file inside the selected watch as
 received, returning False for missing/outside/excluded/changing paths. Callers publish first;
 receipt updates win over older send/scan completions. This does not change any wire schema.
-Native WebRTC receive receipt integration remains in Progress.md.
+Native receive receipts are integrated below; remote publication acknowledgement/retry remains in Progress.md.
 
 FileTransferSender.send, WebRTCDesktopViewer.send_file and WebRTCDesktopHost.push_file
 accept an optional keyword-only cancelled predicate. Writes now synchronously confirm
@@ -263,7 +263,7 @@ request_stop plus stop_requested. GUI folder jobs capture authority and peer ide
 loss of ownership stops scans and queued writes. Viewer connection_identity is opaque.
 Native inbox pulls use a per-channel queue of at most 32 jobs on the original loop,
 perform blocking sends in a worker and cancel owned jobs on host shutdown. Failure replies
-remain bound to their original control channel. Receive-side receipts and clipboard
+remain bound to their original control channel. Remote publication acknowledgement/retry and clipboard
 coverage remain C3 follow-ups in Progress.md.
 
 FileTransferReceiver.close is idempotent and terminal: it refuses subsequent frames and
@@ -278,4 +278,23 @@ cannot retire a replacement transfer. Terminal cleanup precedes state callbacks,
 callbacks that reconnect immediately. File/audit/state callback interruption carriers propagate
 unchanged; ordinary native callback failures retain their existing logging/containment behavior.
 The Remote Desktop GUI uses the same endpoints. No wire, facade, command or MCP schema changes.
-Native folder receive receipts and clipboard loop/disconnect coverage remain in Progress.md.
+Remote folder publication acknowledgement/retry and clipboard loop/disconnect coverage remain in Progress.md.
+
+FileReceiveReceipt (utils.remote_desktop.file_receipts) is frozen local metadata with an
+absolute path, lowercase SHA-256 and nonnegative byte size; malformed metadata raises the
+flat-family FileReceiptError. FileTransferReceiver.handle_message accepts keyword-only
+on_receipt, emitting once after complete atomic publication and before the legacy path callback.
+The digest is built from successfully written chunks, without rereading a changing target;
+short writes, aborts and publication failures emit no receipt. Host/viewer
+set_file_receipt_callback accepts a listener or None, retaining existing path/audit callbacks
+and original interruption objects. Relative inbox/watch paths bind at construction; path
+notifications now use absolute paths for relative inbox configurations.
+FolderSyncEngine.record_receipt registers original received bytes and returns False for
+unselected/missing targets or detached/revoked owners. It does not hash the target, so delayed
+processing cannot consume a later local edit. Legacy record_received(path) still explicitly
+hashes current content. Receipt state wins older scans/sender completions; owner checks precede
+filesystem access and repeat before state mutation with consistent lifecycle/content lock order.
+The GUI folder toggle binds receipts to its captured viewer and engine; live role/auth/peer
+checks retain the original authority. Local receipt metadata does not acknowledge remote
+publication or verify a sender-provided checksum. Wire changes and reliable reconnect retry
+remain separate C3 work in Progress.md, along with clipboard regressions.

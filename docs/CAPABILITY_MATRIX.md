@@ -453,7 +453,7 @@ retry of pending/offline bytes and transient scan failure. Explicit receive rece
 no-echo behavior and races with older send, baseline and pruning operations. Wrapped
 cancellation/KeyboardInterrupt/SystemExit carriers retain their original identities at scan,
 send and receipt boundaries. These are local filesystem/fake-sender checks; native WebRTC
-receive receipt wiring and clipboard loop tests remain C3 work.
+remote publication acknowledgement/retry and clipboard loop tests remain C3 work.
 
 Local bridge/fake-channel regressions verify observable callback failure, folder retry,
 bounded buffering, queued cancellation, pending-abort ownership, completed-end cancellation
@@ -475,4 +475,16 @@ transfer. Wrapped cancellation and hard signals retain object identity at write/
 native file/audit/state callback boundaries. Tests use fake peer/channel objects and local files;
 published targets survive failed receives. Receive-close behavior is shared by existing GUI and
 SDK endpoints. These checks do not establish remote publication acknowledgement, file-wire
-checksums, native folder receive receipts or clipboard no-echo; open C3 work stays in Progress.md.
+checksums, remote folder publication acknowledgement/retry or clipboard no-echo; open C3 work stays in Progress.md.
+
+Native GUI wiring initially reproduces received bytes being sent back before the next local edit.
+Immutable streamed receipts now suppress that echo and retain delayed/before-baseline local
+edits without rehashing received paths. Tests cover empty/small/one-MiB receipts, immutability,
+malformed metadata, selected-path restrictions, short-write/abort/truncation/publication failures,
+relative cwd changes, callback replacement/clearing and ordinary/wrapped interruption behavior.
+Actual native host/viewer channels converge with one local edit per side and exactly two
+transfers, including a reply delivered before the first sender completes. GUI toggle integration
+rejects stale viewer/engine/peer, stopped/auth-lost and live role-revoked receipts before watch I/O.
+These are local fake-channel/controlled-loop checks; they do not establish loss recovery or remote
+commit acknowledgement. Those delivery/reconnect requirements and clipboard regressions remain
+in Progress.md. No physical device or paid API acceptance is claimed.

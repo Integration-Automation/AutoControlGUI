@@ -26,12 +26,14 @@ import json
 import os
 import secrets
 import threading
+from hashlib import sha256
 from pathlib import Path
 from typing import Callable, Optional
 
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.remote_desktop.file_receipts import FileReceiveReceipt
 from je_auto_control.utils.remote_desktop.webrtc_transport import get_bridge
 from je_auto_control.utils.remote_desktop.webrtc_file_write import (
     _PinnedBridge, _channel_transfer, _checkpoint, _send_confirmed,
@@ -91,7 +93,7 @@ class FileTransferReceiver:
     """Reassemble incoming chunks into a file under ``inbox_dir``."""
 
     def __init__(self, inbox_dir: Optional[Path] = None) -> None:
-        self._inbox = Path(inbox_dir) if inbox_dir else default_inbox_dir()
+        self._inbox = (Path(inbox_dir) if inbox_dir else default_inbox_dir()).absolute()
         self._inbox.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
         self._current: Optional[dict] = None
@@ -110,14 +112,15 @@ class FileTransferReceiver:
     def handle_message(self, message,
                        on_progress: Optional[Callable[[int, int], None]] = None,
                        on_done: Optional[Callable[[Path], None]] = None,
-                       on_error: Optional[Callable[[str], None]] = None) -> None:
+                       on_error: Optional[Callable[[str], None]] = None, *,
+                       on_receipt: Optional[Callable[[FileReceiveReceipt], None]] = None) -> None:
         """Consume one envelope or chunk; publish complete files before notifying completion."""
         with self._lock:
             if self._closed:
                 return
         try:
             if isinstance(message, str):
-                self._handle_envelope(message, on_done, on_error)
+                self._handle_envelope(message, on_done, on_error, on_receipt)
             elif isinstance(message, (bytes, bytearray, memoryview)):
                 self._handle_chunk(bytes(message), on_progress)
         except FileTransferError as error:
@@ -135,7 +138,7 @@ class FileTransferReceiver:
             raise
 
     def _handle_envelope(self, raw: str,
-                         on_done, on_error) -> None:
+                         on_done, on_error, on_receipt) -> None:
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as error:
@@ -146,7 +149,7 @@ class FileTransferReceiver:
         if msg_type == "file_begin":
             self._begin(data)
         elif msg_type == "file_end":
-            self._finish(on_done)
+            self._finish(on_done, on_receipt)
         elif msg_type == "file_abort":
             reason = "aborted by sender"
             self._abort_locked(reason=reason)
@@ -162,9 +165,12 @@ class FileTransferReceiver:
                 raise FileTransferError(
                     f"more data than the {current['size']} bytes announced")
             try:
-                current["fh"].write(chunk)
+                written = current["fh"].write(chunk)
             except OSError as error:
                 raise FileTransferError(f"write failed: {error}") from error
+            if written != len(chunk):
+                raise FileTransferError('incomplete file chunk write')
+            current['digest'].update(chunk)
             current["written"] += len(chunk)
             written, size = current['written'], current['size']
         if on_progress is not None:
@@ -188,12 +194,13 @@ class FileTransferReceiver:
                 "fh": fh, "size": size, "written": 0,
                 "path": target, "part": part,
                 "transfer_id": data.get("transfer_id", ""),
+                "digest": sha256(),
             }
         autocontrol_logger.info(
             "file transfer: receiving %s (%d bytes)", target, size,
         )
 
-    def _finish(self, on_done) -> None:
+    def _finish(self, on_done, on_receipt) -> None:
         with self._lock:
             current = self._current
             if self._closed or current is None:
@@ -209,10 +216,13 @@ class FileTransferReceiver:
             except OSError as error:
                 raise FileTransferError(f"cannot finish {current['path'].name}: {error}") from error
             self._current = None
+            receipt = FileReceiveReceipt(current['path'], current['digest'].hexdigest(), current['written'])
         autocontrol_logger.info(
             "file transfer: complete %s (%d bytes)",
             current["path"], current["written"],
         )
+        if on_receipt is not None:
+            on_receipt(receipt)
         if on_done is not None:
             on_done(current["path"])
 

@@ -15,6 +15,7 @@ from typing import BinaryIO, Callable, Generator, Optional, Protocol
 
 from je_auto_control.utils.exception.control_signals import OperationCancelledError, raise_caused_run_interruption
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.remote_desktop.file_receipts import FileReceiveReceipt
 
 _DEFAULT_POLL_S = 3.0
 
@@ -62,7 +63,7 @@ class FolderSyncEngine:
     def __init__(self, *, watch_dir: Path, sender: Callable[[str, str], None],
                  poll_interval_s: float = _DEFAULT_POLL_S, include_subdirs: bool = False,
                  cancelled: Optional[Callable[[], bool]] = None) -> None:
-        self._watch = Path(watch_dir)
+        self._watch = Path(watch_dir).absolute()
         self._sender = sender
         self._interval = max(0.5, float(poll_interval_s))
         self._include_subdirs = bool(include_subdirs)
@@ -120,27 +121,51 @@ class FolderSyncEngine:
         Return False for outside, excluded, missing, redirected or changing files. Receipt
         hashing never starts a worker, and later local content edits still propagate.
         """
-        selected = Path(path)
+        return self._record_received(path, None)
+
+    def record_receipt(self, receipt: FileReceiveReceipt) -> bool:
+        """Record originally received bytes without hashing or consuming a later local edit to the published path."""
+        if not isinstance(receipt, FileReceiveReceipt):
+            return False
+        return self._record_received(receipt.path, receipt.sha256)
+
+    def _record_received(self, path: str | Path, digest: Optional[str]) -> bool:
+        if self._cancelled is not None and self._cancelled():
+            return False
         try:
-            root = self._watch.resolve(strict=True)
-            if selected.is_symlink():
+            target = self._receipt_target(path)
+            if target is None:
                 return False
-            selected = selected.resolve(strict=True)
-            relative = selected.relative_to(root)
-            if not self._include_subdirs and len(relative.parts) != 1:
-                return False
-            digest = self._digest(selected, None)
+            selected, relative = target
+            if digest is None:
+                digest = self._digest(selected, None)
         except (OSError, ValueError) as error:
             raise_caused_run_interruption(error)
             return False
         if digest is None:
             return False
-        with self._content.lock:
-            self._content.snapshot[relative.as_posix()] = digest
-            self._content.received.add(relative.as_posix())
-            self._content.sequence += 1
-            self._content.versions[relative.as_posix()] = self._content.sequence
+        with self._lifecycle_lock:
+            if self._cancelled is not None and self._cancelled():
+                return False
+            with self._content.lock:
+                self._content.snapshot[relative] = digest
+                self._content.received.add(relative)
+                self._content.sequence += 1
+                self._content.versions[relative] = self._content.sequence
         return True
+
+    def _receipt_target(self, path: str | Path) -> Optional[tuple[Path, str]]:
+        selected = Path(path)
+        root = self._watch.resolve(strict=True)
+        if selected.is_symlink():
+            return None
+        selected = selected.resolve(strict=True)
+        relative = selected.relative_to(root)
+        if not self._include_subdirs and len(relative.parts) != 1:
+            return None
+        if not selected.is_file():
+            return None
+        return selected, relative.as_posix()
 
     @staticmethod
     def _digest(path: Path, stop: Optional[_StopFlag]) -> Optional[str]:
