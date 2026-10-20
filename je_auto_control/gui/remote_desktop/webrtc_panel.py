@@ -32,6 +32,7 @@ from je_auto_control.gui.remote_desktop.advanced_group import (
 )
 from je_auto_control.gui.remote_desktop.blanking_overlay import BlankingOverlay
 from je_auto_control.gui.remote_desktop.frame_display import _FrameDisplay
+from je_auto_control.gui.remote_desktop.folder_sync_io import make_folder_engine
 from je_auto_control.gui.remote_desktop.remote_screen_window import (
     RemoteScreenWindow,
 )
@@ -1426,18 +1427,9 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
                 )
                 self._sync_btn.setChecked(False)
                 return
-            from je_auto_control.utils.remote_desktop.file_sync import (
-                FolderSyncEngine,
-            )
-            from pathlib import Path as _Path
             try:
                 viewer = self._require_viewer()
-                engine = FolderSyncEngine(
-                    watch_dir=_Path(path),
-                    sender=lambda local, name: viewer.send_file(
-                        local, remote_name=name,
-                    ),
-                )
+                engine = make_folder_engine(viewer, path, lambda: self._viewer, lambda: self._sync_engine)
                 self._sync_engine = engine
                 engine.start()
             except (RuntimeError, OSError) as error:  # FileNotFoundError is an OSError

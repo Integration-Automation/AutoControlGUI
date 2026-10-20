@@ -525,7 +525,7 @@ def test_pushing_a_file_to_an_unauthenticated_peer_is_refused(host):
 def test_pushing_a_file_streams_it_over_the_files_channel(host, tmp_path):
     source = tmp_path / "notes.txt"
     source.write_bytes(b"hello")
-    host._files_channel = Channel("files")
+    host._files_channel = Channel("files", ready_state="open")
     host.push_file(str(source), remote_name="renamed.txt")
     envelope = json.loads(host._files_channel.sent[0])
     assert envelope["type"] == "file_begin"
@@ -630,7 +630,7 @@ def test_the_inbox_receiver_is_built_once_and_reused(host):
 
 def test_requesting_a_file_pushes_it_over_the_files_channel(host):
     (_inbox(host) / "a.txt").write_bytes(b"12345")
-    host._files_channel = Channel("files")
+    host._files_channel = Channel("files", ready_state="open")
     _deliver(host, {"type": "request_file", "name": "a.txt"})
     envelope = json.loads(host._files_channel.sent[0])
     assert (envelope["type"], envelope["name"]) == ("file_begin", "a.txt")

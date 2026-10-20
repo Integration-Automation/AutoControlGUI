@@ -453,4 +453,16 @@ retry of pending/offline bytes and transient scan failure. Explicit receive rece
 no-echo behavior and races with older send, baseline and pruning operations. Wrapped
 cancellation/KeyboardInterrupt/SystemExit carriers retain their original identities at scan,
 send and receipt boundaries. These are local filesystem/fake-sender checks; native WebRTC
-receipt wiring, queued-disconnect propagation and clipboard loop tests remain C3 work.
+receive receipt wiring, receive-close cleanup and clipboard loop tests remain C3 work.
+
+Local bridge/fake-channel regressions verify observable callback failure, folder retry,
+bounded buffering, queued cancellation, pending-abort ownership, completed-end cancellation
+ordering, source-size mutation and refusal to write through a replaced bridge epoch.
+Actual GUI folder toggles and direct factories stop on engine/viewer/peer/auth/role changes;
+a controlled subprocess guards cancellation after scanning against lifecycle-lock deadlock.
+Large inbox pulls yield the bridge loop; two downloads serialize without frame interleaving.
+Queue overflow and cancellation before the first task step release capacity; stale failure
+replies are suppressed and wrapped interruption objects survive error-reply callbacks.
+These checks use local threads/files/fake channels, without real devices or paid APIs.
+They do not establish remote publication acknowledgement, receive SHA-256 validation,
+receive-close cleanup or clipboard no-echo/disconnect behavior, which remain in Progress.md.

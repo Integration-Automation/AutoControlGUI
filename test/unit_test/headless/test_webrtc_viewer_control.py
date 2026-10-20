@@ -466,7 +466,7 @@ def test_sending_a_file_before_the_channel_opens_is_refused(viewer):
 def test_sending_a_file_streams_it_over_the_files_channel(viewer, tmp_path):
     source = tmp_path / "notes.txt"
     source.write_bytes(b"hello")
-    viewer._files_channel = Channel("files")
+    viewer._files_channel = Channel("files", ready_state="open")
     viewer.send_file(str(source), remote_name="renamed.txt")
     envelope = json.loads(viewer._files_channel.sent[0])
     assert (envelope["type"], envelope["name"]) == ("file_begin",

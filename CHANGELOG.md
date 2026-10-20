@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Wait for bounded DataChannel file writes and expose callback errors, source-size changes
+  and cooperative cancellation to callers. Prevent overlapping producers and stale loop writes.
+  Bind GUI folder jobs to their original authorization and concrete peer connection.
+  Serialize up to 32 inbox download requests per channel outside the bridge event loop;
+  cancel owned jobs on host shutdown and suppress stale failure replies.
+
 - Compare folder mirror content using SHA-256, preserving same/older timestamp edits
   without resending timestamp-only changes. Retain pending/offline changes across restarts,
   stop between files and retain blocked worker ownership instead of overlapping runs.

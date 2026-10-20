@@ -10,8 +10,8 @@ Limitations:
     active transfer; a second begin while the first is open is rejected).
   * No resume / no integrity checksum — DataChannel runs over SCTP which
     is reliable + ordered, so corruption mid-stream is not the concern.
-  * No backpressure on the sender; chunks are scheduled all at once. If
-    you need to ship multi-GB files, add a ``bufferedAmount`` poll.
+  * Sender calls observe channel acceptance, not a remote commit acknowledgement.
+    Writes are bounded/cancellable and pause above one MiB of buffered data.
 
 Host inbox defaults to ``~/.je_auto_control/inbox`` and incoming filenames
 are stripped of any directory components to defeat path traversal; names a
@@ -29,9 +29,13 @@ import threading
 from pathlib import Path
 from typing import Callable, Optional
 
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.webrtc_transport import get_bridge
+from je_auto_control.utils.remote_desktop.webrtc_file_write import (
+    _PinnedBridge, _channel_transfer, _checkpoint, _send_confirmed,
+)
 
 
 _DEFAULT_CHUNK_SIZE = 16 * 1024  # 16 KB; SCTP message limit varies, 16K is safe
@@ -96,6 +100,7 @@ class FileTransferReceiver:
                        on_progress: Optional[Callable[[int, int], None]] = None,
                        on_done: Optional[Callable[[Path], None]] = None,
                        on_error: Optional[Callable[[str], None]] = None) -> None:
+        """Consume one envelope or chunk; publish complete files before notifying completion."""
         try:
             if isinstance(message, str):
                 self._handle_envelope(message, on_done, on_error)
@@ -211,37 +216,86 @@ class FileTransferSender:
     def send(self, local_path,
              remote_name: Optional[str] = None,
              chunk_size: int = _DEFAULT_CHUNK_SIZE,
-             on_progress: Optional[Callable[[int, int], None]] = None) -> None:
-        path = Path(local_path)
-        if not path.is_file():
-            raise FileTransferError(f"not a file: {local_path}")
-        size = path.stat().st_size
-        name = _safe_basename(remote_name or path.name)
+             on_progress: Optional[Callable[[int, int], None]] = None, *,
+             cancelled: Optional[Callable[[], bool]] = None) -> None:
+        """Return only after channel writes execute; cancellation aborts partial files without remote commit claims."""
+        try:
+            _checkpoint(cancelled)
+            if getattr(self._channel, 'readyState', 'open') != 'open':
+                raise FileTransferError('files channel is not open')
+            if isinstance(chunk_size, bool) or not isinstance(chunk_size, int) or not 1 <= chunk_size <= 1024 * 1024:
+                raise FileTransferError('chunk size must be an integer from 1 through 1048576')
+            path = Path(local_path)
+            if not path.is_file():
+                raise FileTransferError(f'not a file: {local_path}')
+            size = path.stat().st_size
+            if size > _MAX_SIZE:
+                raise FileTransferError('file exceeds the four-GiB protocol limit')
+            name = _safe_basename(remote_name or path.name)
+            with _channel_transfer(self._channel):
+                self._transfer(path, name, size, chunk_size, on_progress, cancelled)
+        except FileTransferError as error:
+            raise_caused_run_interruption(error)
+            raise
+        except BaseException as error:  # reason: preserve signals while containing ordinary channel failures
+            raise _send_failure(error) from error
+
+    def _transfer(self, path, name, size, chunk_size, on_progress, cancelled) -> None:
         transfer_id = secrets.token_hex(8)
-        bridge = get_bridge()
-        bridge.call_soon(self._channel.send, json.dumps({
-            "type": "file_begin", "name": name,
-            "size": size, "transfer_id": transfer_id,
-        }))
+        bridge = _PinnedBridge(get_bridge())
+        try:
+            _send_confirmed(self._channel, bridge, json.dumps({
+                'type': 'file_begin', 'name': name, 'size': size, 'transfer_id': transfer_id}), cancelled=cancelled)
+            self._chunks(path, size, chunk_size, on_progress, bridge, cancelled)
+            _send_confirmed(self._channel, bridge, json.dumps({
+                'type': 'file_end', 'transfer_id': transfer_id}), cancelled=cancelled)
+        except BaseException as error:  # reason: abort partial transfers before propagating their failure
+            cleanup_error = None
+            try:
+                _send_confirmed(self._channel, bridge, json.dumps({
+                    'type': 'file_abort', 'transfer_id': transfer_id}), timeout=1.0, retain_abort=True)
+            # pylint: disable-next=broad-exception-caught  # reason: preserve the original signal before cleanup signals
+            except BaseException as secondary:  # reason: select the original interruption before a cleanup interruption
+                cleanup_error = secondary
+            converted = _send_failure(error, cleanup_error)
+            if converted is error:
+                raise
+            raise converted from error
+
+    def _chunks(self, path, size, chunk_size, on_progress, bridge, cancelled) -> None:
         sent = 0
         try:
-            with path.open("rb") as fh:
+            _checkpoint(cancelled)
+            bridge.validate()
+            with path.open('rb') as stream:
                 while True:
-                    chunk = fh.read(chunk_size)
+                    _checkpoint(cancelled)
+                    bridge.validate()
+                    chunk = stream.read(chunk_size)
                     if not chunk:
-                        break
-                    bridge.call_soon(self._channel.send, chunk)
+                        if sent != size:
+                            raise FileTransferError('source size changed during transfer')
+                        return
+                    if sent + len(chunk) > size:
+                        raise FileTransferError('source size changed during transfer')
+                    _send_confirmed(self._channel, bridge, chunk, cancelled=cancelled)
                     sent += len(chunk)
                     if on_progress is not None:
                         on_progress(sent, size)
         except OSError as error:
-            bridge.call_soon(self._channel.send, json.dumps({
-                "type": "file_abort", "transfer_id": transfer_id,
-            }))
-            raise FileTransferError(f"read failed: {error}") from error
-        bridge.call_soon(self._channel.send, json.dumps({
-            "type": "file_end", "transfer_id": transfer_id,
-        }))
+            raise_caused_run_interruption(error)
+            raise FileTransferError(f'read failed: {error}') from error
+
+
+def _send_failure(error: BaseException, cleanup: Optional[BaseException] = None) -> FileTransferError:
+    raise_caused_run_interruption(error)
+    if cleanup is not None:
+        raise_caused_run_interruption(cleanup)
+    if isinstance(error, FileTransferError):
+        return error
+    converted = FileTransferError('file send failed before complete channel acceptance')
+    converted.__cause__ = error
+    return converted
 
 
 __all__ = [

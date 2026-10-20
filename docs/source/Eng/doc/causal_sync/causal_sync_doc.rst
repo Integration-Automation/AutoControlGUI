@@ -797,5 +797,22 @@ After atomically publishing received bytes, an owning transport may explicitly c
 ``record_received(path)``. It returns false for outside, excluded, missing or changing paths.
 Successful receipts suppress echo without suppressing later local edits; newer receipts win
 over older sender completions and scans. This core seam is covered by local fake-sender
-regressions. WebRTC receipt wiring, queued disconnect reporting and clipboard loop handling
+regressions. WebRTC receive receipt wiring, receive-close cleanup and clipboard loop handling
 are still tracked in ``Progress.md``; this section does not claim those integrations complete.
+
+Observable file sends and connection ownership
+----------------------------------------------
+
+File sends wait for the channel callback on its original bridge loop. Buffering is capped
+at 1 MiB and waits are bounded. Optional ``cancelled`` callbacks stop queued writes; channel
+errors reach the synchronous caller so folder retries retain unsent content. Source truncation
+or growth relative to the announced size aborts. Concurrent producers are refused and a pending
+abort retains channel ownership. A completed end frame wins over cancellation arriving later.
+Success confirms channel acceptance, not remote publication; the file wire format is unchanged.
+
+Native folder jobs bind their original authorization, engine, viewer and concrete peer connection.
+They stop scanning and writing after ownership changes, including reconnection of the same viewer.
+Inbox pulls run outside the bridge event loop and serialize up to 32 requests per channel.
+Shutdown cancels owned file jobs; error replies stay on the original control channel and loop.
+These behaviors are covered with local bridge/fake-channel regressions. Receive receipts,
+receive-close cleanup and clipboard loop/disconnect coverage remain in ``Progress.md``.

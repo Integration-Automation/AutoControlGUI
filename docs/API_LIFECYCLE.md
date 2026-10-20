@@ -248,4 +248,20 @@ start is a no-op while that worker lives, and readiness clears on stop/exit.
 record_received(path) explicitly marks a complete regular file inside the selected watch as
 received, returning False for missing/outside/excluded/changing paths. Callers publish first;
 receipt updates win over older send/scan completions. This does not change any wire schema.
-Native WebRTC receipt integration and queued transport failures remain in Progress.md.
+Native WebRTC receive receipt integration and receive-close cleanup remain in Progress.md.
+
+FileTransferSender.send, WebRTCDesktopViewer.send_file and WebRTCDesktopHost.push_file
+accept an optional keyword-only cancelled predicate. Writes now synchronously confirm
+the original bridge callback, cap buffered data at 1 MiB and fail after a bounded wait.
+Callback errors reach FileTransferError; cancellation/hard signals keep their original
+identity. Chunk sizes must be integers from 1 byte through 1 MiB (bool is refused), and
+source truncation/growth relative to the announced size aborts the transfer. Success means
+the channel accepted every frame, not that the peer committed the file. The wire is unchanged.
+Concurrent producers on one channel fail explicitly; a pending abort retains ownership.
+FolderSyncEngine accepts an optional cancelled predicate and provides nonjoining
+request_stop plus stop_requested. GUI folder jobs capture authority and peer identity;
+loss of ownership stops scans and queued writes. Viewer connection_identity is opaque.
+Native inbox pulls use a per-channel queue of at most 32 jobs on the original loop,
+perform blocking sends in a worker and cancel owned jobs on host shutdown. Failure replies
+remain bound to their original control channel. Receive-side cleanup/receipts and clipboard
+coverage remain C3 follow-ups in Progress.md.

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from _thread import LockType
+from asyncio import CancelledError as AsyncCancelledError
+from concurrent.futures import CancelledError
 from contextlib import closing
 from dataclasses import dataclass, field
 from hashlib import sha256
@@ -9,9 +11,9 @@ import os
 from os import fstat, stat_result
 import threading
 from pathlib import Path
-from typing import BinaryIO, Callable, Generator, Optional
+from typing import BinaryIO, Callable, Generator, Optional, Protocol
 
-from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
+from je_auto_control.utils.exception.control_signals import OperationCancelledError, raise_caused_run_interruption
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 _DEFAULT_POLL_S = 3.0
@@ -27,6 +29,26 @@ class _ContentState:
     lock: LockType = field(default_factory=threading.Lock)
 
 
+# pylint: disable-next=too-few-public-methods  # reason: polling needs only a cooperative stop check
+class _StopFlag(Protocol):
+    def is_set(self) -> bool:
+        """Whether the current polling operation must stop before another side effect."""
+
+
+@dataclass
+class _PollStop:
+    event: threading.Event
+    cancelled: Optional[Callable[[], bool]]
+
+    def is_set(self) -> bool:
+        """Combine owner cancellation with the owned run event."""
+        if self.event.is_set():
+            return True
+        if self.cancelled is not None and self.cancelled():
+            self.event.set()
+        return self.event.is_set()
+
+
 # pylint: disable-next=too-many-instance-attributes  # reason: watch options, worker ownership and locked content baseline
 class FolderSyncEngine:
     """Mirror new or changed bytes through a synchronous sender; retry failures on the next tick.
@@ -38,16 +60,18 @@ class FolderSyncEngine:
     """
 
     def __init__(self, *, watch_dir: Path, sender: Callable[[str, str], None],
-                 poll_interval_s: float = _DEFAULT_POLL_S, include_subdirs: bool = False) -> None:
+                 poll_interval_s: float = _DEFAULT_POLL_S, include_subdirs: bool = False,
+                 cancelled: Optional[Callable[[], bool]] = None) -> None:
         self._watch = Path(watch_dir)
         self._sender = sender
         self._interval = max(0.5, float(poll_interval_s))
         self._include_subdirs = bool(include_subdirs)
+        self._cancelled = cancelled
         self._content = _ContentState()
         self._stop = threading.Event()
         self._ready = threading.Event()
         self._thread: Optional[threading.Thread] = None
-        self._lifecycle_lock = threading.Lock()
+        self._lifecycle_lock = threading.RLock()
 
     def start(self) -> None:
         """Start one polling worker, or retain the existing worker until it actually ends."""
@@ -62,14 +86,24 @@ class FolderSyncEngine:
             self._thread.start()
         autocontrol_logger.info('folder sync: watching %s every %.1fs', self._watch, self._interval)
 
-    def stop(self) -> None:
-        """Signal cancellation and wait at most two seconds, retaining ownership of a blocked sender."""
+    def request_stop(self) -> None:
+        """Signal cancellation without joining, including from an owner predicate on the bridge thread."""
         with self._lifecycle_lock:
             self._stop.set()
             self._ready.clear()
+
+    def stop(self) -> None:
+        """Signal cancellation and wait at most two seconds, retaining ownership of a blocked sender."""
+        with self._lifecycle_lock:
+            self.request_stop()
             thread = self._thread
         if thread is not None and thread is not threading.current_thread():
             thread.join(timeout=2.0)
+
+    @property
+    def stop_requested(self) -> bool:
+        """Expose the current run's cancellation request to an owning synchronous sender."""
+        return self._stop.is_set()
 
     def is_running(self) -> bool:
         """Report a live worker, including a stopped worker finishing an in-flight sender call."""
@@ -109,7 +143,7 @@ class FolderSyncEngine:
         return True
 
     @staticmethod
-    def _digest(path: Path, stop: Optional[threading.Event]) -> Optional[str]:
+    def _digest(path: Path, stop: Optional[_StopFlag]) -> Optional[str]:
         if path.is_symlink() or not path.is_file():
             raise OSError('folder sync requires a regular file')
         before = path.stat()
@@ -121,7 +155,7 @@ class FolderSyncEngine:
             raise OSError('folder sync file changed during hashing')
         return digest
 
-    def _paths(self, stop: threading.Event) -> Generator[Path, None, None]:
+    def _paths(self, stop: _StopFlag) -> Generator[Path, None, None]:
         root = self._watch.resolve(strict=True)
         directories = [self._watch]
         visited: set[Path] = set()
@@ -149,7 +183,7 @@ class FolderSyncEngine:
             return Path(entry.path)
         return None
 
-    def _scan(self, stop: threading.Event) -> Optional[dict[str, str]]:
+    def _scan(self, stop: _StopFlag) -> Optional[dict[str, str]]:
         out: dict[str, str] = {}
         with closing(self._paths(stop)) as paths:
             for entry in paths:
@@ -159,7 +193,7 @@ class FolderSyncEngine:
                 out[entry.relative_to(self._watch).as_posix()] = digest
         return out
 
-    def _poll(self, current: dict[str, str], stop: threading.Event) -> None:
+    def _poll(self, current: dict[str, str], stop: _StopFlag) -> None:
         for relative, digest in current.items():
             if stop.is_set():
                 return
@@ -188,7 +222,7 @@ class FolderSyncEngine:
             self._content.versions = {name: version for name, version in self._content.versions.items()
                                       if name in self._content.snapshot}
 
-    def _accept_scan(self, current: dict[str, str], stop: threading.Event) -> bool:
+    def _accept_scan(self, current: dict[str, str], stop: _StopFlag) -> bool:
         with self._lifecycle_lock:
             if stop.is_set():
                 return False
@@ -203,18 +237,23 @@ class FolderSyncEngine:
         return True
 
     def _loop(self, stop: threading.Event) -> None:
+        guard = _PollStop(stop, self._cancelled)
         try:
-            while not stop.is_set():
+            while not guard.is_set():
                 try:
                     with self._content.lock:
                         self._content.received.clear()
-                    current = self._scan(stop)
-                    if current is None or not self._accept_scan(current, stop):
+                    current = self._scan(guard)
+                    if current is None or not self._accept_scan(current, guard):
                         return
                 except OSError as error:
                     raise_caused_run_interruption(error)
                     autocontrol_logger.warning('folder sync scan: %r', error)
                 stop.wait(self._interval)
+        except (CancelledError, AsyncCancelledError, OperationCancelledError):
+            if self._thread is not threading.current_thread():
+                raise
+            stop.set()
         finally:
             with self._lifecycle_lock:
                 if self._thread is threading.current_thread():
@@ -227,7 +266,7 @@ def _identity(value: stat_result) -> tuple[int, int, int, int]:
     return value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns
 
 
-def _read_digest(stream: BinaryIO, stop: Optional[threading.Event]) -> Optional[str]:
+def _read_digest(stream: BinaryIO, stop: Optional[_StopFlag]) -> Optional[str]:
     digest = sha256()
     opened = fstat(stream.fileno())
     while True:

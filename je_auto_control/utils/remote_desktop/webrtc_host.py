@@ -22,6 +22,10 @@ from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, Tuple
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.audit_log import default_audit_log
 from je_auto_control.utils.remote_desktop.input_dispatch import dispatcher_at
+from je_auto_control.utils.remote_desktop.webrtc_file_tasks import (
+    cancel_file_requests, file_request_failure, start_file_request,
+)
+from je_auto_control.utils.remote_desktop.webrtc_file_write import _on_bridge_thread
 from je_auto_control.utils.remote_desktop.permissions import SessionPermissions
 from je_auto_control.utils.remote_desktop.rate_limit import (
     RateLimitConfig, RateLimiter,
@@ -236,6 +240,8 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
             autocontrol_logger.debug("%s stop: %r", label, error)
 
     async def _async_stop(self) -> None:
+        self._closed.set()
+        await cancel_file_requests(self._background_tasks)
         self._stop_quietly(self._host_voice_track, "host voice")
         self._host_voice_track = None
         self._stop_quietly(self._opus_audio_receiver, "opus receiver")
@@ -445,7 +451,8 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         """Register a sync callback ``cb(path: Path)`` for completed transfers."""
         self._on_file_received = callback
 
-    def push_file(self, local_path, remote_name=None) -> None:
+    def push_file(self, local_path, remote_name=None, *,
+                  cancelled: Optional[Callable[[], bool]] = None) -> None:
         """Send a local file to this connected viewer via the files channel."""
         if self._files_channel is None or not self._authenticated:
             raise RuntimeError("not connected to a viewer yet")
@@ -453,7 +460,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
             FileTransferSender,
         )
         FileTransferSender(self._files_channel).send(
-            local_path, remote_name=remote_name,
+            local_path, remote_name=remote_name, cancelled=cancelled,
         )
 
     def _on_file_done(self, path) -> None:
@@ -646,7 +653,19 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
                                  "name": safe, "ok": False,
                                  "error": "not found"})
                 return
-            self.push_file(str(target), remote_name=safe)
+            if _on_bridge_thread(get_bridge()):
+                channel, connection, epoch = self._files_channel, self._pc, asyncio.get_running_loop()
+                control = self._control_channel
+
+                def active() -> bool:
+                    return (self._files_channel is channel and self._pc is connection and self._authenticated
+                            and self._control_channel is control and self._permissions.allow_files
+                            and not self._closed.is_set() and getattr(get_bridge(), '_loop', None) is epoch)
+
+                start_file_request(self._background_tasks, self.push_file, str(target), safe, channel,
+                                   active, file_request_failure(control, safe, active))
+            else:
+                self.push_file(str(target), remote_name=safe)
         except (OSError, ValueError, RuntimeError) as error:
             self._send_ctrl({"type": "request_file_response",
                              "name": str(name), "ok": False,

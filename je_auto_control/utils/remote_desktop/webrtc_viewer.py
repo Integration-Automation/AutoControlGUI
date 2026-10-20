@@ -158,7 +158,8 @@ class WebRTCDesktopViewer:
         return self._mic_sender is not None and self._mic_sender.is_running()
 
     def send_file(self, local_path, remote_name: Optional[str] = None,
-                  on_progress: Optional[Callable[[int, int], None]] = None) -> None:
+                  on_progress: Optional[Callable[[int, int], None]] = None, *,
+                  cancelled: Optional[Callable[[], bool]] = None) -> None:
         """Stream a local file to the host's inbox via the files DataChannel."""
         if self._files_channel is None:
             raise RuntimeError("files channel not open yet")
@@ -166,7 +167,7 @@ class WebRTCDesktopViewer:
             FileTransferSender,
         )
         FileTransferSender(self._files_channel).send(
-            local_path, remote_name=remote_name, on_progress=on_progress,
+            local_path, remote_name=remote_name, on_progress=on_progress, cancelled=cancelled,
         )
 
     def set_file_received_callback(self, callback) -> None:
@@ -328,6 +329,12 @@ class WebRTCDesktopViewer:
             future.result(timeout=3.0)
         except (asyncio.TimeoutError, OSError, RuntimeError) as error:
             autocontrol_logger.warning("webrtc viewer stop: %r", error)
+
+    @property
+    def connection_identity(self) -> object:
+        """Return an opaque peer-connection identity for delayed work; compare only by object identity."""
+        identity: object = self._pc
+        return identity
 
     @property
     def authenticated(self) -> bool:
