@@ -14,10 +14,57 @@ from pathlib import Path
 from typing import BinaryIO, Callable, Generator, Optional, Protocol
 
 from je_auto_control.utils.exception.control_signals import OperationCancelledError, raise_caused_run_interruption
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.file_receipts import FileReceiveReceipt
 
 _DEFAULT_POLL_S = 3.0
+
+
+class FolderSyncStateError(AutoControlException, RuntimeError):
+    """A folder baseline cannot be handed to another worker safely."""
+
+
+@dataclass(frozen=True)
+class FolderSyncCheckpoint:
+    """Immutable in-memory baseline for a retired worker; contains no file bytes or sender authority."""
+    watch_dir: Path
+    include_subdirs: bool
+    entries: tuple[tuple[str, str], ...]
+    baselined: bool
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.watch_dir, Path) or not self.watch_dir.is_absolute():
+            raise FolderSyncStateError('checkpoint requires an absolute watch path')
+        if not isinstance(self.include_subdirs, bool) or not isinstance(self.baselined, bool):
+            raise FolderSyncStateError('checkpoint flags must be booleans')
+        _validate_checkpoint_entries(self.entries, self.include_subdirs)
+
+
+def _validate_checkpoint_entries(entries: tuple[tuple[str, str], ...], include_subdirs: bool) -> None:
+    if not isinstance(entries, tuple) or not all(_checkpoint_entry(item) for item in entries):
+        raise FolderSyncStateError('checkpoint entries must contain relative names and SHA-256 digests')
+    if len(dict(entries)) != len(entries):
+        raise FolderSyncStateError('checkpoint contains duplicate paths')
+    if not include_subdirs and any('/' in name for name, _digest in entries):
+        raise FolderSyncStateError('checkpoint excludes subdirectories')
+
+
+def _checkpoint_entry(item: object) -> bool:
+    if not isinstance(item, tuple) or len(item) != 2:
+        return False
+    name, digest = item
+    return (_checkpoint_name(name) and isinstance(digest, str) and len(digest) == 64
+            and all(char in '0123456789abcdef' for char in digest))
+
+
+def _checkpoint_name(name: object) -> bool:
+    if not isinstance(name, str) or not name or '\x00' in name:
+        return False
+    selected = Path(name)
+    if selected.anchor or selected.as_posix() != name:
+        return False
+    return all(part not in ('', '.', '..') for part in name.split('/'))
 
 
 @dataclass
@@ -58,17 +105,26 @@ class FolderSyncEngine:
     edits. Deletions never propagate. Receiving transports
     call record_received after publishing a file to prevent sending those bytes back.
     A stopped but blocked sender remains owned; start cannot overlap it with a new run.
+    Retired workers can export an immutable checkpoint for an explicitly authorised
+    replacement sender watching the same path and recursion mode.
     """
 
     def __init__(self, *, watch_dir: Path, sender: Callable[[str, str], None],
                  poll_interval_s: float = _DEFAULT_POLL_S, include_subdirs: bool = False,
-                 cancelled: Optional[Callable[[], bool]] = None) -> None:
+                 cancelled: Optional[Callable[[], bool]] = None,
+                 checkpoint: Optional[FolderSyncCheckpoint] = None) -> None:
         self._watch = Path(watch_dir).absolute()
         self._sender = sender
         self._interval = max(0.5, float(poll_interval_s))
         self._include_subdirs = bool(include_subdirs)
         self._cancelled = cancelled
         self._content = _ContentState()
+        if checkpoint is not None:
+            if (not isinstance(checkpoint, FolderSyncCheckpoint) or checkpoint.watch_dir != self._watch
+                    or checkpoint.include_subdirs != self._include_subdirs):
+                raise FolderSyncStateError('checkpoint watch path or recursion mode does not match')
+            self._content.snapshot = dict(checkpoint.entries)
+            self._content.baselined = checkpoint.baselined
         self._stop = threading.Event()
         self._ready = threading.Event()
         self._thread: Optional[threading.Thread] = None
@@ -114,6 +170,19 @@ class FolderSyncEngine:
     def wait_until_ready(self, timeout: float = 5.0) -> bool:
         """Wait for a complete initial content baseline; stopped or failed scans are never ready."""
         return self._ready.wait(timeout)
+
+    def checkpoint(self) -> FolderSyncCheckpoint:
+        """Copy metadata without filesystem access only after stop and actual worker retirement.
+
+        The caller must bind a replacement to its authorised peer. An initial baseline
+        includes pre-existing files and is not evidence that those bytes were delivered.
+        """
+        with self._lifecycle_lock:
+            if not self._stop.is_set() or self.is_running():
+                raise FolderSyncStateError('previous folder worker has not retired; retry after it exits')
+            with self._content.lock:
+                return FolderSyncCheckpoint(self._watch, self._include_subdirs,
+                                            tuple(self._content.snapshot.items()), self._content.baselined)
 
     def record_received(self, path: str | Path) -> bool:
         """Accept an already-published regular file inside this watch root as received, without echoing it.
@@ -307,4 +376,4 @@ def _read_digest(stream: BinaryIO, stop: Optional[_StopFlag]) -> Optional[str]:
     return digest.hexdigest()
 
 
-__all__ = ['FolderSyncEngine']
+__all__ = ['FolderSyncEngine', 'FolderSyncCheckpoint', 'FolderSyncStateError']

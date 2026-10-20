@@ -248,7 +248,7 @@ start is a no-op while that worker lives, and readiness clears on stop/exit.
 record_received(path) explicitly marks a complete regular file inside the selected watch as
 received, returning False for missing/outside/excluded/changing paths. Callers publish first;
 receipt updates win over older send/scan completions. This does not change any wire schema.
-Native receive receipts are integrated below; GUI reconnect state retention remains in Progress.md.
+Native receive receipts and explicit GUI reconnect/resume are integrated below.
 
 FileTransferSender.send, WebRTCDesktopViewer.send_file and WebRTCDesktopHost.push_file
 accept an optional keyword-only cancelled predicate. Writes now synchronously confirm
@@ -263,8 +263,7 @@ request_stop plus stop_requested. GUI folder jobs capture authority and peer ide
 loss of ownership stops scans and queued writes. Viewer connection_identity is opaque.
 Native inbox pulls use a per-channel queue of at most 32 jobs on the original loop,
 perform blocking sends in a worker and cancel owned jobs on host shutdown. Failure replies
-remain bound to their original control channel. GUI reconnect state retention and clipboard
-coverage remain C3 follow-ups in Progress.md.
+remain bound to their original control channel. Explicit GUI reconnect/resume is described below; clipboard coverage remains in Progress.md.
 
 FileTransferReceiver.close is idempotent and terminal: it refuses subsequent frames and
 discards unfinished bytes while preserving any earlier published target. abort discards
@@ -278,7 +277,7 @@ cannot retire a replacement transfer. Terminal cleanup precedes state callbacks,
 callbacks that reconnect immediately. File/audit/state callback interruption carriers propagate
 unchanged; ordinary native callback failures retain their existing logging/containment behavior.
 The Remote Desktop GUI uses the same endpoints. No wire, facade, command or MCP schema changes.
-GUI folder reconnect state retention and clipboard loop/disconnect coverage remain in Progress.md.
+Explicit GUI reconnect/resume is described below; clipboard loop/disconnect coverage remains in Progress.md.
 
 FileReceiveReceipt (utils.remote_desktop.file_receipts) is frozen local metadata with an
 absolute path, lowercase SHA-256 and nonnegative byte size; malformed metadata raises the
@@ -296,8 +295,7 @@ hashes current content. Receipt state wins older scans/sender completions; owner
 filesystem access and repeat before state mutation with consistent lifecycle/content lock order.
 The GUI folder toggle binds receipts to its captured viewer and engine; live role/auth/peer
 checks retain the original authority. Local receipt metadata does not acknowledge remote
-publication or verify a sender-provided checksum in legacy mode. GUI reconnect state retention
-remains separate C3 work in Progress.md, along with clipboard regressions.
+publication or verify a sender-provided checksum in legacy mode. GUI explicit reconnect/resume is described below; clipboard regressions remain in Progress.md.
 
 Publication-confirmed native sends use keyword-only require_commit=True on the existing
 FileTransferSender.send, WebRTCDesktopViewer.send_file and WebRTCDesktopHost.push_file.
@@ -318,5 +316,26 @@ is bounded to 4 KiB before decoding. FileCommitError stays in the flat framework
 native sender boundaries expose FileTransferError with original interruption identities.
 Legacy manual envelopes and path/receipt listeners remain available. GUI folder delivery now
 requires compatible support on both peers. Same-engine uncertain sends retry without advancing
-the confirmed digest; preserving pending/offline state when the GUI recreates an engine after
-disconnect/reconnect remains in Progress.md, along with clipboard regressions.
+the confirmed digest. Explicit GUI reconnect/resume is described below; clipboard regressions
+remain in Progress.md.
+
+FolderSyncEngine.checkpoint() exports a frozen FolderSyncCheckpoint only after request_stop/stop
+and actual worker retirement; a live blocked sender raises flat-family FolderSyncStateError.
+The metadata contains the absolute watch, recursion flag, baseline status and immutable name/digest
+pairs. Export and constructor restoration perform no filesystem reads. Invalid/mutable/duplicate
+entries and mismatched watch/recursion options fail explicitly. A replacement copies metadata and
+receives a fresh sender/cancelled predicate; it never adopts the old transport or authority.
+The baseline includes initially ignored files and frozen local receipts, not just delivered files.
+
+GUI folder start/stop now lives in folder_sync_controls.py; the existing panel toggle delegates to it.
+One FolderSyncHistory retains a stopped engine across viewer stop/reconnect. The user reconnects
+and explicitly presses Start sync. Handoff requires a matching authenticated host fingerprint,
+absolute watch path and local principal (including user-store provenance). Missing/changed host
+identity, root or principal establishes a fresh baseline. Unknown fingerprints are scoped to one
+concrete viewer/connection, never a replacement. Host metadata uses the existing authentication
+trust model and adds no cryptographic identity guarantee. Store-backed permission is refreshed
+before a new engine can read the watch or send; old callback/worker bindings remain invalid.
+A still-running old worker refuses handoff, including a change of peer/root; retry after it exits.
+Failed starts leave the retained baseline intact. Explicitly disabling folder sync forgets the
+baseline, but still owns a retiring worker. Viewer Stop/reconnect retains it until resume; panel
+destruction/application exit clears it. This state is memory-only and never auto-enables sync.

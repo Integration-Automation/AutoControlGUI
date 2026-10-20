@@ -453,7 +453,7 @@ retry of pending/offline bytes and transient scan failure. Explicit receive rece
 no-echo behavior and races with older send, baseline and pruning operations. Wrapped
 cancellation/KeyboardInterrupt/SystemExit carriers retain their original identities at scan,
 send and receipt boundaries. These are local filesystem/fake-sender checks; native WebRTC
-GUI reconnect state retention and clipboard loop tests remain C3 work.
+explicit GUI reconnect/resume is covered below; clipboard loop tests remain in Progress.md.
 
 Local bridge/fake-channel regressions verify observable callback failure, folder retry,
 bounded buffering, queued cancellation, pending-abort ownership, completed-end cancellation
@@ -475,7 +475,8 @@ transfer. Wrapped cancellation and hard signals retain object identity at write/
 native file/audit/state callback boundaries. Tests use fake peer/channel objects and local files;
 published targets survive failed receives. Receive-close behavior is shared by existing GUI and
 SDK endpoints. These checks do not establish remote publication acknowledgement, file-wire
-checksums, GUI folder reconnect state retention or clipboard no-echo; open C3 work stays in Progress.md.
+checksums or clipboard no-echo. Publication confirmation and GUI reconnect tests are described below;
+clipboard regressions remain in Progress.md.
 
 Native GUI wiring initially reproduces received bytes being sent back before the next local edit.
 Immutable streamed receipts now suppress that echo and retain delayed/before-baseline local
@@ -486,8 +487,8 @@ Actual native host/viewer channels converge with one local edit per side and exa
 transfers, including a reply delivered before the first sender completes. GUI toggle integration
 rejects stale viewer/engine/peer, stopped/auth-lost and live role-revoked receipts before watch I/O.
 These are local fake-channel/controlled-loop checks; they do not establish loss recovery or remote
-commit acknowledgement. Those delivery/reconnect requirements and clipboard regressions remain
-in Progress.md. No physical device or paid API acceptance is claimed.
+commit acknowledgement. Confirmed delivery and explicit reconnect/resume are covered below;
+clipboard regressions remain in Progress.md. No physical device or paid API acceptance is claimed.
 
 The native bridge pair first reproduces dropped binary chunks being marked delivered even
 though the remote target never appears. Publication-confirmed folder sends now leave that
@@ -501,5 +502,20 @@ cover source cwd changes during negotiation, malformed/bounded envelopes, channe
 and permission-generation cancellation, loop replacement, single-producer ownership, weak
 registry collection, wrapped original controls and completed-receipt/late-cancel ordering.
 Actual GUI folder wiring requests confirmation and connected two-way native tests use it in
-both directions. These local fake-channel tests do not establish GUI engine-state retention
-across disconnect/reconnect; that and clipboard regressions remain explicitly in Progress.md.
+both directions. GUI reconnect/resume tests are described below; clipboard regressions remain
+explicitly in Progress.md.
+
+The actual GUI stop/toggle path first reproduces failed/offline files being ignored when a new
+engine establishes its initial baseline. Native paired channels now confirm both failed-send
+retries and files created/edited while the viewer was disconnected, using a replacement viewer
+and engine. Initial ignored files remain ignored; frozen received bytes retain subsequent edits.
+Different host metadata, missing fingerprint, root, local user, user-store path or trusted role
+cannot inherit prior pending data. Revoked/deleted owners fail before scanning, then explicitly
+re-authorised retries retain pending data. Failed worker starts preserve that baseline too.
+A real blocked polling sender remains owned through disconnect: an early handoff is refused,
+late old work cannot send through the replacement, and a retry after retirement publishes the
+pending file. Late old receipt callbacks cannot access/adopt either watch. Explicitly disabling
+sync resets its baseline. Headless checkpoint tests cover immutability, no-I/O export/restore,
+path/recursion matching, initial/recursive semantics and native filename validation. These are
+controlled local filesystem/thread/fake-channel cases, without physical devices or paid APIs.
+Clipboard loop/disconnect regression work remains in Progress.md.

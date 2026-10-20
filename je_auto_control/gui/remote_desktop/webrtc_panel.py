@@ -33,6 +33,7 @@ from je_auto_control.gui.remote_desktop.advanced_group import (
 from je_auto_control.gui.remote_desktop.blanking_overlay import BlankingOverlay
 from je_auto_control.gui.remote_desktop.frame_display import _FrameDisplay
 from je_auto_control.gui.remote_desktop.folder_sync_io import bind_folder_receipts, make_folder_engine
+from je_auto_control.gui.remote_desktop.folder_sync_controls import toggle_folder_sync
 from je_auto_control.gui.remote_desktop.remote_screen_window import (
     RemoteScreenWindow,
 )
@@ -1413,39 +1414,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             self._sync_dir_edit.setText(path)
 
     def _on_toggle_sync(self, checked: bool) -> None:
-        if checked:
-            if self._viewer is None or not self._viewer.authenticated:
-                QMessageBox.information(
-                    self, "WebRTC", _t("rd_webrtc_cad_not_connected"),
-                )
-                self._sync_btn.setChecked(False)
-                return
-            path = self._sync_dir_edit.text().strip()
-            if not path:
-                QMessageBox.warning(
-                    self, "WebRTC", _t("rd_webrtc_sync_dir_required"),
-                )
-                self._sync_btn.setChecked(False)
-                return
-            try:
-                viewer = self._require_viewer()
-                engine = make_folder_engine(viewer, path, lambda: self._viewer, lambda: self._sync_engine)
-                self._sync_engine = engine
-                bind_folder_receipts(viewer, lambda: self._viewer, lambda: self._sync_engine)
-                engine.start()
-            except (RuntimeError, OSError) as error:  # FileNotFoundError is an OSError
-                QMessageBox.warning(self, "WebRTC", str(error))
-                self._sync_btn.setChecked(False)
-                return
-            self._sync_btn.setText(_t("rd_webrtc_sync_stop"))
-        else:
-            if self._sync_engine is not None:
-                try:
-                    self._sync_engine.stop()
-                except (RuntimeError, OSError):
-                    pass
-                self._sync_engine = None
-            self._sync_btn.setText(_t("rd_webrtc_sync_start"))
+        toggle_folder_sync(self, checked, make_folder_engine)
 
     def _build_remote_files_group(self) -> QGroupBox:
         group = self._tr(QGroupBox(), "rd_webrtc_remote_files_group")

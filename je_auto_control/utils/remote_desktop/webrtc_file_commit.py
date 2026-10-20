@@ -10,7 +10,7 @@ from concurrent.futures import Future, InvalidStateError, TimeoutError as Future
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from functools import partial
-from threading import Lock
+from threading import Lock, RLock
 from time import monotonic
 from typing import Any, Callable, Iterator, Optional, TypeGuard
 
@@ -219,7 +219,8 @@ class FileCommitBinding:
         _settle(commit.future, None if valid else FileCommitError('publication receipt does not match sent content'))
 
 
-_bindings_lock = Lock()
+# Registry allocation can run cyclic GC and synchronously reenter weak-reference cleanup.
+_bindings_lock = RLock()
 _bindings: dict[int, weakref.ReferenceType[FileCommitBinding]] = {}
 
 

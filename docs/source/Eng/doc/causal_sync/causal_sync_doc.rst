@@ -814,8 +814,8 @@ Native folder jobs bind their original authorization, engine, viewer and concret
 They stop scanning and writing after ownership changes, including reconnection of the same viewer.
 Inbox pulls run outside the bridge event loop and serialize up to 32 requests per channel.
 Shutdown cancels owned file jobs; error replies stay on the original control channel and loop.
-These behaviors are covered with local bridge/fake-channel regressions. GUI reconnect state retention and
-clipboard loop/disconnect coverage remain in ``Progress.md``.
+These behaviors are covered with local bridge/fake-channel regressions. Explicit GUI reconnect/resume is described below;
+clipboard loop/disconnect coverage remains in ``Progress.md``.
 
 Native receive ownership and disconnect cleanup
 -----------------------------------------------
@@ -832,8 +832,8 @@ permission loss clean unfinished bytes without another inbound frame. A stale ca
 affect the replacement receiver. Terminal cleanup precedes state notification, including a
 callback that immediately reconnects. Native file/audit/state callbacks preserve wrapped
 interruption identity. Existing Remote Desktop controls use this same lifecycle.
-Completed targets and the wire format remain unchanged. Native folder receive receipts and
-clipboard loop/disconnect coverage remain in ``Progress.md``.
+Completed targets and legacy manual wire remain available. Native folder receipts, confirmed
+publication and explicit reconnect/resume are described below; clipboard coverage remains in ``Progress.md``.
 
 Frozen local receive receipts and native folder echo suppression
 ----------------------------------------------------------------
@@ -855,8 +855,8 @@ role authorization and refuses stopped/auth-lost/replaced peers before touching 
 
 Controlled native host/viewer tests converge with two edits and zero echoes, including a reply
 arriving before the first send completes. This is connected local receipt bookkeeping, not a
-remote commit acknowledgement or a sender checksum. GUI reconnect state retention
-and clipboard coverage remain in ``Progress.md``; legacy manual wire remains available.
+remote commit acknowledgement or a sender checksum. Confirmed mode and explicit reconnect/resume
+are described below; clipboard coverage remains in ``Progress.md``.
 
 Authenticated native publication confirmation
 ---------------------------------------------
@@ -882,5 +882,31 @@ retain identity. Native callbacks still receive local immutable receipts and leg
 
 Controlled native pairs cover dropped bytes, delayed publication, corrupted content,
 replayed receipts with reused transfer IDs, permission changes, source cwd changes and
-two-way GUI folder sends. Preserving pending/offline changes when GUI disconnect/reconnect
-creates another engine, plus clipboard regressions, remains in ``Progress.md``.
+two-way GUI folder sends. Explicit GUI reconnect/resume is described below; clipboard regressions
+remain in ``Progress.md``.
+
+Explicit folder resume after viewer reconnect
+---------------------------------------------
+
+The panel retains one in-memory folder baseline when the viewer stops or reconnects.
+Reconnect, then press Start sync again to send failed or offline changes. The authenticated
+host fingerprint, absolute watch path and local principal must match. Missing/changed host
+metadata, roots or users establish a fresh baseline. Host metadata follows the existing
+authentication trust model and does not add a cryptographic identity guarantee. Permission is
+refreshed before watch reads/sends. Old workers and callbacks remain attached to their original
+owners; a blocked old worker refuses handoff until it exits. Failed starts retain the baseline.
+
+Explicitly disabling folder sync resets its baseline; viewer Stop/reconnect retains it.
+The state is lost when the panel/application closes and never automatically enables sync.
+Initially ignored files remain ignored; received-content digests preserve later local edits.
+
+Headless callers can stop ``FolderSyncEngine``, export ``checkpoint()`` after the worker retires,
+and pass that frozen ``FolderSyncCheckpoint`` through the replacement engine's ``checkpoint``
+argument. Watch path and recursion mode must match; supply a newly authorised sender and
+cancellation predicate. Export/restore copy only metadata without reading files. Invalid
+metadata or an active old worker raises ``FolderSyncStateError``. The baseline includes initial
+ignored files, received bytes and successful sends; it is not a remote acknowledgement list.
+
+Controlled native GUI stop/toggle tests cover pending/offline retry, ownership changes,
+permission revocation, failed starts, blocked handoffs and late receipts. Clipboard loop and
+disconnect regressions remain in ``Progress.md``.

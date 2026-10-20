@@ -13,7 +13,7 @@
 `TODO` — 真機與付費 API 驗收暫緩，待明確恢復後執行；相關項目保留待驗證。
 
 `WIP` — 改版仍缺以下內容；原生平台與正式環境驗收缺口另列於後。
-計畫 C 仍缺 C3 的原生 folder GUI 重連後待送／離線修改的保留與重試，以及 clipboard 迴圈與斷線回歸。
+計畫 C 仍缺 C3 的原生 clipboard 迴圈與斷線回歸。
 計畫 D（Wayland）、E（Android／iOS）、G（MCP 逐步揭露）、H（型別深化與總驗收）尚未開始。F 還缺：
 
 - **Remote Desktop 與 Script Builder 仍在啟動時建立**（預設開啟），啟動時間 2.6–2.7 秒裡大半是它們與門面匯入。
@@ -48,7 +48,7 @@
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
 | `utils/mcp_server/tools/_handlers_executor_bridge.py` | 1,429 | 純委派函式（函式內匯入後立即轉呼叫，沒有分支），不適用 flat data tables 豁免。需先定義領域邊界再拆分。 |
-| `gui/remote_desktop/webrtc_panel.py` | 2,519 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
+| `gui/remote_desktop/webrtc_panel.py` | 2,488 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
 | `utils/accessibility/backends/windows_backend.py` | 805 | 剩餘 UIA COM 生命週期管理仍需保留 `CoInitialize`／介面釋放的配對；拆分前須建立這些配對的回歸。 |
 
 **本質豁免（flat data tables）**：`utils/mcp_server/tools/_factories.py`、
