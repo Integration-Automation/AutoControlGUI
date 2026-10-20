@@ -13,6 +13,7 @@ from je_auto_control.utils.rbac import AuthorizationContext, Role, UserStore, au
 from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
 from je_auto_control.utils.remote_desktop import webrtc_files
 from je_auto_control.utils.remote_desktop.webrtc_transport import WebRTCConfig
+from je_auto_control.utils.remote_desktop.webrtc_file_receive import bind_file_receiver, close_file_receiver
 
 
 @pytest.fixture
@@ -37,6 +38,16 @@ def native_folder(tmp_path, monkeypatch):
     viewer._authenticated = True
     channel = Channel('files', ready_state='open')
     viewer._wire_files_channel(channel)
+    peer = Channel('files', ready_state='open')
+    peer_receiver = webrtc_files.FileTransferReceiver(tmp_path / 'default-peer')
+
+    def send(message):
+        channel.sent.append(message)
+        peer.fire('message', message)
+
+    channel.send = send
+    peer.send = lambda message: channel.fire('message', message)
+    bind_file_receiver(peer, peer_receiver, lambda: True, lambda _path: None)
     owner._require_viewer = lambda: viewer
     context = AuthorizationContext('owner', Role.OPERATOR, store_path=str(store.path))
     monkeypatch.setattr(FolderSyncEngine, 'start', lambda _engine: None)
@@ -45,7 +56,8 @@ def native_folder(tmp_path, monkeypatch):
     engine = owner._sync_engine
     yield owner, viewer, engine, channel, notices
     engine.stop()
-    viewer._files_receiver.close()
+    close_file_receiver(viewer._files_receiver, channel)
+    close_file_receiver(peer_receiver, peer)
 
 
 def deliver(channel, content=b'remote bytes'):
@@ -105,7 +117,8 @@ def test_native_two_way_folder_receipts_converge_without_echo_or_lost_reply(
     host._pc, host._authenticated = object(), True
     channel_b = Channel('files', ready_state='open')
     host._wire_files_channel(channel_b)
-    engine_b = FolderSyncEngine(watch_dir=watch_b, sender=lambda path, name: host.push_file(path, remote_name=name))
+    engine_b = FolderSyncEngine(watch_dir=watch_b,
+                               sender=lambda path, name: host.push_file(path, remote_name=name, require_commit=True))
     edited = False
 
     def received_b(receipt):

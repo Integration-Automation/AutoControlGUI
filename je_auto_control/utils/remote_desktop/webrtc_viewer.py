@@ -166,8 +166,8 @@ class WebRTCDesktopViewer:
 
     def send_file(self, local_path, remote_name: Optional[str] = None,
                   on_progress: Optional[Callable[[int, int], None]] = None, *,
-                  cancelled: Optional[Callable[[], bool]] = None) -> None:
-        """Stream a local file to the host's inbox via the files DataChannel."""
+                  cancelled: Optional[Callable[[], bool]] = None, require_commit: bool = False) -> None:
+        """Stream to the host inbox, optionally requiring its matching atomic-publication receipt."""
         if self._files_channel is None:
             raise RuntimeError("files channel not open yet")
         from je_auto_control.utils.remote_desktop.webrtc_files import (
@@ -175,6 +175,7 @@ class WebRTCDesktopViewer:
         )
         FileTransferSender(self._files_channel).send(
             local_path, remote_name=remote_name, on_progress=on_progress, cancelled=cancelled,
+            require_commit=require_commit,
         )
 
     def set_file_received_callback(self, callback) -> None:
@@ -297,7 +298,7 @@ class WebRTCDesktopViewer:
 
     def _wire_files_channel(self, channel) -> None:
         from je_auto_control.utils.remote_desktop.webrtc_files import FileTransferReceiver
-        close_file_receiver(self._files_receiver)
+        close_file_receiver(self._files_receiver, self._files_channel)
         receiver = self._files_receiver = FileTransferReceiver()
         self._files_channel, connection = channel, self._pc
 
@@ -451,7 +452,7 @@ class WebRTCDesktopViewer:
 
     async def _async_stop(self) -> None:
         self._closed.set()
-        close_file_receiver(self._files_receiver)
+        close_file_receiver(self._files_receiver, self._files_channel)
         self._stop_quietly(self._host_voice_receiver, "host voice")
         self._host_voice_receiver = None
         self._stop_quietly(self._opus_audio_track, "opus mic track")
@@ -485,7 +486,7 @@ class WebRTCDesktopViewer:
             autocontrol_logger.info("webrtc viewer: connection %s", state)
             if state in ("failed", "closed", "disconnected"):
                 self._authenticated = False
-                close_file_receiver(self._files_receiver)
+                close_file_receiver(self._files_receiver, self._files_channel)
             if cb is not None:
                 try:
                     cb(state)
@@ -539,7 +540,7 @@ class WebRTCDesktopViewer:
         def _on_close() -> None:
             if self._control_channel is channel:
                 self._authenticated = False
-                abort_file_receiver(self._files_receiver)
+                abort_file_receiver(self._files_receiver, self._files_channel)
 
         # Channel may already be open by the time aiortc fires the
         # "datachannel" event; in that case "open" never fires again.

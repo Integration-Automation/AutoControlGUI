@@ -48,6 +48,11 @@ class _PinnedBridge:
         self._epoch: object = getattr(bridge, '_loop', None)
 
     @property
+    def identity(self) -> object:
+        """Return the opaque captured loop epoch for native protocol ownership checks."""
+        return self._epoch
+
+    @property
     def _thread(self) -> object:
         if self._epoch is not None and getattr(self._bridge, '_loop', None) is not self._epoch:
             return None

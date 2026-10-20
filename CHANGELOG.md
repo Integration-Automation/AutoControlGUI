@@ -13,13 +13,21 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Require authenticated publication receipts for native GUI folder sends; queued acceptance
+  alone no longer advances folder delivery state. Optional SDK require_commit probes support
+  before source reads and verifies transfer ID, nonce, SHA-256 and size after atomic replacement.
+  Bound protocol state to channel/loop/permission generation, preserve cancellation and refuse
+  stale receipts or unsupported peers. Legacy manual sends retain their original envelopes.
+  Relative source paths bind before the capability exchange. GUI reconnect state retention
+  remains C3 work; a failed/uncertain send retries on the same retained engine.
+
 - Publish immutable local file receipts with streamed SHA-256/size metadata after atomic
   replacement, exposing optional receipt callbacks through the receiver and native endpoints.
   Native GUI folder watches consume captured receipts without rehashing or echoing received
   bytes; delayed receipts retain later local edits and reject stale engine/viewer/peer/role owners.
   Bind relative receive inboxes and folder watches to their creation cwd; legacy path notices
   now use absolute paths for relative inbox configurations. File wire and legacy path callbacks
-  remain available; remote commit acknowledgement/reconnect retry remains C3 work.
+  remain available; GUI reconnect state retention remains C3 work.
 
 - Retire unfinished native file receives on close, disconnect, replacement and permission loss.
   Serialize cleanup with writes, refuse unauthenticated viewer receives and isolate stale
@@ -36,7 +44,7 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   without resending timestamp-only changes. Retain pending/offline changes across restarts,
   stop between files and retain blocked worker ownership instead of overlapping runs.
   Explicit receive receipts suppress returned bytes and survive concurrent send/scan completion.
-  Transport receipt wiring and queued-disconnect handling remain C3 follow-ups in Progress.md.
+  GUI reconnect state retention remains a C3 follow-up in Progress.md.
 
 - Add experimental load_sync_profile/LoadedSyncProfile and private AC_sync_profile_load,
   MCP and Builder routing for exact reviewed generations. Each load creates an independent

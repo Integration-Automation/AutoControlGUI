@@ -1,4 +1,4 @@
-"""Bind folder polling, cancellation and frozen receive receipts to one captured GUI owner."""
+"""Bind confirmed folder sends, cancellation and frozen receipts to one captured GUI owner."""
 from __future__ import annotations
 from concurrent.futures import CancelledError
 from pathlib import Path
@@ -22,7 +22,7 @@ class _Viewer(Protocol):
 
     def send_file(self, local_path: str, remote_name: Optional[str] = None,
                   on_progress: Optional[Callable[[int, int], None]] = None, *,
-                  cancelled: Optional[Callable[[], bool]] = None) -> None:
+                  cancelled: Optional[Callable[[], bool]] = None, require_commit: bool = False) -> None:
         """Send a file cooperatively under its owner's cancellation predicate."""
 
     def set_file_received_callback(self, callback: Callable[[Path], None]) -> None:
@@ -81,7 +81,7 @@ def make_folder_engine(viewer: _Viewer, directory: str, current_viewer: Callable
         if cancelled():
             raise CancelledError()
         with authority.scope():
-            viewer.send_file(path, remote_name=name, cancelled=cancelled)
+            viewer.send_file(path, remote_name=name, cancelled=cancelled, require_commit=True)
 
     engine = FolderSyncEngine(watch_dir=Path(directory), sender=send, cancelled=cancelled)
     return engine

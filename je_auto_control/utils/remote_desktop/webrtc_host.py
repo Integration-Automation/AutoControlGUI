@@ -250,7 +250,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
 
     async def _async_stop(self) -> None:
         self._closed.set()
-        close_file_receiver(self._files_receiver)
+        close_file_receiver(self._files_receiver, self._files_channel)
         await cancel_file_requests(self._background_tasks)
         self._stop_quietly(self._host_voice_track, "host voice")
         self._host_voice_track = None
@@ -350,7 +350,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
             autocontrol_logger.info("webrtc host: connection %s", state)
             if state in ("failed", "closed", "disconnected"):
                 self._authenticated = False
-                close_file_receiver(self._files_receiver)
+                close_file_receiver(self._files_receiver, self._files_channel)
             if state == "connected":
                 await self._snapshot_remote_ip()
             if cb is not None:
@@ -398,7 +398,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
 
     def _wire_files_channel(self, channel) -> None:
         from je_auto_control.utils.remote_desktop.webrtc_files import FileTransferReceiver
-        close_file_receiver(self._files_receiver)
+        close_file_receiver(self._files_receiver, self._files_channel)
         receiver = self._files_receiver = FileTransferReceiver(self._inbox_dir)
         self._files_channel, connection = channel, self._pc
 
@@ -465,15 +465,15 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         self._file_callbacks.on_receipt = callback
 
     def push_file(self, local_path, remote_name=None, *,
-                  cancelled: Optional[Callable[[], bool]] = None) -> None:
-        """Send a local file to this connected viewer via the files channel."""
+                  cancelled: Optional[Callable[[], bool]] = None, require_commit: bool = False) -> None:
+        """Send to the viewer, optionally requiring its matching atomic-publication receipt."""
         if self._files_channel is None or not self._authenticated:
             raise RuntimeError("not connected to a viewer yet")
         from je_auto_control.utils.remote_desktop.webrtc_files import (
             FileTransferSender,
         )
         FileTransferSender(self._files_channel).send(
-            local_path, remote_name=remote_name, cancelled=cancelled,
+            local_path, remote_name=remote_name, cancelled=cancelled, require_commit=require_commit,
         )
 
     def _on_file_done(self, path) -> None:
@@ -511,7 +511,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         def _on_close() -> None:
             if self._control_channel is channel:
                 self._authenticated = False
-                abort_file_receiver(self._files_receiver)
+                abort_file_receiver(self._files_receiver, self._files_channel)
 
     def _handle_ctrl_message(self, message: Any) -> None:
         data = self._parse_ctrl_envelope(message)
@@ -706,7 +706,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         """Update the granular permissions at runtime."""
         self._permissions = permissions
         if not permissions.allow_files:
-            abort_file_receiver(self._files_receiver)
+            abort_file_receiver(self._files_receiver, self._files_channel)
         self._send_ctrl({"type": "permissions", "value": permissions.to_dict()})
 
     @property

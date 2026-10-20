@@ -295,9 +295,14 @@ def test_state_callback_can_attach_a_new_peer_without_old_failure_retiring_it(en
     else:
         owner._wire_pc_handlers(old_pc)
     old_pc.connectionState = 'failed'
-    asyncio.run(old_pc.handlers['connectionstatechange']())
-    assert owner.authenticated
-    replacement.fire('message', end())
+
+    async def reconnected_transfer():
+        # Keep the replacement channel's callbacks on its live native loop, after the old handler returns.
+        await old_pc.handlers['connectionstatechange']()
+        assert owner.authenticated
+        replacement.fire('message', end())
+
+    asyncio.run(reconnected_transfer())
     assert (inbox / 'payload.bin').read_bytes() == b'new!'
 
 

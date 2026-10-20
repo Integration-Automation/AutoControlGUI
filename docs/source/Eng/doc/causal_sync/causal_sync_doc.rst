@@ -797,7 +797,7 @@ After atomically publishing received bytes, an owning transport may explicitly c
 ``record_received(path)``. It returns false for outside, excluded, missing or changing paths.
 Successful receipts suppress echo without suppressing later local edits; newer receipts win
 over older sender completions and scans. This core seam is covered by local fake-sender
-regressions. Remote publication acknowledgement/retry and clipboard loop handling
+regressions. GUI reconnect state retention and clipboard loop handling
 are still tracked in ``Progress.md``; this section does not claim those integrations complete.
 
 Observable file sends and connection ownership
@@ -808,13 +808,13 @@ at 1 MiB and waits are bounded. Optional ``cancelled`` callbacks stop queued wri
 errors reach the synchronous caller so folder retries retain unsent content. Source truncation
 or growth relative to the announced size aborts. Concurrent producers are refused and a pending
 abort retains channel ownership. A completed end frame wins over cancellation arriving later.
-Success confirms channel acceptance, not remote publication; the file wire format is unchanged.
+Default manual-mode success confirms channel acceptance, not remote publication; legacy manual wire remains available; confirmed mode is described below.
 
 Native folder jobs bind their original authorization, engine, viewer and concrete peer connection.
 They stop scanning and writing after ownership changes, including reconnection of the same viewer.
 Inbox pulls run outside the bridge event loop and serialize up to 32 requests per channel.
 Shutdown cancels owned file jobs; error replies stay on the original control channel and loop.
-These behaviors are covered with local bridge/fake-channel regressions. Remote publication acknowledgement/retry and
+These behaviors are covered with local bridge/fake-channel regressions. GUI reconnect state retention and
 clipboard loop/disconnect coverage remain in ``Progress.md``.
 
 Native receive ownership and disconnect cleanup
@@ -855,5 +855,32 @@ role authorization and refuses stopped/auth-lost/replaced peers before touching 
 
 Controlled native host/viewer tests converge with two edits and zero echoes, including a reply
 arriving before the first send completes. This is connected local receipt bookkeeping, not a
-remote commit acknowledgement or a sender checksum. Remote publication confirmation,
-disconnect/reconnect retry and clipboard coverage remain in ``Progress.md``; wire is unchanged.
+remote commit acknowledgement or a sender checksum. GUI reconnect state retention
+and clipboard coverage remain in ``Progress.md``; legacy manual wire remains available.
+
+Authenticated native publication confirmation
+---------------------------------------------
+
+Use ``require_commit=True`` on ``FileTransferSender.send``, viewer ``send_file`` or
+host ``push_file`` to require a matching remote publication response. Legacy manual mode
+remains the default. The GUI folder sender always opts in and needs compatible support on
+both peers; it never silently substitutes queued acceptance for publication.
+
+Each file performs a fresh authenticated version-2 capability probe before sender source
+metadata/content reads. Source paths bind to their call working directory. Strict begin
+contains ``commit: 2`` and a transfer ID; strict end contains SHA-256 and an unpredictable
+nonce. The receiver validates those fields and bytes before atomic replacement, then sends
+``file_commit`` with the matching ID/nonce/hash/size. Sender success waits for that response.
+Corruption or uncertain/dropped writes leave the folder digest pending for same-engine retry.
+
+Queued writes retain their existing bounds; reply waits are two seconds for capability and
+five for publication. Confirmed synchronous calls run outside the bridge thread. Channel,
+loop and permission generations prevent old requests/receipts from adopting a replacement
+owner; completed publication wins a later cancellation. Metadata envelopes are bounded to
+4 KiB, request slots are bounded and the global lookup is weak. Original wrapped controls
+retain identity. Native callbacks still receive local immutable receipts and legacy paths.
+
+Controlled native pairs cover dropped bytes, delayed publication, corrupted content,
+replayed receipts with reused transfer IDs, permission changes, source cwd changes and
+two-way GUI folder sends. Preserving pending/offline changes when GUI disconnect/reconnect
+creates another engine, plus clipboard regressions, remains in ``Progress.md``.

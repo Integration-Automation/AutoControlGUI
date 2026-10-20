@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261020-10 | 2026-10-20 | Confirm native folder delivery after remote atomic publication | #done #remote-desktop #file-commit #C3 | [2026-10](2026-10.md) |
 | U-20261020-09 | 2026-10-20 | Bind native folder receipts to the originally received bytes | #done #remote-desktop #folder-sync #C3 | [2026-10](2026-10.md) |
 | U-20261020-08 | 2026-10-20 | Observe original cancellation before Python Task normalization | #done #validation-only #remote-desktop #python310 | [2026-10](2026-10.md) |
 | U-20261020-07 | 2026-10-20 | Retire native file receives with their original peer and channel | #done #remote-desktop #file-receive #C3 | [2026-10](2026-10.md) |
@@ -416,7 +417,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 80 |
+| [2026-10.md](2026-10.md) | 2026-10 | 81 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

@@ -453,7 +453,7 @@ retry of pending/offline bytes and transient scan failure. Explicit receive rece
 no-echo behavior and races with older send, baseline and pruning operations. Wrapped
 cancellation/KeyboardInterrupt/SystemExit carriers retain their original identities at scan,
 send and receipt boundaries. These are local filesystem/fake-sender checks; native WebRTC
-remote publication acknowledgement/retry and clipboard loop tests remain C3 work.
+GUI reconnect state retention and clipboard loop tests remain C3 work.
 
 Local bridge/fake-channel regressions verify observable callback failure, folder retry,
 bounded buffering, queued cancellation, pending-abort ownership, completed-end cancellation
@@ -464,7 +464,7 @@ Large inbox pulls yield the bridge loop; two downloads serialize without frame i
 Queue overflow and cancellation before the first task step release capacity; stale failure
 replies are suppressed and wrapped interruption objects survive error-reply callbacks.
 These checks use local threads/files/fake channels, without real devices or paid APIs.
-They do not establish remote publication acknowledgement, receive SHA-256 validation,
+They do not establish remote publication acknowledgement, sender-checksum validation in legacy mode,
 clipboard no-echo/disconnect behavior, which remain in Progress.md.
 
 Native receive lifecycle evidence covers deterministic close/write overlap, repeated close,
@@ -475,7 +475,7 @@ transfer. Wrapped cancellation and hard signals retain object identity at write/
 native file/audit/state callback boundaries. Tests use fake peer/channel objects and local files;
 published targets survive failed receives. Receive-close behavior is shared by existing GUI and
 SDK endpoints. These checks do not establish remote publication acknowledgement, file-wire
-checksums, remote folder publication acknowledgement/retry or clipboard no-echo; open C3 work stays in Progress.md.
+checksums, GUI folder reconnect state retention or clipboard no-echo; open C3 work stays in Progress.md.
 
 Native GUI wiring initially reproduces received bytes being sent back before the next local edit.
 Immutable streamed receipts now suppress that echo and retain delayed/before-baseline local
@@ -488,3 +488,18 @@ rejects stale viewer/engine/peer, stopped/auth-lost and live role-revoked receip
 These are local fake-channel/controlled-loop checks; they do not establish loss recovery or remote
 commit acknowledgement. Those delivery/reconnect requirements and clipboard regressions remain
 in Progress.md. No physical device or paid API acceptance is claimed.
+
+The native bridge pair first reproduces dropped binary chunks being marked delivered even
+though the remote target never appears. Publication-confirmed folder sends now leave that
+digest pending, then retry and advance only after a matching atomic-publication receipt.
+Controlled cases cover delayed end, empty/small/two-MiB transfer, corrupted chunks, checksum
+rejection before target replacement, tampered size/hash, and stale acknowledgements under a
+forced reused transfer ID with a fresh nonce. An old receipt cannot confirm a missing new target.
+Fresh probes reject unsupported/version-mismatched or permission-revoked peers before sender
+source metadata reads. Legacy manual sends still work against a non-confirming peer. Tests also
+cover source cwd changes during negotiation, malformed/bounded envelopes, channel/control/stop
+and permission-generation cancellation, loop replacement, single-producer ownership, weak
+registry collection, wrapped original controls and completed-receipt/late-cancel ordering.
+Actual GUI folder wiring requests confirmation and connected two-way native tests use it in
+both directions. These local fake-channel tests do not establish GUI engine-state retention
+across disconnect/reconnect; that and clipboard regressions remain explicitly in Progress.md.

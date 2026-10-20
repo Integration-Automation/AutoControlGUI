@@ -248,22 +248,22 @@ start is a no-op while that worker lives, and readiness clears on stop/exit.
 record_received(path) explicitly marks a complete regular file inside the selected watch as
 received, returning False for missing/outside/excluded/changing paths. Callers publish first;
 receipt updates win over older send/scan completions. This does not change any wire schema.
-Native receive receipts are integrated below; remote publication acknowledgement/retry remains in Progress.md.
+Native receive receipts are integrated below; GUI reconnect state retention remains in Progress.md.
 
 FileTransferSender.send, WebRTCDesktopViewer.send_file and WebRTCDesktopHost.push_file
 accept an optional keyword-only cancelled predicate. Writes now synchronously confirm
 the original bridge callback, cap buffered data at 1 MiB and fail after a bounded wait.
 Callback errors reach FileTransferError; cancellation/hard signals keep their original
 identity. Chunk sizes must be integers from 1 byte through 1 MiB (bool is refused), and
-source truncation/growth relative to the announced size aborts the transfer. Success means
-the channel accepted every frame, not that the peer committed the file. The wire is unchanged.
+source truncation/growth relative to the announced size aborts the transfer. Default manual-mode success means
+the channel accepted every frame, not that the peer committed the file. Legacy manual wire remains available; confirmed native mode is described below.
 Concurrent producers on one channel fail explicitly; a pending abort retains ownership.
 FolderSyncEngine accepts an optional cancelled predicate and provides nonjoining
 request_stop plus stop_requested. GUI folder jobs capture authority and peer identity;
 loss of ownership stops scans and queued writes. Viewer connection_identity is opaque.
 Native inbox pulls use a per-channel queue of at most 32 jobs on the original loop,
 perform blocking sends in a worker and cancel owned jobs on host shutdown. Failure replies
-remain bound to their original control channel. Remote publication acknowledgement/retry and clipboard
+remain bound to their original control channel. GUI reconnect state retention and clipboard
 coverage remain C3 follow-ups in Progress.md.
 
 FileTransferReceiver.close is idempotent and terminal: it refuses subsequent frames and
@@ -278,7 +278,7 @@ cannot retire a replacement transfer. Terminal cleanup precedes state callbacks,
 callbacks that reconnect immediately. File/audit/state callback interruption carriers propagate
 unchanged; ordinary native callback failures retain their existing logging/containment behavior.
 The Remote Desktop GUI uses the same endpoints. No wire, facade, command or MCP schema changes.
-Remote folder publication acknowledgement/retry and clipboard loop/disconnect coverage remain in Progress.md.
+GUI folder reconnect state retention and clipboard loop/disconnect coverage remain in Progress.md.
 
 FileReceiveReceipt (utils.remote_desktop.file_receipts) is frozen local metadata with an
 absolute path, lowercase SHA-256 and nonnegative byte size; malformed metadata raises the
@@ -296,5 +296,27 @@ hashes current content. Receipt state wins older scans/sender completions; owner
 filesystem access and repeat before state mutation with consistent lifecycle/content lock order.
 The GUI folder toggle binds receipts to its captured viewer and engine; live role/auth/peer
 checks retain the original authority. Local receipt metadata does not acknowledge remote
-publication or verify a sender-provided checksum. Wire changes and reliable reconnect retry
-remain separate C3 work in Progress.md, along with clipboard regressions.
+publication or verify a sender-provided checksum in legacy mode. GUI reconnect state retention
+remains separate C3 work in Progress.md, along with clipboard regressions.
+
+Publication-confirmed native sends use keyword-only require_commit=True on the existing
+FileTransferSender.send, WebRTCDesktopViewer.send_file and WebRTCDesktopHost.push_file.
+The default remains False for legacy manual callers; the GUI folder sender always opts in.
+Confirmed mode requires a native file listener on the original authenticated channel/loop
+and runs outside the bridge thread. A fresh version-2 nonce probe precedes each file's source
+metadata/content reads, including after permission changes. Source paths bind to their call cwd.
+The strict begin includes commit=2 and a transfer ID; strict end includes SHA-256 and a new
+unpredictable nonce. The receiver validates ID, integer size, nonce and checksum before atomic
+replacement, then sends file_commit with that ID/nonce/digest/size before user callbacks.
+Only a matching response completes delivery. Unsupported, timed-out, cancelled, replaced or
+revoked operations retain failure; a completed receipt wins cancellation arriving later.
+Each queued write keeps its existing bound; capability replies wait at most two seconds and
+publication replies five seconds. They are distinct from write/backpressure waits.
+Protocol requests are bounded, weakly indexed and retired on channel/session/permission end;
+captured generations prevent revoke/regrant from reviving a pending request. Envelope parsing
+is bounded to 4 KiB before decoding. FileCommitError stays in the flat framework family and
+native sender boundaries expose FileTransferError with original interruption identities.
+Legacy manual envelopes and path/receipt listeners remain available. GUI folder delivery now
+requires compatible support on both peers. Same-engine uncertain sends retry without advancing
+the confirmed digest; preserving pending/offline state when the GUI recreates an engine after
+disconnect/reconnect remains in Progress.md, along with clipboard regressions.

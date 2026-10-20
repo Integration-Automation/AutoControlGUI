@@ -3,15 +3,17 @@
 Protocol:
   * String envelope ``{"type": "file_begin", "name", "size", "transfer_id"}``
   * Binary chunks (raw ``bytes``) follow until total bytes == size
-  * String envelope ``{"type": "file_end", "transfer_id"}`` confirms
+  * String envelope ``{"type": "file_end", "transfer_id"}`` ends the legacy stream.
+  * Native confirmed sends probe support, use ``commit: 2`` and bind end SHA-256/nonce
+    to an authenticated ``file_commit`` response after atomic publication.
 
 Limitations:
   * One transfer in-flight per channel (the receiver tracks a single
     active transfer; a second begin while the first is open is rejected).
-  * No resume / no integrity checksum — DataChannel runs over SCTP which
-    is reliable + ordered, so corruption mid-stream is not the concern.
-  * Sender calls observe channel acceptance, not a remote commit acknowledgement.
-    Writes are bounded/cancellable and pause above one MiB of buffered data.
+  * No resume. Legacy manual sends confirm channel acceptance without a peer checksum/receipt.
+  * ``require_commit=True`` needs a native listener and a compatible authenticated peer;
+    source reads follow a bounded probe and success waits for matching publication metadata.
+  * Writes are bounded/cancellable and pause above one MiB of buffered data.
 
 Host inbox defaults to ``~/.je_auto_control/inbox`` and incoming filenames
 are stripped of any directory components to defeat path traversal; names a
@@ -26,6 +28,7 @@ import json
 import os
 import secrets
 import threading
+from dataclasses import dataclass, field
 from hashlib import sha256
 from pathlib import Path
 from typing import Callable, Optional
@@ -34,6 +37,9 @@ from je_auto_control.utils.exception.control_signals import raise_caused_run_int
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.file_receipts import FileReceiveReceipt
+from je_auto_control.utils.remote_desktop.webrtc_file_commit import (
+    ConfirmedPeer, FileCommitError, commit_request, confirmed_peer, valid_hex, valid_int,
+)
 from je_auto_control.utils.remote_desktop.webrtc_transport import get_bridge
 from je_auto_control.utils.remote_desktop.webrtc_file_write import (
     _PinnedBridge, _channel_transfer, _checkpoint, _send_confirmed,
@@ -87,6 +93,27 @@ def _announced_size(raw) -> int:
     if size < 0 or size > _MAX_SIZE:
         raise FileTransferError(f"invalid size: {size}")
     return size
+
+
+def _confirmed_begin(data: dict) -> bool:
+    version = data.get('commit')
+    if version is None:
+        return False
+    if not valid_int(version) or version != 2 or not valid_hex(data.get('transfer_id'), 16):
+        raise FileTransferError('invalid publication-confirmed file begin')
+    if not valid_int(data.get('size')):
+        raise FileTransferError('confirmed file size must be an integer')
+    return True
+
+
+def _confirmed_end(current: dict, data: dict) -> None:
+    if not current['commit']:
+        return
+    if (data.get('transfer_id') != current['transfer_id'] or not valid_hex(data.get('sha256'), 64)
+            or not valid_hex(data.get('commit_nonce'), 32)):
+        raise FileTransferError('invalid publication-confirmed file end')
+    if data['sha256'] != current['digest'].hexdigest():
+        raise FileTransferError('received file checksum does not match sender')
 
 
 class FileTransferReceiver:
@@ -149,7 +176,7 @@ class FileTransferReceiver:
         if msg_type == "file_begin":
             self._begin(data)
         elif msg_type == "file_end":
-            self._finish(on_done, on_receipt)
+            self._finish(on_done, on_receipt, data)
         elif msg_type == "file_abort":
             reason = "aborted by sender"
             self._abort_locked(reason=reason)
@@ -183,6 +210,7 @@ class FileTransferReceiver:
             if self._current is not None:
                 raise FileTransferError("transfer already in progress")
             name = _safe_basename(data.get("name", ""))
+            commit = _confirmed_begin(data)
             size = _announced_size(data.get("size", 0))
             target = self._inbox / name
             part = self._inbox / f".{name}.{secrets.token_hex(4)}.part"
@@ -195,12 +223,13 @@ class FileTransferReceiver:
                 "path": target, "part": part,
                 "transfer_id": data.get("transfer_id", ""),
                 "digest": sha256(),
+                "commit": commit,
             }
         autocontrol_logger.info(
             "file transfer: receiving %s (%d bytes)", target, size,
         )
 
-    def _finish(self, on_done, on_receipt) -> None:
+    def _finish(self, on_done, on_receipt, data) -> None:
         with self._lock:
             current = self._current
             if self._closed or current is None:
@@ -210,6 +239,7 @@ class FileTransferReceiver:
                 # aborts it; a truncated file used to be reported received.
                 raise FileTransferError(
                     f"received {current['written']} of {current['size']} bytes")
+            _confirmed_end(current, data)
             try:
                 current["fh"].close()
                 os.replace(current["part"], current["path"])
@@ -250,6 +280,36 @@ def _discard_partial(current: dict) -> None:
         autocontrol_logger.warning('file receive cleanup failed: %r', failure)
 
 
+@dataclass(frozen=True)
+class _SendPlan:
+    """Capture source metadata and the original confirmation owner for one file send."""
+    path: Path
+    name: str
+    size: int
+    chunk_size: int
+    peer: Optional[ConfirmedPeer] = None
+    transfer_id: str = field(default_factory=lambda: secrets.token_hex(8))
+
+
+def _send_options(channel: object, chunk_size: int, require_commit: bool) -> None:
+    if getattr(channel, 'readyState', 'open') != 'open':
+        raise FileTransferError('files channel is not open')
+    if isinstance(chunk_size, bool) or not isinstance(chunk_size, int) or not 1 <= chunk_size <= 1024 * 1024:
+        raise FileTransferError('chunk size must be an integer from 1 through 1048576')
+    if not isinstance(require_commit, bool):
+        raise FileTransferError('require_commit must be a boolean')
+
+
+def _source_plan(local_path, remote_name, chunk_size, peer) -> _SendPlan:
+    path = Path(local_path)
+    if not path.is_file():
+        raise FileTransferError(f'not a file: {local_path}')
+    size = path.stat().st_size
+    if size > _MAX_SIZE:
+        raise FileTransferError('file exceeds the four-GiB protocol limit')
+    return _SendPlan(path, _safe_basename(remote_name or path.name), size, chunk_size, peer)
+
+
 class FileTransferSender:
     """Send a single file from the caller side via the DataChannel."""
 
@@ -262,83 +322,91 @@ class FileTransferSender:
              remote_name: Optional[str] = None,
              chunk_size: int = _DEFAULT_CHUNK_SIZE,
              on_progress: Optional[Callable[[int, int], None]] = None, *,
-             cancelled: Optional[Callable[[], bool]] = None) -> None:
-        """Return only after channel writes execute; cancellation aborts partial files without remote commit claims."""
+             cancelled: Optional[Callable[[], bool]] = None, require_commit: bool = False) -> None:
+        """Confirm queued writes, or require a native peer's matching atomic-publication receipt when requested."""
         try:
             _checkpoint(cancelled)
-            if getattr(self._channel, 'readyState', 'open') != 'open':
-                raise FileTransferError('files channel is not open')
-            if isinstance(chunk_size, bool) or not isinstance(chunk_size, int) or not 1 <= chunk_size <= 1024 * 1024:
-                raise FileTransferError('chunk size must be an integer from 1 through 1048576')
-            path = Path(local_path)
-            if not path.is_file():
-                raise FileTransferError(f'not a file: {local_path}')
-            size = path.stat().st_size
-            if size > _MAX_SIZE:
-                raise FileTransferError('file exceeds the four-GiB protocol limit')
-            name = _safe_basename(remote_name or path.name)
+            _send_options(self._channel, chunk_size, require_commit)
+            source_path = Path(local_path).absolute()
             with _channel_transfer(self._channel):
-                self._transfer(path, name, size, chunk_size, on_progress, cancelled)
+                bridge = _PinnedBridge(get_bridge()) if require_commit else None
+                peer = confirmed_peer(self._channel, bridge, cancelled) if bridge is not None else None
+                plan = _source_plan(source_path, remote_name, chunk_size, peer)
+                self._transfer(plan, on_progress, bridge or _PinnedBridge(get_bridge()), cancelled)
         except FileTransferError as error:
             raise_caused_run_interruption(error)
             raise
         except BaseException as error:  # reason: preserve signals while containing ordinary channel failures
-            raise _send_failure(error) from error
+            raise _send_failure(error, require_commit=require_commit) from error
 
-    def _transfer(self, path, name, size, chunk_size, on_progress, cancelled) -> None:
-        transfer_id = secrets.token_hex(8)
-        bridge = _PinnedBridge(get_bridge())
+    def _transfer(self, plan, on_progress, bridge, cancelled) -> None:
+        guard = plan.peer.guard if plan.peer is not None else cancelled
         try:
-            _send_confirmed(self._channel, bridge, json.dumps({
-                'type': 'file_begin', 'name': name, 'size': size, 'transfer_id': transfer_id}), cancelled=cancelled)
-            self._chunks(path, size, chunk_size, on_progress, bridge, cancelled)
-            _send_confirmed(self._channel, bridge, json.dumps({
-                'type': 'file_end', 'transfer_id': transfer_id}), cancelled=cancelled)
+            with commit_request(plan.peer, plan.transfer_id, plan.size) as request:
+                begin = {'type': 'file_begin', 'name': plan.name, 'size': plan.size, 'transfer_id': plan.transfer_id}
+                if request is not None:
+                    begin['commit'] = 2
+                _send_confirmed(self._channel, bridge, json.dumps(begin), cancelled=guard)
+                digest = self._chunks(plan, on_progress, bridge, guard)
+                end = {'type': 'file_end', 'transfer_id': plan.transfer_id}
+                if request is not None:
+                    end.update(request.end_fields(digest))
+                _send_confirmed(self._channel, bridge, json.dumps(end), cancelled=guard)
+                if request is not None:
+                    request.wait()
         except BaseException as error:  # reason: abort partial transfers before propagating their failure
             cleanup_error = None
             try:
                 _send_confirmed(self._channel, bridge, json.dumps({
-                    'type': 'file_abort', 'transfer_id': transfer_id}), timeout=1.0, retain_abort=True)
+                    'type': 'file_abort', 'transfer_id': plan.transfer_id}), timeout=1.0, retain_abort=True)
             # pylint: disable-next=broad-exception-caught  # reason: preserve the original signal before cleanup signals
             except BaseException as secondary:  # reason: select the original interruption before a cleanup interruption
                 cleanup_error = secondary
-            converted = _send_failure(error, cleanup_error)
+            converted = _send_failure(error, cleanup_error, require_commit=plan.peer is not None)
             if converted is error:
                 raise
             raise converted from error
 
-    def _chunks(self, path, size, chunk_size, on_progress, bridge, cancelled) -> None:
+    def _chunks(self, plan, on_progress, bridge, cancelled) -> str:
         sent = 0
+        digest = sha256()
         try:
             _checkpoint(cancelled)
             bridge.validate()
-            with path.open('rb') as stream:
+            with plan.path.open('rb') as stream:
                 while True:
                     _checkpoint(cancelled)
                     bridge.validate()
-                    chunk = stream.read(chunk_size)
+                    chunk = stream.read(plan.chunk_size)
                     if not chunk:
-                        if sent != size:
+                        if sent != plan.size:
                             raise FileTransferError('source size changed during transfer')
-                        return
-                    if sent + len(chunk) > size:
+                        return digest.hexdigest()
+                    if sent + len(chunk) > plan.size:
                         raise FileTransferError('source size changed during transfer')
                     _send_confirmed(self._channel, bridge, chunk, cancelled=cancelled)
+                    digest.update(chunk)
                     sent += len(chunk)
                     if on_progress is not None:
-                        on_progress(sent, size)
+                        on_progress(sent, plan.size)
         except OSError as error:
             raise_caused_run_interruption(error)
             raise FileTransferError(f'read failed: {error}') from error
 
 
-def _send_failure(error: BaseException, cleanup: Optional[BaseException] = None) -> FileTransferError:
+def _send_failure(error: BaseException, cleanup: Optional[BaseException] = None, *,
+                  require_commit: bool = False) -> FileTransferError:
     raise_caused_run_interruption(error)
     if cleanup is not None:
         raise_caused_run_interruption(cleanup)
     if isinstance(error, FileTransferError):
         return error
-    converted = FileTransferError('file send failed before complete channel acceptance')
+    message = 'file send failed before complete channel acceptance'
+    if require_commit:
+        message = 'file send failed before publication confirmation'
+        if isinstance(error, FileCommitError):
+            message = str(error)
+    converted = FileTransferError(message)
     converted.__cause__ = error
     return converted
 
