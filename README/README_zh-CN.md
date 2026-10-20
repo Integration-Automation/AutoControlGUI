@@ -495,6 +495,12 @@ pylint je_auto_control/
 bandit -c pyproject.toml -r je_auto_control/
 ```
 
+dev／main 的无头任务会保留七天的 `native-<os>-<python>` artifact，内含合并进程输出、
+包／运行环境版本与退出码。Linux 经 GDB 保留各线程原生堆栈；其他平台保留 Python
+faulthandler 输出，测试失败仍会使任务失败。可在 repo 执行单一命令
+`python scripts/ci_native_diagnostics.py --artifact-dir test-artifacts -- python -m pytest -v --tb=short --timeout=120`；
+Linux 安装 GDB 后，可在 `--` 前加入 `--native`。
+
 欢迎贡献——请见 [CONTRIBUTING.md](../CONTRIBUTING.md) 与
 [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)。CI 会强制两条规则：`import je_auto_control`
 绝不能加载 PySide6；每个功能都必须同时具备无头 API 与 GUI 界面。

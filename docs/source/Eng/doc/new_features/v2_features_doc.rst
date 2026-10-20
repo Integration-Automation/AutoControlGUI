@@ -506,6 +506,14 @@ backend and preserve the original cancellation. The explicit wtype text path
 and screen-capture selection are unchanged.
 
 
+The repository's dev/main headless jobs retain merged test output and runtime
+versions even after a native failure. Linux runs under GDB for all-thread
+native backtraces; other platforms retain Python faulthandler output. The
+``native-<os>-<python>`` artifacts expire after seven days. Failed child exits
+still fail CI. See :doc:`/getting_started/run_in_ci` for reproduction. Collecting
+evidence does not mark pending portal/native lifecycle acceptance complete.
+
+
 macOS Accessibility: tree dump + recorder
 -----------------------------------------
 

@@ -535,6 +535,14 @@ pylint je_auto_control/
 bandit -c pyproject.toml -r je_auto_control/
 ```
 
+The dev/main headless jobs retain `native-<os>-<python>` artifacts for seven
+days: merged process output, package/runtime versions and exit status. Linux
+runs under GDB to retain all-thread native backtraces; other platforms retain
+Python faulthandler output. Test failures remain failures. From a repository
+checkout, reproduce collection with `python scripts/ci_native_diagnostics.py
+--artifact-dir test-artifacts -- python -m pytest -v --tb=short --timeout=120`
+(one command); add `--native` before `--` on Linux with GDB installed.
+
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Two rules the CI enforces: `import
 je_auto_control` must never pull in PySide6, and every feature needs both a headless

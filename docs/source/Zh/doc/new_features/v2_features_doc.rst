@@ -443,6 +443,12 @@ Wayland libei native backend
 明確的 wtype 文字輸入路徑與螢幕擷取選擇不變。
 
 
+repo 的 dev／main 無頭工作在原生失敗後仍保留合併測試輸出與執行環境版本。
+Linux 經 GDB 擷取各執行緒原生堆疊，其他平台保留 Python faulthandler 輸出。
+``native-<os>-<python>`` artifact 保留七天；子行程失敗仍使 CI 失敗。
+重現方法見 :doc:`/getting_started/run_in_ci`。蒐集證據不代表完成尚缺的 portal／原生生命週期驗收。
+
+
 macOS Accessibility：tree dump + recorder
 -----------------------------------------
 

@@ -51,7 +51,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            xvfb xauth x11-utils \
+            xvfb xauth x11-utils gdb \
             libgl1 libegl1 libglib2.0-0 \
             libxkbcommon-x11-0 libdbus-1-3 \
             libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
@@ -85,7 +85,18 @@ jobs:
         shell: bash
         run: >-
           ${{ runner.os == 'Linux' && 'xvfb-run -a -s "-screen 0 1280x800x24"' || '' }}
+          python scripts/ci_native_diagnostics.py
+          --artifact-dir "${{ runner.temp }}/autocontrol-native"
+          ${{ runner.os == 'Linux' && '--native' || '' }} --
           python -m pytest -v --tb=short --timeout=120
+
+      - name: Retain native test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: native-${{ matrix.os }}-${{ matrix.python-version }}
+          path: ${{ runner.temp }}/autocontrol-native
+          retention-days: 7
 
   publish-dev:
     # A push to dev that passes the tests is built from dev.toml and uploaded

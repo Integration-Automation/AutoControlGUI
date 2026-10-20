@@ -58,6 +58,22 @@ push touching ``docker/``, ``je_auto_control/`` or
 container under ``xvfb-run``, then smoke-tests the REST entrypoint
 with ``curl /health``.
 
+The dev/main headless jobs also retain ``native-<os>-<python>`` artifacts for
+seven days, even when tests fail. ``process.log`` combines stdout/stderr;
+``runtime.json`` records package/runtime versions and the child exit status.
+Linux runs under GDB and retains all-thread native backtraces. Other systems
+retain Python faulthandler output. Neither ordinary failure nor native abort
+is converted into a passing job. Native root-cause acceptance remains separate
+from collecting the evidence.
+
+From the repository, run::
+
+   python scripts/ci_native_diagnostics.py --artifact-dir test-artifacts -- python -m pytest -v --tb=short --timeout=120
+
+On Linux, install GDB and add ``--native`` before ``--`` to collect native
+backtraces. The wrapper never opens a display or obtains device permissions;
+the selected test command still requires its normal Xvfb/backend setup.
+
 Reuse from any branch by adding this job to your own workflow:
 
 .. code-block:: yaml

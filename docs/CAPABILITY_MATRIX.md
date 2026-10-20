@@ -73,6 +73,12 @@ stale CAS, historical retries, forbidden legacy overwrites, retained alternative
 fabricated acknowledgements, obsolete epochs and explicit restoration after GC.
 Explicit CausalSyncClient/outbox HTTP delivery now has controlled tests for uncertain accepted sends, exact restart retry before fetch, bounded definite-rejection rebasing, operation-ID conflicts, retired peers, credentials, stale leases and atomic snapshot rollback/fork refusal. Durable explicit peer controls and atomic local full-resync now cover registration, ack/collection, retirement, uncertain restart retries, compact historical receipts, leases, pending-retirement consent and generation adoption. AC/MCP/Builder share the private control/status surface; the loopback example needs no optional web framework. Coordinated source workspaces are covered below; referenced assets are covered below; Sync UI controlled coverage is described below.
 
+The dev/main headless suites retain merged process output, runtime/package
+versions and child status for seven days, including failures. Linux collects
+all-thread native backtraces through batch GDB; other platforms retain Python
+faulthandler output. This is diagnostic infrastructure, not native lifecycle
+acceptance or a root-cause correction; outstanding crashes remain in Progress.md.
+
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
 
