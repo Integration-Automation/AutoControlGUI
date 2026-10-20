@@ -319,9 +319,15 @@ def test_state_callback_control_survives_after_terminal_receive_cleanup(endpoint
     else:
         owner._wire_pc_handlers(pc)
     pc.connectionState = 'failed'
-    with pytest.raises(signal) as caught:
-        asyncio.run(pc.handlers['connectionstatechange']())
-    assert caught.value is original and not owner.authenticated and list(inbox.iterdir()) == []
+
+    async def observe_native_callback():
+        # Observe before Python 3.10 Task.result replaces a propagated CancelledError object.
+        with pytest.raises(signal) as caught:
+            await pc.handlers['connectionstatechange']()
+        return caught.value
+
+    caught = asyncio.run(observe_native_callback())
+    assert caught is original and not owner.authenticated and list(inbox.iterdir()) == []
 
 
 @pytest.mark.parametrize('endpoint', ['host'], indirect=True)
