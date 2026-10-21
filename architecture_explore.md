@@ -26,7 +26,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 套件門面 `__all__` 公開名稱數 | 1380 |
 | GUI 分頁數（`main_widget` 註冊） | 49 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 711 |
-| `test_*.py` 測試檔／測試函式 | 846 / 8,820 |
+| `test_*.py` 測試檔／測試函式 | 846 / 8,825 |
 | 範例腳本 | 43 |
 
 **技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
@@ -1163,7 +1163,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，只需要 PySide6
 | `scripts/dev_release.py` | 只用標準函式庫的發佈輔助腳本 | dev 通道（PyPI 的 `je_auto_control_dev`）的版本與比對：`prepare` 把 `dev.toml` 寫成 `pyproject.toml`，版本取 PyPI 最新一版加一個 patch（`dev.toml` 的版本只是下限，不回寫 repo）；`changed dist` 把建好的 wheel 跟 PyPI 最新一版逐檔比對，內容沒變就不上傳。只給 `dev.yml` 的 `publish-dev` job 與拋棄式的 checkout 用，因為 `prepare` 會蓋掉 `pyproject.toml`。 |
 | `docs/` | Sphinx（`API`／`Eng`／`Zh`／`getting_started`） | Read the Docs 文件。 |
 | `architecture_diagram/` | drawio + png | 既有的架構圖原始檔。 |
-| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 846 個 `test_*.py`／8,820 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
+| `test/` | `unit_test/headless`（主要）、`unit_test/flow_control`、`integrated_test`、`gui_test`、`manual_test`、`verify`、`test_source` | 846 個 `test_*.py`／8,825 個測試函式。**注意**：`test/unit_test/` 下的 `*_test.py` 是會真的驅動滑鼠鍵盤的手動示範腳本，因此 `pyproject.toml` 把 `python_files` 釘成 `test_*.py`。`unit_test/headless/conftest.py` 有一個 autouse fixture，每個測試結束都沖掉 Qt 排隊中的 `deleteLater()`——不沖會讓殘留的 widget 在後面某個不相干的測試裡被銷毀，曾經整個直譯器 `__fastfail`。`test_doc_counts.py` 守住文件引用的指令／工具／子套件／範例數,`test_doc_line_counts.py` 守住所有行數（`--fix` 可一次重新產生）。 `verify/macos_verify.py` 是在真的 `macos-14` runner 上量測 TCC 到底允許什麼的探針（macOS 是唯一沒有容器可用的支援平台），不被 pytest 收集。 |
 
 ---
 
@@ -1201,7 +1201,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，只需要 PySide6
 | `quality.yml` | ruff、bandit、dependency review、九格矩陣的 headless pytest（含 coverage 地板）與 mypy。 |
 | `platform-smoke.yml` | 跨平台煙霧測試。 |
 | `docker.yml` | 容器映像建置。 |
-| `ei-lifecycle.yml` | 選定 dev 推送的隔離 libei／libeis 驗證；獨立執行有界半開釋放與 live peer，保留版本／原生紀錄十四天，失敗仍失敗，不開啟裝置。 |
+| `ei-lifecycle.yml` | 選定 dev 推送的隔離 libei／libeis 驗證；獨立執行有界半開釋放與 live peer，保留版本／原生紀錄十四天；live 子行程先釋放 device refs，缺少完成標記或其他失敗不得算通過，不開啟裝置。 |
 | `action-json-lint.yml` | 用 `python -m je_auto_control.utils.action_lint` 檢查 action JSON。 |
 
 **設定基線**（`pyproject.toml`）：

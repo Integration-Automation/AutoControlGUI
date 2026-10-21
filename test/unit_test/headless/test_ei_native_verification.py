@@ -22,6 +22,15 @@ def verifier():
     return module
 
 
+@pytest.fixture
+def live_verifier():
+    spec = importlib.util.spec_from_file_location('controlled_eis_verifier', ROOT/'docker/eis_verify.py')
+    module = importlib.util.module_from_spec(spec)
+    with patch('faulthandler.enable'):
+        spec.loader.exec_module(module)
+    return module
+
+
 def completed(code, output='', error=''):
     return subprocess.CompletedProcess(['controlled-child'], code, output, error)
 
@@ -132,3 +141,53 @@ def test_dev_native_workflow_runs_both_probes_and_retains_failure_logs():
     assert not any('--privileged' in step.get('run', '') or '--device' in step.get('run', '') for step in steps)
     dockerfile = (ROOT/'docker/Dockerfile.eis').read_text(encoding='utf-8')
     assert 'COPY docker/libei_verify.py /opt/verify/libei_verify.py' in dockerfile
+
+
+@pytest.mark.parametrize('code', [1, 4, -6, -15])
+def test_live_cleanup_cannot_pass_an_inconclusive_child_failure(live_verifier, monkeypatch, code):
+    monkeypatch.setattr(subprocess, 'run', lambda *_args, **_kwargs: completed(code, error='controlled failure'))
+    with pytest.raises(AssertionError, match='unexpected'):
+        live_verifier._live_teardown_sentinel('/controlled/eis')
+
+
+@pytest.mark.parametrize('output', ['', 'ei_unref live: begin\n'])
+def test_live_success_requires_recorded_native_completion(live_verifier, monkeypatch, output):
+    monkeypatch.setattr(subprocess, 'run', lambda *_args, **_kwargs: completed(0, output))
+    with pytest.raises(AssertionError):
+        live_verifier._live_teardown_sentinel('/controlled/eis')
+
+
+@pytest.mark.parametrize('code', [0, -11])
+def test_live_native_boundary_and_trace_are_retained(live_verifier, monkeypatch, capsys, code):
+    output = 'ei_unref live: begin\n'+('ei_unref live: end\n' if code == 0 else '')
+    trace = 'controlled native cleanup trace'
+    monkeypatch.setattr(subprocess, 'run', lambda *_args, **_kwargs: completed(code, output, trace))
+    if code == 0:
+        assert 'safe' in live_verifier._live_teardown_sentinel('/controlled/eis')
+    else:
+        with pytest.raises(AssertionError, match='ei_unref.*SIGSEGV'):
+            live_verifier._live_teardown_sentinel('/controlled/eis')
+    captured = capsys.readouterr().out
+    assert output in captured and trace in captured
+
+
+def test_live_fault_before_unref_does_not_misidentify_the_native_root(live_verifier, monkeypatch):
+    monkeypatch.setattr(subprocess, 'run', lambda *_args, **_kwargs: completed(-11, 'connecting\n', 'native fault'))
+    with pytest.raises(AssertionError, match='before.*ei_unref'):
+        live_verifier._live_teardown_sentinel('/controlled/eis')
+
+
+def test_live_child_is_bounded_and_releases_owned_devices_before_context(live_verifier, monkeypatch):
+    def run(argv, **kwargs):
+        assert argv[1:3] == ['-X', 'faulthandler'] and kwargs['check'] is False
+        assert 0 < kwargs.get('timeout', 0) <= 60
+        assert kwargs['capture_output'] is True
+        program = argv[-1]
+        compile(program, '<controlled-live-probe>', 'exec')
+        assert program.index('ei_device_unref') < program.index('ei_unref live: begin')
+        assert program.index('ei_unref live: begin') < program.index('ei_unref(')
+        raise subprocess.TimeoutExpired(argv, kwargs['timeout'])
+
+    monkeypatch.setattr(subprocess, 'run', run)
+    with pytest.raises(subprocess.TimeoutExpired):
+        live_verifier._live_teardown_sentinel('/controlled/eis')

@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Fail live EI cleanup verification on unrelated child errors or missing native
+  completion evidence; retain bounded fault traces and release owned device refs
+  before the context. Record native half-open SIGSEGV and socket-peer refusal
+  evidence while retaining runtime protection pending helper isolation.
+
 - Collect isolated native EI lifecycle evidence on selected dev pushes. Bound
   the half-open teardown child, retain fault traces and descriptor counts,
   reject unrelated probe failures, and verify native refusal separately from

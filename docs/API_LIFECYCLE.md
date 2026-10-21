@@ -1,13 +1,16 @@
 # Public API lifecycle
 
-Selected dev pushes now run `.github/workflows/ei-lifecycle.yml` against an
-isolated libei/libeis container. It runs the silent-peer teardown/refusal probe
-and live EIS peer independently, retaining available version/native logs in
-`ei-lifecycle-<run>-<attempt>` artifacts for 14 days. The teardown child has a
-10-second deadline and faulthandler; only SIGSEGV reached inside `ei_unref` is
-classified as the known upstream fault. A successful cleanup must report equal
-descriptor counts. Other failures fail CI. No compositor, device or consent
-dialog is involved; results must be inspected before changing native cleanup.
+Selected dev pushes run `.github/workflows/ei-lifecycle.yml` in an isolated
+libei/libeis container, retaining versions and both native logs for 14 days in
+`ei-lifecycle-<run>-<attempt>` artifacts. Half-open and live cleanup children
+have 10/60-second deadlines and faulthandler. Unrelated child failures fail CI;
+successful cleanup requires begin/end markers. The half-open probe also requires
+equal integer descriptor counts; live cleanup releases owned device refs first.
+Run 39507190704 on libei/libeis 1.3.901-1 passes 9/9 and 20/20 checks, including
+native out-of-region refusal without CLI fallback. Half-open `ei_unref` still
+segfaults, so runtime protection remains and helper isolation is pending.
+Device pause and sequence readback remain unverified. These controlled socket
+peers do not establish compositor consent, physical or multi-monitor acceptance.
 
 A native Wayland pointer coordinate outside every granted EIS region, after
 raw-coordinate and layout-origin mapping, raises `LibeiUnavailable` with

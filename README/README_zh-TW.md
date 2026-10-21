@@ -576,12 +576,14 @@ Linux 安裝 GDB 後，可在 `--` 前加入 `--native`。
 含空白／引號的 argv 仍是原始參數，已處理的 `SIGINT` 會傳給子行程。
 Linux 先在完整套件的 debugger 外驗證診斷工具；前置檢查紀錄也收在同一 artifact。
 
-選定的 dev 推送會由 `.github/workflows/ei-lifecycle.yml` 在隔離的 libei／libeis
-容器驗證靜默 peer 的釋放／拒絕與獨立的 live EIS peer，將可取得的版本／原生紀錄保留於
-`ei-lifecycle-<run>-<attempt>` artifact 十四天。釋放子行程有十秒時限與 faulthandler；
-只有已進入 `ei_unref` 的 SIGSEGV 才分類為既有上游故障。釋放成功必須有相同 fd 數量的
-證據，其餘失敗仍使 CI 失敗。此流程不涉及合成器、裝置或授權對話框；修改原生清理前仍須
-檢查實際結果。
+選定的 dev 推送由 `.github/workflows/ei-lifecycle.yml` 在隔離 libei／libeis
+容器執行，將版本及兩份原生紀錄保留於 `ei-lifecycle-<run>-<attempt>` artifact 十四天。
+半開與 live 釋放子行程分別有十／六十秒時限與 faulthandler；其他子行程失敗使 CI 失敗，
+釋放成功必須有 begin／end 標記。半開探測另須有相同整數 fd 數量，live 清理先釋放擁有的
+device refs。run 39507190704 在 libei／libeis 1.3.901-1 通過 9/9 與 20/20 檢查，
+包含座標越界拒絕且不轉用 CLI。半開 `ei_unref` 仍會 SIGSEGV，因此保留 runtime 保護，
+helper 隔離仍待完成。裝置暫停與序號回讀仍未驗證；受控 socket peer 不代表合成器授權、
+真機或多螢幕驗收。
 
 歡迎貢獻——請見 [CONTRIBUTING.md](../CONTRIBUTING.md) 與
 [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)。CI 會強制兩條規則：`import je_auto_control`

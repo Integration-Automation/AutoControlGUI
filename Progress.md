@@ -10,12 +10,12 @@
 實作計畫：[分階段交付計畫](docs/superpowers/plans/2026-10-02-modernization-index.md)，待審閱。
 現有 `[Answer]` 決策沿用。
 
-`TODO` — 真機與付費 API 驗收暫緩，待明確恢復後執行；相關項目保留待驗證。
+`TODO` — 真機與付費 API 驗收暫緩，待明確恢復後執行；其餘目前缺環境的實驗先略過，相關項目保留未驗證。
 
 `WIP` — 改版仍缺以下內容；原生平台與正式環境驗收缺口另列於後。
 計畫 D1 仍缺 portal session 關閉／恢復、compositor 重啟的狀態與原生驗收、
 擷取結果與擁有者 context 的接合，以及原生 session 的重試／取消／停止控制。
-D2 仍缺 `ei-lifecycle.yml` 原生結果確認與據此判斷 helper 隔離；D3 的錄製／全域停止／Windows 原生崩潰證據仍缺，詳見計畫與下方生命週期待辦。
+D2 仍缺 helper 隔離與半開交握資源回收；D3 的錄製／全域停止／Windows 原生崩潰證據仍缺，詳見計畫與下方生命週期待辦。
 計畫 E（Android／iOS）、G（MCP 逐步揭露）、H（型別深化與總驗收）尚未開始。F 還缺：
 
 - **Remote Desktop 與 Script Builder 仍在啟動時建立**（預設開啟），啟動時間 2.6–2.7 秒裡大半是它們與門面匯入。
@@ -192,18 +192,16 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 ---
 
-## libei 的 `ei_unref` 在半開交握上會 SIGSEGV
+## libei 半開交握的資源隔離尚未完成
 
-`BLOCKED` — 上游（libei 1.3.901）
+`TODO` — D2 helper 隔離；不能直接移除 `linux_wayland/libei.py::_teardown` 的半開保護。
 
-`linux_wayland/libei.py` 的 `_teardown` **刻意每個行程漏一個 context 與一個 fd**，
-因為對一個還沒完成交握的 handle 呼叫 `ei_unref` 會直接 SIGSEGV。
-這是在驅動使用者桌面的函式庫裡的 crash，所以寧可漏也不能當。
-
-待驗證腳本：`docker/libei_verify.py` 與 `docker/eis_verify.py`。
-
-重驗方式就是跑那兩支腳本（`eis-verification` job 已經在跑）；哪天 banner 不再
-出現，就把 `_teardown` 的迴避拿掉。形狀與 arm64 那條一樣：卡上游、有一行重驗。
+需依 D2 計畫把原生配置、portal／交握、事件送出與 teardown 放進擁有的 helper，
+補上有界 IPC、request ID、逾時與取消，以及 parent close／reap。
+半開交握失敗仍會留下 context／fd；直接重複建立 backend 可能重複累積，
+需驗證 helper 結束後資源可回收，且取消不影響其他擁有者。
+`docker/libei_verify.py` 與 `docker/eis_verify.py` 保留原生故障／成功邊界檢查；
+裝置暫停與序號回讀、真實合成器權限流程仍待對應環境驗證。
 
 ---
 

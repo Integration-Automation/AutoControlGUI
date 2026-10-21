@@ -20,9 +20,9 @@ they are answered here:
     the key codes, coordinates, button codes and scroll signs intended —
     including the axis flip ``mouse.scroll()`` applies between the kernel's
     ``REL_WHEEL`` frame and libei's, and the negative value that flip makes;
-  * tearing down a *live* context is finally testable — it is safe, which is
-    what lets ``_teardown`` release a completed session instead of leaking a
-    context and an fd per process, and this file is the sentinel for that.
+  * live cleanup is measured in a bounded child after releasing owned device
+    refs; successful process exit and both native boundary markers are required.
+    Unrelated child failures cannot count as evidence for safe teardown.
 
 Two things it measures but cannot settle, and says so rather than claiming
 either way: ``eis_device_pause()`` puts nothing on the wire for a sender
@@ -386,47 +386,44 @@ def _check_resume_recovers(backend, server) -> str:
 
 
 def _live_teardown_sentinel(path: str) -> str:
-    """Is ``ei_unref`` safe once the handshake has actually completed?
-
-    ``libei_verify.py`` established that it segfaults on a context whose
-    backend opened but never handshook. Whether a *live* context is safe was
-    untestable without a peer; it is testable now, and it is safe — which is
-    what lets ``_teardown`` release a completed session rather than leaking
-    its context. This is therefore a regression sentinel for that decision,
-    and it runs in a subprocess because the answer is a signal, not an
-    exception.
-    """
-    program = (
-        "import sys; sys.path.insert(0, '/opt/verify');"
-        "from eis_server import RecordingEisServer;"
-        "from je_auto_control.linux_wayland import libei;"
-        f"srv = RecordingEisServer({path + '-teardown'!r}); srv.start();"
-        "b = libei.LibeiBackend();"
-        f"b.connect(timeout=5.0, socket_path={(path + '-teardown').encode()!r});"
-        "assert b.is_connected;"
-        "sym = libei._load_symbols();"
-        "sym.ei_unref(b._ei);"
-        "print('survived')"
+    """Measure live cleanup after owned device refs are released; unrelated failures never pass."""
+    program = f"""
+import sys
+sys.path.insert(0, '/opt/verify')
+from eis_server import RecordingEisServer
+from je_auto_control.linux_wayland import libei
+server = RecordingEisServer({path+'-teardown'!r})
+server.start()
+backend = libei.LibeiBackend()
+backend.connect(timeout=5.0, socket_path={(path+'-teardown').encode()!r})
+if not backend.is_connected:
+    raise RuntimeError('live cleanup never reached a connected device')
+symbols = libei._load_symbols()
+if symbols is None:
+    raise RuntimeError('libei symbols did not resolve for live cleanup')
+for device in sorted(backend._refs):
+    symbols.ei_device_unref(device)
+print('ei_unref live: begin', flush=True)
+symbols.ei_unref(backend._ei)
+print('ei_unref live: end', flush=True)
+"""
+    finished = subprocess.run(  # nosec B603  # nosemgrep  # reason: fixed interpreter/program, isolate native teardown
+        [sys.executable, '-X', 'faulthandler', '-c', program], capture_output=True,
+        timeout=60, text=True, encoding='utf-8', errors='replace', check=False,
     )
-    # This interpreter, running a program built from literals above; no shell.
-    finished = subprocess.run([sys.executable, "-c", program],  # nosec B603  # nosemgrep
-                              capture_output=True, timeout=60)
-    if finished.returncode == 0:
-        return ("safe, which is what _teardown now relies on to release a "
-                "completed session instead of leaking its context")
+    print(finished.stdout, end='')
+    print(finished.stderr, end='')
+    began = 'ei_unref live: begin' in finished.stdout.splitlines()
+    ended = 'ei_unref live: end' in finished.stdout.splitlines()
     if finished.returncode == -11:
-        print()
-        print("      *** REVISIT ***  ei_unref now SEGFAULTS on a live")
-        print("      context too. LibeiBackend._teardown releases completed")
-        print("      sessions on the measurement that it is safe, so that")
-        print("      must go back to abandoning them — this is a crash in a")
-        print("      library that drives the user's desktop. See Progress.md.")
-        print()
-        raise AssertionError(
-            "ei_unref segfaults on a live context (rc=-11); _teardown's "
-            "release path is no longer safe on this libei")
-    detail = finished.stderr.decode("utf-8", "replace").strip().splitlines()
-    return f"inconclusive (rc={finished.returncode}): {detail[-1] if detail else ''}"
+        if not began:
+            raise AssertionError('native fault before live ei_unref boundary; inspect native trace')
+        raise AssertionError('live ei_unref probe exited with SIGSEGV; inspect its recorded boundary and native trace')
+    if finished.returncode != 0:
+        raise AssertionError(f'unexpected live ei_unref probe exit {finished.returncode}')
+    if not began or not ended:
+        raise AssertionError('live ei_unref did not reach completed native cleanup')
+    return 'safe in this probe: owned device refs released, live ei_unref completed (rc=0)'
 
 
 #: An offset region layout: the shape a compositor must advertise for a
