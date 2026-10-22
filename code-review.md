@@ -6,6 +6,8 @@
 
 ## 審核規範
 
+共通規範在工作區 repo [JE-Chen/Codes](https://github.com/JE-Chen/Codes) 的 `docs/code-review-standard.md`。下面留下 2026-10-22 這次審核所用的條款，讓審核紀錄的依據對得上那一次。之後的審核以工作區那份為準。本專案更嚴的條款仍以本節與本專案的 `CLAUDE.md` 為準。
+
 1. 設計：分層為進入點 → `utils/executor/` → `utils/` → `wrapper/` → 單一 OS backend；新能力須同時有 headless API、外觀匯出、`AC_*` 與薄 GUI。
 2. 可讀性：依 `CLAUDE.md` 從嚴。循環複雜度 ≤ 10、認知複雜度 ≤ 15、函式 ≤ 75 行、參數 ≤ 7、巢狀 ≤ 4、檔案 ≤ 750 行（flat data table 與 `Progress.md` 豁免除外）、每行 ≤ 120。
 3. 錯誤處理：框架錯誤須衍生自 `AutoControlException`；邊界失敗要明確拋出；寬 `except` 須就地註明原因，禁止裸 `except:`。
