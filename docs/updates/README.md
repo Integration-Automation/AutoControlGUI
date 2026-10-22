@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261022-01 | 2026-10-22 | Keep dependency metadata aligned | #bugfix #deps #ci | [2026-10](2026-10.md) |
 | U-20261009-43 | 2026-10-09 | The seven SonarCloud issues left on main after U-20261009-42 | #done #quality #sonar #security | [2026-10](2026-10.md) |
 | U-20261009-42 | 2026-10-09 | SonarCloud and Codacy backlog on main: 2,344 and 8 findings worked through | #done #quality #sonar #codacy | [2026-10](2026-10.md) |
 | U-20261009-41 | 2026-10-09 | Release 1.0.0; the publish job releases a hand-set version as written | #release #ci | [2026-10](2026-10.md) |
