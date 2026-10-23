@@ -1638,6 +1638,17 @@ english_word_dict.update({
     "agent_receipts": "Action receipts / row results",
     "agent_reconcile": "Record reviewed outcome",
     "agent_recovery_note": "Crash recovery review note",
+    "agent_skill_operation": "Skill operation",
+    "agent_skill_request": "Skill request",
+    "agent_skill_apply": "Apply skill operation",
+    "agent_skill_record": "Record verified task",
+    "agent_skill_repair": "Propose semantic repair",
+    "agent_skill_list": "List skill versions",
+    "agent_skill_get": "Inspect skill candidate",
+    "agent_skill_preview": "Preview parameterized skill",
+    "agent_skill_validate": "Run candidate validation",
+    "agent_skill_accept": "Publish reviewed version",
+    "agent_skill_run": "Run pinned version",
     "agent_recover_target": "Recover reviewed input ownership",
     "agent_prune": "Prune expired task cache"
 })

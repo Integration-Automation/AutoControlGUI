@@ -27,6 +27,7 @@ from je_auto_control.utils.agent_runtime.budget_clock import BudgetClock
 from je_auto_control.utils.agent_runtime.evidence import TaskEvidence
 from je_auto_control.utils.agent_runtime.receipts import reconcile, row_report
 from je_auto_control.utils.agent_runtime.task_triggers import AgentTriggers
+from je_auto_control.utils.agent_runtime.task_skills import AgentSkills
 from je_auto_control.utils.agent_runtime.store import AgentTaskStore
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
@@ -60,6 +61,7 @@ class AgentRuntime:
         self.clock = BudgetClock(self.store)
         self.evidence = TaskEvidence(self.store)
         self.triggers = AgentTriggers(self)
+        self.skills = AgentSkills(self)
         self._targets = dict(targets) if targets is not None else _default_targets()
         self._tokens: dict[str, CancellationToken] = {}
         self._executing: set[str] = set()
@@ -120,8 +122,12 @@ class AgentRuntime:
     def get(self, task_id: str) -> AgentTaskResult:
         """Read owner-scoped task status without observing the desktop."""
         row = self._row(task_id)
+        metadata = self.evidence.metadata(task_id)
+        pin = self.skills.task_pin(row)
+        if pin:
+            metadata["skill_pin"] = pin
         return AgentTaskResult(task_id, row["state"], row["spec"]["goal"], row["reason"], row["steps"],
-                               tuple(freeze(row["verification"])), freeze(self.evidence.metadata(task_id)))
+                               tuple(freeze(row["verification"])), freeze(metadata))
 
     def receipts(self, task_id: str, offset: int = 0, limit: int = 100) -> dict[str, Any]:
         """Inspect owner-scoped receipts, immutable reviews and per-row completion status."""

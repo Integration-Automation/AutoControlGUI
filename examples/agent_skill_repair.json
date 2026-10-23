@@ -1,0 +1,7 @@
+{
+  "candidate_id": "replace-with-published-candidate-id",
+  "changes": [
+    {"path": "/actions/1/arguments/selector/name", "value": "Customer full name"}
+  ],
+  "note": "The application's accessible field name changed; validate before publishing"
+}

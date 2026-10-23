@@ -48,6 +48,17 @@ CREATE TABLE IF NOT EXISTS agent_trigger_events (
  task_id TEXT NOT NULL, created REAL NOT NULL, PRIMARY KEY(trigger_id,event_hash));
 CREATE TABLE IF NOT EXISTS agent_evidence_pending (
  task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE);
+CREATE TABLE IF NOT EXISTS agent_skill_candidates (
+ id TEXT PRIMARY KEY, skill_id TEXT NOT NULL, name TEXT NOT NULL, owner TEXT NOT NULL,
+ spec TEXT NOT NULL, parameters TEXT NOT NULL, provenance TEXT NOT NULL, digest TEXT NOT NULL,
+ state TEXT NOT NULL, version INTEGER NOT NULL, created REAL NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS agent_skill_versions ON agent_skill_candidates(skill_id,version) WHERE version > 0;
+CREATE TABLE IF NOT EXISTS agent_skill_trials (
+ task_id TEXT PRIMARY KEY, candidate_id TEXT NOT NULL REFERENCES agent_skill_candidates(id),
+ spec_hash TEXT NOT NULL, purpose TEXT NOT NULL, created REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_skill_publications (
+ candidate_id TEXT PRIMARY KEY REFERENCES agent_skill_candidates(id), task_id TEXT NOT NULL,
+ actor TEXT NOT NULL, note TEXT NOT NULL, created REAL NOT NULL);
 """
 
 

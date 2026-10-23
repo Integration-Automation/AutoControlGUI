@@ -460,3 +460,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | [2026-05.md](2026-05.md) | 2026-05 | 1 |
 
 | U-20261023-08 | 2026-10-23 | Persist crash input witnesses and separate workspace launch lifetime | #done #agent #recovery | [2026-10-c](2026-10-c.md) |
+
+| U-20261023-09 | 2026-10-23 | Record managed skills and require verified trials before version publication | #done #agent #skills | [2026-10-c](2026-10-c.md) |

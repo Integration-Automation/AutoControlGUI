@@ -1488,6 +1488,17 @@ traditional_chinese_word_dict.update({
     "agent_receipts": "動作回執／逐筆結果",
     "agent_reconcile": "記錄已確認的結果",
     "agent_recovery_note": "崩潰恢復審閱註記",
+    "agent_skill_operation": "技能操作",
+    "agent_skill_request": "技能請求",
+    "agent_skill_apply": "套用技能操作",
+    "agent_skill_record": "錄製已驗證任務",
+    "agent_skill_repair": "提出語義修復候選",
+    "agent_skill_list": "列出技能版本",
+    "agent_skill_get": "檢視技能候選",
+    "agent_skill_preview": "預覽參數化技能",
+    "agent_skill_validate": "執行候選驗證",
+    "agent_skill_accept": "發布已審閱版本",
+    "agent_skill_run": "執行指定版本",
     "agent_recover_target": "恢復已審閱的輸入控制權",
     "agent_prune": "清理過期任務快取"
 })

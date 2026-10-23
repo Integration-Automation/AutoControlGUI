@@ -18,7 +18,8 @@ def test_task_workspace_is_idle_and_uses_actions(monkeypatch):
     try:
         assert tab.findChildren(QPushButton) == []
         actions = dict(tab.menu_actions())
-        assert {"agent_submit", "agent_pause", "agent_resume", "agent_cancel"} <= set(actions)
+        assert {"agent_submit", "agent_pause", "agent_resume", "agent_cancel", "agent_skill_apply",
+                "agent_skill_list"} <= set(actions)
         tab.retranslate()
         assert calls == []
     finally:

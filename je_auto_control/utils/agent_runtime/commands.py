@@ -8,11 +8,15 @@ from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workf
 from je_auto_control.utils.agent_runtime.workflow_files import workflow_download, workflow_manifest
 from je_auto_control.utils.agent_runtime.workflow_desktop import workflow_control, workflow_open
 from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGER_OPERATIONS
+from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILL_OPERATIONS
 
 _ID = {"task_id": {"type": "string", "minLength": 1}}
 
 # name: (function, JSON properties, required, read_only, host_management)
 CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
+    "AC_agent_skill": (api.manage_agent_skill, {"operation": {"type": "string", "enum": list(SKILL_OPERATIONS)},
+                                              "request": {"type": "object"}}, ("operation",), False, False),
+    "AC_agent_skill_list": (api.list_agent_skills, {}, (), True, False),
     "AC_agent_target_recover": (api.recover_agent_target, {"target": {"type": "string"},
                                                         "note": {"type": "string", "maxLength": 2000}},
                                 ("target", "note"), False, True),

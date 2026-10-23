@@ -6,7 +6,8 @@
 尚缺非 Windows 共用桌面的真人活動 adapter、Windows presence hook 原生驗收、
 更深入應用／瀏覽器互動及四條範本的原生應用驗收、
 原生能力診斷、origin 路徑政策生命週期、
-跨平台／行動 adapter、MCP 逐步揭露、GUI 目標預覽、P8 多 agent/多機及 P9 技能版本。
+背景服務停止時取消所有實際執行中的 worker（含尚未取得 lease 的模型初始化）、
+跨平台／行動 adapter、MCP 逐步揭露、GUI 目標預覽、P8 多 agent／多機協調。
 既有原生桌面與真機驗收暫緩限制沿用；新流程不新增付費依賴。
 
 ## 跨平台與 GUI 全面改版

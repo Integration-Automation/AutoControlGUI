@@ -22,6 +22,8 @@ def test_cli_task_commands_parse_without_starting_a_service():
     for operation in ("start", "stop", "status", "list"):
         assert parser.parse_args(["agent-task", operation]).agent_operation == operation
     assert parser.parse_args(["agent-task", "submit", "task.json"]).spec == "task.json"
+    assert parser.parse_args(["agent-task", "skill", "list"]).request is None
+    assert parser.parse_args(["agent-task", "skill", "record", "record.json"]).skill_operation == "record"
 
 
 def test_headless_task_contract_does_not_load_qt():

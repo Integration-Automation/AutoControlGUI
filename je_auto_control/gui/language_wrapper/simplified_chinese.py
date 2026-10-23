@@ -1487,6 +1487,17 @@ simplified_chinese_word_dict.update({
     "agent_receipts": "动作回执／逐条结果",
     "agent_reconcile": "记录已确认的结果",
     "agent_recovery_note": "崩溃恢复审核备注",
+    "agent_skill_operation": "技能操作",
+    "agent_skill_request": "技能请求",
+    "agent_skill_apply": "应用技能操作",
+    "agent_skill_record": "录制已验证任务",
+    "agent_skill_repair": "提出语义修复候选",
+    "agent_skill_list": "列出技能版本",
+    "agent_skill_get": "查看技能候选",
+    "agent_skill_preview": "预览参数化技能",
+    "agent_skill_validate": "执行候选验证",
+    "agent_skill_accept": "发布已审核版本",
+    "agent_skill_run": "执行指定版本",
     "agent_recover_target": "恢复已审核的输入控制权",
     "agent_prune": "清理过期任务缓存"
 })

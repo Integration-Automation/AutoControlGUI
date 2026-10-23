@@ -1,0 +1,10 @@
+{
+  "task_id": "replace-with-your-verified-task-id",
+  "name": "Reviewed form workflow",
+  "parameters": {
+    "customer_name": {
+      "type": "string",
+      "paths": ["/actions/1/arguments/value", "/actions/2/expect_result"]
+    }
+  }
+}

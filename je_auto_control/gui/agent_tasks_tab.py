@@ -18,6 +18,7 @@ from je_auto_control.utils.agent_runtime.api import start_agent_runtime, stop_ag
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
 from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow, WORKFLOWS
 from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGER_OPERATIONS
+from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILL_OPERATIONS
 from je_auto_control.utils.agent_runtime.trigger_config import KINDS as TRIGGER_KINDS
 from je_auto_control.utils.exception.cancellation import CancellationToken
 
@@ -47,6 +48,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._handle: Any = None
         self._goal, self._target, self._task_id = QLineEdit(), QLineEdit("local-desktop"), QLineEdit()
         self._recovery_note = QLineEdit()
+        self._skill_operation, self._skill_request = QComboBox(), QPlainTextEdit("{}")
+        for name in SKILL_OPERATIONS:
+            self._skill_operation.addItem(_translate("agent_skill_" + name), name)
         self._mode = QComboBox()
         self._mode.addItems(["external", "skill", "ollama"])
         self._workflow = QComboBox()
@@ -76,6 +80,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                              ("agent_trigger_operation", self._trigger_operation),
                              ("agent_trigger_kind", self._trigger_kind), ("agent_event_key", self._event_key),
                              ("agent_trigger_config", self._trigger_config),
+                             ("agent_skill_operation", self._skill_operation),
+                             ("agent_skill_request", self._skill_request),
                              ("agent_task_id", self._task_id)):
             label = QLabel()
             self._labels.append((label, key))
@@ -101,6 +107,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         for combo, prefix in ((self._trigger_operation, "agent_trigger_"), (self._trigger_kind, "agent_trigger_kind_")):
             for index in range(combo.count()):
                 combo.setItemText(index, _translate(prefix + combo.itemData(index)))
+        for index in range(self._skill_operation.count()):
+            self._skill_operation.setItemText(index, _translate("agent_skill_" + self._skill_operation.itemData(index)))
 
     def menu_actions(self) -> list:
         """Expose lifecycle commands through the common Actions menu."""
@@ -113,6 +121,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_prune", partial(self._dispatch, "prune", {})),
                 ("agent_trigger_apply", self._trigger_apply),
                 ("agent_trigger_list", partial(self._dispatch, "trigger", {"operation": "list"})),
+                ("agent_skill_apply", self._skill_apply),
+                ("agent_skill_list", partial(self._dispatch, "skill", {"operation": "list"})),
                 ("agent_submit", self._submit), ("agent_refresh", partial(self._dispatch, "list")),
                 *[("agent_" + name, partial(self._dispatch, name)) for name in
                   ("get", "observe", "finish", "pause", "resume", "cancel", "receipts")]]
@@ -135,6 +145,14 @@ class AgentTasksTab(TranslatableMixin, QWidget):
 
     def _recover_target(self) -> None:
         self._dispatch("recover_target", {"target": self._target.text(), "note": self._recovery_note.text()})
+
+    def _skill_apply(self) -> None:
+        try:
+            request = json.loads(self._skill_request.toPlainText())
+        except (ValueError, TypeError) as error:
+            self._status.setText(str(error))
+            return
+        self._dispatch("skill", {"operation": self._skill_operation.currentData(), "request": request})
 
     def _submit(self) -> None:
         try:

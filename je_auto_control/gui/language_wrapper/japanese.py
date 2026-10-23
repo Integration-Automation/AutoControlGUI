@@ -1525,6 +1525,17 @@ japanese_word_dict.update({
     "agent_receipts": "アクション記録／行別結果",
     "agent_reconcile": "確認済み結果を記録",
     "agent_recovery_note": "クラッシュ復旧の確認メモ",
+    "agent_skill_operation": "スキル操作",
+    "agent_skill_request": "スキル要求",
+    "agent_skill_apply": "スキル操作を適用",
+    "agent_skill_record": "検証済みタスクを記録",
+    "agent_skill_repair": "意味的修復の候補を作成",
+    "agent_skill_list": "スキルの版を一覧",
+    "agent_skill_get": "スキル候補を確認",
+    "agent_skill_preview": "パラメーター付きスキルを確認",
+    "agent_skill_validate": "候補の検証を実行",
+    "agent_skill_accept": "確認済みの版を公開",
+    "agent_skill_run": "指定した版を実行",
     "agent_recover_target": "確認済み入力制御権を復旧",
     "agent_prune": "期限切れキャッシュを削除"
 })

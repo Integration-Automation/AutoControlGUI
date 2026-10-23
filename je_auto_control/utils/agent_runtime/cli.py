@@ -16,7 +16,7 @@ def register_parser(subparsers: Any, handler: Callable[..., int]) -> None:
     operations = parser.add_subparsers(dest="agent_operation", required=True)
     for operation in ("start", "stop", "status", "submit", "list", "get", "observe", "act", "finish",
                       "pause", "resume", "cancel", "draft", "stop-all", "receipts", "reconcile", "prune", "trigger",
-                      "recover-target"):
+                      "recover-target", "skill"):
         item = operations.add_parser(operation)
         item.set_defaults(func=handler)
         _operation_arguments(item, operation)
@@ -34,10 +34,8 @@ def _operation_arguments(item: Any, operation: str) -> None:
         from je_auto_control.utils.agent_runtime.workflow_specs import WORKFLOWS
         item.add_argument("workflow", choices=WORKFLOWS)
         item.add_argument("config", help="JSON workflow configuration")
-    elif operation == "trigger":
-        from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS
-        item.add_argument("trigger_operation", choices=OPERATIONS)
-        item.add_argument("request", nargs="?", help="JSON trigger request")
+    elif operation in {"trigger", "skill"}:
+        _reviewed_arguments(item, operation)
     elif operation == "recover-target":
         item.add_argument("target")
         item.add_argument("note", help="Operator review after manually releasing held input")
@@ -45,6 +43,14 @@ def _operation_arguments(item: Any, operation: str) -> None:
         item.add_argument("task_id")
         if operation in {"act", "reconcile"}:
             item.add_argument("action" if operation == "act" else "review", help="JSON action request or owner review")
+
+
+def _reviewed_arguments(item: Any, operation: str) -> None:
+    from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGERS
+    from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILLS
+    choices = TRIGGERS if operation == "trigger" else SKILLS
+    item.add_argument(operation + "_operation", choices=choices)
+    item.add_argument("request", nargs="?", help="JSON reviewed operation request")
 
 
 def run(arguments: argparse.Namespace) -> dict[str, Any]:
@@ -57,6 +63,8 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
                   "draft": lambda: _draft(arguments), "prune": lambda: api.prune_agent_tasks(arguments.keep_days),
                   "reconcile": lambda: api.reconcile_agent_task(arguments.task_id, _read(arguments.review)),
                   "recover-target": lambda: api.recover_agent_target(arguments.target, arguments.note),
+                  "skill": lambda: api.manage_agent_skill(arguments.skill_operation,
+                                                            _read(arguments.request) if arguments.request else {}),
                   "trigger": lambda: api.manage_agent_trigger(arguments.trigger_operation,
                                                                 _read(arguments.request) if arguments.request else {})}
     if operation in operations:

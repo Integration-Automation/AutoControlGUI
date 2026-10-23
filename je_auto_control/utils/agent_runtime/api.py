@@ -110,6 +110,16 @@ def recover_agent_target(target: str, note: str) -> dict[str, Any]:
     return AgentRuntimeClient().call("recover_target", {"target": target, "note": note})
 
 
+def manage_agent_skill(operation: str, request: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Record, parameterize, validate, explicitly publish or run an immutable managed skill version."""
+    return AgentRuntimeClient().call("skill", {"operation": operation, "request": dict(request or {})})
+
+
+def list_agent_skills() -> dict[str, Any]:
+    """List owner-visible immutable skill candidates and published versions."""
+    return manage_agent_skill("list")
+
+
 def observe_agent_task(task_id: str) -> dict[str, Any]:
     """Acquire the authorized target and obtain a fresh, versioned observation."""
     return _task_call("observe", task_id)
