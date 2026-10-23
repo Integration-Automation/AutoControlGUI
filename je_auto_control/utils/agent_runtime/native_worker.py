@@ -53,6 +53,11 @@ class NativeWorker:
             if self._activity is not None:
                 self._activity.check()
             self._target.validate_input(event)
+            if event.get("move_before_press"):
+                if event.get("kind") != "mouse_press":
+                    raise AgentTaskError("only a mouse press may request pointer preparation")
+                self._target.prepare_input(event)
+                self._target.validate_input(event)
         self._reply({"id": self._request_id, "event": event})
         line = self._source.readline(_LIMIT + 1)
         if not line or len(line) > _LIMIT or json.loads(line) != {"ack": True}:
@@ -76,6 +81,8 @@ class NativeWorker:
                                              "error_type": type(error).__name__}))
 
     def _dispatch(self, operation: str, payload: dict) -> Any:
+        if operation == "bootstrap":
+            return {"protocol": 1}
         if operation == "cleanup":
             return self._release_owned(payload)
         if operation == "configure":

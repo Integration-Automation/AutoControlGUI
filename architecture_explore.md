@@ -19,11 +19,11 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,277 |
-| 程式碼總行數 | 188,482 |
+| Python 模組總數（含周邊子專案） | 1,281 |
+| 程式碼總行數 | 188,945 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 836 |
-| 套件門面 `__all__` 公開名稱數 | 1416 |
+| 套件門面 `__all__` 公開名稱數 | 1417 |
 | GUI 分頁數（`main_widget` 註冊） | 50 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 737 |
 | `test_*.py` 測試檔／測試函式 | 846 / 8,825 |
@@ -92,7 +92,7 @@ USB/IP 協定、Prometheus 指標），以維持這條輕相依基線。
 | 模式 | 落點 | 說明 |
 | --- | --- | --- |
 | **Strategy** | `wrapper/platform_wrapper.py` | 依 `sys.platform` 只匯入當前 OS 的 `keyboard`／`mouse`／`screen`／`recorder` 實作；Linux 再細分 Wayland／X11，Wayland 後端不可用時自動退回 XWayland 並記警告。新增平台不需要改 wrapper。 |
-| **Facade** | `je_auto_control/__init__.py` | 把 1416 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
+| **Facade** | `je_auto_control/__init__.py` | 把 1417 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
 | **Command** | `utils/executor/action_executor.py` | `Executor.event_dict` 是字串 → callable 的分派表；JSON 動作檔即指令序列，因此可錄製、序列化、重播、簽章。 |
 | **Observer** | `utils/callback/`、`utils/observer/`、`utils/triggers/` | 動作完成後觸發回呼；畫面出現／消失／變化與外部事件（webhook／IMAP／檔案）驅動腳本。 |
 | **Template Method** | `utils/generate_report/` | HTML／JSON／XML 三個產生器共用「收集紀錄 → 格式化 → 寫檔」骨架，各自實作渲染。 |
@@ -157,7 +157,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `je_auto_control/__init__.py` | 2,105 | **套件門面**。集中匯入並再匯出 1416 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
+| `je_auto_control/__init__.py` | 2,106 | **套件門面**。集中匯入並再匯出 1417 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
 | `je_auto_control/__main__.py` | 106 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
 | `je_auto_control/cli.py` | 453 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`／`--journal`）、`journal`（依 run 篩選與有界遮罩快照）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`。所有子命令延遲匯入，確保不碰 Qt。 |
 | `je_auto_control/api/__init__.py` | 27 | 版本化整合進入點。 |
@@ -182,7 +182,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `wrapper/_platform_linux.py` | 278 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
 | `wrapper/_platform_wayland.py` | 63 | Wayland 後端組裝（libei／ydotool／grim）。 |
 | `wrapper/_input_observer.py` | 30 | Optional context-local native input announcements; legacy callers remain unaffected. |
-| `wrapper/auto_control_mouse.py` | 584 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
+| `wrapper/auto_control_mouse.py` | 600 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
 | `wrapper/auto_control_keyboard.py` | 550 | 鍵盤 API：鍵表查詢、`keyboard_key_name` 反查標準鍵名（不回別名）、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。**`type_keyboard` 與 `hotkey` 的放開走 `finally`**（見下）。 |
 | `wrapper/auto_control_screen.py` | 111 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
 | `wrapper/auto_control_image.py` | 85 | 影像 API：`locate_all_image`、`locate_image_center`、`locate_and_click`。 |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 30,209 行。
+> 14 個套件、約 30,655 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 5,453 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 5,899 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -982,11 +982,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（5,453 行／51 檔）
+#### `utils/agent_runtime/`（5,899 行／55 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `__init__.py` | 31 | Managed computer tasks with explicit authority, fenced input and verified outcomes. |
+| `__init__.py` | 32 | Managed computer tasks with explicit authority, fenced input and verified outcomes. |
 | `__main__.py` | 24 | Explicit service entry point; no native target is operated during startup. |
 | `activity.py` | 66 | Physical activity gates with explicit idle acquisition and manual takeover semantics. |
 | `activity_windows.py` | 102 | Owned Win32 presence-only hooks; no key values, coordinates or input contents are retained. |
@@ -998,44 +998,48 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `context.py` | 48 | Host-owned operation context shared with local workers, never serialized model authority. |
 | `delegation.py` | 43 | Short-lived, authenticated principal forwarding across the local service boundary. |
 | `document_launch.py` | 46 | Bounded document handoff runs outside the disposable native input helper's process tree. |
-| `errors.py` | 10 | Typed failures for managed tasks, observations and control ownership. |
-| `evidence.py` | 189 | Service-owned task provenance, redacted artifacts and thirty-day metadata retention. |
+| `errors.py` | 14 | Typed failures for managed tasks, observations and control ownership. |
+| `evidence.py` | 183 | Service-owned task provenance, redacted artifacts and thirty-day metadata retention. |
 | `file_target.py` | 35 | A noninteractive target for rooted archive workflows, separate from desktop input. |
+| `images.py` | 43 | Bounded redacted JPEG validation is shared by point grounding, previews and persistence. |
 | `input_journal.py` | 89 | Durable resource witnesses prevent input transfer after an unreviewed host crash. |
 | `input_ledger.py` | 88 | Host-owned press announcements and acknowledged releases survive helper termination. |
 | `jobs.py` | 109 | Durable background dispatch over the existing fenced WorkQueue implementation. |
-| `models.py` | 231 | Detached JSON contracts for managed computer tasks and their evidence. |
+| `model_tools.py` | 50 | Local-model schemas expose observation references without changing legacy executor signatures. |
+| `models.py` | 234 | Detached JSON contracts for managed computer tasks and their evidence. |
 | `native_channel.py` | 198 | Bounded JSON IPC to an owned helper, with cancellable writes, replies and retirement. |
 | `native_job.py` | 69 | Own a Windows helper process tree through a kill-on-close Job Object. |
 | `native_recovery.py` | 36 | Host-only input recovery checks never replay persisted keys or signal persisted PIDs. |
-| `native_scope.py` | 67 | Scope native window and control targets before their existing backend performs an action. |
-| `native_target.py` | 163 | Native desktop proxy with private IPC, host input ledger and cross-database ownership. |
-| `native_worker.py` | 166 | Private native helper entry point; stdout is a bounded owner-only JSON protocol. |
-| `ollama.py` | 78 | Local-only Ollama decisions over bounded HTTP, without an SDK or remote fallback. |
+| `native_scope.py` | 86 | Scope native window and control targets before their existing backend performs an action. |
+| `native_target.py` | 177 | Native desktop proxy with private IPC, host input ledger and cross-database ownership. |
+| `native_worker.py` | 173 | Private native helper entry point; stdout is a bounded owner-only JSON protocol. |
+| `observation_refs.py` | 102 | Resolve observation-local elements and thumbnail points into host-checked native coordinates. |
+| `ollama.py` | 82 | Local-only Ollama decisions over bounded HTTP, without an SDK or remote fallback. |
 | `origin_policy.py` | 159 | Live origin path ceilings remain restrictive across accepted tasks, workers and service processes. |
 | `ownership.py` | 86 | Fenced input ownership; running dispatch must retire before ownership transfers. |
 | `parent_watch.py` | 25 | POSIX helpers retire their own live process group when the owning parent disappears. |
 | `policy.py` | 105 | Explicit task scopes, rooted data paths and secret-safe durable payloads. |
 | `receipts.py` | 84 | Owner-reviewed uncertain outcomes and per-row workflow reports without blind replay. |
-| `retention.py` | 54 | Thirty-day cleanup of stopped tasks and exclusively owned runtime artifacts. |
-| `routes.py` | 121 | Authenticated REST adapters for the runtime explicitly owned by a server. |
-| `runner.py` | 82 | Autonomous skill/local-model driver over exactly the external task operations. |
-| `runtime.py` | 523 | Shared managed-task lifecycle with fenced dispatch and evidence-based completion. |
+| `retention.py` | 55 | Thirty-day cleanup of stopped tasks and exclusively owned runtime artifacts. |
+| `routes.py` | 123 | Authenticated REST adapters for the runtime explicitly owned by a server. |
+| `runner.py` | 106 | Autonomous skill/local-model driver over exactly the external task operations. |
+| `runtime.py` | 547 | Shared managed-task lifecycle with fenced dispatch and evidence-based completion. |
 | `runtime_lock.py` | 40 | Cross-process ownership for one runtime database; imports never acquire locks. |
 | `service.py` | 107 | Explicit local runtime service lifecycle over the existing authenticated REST server. |
 | `skill_parameters.py` | 109 | Explicit typed parameter slots modify data values without widening a skill's authority. |
 | `skill_recording.py` | 59 | Semantic skill drafts retain verified actions, original scope and independent completion evidence. |
-| `store.py` | 232 | Transactional task metadata, durable action receipts and input ownership. |
-| `targets.py` | 167 | Explicit target adapters; native imports occur only during requested operations. |
+| `store.py` | 248 | Transactional task metadata, durable action receipts and input ownership. |
+| `targets.py` | 172 | Explicit target adapters; native imports occur only during requested operations. |
 | `task_skills.py` | 197 | Immutable managed skill candidates require a verified trial and explicit version publication. |
 | `task_triggers.py` | 263 | Durable preauthorized task bindings with owner refresh, bounded backlog and event deduplication. |
-| `transport.py` | 81 | Bounded HTTP requests; cancellation discards late inference replies before any input. |
+| `transport.py` | 87 | Bounded HTTP requests; cancellation discards late inference replies before any input. |
 | `trigger_config.py` | 69 | Validate durable trigger schedules and rooted file-version notifications without side effects. |
 | `verification.py` | 82 | Deterministic completion evidence with explicit passed, failed and unknown states. |
+| `window_pixels.py` | 118 | Capture only an identified Windows window, with no desktop-pixel fallback. |
 | `workflow_desktop.py` | 70 | Reviewed semantic control and document operations within the current task's application scope. |
 | `workflow_files.py` | 128 | Rooted, bounded and idempotent download/archive operations for managed workflows. |
 | `workflow_specs.py` | 206 | Compile four reviewed workflows into inspectable, bounded managed-task specifications. |
-| `workflow_values.py` | 70 | Resolve receipt-backed workflow variables and compare explicit per-step expectations. |
+| `workflow_values.py` | 79 | Resolve receipt-backed workflow variables and compare explicit per-step expectations. |
 | `workspace_scope.py` | 36 | Bounded workspace bootstrap only focuses explicitly approved application windows. |
 
 #### 其他多檔子套件
@@ -1322,9 +1326,9 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/remote_desktop/` | 63 | 14,634 |
 | `utils/executor/` | 9 | 9,876 |
 | `utils/usb/` | 17 | 4,816 |
-| `je_auto_control/`（頂層 3 檔） | 3 | 2,664 |
+| `je_auto_control/`（頂層 3 檔） | 3 | 2,665 |
 | `utils/accessibility/` | 14 | 3,143 |
-| `wrapper/` | 21 | 4,450 |
+| `wrapper/` | 21 | 4,466 |
 | `windows/` | 23 | 2,154 |
 | `utils/rest_api/` | 8 | 2,101 |
 | `utils/agent/` | 9 | 2,142 |
@@ -1337,6 +1341,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 849 | 77,108 |
-| **總計** | **1,270** | **188,395** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 853 | 77,554 |
+| **總計** | **1,274** | **188,858** |
 

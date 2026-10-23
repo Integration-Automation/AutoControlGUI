@@ -5,9 +5,9 @@ import queue
 import threading
 import time
 from contextvars import copy_context
-from typing import Any, Callable
+from typing import Any, Callable, NoReturn
 
-from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError
+from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError, AgentObservationStale
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
 from je_auto_control.utils.http_client.http_client import build_call, urllib_transport
 
@@ -63,11 +63,17 @@ def request_json(url: str, *, body: Any = None, token: str | None = None,
             raise reply
         check()
         if not 200 <= reply.get("status", 0) < 300 or not isinstance(reply.get("json"), dict):
-            payload = reply.get("json")
-            detail = payload.get("error", "operation failed") if isinstance(payload, dict) else "invalid JSON reply"
-            raise AgentTaskError(f"local HTTP operation failed ({reply.get('status', 0)}): {detail}")
+            _raise_reply_error(reply)
         return reply["json"]
     raise AgentTaskError("local HTTP request timed out")
+
+
+def _raise_reply_error(reply: dict) -> NoReturn:
+    payload = reply.get("json")
+    detail = payload.get("error", "operation failed") if isinstance(payload, dict) else "invalid JSON reply"
+    if isinstance(payload, dict) and payload.get("error_type") == "stale_observation":
+        raise AgentObservationStale(f"local HTTP observation changed: {detail}")
+    raise AgentTaskError(f"local HTTP operation failed ({reply.get('status', 0)}): {detail}")
 
 
 def _acquire(slots: Any, timeout: float, check: Callable[[], None]) -> None:

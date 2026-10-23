@@ -15,7 +15,9 @@ def notify(request, event):
 for line in sys.stdin.buffer:
     request=json.loads(line)
     operation, payload=request['operation'],request['payload']
-    if operation=='configure':
+    if operation=='bootstrap':
+        result={'protocol':1}
+    elif operation=='configure':
         result={'ready':True}
     elif operation=='observe':
         result={'identity':'fixture', 'value':counter}
@@ -43,6 +45,34 @@ def spec():
 
 def target(tmp_path):
     return NativeDesktopTarget(argv=[sys.executable, "-u", "-c", HELPER], resource_path=tmp_path / "input.lock")
+
+
+def test_helper_bootstrap_has_a_separate_bound_without_extending_action_deadlines(tmp_path, monkeypatch):
+    from je_auto_control.utils.agent_runtime import native_target
+    calls = []
+
+    class Channel:
+        def __init__(self, *_args, **_kwargs):
+            self.retired = False
+
+        def request(self, operation, payload, *, timeout, check, on_event=None):
+            check()
+            calls.append((operation, timeout))
+            return {"protocol": 1} if operation == "bootstrap" else {"ready": True, "identity": "fixture"}
+
+        def close(self):
+            self.retired = True
+
+    monkeypatch.setattr(native_target, "OwnedChannel", Channel)
+    adapter = target(tmp_path)
+    runtime = AgentRuntime(tmp_path / "one.sqlite", targets={"fixture": adapter})
+    try:
+        task = runtime.submit(spec())
+        runtime.observe(task.task_id)
+        assert calls[0] == ("bootstrap", 5)
+        assert all(timeout == 1 for operation, timeout in calls if operation != "bootstrap")
+    finally:
+        runtime.close()
 
 
 def test_pause_cleans_only_announced_input_before_retiring_helper(tmp_path):

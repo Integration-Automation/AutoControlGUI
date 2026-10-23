@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import sys
+import ctypes
+from ctypes import wintypes
 from contextlib import contextmanager
 from typing import Any, Iterator
 
@@ -20,6 +22,23 @@ def check_pointer(hwnd: int, event: dict) -> None:
     x, y, width, height = geometry
     if not x <= event["x"] < x + width or not y <= event["y"] < y + height:
         raise AgentTaskError("pointer is outside the owned window")
+    if _point_window(event["x"], event["y"]) != hwnd:
+        raise AgentTaskError("pointer target is covered by another window or unavailable")
+
+
+def _hit_library() -> Any:
+    if sys.platform != "win32":
+        raise AgentTaskError("window hit testing needs a platform adapter")
+    user = ctypes.WinDLL("user32", use_last_error=True)
+    user.WindowFromPoint.argtypes, user.WindowFromPoint.restype = [wintypes.POINT], wintypes.HWND
+    user.GetAncestor.argtypes, user.GetAncestor.restype = [wintypes.HWND, wintypes.UINT], wintypes.HWND
+    return user
+
+
+def _point_window(x: int, y: int) -> int | None:
+    user = _hit_library()
+    hit = user.WindowFromPoint(wintypes.POINT(x, y))
+    return int(user.GetAncestor(hit, 2) or 0) if hit else None  # GA_ROOT retains owned child controls.
 
 
 def check_window_arguments(arguments: dict, spec: AgentTaskSpec | None) -> None:

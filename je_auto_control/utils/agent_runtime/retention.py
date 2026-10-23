@@ -33,6 +33,7 @@ def prune_tasks(runtime: Any, keep_days: int = 30) -> dict[str, Any]:
             runtime._tokens.pop(task_id, None)
             runtime._stop_final.pop(task_id, None)
             runtime._observations.pop(task_id, None)
+            runtime._observation_times.pop(task_id, None)
             deleted.append(task_id)
     return {"deleted": deleted, "keep_days": keep_days}
 

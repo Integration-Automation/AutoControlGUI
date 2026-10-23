@@ -64,7 +64,16 @@ def complete(spec: AgentTaskSpec, receipts: Sequence[Mapping[str, Any]]) -> bool
 def _matches_action(action: Mapping, receipt: Mapping, values: Mapping) -> bool:
     if receipt["status"] != "confirmed" or receipt["command"] != action["tool"]:
         return False
-    if receipt["arguments"] != resolve(action.get("arguments", {}), values):
+    if not _arguments_match(action, receipt, values):
         return False
     required, value = expected(action, values)
     return not required or receipt["result"] == value
+
+
+def _arguments_match(action: Mapping, receipt: Mapping, values: Mapping) -> bool:
+    arguments = resolve(action.get("arguments", {}), values)
+    if action.get("reference") is None:
+        return receipt["arguments"] == arguments
+    grounding = receipt.get("grounding", {})
+    return (grounding.get("reference") == thaw(action["reference"])
+            and grounding.get("requested_arguments") == arguments)

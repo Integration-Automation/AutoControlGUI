@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import io
 import json
 import re
 import time
@@ -166,8 +165,11 @@ def _owned_artifact(path: Path) -> bool:
 
 def _summary(receipt: dict) -> dict:
     outcome = json.dumps(receipt["result"], sort_keys=True).encode("utf-8")
-    return {"id": receipt["id"], "command": receipt["command"], "status": receipt["status"],
-            "created": receipt["created"], "result_sha256": hashlib.sha256(outcome).hexdigest()}
+    result = {"id": receipt["id"], "command": receipt["command"], "status": receipt["status"],
+              "created": receipt["created"], "result_sha256": hashlib.sha256(outcome).hexdigest()}
+    if "grounding" in receipt:
+        result["grounding"] = receipt["grounding"]
+    return result
 
 
 def _replay_reasons(receipt: dict) -> tuple[str, ...]:
@@ -177,13 +179,5 @@ def _replay_reasons(receipt: dict) -> tuple[str, ...]:
 
 
 def _verify_image(data: bytes) -> None:
-    if len(data) > 1_000_000:
-        raise AgentTaskError("persistent task image exceeds one megabyte")
-    from PIL import Image
-    try:
-        with Image.open(io.BytesIO(data)) as image:
-            if image.format != "JPEG" or max(image.size) > 1280:
-                raise AgentTaskError("persistent task image requires a bounded JPEG")
-            image.verify()
-    except (OSError, ValueError, Image.DecompressionBombError) as error:
-        raise AgentTaskError("persistent task image validation failed") from error
+    from je_auto_control.utils.agent_runtime.images import verify_jpeg
+    verify_jpeg(data)

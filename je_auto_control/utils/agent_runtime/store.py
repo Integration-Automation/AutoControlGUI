@@ -59,6 +59,8 @@ CREATE TABLE IF NOT EXISTS agent_skill_trials (
 CREATE TABLE IF NOT EXISTS agent_skill_publications (
  candidate_id TEXT PRIMARY KEY REFERENCES agent_skill_candidates(id), task_id TEXT NOT NULL,
  actor TEXT NOT NULL, note TEXT NOT NULL, created REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_action_grounding (
+ action_id TEXT PRIMARY KEY REFERENCES agent_actions(id) ON DELETE CASCADE, details TEXT NOT NULL);
 """
 
 
@@ -186,12 +188,15 @@ class AgentTaskStore:
             if cursor.rowcount != 1:
                 raise AgentTaskError("task stopped before control activation")
 
-    def prepare(self, task_id: str, command: str, arguments: dict) -> str:
+    def prepare(self, task_id: str, command: str, arguments: dict, *, grounding: dict | None = None) -> str:
         """Durably record the next operation before any external side effect."""
         identifier = uuid.uuid4().hex
         with self.connection(write=True) as connection:
             connection.execute("INSERT INTO agent_actions VALUES (?,?,?,?,?,?,?)",
                                (identifier, task_id, command, json.dumps(arguments), "prepared", None, time.time()))
+            if grounding is not None:
+                connection.execute("INSERT INTO agent_action_grounding VALUES (?,?)",
+                                   (identifier, json.dumps(detached(grounding), allow_nan=False)))
         return identifier
 
     def settle(self, action_id: str, status: str, result: Any = None) -> None:
@@ -212,12 +217,13 @@ class AgentTaskStore:
     def actions(self, task_id: str) -> List[dict[str, Any]]:
         """Return independent action receipts in their original execution order."""
         with self.connection() as connection:
-            rows = connection.execute("SELECT a.*,r.actor AS reviewed_by,r.decision AS review_decision "
+            rows = connection.execute("SELECT a.*,r.actor AS reviewed_by,r.decision AS review_decision,"
+                                      "g.details AS grounding "
                                       "FROM agent_actions a LEFT JOIN agent_reviews r ON a.id=r.action_id "
+                                      "LEFT JOIN agent_action_grounding g ON a.id=g.action_id "
                                       "WHERE a.task_id=? ORDER BY a.created,a.rowid",
                                       (task_id,)).fetchall()
-        return [{**dict(row), "arguments": json.loads(row["arguments"]),
-                 "result": json.loads(row["result"]) if row["result"] is not None else None} for row in rows]
+        return [_receipt(row) for row in rows]
 
     def recover(self) -> None:
         """Mark abandoned live work for review; never replay an uncertain effect."""
@@ -230,3 +236,13 @@ class AgentTaskStore:
             connection.execute("UPDATE agent_tasks SET state='recovering',reason='runtime restarted' "
                                "WHERE state IN ('running','verifying','pausing','cancelling')")
             connection.execute("UPDATE agent_control SET owner=''")
+
+
+def _receipt(row: Any) -> dict:
+    result = dict(row)
+    result["arguments"] = json.loads(result["arguments"])
+    result["result"] = json.loads(result["result"]) if result["result"] is not None else None
+    grounding = result.pop("grounding", None)
+    if grounding is not None:
+        result["grounding"] = json.loads(grounding)
+    return result

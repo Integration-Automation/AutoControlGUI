@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, Mapping, List
 
-from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentObservationStale
 from je_auto_control.utils.agent_runtime.context import TaskOperation, operation_scope
 from je_auto_control.utils.agent_runtime.models import (
     AgentActionRequest, AgentActionResult, AgentObservation, AgentTaskHandle, AgentTaskResult,
@@ -125,7 +125,7 @@ class AgentRuntime:
         """Read owner-scoped task status without observing the desktop."""
         row = self._row(task_id)
         metadata = self.evidence.metadata(task_id)
-        pin = self.skills.task_pin(row)
+        pin = self.skills.task_pin(row) if "skill_pin" in row["spec"]["options"] else {}
         if pin:
             metadata["skill_pin"] = pin
         return AgentTaskResult(task_id, row["state"], row["spec"]["goal"], row["reason"], row["steps"],
@@ -276,14 +276,14 @@ class AgentRuntime:
     def _ground(self, row: Mapping[str, Any], request: AgentActionRequest) -> None:
         observation = self._observations.get(row["id"])
         if observation is None or request.observation_id != observation.observation_id:
-            raise AgentTaskError("observation is missing or no longer current")
+            raise AgentObservationStale("observation is missing or no longer current")
         age = time.monotonic() - self._observation_times.get(row["id"], float("-inf"))
         if not 0 <= age <= 30 or time.time() - observation.captured_at > 30:
-            raise AgentTaskError("observation has expired")
+            raise AgentObservationStale("observation has expired")
         current = self._target(row).observe()
         if _fingerprint(current) != _fingerprint(observation.data):
             self._observations.pop(row["id"], None)
-            raise AgentTaskError("observation changed; observe again before acting")
+            raise AgentObservationStale("observation changed; observe again before acting")
 
     def act(self, task_id: str, value: Mapping[str, Any]) -> AgentActionResult:
         """Execute one grounded, authorized action and persist its result certainty."""
@@ -301,9 +301,15 @@ class AgentRuntime:
 
     def _perform(self, row: Mapping[str, Any], request: AgentActionRequest) -> AgentActionResult:
         task_id = row["id"]
+        from je_auto_control.utils.agent_runtime.observation_refs import resolve_action
+        observation = self._observations[task_id]
+        arguments, grounding = resolve_action(request.tool, request.arguments, request.reference, observation.data)
+        TaskPolicy(AgentTaskSpec.from_dict(row["spec"])).check(request.tool, arguments)
+        grounding.update(observation_id=observation.observation_id, fingerprint=_fingerprint(observation.data))
         self._observations.pop(task_id, None)
-        arguments = thaw(request.arguments)
-        action_id = self.store.prepare(task_id, request.tool, durable_payload(arguments))
+        self._observation_times.pop(task_id, None)
+        action_id = self.store.prepare(task_id, request.tool, durable_payload(arguments),
+                                       grounding=durable_payload(grounding))
         try:
             self._token(task_id).checkpoint()
             self.evidence.action(task_id, self.store.actions(task_id)[-1])
@@ -368,16 +374,34 @@ class AgentRuntime:
                 "AND state NOT IN ('succeeded','failed','cancelled','timed_out')",
                 [(time.time(), identifier) for identifier in identifiers])
         queued = self._cancel_without_input(identifiers)
+        snapshots = self._stop_snapshots([task_id for task_id in identifiers[:1000] if task_id in queued])
         results: List[dict[str, Any]] = []
         errors: List[dict[str, str]] = []
         for task_id in identifiers:
+            if task_id in queued:
+                if task_id in snapshots:
+                    results.append(snapshots[task_id])
+                continue
             try:
-                result = self.get(task_id) if task_id in queued else self.cancel(task_id)
+                result = self.cancel(task_id)
                 if len(results) < 1000:
                     results.append(result.to_dict())
             except _ERRORS as error:
                 errors.append({"task_id": task_id, "error": type(error).__name__})
         return {"tasks": results, "requested": len(identifiers), "cleanup_errors": errors[:1000]}
+
+    def _stop_snapshots(self, identifiers: List[str]) -> dict[str, dict]:
+        if not identifiers:
+            return {}
+        with self.store.connection() as connection:
+            connection.execute("CREATE TEMP TABLE agent_stop_page (id TEXT PRIMARY KEY)")
+            connection.executemany("INSERT INTO agent_stop_page VALUES (?)", [(item,) for item in identifiers])
+            rows = connection.execute("SELECT t.*,p.task_id AS report_pending FROM agent_tasks t "
+                "JOIN agent_stop_page s ON s.id=t.id LEFT JOIN agent_evidence_pending p ON p.task_id=t.id").fetchall()
+        return {row["id"]: AgentTaskResult(row["id"], row["state"], json.loads(row["spec"])["goal"], row["reason"],
+                row["steps"], tuple(freeze(json.loads(row["verification"]))),
+                freeze({"details_deferred": True, "report_pending": row["report_pending"] is not None})).to_dict()
+                for row in rows}
 
     def _cancel_without_input(self, identifiers: List[str]) -> set[str]:
         with self._mutex:

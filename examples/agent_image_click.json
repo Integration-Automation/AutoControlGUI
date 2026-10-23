@@ -1,0 +1,6 @@
+{
+  "tool": "AC_click_mouse",
+  "arguments": {"mouse_keycode": "left"},
+  "reference": {"image_point": [120, 80]},
+  "observation_id": "replace-with-a-fresh-observation-id"
+}

@@ -174,6 +174,27 @@ def test_emergency_stop_is_not_limited_to_the_task_list_page(runtime, monkeypatc
         assert connection.execute("SELECT COUNT(*) FROM agent_tasks WHERE state='cancelled'").fetchone()[0] == 1002
 
 
+def test_queued_emergency_stop_reads_status_in_batches_instead_of_per_task(runtime, monkeypatch):
+    from contextlib import contextmanager
+    monkeypatch.setattr(runtime.evidence, "ensure", lambda _task_id: {})
+    monkeypatch.setattr(runtime.evidence, "publish", lambda _task_id: None)
+    for _index in range(5):
+        runtime.submit(spec())
+    connection = runtime.store.connection
+    reads = []
+
+    @contextmanager
+    def counted(**kwargs):
+        reads.append(kwargs)
+        with connection(**kwargs) as opened:
+            yield opened
+
+    monkeypatch.setattr(runtime.store, "connection", counted)
+    result = runtime.stop_all()
+    assert len(reads) <= 6
+    assert result["requested"] == 5 and all(item["state"] == "cancelled" for item in result["tasks"])
+
+
 def test_canonical_root_replacement_requires_scope_review_before_target_acquisition(runtime, tmp_path):
     root, outside = tmp_path / "root", tmp_path / "outside"
     root.mkdir()

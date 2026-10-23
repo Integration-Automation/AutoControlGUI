@@ -10,7 +10,8 @@ import json, sys, time
 for line in sys.stdin.buffer:
     request=json.loads(line)
     operation=request['operation']
-    if operation=='configure': result={'ready':True}
+    if operation=='bootstrap': result={'protocol':1}
+    elif operation=='configure': result={'ready':True}
     elif operation=='observe': result={'identity':'fixture'}
     elif operation=='perform':
         print(json.dumps({'control':'physical_input'}),flush=True)

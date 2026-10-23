@@ -186,6 +186,7 @@ class AgentActionRequest:
     tool: str
     observation_id: str
     arguments: Mapping[str, Any] = field(default_factory=dict)
+    reference: Mapping[str, Any] | None = None
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> AgentActionRequest:
@@ -198,7 +199,9 @@ class AgentActionRequest:
             raise AgentTaskError("action arguments must be an object")
         if not isinstance(request.tool, str) or not isinstance(request.observation_id, str):
             raise AgentTaskError("action tool and observation_id must be strings")
-        return cls(request.tool, request.observation_id, freeze(request.arguments))
+        from je_auto_control.utils.agent_runtime.observation_refs import validate_reference
+        validate_reference(request.reference)
+        return cls(request.tool, request.observation_id, freeze(request.arguments), freeze(request.reference))
 
 
 @dataclass(frozen=True)

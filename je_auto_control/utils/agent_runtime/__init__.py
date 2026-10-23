@@ -1,5 +1,5 @@
 """Managed computer tasks with explicit authority, fenced input and verified outcomes."""
-from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError
+from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError, AgentObservationStale
 from je_auto_control.utils.agent_runtime.models import (
     AgentActionRequest, AgentActionResult, AgentObservation, AgentTaskBudget,
     AgentTaskHandle, AgentTaskResult, AgentTaskSpec,
@@ -28,4 +28,5 @@ __all__ = [
     "stop_agent_runtime", "stop_all_agent_tasks",
     "AgentActionRequest", "AgentActionResult", "AgentControlBusy", "AgentObservation", "AgentRuntime",
     "AgentTaskBudget", "AgentTaskError", "AgentTaskHandle", "AgentTaskResult", "AgentTaskSpec",
+    "AgentObservationStale",
 ]

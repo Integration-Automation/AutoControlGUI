@@ -79,6 +79,9 @@ class DesktopTarget:
         result = {"identity": {"window": hwnd, "process": pid, "title": title}, "elements": elements}
         if self._spec is not None and self._spec.options.get("vision"):
             result["image"] = self._image(hwnd, elements)
+        current_hwnd, _current_title, current_pid = self._check_foreground()
+        if (current_hwnd, current_pid) != (hwnd, pid):
+            raise AgentTaskError("foreground target changed during observation")
         return result
 
     @staticmethod
@@ -90,7 +93,8 @@ class DesktopTarget:
         buffer = io.BytesIO()
         redacted.convert("RGB").save(buffer, format="JPEG", quality=65)
         return {"format": "jpeg", "redacted_by": "strict", "data": base64.b64encode(buffer.getvalue()).decode("ascii"),
-                "origin": list(origin), "original_size": list(original), "image_size": list(redacted.size)}
+                "origin": list(origin), "original_size": list(original), "image_size": list(redacted.size),
+                "coordinate_space": "desktop"}
 
     def perform(self, name: str, arguments: dict[str, Any]) -> Any:
         """Execute reviewed commands, with a final foreground check immediately before dispatch."""
@@ -129,6 +133,14 @@ class DesktopTarget:
             from je_auto_control.utils.agent_runtime.native_scope import check_pointer
             check_pointer(hwnd, event)
 
+    def prepare_input(self, event: dict) -> None:
+        """Position and confirm the actual pointer before acknowledging an owned button press."""
+        from je_auto_control.wrapper.auto_control_mouse import set_mouse_position, get_mouse_position
+        point = event["x"], event["y"]
+        set_mouse_position(*point)
+        if get_mouse_position() != point:
+            raise AgentTaskError("native pointer position was not confirmed before pressing")
+
     def cleanup(self) -> None:
         """Retire helper-local scope; the host ledger owns every key/button release."""
         self._spec = None
@@ -145,15 +157,8 @@ def _application_name(elements: list[Any], process_id: int, apps: tuple[str, ...
 
 
 def _window_frame(hwnd: int) -> tuple[Any, tuple[int, int]]:
-    if os.name != "nt":
-        raise AgentTaskError("window-scoped vision capture has not been configured on this platform")
-    from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-    from je_auto_control.utils.window_capture.window_capture import _win32_geometry
-    geometry = _win32_geometry(hwnd)
-    if geometry is None:
-        raise AgentTaskError("window-scoped vision geometry is unavailable")
-    x, y, width, height = geometry
-    return pil_screenshot(screen_region=[x, y, x + width, y + height]), (x, y)
+    from je_auto_control.utils.agent_runtime.window_pixels import capture_window
+    return capture_window(hwnd)
 
 
 def _redact_frame(image: Any, elements: list[dict], origin: tuple[int, int]) -> Any:

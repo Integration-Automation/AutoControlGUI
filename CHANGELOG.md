@@ -13,6 +13,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Managed Windows vision renders only its scoped window; unsupported rendering pauses without a
+  desktop-crop fallback. Managed pointer input rejects foreign overlays and confirms positioning.
+
 - Add experimental managed tasks across Python/AC/MCP/REST/CLI/GUI, with detached task contracts,
   owner-scoped service transport, fenced target control, durable receipts, independent completion
   checks, WorkQueue delivery and configured local Ollama decisions. Native acceptance remains open.
@@ -3106,3 +3109,5 @@ No compatibility changes.
 - Add immutable managed skill recording, typed parameters, candidate validation and explicitly reviewed version publication. Legacy SkillLibrary is unchanged.
 
 - Managed tasks retain live origin ceilings. MCP client roots are session-local and no longer replace the shared HTTP resource workspace. Worker shutdown cancels model initialization before lease acquisition.
+
+- Add observation-local point references, durable grounding receipts and typed pre-dispatch stale-observation retries. Explicit legacy coordinates keep their meaning.

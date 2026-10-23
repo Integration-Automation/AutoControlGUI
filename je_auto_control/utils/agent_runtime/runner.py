@@ -4,7 +4,7 @@ from __future__ import annotations
 from concurrent.futures import CancelledError
 from typing import Any
 
-from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError
+from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError, AgentObservationStale
 from je_auto_control.utils.agent_runtime.models import AgentTaskResult, AgentTaskSpec, TERMINAL, thaw
 from je_auto_control.utils.agent_runtime.ollama import OllamaTaskBackend
 from je_auto_control.utils.loop_guard.loop_guard import LoopGuard, digest_result
@@ -38,6 +38,7 @@ def run_task(runtime: Any, task_id: str, *, backend: Any = None) -> AgentTaskRes
 
 
 def _loop(runtime: Any, task_id: str, spec: AgentTaskSpec, backend: Any, guard: LoopGuard) -> AgentTaskResult:
+    stale_attempts = 0
     while runtime.get(task_id).state in {"queued", "running"}:
         observation = runtime.observe(task_id)
         receipts = effective_actions(runtime.store.actions(task_id))
@@ -50,16 +51,39 @@ def _loop(runtime: Any, task_id: str, spec: AgentTaskSpec, backend: Any, guard: 
         if proposal.get("stop"):
             return runtime.finish(task_id)
         values = captures(spec, receipts)
-        action = {"tool": proposal["tool"], "arguments": resolve(proposal.get("arguments", {}), values),
-                  "observation_id": observation.observation_id}
-        result = runtime.act(task_id, action)
-        required, value = expected(proposal, values)
-        if required and thaw(result.result) != value:
-            raise AgentTaskError("workflow read-back did not match; review before continuing")
-        verdict = guard.observe(action["tool"], action["arguments"], digest_result(result.result))
-        if verdict.level == "critical":
-            raise AgentTaskError("agent has stopped making progress")
+        action = _grounded_action(proposal, values, observation.observation_id)
+        try:
+            result = runtime.act(task_id, action)
+        except AgentObservationStale:
+            if stale_attempts >= spec.budget.retries or not _can_reobserve(runtime, task_id):
+                raise
+            stale_attempts += 1
+            continue
+        stale_attempts = 0
+        _check_step(proposal, values, result.result, action, guard)
     return runtime.get(task_id)
+
+
+def _grounded_action(proposal: dict, values: dict, observation_id: str) -> dict:
+    action = {"tool": proposal["tool"], "arguments": resolve(proposal.get("arguments", {}), values),
+              "observation_id": observation_id}
+    if proposal.get("reference") is not None:
+        action["reference"] = proposal["reference"]
+    return action
+
+
+def _can_reobserve(runtime: Any, task_id: str) -> bool:
+    target = runtime._target(runtime._row(task_id))
+    return getattr(target, "can_reobserve", False) is True
+
+
+def _check_step(proposal: dict, values: dict, result: Any, action: dict, guard: LoopGuard) -> None:
+    required, value = expected(proposal, values)
+    if required and thaw(result) != value:
+        raise AgentTaskError("workflow read-back did not match; review before continuing")
+    verdict = guard.observe(action["tool"], action["arguments"], digest_result(result))
+    if verdict.level == "critical":
+        raise AgentTaskError("agent has stopped making progress")
 
 
 def _decision(runtime: Any, task_id: str, spec: AgentTaskSpec, backend: Any, observation: Any,

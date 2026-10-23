@@ -69,8 +69,23 @@ class NativeDesktopTarget:
             if not self._ledger.empty:
                 raise AgentTaskError("native input cleanup is required before another operation")
             self._takeover_sent.clear()
-            self._channel = OwnedChannel(self._argv, on_control=self._control)
+            context = current_operation()
+            self._channel = self._launch(context.checkpoint if context is not None else lambda: None, self._control)
         return self._channel
+
+    def _launch(self, check: Callable[[], None], control: Callable[[str], None] | None = None) -> OwnedChannel:
+        self._channel = OwnedChannel(self._argv, on_control=control)
+        reply = self._channel.request("bootstrap", {}, timeout=5, check=check)
+        if not isinstance(reply, dict) or type(reply.get("protocol")) is not int or reply["protocol"] != 1:
+            self._channel.close()
+            raise AgentTaskError("native helper bootstrap protocol is incompatible")
+        return self._channel
+
+    @property
+    def can_reobserve(self) -> bool:
+        """Allow pre-dispatch replanning only with no held input and a settled live channel."""
+        return (self._channel is not None and not self._channel.retired
+                and self._ledger.empty and self._pending is None)
 
     def _control(self, _kind: str) -> None:
         if self._takeover is None or self._takeover_sent.is_set():
@@ -145,8 +160,7 @@ class NativeDesktopTarget:
         channel = self._channel
         if not self._ledger.empty:
             if channel is None or channel.retired:
-                channel = OwnedChannel(self._argv)
-                self._channel = channel
+                channel = self._launch(lambda: None)
             channel.request("cleanup", self._ledger.snapshot(), timeout=3, check=lambda: None,
                             on_event=lambda event: self._input(event, cleanup=True))
         if channel is not None:

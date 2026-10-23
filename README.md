@@ -712,3 +712,9 @@ optional third-party components.
 - **Documentation**: https://autocontrol.readthedocs.io/en/latest/
 
 Legacy MCP action wrappers, parallel branches and local DAG workers retain the same origin ceilings.
+
+Managed point actions accept observation-local element indices or thumbnail image points. The host checks the current frame and resolves native coordinates, including scaling and negative monitor origins. Receipts retain geometry provenance without image bytes. `AgentObservationStale` identifies rejection before dispatch; local agents reobserve only within their retry budget when the adapter confirms no held or pending input.
+
+Emergency stop returns compact snapshots with metadata.details_deferred; fetch individual task details for full artifact links.
+
+Managed mouse presses normalize button ownership and confirm the actual cursor before input. Windows pointer checks reject foreign overlays. Vision renders the exact scoped window into cleared private GDI storage, rejects geometry changes and releases resources even on rendering/read failure. There is no desktop-crop fallback. Fake-native tests cover these paths; native acceptance remains unverified.

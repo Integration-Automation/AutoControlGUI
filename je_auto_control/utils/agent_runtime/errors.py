@@ -8,3 +8,7 @@ class AgentTaskError(AutoControlException, ValueError):
 
 class AgentControlBusy(AgentTaskError):
     """Another task still owns the target's input or cleanup."""
+
+
+class AgentObservationStale(AgentTaskError):
+    """No action was dispatched because its observation is missing, expired or changed."""
