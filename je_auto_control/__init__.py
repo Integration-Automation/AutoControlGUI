@@ -4,6 +4,7 @@ import all wrapper function
 
 # callback
 from je_auto_control.utils.agent_runtime import (
+    browser_navigate, browser_click, browser_fill, browser_select, browser_check, browser_read,
     draft_agent_workflow, workflow_download, workflow_manifest, workflow_control, workflow_open, workflow_wait,
     AgentActionRequest, AgentActionResult, AgentControlBusy, AgentObservation, AgentRuntime,
     AgentTaskBudget, AgentTaskError, AgentTaskHandle, AgentTaskResult, AgentTaskSpec,
@@ -1382,7 +1383,8 @@ def start_autocontrol_gui(*args, **kwargs):
 __all__ = [
     "AgentTargetProfile", "manage_agent_target", "list_agent_targets",
     "draft_agent_workflow", "workflow_download", "workflow_manifest", "workflow_control", "workflow_open",
-    "workflow_wait",
+    "workflow_wait", "browser_navigate", "browser_click", "browser_fill", "browser_select", "browser_check",
+    "browser_read",
     "AgentActionRequest", "AgentActionResult", "AgentControlBusy", "AgentObservation", "AgentRuntime",
     "AgentTaskBudget", "AgentTaskError", "AgentTaskHandle", "AgentTaskResult", "AgentTaskSpec",
     "get_agent_task_receipts", "reconcile_agent_task", "prune_agent_tasks",

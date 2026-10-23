@@ -5,7 +5,7 @@
 `WIP` — 依使用者後續要求繼續執行
 `docs/superpowers/plans/2026-10-23-agent-runtime.md` 的完整交付，仍缺六大類工作：
 
-1. **瀏覽器及應用深化**：受管瀏覽器 adapter、網站範圍、表單／下載與四條流程的實際應用驗收。
+1. **瀏覽器及應用深化**：瀏覽器流程編譯、已審閱上／下載許可，以及四條流程的實際應用驗收。受管 SDK 的正式 helper 環境部署與真實瀏覽器驗收尚未執行；目前僅以隔離來源契約及替身引擎驗證。
    瀏覽器一律使用 WebRunner（`je_web_runner`），本機來源 `D:\Codes\WebRunner`；
    不在 AutoControlGUI 另建瀏覽器引擎。目前共用 `.venv` 未安裝／連結該套件，後續需在隔離環境接合。
 2. **跨平台桌面**：macOS／X11／Wayland 的真人活動、觀察與輸入隔離，非 Windows 對話框／未儲存 gate，

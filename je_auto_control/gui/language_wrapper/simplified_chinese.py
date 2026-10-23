@@ -1537,11 +1537,12 @@ simplified_chinese_word_dict.update({
     'agent_element_index': '索引',
     'agent_element_name': '名称',
     'agent_element_role': '角色',
-    'agent_element_bounds': '范围'
+    'agent_element_bounds': '范围／DOM 定位'
 })
 
 simplified_chinese_word_dict.update({
     'agent_page_targets': '主机目标',
+    'agent_browser_example': '起草浏览器目标示例',
     'agent_target_operation': '目标操作',
     'agent_target_request': '已审核的目标设置',
     'agent_target_apply': '应用目标操作',

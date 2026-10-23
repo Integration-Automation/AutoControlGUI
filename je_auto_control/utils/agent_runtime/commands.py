@@ -11,11 +11,34 @@ from je_auto_control.utils.agent_runtime.workflow_wait import workflow_wait
 from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGER_OPERATIONS
 from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILL_OPERATIONS
 from je_auto_control.utils.agent_runtime.target_profiles import OPERATIONS as TARGET_OPERATIONS
+from je_auto_control.utils.agent_runtime.browser_commands import (
+    browser_navigate, browser_click, browser_fill, browser_select, browser_check, browser_read,
+)
 
 _ID = {"task_id": {"type": "string", "minLength": 1}}
 
 # name: (function, JSON properties, required, read_only, host_management)
 CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
+    "AC_browser_navigate": (browser_navigate, {"url": {"type": "string", "maxLength": 4096}},
+                            ("url",), False, False),
+    "AC_browser_click": (browser_click, {"selector": {"type": "string", "maxLength": 4096},
+                                         "frame": {"type": "string", "maxLength": 4096}},
+                         ("selector",), False, False),
+    "AC_browser_fill": (browser_fill, {"selector": {"type": "string", "maxLength": 4096},
+                                       "value": {"type": "string", "maxLength": 8000},
+                                       "frame": {"type": "string", "maxLength": 4096}},
+                        ("selector", "value"), False, False),
+    "AC_browser_select": (browser_select, {"selector": {"type": "string", "maxLength": 4096},
+                                           "value": {"type": "string", "maxLength": 8000},
+                                           "frame": {"type": "string", "maxLength": 4096}},
+                          ("selector", "value"), False, False),
+    "AC_browser_check": (browser_check, {"selector": {"type": "string", "maxLength": 4096},
+                                         "frame": {"type": "string", "maxLength": 4096}},
+                         ("selector",), False, False),
+    "AC_browser_read": (browser_read, {"operation": {"type": "string", "enum": ["text", "value", "visible"]},
+                                       "selector": {"type": "string", "maxLength": 4096},
+                                       "frame": {"type": "string", "maxLength": 4096}},
+                        ("operation", "selector"), True, False),
     "AC_agent_target": (api.manage_agent_target, {"operation": {"type": "string", "enum": list(TARGET_OPERATIONS)},
                                                "request": {"type": "object"}}, ("operation",), False, True),
     "AC_agent_target_list": (api.list_agent_targets, {}, (), True, False),

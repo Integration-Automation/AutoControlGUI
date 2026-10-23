@@ -6,6 +6,7 @@ from typing import Any, Mapping
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import detached
+from je_auto_control.utils.agent_runtime.browser_commands import BROWSER_ELEMENT_TOOLS
 
 POINT_TOOLS = frozenset({"AC_click_mouse", "AC_set_mouse_position", "AC_press_mouse"})
 IMAGE_FIELDS = ("origin", "original_size", "image_size", "format", "redacted_by", "coordinate_space")
@@ -87,6 +88,12 @@ def resolve_action(tool: str, arguments: Mapping, reference: Any, data: Mapping)
     if reference is None:
         return kwargs, evidence
     validate_reference(reference)
+    if tool in BROWSER_ELEMENT_TOOLS:
+        return _browser_element(tool, kwargs, reference, data, evidence)
+    return _point_reference(tool, kwargs, reference, data, evidence)
+
+
+def _point_reference(tool: str, kwargs: dict, reference: Mapping, data: Mapping, evidence: dict) -> tuple[dict, dict]:
     if tool not in POINT_TOOLS:
         raise AgentTaskError("observation references require a reviewed point action")
     if {"x", "y"} & set(kwargs):
@@ -100,3 +107,27 @@ def resolve_action(tool: str, arguments: Mapping, reference: Any, data: Mapping)
     if any(not -(2 ** 31) <= coordinate < 2 ** 31 for coordinate in point):
         raise AgentTaskError("resolved point geometry is outside native coordinate bounds")
     return {**kwargs, "x": point[0], "y": point[1]}, evidence
+
+
+def _browser_element(tool: str, kwargs: dict, reference: Mapping, data: Mapping, evidence: dict) -> tuple[dict, dict]:
+    if "element_index" not in reference or {"selector", "frame"} & set(kwargs):
+        raise AgentTaskError("browser reference requires one DOM index without explicit selector or frame")
+    index = reference["element_index"]
+    element = _observed_dom_element(index, data, require_enabled=tool != "AC_browser_read")
+    selector, frame = element.get("selector"), element.get("frame", "")
+    if not isinstance(selector, str) or not selector or not isinstance(frame, str):
+        raise AgentTaskError("observed DOM locator is unavailable")
+    evidence.update(reference=detached(reference), element=detached(element))
+    return {**kwargs, "selector": selector, "frame": frame}, evidence
+
+
+def _observed_dom_element(index: int, data: Mapping, *, require_enabled: bool) -> Mapping:
+    elements = data.get("elements", ())
+    if not isinstance(elements, (list, tuple)) or index >= len(elements):
+        raise AgentTaskError("DOM index is outside this observation")
+    element = elements[index]
+    if not isinstance(element, Mapping) or element.get("index") != index:
+        raise AgentTaskError("DOM observation index is ambiguous")
+    if (require_enabled and element.get("enabled") is not True) or element.get("visible") is not True:
+        raise AgentTaskError("observed DOM element is not actionable")
+    return element

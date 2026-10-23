@@ -1,5 +1,19 @@
 # AutoControl
 
+受管浏览器 profile（`kind: browser`）统一委派给 WebRunner 的 `je_web_runner` SDK；
+开发来源为 `D:\Codes\WebRunner`，集成来源位于其隔离的受管 session 功能分支。
+Profile 必须提供精确的 `settings.allowed_origins`、浏览器专用工具，且不能授权桌面 app；
+每项任务另须设置非空、更窄的 `options.allowed_origins`，每次激活均重新核对两层范围。
+注册不启动资源；helper 环境须明确安装已审核的受管 SDK 与 Chromium，缺少时就绪失败，不自动安装。
+`AC_browser_navigate`、`AC_browser_click`、`AC_browser_fill`、`AC_browser_select`、`AC_browser_check`
+及 `AC_browser_read` 共用 Python/core、executor、MCP 与 Builder 定义。命令仅在受管 helper 中
+运行，通过既有 task submit/observe/act 周期驱动。读取操作为 `text`、`value` 或 `visible`；
+WebRunner 拒绝秘密表单字段。DOM 索引在当前 observation 内解析 selector／frame，再核对新鲜度。
+失败副作用保持不确定且需对账；暂停／取消会结束拥有的资源。GUI Actions 可生成浏览器目标示例
+供审核；DOM 选择仅编辑动作请求。专用 helper 跨就绪检查保留同一个全新 session，正常清理先
+取得浏览器 ACK，再结束自己的进程树，不获取共享桌面输入控制权。跨源受控测试使用真正 SDK、
+替身 Chromium、自有 IPC／loopback；实际浏览器／原生验收、已审核传输及浏览器流程编译仍列于 `Progress.md`。
+
 MCP 异步调用会保留接受请求时的角色、session、原路径策略与工具列表；session 或路径策略
 结束后，延迟分派会被拒绝。异步无状态调用仍使用固定 profile。插件工具列表变更会送达所有
 有效 HTTP session 流；session 启停只通知拥有者，并避免重复发送。流注册与 HTTP 标头
@@ -71,7 +85,7 @@ Windows 共享桌面须解锁并空闲 60 秒，实体键鼠活动会触发暂�
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 841 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 847 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -273,7 +287,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 841 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 847 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -371,7 +385,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 745 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 751 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |

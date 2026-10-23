@@ -123,7 +123,7 @@ class AgentTargetProfiles:
         kind = profile.kind if profile is not None else {"local-desktop": "desktop", "local-files": "files"}.get(
             name, "injected")
         tools = list(profile.allowed_tools) if profile is not None else sorted(
-            reviewed_tools(kind)) if kind in {"desktop", "files"} else []
+            reviewed_tools(kind)) if kind in {"desktop", "files", "browser"} else []
         return {"name": name, "kind": kind, "enabled": self._enabled.get(name, True), "declared_tools": tools,
                 "managed_profile": profile is not None, "readiness": "not_probed", "native_evidence": "not_recorded",
                 "digest": profile.digest if profile is not None else None}

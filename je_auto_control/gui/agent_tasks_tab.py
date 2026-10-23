@@ -23,6 +23,8 @@ from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIG
 from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILL_OPERATIONS
 from je_auto_control.utils.agent_runtime.trigger_config import KINDS as TRIGGER_KINDS
 from je_auto_control.utils.agent_runtime.target_profiles import OPERATIONS as TARGET_OPERATIONS
+from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile
+from je_auto_control.utils.agent_runtime.browser_commands import BROWSER_TOOLS, BROWSER_ELEMENT_TOOLS
 from je_auto_control.utils.exception.cancellation import CancellationToken
 
 
@@ -167,6 +169,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_skill_apply", self._skill_apply),
                 ("agent_skill_list", partial(self._dispatch, "skill", {"operation": "list"})),
                 ("agent_target_apply", self._target_apply),
+                ("agent_browser_example", self._browser_example),
                 ("agent_target_list", partial(self._dispatch, "targets", {})),
                 ("agent_submit", self._submit), ("agent_refresh", partial(self._dispatch, "list")),
                 *[("agent_" + name, partial(self._dispatch, name)) for name in
@@ -180,6 +183,13 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             return
         self._dispatch("draft", {"workflow": self._workflow.currentText(), "config": config})
 
+    def _browser_example(self) -> None:
+        profile = AgentTargetProfile(name="reviewed-browser", kind="browser",
+                                     allowed_tools=tuple(sorted(BROWSER_TOOLS)),
+                                     settings={"allowed_origins": ["https://example.invalid"]})
+        self._target_request.setPlainText(json.dumps(profile.to_dict(), ensure_ascii=False, indent=2))
+        self._pages.setCurrentIndex(self._page_keys.index("agent_page_targets"))
+
     def _clear_observation(self, _task_id: str = "") -> None:
         self._observation.clear()
 
@@ -188,7 +198,10 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             action = json.loads(self._action.toPlainText())
             if not isinstance(action, dict) or not isinstance(action.get("arguments", {}), dict):
                 raise AgentTaskError("action must contain an arguments object")
-            arguments = {key: value for key, value in action.get("arguments", {}).items() if key not in {"x", "y"}}
+            excluded = {"x", "y"}
+            if action.get("tool") in BROWSER_ELEMENT_TOOLS:
+                excluded |= {"selector", "frame"}
+            arguments = {key: value for key, value in action.get("arguments", {}).items() if key not in excluded}
             action.update(arguments=arguments, reference=reference, observation_id=self._observation.observation_id)
             self._action.setPlainText(json.dumps(AgentActionRequest.from_dict(action).to_dict(),
                                                   ensure_ascii=False, indent=2))

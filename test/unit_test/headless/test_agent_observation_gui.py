@@ -52,6 +52,29 @@ def test_element_selection_only_edits_action_and_actions_submit_it(tab, monkeypa
     assert calls == [("act", {"task_id": "task-a", "action": action})]
 
 
+def test_browser_example_is_inert_and_dom_selection_replaces_locator(tab, monkeypatch):
+    from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile
+    calls = []
+    monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))
+    dict(tab.menu_actions())["agent_browser_example"]()
+    configuration = AgentTargetProfile.from_dict(json.loads(tab._target_request.toPlainText()))
+    assert configuration.kind == "browser"
+    assert configuration.settings["allowed_origins"] == ("https://example.invalid:443",)
+    assert calls == []
+    observed = observation()
+    observed["data"]["elements"] = [{"index": 0, "name": "Save", "role": "button", "selector": "#save",
+                                     "frame": "#form", "enabled": True, "visible": True}]
+    tab._action.setPlainText(json.dumps({"tool": "AC_browser_click", "arguments": {"selector": "#old", "frame": ""},
+                                       "observation_id": ""}))
+    tab._present_result(observed)
+    tab._observation._elements.cellClicked.emit(0, 0)
+    action = json.loads(tab._action.toPlainText())
+    assert action["arguments"] == {}
+    assert action["reference"] == {"element_index": 0}
+    assert "#save" in tab._observation._elements.item(0, 3).text()
+    assert calls == []
+
+
 def test_image_click_uses_unscaled_rendered_pixels_and_never_dispatches(tab, monkeypatch):
     calls = []
     monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))

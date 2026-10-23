@@ -87,12 +87,7 @@ class NativeWorker:
         if operation == "cleanup":
             return self._release_owned(payload)
         if operation == "configure":
-            self._spec = AgentTaskSpec.from_dict(payload["spec"])
-            self._owner = AuthorizationContext(**payload["owner"]) if payload.get("owner") else None
-            self._configure_profile(payload)
-            if not self._custom_target and (self._spec.target == "local-files" or self._profile_kind == "files"):
-                from je_auto_control.utils.agent_runtime.file_target import FileTarget
-                self._target = FileTarget()
+            self._configure_scope(payload)
         if self._spec is None:
             raise AgentTaskError("native worker must be configured by its owner")
         with ExitStack() as stack:
@@ -103,6 +98,18 @@ class NativeWorker:
             stack.enter_context(input_observer(self._input))
             stack.enter_context(operation_scope(TaskOperation(self._spec, self._check_activity, self._owner)))
             return self._operation(operation, payload)
+
+    def _configure_scope(self, payload: dict) -> None:
+        self._spec = AgentTaskSpec.from_dict(payload["spec"])
+        self._owner = AuthorizationContext(**payload["owner"]) if payload.get("owner") else None
+        self._configure_profile(payload)
+        if not self._custom_target and (self._spec.target == "local-files" or self._profile_kind == "files"):
+            from je_auto_control.utils.agent_runtime.file_target import FileTarget
+            self._target = FileTarget()
+        if not self._custom_target and self._profile_kind == "browser":
+            from je_auto_control.utils.agent_runtime.browser_target import BrowserTarget
+            if not isinstance(self._target, BrowserTarget):
+                self._target = BrowserTarget()
 
     def _configure_profile(self, payload: dict) -> None:
         if "profile" not in payload:
@@ -140,7 +147,7 @@ class NativeWorker:
         raise AgentTaskError("unknown native worker operation")
 
     def _ready_activity(self) -> None:
-        if self._custom_target or self._spec is None or self._profile_kind == "files":
+        if self._custom_target or self._spec is None or self._profile_kind in {"files", "browser"}:
             return
         if self._spec.target == "local-files":
             return

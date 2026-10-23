@@ -1,5 +1,7 @@
 # Changelog
 
+Experimental: add browser host profiles and six managed browser commands through the reviewed WebRunner SDK. Existing browser bridge APIs remain delegated to je_web_runner. DOM indexes use observation-local grounding; repeated readiness preserves one session. SDK absence fails before browser startup; no dependency or browser is installed automatically.
+
 Preserve MCP async caller authority, session roots and accepted tool availability; retired views/policies refuse late calls. HTTP plugin notifications reach live sessions exactly once per stream, and header publication is atomic with stream registration. Existing argument, rate-limit, confirmation and invocation gates remain in use. Add a metadata-only schema/latency benchmark and dated results without native input or browser execution.
 
 Add opt-in MCP progressive/static availability and snapshot pagination. Default full mode keeps an unpaginated authorized list. Anonymous/shared-token listings now match their existing operator invocation ceiling, so host administration names are hidden. Read-only host ceilings also filter newly registered plugins. Existing stdio import paths and the default AC_run_agent tool collection remain available.

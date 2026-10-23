@@ -1,5 +1,7 @@
 # Capability matrix
 
+Managed browser target: experimental and SDK-dependent; exact profile/task origins, fake Chromium, real SDK source-to-source, owned helper/loopback and timeout/uncertainty tests. Passive readiness remains not_probed and native_evidence not_recorded until separately accepted. Reviewed upload/download grants and real-browser acceptance remain open.
+
 MCP metadata discovery: experimental, platform-neutral; fake-registry and offscreen GUI checks. Search/single-schema lookup are implemented; session disclosure, pagination and static profiles use controlled HTTP/offscreen checks; role/root/env/rate/confirmation guards, asynchronous handoff, plugin notifications and stream-header ordering have controlled regression evidence. Dated metadata byte/latency measurements are in docs/benchmarks/mcp-discovery-2026-10-24.json; native/platform acceptance remains separate.
 
 Selected dev pushes run `.github/workflows/ei-lifecycle.yml` in an isolated

@@ -1575,11 +1575,12 @@ japanese_word_dict.update({
     'agent_element_index': '索引',
     'agent_element_name': '名前',
     'agent_element_role': 'ロール',
-    'agent_element_bounds': '領域'
+    'agent_element_bounds': '領域／DOM ロケータ'
 })
 
 japanese_word_dict.update({
     'agent_page_targets': 'ホスト対象',
+    'agent_browser_example': 'ブラウザ対象の例を作成',
     'agent_target_operation': '対象操作',
     'agent_target_request': '確認済みの対象設定',
     'agent_target_apply': '対象操作を適用',

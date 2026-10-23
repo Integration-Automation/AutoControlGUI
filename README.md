@@ -1,5 +1,23 @@
 # AutoControl
 
+Managed browser profiles (`kind: browser`) now delegate to the owned `je_web_runner` SDK from
+WebRunner (`D:\Codes\WebRunner`; integration source on its isolated managed-session branch).
+Profiles require exact `settings.allowed_origins`, browser-only tools and no desktop apps; every task
+also declares a narrower nonempty `options.allowed_origins`. Profile/task grants are checked again on
+activation. Registration stays inert. Install the reviewed managed-session SDK and its Chromium runtime
+in the helper environment explicitly; absent dependencies fail readiness and nothing is installed automatically.
+`AC_browser_navigate`, `AC_browser_click`, `AC_browser_fill`, `AC_browser_select`, `AC_browser_check`
+and `AC_browser_read` share Python/core, executor, MCP and Builder schemas. They operate inside the
+managed helper; drive them through the existing task submit/observe/act lifecycle, not an ambient browser.
+The read operation is `text`, `value` or `visible`; secret form controls are refused by WebRunner.
+Observation-local DOM indexes resolve selectors and frames after the runtime's freshness check.
+Failed effects remain uncertain and require reconciliation; pause/cancel retire owned resources.
+GUI Actions can draft a browser target example for review, and DOM selection only edits the action request.
+The dedicated helper preserves one fresh session across readiness checks, acknowledges browser cleanup
+and then reaps its owned process tree. Existing desktop input ownership is not acquired for browser tasks.
+Controlled cross-source tests use the real SDK with fake Chromium and owned IPC/loopback. Browser/native
+acceptance, reviewed transfers and browser workflow compilation remain tracked in `Progress.md`.
+
 MCP asynchronous calls preserve the accepting caller's role, session, exact root policy and
 disclosure view; retired sessions and path policies reject late dispatch. Stateless async calls keep
 their fixed profile. HTTP tool-list changes reach all live session streams for plugin updates, while
@@ -77,7 +95,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 841 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 847 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -292,7 +310,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 841 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 847 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -397,7 +415,7 @@ under a relative name are written below that directory.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 745 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 751 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |

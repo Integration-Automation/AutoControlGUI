@@ -210,3 +210,33 @@ MCP 非同步呼叫會保留接受請求時的角色、session、原路徑政策
 358,029 bytes；逐步模式為 5 個、2,029 bytes，回應大小減少 99.43%。交握為 58.263／47.439 ms，
 搜尋中位數為 16.243／19.718 ms；逐步啟用中位數為 42.486 ms。此本機量測不含冷啟動匯入及原生操作。
 有日期的 JSON 紀錄位於 ``docs/benchmarks/``；既有參數政策的涵蓋限制仍列於 ``Progress.md``。
+
+
+受管 WebRunner 目標與 DOM 參照
+----------------------------------------------------------------------
+
+受管瀏覽器 profile（``kind: browser``）統一委派給 WebRunner 的 ``je_web_runner`` SDK；
+開發來源為 ``D:\Codes\WebRunner``，整合來源位於其隔離的受管 session 功能分支。
+Profile 必須提供精確的 ``settings.allowed_origins``、瀏覽器專用工具，且不能授權桌面 app；
+每項任務另須設定非空、較窄的 ``options.allowed_origins``，每次啟用均重新核對兩層範圍。
+註冊不啟動資源；helper 環境須明確安裝已審閱的受管 SDK 與 Chromium，缺少時就緒失敗，不自動安裝。
+``AC_browser_navigate``、``AC_browser_click``、``AC_browser_fill``、``AC_browser_select``、``AC_browser_check``
+及 ``AC_browser_read`` 共用 Python/core、executor、MCP 與 Builder 定義。命令只在受管 helper 中
+運作，透過既有 task submit/observe/act 週期驅動。讀取操作為 ``text``、``value`` 或 ``visible``；
+WebRunner 拒絕秘密表單欄位。DOM 索引在目前 observation 內解析 selector／frame，再核對新鮮度。
+失敗副作用保持不確定且需對帳；暫停／取消會結束擁有的資源。GUI Actions 可產生瀏覽器目標範例
+供審閱；DOM 選取只編輯動作請求。專用 helper 跨就緒檢查保留同一個全新 session，正常清理先
+取得瀏覽器 ACK，再結束自己的程序樹，不取得共用桌面輸入控制權。跨來源受控測試使用真正 SDK、
+替身 Chromium、自有 IPC／loopback；實際瀏覽器／原生驗收、已審閱傳輸及瀏覽器流程編譯仍列於 ``Progress.md``。
+
+Profile 範例（先審閱，再用 ``manage_agent_target("register", profile)`` 註冊）::
+
+    {"name": "reviewed-browser", "kind": "browser",
+     "allowed_tools": ["AC_browser_navigate", "AC_browser_fill", "AC_browser_read"],
+     "settings": {"allowed_origins": ["https://example.invalid"]}}
+
+任務指定相同 target 名稱，列出自己的工具並設定 ``options.allowed_origins``。
+Skill 可導頁、填入 CSS selector，再獨立讀回 value，以 ``expect_result`` 驗證後才完成。
+外部 agent 先觀察，再以目前 observation ID 和 ``reference: {"element_index": 0}``
+呼叫 ``act_agent_task``；arguments 僅提供填入值／讀取操作，不混入另一個 selector／frame。
+初始分頁為空白；明確授權導頁後才會出現可選 DOM 參照。

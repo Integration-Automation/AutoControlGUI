@@ -93,6 +93,8 @@ class AgentObservationView(QWidget):
             self._elements.insertRow(index)
             for column, name in enumerate(("index", "name", "role", "bounds")):
                 value = index if name == "index" else element.get(name, "")
+                if name == "bounds" and "selector" in element:
+                    value = {"selector": element["selector"], "frame": element.get("frame", "")}
                 self._elements.setItem(index, column, QTableWidgetItem(str(value)))
 
     def _present_image(self, image: dict) -> None:

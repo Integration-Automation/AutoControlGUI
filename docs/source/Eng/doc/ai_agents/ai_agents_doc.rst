@@ -223,3 +223,38 @@ warm in-process handshake, search and enable latency. The captured Windows/Pytho
 (99.43% fewer response bytes). Handshake is 58.263 / 47.439 ms; search median is 16.243 / 19.718 ms.
 Progressive enable median is 42.486 ms. These local timings exclude cold imports and native work.
 See the dated JSON report under ``docs/benchmarks/``; argument-policy coverage limits remain in ``Progress.md``.
+
+
+Managed WebRunner targets and DOM references
+----------------------------------------------------------------------
+
+Managed browser profiles (``kind: browser``) now delegate to the owned ``je_web_runner`` SDK from
+WebRunner (``D:\Codes\WebRunner``; integration source on its isolated managed-session branch).
+Profiles require exact ``settings.allowed_origins``, browser-only tools and no desktop apps; every task
+also declares a narrower nonempty ``options.allowed_origins``. Profile/task grants are checked again on
+activation. Registration stays inert. Install the reviewed managed-session SDK and its Chromium runtime
+in the helper environment explicitly; absent dependencies fail readiness and nothing is installed automatically.
+``AC_browser_navigate``, ``AC_browser_click``, ``AC_browser_fill``, ``AC_browser_select``, ``AC_browser_check``
+and ``AC_browser_read`` share Python/core, executor, MCP and Builder schemas. They operate inside the
+managed helper; drive them through the existing task submit/observe/act lifecycle, not an ambient browser.
+The read operation is ``text``, ``value`` or ``visible``; secret form controls are refused by WebRunner.
+Observation-local DOM indexes resolve selectors and frames after the runtime's freshness check.
+Failed effects remain uncertain and require reconciliation; pause/cancel retire owned resources.
+GUI Actions can draft a browser target example for review, and DOM selection only edits the action request.
+The dedicated helper preserves one fresh session across readiness checks, acknowledges browser cleanup
+and then reaps its owned process tree. Existing desktop input ownership is not acquired for browser tasks.
+Controlled cross-source tests use the real SDK with fake Chromium and owned IPC/loopback. Browser/native
+acceptance, reviewed transfers and browser workflow compilation remain tracked in ``Progress.md``.
+
+Profile example (review and register with ``manage_agent_target("register", profile)``)::
+
+    {"name": "reviewed-browser", "kind": "browser",
+     "allowed_tools": ["AC_browser_navigate", "AC_browser_fill", "AC_browser_read"],
+     "settings": {"allowed_origins": ["https://example.invalid"]}}
+
+A task selects that name, repeats its allowed tools and supplies
+``options.allowed_origins``. A skill can navigate, fill a CSS selector and read its value
+with an independent ``expect_result`` before completion. External agents observe then call
+``act_agent_task`` with ``reference: {"element_index": 0}`` and the current observation ID;
+its arguments supply the fill value or read operation, without a competing selector/frame.
+The initial page is blank and has no DOM references until an explicitly authorized navigation.

@@ -167,6 +167,7 @@ class NativeDesktopTarget:
     def cleanup(self) -> None:
         """Reap native calls and release only host-recorded keys/buttons before input transfer."""
         channel = self._channel
+        self._cleanup_browser(channel)
         if not self._ledger.empty:
             if channel is None or channel.retired:
                 channel = self._launch(lambda: None)
@@ -184,3 +185,9 @@ class NativeDesktopTarget:
         if self._resource is not None:
             self._resource.close()
             self._resource = None
+
+    def _cleanup_browser(self, channel: OwnedChannel | None) -> None:
+        if (self._profile is not None and self._profile.kind == "browser"
+                and channel is not None and not channel.retired):
+            channel.request("cleanup", self._ledger.snapshot(), timeout=3, check=lambda: None,
+                            on_event=lambda event: self._input(event, cleanup=True))

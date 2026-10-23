@@ -1538,11 +1538,12 @@ traditional_chinese_word_dict.update({
     'agent_element_index': '索引',
     'agent_element_name': '名稱',
     'agent_element_role': '角色',
-    'agent_element_bounds': '範圍'
+    'agent_element_bounds': '範圍／DOM 定位'
 })
 
 traditional_chinese_word_dict.update({
     'agent_page_targets': '主機目標',
+    'agent_browser_example': '草擬瀏覽器目標範例',
     'agent_target_operation': '目標操作',
     'agent_target_request': '已審閱的目標設定',
     'agent_target_apply': '套用目標操作',

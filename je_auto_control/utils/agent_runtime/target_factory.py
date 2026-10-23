@@ -18,4 +18,7 @@ def build_target(profile: AgentTargetProfile) -> Any:
         return NativeDesktopTarget(resource_path=path, recovery_probe=lambda: None, profile=profile.to_dict())
     if profile.kind == "desktop":
         return NativeDesktopTarget(profile=profile.to_dict())
+    if profile.kind == "browser":
+        path = Path.home() / ".je_auto_control" / "input_ownership" / ("browser-" + profile.digest + ".lock")
+        return NativeDesktopTarget(resource_path=path, recovery_probe=lambda: None, profile=profile.to_dict())
     raise AgentTaskError("target kind does not have a host adapter factory")

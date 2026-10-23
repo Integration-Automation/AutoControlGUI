@@ -7,6 +7,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 from typing import Any, Mapping
+from urllib.parse import urlsplit
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached, freeze, thaw
@@ -19,7 +20,8 @@ def reviewed_tools(kind: str) -> frozenset[str]:
     """List implemented adapter commands without loading a platform SDK or connecting a target."""
     from je_auto_control.utils.agent_runtime.file_target import FILE_TOOLS
     from je_auto_control.utils.agent_runtime.targets import DESKTOP_TOOLS
-    kinds = {"files": FILE_TOOLS, "desktop": DESKTOP_TOOLS}
+    from je_auto_control.utils.agent_runtime.browser_commands import BROWSER_TOOLS
+    kinds = {"files": FILE_TOOLS, "desktop": DESKTOP_TOOLS, "browser": BROWSER_TOOLS}
     if kind not in kinds:
         raise AgentTaskError("target kind does not have an implemented managed adapter")
     return kinds[kind]
@@ -86,6 +88,14 @@ class AgentTargetProfile:
             raise AgentTaskError("task tools exceed the host target profile")
         if not {name.casefold() for name in spec.apps} <= {name.casefold() for name in self.apps}:
             raise AgentTaskError("task applications exceed the host target profile")
+        self._check_roots(spec)
+        origins = spec.options.get("allowed_origins", ())
+        if self.kind == "browser":
+            origins = browser_origins(origins)
+        if not _origins_within(origins, self.settings.get("allowed_origins", ())):
+            raise AgentTaskError("task network origins exceed the host target profile")
+
+    def _check_roots(self, spec: AgentTaskSpec) -> None:
         if spec.roots and not self.roots:
             raise AgentTaskError("target profile grants no filesystem roots")
         try:
@@ -94,9 +104,6 @@ class AgentTargetProfile:
                 paths.validate(root, operation="target profile root")
         except PathNotAllowedError as error:
             raise AgentTaskError("task roots exceed the host target profile") from error
-        origins = spec.options.get("allowed_origins", ())
-        if not _origins_within(origins, self.settings.get("allowed_origins", ())):
-            raise AgentTaskError("task network origins exceed the host target profile")
 
 
 def _settings(kind: str, value: Mapping) -> dict:
@@ -109,6 +116,8 @@ def _settings(kind: str, value: Mapping) -> dict:
     if kind == "desktop" and data.get("platform") not in {"windows", "macos", "x11", "wayland"}:
         raise AgentTaskError("desktop profiles require an explicit platform")
     _normalize_origins(data)
+    if kind == "browser":
+        data["allowed_origins"] = browser_origins(value.get("allowed_origins", ()))
     return data
 
 
@@ -126,6 +135,28 @@ def _check_resource_scope(kind: str, spec: AgentTaskSpec) -> None:
         raise AgentTaskError("file target profiles require explicit roots and no desktop applications")
     if kind == "desktop" and not spec.apps:
         raise AgentTaskError("desktop target profiles require explicit application names")
+    if kind == "browser" and spec.apps:
+        raise AgentTaskError("browser target profiles cannot grant desktop applications")
+
+
+def browser_origins(values: Any) -> list[str]:
+    """Normalize exact origin grants without importing or starting the optional browser SDK."""
+    if not isinstance(values, (list, tuple)) or not 1 <= len(values) <= 50:
+        raise AgentTaskError("browser origins require between one and fifty exact HTTP(S) origins")
+    return sorted({_browser_origin(value) for value in values})
+
+
+def _browser_origin(value: Any) -> str:
+    from je_auto_control.utils.agent_runtime.workflow_specs import url_origin
+    if not isinstance(value, str) or len(value) > 4096:
+        raise AgentTaskError("browser origins must be bounded text")
+    try:
+        parsed = urlsplit(value)
+        if parsed.path not in {"", "/"} or parsed.query or parsed.fragment or parsed.username is not None:
+            raise AgentTaskError("browser origin grants cannot contain paths, queries, fragments or credentials")
+        return url_origin(value)
+    except ValueError:
+        raise AgentTaskError("browser origin grant is invalid") from None
 
 
 def _origins_within(value: Any, allowed: Any) -> bool:
