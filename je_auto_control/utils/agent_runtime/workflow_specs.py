@@ -31,6 +31,8 @@ def draft_agent_workflow(workflow: str, config: Mapping[str, Any]) -> dict[str, 
     except (KeyError, OSError, TypeError, ValueError, ImportError) as error:
         raise AgentTaskError(f"invalid {workflow} configuration: {type(error).__name__}") from error
     spec["allowed_tools"] = sorted({action["tool"] for action in spec["actions"]})
+    if len(spec["actions"]) > 1000:
+        raise AgentTaskError("workflow requires at most one thousand actions")
     spec["budget"] = {"max_steps": max(25, len(spec["actions"]) + 2),
                       "wall_seconds": value.get("wall_seconds", 300),
                       "action_seconds": value.get("action_seconds", 30)}
@@ -76,10 +78,13 @@ def _downloads(config: dict, policy: TaskPolicy) -> dict:
             raise AgentTaskError("sha256 must be 64 lowercase hexadecimal characters")
     origins = sorted({url_origin(item.get("url", "")) for item in entries})
     actions = [_action("AC_workflow_download", {**entry, "directory": directory}) for entry in entries]
+    names = [item["name"] for item in entries]
     manifest = policy.path(config.get("manifest", str(Path(directory) / "manifest.json")))
     actions.append(_action("AC_workflow_manifest", {"directory": directory, "path": manifest,
-                                                  "names": [item["name"] for item in entries]}))
-    return {"actions": actions, "options": {"workflow": "download_archive", "allowed_origins": origins}}
+                                                  "names": names}))
+    return {"actions": actions, "options": {"workflow": "download_archive", "allowed_origins": origins},
+            "success_criteria": [{"kind": "actions_complete"}, {"kind": "file_manifest", "path": manifest,
+                                  "directory": directory, "names": names}]}
 
 
 def url_origin(url: str) -> str:
@@ -127,6 +132,9 @@ def _forms(config: dict, policy: TaskPolicy) -> dict:
     actions = [_focus(config)]
     for index, row in enumerate(rows):
         first_action = len(actions)
+        if config.get("new_record_selector"):
+            actions.append(_action("AC_workflow_control", {"operation": "invoke",
+                                   "selector": config["new_record_selector"]}, True))
         if any(field.get("column") not in row for field in fields):
             raise AgentTaskError("a mapped column is missing from the input table")
         for field in fields:
@@ -134,7 +142,7 @@ def _forms(config: dict, policy: TaskPolicy) -> dict:
             value = str(row[field["column"]])
             actions.append(_action("AC_workflow_control", {"operation": "set", "selector": selector,
                                                            "value": value}, True))
-            actions.append(_action("AC_workflow_control", {"operation": "get", "selector": selector}, value))
+            actions.append(_action("AC_workflow_wait", {"selector": selector, "expected": value}, value))
         _commit_actions(actions, config, str(index + 1))
         for action in actions[first_action:]:
             action["row"] = str(index + 1)
@@ -146,10 +154,13 @@ def _commit_actions(actions: list[dict], config: dict, row: str) -> None:
         raise AgentTaskError("submission requires a button and a read-back confirmation selector")
     if "confirmation_value" not in config:
         raise AgentTaskError("submission requires a deterministic confirmation_value")
+    confirmation = str(config["confirmation_value"])
+    actions.append({**_action("AC_workflow_control", {"operation": "get",
+                    "selector": config["confirmation_selector"]}), "expect_not_result": confirmation, "row": row})
     actions.append({**_action("AC_workflow_control", {"operation": "invoke",
                     "selector": config["submit_selector"]}, True), "row": row, "side_effect": "submit"})
-    actions.append({**_action("AC_workflow_control", {"operation": "get",
-                    "selector": config["confirmation_selector"]}, str(config["confirmation_value"])), "row": row})
+    actions.append({**_action("AC_workflow_wait", {"selector": config["confirmation_selector"],
+                    "expected": confirmation}, confirmation), "row": row})
 
 
 def _transfer(config: dict, _policy: TaskPolicy) -> dict:
@@ -164,7 +175,7 @@ def _transfer(config: dict, _policy: TaskPolicy) -> dict:
         captured = {"$capture": variable, "transform": field.get("transform", "identity")}
         actions.append(_action("AC_workflow_control", {"operation": "set", "selector": field["destination"],
                                                         "value": captured}, True))
-        actions.append({**_action("AC_workflow_control", {"operation": "get", "selector": field["destination"]}),
+        actions.append({**_action("AC_workflow_wait", {"selector": field["destination"], "expected": captured}),
                         "expect_capture": variable, "transform": field.get("transform", "identity")})
     _commit_actions(actions, config, "transfer")
     return {"actions": actions}
@@ -182,15 +193,15 @@ def _workspace(config: dict, policy: TaskPolicy) -> dict:
         if entry.get("position"):
             actions.append(_action("AC_snap_window", {"title": entry["window_title"],
                                                         "position": entry["position"]}, {"moved": True}))
-        actions.append(_action("AC_workflow_control", {"operation": "state", "selector": entry["ready_selector"]},
-                               entry["ready_state"]))
+        actions.append(_action("AC_workflow_wait", {"selector": entry["ready_selector"], "state": True,
+                                                    "expected": entry["ready_state"]}, entry["ready_state"]))
     return {"actions": actions, "options": {"workflow": "workspace", "approved_documents": launches}}
 
 
 def _validate_actions(spec: AgentTaskSpec) -> None:
     for action in spec.actions:
         arguments = action["arguments"]
-        if action["tool"] == "AC_workflow_control":
+        if action["tool"] in {"AC_workflow_control", "AC_workflow_wait"}:
             _validate_selector(arguments["selector"], spec.apps)
         if action["tool"] == "AC_snap_window" and arguments["position"] not in {
                 "left", "right", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right", "max"}:

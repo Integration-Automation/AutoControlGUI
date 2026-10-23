@@ -8,7 +8,7 @@ from typing import Any, Mapping, Sequence
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
 from je_auto_control.utils.agent_runtime.policy import durable_payload
-from je_auto_control.utils.agent_runtime.workflow_values import captures, expected
+from je_auto_control.utils.agent_runtime.workflow_values import captures, _matches_action
 from je_auto_control.utils.rbac.authorization import current_authorization
 
 _INACTIVE = frozenset({"not_applied", "failed"})
@@ -70,10 +70,10 @@ def _step_state(action: Mapping, receipt: Mapping | None, values: Mapping) -> st
     if receipt["status"] != "confirmed":
         return "pending"
     try:
-        required, value = expected(action, values)
+        verified = _matches_action(action, receipt, values)
     except KeyError:
         return "pending"
-    return "failed" if required and receipt["result"] != value else "success"
+    return "success" if verified else "failed"
 
 
 def _row_state(states: list[str]) -> str:

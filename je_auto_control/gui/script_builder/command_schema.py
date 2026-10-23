@@ -86,8 +86,10 @@ def _build_specs() -> List[CommandSpec]:
 
 def _add_agent_task_specs(specs: List[CommandSpec]) -> None:
     from je_auto_control.utils.agent_runtime.commands import CATALOG
+    kinds = {"string": FieldType.STRING, "integer": FieldType.INT,
+             "number": FieldType.FLOAT, "boolean": FieldType.BOOL}
     for name, (function, properties, required, _readonly, _management) in CATALOG.items():
-        fields = tuple(FieldSpec(key, FieldType.JSON if value["type"] == "object" else FieldType.STRING,
+        fields = tuple(FieldSpec(key, kinds.get(value.get("type"), FieldType.JSON),
                                  optional=key not in required) for key, value in properties.items())
         specs.append(CommandSpec(name, "Agent Tasks", name.removeprefix("AC_").replace("_", " "),
                                  fields=fields, description=function.__doc__ or name))

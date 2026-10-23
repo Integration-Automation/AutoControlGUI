@@ -161,6 +161,7 @@ COMMAND_CAPABILITIES: Dict[str, str] = {
 
 #: MCP tools whose capability is not the one their read-only hint implies.
 TOOL_CAPABILITIES: Dict[str, str] = {
+    "ac_workflow_wait": _DRIVE,
     "ac_agent_target_recover": _HOSTS,
     "ac_agent_runtime_stop": _HOSTS,
     "ac_agent_runtime_start": _HOSTS,

@@ -48,6 +48,56 @@ def test_deterministic_skill_runs_through_the_same_verifier(tmp_path):
         runtime.close()
 
 
+def test_finite_skill_progress_is_its_verified_sequence_even_with_identical_results(tmp_path):
+    target = Target()
+    target.perform = lambda *_args: {"value": 1}
+    runtime = AgentRuntime(tmp_path / "tasks.sqlite", targets={"fixture": target})
+    try:
+        handle = runtime.submit(task_spec(actions=[{"tool": "AC_increment", "expect_result": {"value": 1}}] * 20,
+                                          success_criteria=[{"kind": "actions_complete"}]))
+        result = run_task(runtime, handle.task_id)
+        assert result.state == "succeeded", result.reason
+        assert result.steps == 20
+    finally:
+        runtime.close()
+
+
+def test_model_cannot_claim_finite_progress_to_bypass_stuck_detection(tmp_path):
+    target = Target()
+    target.perform = lambda *_args: {"value": 1}
+
+    class Backend:
+        def decide(self, *_args, **_kwargs):
+            return {"tool": "AC_increment", "row": "untrusted", "expect_result": {"value": 1}}
+
+    runtime = AgentRuntime(tmp_path / "tasks.sqlite", targets={"fixture": target})
+    try:
+        handle = runtime.submit(task_spec(mode="ollama"))
+        result = run_task(runtime, handle.task_id, backend=Backend())
+        assert result.state == "waiting_user"
+        assert "progress" in result.reason
+        assert result.steps == 15
+    finally:
+        runtime.close()
+
+
+def test_resume_cannot_skip_a_confirmed_step_whose_readback_failed(tmp_path):
+    target = Target()
+    target.perform = lambda *_args: {"value": "stale"}
+    runtime = AgentRuntime(tmp_path / "tasks.sqlite", targets={"fixture": target})
+    try:
+        handle = runtime.submit(task_spec(actions=[
+            {"tool": "AC_increment", "expect_result": {"value": "new"}}, {"tool": "AC_increment"}],
+            success_criteria=[{"kind": "actions_complete"}]))
+        assert run_task(runtime, handle.task_id).state == "waiting_user"
+        assert runtime.get(handle.task_id).steps == 1
+        runtime.resume(handle.task_id)
+        assert run_task(runtime, handle.task_id).state == "waiting_user"
+        assert runtime.get(handle.task_id).steps == 1
+    finally:
+        runtime.close()
+
+
 def test_busy_local_model_initialization_stays_queued_without_acquiring_input(tmp_path):
     from je_auto_control.utils.agent_runtime import AgentControlBusy
     target = Target()

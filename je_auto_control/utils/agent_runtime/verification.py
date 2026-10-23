@@ -9,7 +9,8 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.policy import TaskPolicy
 from je_auto_control.utils.postcondition import check_postcondition
 
-KINDS = frozenset({"result_equals", "file_exists", "file_sha256", "file_text", "screen", "actions_complete"})
+KINDS = frozenset({"result_equals", "file_exists", "file_sha256", "file_text", "file_manifest", "screen",
+                   "actions_complete"})
 
 
 def validate_criteria(criteria: Sequence[Mapping[str, Any]]) -> None:
@@ -22,6 +23,9 @@ def validate_criteria(criteria: Sequence[Mapping[str, Any]]) -> None:
 
 
 def _validate_clause(kind: str, clause: Mapping[str, Any]) -> None:
+    if kind == "file_manifest":
+        from je_auto_control.utils.agent_runtime.manifest_evidence import validate_manifest_clause
+        validate_manifest_clause(clause)
     if kind == "result_equals" and (not isinstance(clause.get("key"), str) or "value" not in clause):
         raise AgentTaskError("result_equals requires key and value")
     if kind == "screen" and not clause.get("spec"):
@@ -47,23 +51,30 @@ def verify(policy: TaskPolicy, receipts: Sequence[Mapping[str, Any]],
 def _evaluate(clause: Mapping[str, Any], policy: TaskPolicy, receipts: Sequence[Mapping[str, Any]],
               observation: Mapping[str, Any]) -> bool | None:
     kind = clause["kind"]
+    if kind == "file_manifest":
+        from je_auto_control.utils.agent_runtime.manifest_evidence import manifest_matches
+        return manifest_matches(clause, policy)
     if kind == "actions_complete":
         from je_auto_control.utils.agent_runtime.workflow_values import complete
         return complete(policy.spec, receipts)
     if kind == "result_equals":
-        confirmed = [row for row in receipts if row["status"] == "confirmed"]
-        if not confirmed:
-            return None
-        result = confirmed[-1]["result"]
-        if not isinstance(result, Mapping) or clause["key"] not in result:
-            return None
-        return result[clause["key"]] == clause["value"]
+        return _last_result(clause, receipts)
     if kind == "screen":
         elements = observation.get("elements")
         if elements is None:
             return None
         return check_postcondition(list(elements), dict(clause["spec"])).ok
     return _file_evidence(clause, policy)
+
+
+def _last_result(clause: Mapping, receipts: Sequence[Mapping[str, Any]]) -> bool | None:
+    confirmed = [row for row in receipts if row["status"] == "confirmed"]
+    if not confirmed:
+        return None
+    result = confirmed[-1]["result"]
+    if not isinstance(result, Mapping) or clause["key"] not in result:
+        return None
+    return result[clause["key"]] == clause["value"]
 
 
 def _file_evidence(clause: Mapping[str, Any], policy: TaskPolicy) -> bool:

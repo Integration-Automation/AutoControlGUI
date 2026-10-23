@@ -10,7 +10,8 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import detached
 
 _NAME = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}")
-_DATA = re.compile(r"/(?:actions/[0-9]+/(?:arguments/[^/]+(?:/[^/]+)*|expect_result)|inputs/[^/]+(?:/[^/]+)*|"
+_DATA = re.compile(r"/(?:actions/[0-9]+/(?:arguments/[^/]+(?:/[^/]+)*|expect_result|expect_not_result)|"
+                   r"inputs/[^/]+(?:/[^/]+)*|"
                    r"success_criteria/[0-9]+/value)")
 
 

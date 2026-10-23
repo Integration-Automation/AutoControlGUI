@@ -1,7 +1,7 @@
 """Stable, headless AutoControl API façade."""
 
 from je_auto_control.utils.agent_runtime import (
-    draft_agent_workflow, workflow_download, workflow_manifest, workflow_control, workflow_open,
+    draft_agent_workflow, workflow_download, workflow_manifest, workflow_control, workflow_open, workflow_wait,
     AgentActionRequest, AgentActionResult, AgentControlBusy, AgentObservation, AgentRuntime,
     AgentTaskBudget, AgentTaskError, AgentTaskHandle, AgentTaskResult, AgentTaskSpec,
     get_agent_task_receipts, reconcile_agent_task, prune_agent_tasks, manage_agent_trigger, list_agent_triggers,
@@ -29,6 +29,7 @@ from je_auto_control.utils.failure_bundle import (
 
 __all__ = [
     "draft_agent_workflow", "workflow_download", "workflow_manifest", "workflow_control", "workflow_open",
+    "workflow_wait",
     "AgentActionRequest", "AgentActionResult", "AgentControlBusy", "AgentObservation", "AgentRuntime",
     "AgentTaskBudget", "AgentTaskError", "AgentTaskHandle", "AgentTaskResult", "AgentTaskSpec",
     "get_agent_task_receipts", "reconcile_agent_task", "prune_agent_tasks",

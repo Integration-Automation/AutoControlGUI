@@ -7,6 +7,7 @@ from je_auto_control.utils.agent_runtime import api
 from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow, WORKFLOWS
 from je_auto_control.utils.agent_runtime.workflow_files import workflow_download, workflow_manifest
 from je_auto_control.utils.agent_runtime.workflow_desktop import workflow_control, workflow_open
+from je_auto_control.utils.agent_runtime.workflow_wait import workflow_wait
 from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGER_OPERATIONS
 from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILL_OPERATIONS
 
@@ -43,6 +44,10 @@ CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
                               "selector": {"type": "object"}, "value": {"type": "string"}},
                              ("operation", "selector"), False, False),
     "AC_workflow_open": (workflow_open, {"path": {"type": "string"}}, ("path",), False, False),
+    "AC_workflow_wait": (workflow_wait, {"selector": {"type": "object"}, "expected": {},
+                         "state": {"type": "boolean"}, "timeout_seconds": {"type": "number",
+                                                                         "exclusiveMinimum": 0, "maximum": 60}},
+                        ("selector", "expected"), True, False),
     "AC_agent_runtime_stop": (api.stop_agent_runtime, {}, (), False, True),
     "AC_agent_runtime_start": (api.start_agent_runtime, {"directory": {"type": "string", "format": "path"}},
                                (), False, True),

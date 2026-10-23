@@ -42,7 +42,7 @@ Windows 共享桌面须解锁并空闲 60 秒，实体键鼠活动会触发暂�
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 836 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 837 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -244,7 +244,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 836 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 837 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -342,7 +342,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 737 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 738 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -632,3 +632,5 @@ helper 隔离仍待完成。设备暂停与序号回读仍未验证；受控 soc
 托管鼠标按下前会规范按钮所有权并确认实际光标位置。Windows 指针检查会拒绝其他窗口遮挡。影像仅将指定窗口绘制到清空的私有 GDI 内存，几何变化会拒绝该画面；绘制或读取失败也会释放资源。不改用桌面捕获。这些路径已用模拟原生 API 测试，实际原生验收仍未验证。
 
 Agent 任务界面将任务范围、工作流程设置、触发器、技能及恢复分页。观察页显示只读元素和已验证、严格遮罩的 JPEG，每个逻辑画面像素对应一个呈现像素。选择元素或影像坐标只会编辑该次观察的动作请求；由 Actions 的「执行观察动作」通过共用任务 API 发送。切换任务会清除预览，迟到回复不能替换当前任务；新画面必须重新选择，旧索引不能直接复用。关闭界面仅解除请求订阅。
+
+托管工作流程可用 workflow_wait／AC_workflow_wait 等待指定控件的精确值或状态，只重复读取；可取消且受动作预算限制，默认五秒、上限六十秒，不重发写入或提交。固定技能每一步都验证已有收据与固定顺序，恢复也不能跳过读回失败的步骤；模型自主循环仍保留停滞检测。新表单／跨应用模板会在提交前拒绝原本已匹配的确认值，提交后等待新的状态转换。批次可设置 new_record_selector 逐条重置；确认仅证明配置的界面转换，有交易标识值时应使用它。归档模板完成时会重读指定清单及文件摘要，清单上限一 MB，总验证数据上限六十四 MiB。

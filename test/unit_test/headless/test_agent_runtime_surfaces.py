@@ -14,6 +14,17 @@ def test_catalogue_is_available_in_executor_mcp_and_builder():
         assert name.lower() in registry
     assert "AgentTaskSpec" in ac.__all__
     assert callable(ac.submit_agent_task)
+    assert "workflow_wait" in ac.__all__
+    assert callable(ac.workflow_wait)
+
+
+def test_builder_preserves_json_numeric_and_boolean_workflow_parameters():
+    from je_auto_control.gui.script_builder.command_schema import COMMAND_SPECS, FieldType
+    wait = {field.name: field.field_type for field in COMMAND_SPECS["AC_workflow_wait"].fields}
+    assert wait == {"selector": FieldType.JSON, "expected": FieldType.JSON,
+                    "state": FieldType.BOOL, "timeout_seconds": FieldType.FLOAT}
+    manifest = {field.name: field.field_type for field in COMMAND_SPECS["AC_workflow_manifest"].fields}
+    assert manifest["names"] == FieldType.JSON
 
 
 def test_cli_task_commands_parse_without_starting_a_service():

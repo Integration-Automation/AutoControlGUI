@@ -13,7 +13,7 @@ from je_auto_control.utils.agent_runtime.runner import run_task
 
 class Applications:
     def __init__(self):
-        self.values = {"Source": "  Ada  ", "Confirmation": "saved"}
+        self.values = {"Source": "  Ada  ", "Confirmation": "ready"}
         self.submissions = 0
         self.opened = []
         self.fail_readback = False
@@ -33,6 +33,10 @@ class Applications:
             self.opened.append(arguments["path"])
             return True
         selector = arguments["selector"]["name"]
+        if tool == "AC_workflow_wait":
+            if arguments.get("state"):
+                return {"read_only": False}
+            return "wrong" if self.fail_readback else self.values.get(selector, "")
         operation = arguments["operation"]
         if operation == "state":
             return {"read_only": False}
@@ -41,7 +45,11 @@ class Applications:
             return True
         if operation == "get":
             return "wrong" if self.fail_readback else self.values.get(selector, "")
+        if selector == "New":
+            self.values["Confirmation"] = "ready"
+            return True
         self.submissions += 1
+        self.values["Confirmation"] = "saved"
         return True
 
     def cleanup(self):
@@ -54,7 +62,7 @@ def selector(name):
 
 def commit_config():
     return {"submit_selector": selector("Save"), "confirmation_selector": selector("Confirmation"),
-            "confirmation_value": "saved"}
+            "confirmation_value": "saved", "new_record_selector": selector("New")}
 
 
 @pytest.fixture
@@ -80,7 +88,24 @@ def test_csv_batch_validates_and_reads_back_each_row_before_submit(apps, tmp_pat
         **commit_config()})
     assert result.state == "succeeded"
     assert target.submissions == 2
-    assert len(runtime.store.actions(task.task_id)) == 9
+    assert len(runtime.store.actions(task.task_id)) == 13
+
+
+def test_stale_saved_label_never_causes_a_duplicate_submission(apps, tmp_path):
+    runtime, target = apps
+    target.values["Confirmation"] = "saved"
+    source = tmp_path / "rows.csv"
+    source.write_text("name\nAda\n", encoding="utf-8")
+    config = {key: value for key, value in commit_config().items() if key != "new_record_selector"}
+    task, result = execute(runtime, "batch_form", {"roots": [str(tmp_path)], "apps": ["fixture"],
+        "source": str(source), "window_title": "Form", "fields": [{"column": "name", "selector": selector("Name")}],
+        **config})
+    assert result.state == "waiting_user"
+    assert target.submissions == 0
+    assert runtime.receipts(task.task_id)["rows"] == [{"row": "1", "status": "failed"}]
+    runtime.resume(task.task_id)
+    assert run_task(runtime, task.task_id).state == "waiting_user"
+    assert target.submissions == 0
 
 
 def test_readback_mismatch_stops_before_submission(apps, tmp_path):

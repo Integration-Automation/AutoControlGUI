@@ -55,5 +55,10 @@ def independent_evidence(spec: dict) -> bool:
     """Accept explicit evidence or reviewed semantic read-back, never dispatch-only completion."""
     if any(clause["kind"] != "actions_complete" for clause in spec["success_criteria"]):
         return True
-    return any(action["tool"] == "AC_workflow_control" and action["arguments"].get("operation") in {"get", "state"}
+    return any(_read_back(action)
                and ("expect_result" in action or "expect_capture" in action) for action in spec["actions"])
+
+
+def _read_back(action: dict) -> bool:
+    return (action["tool"] == "AC_workflow_wait" or
+            action["tool"] == "AC_workflow_control" and action["arguments"].get("operation") in {"get", "state"})
