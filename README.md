@@ -1,5 +1,9 @@
 # AutoControl
 
+Agent tool calls use `executor.execute_one(name, arguments)`, returning the raw result through
+the same authorization, variable interpolation, cancellation and journal boundaries as action scripts.
+Private executor arguments are rejected. Managed task delivery is tracked in `Progress.md`.
+
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

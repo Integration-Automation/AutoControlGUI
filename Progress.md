@@ -1,5 +1,12 @@
 # Progress
 
+## Agent 電腦接管與任務自動化
+
+`WIP` — 依 `docs/superpowers/plans/2026-10-23-agent-runtime.md` 交付受管任務。
+共用單指令分派已接入；尚缺 P1 控制權、P2 觀察驗證、P3 本機模型、P4 完整流程、
+P5 持久化觸發、P6 GUI/MCP、P7 平台、P8 多 agent/多機與 P9 技能。
+既有原生桌面與真機驗收暫緩限制沿用；新流程不新增付費依賴。
+
 ## 跨平台與 GUI 全面改版
 
 `TODO` — 重設 UI、重寫並優化 GUI、修正 Wayland 與函式庫問題、跨機器同步、

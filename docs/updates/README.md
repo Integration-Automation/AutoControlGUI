@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261023-01 | 2026-10-23 | Share agent and executor command boundaries | #done #agent #P0 | [2026-10-c](2026-10-c.md) |
 | U-20261021-14 | 2026-10-21 | Reject inconclusive live EI cleanup and inspect native evidence | #done #ci #D2 | [2026-10-b](2026-10-b.md) |
 | U-20261021-13 | 2026-10-21 | Collect bounded native EI teardown evidence on dev | #done #ci #D2 | [2026-10-b](2026-10-b.md) |
 | U-20261021-12 | 2026-10-21 | Run cancellable diagnostics through owned GUI tasks and scoped I/O | #done #diagnostics #D1 #F3 | [2026-10-b](2026-10-b.md) |

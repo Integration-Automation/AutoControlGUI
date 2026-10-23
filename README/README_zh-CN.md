@@ -1,5 +1,8 @@
 # AutoControl
 
+Agent 工具调用经 `executor.execute_one(name, arguments)` 返回原始结果，与动作脚本共用
+授权、变量插值、取消及日志边界；拒绝私有 executor 参数。受管任务交付进度见 `Progress.md`。
+
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)

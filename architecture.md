@@ -13,6 +13,11 @@ macOS, Linux X11, Linux Wayland, Android and iOS.
 
 ## 2. Layers and directories
 
+Agent tool calls share `Executor.execute_one` with the existing per-action pipeline.
+`executor/dispatch.py` binds strict executor ownership, raw-result capture and intersecting
+context-local guards. Guards run after variable interpolation on nested commands as well;
+single-command callers also enforce the default command capability that server routes normally enforce.
+
 Native pointer region validation preserves raw-first then layout-origin
 mapping. A miss raises a failed LibeiUnavailable before motion/frame or
 a following click. The input selector propagates that refusal and cannot

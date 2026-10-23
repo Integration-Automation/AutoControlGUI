@@ -118,3 +118,10 @@ An AI-controlled GUI process has control over the host machine.
 * Prefer explicit tool allow-lists.
 * Do not expose shell/process/package-loading tools to untrusted models.
 * Use authentication, audit, rate limiting, and confirmation controls for service deployments.
+Single-command dispatch
+-----------------------
+
+``executor.execute_one(name, arguments)`` and ``run_tool_call`` share script authorization,
+interpolation, cancellation and journal capture while returning raw command results.
+Private executor arguments are rejected. Identity-scoped calls require command capability.
+

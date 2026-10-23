@@ -1,5 +1,11 @@
 # Public API lifecycle
 
+`Executor.execute_one(name, arguments=None)` is additive and returns the raw command result.
+`run_tool_call` now uses it: configured identities must possess the command capability,
+private top-level arguments are refused, runtime variables interpolate, cancellation propagates,
+and an enclosing action journal captures the call. Calls without an RBAC scope retain local trust.
+Nested dispatch intersects context-local command guards after argument interpolation.
+
 Selected dev pushes run `.github/workflows/ei-lifecycle.yml` in an isolated
 libei/libeis container, retaining versions and both native logs for 14 days in
 `ei-lifecycle-<run>-<attempt>` artifacts. Half-open and live cleanup children

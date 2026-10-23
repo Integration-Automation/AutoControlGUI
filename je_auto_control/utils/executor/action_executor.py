@@ -30,6 +30,7 @@ from je_auto_control.utils.executor.action_schema import (
     unknown_command_names, validate_actions,
 )
 from je_auto_control.utils.executor.flags import as_bool as _as_bool
+from je_auto_control.utils.executor.dispatch import dispatch_checkpoint
 from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue, MacroDepthExceeded,
 )
@@ -8222,7 +8223,9 @@ class Executor:
                 raise AutoControlActionException(
                     f"{name} requires a dict of arguments"
                 )
-            return block_handler(self, self._resolve_runtime_args(args, name))
+            resolved = self._resolve_runtime_args(args, name)
+            dispatch_checkpoint(name, resolved)
+            return block_handler(self, resolved)
 
         event = self.event_dict.get(name)
         if event is None:
@@ -8230,12 +8233,19 @@ class Executor:
 
         if len(action) == 2:
             resolved = self._resolve_runtime_args(action[1], name)
+            dispatch_checkpoint(name, resolved)
             if isinstance(resolved, dict):
                 return event(**resolved)
             return event(*resolved)
         if len(action) == 1:
+            dispatch_checkpoint(name, {})
             return event()
         raise AutoControlActionException(cant_execute_action_error_message + " " + describe_action(action))
+
+    def execute_one(self, name: str, arguments: Optional[Dict[str, Any]] = None) -> Any:
+        """Execute one public command through validation, policy and journal boundaries."""
+        from je_auto_control.utils.executor.dispatch import execute_one
+        return execute_one(self, name, arguments)
 
     def execute_action(self, action_list: Union[list, dict],
                        raise_on_error: bool = False,

@@ -13,6 +13,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Route agent tool calls through validated, authorized, cancellable executor dispatch and journal capture.
+  Add `Executor.execute_one` with raw results. Private top-level tool arguments are rejected;
+  configured viewer identities cannot drive input through `run_tool_call`.
+
 - Fail live EI cleanup verification on unrelated child errors or missing native
   completion evidence; retain bounded fault traces and release owned device refs
   before the context. Record native half-open SIGSEGV and socket-peer refusal

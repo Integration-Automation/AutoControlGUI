@@ -114,3 +114,9 @@ AI 控制的 GUI process 具有主機操作權限。
 * AI agent 優先使用明確的工具 allow-list。
 * 不要把 shell/process/package-loading 工具暴露給不受信任的模型。
 * 作為服務部署時使用 authentication、audit、rate limit 與 confirmation 控制。
+單指令執行
+----------
+
+``executor.execute_one(name, arguments)`` 與 ``run_tool_call`` 共用腳本的授權、
+插值、取消與日誌邊界，回傳原始結果。私有 executor 參數被拒絕；身分範圍內檢查指令能力。
+
