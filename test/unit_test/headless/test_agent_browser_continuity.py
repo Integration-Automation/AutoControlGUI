@@ -73,5 +73,5 @@ def test_external_browser_owner_can_reobserve_a_fresh_context_after_pause(fake_s
 
 
 def test_only_reviewed_non_effects_allow_a_fresh_skill_context():
-    from je_auto_control.utils.agent_runtime.browser_continuity import require_browser_continuity
-    require_browser_continuity(form(), [{"status": "not_applied"}, {"status": "failed"}], False)
+    from je_auto_control.utils.agent_runtime.target_continuity import require_context_continuity
+    require_context_continuity(form(), [{"status": "not_applied"}, {"status": "failed"}], False, kind="browser")

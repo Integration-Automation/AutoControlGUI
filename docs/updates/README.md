@@ -496,3 +496,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-15 | 2026-10-24 | Runtime authority, exports and budget race closure | #done #agent #contracts | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-16 | 2026-10-24 | Fence retired browser skill contexts | #done #agent #recovery | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-17 | 2026-10-24 | Fence retired desktop skill contexts | #done #agent #recovery | [2026-10-c](2026-10-c.md) |

@@ -10,6 +10,7 @@ from contextlib import nullcontext
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentHumanReview
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
 from je_auto_control.utils.agent_runtime.workspace_scope import bootstrap_allowed, focus_approved
+from je_auto_control.utils.agent_runtime.target_continuity import require_context_continuity
 
 # Only these reviewed commands can drive the default desktop adapter. Additional
 # application integrations register their own adapter instead of receiving all AC_*.
@@ -44,6 +45,10 @@ class DesktopTarget:
         if not bootstrap_allowed(spec):
             self._check_foreground()
         return True, ""
+
+    def check_resume(self, spec: AgentTaskSpec, receipts: list[dict]) -> None:
+        """A retired desktop scope cannot attest that earlier form/window state is still current."""
+        require_context_continuity(spec, receipts, self._spec == spec, kind="desktop")
 
     def _check_foreground(self) -> tuple[int, str, int]:
         from je_auto_control.wrapper.auto_control_window import foreground_window, foreground_window_process_id

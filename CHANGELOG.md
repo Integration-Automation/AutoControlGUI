@@ -1,5 +1,7 @@
 # Changelog
 
+Extend retired-context prefix protection to managed desktop skills, including host-profiled and built-in desktop helpers. The shared validator is now target_continuity.py. Browser protection, external reobservation and persistent file recovery retain their behavior; interrupted desktop fixed flows now require review before continuing old actions.
+
 Experimental browser recovery now refuses a finite skill prefix when its original context has retired. The shared activation gate runs before helper replacement/input ownership, enters human review and retains history; users review remaining steps into a new task. Uninterrupted sessions, fresh starts and external reobservation remain supported. This closes a reproduced empty-form submission after pause/restart; it does not implement browser state restoration.
 
 Fix generic HTTP transport forwarding local principals/root witnesses: only explicit validated local runtime client calls delegate metadata. Complete versioned API exports and shipped command stubs, including recovery/skills/browser operations; unknown postponed stub types follow the existing Any fallback. Sample persistent budget clocks after acquiring the database transaction to prevent concurrent readers from falsely expiring a task. Public task and GUI operation signatures remain compatible.

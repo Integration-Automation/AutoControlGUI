@@ -1,5 +1,7 @@
 # Capability matrix
 
+UI skill continuity now covers desktop and browser targets. Fake applications reproduce an edited form being submitted after scope retirement; the shared pre-start fence refuses it. Live contexts and persistent file recovery retain separate lifecycle checks. Native platform evidence and state-restoring resume remain open.
+
 Browser continuity: a retained finite prefix requires the original live SDK/helper context. Reproduced pause/restart empty-form submission is refused before replacement startup; history and explicit review remain available. Source-to-source real SDK/owned-helper tests verify the fence. Authenticated/draft state restoration remains open; native evidence remains separate.
 
 Runtime contract closure: versioned API names now resolve consistently, all shipped commands appear in IDE stubs, local authority forwarding stays on explicit loopback runtime calls, and reordered concurrent budget readers cannot cause false clock rollback. Evidence uses deterministic transaction ordering, fake HTTP and owned loopback; native/device/browser evidence remains separate.

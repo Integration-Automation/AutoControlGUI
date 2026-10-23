@@ -343,3 +343,13 @@ helper or sending the next action. Review the remaining steps and create a new t
 Pausing before any retained attempt and attempts reviewed as failed/not-applied permit a fresh start.
 External owners can reobserve a new context and plan fresh scoped actions; ordinary uninterrupted skills
 continue on their existing session. Restoring authenticated/draft browser state remains open work.
+
+Desktop skill context continuity
+----------------------------------------------------------------------
+
+Desktop finite skills now use the same context-continuity fence as browser skills. Retiring a
+desktop scope or its owned helper requires review before an old prefix can continue; paused form/window
+state is not established by historical receipts. Live uninterrupted contexts continue normally. File
+adapters retain their persistent-artifact recovery. Target checks run before helper replacement, and
+existing resume/status/receipt interfaces expose the human-review result. Draft/authentication/window
+state restoration and reviewed remaining-step reconstruction remain open; native acceptance stays paused.

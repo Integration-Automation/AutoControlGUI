@@ -1,5 +1,12 @@
 # Public API lifecycle
 
+Desktop finite skills now use the same context-continuity fence as browser skills. Retiring a
+desktop scope or its owned helper requires review before an old prefix can continue; paused form/window
+state is not established by historical receipts. Live uninterrupted contexts continue normally. File
+adapters retain their persistent-artifact recovery. Target checks run before helper replacement, and
+existing resume/status/receipt interfaces expose the human-review result. Draft/authentication/window
+state restoration and reviewed remaining-step reconstruction remain open; native acceptance stays paused.
+
 A finite browser skill's verified prefix now requires its original live browser/helper context.
 After pause, cleanup, helper loss or runtime restart, retained action history cannot prove that the
 form still contains its previous values. Continuation enters human review before launching a replacement
