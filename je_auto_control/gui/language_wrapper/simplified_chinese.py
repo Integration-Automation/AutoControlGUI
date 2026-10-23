@@ -1486,6 +1486,8 @@ simplified_chinese_word_dict["agent_stop_all"] = "停止全部任务"
 simplified_chinese_word_dict.update({
     "agent_receipts": "动作回执／逐条结果",
     "agent_reconcile": "记录已确认的结果",
+    "agent_recovery_note": "崩溃恢复审核备注",
+    "agent_recover_target": "恢复已审核的输入控制权",
     "agent_prune": "清理过期任务缓存"
 })
 

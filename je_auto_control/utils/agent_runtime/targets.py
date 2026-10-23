@@ -8,6 +8,7 @@ from typing import Any
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
+from je_auto_control.utils.agent_runtime.workspace_scope import bootstrap_allowed, focus_approved
 
 # Only these reviewed commands can drive the default desktop adapter. Additional
 # application integrations register their own adapter instead of receiving all AC_*.
@@ -39,7 +40,8 @@ class DesktopTarget:
         if not set(spec.allowed_tools) <= DESKTOP_TOOLS:
             return False, "one or more tools lack a reviewed desktop adapter"
         self._spec = spec
-        self._check_foreground()
+        if not bootstrap_allowed(spec):
+            self._check_foreground()
         return True, ""
 
     def _check_foreground(self) -> tuple[int, str, int]:
@@ -56,7 +58,12 @@ class DesktopTarget:
     def observe(self) -> dict[str, Any]:
         """Observe bounded scoped controls; optional images stay in the observation's memory only."""
         from je_auto_control.utils.accessibility.accessibility_api import list_accessibility_elements
-        hwnd, title, pid = self._check_foreground()
+        try:
+            hwnd, title, pid = self._check_foreground()
+        except AgentTaskError:
+            if bootstrap_allowed(self._spec):
+                return {"identity": "approved-window-bootstrap", "elements": [], "state": "waiting_for_window"}
+            raise
         controls = list_accessibility_elements(max_results=200, window_title=title)
         elements: list[dict[str, Any]] = []
         for item in controls:
@@ -90,6 +97,10 @@ class DesktopTarget:
         from je_auto_control.utils.tool_use_schema import run_tool_call
         if name not in DESKTOP_TOOLS:
             raise AgentTaskError("tool lacks a reviewed desktop adapter")
+        if name == "AC_workflow_open":
+            raise AgentTaskError("approved document launch must be owned by the host outside its input helper")
+        if name == "AC_focus_window" and bootstrap_allowed(self._spec):
+            return focus_approved(self._spec, arguments)
         hwnd, _title, pid = self._check_foreground()
         self._action_identity = hwnd, pid
         if name.startswith("AC_control_"):

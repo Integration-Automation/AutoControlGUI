@@ -8,11 +8,13 @@ import socket
 import sys
 import threading
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.input_ledger import InputLedger
+from je_auto_control.utils.agent_runtime.input_journal import InputJournal
+from je_auto_control.utils.agent_runtime.native_recovery import no_held_input
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
 from je_auto_control.utils.agent_runtime.native_channel import OwnedChannel
 from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock
@@ -38,11 +40,15 @@ def _desktop_lock_path() -> Path:
 class NativeDesktopTarget:
     """Only trusted host code may select an argv/resource path; neither is task/model input."""
 
-    def __init__(self, *, argv: Sequence[str] | None = None, resource_path: Path | None = None) -> None:
+    def __init__(self, *, argv: Sequence[str] | None = None, resource_path: Path | None = None,
+                 recovery_probe: Callable[[], None] = no_held_input) -> None:
         self._argv = tuple(argv) if argv is not None else (
             sys.executable, "-u", "-m", "je_auto_control.utils.agent_runtime.native_worker")
         self._resource_path = resource_path
         self._resource: RuntimeLock | None = None
+        self._journal: InputJournal | None = None
+        self._recovery_probe = recovery_probe
+        self._pending: str | None = None
         self._channel: OwnedChannel | None = None
         self._ledger = InputLedger()
         self._takeover: Any = None
@@ -50,7 +56,15 @@ class NativeDesktopTarget:
 
     def _ensure(self) -> OwnedChannel:
         if self._resource is None:
-            self._resource = RuntimeLock(self._resource_path or _desktop_lock_path())
+            path = self._resource_path or _desktop_lock_path()
+            resource = RuntimeLock(path)
+            journal = InputJournal(path)
+            try:
+                journal.acquire()
+            except BaseException:  # reason: failed recovery gate cannot retain the newly acquired OS lock
+                resource.close()
+                raise
+            self._resource, self._journal = resource, journal
         if self._channel is None or self._channel.retired:
             if not self._ledger.empty:
                 raise AgentTaskError("native input cleanup is required before another operation")
@@ -72,8 +86,30 @@ class NativeDesktopTarget:
             raise AgentTaskError("native targets require an explicitly managed operation scope")
         context.checkpoint()
         channel = self._ensure()
-        return channel.request(operation, payload, timeout=context.spec.budget.action_seconds,
-                               check=context.checkpoint, on_event=self._ledger.consume)
+        self._pending = operation
+        self._persist()
+        result = channel.request(operation, payload, timeout=context.spec.budget.action_seconds,
+                                 check=context.checkpoint, on_event=self._input)
+        self._pending = None
+        self._persist()
+        return result
+
+    def _persist(self) -> None:
+        if self._journal is not None:
+            self._journal.update(self._ledger.snapshot(), self._pending)
+
+    def _input(self, event: dict, *, cleanup: bool = False) -> None:
+        self._ledger.consume(event, cleanup=cleanup)
+        self._persist()
+
+    def recover(self, note: str, *, actor: str) -> dict:
+        """Review a stale witness while exclusively owning the resource; never replay old input."""
+        path = self._resource_path or _desktop_lock_path()
+        lock = RuntimeLock(path)
+        try:
+            return InputJournal(path).recover(note, self._recovery_probe, actor)
+        finally:
+            lock.close()
 
     def ready(self, spec: AgentTaskSpec) -> tuple[bool, str]:
         """Configure the owned helper only after the runtime has acquired its target lease."""
@@ -93,6 +129,15 @@ class NativeDesktopTarget:
 
     def perform(self, name: str, arguments: dict[str, Any]) -> Any:
         """Execute an authorized command in the helper, retaining input ownership in the host."""
+        if name == "AC_workflow_open":
+            from je_auto_control.utils.agent_runtime.workflow_desktop import workflow_open
+            self._ensure()
+            self._pending = "launch_document"
+            self._persist()
+            result = workflow_open(**arguments)
+            self._pending = None
+            self._persist()
+            return result
         return self._request("perform", {"tool": name, "arguments": arguments})
 
     def cleanup(self) -> None:
@@ -103,12 +148,16 @@ class NativeDesktopTarget:
                 channel = OwnedChannel(self._argv)
                 self._channel = channel
             channel.request("cleanup", self._ledger.snapshot(), timeout=3, check=lambda: None,
-                            on_event=lambda event: self._ledger.consume(event, cleanup=True))
+                            on_event=lambda event: self._input(event, cleanup=True))
         if channel is not None:
             channel.close()
         self._channel = None
         if not self._ledger.empty:
             raise AgentTaskError("native input cleanup has not been confirmed")
+        if self._journal is not None:
+            self._journal.release()
+            self._journal = None
+        self._pending = None
         if self._resource is not None:
             self._resource.close()
             self._resource = None

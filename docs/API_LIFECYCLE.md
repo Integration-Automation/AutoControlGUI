@@ -514,3 +514,5 @@ need explicit owner review. Native task images persist only with strict-redactio
 submit_agent_task accepts an optional owner-scoped idempotency_key. manage_agent_trigger and
 list_agent_triggers add durable preauthorized interval/cron/file/event bindings across all task surfaces.
 Private vault guards are installed by managed operation context; unscoped script interpolation is unchanged.
+
+Input ownership writes a private, fsynced per-resource crash witness before native dispatch and input ACK. An unfinished witness blocks new owners across databases. Explicit host-only recovery requires a review note and a trusted no-held-input probe, never replays persisted input or signals persisted PIDs, and does not reconcile/resume the old task. POSIX input helpers monitor their actual parent and retire only their own live session group. Approved document handoff runs outside the input helper tree, so user applications survive normal task cleanup; bounded, preapproved focus steps wait for scoped windows. Observations also expire against a host monotonic clock. Native desktop/device acceptance remains unverified.

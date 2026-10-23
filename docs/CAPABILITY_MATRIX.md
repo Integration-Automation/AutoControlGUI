@@ -666,3 +666,5 @@ Preauthorized triggers have fake-source and real owned file-helper coverage for 
 restart, bounded pending work, owner revocation, authority-store isolation and event-scoped outputs.
 Canonical-root symlink replacement is tested only where the filesystem grants symlink creation.
 Emergency stop and queued recovery cover more than one thousand task records without native input.
+
+Input ownership writes a private, fsynced per-resource crash witness before native dispatch and input ACK. An unfinished witness blocks new owners across databases. Explicit host-only recovery requires a review note and a trusted no-held-input probe, never replays persisted input or signals persisted PIDs, and does not reconcile/resume the old task. POSIX input helpers monitor their actual parent and retire only their own live session group. Approved document handoff runs outside the input helper tree, so user applications survive normal task cleanup; bounded, preapproved focus steps wait for scoped windows. Observations also expire against a host monotonic clock. Native desktop/device acceptance remains unverified.

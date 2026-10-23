@@ -157,6 +157,8 @@ class NativeWorker:
 
 def main() -> None:
     """Run only when explicitly launched by a host-owned NativeDesktopTarget."""
+    from je_auto_control.utils.agent_runtime.parent_watch import start_parent_watch
+    start_parent_watch()
     NativeWorker(sys.stdin.buffer, sys.stdout.buffer).run()
 
 

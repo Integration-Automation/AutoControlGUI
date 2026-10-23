@@ -155,3 +155,5 @@ are ephemeral unless strict-redacted persistence is explicitly enabled.
 ``manage_agent_trigger`` captures approved interval/cron/file/event templates and refreshes the owner
 on each fire. Event/task deduplication commits atomically. ``submit_agent_task`` accepts an optional
 idempotency key; CLI and Actions expose trigger controls. Managed scopes reject ambient vault resolution.
+
+Input ownership writes a private, fsynced per-resource crash witness before native dispatch and input ACK. An unfinished witness blocks new owners across databases. Explicit host-only recovery requires a review note and a trusted no-held-input probe, never replays persisted input or signals persisted PIDs, and does not reconcile/resume the old task. POSIX input helpers monitor their actual parent and retire only their own live session group. Approved document handoff runs outside the input helper tree, so user applications survive normal task cleanup; bounded, preapproved focus steps wait for scoped windows. Observations also expire against a host monotonic clock. Native desktop/device acceptance remains unverified.

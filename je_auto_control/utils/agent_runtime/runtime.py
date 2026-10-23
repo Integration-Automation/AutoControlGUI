@@ -66,6 +66,7 @@ class AgentRuntime:
         self._stop_final: dict[str, str] = {}
         self._leases: dict[str, ControlLease] = {}
         self._observations: dict[str, AgentObservation] = {}
+        self._observation_times: dict[str, float] = {}
         self._mutex = threading.RLock()
         self._task_locks: dict[str, Any] = {}
         self._closed = False
@@ -255,6 +256,7 @@ class AgentRuntime:
                         self._token(task_id).checkpoint()
                     observation = AgentObservation(uuid.uuid4().hex, task_id, time.time(), freeze(data))
                     self._observations[task_id] = observation
+                    self._observation_times[task_id] = time.monotonic()
                     if row["spec"]["options"].get("persist_images") and data.get("image"):
                         self.evidence.image(task_id, observation.observation_id, data["image"])
                     return observation
@@ -265,7 +267,8 @@ class AgentRuntime:
         observation = self._observations.get(row["id"])
         if observation is None or request.observation_id != observation.observation_id:
             raise AgentTaskError("observation is missing or no longer current")
-        if time.time() - observation.captured_at > 30:
+        age = time.monotonic() - self._observation_times.get(row["id"], float("-inf"))
+        if not 0 <= age <= 30 or time.time() - observation.captured_at > 30:
             raise AgentTaskError("observation has expired")
         current = self._target(row).observe()
         if _fingerprint(current) != _fingerprint(observation.data):
@@ -503,4 +506,4 @@ def _default_targets() -> dict[str, Any]:
     from je_auto_control.utils.agent_runtime.native_target import NativeDesktopTarget
     return {"local-desktop": NativeDesktopTarget(),
             "local-files": NativeDesktopTarget(resource_path=Path.home() / ".je_auto_control" /
-                                                "input_ownership" / "file-workflows.lock")}
+                                                "input_ownership" / "file-workflows.lock", recovery_probe=lambda: None)}

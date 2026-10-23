@@ -50,4 +50,4 @@ def test_service_routes_have_explicit_operator_or_host_capabilities():
     from je_auto_control.utils.rbac.policy import capability_for_route
     for operation in OPERATIONS:
         assert capability_for_route("POST", f"/agent/{operation}") == (
-            "manage_hosts" if operation == "shutdown" else "drive_input")
+            "manage_hosts" if operation in {"shutdown", "recover_target"} else "drive_input")

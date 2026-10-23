@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import Any
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.document_launch import DOCUMENT_SUFFIXES as _DOCUMENTS
 from je_auto_control.utils.agent_runtime.workflow_files import task_policy
 
 _SELECTORS = frozenset({"name", "role", "app_name", "automation_id"})
-_DOCUMENTS = frozenset({".txt", ".csv", ".xlsx", ".docx", ".pdf", ".png", ".jpg", ".jpeg"})
 
 
 def workflow_control(operation: str, selector: dict[str, Any], value: str = "") -> Any:
@@ -66,5 +66,5 @@ def workflow_open(path: str) -> bool:
     document = Path(canonical)
     if document.suffix.lower() not in _DOCUMENTS or not document.is_file():
         raise AgentTaskError("workflow launch requires a supported existing document")
-    from je_auto_control.utils.shell_open import open_path
-    return bool(open_path(canonical))
+    from je_auto_control.utils.agent_runtime.document_launch import launch_document
+    return launch_document(canonical)

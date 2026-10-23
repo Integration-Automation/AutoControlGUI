@@ -458,3 +458,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | [2026-06-b.md](2026-06-b.md) | 2026-06 | 4 |
 | [2026-06.md](2026-06.md) | 2026-06 | 6 |
 | [2026-05.md](2026-05.md) | 2026-05 | 1 |
+
+| U-20261023-08 | 2026-10-23 | Persist crash input witnesses and separate workspace launch lifetime | #done #agent #recovery | [2026-10-c](2026-10-c.md) |

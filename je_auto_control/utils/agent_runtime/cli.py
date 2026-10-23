@@ -15,7 +15,8 @@ def register_parser(subparsers: Any, handler: Callable[..., int]) -> None:
     parser = subparsers.add_parser("agent-task", help="Manage explicitly authorized agent tasks")
     operations = parser.add_subparsers(dest="agent_operation", required=True)
     for operation in ("start", "stop", "status", "submit", "list", "get", "observe", "act", "finish",
-                      "pause", "resume", "cancel", "draft", "stop-all", "receipts", "reconcile", "prune", "trigger"):
+                      "pause", "resume", "cancel", "draft", "stop-all", "receipts", "reconcile", "prune", "trigger",
+                      "recover-target"):
         item = operations.add_parser(operation)
         item.set_defaults(func=handler)
         _operation_arguments(item, operation)
@@ -37,6 +38,9 @@ def _operation_arguments(item: Any, operation: str) -> None:
         from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS
         item.add_argument("trigger_operation", choices=OPERATIONS)
         item.add_argument("request", nargs="?", help="JSON trigger request")
+    elif operation == "recover-target":
+        item.add_argument("target")
+        item.add_argument("note", help="Operator review after manually releasing held input")
     elif operation not in {"list", "status", "stop", "stop-all"}:
         item.add_argument("task_id")
         if operation in {"act", "reconcile"}:
@@ -52,6 +56,7 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
                   "submit": lambda: api.submit_agent_task(_read(arguments.spec), arguments.idempotency_key),
                   "draft": lambda: _draft(arguments), "prune": lambda: api.prune_agent_tasks(arguments.keep_days),
                   "reconcile": lambda: api.reconcile_agent_task(arguments.task_id, _read(arguments.review)),
+                  "recover-target": lambda: api.recover_agent_target(arguments.target, arguments.note),
                   "trigger": lambda: api.manage_agent_trigger(arguments.trigger_operation,
                                                                 _read(arguments.request) if arguments.request else {})}
     if operation in operations:

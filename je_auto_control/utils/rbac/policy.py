@@ -39,6 +39,7 @@ REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
     ("GET", "/agent/tasks"): _DRIVE,
     ("GET", "/agent/task"): _DRIVE,
     ("POST", "/agent/shutdown"): _HOSTS,
+    ("POST", "/agent/recover_target"): _HOSTS,
     ("GET", "/metrics"): _READ,
     ("GET", "/jobs"): _READ,
     ("GET", "/history"): _READ,
@@ -79,6 +80,7 @@ REST_ROUTE_CAPABILITIES.update({("POST", f"/agent/{operation}"): _DRIVE
 #: Commands that need more than ``drive_input``. Every other command is
 #: covered by the capability of the surface that submitted the action list.
 COMMAND_CAPABILITIES: Dict[str, str] = {
+    "AC_agent_target_recover": _HOSTS,
     "AC_agent_runtime_stop": _HOSTS,
     "AC_agent_runtime_start": _HOSTS,
     "AC_probe_capabilities": _READ,
@@ -159,6 +161,7 @@ COMMAND_CAPABILITIES: Dict[str, str] = {
 
 #: MCP tools whose capability is not the one their read-only hint implies.
 TOOL_CAPABILITIES: Dict[str, str] = {
+    "ac_agent_target_recover": _HOSTS,
     "ac_agent_runtime_stop": _HOSTS,
     "ac_agent_runtime_start": _HOSTS,
     "ac_agent_runtime_status": _DRIVE,

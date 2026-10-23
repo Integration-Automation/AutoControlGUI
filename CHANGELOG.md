@@ -3100,3 +3100,5 @@ No compatibility changes.
   `UnicodeEncodeError`) on non-encodable text; non-ASCII USB/IP busid no longer
   kills the client thread; SQLite connections are closed; USB ACL removal is
   case-insensitive.
+
+- Managed input now requires explicit host review after an unfinished crash witness; approved workspace applications survive task input cleanup.

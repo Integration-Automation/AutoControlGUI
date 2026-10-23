@@ -105,6 +105,11 @@ def list_agent_triggers() -> dict[str, Any]:
     return manage_agent_trigger("list")
 
 
+def recover_agent_target(target: str, note: str) -> dict[str, Any]:
+    """Review host-crash input ownership after manually releasing held keys/buttons."""
+    return AgentRuntimeClient().call("recover_target", {"target": target, "note": note})
+
+
 def observe_agent_task(task_id: str) -> dict[str, Any]:
     """Acquire the authorized target and obtain a fresh, versioned observation."""
     return _task_call("observe", task_id)

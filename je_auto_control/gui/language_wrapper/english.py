@@ -1637,6 +1637,8 @@ english_word_dict["agent_stop_all"] = "Stop all tasks"
 english_word_dict.update({
     "agent_receipts": "Action receipts / row results",
     "agent_reconcile": "Record reviewed outcome",
+    "agent_recovery_note": "Crash recovery review note",
+    "agent_recover_target": "Recover reviewed input ownership",
     "agent_prune": "Prune expired task cache"
 })
 

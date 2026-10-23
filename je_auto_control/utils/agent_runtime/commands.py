@@ -13,6 +13,9 @@ _ID = {"task_id": {"type": "string", "minLength": 1}}
 
 # name: (function, JSON properties, required, read_only, host_management)
 CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
+    "AC_agent_target_recover": (api.recover_agent_target, {"target": {"type": "string"},
+                                                        "note": {"type": "string", "maxLength": 2000}},
+                                ("target", "note"), False, True),
     "AC_agent_trigger": (api.manage_agent_trigger, {"operation": {"type": "string", "enum": list(TRIGGER_OPERATIONS)},
                                                   "request": {"type": "object"}}, ("operation",), False, False),
     "AC_agent_trigger_list": (api.list_agent_triggers, {}, (), True, False),

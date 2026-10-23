@@ -46,6 +46,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._controller = TaskController(self)
         self._handle: Any = None
         self._goal, self._target, self._task_id = QLineEdit(), QLineEdit("local-desktop"), QLineEdit()
+        self._recovery_note = QLineEdit()
         self._mode = QComboBox()
         self._mode.addItems(["external", "skill", "ollama"])
         self._workflow = QComboBox()
@@ -79,6 +80,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             label = QLabel()
             self._labels.append((label, key))
             form.addRow(label, control)
+        recovery_label = QLabel()
+        self._labels.append((recovery_label, "agent_recovery_note"))
+        form.addRow(recovery_label, self._recovery_note)
         layout = QVBoxLayout(self)
         layout.addLayout(form)
         layout.addWidget(self._status)
@@ -105,6 +109,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_stop_all", partial(self._dispatch, "stop_all", {})),
                 ("agent_preview", self._preview),
                 ("agent_reconcile", self._reconcile),
+                ("agent_recover_target", self._recover_target),
                 ("agent_prune", partial(self._dispatch, "prune", {})),
                 ("agent_trigger_apply", self._trigger_apply),
                 ("agent_trigger_list", partial(self._dispatch, "trigger", {"operation": "list"})),
@@ -127,6 +132,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             self._status.setText(str(error))
             return
         self._dispatch("reconcile", {"task_id": self._task_id.text(), "review": review})
+
+    def _recover_target(self) -> None:
+        self._dispatch("recover_target", {"target": self._target.text(), "note": self._recovery_note.text()})
 
     def _submit(self) -> None:
         try:

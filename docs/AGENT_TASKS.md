@@ -244,3 +244,11 @@ Bulk stop publishes stopped task states before producing a large report batch. T
 that publication queue and exposes `metadata.report_pending` until the report/history update is ready.
 Cancelled/timed-out/failed unknown attempts can still receive an audit review without reopening their
 terminal task. Local-model initialization under temporary HTTP capacity pressure stays queued.
+
+## Host crash and workspace recovery
+
+Input ownership writes a private, fsynced per-resource crash witness before native dispatch and input ACK. An unfinished witness blocks new owners across databases. Explicit host-only recovery requires a review note and a trusted no-held-input probe, never replays persisted input or signals persisted PIDs, and does not reconcile/resume the old task. POSIX input helpers monitor their actual parent and retire only their own live session group. Approved document handoff runs outside the input helper tree, so user applications survive normal task cleanup; bounded, preapproved focus steps wait for scoped windows. Observations also expire against a host monotonic clock. Native desktop/device acceptance remains unverified.
+
+Use `recover_agent_target(target, note)`, `AC_agent_target_recover`, MCP `ac_agent_target_recover`, POST `/agent/recover_target`, or `agent-task recover-target TARGET NOTE`. The Agent Tasks Actions menu uses the target and crash recovery review note fields. These operations require `manage_hosts`. A live resource lock prevents recovery; Windows checks the unlocked desktop and all held keys/buttons. Other shared platforms require a trusted recovery adapter. The local-files target holds no native input. The witness records only transient owned release data, clears it after confirmed cleanup, and retains the review's actor/time/note. A corrupt or redirected witness is refused; no automatic replay or arbitrary PID cleanup occurs.
+
+Bootstrap observations disclose no unrelated foreground controls. Only focus arguments present in the reviewed plan may bootstrap; arbitrary input continues to require an allowed foreground application. Document handoff confirms OS acceptance only; later window readiness and configured workflow read-back provide separate evidence.

@@ -1524,6 +1524,8 @@ japanese_word_dict["agent_stop_all"] = "すべてのタスクを停止"
 japanese_word_dict.update({
     "agent_receipts": "アクション記録／行別結果",
     "agent_reconcile": "確認済み結果を記録",
+    "agent_recovery_note": "クラッシュ復旧の確認メモ",
+    "agent_recover_target": "確認済み入力制御権を復旧",
     "agent_prune": "期限切れキャッシュを削除"
 })
 

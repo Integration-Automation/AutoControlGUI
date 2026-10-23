@@ -1487,6 +1487,8 @@ traditional_chinese_word_dict["agent_stop_all"] = "停止全部任務"
 traditional_chinese_word_dict.update({
     "agent_receipts": "動作回執／逐筆結果",
     "agent_reconcile": "記錄已確認的結果",
+    "agent_recovery_note": "崩潰恢復審閱註記",
+    "agent_recover_target": "恢復已審閱的輸入控制權",
     "agent_prune": "清理過期任務快取"
 })
 

@@ -4,8 +4,6 @@
 
 `WIP` — 依 `docs/superpowers/plans/2026-10-23-agent-runtime.md` 交付受管任務。
 尚缺非 Windows 共用桌面的真人活動 adapter、Windows presence hook 原生驗收、
-主服務崩潰後的持久輸入 ledger 與明確恢復 gate、
-workspace 文件開啟與輸入 helper 的生命週期分離、啟動等待及非前景 bootstrap、
 更深入應用／瀏覽器互動及四條範本的原生應用驗收、
 原生能力診斷、origin 路徑政策生命週期、
 跨平台／行動 adapter、MCP 逐步揭露、GUI 目標預覽、P8 多 agent/多機及 P9 技能版本。
