@@ -467,8 +467,10 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | U-20261024-01 | 2026-10-24 | Resolve observation-local targets and audit native coordinate grounding | #done #agent #observation | [2026-10-c](2026-10-c.md) |
 
-| U-20261024-02 | [Task observation and action editor](2026-10-c.md#u-20261024-02) | #done #agent #gui |
+| U-20261024-02 | 2026-10-24 | Task observation and action editor | #done #agent #gui | [2026-10-c](2026-10-c.md) |
 
-| U-20261024-03 | [Finite workflow progress and fresh evidence](2026-10-c.md#u-20261024-03) | #done #agent #workflow |
+| U-20261024-03 | 2026-10-24 | Finite workflow progress and fresh evidence | #done #agent #workflow | [2026-10-c](2026-10-c.md) |
 
-| U-20261024-04 | [Dialog review and native window scope](2026-10-c.md#u-20261024-04) | #done #agent #scope |
+| U-20261024-04 | 2026-10-24 | Dialog review and native window scope | #done #agent #scope | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-05 | 2026-10-24 | Host target ceilings and MCP session authority | #done #agent #targets #auth | [2026-10-c](2026-10-c.md) |

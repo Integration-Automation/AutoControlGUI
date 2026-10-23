@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Tuple
 
 from je_auto_control.utils.rbac.policy import capability_for_route
+from je_auto_control.utils.agent_runtime.routes import OPERATIONS as _AGENT_OPERATIONS
 
 
 _BEARER_SCHEME_NAME = "BearerAuth"
@@ -298,13 +299,13 @@ _ENDPOINT_METADATA: Dict[Tuple[str, str], Dict[str, Any]] = {
 }
 
 
-for _operation in ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown", "draft", "stop_all",
-                   "receipts", "reconcile", "prune", "trigger"):
+for _operation in _AGENT_OPERATIONS:
     _ENDPOINT_METADATA[("POST", f"/agent/{_operation}")] = {
         "summary": f"Managed task {_operation}; preserves caller authority and host ownership.",
         "tag": "agent", "request_body": {"type": "object"},
     }
 _ENDPOINT_METADATA[("GET", "/agent/tasks")] = {"summary": "List owned managed tasks.", "tag": "agent"}
+_ENDPOINT_METADATA[("GET", "/agent/targets")] = {"summary": "List passive managed target metadata.", "tag": "agent"}
 _ENDPOINT_METADATA[("GET", "/agent/task")] = {"summary": "Read one owned task.", "tag": "agent"}
 
 

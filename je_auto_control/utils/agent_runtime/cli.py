@@ -16,7 +16,7 @@ def register_parser(subparsers: Any, handler: Callable[..., int]) -> None:
     operations = parser.add_subparsers(dest="agent_operation", required=True)
     for operation in ("start", "stop", "status", "submit", "list", "get", "observe", "act", "finish",
                       "pause", "resume", "cancel", "draft", "stop-all", "receipts", "reconcile", "prune", "trigger",
-                      "recover-target", "skill"):
+                      "recover-target", "skill", "target", "targets"):
         item = operations.add_parser(operation)
         item.set_defaults(func=handler)
         _operation_arguments(item, operation)
@@ -34,12 +34,12 @@ def _operation_arguments(item: Any, operation: str) -> None:
         from je_auto_control.utils.agent_runtime.workflow_specs import WORKFLOWS
         item.add_argument("workflow", choices=WORKFLOWS)
         item.add_argument("config", help="JSON workflow configuration")
-    elif operation in {"trigger", "skill"}:
+    elif operation in {"trigger", "skill", "target"}:
         _reviewed_arguments(item, operation)
     elif operation == "recover-target":
         item.add_argument("target")
         item.add_argument("note", help="Operator review after manually releasing held input")
-    elif operation not in {"list", "status", "stop", "stop-all"}:
+    elif operation not in {"list", "status", "stop", "stop-all", "targets"}:
         item.add_argument("task_id")
         if operation in {"act", "reconcile"}:
             item.add_argument("action" if operation == "act" else "review", help="JSON action request or owner review")
@@ -48,7 +48,8 @@ def _operation_arguments(item: Any, operation: str) -> None:
 def _reviewed_arguments(item: Any, operation: str) -> None:
     from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGERS
     from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILLS
-    choices = TRIGGERS if operation == "trigger" else SKILLS
+    from je_auto_control.utils.agent_runtime.target_profiles import OPERATIONS as TARGETS
+    choices = {"trigger": TRIGGERS, "skill": SKILLS, "target": TARGETS}[operation]
     item.add_argument(operation + "_operation", choices=choices)
     item.add_argument("request", nargs="?", help="JSON reviewed operation request")
 
@@ -57,6 +58,9 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
     """Run one parsed operation and return a JSON-compatible result."""
     operation = arguments.agent_operation
     operations = {"start": lambda: api.start_agent_runtime(arguments.directory),
+                  "targets": api.list_agent_targets,
+                  "target": lambda: api.manage_agent_target(arguments.target_operation,
+                                                             _read(arguments.request) if arguments.request else {}),
                   "status": api.agent_runtime_status, "stop": api.stop_agent_runtime,
                   "stop-all": api.stop_all_agent_tasks, "list": api.list_agent_tasks,
                   "submit": lambda: api.submit_agent_task(_read(arguments.spec), arguments.idempotency_key),

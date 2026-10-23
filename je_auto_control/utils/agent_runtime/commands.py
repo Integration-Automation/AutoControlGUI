@@ -10,11 +10,15 @@ from je_auto_control.utils.agent_runtime.workflow_desktop import workflow_contro
 from je_auto_control.utils.agent_runtime.workflow_wait import workflow_wait
 from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGER_OPERATIONS
 from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILL_OPERATIONS
+from je_auto_control.utils.agent_runtime.target_profiles import OPERATIONS as TARGET_OPERATIONS
 
 _ID = {"task_id": {"type": "string", "minLength": 1}}
 
 # name: (function, JSON properties, required, read_only, host_management)
 CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
+    "AC_agent_target": (api.manage_agent_target, {"operation": {"type": "string", "enum": list(TARGET_OPERATIONS)},
+                                               "request": {"type": "object"}}, ("operation",), False, True),
+    "AC_agent_target_list": (api.list_agent_targets, {}, (), True, False),
     "AC_agent_skill": (api.manage_agent_skill, {"operation": {"type": "string", "enum": list(SKILL_OPERATIONS)},
                                               "request": {"type": "object"}}, ("operation",), False, False),
     "AC_agent_skill_list": (api.list_agent_skills, {}, (), True, False),

@@ -22,6 +22,8 @@ def _handler(command: str) -> Any:
             _paths(ctx, arguments)
         token = CancellationToken(0, event=ctx.cancelled_event) if ctx is not None else None
         identity = current_authorization()
+        if host_management and ctx is not None and identity is None:
+            raise AgentTaskError("managed host tools require an authenticated host administrator")
         if identity is None and not host_management:
             if ctx is None or not ctx.session_id:
                 raise AgentTaskError("managed MCP tasks require an authenticated caller or a live session")

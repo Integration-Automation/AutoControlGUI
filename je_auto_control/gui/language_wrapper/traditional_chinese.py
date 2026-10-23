@@ -1540,3 +1540,15 @@ traditional_chinese_word_dict.update({
     'agent_element_role': '角色',
     'agent_element_bounds': '範圍'
 })
+
+traditional_chinese_word_dict.update({
+    'agent_page_targets': '主機目標',
+    'agent_target_operation': '目標操作',
+    'agent_target_request': '已審閱的目標設定',
+    'agent_target_apply': '套用目標操作',
+    'agent_target_list': '列出目標支援狀態',
+    'agent_target_register': '註冊固定目標',
+    'agent_target_get': '檢查目標',
+    'agent_target_disable': '停用目標',
+    'agent_target_enable': '啟用目標'
+})

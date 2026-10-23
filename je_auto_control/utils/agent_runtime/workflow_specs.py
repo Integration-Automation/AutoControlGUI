@@ -95,7 +95,9 @@ def url_origin(url: str) -> str:
     if parsed.fragment:
         raise AgentTaskError("download URL fragments are not allowed")
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
-    return f"{parsed.scheme}://{parsed.hostname.lower()}:{port}"
+    hostname = parsed.hostname.lower()
+    hostname = f"[{hostname}]" if ":" in hostname else hostname
+    return f"{parsed.scheme}://{hostname}:{port}"
 
 
 def _rows(config: dict, policy: TaskPolicy) -> list[dict]:

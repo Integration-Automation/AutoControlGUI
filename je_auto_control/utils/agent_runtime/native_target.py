@@ -16,6 +16,7 @@ from je_auto_control.utils.agent_runtime.input_ledger import InputLedger
 from je_auto_control.utils.agent_runtime.input_journal import InputJournal
 from je_auto_control.utils.agent_runtime.native_recovery import no_held_input
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
+from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile
 from je_auto_control.utils.agent_runtime.native_channel import OwnedChannel
 from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock
 
@@ -41,7 +42,8 @@ class NativeDesktopTarget:
     """Only trusted host code may select an argv/resource path; neither is task/model input."""
 
     def __init__(self, *, argv: Sequence[str] | None = None, resource_path: Path | None = None,
-                 recovery_probe: Callable[[], None] = no_held_input) -> None:
+                 recovery_probe: Callable[[], None] = no_held_input, profile: dict | None = None) -> None:
+        self._profile = AgentTargetProfile.from_dict(profile) if profile is not None else None
         self._argv = tuple(argv) if argv is not None else (
             sys.executable, "-u", "-m", "je_auto_control.utils.agent_runtime.native_worker")
         self._resource_path = resource_path
@@ -131,11 +133,18 @@ class NativeDesktopTarget:
         context = current_operation()
         if context is None or context.spec != spec:
             raise AgentTaskError("native target scope does not match its owner")
+        if self._profile is not None:
+            from je_auto_control.utils.agent_runtime.target_config import check_host_platform
+            check_host_platform(self._profile)
+            self._profile.check(spec)
         owner = context.owner
         self._takeover = context.takeover
         identity = {"user_id": owner.user_id, "role": owner.role,
                     "store_path": owner.store_path} if owner is not None else {}
-        result = self._request("configure", {"spec": spec.to_dict(), "owner": identity})
+        payload = {"spec": spec.to_dict(), "owner": identity}
+        if self._profile is not None:
+            payload["profile"] = self._profile.to_dict()
+        result = self._request("configure", payload)
         return bool(result["ready"]), str(result.get("reason", ""))
 
     def observe(self) -> dict[str, Any]:

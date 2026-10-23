@@ -1539,3 +1539,15 @@ simplified_chinese_word_dict.update({
     'agent_element_role': '角色',
     'agent_element_bounds': '范围'
 })
+
+simplified_chinese_word_dict.update({
+    'agent_page_targets': '主机目标',
+    'agent_target_operation': '目标操作',
+    'agent_target_request': '已审核的目标设置',
+    'agent_target_apply': '应用目标操作',
+    'agent_target_list': '列出目标支持状态',
+    'agent_target_register': '注册固定目标',
+    'agent_target_get': '检查目标',
+    'agent_target_disable': '禁用目标',
+    'agent_target_enable': '启用目标'
+})

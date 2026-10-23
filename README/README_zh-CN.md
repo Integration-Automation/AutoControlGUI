@@ -42,7 +42,7 @@ Windows 共享桌面须解锁并空闲 60 秒，实体键鼠活动会触发暂�
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 837 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 839 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -244,7 +244,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 837 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 839 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -342,7 +342,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 738 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 740 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -636,3 +636,5 @@ Agent 任务界面将任务范围、工作流程设置、触发器、技能及�
 托管工作流程可用 workflow_wait／AC_workflow_wait 等待指定控件的精确值或状态，只重复读取；可取消且受动作预算限制，默认五秒、上限六十秒，不重发写入或提交。固定技能每一步都验证已有收据与固定顺序，恢复也不能跳过读回失败的步骤；模型自主循环仍保留停滞检测。新表单／跨应用模板会在提交前拒绝原本已匹配的确认值，提交后等待新的状态转换。批次可设置 new_record_selector 逐条重置；确认仅证明配置的界面转换，有交易标识值时应使用它。归档模板完成时会重读指定清单及文件摘要，清单上限一 MB，总验证数据上限六十四 MiB。
 
 AgentHumanReview 表示未保存内容或未知对话框需人工审核；包括外部观察请求都会记录 waiting_user 并释放输入控制权，明确恢复后仍会重新检查。Windows 依据原生对话框／禁用所有者及英中日已知未保存文字判断。Workspace 也会拒绝标题首尾带星号的文档，并可在窗口设置中加入 unsaved_selector 与 unsaved_value，在改变排列前检查应用特有指示；不声称能推断所有程序的未保存状态。标准文件对话框沿用 AC_handle_file_dialog 执行器，托管 driver 只接受唯一精确标题、相同 PID、已确认前景，以及授权根目录内的绝对路径。UIA 控件须属于实际指定的根窗口，同 PID 的其他窗口也会拒绝。模拟原生与本机 HTTP 测试已有覆盖，实际平台验收仍未验证。
+
+主机目标通过 AgentTargetProfile 与 manage_agent_target（AC_agent_target，register/get/disable/enable）设置。名称及设置固定不可替换，目前提供 desktop／files adapter，未实现类型及可执行设置会被拒绝。任务固定主机设置摘要，不能扩大工具、应用、根目录或网络来源。启停状态会跨重启保存并在分派时检查；禁用会请求暂停及清理，重新启用仍须明确恢复任务。list_agent_targets／AC_agent_target_list／CLI agent-task targets 仅提供被动信息，readiness=not_probed、native_evidence=not_recorded；完整设置需要 manage_hosts。CLI agent-task target 及 GUI「主机目标」页使用同一服务。匿名有效 MCP 工具 session 的直接及旧式包装调用都以 operator 权限执行；MCP 主机管理需要已验证的管理员，可信任的直接 Python 调用维持原行为。浏览器自动化统一由 WebRunner（je_web_runner）提供，本机开发来源为 D:/Codes/WebRunner；这批目标注册尚不含托管浏览器 adapter。

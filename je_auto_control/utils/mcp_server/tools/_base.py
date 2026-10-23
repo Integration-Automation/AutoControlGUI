@@ -148,8 +148,9 @@ class MCPTool:
         """
         from je_auto_control.utils.script_vars.execution import execution_scope
         from je_auto_control.utils.agent_runtime.origin_policy import source_policy_scope
+        from je_auto_control.utils.mcp_server._call_authority import invocation_authority
         policy = getattr(ctx, "path_policy", None)
-        with execution_scope(), source_policy_scope(policy):
+        with execution_scope(), source_policy_scope(policy), invocation_authority(self, arguments, ctx):
             if ctx is not None and _handler_accepts_ctx(self.handler):
                 return self.handler(ctx=ctx, **arguments)
             return self.handler(**arguments)

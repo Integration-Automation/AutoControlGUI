@@ -1577,3 +1577,15 @@ japanese_word_dict.update({
     'agent_element_role': 'ロール',
     'agent_element_bounds': '領域'
 })
+
+japanese_word_dict.update({
+    'agent_page_targets': 'ホスト対象',
+    'agent_target_operation': '対象操作',
+    'agent_target_request': '確認済みの対象設定',
+    'agent_target_apply': '対象操作を適用',
+    'agent_target_list': '対象の対応状況を表示',
+    'agent_target_register': '不変の対象を登録',
+    'agent_target_get': '対象を確認',
+    'agent_target_disable': '対象を無効化',
+    'agent_target_enable': '対象を有効化'
+})

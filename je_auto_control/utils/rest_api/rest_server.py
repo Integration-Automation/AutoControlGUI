@@ -101,7 +101,8 @@ _POST_ROUTES: Dict[str, HandlerFn] = {
     "/usb/remote/open": handle_usb_remote_open,
 }
 
-_GET_ROUTES.update({"/agent/tasks": agent_route("list"), "/agent/task": agent_route("get")})
+_GET_ROUTES.update({"/agent/tasks": agent_route("list"), "/agent/task": agent_route("get"),
+                    "/agent/targets": agent_route("targets")})
 _POST_ROUTES.update({f"/agent/{operation}": agent_route(operation) for operation in AGENT_OPERATIONS})
 
 # /health is intentionally unauthenticated so probes / load balancers

@@ -28,6 +28,7 @@ class NativeWorker:
         self._source, self._sink = source, sink
         self._target: Any = target if target is not None else DesktopTarget()
         self._custom_target = target is not None
+        self._profile_kind = ""
         self._spec: AgentTaskSpec | None = None
         self._owner: AuthorizationContext | None = None
         self._request_id = ""
@@ -88,7 +89,8 @@ class NativeWorker:
         if operation == "configure":
             self._spec = AgentTaskSpec.from_dict(payload["spec"])
             self._owner = AuthorizationContext(**payload["owner"]) if payload.get("owner") else None
-            if not self._custom_target and self._spec.target == "local-files":
+            self._configure_profile(payload)
+            if not self._custom_target and (self._spec.target == "local-files" or self._profile_kind == "files"):
                 from je_auto_control.utils.agent_runtime.file_target import FileTarget
                 self._target = FileTarget()
         if self._spec is None:
@@ -101,6 +103,20 @@ class NativeWorker:
             stack.enter_context(input_observer(self._input))
             stack.enter_context(operation_scope(TaskOperation(self._spec, self._check_activity, self._owner)))
             return self._operation(operation, payload)
+
+    def _configure_profile(self, payload: dict) -> None:
+        if "profile" not in payload:
+            return
+        from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile, check_host_platform
+        profile = AgentTargetProfile.from_dict(payload["profile"])
+        if self._spec is None or self._spec.target != profile.name:
+            raise AgentTaskError("native target profile does not match its managed resource")
+        profile.check(self._spec)
+        check_host_platform(profile)
+        pin = {"name": profile.name, "digest": profile.digest}
+        if self._spec.options.get("target_profile") != pin:
+            raise AgentTaskError("native target profile pin is invalid")
+        self._profile_kind = profile.kind
 
     def _check_activity(self) -> None:
         if self._activity is not None:
@@ -124,7 +140,9 @@ class NativeWorker:
         raise AgentTaskError("unknown native worker operation")
 
     def _ready_activity(self) -> None:
-        if self._custom_target or self._spec is None or self._spec.target == "local-files":
+        if self._custom_target or self._spec is None or self._profile_kind == "files":
+            return
+        if self._spec.target == "local-files":
             return
         if self._activity is None:
             from je_auto_control.utils.agent_runtime.activity import desktop_activity_gate

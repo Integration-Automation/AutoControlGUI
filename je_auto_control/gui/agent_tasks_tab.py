@@ -22,6 +22,7 @@ from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workf
 from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGER_OPERATIONS
 from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILL_OPERATIONS
 from je_auto_control.utils.agent_runtime.trigger_config import KINDS as TRIGGER_KINDS
+from je_auto_control.utils.agent_runtime.target_profiles import OPERATIONS as TARGET_OPERATIONS
 from je_auto_control.utils.exception.cancellation import CancellationToken
 
 
@@ -96,6 +97,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                                               "observation_id": ""}, indent=2))
         self._observation = AgentObservationView()
         self._observation.picked.connect(self._pick_reference)
+        self._target_operation, self._target_request = QComboBox(), QPlainTextEdit("{}")
+        for name in TARGET_OPERATIONS:
+            self._target_operation.addItem(_translate("agent_target_" + name), name)
 
     def _setup_pages(self) -> None:
         self._page("agent_page_task", (("agent_goal", self._goal), ("agent_target", self._target),
@@ -108,6 +112,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                    ("agent_event_key", self._event_key), ("agent_trigger_config", self._trigger_config)))
         self._page("agent_page_skills", (("agent_skill_operation", self._skill_operation),
                    ("agent_skill_request", self._skill_request)))
+        self._page("agent_page_targets", (("agent_target_operation", self._target_operation),
+                   ("agent_target_request", self._target_request)))
         self._page("agent_page_recovery", (("agent_recovery_note", self._recovery_note),
                    ("agent_review", self._review)))
         self._page("agent_page_observation", (("agent_action", self._action),))
@@ -142,6 +148,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 combo.setItemText(index, _translate(prefix + combo.itemData(index)))
         for index in range(self._skill_operation.count()):
             self._skill_operation.setItemText(index, _translate("agent_skill_" + self._skill_operation.itemData(index)))
+        for index in range(self._target_operation.count()):
+            label = _translate("agent_target_" + self._target_operation.itemData(index))
+            self._target_operation.setItemText(index, label)
 
     def menu_actions(self) -> list:
         """Expose lifecycle commands through the common Actions menu."""
@@ -157,6 +166,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_trigger_list", partial(self._dispatch, "trigger", {"operation": "list"})),
                 ("agent_skill_apply", self._skill_apply),
                 ("agent_skill_list", partial(self._dispatch, "skill", {"operation": "list"})),
+                ("agent_target_apply", self._target_apply),
+                ("agent_target_list", partial(self._dispatch, "targets", {})),
                 ("agent_submit", self._submit), ("agent_refresh", partial(self._dispatch, "list")),
                 *[("agent_" + name, partial(self._dispatch, name)) for name in
                   ("get", "observe", "finish", "pause", "resume", "cancel", "receipts")]]
@@ -214,6 +225,14 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             return
         self._dispatch("skill", {"operation": self._skill_operation.currentData(), "request": request})
 
+    def _target_apply(self) -> None:
+        try:
+            request = json.loads(self._target_request.toPlainText())
+        except (ValueError, TypeError) as error:
+            self._status.setText(str(error))
+            return
+        self._dispatch("target", {"operation": self._target_operation.currentData(), "request": request})
+
     def _submit(self) -> None:
         try:
             payload: dict[str, Any] = {"spec": self._task_spec()}
@@ -254,7 +273,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             if operation not in {"pause", "cancel", "stop", "stop_all"}:
                 return
             self._handle.cancel()
-        task_operation = operation not in {"start", "stop", "list", "stop_all", "prune"}
+        task_operation = operation not in {"start", "stop", "list", "stop_all", "prune", "targets", "target"}
         default = {"task_id": self._task_id.text()} if task_operation else {}
         data = payload or default
         self._view_task = str(data.get("task_id", ""))

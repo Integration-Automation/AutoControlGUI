@@ -120,6 +120,16 @@ def list_agent_skills() -> dict[str, Any]:
     return manage_agent_skill("list")
 
 
+def manage_agent_target(operation: str, request: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Register an immutable host-reviewed target or explicitly change its availability."""
+    return AgentRuntimeClient().call("target", {"operation": operation, "request": dict(request or {})})
+
+
+def list_agent_targets() -> dict[str, Any]:
+    """Read passive target names and declared support without connecting or exposing host configuration."""
+    return AgentRuntimeClient().call("targets")
+
+
 def observe_agent_task(task_id: str) -> dict[str, Any]:
     """Acquire the authorized target and obtain a fresh, versioned observation."""
     return _task_call("observe", task_id)

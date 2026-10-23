@@ -323,8 +323,9 @@ user of that store instead of comparing a shared token (``auth_token`` and
 ``JE_AUTOCONTROL_MCP_TOKEN`` are then not accepted, and a bearer token is
 always required). The store, its roles and how to create users are described
 under *Roles* in the operations-layer REST API chapter; both servers can
-share one file. Without a store nothing changes. The stdio transport has no
-bearer token and is never subject to RBAC.
+share one file. Without a store, live MCP tool sessions use an operator principal;
+host-management tools require an authenticated administrator. The stdio transport has no
+bearer token and uses the same operator ceiling for its live tool sessions.
 
 - A tool defaults to ``read_screen`` for ``readOnlyHint`` and ``drive_input``
   otherwise, with explicit capability overrides. Sensitive reads require

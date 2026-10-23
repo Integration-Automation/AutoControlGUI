@@ -61,6 +61,9 @@ CREATE TABLE IF NOT EXISTS agent_skill_publications (
  actor TEXT NOT NULL, note TEXT NOT NULL, created REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_action_grounding (
  action_id TEXT PRIMARY KEY REFERENCES agent_actions(id) ON DELETE CASCADE, details TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_target_profiles (
+ name TEXT PRIMARY KEY, config TEXT NOT NULL, digest TEXT NOT NULL, created REAL NOT NULL, actor TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_target_controls (name TEXT PRIMARY KEY, enabled INTEGER NOT NULL);
 """
 
 

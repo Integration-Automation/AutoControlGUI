@@ -77,6 +77,8 @@ class AgentRuntime:
         self.shutdown_requested = threading.Event()
         self._next_retention = 0.0
         try:
+            from je_auto_control.utils.agent_runtime.target_profiles import AgentTargetProfiles
+            self.target_profiles = AgentTargetProfiles(self)
             self.store.recover()
         except BaseException:  # reason: construction failure must release only the newly owned OS lock
             self._owner_lock.close()
@@ -101,6 +103,7 @@ class AgentRuntime:
         spec = bind_origin(spec)
         if spec.target not in self._targets:
             raise AgentTaskError("task target has not been configured")
+        spec = self.target_profiles.bind(spec)
         TaskPolicy(spec)
         validate_criteria(spec.success_criteria)
         return spec
@@ -125,6 +128,9 @@ class AgentRuntime:
         """Read owner-scoped task status without observing the desktop."""
         row = self._row(task_id)
         metadata = self.evidence.metadata(task_id)
+        metadata["target"] = row["spec"]["target"]
+        if "target_profile" in row["spec"]["options"]:
+            metadata["target_profile"] = thaw(row["spec"]["options"]["target_profile"])
         pin = self.skills.task_pin(row) if "skill_pin" in row["spec"]["options"] else {}
         if pin:
             metadata["skill_pin"] = pin
@@ -182,6 +188,7 @@ class AgentRuntime:
         spec = AgentTaskSpec.from_dict(row["spec"])
         owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
         try:
+            self.target_profiles.check(spec)
             policy = TaskPolicy(spec)
         except AgentTaskError as error:
             paused = self.pause(row["id"])
@@ -193,11 +200,13 @@ class AgentRuntime:
             self._token(row["id"]).checkpoint()
             self._check_budget(row["id"])
             policy.validate_snapshot()
+            self.target_profiles.check(spec)
             with DeferredAuthorization(owner).scope():
                 pass
 
         def guard(name: str, arguments: Any) -> None:
             self._check_budget(row["id"])
+            self.target_profiles.check(spec)
             policy.check(name, arguments)
             lease = self._leases.get(row["id"])
             if lease is not None:
@@ -504,6 +513,7 @@ class AgentRuntime:
             try:
                 validate_root_snapshot(row["spec"]["roots"])
                 validate_origins(AgentTaskSpec.from_dict(row["spec"]))
+                self.target_profiles.check(AgentTaskSpec.from_dict(row["spec"]))
                 with DeferredAuthorization(owner).scope():
                     pass
             except (AutoControlException, OSError, ValueError):

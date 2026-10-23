@@ -21,7 +21,7 @@ class AgentRuntimeClient:
         """Perform a known local task operation without accepting arbitrary URLs or methods."""
         allowed = {"list", "get", "submit", "observe", "act", "finish", "pause", "resume", "cancel",
                    "shutdown", "draft", "stop_all", "receipts", "reconcile", "prune", "trigger", "recover_target",
-                   "skill"}
+                   "skill", "target", "targets"}
         if operation not in allowed:
             raise AgentTaskError("unknown task operation")
         try:
@@ -32,10 +32,11 @@ class AgentRuntimeClient:
         if parsed.scheme != "http" or parsed.hostname != "127.0.0.1" or parsed.path:
             raise AgentTaskError("invalid local runtime connection metadata")
         url = metadata["url"]
-        if operation == "list":
-            return request_json(url + "/agent/tasks", token=metadata["token"])
-        if operation == "get":
-            return request_json(url + "/agent/task?" + urlencode(body or {}), token=metadata["token"])
+        if operation in {"list", "targets", "get"}:
+            path = {"list": "/agent/tasks", "targets": "/agent/targets", "get": "/agent/task"}[operation]
+            if operation == "get":
+                path += "?" + urlencode(body or {})
+            return request_json(url + path, token=metadata["token"])
         return request_json(url + f"/agent/{operation}", body={} if body is None else body,
                             token=metadata["token"], timeout=timeout,
                             control=operation in {"pause", "cancel", "shutdown", "stop_all"})

@@ -13,6 +13,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add immutable host target profiles, durable enable controls and passive target metadata across all
+  task surfaces. Named tasks pin resource policy; enabling never automatically resumes paused work.
+- Live anonymous MCP tool sessions now execute as operator across direct and nested wrappers. MCP
+  host-management calls require authenticated admin authority; trusted direct Python callers keep
+  their prior behavior.
+
 - Add AgentHumanReview for managed dialog/unsaved-content gates; external observation also records
   waiting_user and retires input. Windows UIA lookup requires the exact owned root window.
   Managed file-dialog selection is exact, unique and PID-scoped; paths are canonicalized before typing.

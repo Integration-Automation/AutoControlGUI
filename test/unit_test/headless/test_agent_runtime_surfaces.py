@@ -35,6 +35,8 @@ def test_cli_task_commands_parse_without_starting_a_service():
     assert parser.parse_args(["agent-task", "submit", "task.json"]).spec == "task.json"
     assert parser.parse_args(["agent-task", "skill", "list"]).request is None
     assert parser.parse_args(["agent-task", "skill", "record", "record.json"]).skill_operation == "record"
+    assert parser.parse_args(["agent-task", "targets"]).agent_operation == "targets"
+    assert parser.parse_args(["agent-task", "target", "register", "profile.json"]).target_operation == "register"
 
 
 def test_headless_task_contract_does_not_load_qt():
@@ -63,4 +65,4 @@ def test_service_routes_have_explicit_operator_or_host_capabilities():
     from je_auto_control.utils.rbac.policy import capability_for_route
     for operation in OPERATIONS:
         assert capability_for_route("POST", f"/agent/{operation}") == (
-            "manage_hosts" if operation in {"shutdown", "recover_target"} else "drive_input")
+            "manage_hosts" if operation in {"shutdown", "recover_target", "target"} else "drive_input")

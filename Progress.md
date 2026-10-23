@@ -2,12 +2,21 @@
 
 ## Agent 電腦接管與任務自動化
 
-`WIP` — 依 `docs/superpowers/plans/2026-10-23-agent-runtime.md` 交付受管任務。
-尚缺非 Windows 共用桌面的真人活動 adapter、Windows presence hook 原生驗收、
-更深入應用／瀏覽器互動及四條範本的原生應用驗收、
-原生能力診斷、
-非 Windows 的對話框及未儲存內容暫停 gate、
-跨平台／行動 adapter、MCP 逐步揭露、P8 多 agent／多機協調。
+`WIP` — 依使用者要求暫停；恢復後繼續
+`docs/superpowers/plans/2026-10-23-agent-runtime.md` 的完整交付，仍缺七大類工作：
+
+1. **瀏覽器及應用深化**：受管瀏覽器 adapter、網站範圍、表單／下載與四條流程的實際應用驗收。
+   先完成使用者追加要求的既有 `shell_open.open_path(URL)` 遷移，再暫停；目前該路徑仍呼叫 `webbrowser`。
+   瀏覽器一律使用 WebRunner（`je_web_runner`），本機來源 `D:\Codes\WebRunner`；
+   不在 AutoControlGUI 另建瀏覽器引擎。目前共用 `.venv` 未安裝／連結該套件，後續需在隔離環境接合。
+2. **跨平台桌面**：macOS／X11／Wayland 的真人活動、觀察與輸入隔離，非 Windows 對話框／未儲存 gate，
+   以及 Windows 跨任務的持續 presence／閒置來源；原生證據仍缺。
+3. **Android／iOS**：指定裝置與 app 的受管 adapter、遠端動作逾時及清理確證。
+4. **多 agent／遠端多機**：P8 規劃／執行／驗證角色、DAG 派送及同資源序列／不同資源並行協調。
+5. **MCP 逐步揭露**：依任務、session 與權限提供工具，完成探索與可見性整合。
+6. **能力與就緒診斷**：主機目標目前只有被動宣告；仍須權限、平台／裝置就緒及未驗證狀態的完整接合。
+7. **整體驗收**：全套測試與覆蓋率、文件／套件建置，以及 P0–P9 逐條現況稽核及跨功能回歸。
+
 既有原生桌面與真機驗收暫緩限制沿用；新流程不新增付費依賴。
 
 ## 跨平台與 GUI 全面改版

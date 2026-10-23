@@ -1690,3 +1690,15 @@ english_word_dict.update({
     'agent_element_role': 'Role',
     'agent_element_bounds': 'Bounds'
 })
+
+english_word_dict.update({
+    'agent_page_targets': 'Host targets',
+    'agent_target_operation': 'Target operation',
+    'agent_target_request': 'Reviewed target configuration',
+    'agent_target_apply': 'Apply target operation',
+    'agent_target_list': 'List target support',
+    'agent_target_register': 'Register immutable target',
+    'agent_target_get': 'Inspect target',
+    'agent_target_disable': 'Disable target',
+    'agent_target_enable': 'Enable target'
+})

@@ -7,9 +7,9 @@ configured turns a bearer token into an :class:`AuthorizationContext` with
 dispatcher, the audit writers -- asks :func:`current_authorization` who the
 caller is instead of having the identity threaded through every signature.
 
-No scope means no RBAC: a deployment that never configured a user store, the
-stdio MCP transport, a script calling the library directly. Nothing is
-checked there, which is what keeps those callers working exactly as before.
+Unscoped trusted Python callers retain their existing behavior. MCP tool
+calls with a live session bind an operator principal when no authenticated
+user is present, so nested wrappers cannot borrow trusted host authority.
 """
 from __future__ import annotations
 

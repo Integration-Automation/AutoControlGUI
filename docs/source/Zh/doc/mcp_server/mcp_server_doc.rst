@@ -293,8 +293,8 @@ Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
 傳輸就會把每個請求驗證為存放檔中的某位使用者，而不是比對共用 token（此時
 ``auth_token`` 與 ``JE_AUTOCONTROL_MCP_TOKEN`` 不再被接受，且一律需要 bearer token）。
 存放檔、角色與建立使用者的方式見維運層 REST API 章節的「角色」；兩個伺服器可以共用
-同一個檔案。沒有設定存放檔時行為完全不變。stdio 傳輸沒有 bearer token，不受 RBAC
-約束。
+同一個檔案。未設定存放檔的有效工具 session 會使用 operator 身分；主機管理工具需要
+已驗證的管理員。stdio 傳輸沒有 bearer token，其有效工具 session 也受相同 operator 範圍約束。
 
 - 工具預設依 ``readOnlyHint`` 使用 ``read_screen``，否則為 ``drive_input``，另有明確
   的 capability 覆寫。敏感讀取需要 ``drive_input`` （operator／admin）：剪貼簿與歷史、
