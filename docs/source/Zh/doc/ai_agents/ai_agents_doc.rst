@@ -172,3 +172,14 @@ AgentHumanReview 表示未儲存內容或未知對話框需人工審閱；包含
 主機目標以 AgentTargetProfile 與 manage_agent_target（AC_agent_target，register/get/disable/enable）設定。名稱及設定固定不可替換，目前提供 desktop／files adapter，未實作類型及可執行設定會被拒絕。任務固定主機設定摘要，不能擴大工具、應用、根目錄或網路來源。啟停狀態會跨重啟保存並於分派時檢查；停用會要求暫停及清理，重新啟用仍須明確恢復任務。list_agent_targets／AC_agent_target_list／CLI agent-task targets 只提供被動資訊，readiness=not_probed、native_evidence=not_recorded；完整設定需要 manage_hosts。CLI agent-task target 及 GUI「主機目標」頁使用同一服務。匿名有效 MCP 工具 session 的直接及舊式包裝呼叫都以 operator 權限執行；MCP 主機管理需要已驗證的管理員，可信任的直接 Python 呼叫維持原行為。瀏覽器自動化統一由 WebRunner（je_web_runner）提供，本機開發來源為 D:/Codes/WebRunner；這批目標註冊尚不含受管瀏覽器 adapter。
 
 既有瀏覽器自動化（包含 open_path(URL) 與 AC_open_path）統一交由 WebRunner，Python 套件名稱為 je_web_runner。URL 計畫的 backend 現為 je_web_runner，原本比較 webbrowser 描述值的呼叫端需改用新值；函式介面與本機檔案開啟維持相容。實際 URL 執行需要設定的 WebRunner 專案，缺少時傳出 WebRunnerBridgeError，不改用 OS 瀏覽器。本機開發來源為 D:/Codes/WebRunner；純計畫及注入 opener 測試不需要該套件。協定支援由 WebRunner 與其選用的瀏覽器決定。既有瀏覽器 GUI／MCP／AC 及錄製的 WR_* 動作都使用同一橋接。
+
+
+MCP 工具探索
+------------------------------------------------------------
+
+MCP 工具探索提供 ``search_mcp_tools(query, limit=10)``、``get_mcp_tool_schema(name)``、
+對應 AC／MCP 指令及 Diagnostics → Actions。搜尋回傳有界摘要、分類與所需權限；完整 schema
+須指定單一工具查閱。兩種查詢都重新驗證角色，並遵守 registry 的唯讀篩選；MCP 查詢使用該
+server 的即時 registry，包含外掛變更。CLI 可執行
+``je_auto_control_mcp --search-tools document --limit 5`` 或 ``--tool-schema ac_mcp_tool_search``。
+本階段維持既有完整工具清單；各 session 的逐步揭露仍待完成。

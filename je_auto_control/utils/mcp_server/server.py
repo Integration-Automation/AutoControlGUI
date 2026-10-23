@@ -21,6 +21,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.mcp_server._authz import authorize_tool_call, visible_tools
 from je_auto_control.utils.mcp_server.audit import AuditLogger
+from je_auto_control.utils.mcp_server.discovery import ToolCatalogMixin
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
 )
@@ -65,7 +66,7 @@ from je_auto_control.utils.mcp_server._protocol import (
 WORKER_DRAIN_TIMEOUT = 10.0
 
 
-class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin, OriginPoliciesMixin):
+class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin, OriginPoliciesMixin, ToolCatalogMixin):
     """JSON-RPC 2.0 MCP server with a configurable tool registry."""
 
     def __init__(self, tools: Optional[List[MCPTool]] = None,
@@ -718,6 +719,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin, O
             notifier=self._notifier,
             path_policy=self._active_argument_policy.path_policy,
             session_id=f"{self._agent_session}:{self._connection_id}",
+            tool_catalog=self.tool_index,
         )
 
 

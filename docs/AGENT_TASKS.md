@@ -1,5 +1,15 @@
 # Managed agent tasks
 
+MCP tool discovery is available through `search_mcp_tools(query, limit=10)` and
+`get_mcp_tool_schema(name)`, corresponding AC/MCP commands, and Diagnostics → Actions.
+Search returns bounded summaries with category and required capability; full schemas require a
+single-tool lookup. Both queries refresh role authority and respect the registry's read-only filter.
+MCP queries use that server's live registry, including plugin changes. CLI inspection:
+`je_auto_control_mcp --search-tools document --limit 5` or `--tool-schema ac_mcp_tool_search`.
+This increment preserves the existing full tool list; per-session progressive views are still pending.
+
+The additive metadata API is experimental and Qt-free. Discovery never executes a tool or widens roots, environment references or role grants.
+
 The experimental managed-task core gives external clients, deterministic skills and a configured
 local Ollama model the same observe/act/finish lifecycle. A task's own scope never grants operating
 system permissions. Native target acceptance remains unverified; see `Progress.md`.

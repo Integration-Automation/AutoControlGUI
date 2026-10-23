@@ -98,6 +98,7 @@ from je_auto_control.utils.generate_report.generate_xml_report import generate_x
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.http_transport import start_mcp_http_server
+from je_auto_control.utils.mcp_server.discovery import search_mcp_tools, get_mcp_tool_schema
 from je_auto_control.utils.rbac.policy import authorize_command
 from je_auto_control.utils.mcp_server.server import start_mcp_stdio_server
 from je_auto_control.utils.package_manager.package_manager_class import package_manager
@@ -7496,6 +7497,8 @@ class Executor:
             "AC_queue_stats": _queue_stats,
             "AC_generate_data": _generate_data,
             "AC_mcp_manifest": _mcp_manifest,
+            "AC_mcp_tool_search": search_mcp_tools,
+            "AC_mcp_tool_schema": get_mcp_tool_schema,
             "AC_rank_tests": _rank_tests,
             "AC_select_tests": _select_tests,
             "AC_element_save": _element_save,

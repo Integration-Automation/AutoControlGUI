@@ -88,6 +88,8 @@ COMMAND_CAPABILITIES: Dict[str, str] = {
     "AC_agent_runtime_start": _HOSTS,
     "AC_probe_capabilities": _READ,
     "AC_diagnose": _READ,
+    "AC_mcp_tool_search": _READ,
+    "AC_mcp_tool_schema": _READ,
     "AC_history_capture": _DRIVE,
     "AC_self_heal_evaluate": _DRIVE,
     "AC_self_heal_run": _DRIVE,

@@ -1,5 +1,9 @@
 """Stable, headless AutoControl API façade."""
 
+from je_auto_control.utils.mcp_server.discovery import (
+    ToolDiscoveryError, ToolIndex, ToolSummary, search_mcp_tools, get_mcp_tool_schema,
+)
+
 from je_auto_control.utils.agent_runtime import (
     draft_agent_workflow, workflow_download, workflow_manifest, workflow_control, workflow_open, workflow_wait,
     AgentActionRequest, AgentActionResult, AgentControlBusy, AgentObservation, AgentRuntime,
@@ -30,6 +34,7 @@ from je_auto_control.utils.failure_bundle import (
 )
 
 __all__ = [
+    "ToolDiscoveryError", "ToolIndex", "ToolSummary", "search_mcp_tools", "get_mcp_tool_schema",
     "AgentTargetProfile", "manage_agent_target", "list_agent_targets",
     "AgentHumanReview", "AgentObservationStale",
     "draft_agent_workflow", "workflow_download", "workflow_manifest", "workflow_control", "workflow_open",

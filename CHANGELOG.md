@@ -1,5 +1,7 @@
 # Changelog
 
+Add experimental MCP summary search and single-tool schema inspection across Python/core/AC/MCP/CLI/Builder and Diagnostics Actions. Existing full-registry listing and AC_run_agent tool selection stay unchanged.
+
 This file records user-visible compatibility changes. Detailed development
 notes are recorded in `docs/updates/` (index: `docs/updates/README.md`).
 

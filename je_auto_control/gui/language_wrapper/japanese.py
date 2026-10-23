@@ -1589,3 +1589,11 @@ japanese_word_dict.update({
     'agent_target_disable': '対象を無効化',
     'agent_target_enable': '対象を有効化'
 })
+
+japanese_word_dict.update({
+    'mcp_discovery_query': 'ローカル MCP ツールの概要を検索',
+    'mcp_discovery_name': 'スキーマを確認するツール名',
+    'mcp_discovery_readonly': '読み取り専用ツールに限定',
+    'mcp_discovery_search': 'MCP ツールを検索',
+    'mcp_discovery_schema': 'MCP ツールのスキーマを確認'
+})

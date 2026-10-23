@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.diagnostics_capabilities import CapabilityView
+from je_auto_control.gui.mcp_discovery_view import MCPDiscoveryView
 from je_auto_control.gui.task_controller import TaskController, TaskHandle, TaskOutcome
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -68,6 +69,7 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
         self._progress_label = QLabel()
         self._progress_label.setWordWrap(True)
         self._capability_view = CapabilityView()
+        self._mcp_discovery = MCPDiscoveryView()
         self._table = QTableWidget(0, 4)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.horizontalHeader().setSectionResizeMode(
@@ -84,6 +86,7 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
         root.addWidget(self._summary_label)
         root.addWidget(self._progress_label)
         root.addWidget(self._table, stretch=1)
+        root.addWidget(self._mcp_discovery)
 
     def menu_actions(self) -> list[tuple[str, Callable[[], None]]]:
         """Expose tab commands to the window-level Actions menu."""
@@ -91,13 +94,14 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
             ("diag_probe", self._probe_capabilities),
             ("diag_run", self._refresh),
             ("diag_stop", self._stop),
-        ]
+        ] + self._mcp_discovery.menu_actions()
 
     def retranslate(self) -> None:
         """Translate idle instructions and headers without starting a diagnostic run."""
         super().retranslate()
         self._apply_table_headers()
         self._capability_view.retranslate()
+        self._mcp_discovery.retranslate()
         self._render_summary()
         if self._view.report is not None:
             self._fill_table(self._view.report)

@@ -1551,3 +1551,11 @@ simplified_chinese_word_dict.update({
     'agent_target_disable': '禁用目标',
     'agent_target_enable': '启用目标'
 })
+
+simplified_chinese_word_dict.update({
+    'mcp_discovery_query': '搜索本机 MCP 工具摘要',
+    'mcp_discovery_name': '要查看 schema 的工具名称',
+    'mcp_discovery_readonly': '只探索只读工具',
+    'mcp_discovery_search': '搜索 MCP 工具',
+    'mcp_discovery_schema': '查看 MCP 工具 schema'
+})

@@ -180,3 +180,15 @@ AgentHumanReview identifies an unsaved-content or unknown-dialog gate. It persis
 Host-reviewed targets use AgentTargetProfile and manage_agent_target (AC_agent_target; register/get/disable/enable). Names and configuration are immutable; desktop/file adapters are currently supported, and unimplemented kinds or executable settings are rejected. Tasks pin the host profile digest and cannot expand its tools, applications, roots or network origins. Availability persists across restart and is checked at dispatch; disabling requests pause/cleanup, while enabling requires explicit task resume. list_agent_targets / AC_agent_target_list / CLI agent-task targets expose passive metadata with readiness=not_probed and native_evidence=not_recorded. Full configuration requires manage_hosts; CLI agent-task target and the GUI Host targets page use the same service. Live anonymous MCP tool sessions have operator authority across direct and legacy wrapper calls; MCP host management requires an authenticated administrator. Trusted direct Python callers remain unchanged. Browser automation belongs to WebRunner (je_web_runner), with D:/Codes/WebRunner as the development source; the managed browser adapter is not part of these target registrations.
 
 Existing browser automation, including open_path(URL) and AC_open_path, delegates to WebRunner (Python package je_web_runner). URL plans now report backend=je_web_runner; callers inspecting the previous webbrowser descriptor should use the new value. Signatures and local-file opening stay compatible. URL execution requires the configured WebRunner project and propagates WebRunnerBridgeError when unavailable, without opening an OS browser as a fallback. The development source is D:/Codes/WebRunner. Planning and injected-opener tests remain usable without that package; browser protocol support is determined by WebRunner and its selected browser. Existing dedicated browser GUI/MCP/AC paths and recorded WR_* actions share the same bridge.
+
+
+MCP tool metadata discovery
+------------------------------------------------------------
+
+MCP tool discovery is available through ``search_mcp_tools(query, limit=10)`` and
+``get_mcp_tool_schema(name)``, corresponding AC/MCP commands, and Diagnostics → Actions.
+Search returns bounded summaries with category and required capability; full schemas require a
+single-tool lookup. Both queries refresh role authority and respect the registry's read-only filter.
+MCP queries use that server's live registry, including plugin changes. CLI inspection:
+``je_auto_control_mcp --search-tools document --limit 5`` or ``--tool-schema ac_mcp_tool_search``.
+This increment preserves the existing full tool list; per-session progressive views are still pending.

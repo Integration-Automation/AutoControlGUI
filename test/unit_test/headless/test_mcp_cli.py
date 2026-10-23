@@ -30,6 +30,14 @@ def test_list_tools_with_read_only_drops_destructive(monkeypatch):
     assert "ac_get_mouse_position" in names
 
 
+def test_search_and_single_schema_flags_do_not_start_the_server(monkeypatch):
+    results = json.loads(_capture(monkeypatch, ["--search-tools", "ac_mcp_tool_schema", "--limit", "1"]))
+    assert len(results) == 1 and results[0]["name"] == "ac_mcp_tool_schema"
+    assert "inputSchema" not in results[0]
+    schema = json.loads(_capture(monkeypatch, ["--tool-schema", "ac_mcp_tool_schema"]))
+    assert schema["name"] == "ac_mcp_tool_schema" and "inputSchema" in schema
+
+
 def test_list_resources_emits_json(monkeypatch):
     output = _capture(monkeypatch, ["--list-resources"])
     descriptors = json.loads(output)

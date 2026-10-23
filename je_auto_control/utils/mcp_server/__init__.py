@@ -9,6 +9,9 @@ dependencies are required.
 from je_auto_control.utils.mcp_server.server import (
     MCPServer, start_mcp_stdio_server,
 )
+from je_auto_control.utils.mcp_server.discovery import (
+    ToolDiscoveryError, ToolIndex, ToolSummary, search_mcp_tools, get_mcp_tool_schema,
+)
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
@@ -36,6 +39,7 @@ from je_auto_control.utils.mcp_server.tools import (
 )
 
 __all__ = [
+    "ToolDiscoveryError", "ToolIndex", "ToolSummary", "search_mcp_tools", "get_mcp_tool_schema",
     "AuditLogger", "FakeState", "HttpMCPServer", "LiveScreenProvider",
     "MCPContent", "MCPLogBridge", "MCPPrompt", "MCPPromptArgument",
     "MCPResource", "MCPServer", "MCPTool", "MCPToolAnnotations", "MCPToolResult",

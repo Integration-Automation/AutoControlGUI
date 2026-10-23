@@ -1702,3 +1702,11 @@ english_word_dict.update({
     'agent_target_disable': 'Disable target',
     'agent_target_enable': 'Enable target'
 })
+
+english_word_dict.update({
+    'mcp_discovery_query': 'Search local MCP tool summaries',
+    'mcp_discovery_name': 'Tool name for schema inspection',
+    'mcp_discovery_readonly': 'Limit discovery to read-only tools',
+    'mcp_discovery_search': 'Search MCP tools',
+    'mcp_discovery_schema': 'Inspect MCP tool schema'
+})

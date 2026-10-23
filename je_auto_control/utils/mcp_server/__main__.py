@@ -7,7 +7,7 @@ exits — useful for inspection in CI or manual debugging.
 import argparse
 import json
 import sys
-from typing import Optional
+from typing import Any, Optional
 
 from je_auto_control.utils.cli_output import utf8_stdout
 from je_auto_control.utils.mcp_server.fake_backend import (
@@ -32,6 +32,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "--list-tools", action="store_true",
         help="Print all tool descriptors as JSON and exit.",
     )
+    parser.add_argument(
+        "--search-tools", metavar="QUERY", help="Search permitted tool summaries and exit.",
+    )
+    parser.add_argument(
+        "--tool-schema", metavar="NAME", help="Print one permitted tool descriptor and exit.",
+    )
+    parser.add_argument("--limit", type=int, default=10, help="Tool search result limit (1-50).")
     parser.add_argument(
         "--list-resources", action="store_true",
         help="Print all resource descriptors as JSON and exit.",
@@ -60,7 +67,8 @@ def main(argv: Optional[list] = None) -> None:
         install_fake_backend()
     else:
         maybe_install_from_env()
-    listing_modes = (args.list_tools, args.list_resources, args.list_prompts)
+    listing_modes = (args.list_tools, args.list_resources, args.list_prompts,
+                     args.search_tools is not None, args.tool_schema is not None)
     if any(listing_modes):
         _print_listings(args)
         return
@@ -74,7 +82,7 @@ def _print_listings(args: argparse.Namespace) -> None:
     catalogue -- two arrays back to back were not one JSON document. The
     output is UTF-8 whatever the console's code page.
     """
-    listings = {}
+    listings = _discovery_listings(args)
     if args.list_tools:
         listings["tools"] = [tool.to_descriptor() for tool in
                              build_default_tool_registry(read_only=True if args.read_only else None)]
@@ -86,6 +94,19 @@ def _print_listings(args: argparse.Namespace) -> None:
     utf8_stdout()
     json.dump(document, sys.stdout, ensure_ascii=False, indent=2)
     sys.stdout.write("\n")
+
+
+def _discovery_listings(args: argparse.Namespace) -> dict[str, Any]:
+    from je_auto_control.utils.mcp_server.discovery import ToolIndex
+    listings: dict[str, Any] = {}
+    if args.search_tools is None and args.tool_schema is None:
+        return listings
+    index = ToolIndex(build_default_tool_registry(read_only=True if args.read_only else None))
+    if args.search_tools is not None:
+        listings["matches"] = index.search(args.search_tools, limit=args.limit)
+    if args.tool_schema is not None:
+        listings["schema"] = index.get_schema(args.tool_schema)
+    return listings
 
 
 if __name__ == "__main__":

@@ -1552,3 +1552,11 @@ traditional_chinese_word_dict.update({
     'agent_target_disable': '停用目標',
     'agent_target_enable': '啟用目標'
 })
+
+traditional_chinese_word_dict.update({
+    'mcp_discovery_query': '搜尋本機 MCP 工具摘要',
+    'mcp_discovery_name': '要查閱 schema 的工具名稱',
+    'mcp_discovery_readonly': '只探索唯讀工具',
+    'mcp_discovery_search': '搜尋 MCP 工具',
+    'mcp_discovery_schema': '查閱 MCP 工具 schema'
+})
