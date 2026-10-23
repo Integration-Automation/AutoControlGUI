@@ -67,7 +67,8 @@ def _evaluate(clause: Mapping[str, Any], policy: TaskPolicy, receipts: Sequence[
 
 
 def _file_evidence(clause: Mapping[str, Any], policy: TaskPolicy) -> bool:
-    path = Path(policy.path(clause.get("path")))
+    from je_auto_control.utils.script_vars.interpolate import interpolate_value
+    path = Path(policy.path(interpolate_value(clause.get("path"), policy.spec.inputs)))
     if not path.is_file():
         return False
     if path.suffix.lower() in {".part", ".crdownload", ".tmp"}:

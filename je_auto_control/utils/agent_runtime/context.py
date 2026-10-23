@@ -8,6 +8,8 @@ from typing import Callable, Iterator
 
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
 from je_auto_control.utils.rbac.authorization import AuthorizationContext
+from je_auto_control.utils.script_vars.ref_guard import _vault_guard
+from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 
 
 @dataclass(frozen=True)
@@ -28,11 +30,19 @@ def current_operation() -> TaskOperation | None:
     return _CURRENT.get()
 
 
+def _deny_ambient_secret(_name: str) -> None:
+    raise AgentTaskError("managed task scope does not grant access to the ambient secret vault")
+
+
 @contextmanager
 def operation_scope(operation: TaskOperation | None) -> Iterator[None]:
     """Bind an explicit owner's context, replacing unrelated worker ambient state."""
     token = _CURRENT.set(operation)
     try:
-        yield
+        if operation is None:
+            yield
+        else:
+            with _vault_guard(_deny_ambient_secret):
+                yield
     finally:
         _CURRENT.reset(token)

@@ -29,6 +29,7 @@ class AgentRuntimeService:
         self._connection = self.directory / "agent_runtime.json"
         self._generation = secrets.token_hex(16)
         self._maintenance: threading.Thread | None = None
+        self._triggers: threading.Thread | None = None
         from je_auto_control.utils.agent_runtime.jobs import BackgroundTasks
         self._jobs = BackgroundTasks(self.runtime)
         self.runtime.background = self._jobs
@@ -55,6 +56,8 @@ class AgentRuntimeService:
         self._jobs.start_pending()
         self._maintenance = threading.Thread(target=self._maintain, name="AgentLeaseWatch", daemon=True)
         self._maintenance.start()
+        self._triggers = threading.Thread(target=self._poll_triggers, name="AgentTriggerWatch", daemon=True)
+        self._triggers.start()
         return self.status()
 
     def _maintain(self) -> None:
@@ -63,6 +66,13 @@ class AgentRuntimeService:
                 self.runtime.maintain()
             except (AutoControlException, OSError, RuntimeError, ValueError, TypeError) as error:
                 autocontrol_logger.warning("agent lease maintenance needs review: %s", type(error).__name__)
+
+    def _poll_triggers(self) -> None:
+        while not self._stop.wait(1):
+            try:
+                self.runtime.triggers.poll()
+            except (AutoControlException, OSError, RuntimeError, ValueError, TypeError) as error:
+                autocontrol_logger.warning("agent trigger polling needs review: %s", type(error).__name__)
 
     def status(self) -> dict[str, Any]:
         """Return inert service metadata; credentials never appear in status or logs."""
@@ -76,9 +86,11 @@ class AgentRuntimeService:
     def close(self) -> None:
         """Retire owned task input, listener and matching connection metadata."""
         self._stop.set()
-        if self._maintenance is not None:
-            self._maintenance.join(timeout=3)
-            if self._maintenance.is_alive():
+        for worker in (self._maintenance, self._triggers):
+            if worker is None:
+                continue
+            worker.join(timeout=3)
+            if worker.is_alive():
                 raise AgentTaskError("agent lease maintenance has not retired")
         self._jobs.close()
         self.runtime.close()

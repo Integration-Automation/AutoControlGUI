@@ -92,6 +92,22 @@ def test_status_contains_no_credential(service):
     assert metadata["token"] not in json.dumps(instance.status())
 
 
+def test_empty_post_controls_and_trigger_delivery_share_the_same_service(service):
+    import time
+    client, instance = service
+    assert client.call("stop_all")["requested"] == 0
+    skill = {**spec(), "mode": "skill", "actions": [{"tool": "AC_increment"}]}
+    trigger = client.call("trigger", {"operation": "register", "request": {"kind": "event", "spec": skill}})
+    request = {"operation": "fire", "request": {"trigger_id": trigger["trigger_id"], "event_key": "fixture"}}
+    first = client.call("trigger", request)
+    assert client.call("trigger", request)["task_id"] == first["task_id"]
+    deadline = time.monotonic() + 5
+    while instance.runtime.get(first["task_id"]).state != "succeeded" and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert instance.runtime.get(first["task_id"]).state == "succeeded"
+    assert instance.runtime._targets["counter"].value == 1
+
+
 def test_abandoned_external_lease_expires_without_another_client_request(service):
     import time
     client, instance = service

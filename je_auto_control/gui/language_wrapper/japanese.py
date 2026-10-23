@@ -1526,3 +1526,24 @@ japanese_word_dict.update({
     "agent_reconcile": "確認済み結果を記録",
     "agent_prune": "期限切れキャッシュを削除"
 })
+
+japanese_word_dict.update({
+    "agent_request_key": "送信キー（任意）",
+    "agent_trigger_id": "トリガー ID",
+    "agent_trigger_operation": "トリガー操作",
+    "agent_trigger_kind": "トリガー種類",
+    "agent_event_key": "イベントキー",
+    "agent_trigger_config": "トリガー設定／イベントデータ",
+    "agent_trigger_apply": "トリガー操作を適用",
+    "agent_trigger_register": "バインドを作成",
+    "agent_trigger_list": "バインド一覧",
+    "agent_trigger_get": "バインドを表示",
+    "agent_trigger_enable": "バインドを有効化",
+    "agent_trigger_disable": "バインドを無効化",
+    "agent_trigger_fire": "イベントを送信",
+    "agent_trigger_remove": "バインドを削除",
+    "agent_trigger_kind_interval": "固定間隔",
+    "agent_trigger_kind_cron": "Cron スケジュール",
+    "agent_trigger_kind_file": "ファイル版",
+    "agent_trigger_kind_event": "外部イベント"
+})

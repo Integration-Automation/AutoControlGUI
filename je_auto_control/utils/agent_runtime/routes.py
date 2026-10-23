@@ -7,7 +7,7 @@ from concurrent.futures import CancelledError
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 
 OPERATIONS = ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown", "draft", "stop_all",
-              "receipts", "reconcile", "prune")
+              "receipts", "reconcile", "prune", "trigger")
 
 
 def route(operation: str) -> Callable[..., Any]:
@@ -37,16 +37,16 @@ def dispatch(runtime: Any, operation: str, body: Any = None, task_id: str | None
         raise AgentTaskError("request body must be an object")
     operations = {"shutdown": lambda: runtime.request_shutdown(), "stop_all": lambda: _stop_all(runtime, body),
                   "submit": lambda: _submit(runtime, body), "draft": lambda: _draft(body),
-                  "prune": lambda: _prune(runtime, body)}
+                  "prune": lambda: _prune(runtime, body), "trigger": lambda: _trigger(runtime, body)}
     if operation in operations:
         return operations[operation]()
     return _task_operation(runtime, operation, body)
 
 
 def _submit(runtime: Any, body: dict) -> dict:
-    if set(body) != {"spec"}:
-        raise AgentTaskError("submit requires only spec")
-    task = runtime.submit(body["spec"])
+    if "spec" not in body or set(body) - {"spec", "idempotency_key"}:
+        raise AgentTaskError("submit requires spec and accepts an optional idempotency_key")
+    task = runtime.submit(body["spec"], idempotency_key=body.get("idempotency_key"))
     if getattr(runtime, "background", None) is not None:
         runtime.background.start(task.task_id)
     return {"task_id": task.task_id, "state": task.state}
@@ -71,6 +71,12 @@ def _prune(runtime: Any, body: dict) -> dict:
     return runtime.prune(body.get("keep_days", 30))
 
 
+def _trigger(runtime: Any, body: dict) -> dict:
+    if "operation" not in body or set(body) - {"operation", "request"}:
+        raise AgentTaskError("trigger accepts operation and an optional request object")
+    return runtime.triggers.control(body["operation"], body.get("request"))
+
+
 def _task_operation(runtime: Any, operation: str, body: dict[str, Any]) -> dict[str, Any]:
     _check_task_fields(operation, body)
     task_id = body["task_id"]
@@ -81,7 +87,8 @@ def _task_operation(runtime: Any, operation: str, body: dict[str, Any]) -> dict[
     if operation == "receipts":
         return runtime.receipts(task_id, body.get("offset", 0), body.get("limit", 100))
     handlers = {name: getattr(runtime, name) for name in OPERATIONS
-                if name not in {"submit", "act", "shutdown", "draft", "stop_all", "prune", "reconcile", "receipts"}}
+                if name not in {"submit", "act", "shutdown", "draft", "stop_all", "prune", "reconcile",
+                                "receipts", "trigger"}}
     if operation not in handlers:
         raise AgentTaskError("unknown task operation")
     result = handlers[operation](task_id).to_dict()

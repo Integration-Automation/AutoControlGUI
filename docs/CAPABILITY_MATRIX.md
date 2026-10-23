@@ -661,3 +661,8 @@ Persistent budget rollback/restart/regression handling and owner-scoped emergenc
 Receipt review, non-effect retry, atomic history/journal linkage, image opt-in and owner-scoped 30-day
 retention have fake-effect/cache coverage. These are persistence guarantees, not new native acceptance.
 Cleanup preserves user outputs, external journal files and unrecognized cache content.
+
+Preauthorized triggers have fake-source and real owned file-helper coverage for atomic deduplication,
+restart, bounded pending work, owner revocation, authority-store isolation and event-scoped outputs.
+Canonical-root symlink replacement is tested only where the filesystem grants symlink creation.
+Emergency stop and queued recovery cover more than one thousand task records without native input.

@@ -1,0 +1,37 @@
+{
+  "kind": "file",
+  "config": {
+    "path": "C:/Automation/archive/report.csv",
+    "stable_seconds": 2
+  },
+  "max_pending": 1,
+  "spec": {
+    "goal": "Prepare a report manifest",
+    "target": "local-files",
+    "mode": "skill",
+    "roots": [
+      "C:/Automation"
+    ],
+    "allowed_tools": [
+      "AC_workflow_manifest"
+    ],
+    "actions": [
+      {
+        "tool": "AC_workflow_manifest",
+        "arguments": {
+          "directory": "C:/Automation/archive",
+          "path": "C:/Automation/manifests/${event.key}.json",
+          "names": [
+            "report.csv"
+          ]
+        }
+      }
+    ],
+    "success_criteria": [
+      {
+        "kind": "file_exists",
+        "path": "C:/Automation/manifests/${event.key}.json"
+      }
+    ]
+  }
+}

@@ -109,6 +109,8 @@ def _lookup(name: str, variables: Mapping[str, Any]) -> Any:
 
 def _lookup_secret(secret_name: str) -> str:
     """Resolve ``${secrets.NAME}`` through the global vault."""
+    from je_auto_control.utils.script_vars.ref_guard import _check_vault_access
+    _check_vault_access(secret_name)
     from je_auto_control.utils.secrets import (
         SecretStoreLocked, default_secret_manager,
     )

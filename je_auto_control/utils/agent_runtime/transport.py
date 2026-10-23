@@ -7,7 +7,7 @@ import time
 from contextvars import copy_context
 from typing import Any, Callable
 
-from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
 from je_auto_control.utils.http_client.http_client import build_call, urllib_transport
 
@@ -74,5 +74,5 @@ def _acquire(slots: Any, timeout: float, check: Callable[[], None]) -> None:
         if slots.acquire(blocking=False):
             return
         if time.monotonic() >= deadline:
-            raise AgentTaskError("local HTTP request capacity is busy")
+            raise AgentControlBusy("local HTTP request capacity is busy")
         time.sleep(0.01)

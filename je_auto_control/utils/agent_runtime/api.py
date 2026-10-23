@@ -13,6 +13,7 @@ from typing import Any, Mapping
 from je_auto_control.utils.agent_runtime.client import AgentRuntimeClient
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
+from je_auto_control.utils.agent_runtime.policy import canonical_spec
 from je_auto_control.utils.agent_runtime.service import default_connection_path
 from je_auto_control.utils.rbac.authorization import AuthorizationError, current_authorization
 from je_auto_control.utils.rbac.users import Capability
@@ -59,10 +60,14 @@ def _available(connection: Path) -> bool:
         return False
 
 
-def submit_agent_task(spec: AgentTaskSpec | Mapping[str, Any]) -> dict[str, Any]:
+def submit_agent_task(spec: AgentTaskSpec | Mapping[str, Any], idempotency_key: str | None = None) -> dict[str, Any]:
     """Validate and submit a task to the explicitly running local service."""
     validated = spec if isinstance(spec, AgentTaskSpec) else AgentTaskSpec.from_dict(spec)
-    return AgentRuntimeClient().call("submit", {"spec": validated.to_dict()})
+    validated = canonical_spec(validated)
+    payload: dict[str, Any] = {"spec": validated.to_dict()}
+    if idempotency_key is not None:
+        payload["idempotency_key"] = idempotency_key
+    return AgentRuntimeClient().call("submit", payload)
 
 
 def get_agent_task(task_id: str) -> dict[str, Any]:
@@ -88,6 +93,16 @@ def reconcile_agent_task(task_id: str, review: Mapping[str, Any]) -> dict[str, A
 def prune_agent_tasks(keep_days: int = 30) -> dict[str, Any]:
     """Prune expired visible metadata and owned artifacts, preserving user files and external journals."""
     return AgentRuntimeClient().call("prune", {"keep_days": keep_days})
+
+
+def manage_agent_trigger(operation: str, request: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Register, inspect, pause or fire a durable, preauthorized task trigger."""
+    return AgentRuntimeClient().call("trigger", {"operation": operation, "request": dict(request or {})})
+
+
+def list_agent_triggers() -> dict[str, Any]:
+    """List durable trigger metadata visible to this caller without firing or observing a target."""
+    return manage_agent_trigger("list")
 
 
 def observe_agent_task(task_id: str) -> dict[str, Any]:

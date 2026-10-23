@@ -9,7 +9,7 @@ import uuid
 from concurrent.futures import CancelledError
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator, Mapping
+from typing import Any, Iterator, Mapping, List
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.context import TaskOperation, operation_scope
@@ -18,11 +18,15 @@ from je_auto_control.utils.agent_runtime.models import (
     AgentTaskSpec, TERMINAL, detached, freeze, thaw,
 )
 from je_auto_control.utils.agent_runtime.ownership import ControlBroker, ControlLease
-from je_auto_control.utils.agent_runtime.policy import TaskPolicy, durable_payload
+from je_auto_control.utils.agent_runtime.policy import (
+    TaskPolicy, durable_payload, canonical_spec, owns_task, validate_root_snapshot,
+)
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock
 from je_auto_control.utils.agent_runtime.budget_clock import BudgetClock
 from je_auto_control.utils.agent_runtime.evidence import TaskEvidence
 from je_auto_control.utils.agent_runtime.receipts import reconcile, row_report
+from je_auto_control.utils.agent_runtime.task_triggers import AgentTriggers
 from je_auto_control.utils.agent_runtime.store import AgentTaskStore
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
@@ -55,6 +59,7 @@ class AgentRuntime:
         self.broker = ControlBroker(self.store)
         self.clock = BudgetClock(self.store)
         self.evidence = TaskEvidence(self.store)
+        self.triggers = AgentTriggers(self)
         self._targets = dict(targets) if targets is not None else _default_targets()
         self._tokens: dict[str, CancellationToken] = {}
         self._executing: set[str] = set()
@@ -82,24 +87,34 @@ class AgentRuntime:
             raise AgentTaskError("runtime is closed")
         row = self.store.get(task_id)
         identity = current_authorization()
-        owner = row["owner"].get("user_id")
-        if identity is not None and identity.role != "admin" and identity.user_id != owner:
+        if not owns_task(row["owner"], identity):
             raise AgentTaskError("task does not exist or its owner is another caller")
         return row
 
-    def submit(self, spec: AgentTaskSpec | Mapping[str, Any]) -> AgentTaskHandle:
-        """Persist a validated, detached specification without acquiring or operating a target."""
-        if self._closed:
-            raise AgentTaskError("runtime is closed")
+    def _validated_spec(self, spec: AgentTaskSpec | Mapping[str, Any]) -> AgentTaskSpec:
         spec = spec if isinstance(spec, AgentTaskSpec) else AgentTaskSpec.from_dict(spec)
+        spec = canonical_spec(spec)
         if spec.target not in self._targets:
             raise AgentTaskError("task target has not been configured")
         TaskPolicy(spec)
         validate_criteria(spec.success_criteria)
+        return spec
+
+    def submit(self, spec: AgentTaskSpec | Mapping[str, Any], *,
+               idempotency_key: str | None = None) -> AgentTaskHandle:
+        """Persist a validated, detached specification without acquiring or operating a target."""
+        if self._closed:
+            raise AgentTaskError("runtime is closed")
+        spec = self._validated_spec(spec)
+        return self._create_task(spec, idempotency_key)
+
+    def _create_task(self, spec: AgentTaskSpec, key: str | None,
+                     event: tuple[str, str, str] | None = None) -> AgentTaskHandle:
         with DeferredAuthorization.capture().scope():
-            task_id = self.store.create(durable_payload(spec.to_dict()), _identity_dict())
+            task_id = self.store.create(durable_payload(spec.to_dict()), _identity_dict(),
+                                        idempotency_key=key, trigger_event=event)
         self.evidence.ensure(task_id)
-        return AgentTaskHandle(task_id)
+        return AgentTaskHandle(task_id, self.store.get(task_id)["state"])
 
     def get(self, task_id: str) -> AgentTaskResult:
         """Read owner-scoped task status without observing the desktop."""
@@ -126,10 +141,10 @@ class AgentRuntime:
         """Record an explicit owner's witness for one uncertain attempt; resume remains a separate action."""
         with self._lock(task_id):
             row = self._row(task_id)
-            if row["state"] not in {"waiting_user", "recovering", "paused"} or task_id in self._leases:
+            if row["state"] not in {"waiting_user", "recovering", "paused", "cancelled", "timed_out", "failed"} or (
+                    task_id in self._leases):
                 raise AgentTaskError("reconciliation requires a stopped task with no active input owner")
-            owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
-            with DeferredAuthorization(owner).scope():
+            with DeferredAuthorization.capture().scope():
                 reconcile(self.store, task_id, review)
             receipt = next(item for item in self.store.actions(task_id) if item["id"] == review["action_id"])
             self.evidence.action(task_id, receipt, finished=True)
@@ -140,8 +155,7 @@ class AgentRuntime:
         """List only tasks visible to the current principal."""
         identity = current_authorization()
         rows = self.store.list(limit)
-        visible = [row for row in rows if identity is None or identity.role == "admin"
-                   or row["owner"].get("user_id") == identity.user_id]
+        visible = [row for row in rows if owns_task(row["owner"], identity)]
         return [self.get(row["id"]) for row in visible]
 
     def _target(self, row: Mapping[str, Any]) -> Any:
@@ -158,11 +172,16 @@ class AgentRuntime:
     def _scope(self, row: Mapping[str, Any]) -> Iterator[TaskPolicy]:
         spec = AgentTaskSpec.from_dict(row["spec"])
         owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
-        policy = TaskPolicy(spec)
+        try:
+            policy = TaskPolicy(spec)
+        except AgentTaskError:
+            self.pause(row["id"])
+            raise
 
         def checkpoint() -> None:
             self._token(row["id"]).checkpoint()
             self._check_budget(row["id"])
+            policy.validate_snapshot()
             with DeferredAuthorization(owner).scope():
                 pass
 
@@ -177,17 +196,19 @@ class AgentRuntime:
             self.pause(row["id"])
 
         task_id = row["id"]
-        self._executing.add(task_id)
+        with self._mutex:
+            self._executing.add(task_id)
         try:
             with DeferredAuthorization(owner).scope(), cancellation_scope(self._token(task_id)):
                 with (command_guard(guard), execution_scope(thaw(spec.inputs)),
-                      operation_scope(TaskOperation(spec, checkpoint, owner, takeover))):
+                      operation_scope(TaskOperation(spec, checkpoint, current_authorization(), takeover))):
                     yield policy
         except AuthorizationError:
             self.cancel(task_id)
             raise
         finally:
-            self._executing.discard(task_id)
+            with self._mutex:
+                self._executing.discard(task_id)
             self._settle_control(task_id)
 
     def _check_budget(self, task_id: str) -> None:
@@ -325,11 +346,46 @@ class AgentRuntime:
 
     def stop_all(self) -> dict[str, Any]:
         """Cancel every visible task; operators cannot stop another principal's work."""
-        stopped = []
-        for result in self.list(1000):
-            if result.state not in TERMINAL:
-                stopped.append(self.cancel(result.task_id).to_dict())
-        return {"tasks": stopped}
+        identifiers = self._visible_live_ids()
+        for task_id in identifiers:
+            self._stop_final[task_id] = "cancelled"
+            self._token(task_id).cancel()
+        with self.store.connection(write=True) as connection:
+            connection.executemany("UPDATE agent_tasks SET state='cancelling',updated=? WHERE id=? "
+                "AND state NOT IN ('succeeded','failed','cancelled','timed_out')",
+                [(time.time(), identifier) for identifier in identifiers])
+        queued = self._cancel_without_input(identifiers)
+        results: List[dict[str, Any]] = []
+        errors: List[dict[str, str]] = []
+        for task_id in identifiers:
+            try:
+                result = self.get(task_id) if task_id in queued else self.cancel(task_id)
+                if len(results) < 1000:
+                    results.append(result.to_dict())
+            except _ERRORS as error:
+                errors.append({"task_id": task_id, "error": type(error).__name__})
+        return {"tasks": results, "requested": len(identifiers), "cleanup_errors": errors[:1000]}
+
+    def _cancel_without_input(self, identifiers: List[str]) -> set[str]:
+        with self._mutex:
+            queued = {task_id for task_id in identifiers if task_id not in self._leases
+                      and task_id not in self._executing}
+        with self.store.connection(write=True) as connection:
+            connection.executemany("UPDATE agent_tasks SET state='cancelled',updated=? "
+                                   "WHERE id=? AND state='cancelling'", [(time.time(), item) for item in queued])
+        if self.background is not None:
+            self.evidence.defer(list(queued))
+        else:
+            for task_id in queued:
+                self.evidence.publish(task_id)
+        return queued
+
+    def _visible_live_ids(self) -> List[str]:
+        identity = current_authorization()
+        with self.store.connection() as connection:
+            rows = connection.execute("SELECT id,owner FROM agent_tasks "
+                "WHERE state NOT IN ('succeeded','failed','cancelled','timed_out')").fetchall()
+        return [row["id"] for row in rows if owns_task(json.loads(row["owner"]), identity)]
 
     def _request_stop(self, task_id: str, pending: str, settled: str) -> AgentTaskResult:
         row = self._row(task_id)
@@ -403,13 +459,27 @@ class AgentRuntime:
                 continue
             owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
             try:
+                validate_root_snapshot(row["spec"]["roots"])
                 with DeferredAuthorization(owner).scope():
                     pass
-            except AuthorizationError:
+            except (AutoControlException, OSError, ValueError):
                 self.cancel(task_id)
+        self._settle_stopped()
+        self.evidence.flush()
         if time.monotonic() >= self._next_retention:
             self.prune()
             self._next_retention = time.monotonic() + 3600
+
+    def _settle_stopped(self) -> None:
+        with self.store.connection() as connection:
+            identifiers = [row[0] for row in connection.execute(
+                "SELECT id FROM agent_tasks WHERE state IN ('pausing','cancelling') LIMIT 100")]
+        for task_id in identifiers:
+            if task_id not in self._executing:
+                try:
+                    self._settle_control(task_id)
+                except _ERRORS as error:
+                    autocontrol_logger.warning("agent input retirement needs review: %s", type(error).__name__)
 
     def prune(self, keep_days: int = 30) -> dict[str, Any]:
         """Remove expired visible metadata and owned artifacts, preserving user output and external journals."""

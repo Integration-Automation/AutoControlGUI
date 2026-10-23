@@ -510,3 +510,7 @@ presence-only hook. Budgets persist monotonic elapsed high-water marks without r
 Task results add metadata provenance. get_agent_task_receipts, reconcile_agent_task and prune_agent_tasks
 are additive across Python/AC/MCP/REST/CLI/GUI. Committed receipts are immutable; uncertain outcomes
 need explicit owner review. Native task images persist only with strict-redaction opt-in and bounds.
+
+submit_agent_task accepts an optional owner-scoped idempotency_key. manage_agent_trigger and
+list_agent_triggers add durable preauthorized interval/cron/file/event bindings across all task surfaces.
+Private vault guards are installed by managed operation context; unscoped script interpolation is unchanged.

@@ -107,6 +107,21 @@ def test_reviewed_non_effect_can_retry_without_consuming_the_next_skill_step(run
     assert instance.get(task.task_id).steps == 2
 
 
+def test_cancelled_unknown_effect_can_be_reviewed_without_reopening_the_task(runtime):
+    instance, target = runtime
+    target.fail = True
+    task = instance.submit(spec())
+    with pytest.raises(AgentTaskError):
+        act(instance, task.task_id)
+    receipt = instance.receipts(task.task_id)["actions"][0]
+    instance.cancel(task.task_id)
+    result = instance.reconcile(task.task_id, {"action_id": receipt["id"], "decision": "not_applied",
+                                              "note": "Reviewed after cancellation"})
+    assert result.state == "cancelled"
+    with pytest.raises(AgentTaskError, match="not ready"):
+        instance.resume(task.task_id)
+
+
 def test_committed_receipt_cannot_be_silently_rewritten(runtime):
     instance, _target = runtime
     task = instance.submit(spec())

@@ -189,3 +189,58 @@ unrecognized cache files and symlink escapes refuse cleanup for review.
 AC/MCP expose receipts/reconcile/prune; REST adds POST `/agent/receipts|reconcile|prune`. The task view
 Actions menu exposes receipts, owner review and expired-cache cleanup. Put the review object in the
 JSON editor for the selected task; the operation records it without automatically resuming.
+
+## Preauthorized schedules and events
+
+`manage_agent_trigger(operation, request)` supports register/list/get/enable/disable/fire/remove;
+`list_agent_triggers()` is read-only. A binding captures a validated task specification, original
+principal provenance and a fixed interval, cron, file-version or externally delivered event source.
+The service starts its watcher only on explicit startup and restores saved bindings after restart.
+Internal skills/local models use the same durable WorkQueue; external-mode tasks wait for their client.
+Shared desktop acquisition still requires the idle/activity gate.
+
+```powershell
+je_auto_control agent-task trigger register examples/agent_trigger_interval.json
+je_auto_control agent-task trigger list
+```
+
+The four `examples/agent_trigger_*.json` configurations use rooted file workflows; replace their
+paths before registration. Intervals are at least one second; cron uses the existing five-field parser
+and an explicit timezone (UTC works without optional timezone data). File notifications require a
+stable rooted path/size/mtime/inode version for the configured interval. Stability is an event signal;
+the workflow must still validate file completion. Existing stable files produce an initial event.
+
+Deliver an external notification with `fire` and
+`{"trigger_id": "id", "event_key": "source-event-id", "payload": {"record": 42}}`.
+Keys are hashed; payloads are bounded to 64 KiB. The event becomes `inputs.event.key` and
+`inputs.event.payload`, never a new tool/application/root authorization. `${event.key}` can name a
+versioned output under an approved root; completion file paths use the same scoped interpolation.
+Task creation, request-key deduplication and the event record commit in one transaction before delivery.
+Duplicate events return the original task ID; changed data under the same event key is refused.
+
+A binding defaults to one unfinished task (`max_pending`, at most 100). Additional events return deferred
+without being acknowledged as accepted. Missed interval/cron windows coalesce; file watches retain the
+latest stable version. Up to 200 bindings may be configured. Each fire refreshes its registrant's current
+role; revocation, invalid scope or invalid source state disables the binding with a review reason.
+Disabling/removing a binding stops future fires. Accepted service tasks keep their own lifecycle.
+Deduplication tombstones survive task retention while the binding exists, preventing old notifications
+from replaying an already expired task.
+
+`submit_agent_task(spec, idempotency_key=...)` also deduplicates direct submissions per principal and
+source authority store. Reusing a key with a changed specification fails. Direct keys expire with their
+task metadata. AC/MCP/Builder share this argument; CLI submit accepts `--idempotency-key` and the task
+view provides an optional submission key. Trigger controls are available through `AC_agent_trigger`,
+`ac_agent_trigger`, authenticated POST `/agent/trigger`, CLI and the task view's Actions menu.
+
+Roots are canonicalized before durable acceptance. Replacing a stored canonical root with a symlink
+requires scope review; input checkpoints and lease maintenance refuse the changed scope. Managed
+operations also block ambient `${secrets.*}` vault resolution, including parallel/DAG workers; access
+to a desktop does not implicitly authorize the host vault. Existing unscoped script behavior is preserved.
+Task ownership compares both user ID and source authority store. Emergency stop reaches all visible
+tasks beyond the display page limit and requests cancellation before serial cleanup. View-only request
+cancellation detaches the GUI; explicit Pause/Cancel remain usable during a pending request.
+
+Bulk stop publishes stopped task states before producing a large report batch. The service persists
+that publication queue and exposes `metadata.report_pending` until the report/history update is ready.
+Cancelled/timed-out/failed unknown attempts can still receive an audit review without reopening their
+terminal task. Local-model initialization under temporary HTTP capacity pressure stays queued.

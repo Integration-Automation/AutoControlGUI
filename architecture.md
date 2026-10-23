@@ -609,3 +609,8 @@ TaskEvidence atomically links the runtime task with the existing HistoryStore sc
 SQLite transaction. Append-only journals mirror receipt certainty; reports summarize per-row outcomes.
 Owner testimony reconciles uncertain attempts without automatic resume. Retention only removes validated
 generated cache files and matching private metadata; external journals and user outputs remain separate.
+
+AgentTriggers persists captured task templates, owner provenance and bounded schedule/file/event
+bindings. Event/request deduplication and task creation share one SQLite transaction before WorkQueue
+delivery. Trigger and lease watchers have independent owned threads. Canonical root snapshots and
+operation-bound vault guards follow worker handoff; view cancellation only detaches from service work.

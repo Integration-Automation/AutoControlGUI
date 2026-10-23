@@ -7,11 +7,15 @@ from je_auto_control.utils.agent_runtime import api
 from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow, WORKFLOWS
 from je_auto_control.utils.agent_runtime.workflow_files import workflow_download, workflow_manifest
 from je_auto_control.utils.agent_runtime.workflow_desktop import workflow_control, workflow_open
+from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGER_OPERATIONS
 
 _ID = {"task_id": {"type": "string", "minLength": 1}}
 
 # name: (function, JSON properties, required, read_only, host_management)
 CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
+    "AC_agent_trigger": (api.manage_agent_trigger, {"operation": {"type": "string", "enum": list(TRIGGER_OPERATIONS)},
+                                                  "request": {"type": "object"}}, ("operation",), False, False),
+    "AC_agent_trigger_list": (api.list_agent_triggers, {}, (), True, False),
     "AC_agent_task_receipts": (api.get_agent_task_receipts, {**_ID, "offset": {"type": "integer", "minimum": 0},
                                    "limit": {"type": "integer", "minimum": 1, "maximum": 200}},
                                   ("task_id",), True, False),
@@ -36,7 +40,9 @@ CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
     "AC_agent_runtime_start": (api.start_agent_runtime, {"directory": {"type": "string", "format": "path"}},
                                (), False, True),
     "AC_agent_runtime_status": (api.agent_runtime_status, {}, (), True, False),
-    "AC_agent_task_submit": (api.submit_agent_task, {"spec": {"type": "object"}}, ("spec",), False, False),
+    "AC_agent_task_submit": (api.submit_agent_task, {"spec": {"type": "object"},
+                                                   "idempotency_key": {"type": "string", "maxLength": 256}},
+                            ("spec",), False, False),
     "AC_agent_task_list": (api.list_agent_tasks, {}, (), True, False),
     "AC_agent_task_get": (api.get_agent_task, _ID, ("task_id",), True, False),
     "AC_agent_task_observe": (api.observe_agent_task, _ID, ("task_id",), False, False),

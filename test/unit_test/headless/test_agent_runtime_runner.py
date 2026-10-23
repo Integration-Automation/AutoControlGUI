@@ -48,6 +48,21 @@ def test_deterministic_skill_runs_through_the_same_verifier(tmp_path):
         runtime.close()
 
 
+def test_busy_local_model_initialization_stays_queued_without_acquiring_input(tmp_path):
+    from je_auto_control.utils.agent_runtime import AgentControlBusy
+    target = Target()
+    runtime = AgentRuntime(tmp_path / "tasks.sqlite", targets={"fixture": target})
+    try:
+        handle = runtime.submit(task_spec(mode="ollama"))
+        with patch("je_auto_control.utils.agent_runtime.runner.OllamaTaskBackend",
+                   side_effect=AgentControlBusy("local inference is busy")):
+            assert run_task(runtime, handle.task_id).state == "queued"
+        assert target.count == 0
+        assert not runtime._leases
+    finally:
+        runtime.close()
+
+
 def test_untrusted_model_cannot_expand_task_scope(tmp_path):
     class Backend:
         def decide(self, *_args, **_kwargs):

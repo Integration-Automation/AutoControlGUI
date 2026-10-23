@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import time
 import uuid
 from contextlib import contextmanager
@@ -34,6 +35,19 @@ CREATE TABLE IF NOT EXISTS agent_reviews (
 CREATE TABLE IF NOT EXISTS agent_evidence (
  task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE,
  history_id INTEGER NOT NULL, journal_path TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_request_keys (
+ owner_key TEXT NOT NULL, key_hash TEXT NOT NULL, spec_hash TEXT NOT NULL,
+ task_id TEXT NOT NULL REFERENCES agent_tasks(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
+ PRIMARY KEY(owner_key,key_hash));
+CREATE TABLE IF NOT EXISTS agent_triggers (
+ id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL, spec TEXT NOT NULL, owner TEXT NOT NULL,
+ config TEXT NOT NULL, enabled INTEGER NOT NULL, next_run REAL NOT NULL, last_event TEXT NOT NULL,
+ max_pending INTEGER NOT NULL, error TEXT NOT NULL, created REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_trigger_events (
+ trigger_id TEXT NOT NULL REFERENCES agent_triggers(id), event_hash TEXT NOT NULL, payload_hash TEXT NOT NULL,
+ task_id TEXT NOT NULL, created REAL NOT NULL, PRIMARY KEY(trigger_id,event_hash));
+CREATE TABLE IF NOT EXISTS agent_evidence_pending (
+ task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE);
 """
 
 
@@ -42,6 +56,28 @@ def _open_connection(driver: Any, path: str) -> Any:
         return driver.connect(path, timeout=5, isolation_level=None)
     except driver.Error as error:
         raise AgentTaskError("agent runtime database could not be opened") from error
+
+
+def _request_key(connection: Any, owner: dict, key: str, spec: dict, identifier: str) -> str | None:
+    if not isinstance(key, str) or not key or len(key) > 256:
+        raise AgentTaskError("idempotency_key requires between one and 256 characters")
+    owner_key = json.dumps([owner.get("user_id"), owner.get("store_path")])
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+    spec_hash = hashlib.sha256(json.dumps(spec, sort_keys=True).encode("utf-8")).hexdigest()
+    row = connection.execute("SELECT task_id,spec_hash FROM agent_request_keys WHERE owner_key=? AND key_hash=?",
+                             (owner_key, digest)).fetchone()
+    if row is not None:
+        if row["spec_hash"] != spec_hash:
+            raise AgentTaskError("idempotency_key was already used for a different task specification")
+        return str(row["task_id"])
+    # The deferred foreign key is satisfied by the task inserted in this transaction.
+    connection.execute("INSERT INTO agent_request_keys VALUES (?,?,?,?)", (owner_key, digest, spec_hash, identifier))
+    return None
+
+
+def _bind_trigger_event(connection: Any, event: tuple[str, str, str] | None, task_id: str, now: float) -> None:
+    if event is not None:
+        connection.execute("INSERT INTO agent_trigger_events VALUES (?,?,?,?,?)", (*event, task_id, now))
 
 
 class AgentTaskStore:
@@ -83,13 +119,20 @@ class AgentTaskStore:
         finally:
             connection.close()
 
-    def create(self, spec: dict, owner: dict) -> str:
+    def create(self, spec: dict, owner: dict, *, idempotency_key: str | None = None,
+               trigger_event: tuple[str, str, str] | None = None) -> str:
         """Persist an immutable authorized task snapshot before it can execute."""
         identifier = uuid.uuid4().hex
         now = time.time()
         with self.connection(write=True) as connection:
+            if idempotency_key is not None:
+                existing = _request_key(connection, owner, idempotency_key, spec, identifier)
+                if existing is not None:
+                    _bind_trigger_event(connection, trigger_event, existing, now)
+                    return existing
             connection.execute("INSERT INTO agent_tasks(id,spec,owner,state,created,updated) VALUES (?,?,?,?,?,?)",
                                (identifier, json.dumps(spec), json.dumps(owner), "queued", now, now))
+            _bind_trigger_event(connection, trigger_event, identifier, now)
         return identifier
 
     def get(self, task_id: str) -> dict[str, Any]:

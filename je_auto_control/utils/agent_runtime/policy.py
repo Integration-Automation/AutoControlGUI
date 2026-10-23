@@ -1,12 +1,15 @@
 """Explicit task scopes, rooted data paths and secret-safe durable payloads."""
 from __future__ import annotations
 
+from dataclasses import replace
+from pathlib import Path
 from typing import Any, Mapping
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
 from je_auto_control.utils.path_guard.policy import PathPolicy
 from je_auto_control.utils.path_guard.path_guard import PathNotAllowedError
+from je_auto_control.utils.rbac.authorization import AuthorizationContext
 
 _FORBIDDEN = ("AC_shell", "AC_execute_process", "AC_add_package", "AC_load_plugins", "AC_run_agent",
               "AC_computer_use", "AC_secret_", "AC_egress_", "AC_rest_api_", "AC_start_", "AC_stop_",
@@ -21,6 +24,7 @@ class TaskPolicy:
     def __init__(self, spec: AgentTaskSpec) -> None:
         self.spec = spec
         self.paths = PathPolicy(spec.roots)
+        self.validate_snapshot()
         if any(name.startswith(_FORBIDDEN) for name in spec.allowed_tools):
             raise AgentTaskError("tool is not allowed in the managed task profile")
         for criterion in spec.success_criteria:
@@ -33,10 +37,15 @@ class TaskPolicy:
         """Canonicalize a task data path, refusing unrestricted or escaped paths."""
         if not self.spec.roots or not isinstance(value, str):
             raise AgentTaskError("file operations require explicit task roots")
+        self.validate_snapshot()
         try:
             return str(self.paths.validate(value, operation="agent task root"))
         except (OSError, ValueError, PathNotAllowedError) as error:
             raise AgentTaskError("path is outside the allowed task roots") from error
+
+    def validate_snapshot(self) -> None:
+        """A stored canonical root cannot silently become a symlink to newly authorized data."""
+        validate_root_snapshot(self.spec.roots)
 
     def check(self, name: str, arguments: Any) -> None:
         """Guard every resolved command, including commands nested in action scripts."""
@@ -71,3 +80,24 @@ def durable_payload(value: Any) -> Any:
     if isinstance(value, list):
         return [durable_payload(item) for item in value]
     return value
+
+
+def canonical_spec(spec: AgentTaskSpec) -> AgentTaskSpec:
+    """Pin approved roots to their canonical destinations before durable submission."""
+    roots = tuple(str(path) for path in PathPolicy(spec.roots).roots())
+    return replace(spec, roots=roots) if roots != spec.roots else spec
+
+
+def owns_task(owner: Mapping[str, Any], identity: AuthorizationContext | None) -> bool:
+    """Compare principal provenance as well as names; trusted host administrators can inspect all owners."""
+    if identity is None or identity.role == "admin":
+        return True
+    return (owner.get("user_id"), owner.get("store_path")) == (identity.user_id, identity.store_path)
+
+
+def validate_root_snapshot(roots: Any) -> None:
+    """Refuse a changed canonical root without reconstructing an entire action plan."""
+    for root in roots:
+        path = Path(root)
+        if path.is_absolute() and path.resolve() != path:
+            raise AgentTaskError("authorized task root changed; review its scope before continuing")

@@ -151,3 +151,7 @@ Use ``get_agent_task_receipts`` for per-row results and ``reconcile_agent_task``
 owner witness for an uncertain effect before resume. Task metadata links history, journal and reports.
 Generated cache expires after thirty days; user outputs and external journals are preserved. Images
 are ephemeral unless strict-redacted persistence is explicitly enabled.
+
+``manage_agent_trigger`` captures approved interval/cron/file/event templates and refreshes the owner
+on each fire. Event/task deduplication commits atomically. ``submit_agent_task`` accepts an optional
+idempotency key; CLI and Actions expose trigger controls. Managed scopes reject ambient vault resolution.

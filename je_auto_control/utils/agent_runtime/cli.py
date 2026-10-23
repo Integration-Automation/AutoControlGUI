@@ -15,7 +15,7 @@ def register_parser(subparsers: Any, handler: Callable[..., int]) -> None:
     parser = subparsers.add_parser("agent-task", help="Manage explicitly authorized agent tasks")
     operations = parser.add_subparsers(dest="agent_operation", required=True)
     for operation in ("start", "stop", "status", "submit", "list", "get", "observe", "act", "finish",
-                      "pause", "resume", "cancel", "draft", "stop-all", "receipts", "reconcile", "prune"):
+                      "pause", "resume", "cancel", "draft", "stop-all", "receipts", "reconcile", "prune", "trigger"):
         item = operations.add_parser(operation)
         item.set_defaults(func=handler)
         _operation_arguments(item, operation)
@@ -26,12 +26,17 @@ def _operation_arguments(item: Any, operation: str) -> None:
         item.add_argument("--directory")
     elif operation == "submit":
         item.add_argument("spec", help="JSON task specification")
+        item.add_argument("--idempotency-key")
     elif operation == "prune":
         item.add_argument("--keep-days", type=int, default=30)
     elif operation == "draft":
         from je_auto_control.utils.agent_runtime.workflow_specs import WORKFLOWS
         item.add_argument("workflow", choices=WORKFLOWS)
         item.add_argument("config", help="JSON workflow configuration")
+    elif operation == "trigger":
+        from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS
+        item.add_argument("trigger_operation", choices=OPERATIONS)
+        item.add_argument("request", nargs="?", help="JSON trigger request")
     elif operation not in {"list", "status", "stop", "stop-all"}:
         item.add_argument("task_id")
         if operation in {"act", "reconcile"}:
@@ -44,9 +49,11 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
     operations = {"start": lambda: api.start_agent_runtime(arguments.directory),
                   "status": api.agent_runtime_status, "stop": api.stop_agent_runtime,
                   "stop-all": api.stop_all_agent_tasks, "list": api.list_agent_tasks,
-                  "submit": lambda: api.submit_agent_task(_read(arguments.spec)),
+                  "submit": lambda: api.submit_agent_task(_read(arguments.spec), arguments.idempotency_key),
                   "draft": lambda: _draft(arguments), "prune": lambda: api.prune_agent_tasks(arguments.keep_days),
-                  "reconcile": lambda: api.reconcile_agent_task(arguments.task_id, _read(arguments.review))}
+                  "reconcile": lambda: api.reconcile_agent_task(arguments.task_id, _read(arguments.review)),
+                  "trigger": lambda: api.manage_agent_trigger(arguments.trigger_operation,
+                                                                _read(arguments.request) if arguments.request else {})}
     if operation in operations:
         return operations[operation]()
     task_operations = {"observe": api.observe_agent_task, "finish": api.finish_agent_task}

@@ -26,14 +26,15 @@ class BackgroundTasks:
 
     def start_pending(self) -> None:
         """Recover queued deliveries after exclusive service ownership has been established."""
-        for row in self._runtime.store.list(1000):
-            if row["state"] == "queued":
-                self.start(row["id"])
+        with self._runtime.store.connection() as connection:
+            identifiers = [row[0] for row in connection.execute("SELECT id FROM agent_tasks WHERE state='queued'")]
+        for task_id in identifiers:
+            self.start(task_id)
 
     def start(self, task_id: str) -> None:
         """Persist internal task delivery; external tasks stay under client control."""
         row = self._runtime._row(task_id)
-        if row["spec"]["mode"] == "external":
+        if row["spec"]["mode"] == "external" or row["state"] != "queued":
             return
         self._queue.add({"task_id": task_id}, reference=task_id)
         with self._lock:
@@ -58,11 +59,25 @@ class BackgroundTasks:
                     self._stop.wait(0.25)
                 else:
                     self._queue.complete(item.id, claim=item.claim, output=outcome.to_dict())
+                    self._handoff_resume(task_id)
             except (AutoControlException, OSError, RuntimeError, TypeError, ValueError) as error:
                 self._queue.fail(item.id, type(error).__name__, kind="business", claim=item.claim)
-                if self._runtime.get(task_id).state not in TERMINAL:
-                    self._runtime.store.update(task_id, "waiting_user", reason="background work requires review")
-                self._runtime._retire(task_id)
+                self._review_failure(task_id)
+
+    def _handoff_resume(self, task_id: str) -> None:
+        with self._runtime.store.connection() as connection:
+            row = connection.execute("SELECT state FROM agent_tasks WHERE id=?", (task_id,)).fetchone()
+        if row is not None and row["state"] == "queued" and not self._stop.is_set():
+            self.start(task_id)
+
+    def _review_failure(self, task_id: str) -> None:
+        with self._runtime.store.connection() as connection:
+            row = connection.execute("SELECT state FROM agent_tasks WHERE id=?", (task_id,)).fetchone()
+        if row is None:
+            return
+        if row["state"] not in TERMINAL:
+            self._runtime.store.update(task_id, "waiting_user", reason="background work requires review")
+        self._runtime._retire(task_id)
 
     def close(self) -> None:
         """Cancel running tasks, retire workers, then permit the service to release input."""

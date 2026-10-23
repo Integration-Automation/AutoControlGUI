@@ -143,3 +143,7 @@ Windows 共用桌面需解鎖並閒置 60 秒，實體鍵鼠活動經 helper 獨
 ``get_agent_task_receipts`` 提供逐筆結果；``reconcile_agent_task`` 記錄擁有者對不明結果的確認，
 不會自動恢復或標記成功。任務 metadata 連結歷史、journal 與報告。快取預設保留 30 天，
 保留使用者輸出與外部 journal；影像預設只留在記憶體，持久化需明確啟用且經嚴格遮罩。
+
+``manage_agent_trigger`` 保留預授權間隔、Cron、檔案與事件範本，每次觸發重新檢查擁有者權限，
+事件與任務去重同交易提交。``submit_agent_task`` 可帶冪等識別碼；CLI 與 Actions 提供綁定控制。
+受管範圍不允許隱式解析主機 vault。

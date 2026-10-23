@@ -20,7 +20,7 @@ class AgentRuntimeClient:
     def call(self, operation: str, body: dict[str, Any] | None = None, *, timeout: float = 30) -> dict[str, Any]:
         """Perform a known local task operation without accepting arbitrary URLs or methods."""
         allowed = {"list", "get", "submit", "observe", "act", "finish", "pause", "resume", "cancel",
-                   "shutdown", "draft", "stop_all", "receipts", "reconcile", "prune"}
+                   "shutdown", "draft", "stop_all", "receipts", "reconcile", "prune", "trigger"}
         if operation not in allowed:
             raise AgentTaskError("unknown task operation")
         try:
@@ -35,5 +35,6 @@ class AgentRuntimeClient:
             return request_json(url + "/agent/tasks", token=metadata["token"])
         if operation == "get":
             return request_json(url + "/agent/task?" + urlencode(body or {}), token=metadata["token"])
-        return request_json(url + f"/agent/{operation}", body=body, token=metadata["token"], timeout=timeout,
+        return request_json(url + f"/agent/{operation}", body={} if body is None else body,
+                            token=metadata["token"], timeout=timeout,
                             control=operation in {"pause", "cancel", "shutdown", "stop_all"})

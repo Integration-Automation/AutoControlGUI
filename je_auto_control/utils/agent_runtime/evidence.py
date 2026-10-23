@@ -65,13 +65,29 @@ class TaskEvidence:
         """Read provenance without creating artifacts as a side effect of a status request."""
         with self.store.connection() as connection:
             row = connection.execute("SELECT * FROM agent_evidence WHERE task_id=?", (task_id,)).fetchone()
+            pending = connection.execute("SELECT 1 FROM agent_evidence_pending WHERE task_id=?", (task_id,)).fetchone()
         if row is None:
             return {}
         directory = self.directory(task_id)
         paths = directory.iterdir() if directory.exists() else ()
         artifacts = [str(path) for path in paths if path.is_file() and not path.is_symlink()]
         return {"history_path": self.history.path, "history_id": row["history_id"],
-                "journal_path": row["journal_path"], "artifacts": sorted(artifacts)}
+                "journal_path": row["journal_path"], "artifacts": sorted(artifacts),
+                "report_pending": pending is not None}
+
+    def defer(self, task_ids: list[str]) -> None:
+        """Persist publication work so large emergency stops can acknowledge input retirement promptly."""
+        with self.store.connection(write=True) as connection:
+            connection.executemany("INSERT OR IGNORE INTO agent_evidence_pending VALUES (?)",
+                                   [(identifier,) for identifier in task_ids])
+
+    def flush(self, limit: int = 8) -> None:
+        """Publish a bounded batch; interrupted publication remains durable for the next service owner."""
+        with self.store.connection() as connection:
+            identifiers = [row[0] for row in connection.execute("SELECT task_id FROM agent_evidence_pending LIMIT ?",
+                                                               (limit,))]
+        for task_id in identifiers:
+            self.publish(task_id)
 
     def action(self, task_id: str, receipt: dict[str, Any], *, finished: bool = False) -> None:
         """Mirror receipt certainty into the existing append-only action journal."""
@@ -100,6 +116,10 @@ class TaskEvidence:
         if row["state"] in TERMINAL or row["state"] == "waiting_user":
             self.history.finish_run(link["history_id"], "ok" if row["state"] == "succeeded" else "error",
                                     row["reason"] or row["state"], artifact_path=str(destination))
+        with self.store.connection(write=True) as connection:
+            connection.execute("DELETE FROM agent_evidence_pending WHERE task_id=? AND EXISTS "
+                               "(SELECT 1 FROM agent_tasks WHERE id=? AND updated=?)",
+                               (task_id, task_id, row["updated"]))
 
     def image(self, task_id: str, observation_id: str, image: dict) -> None:
         """Persist only explicitly opted-in, strict-redacted target images under generated names."""

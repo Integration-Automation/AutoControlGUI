@@ -1639,3 +1639,24 @@ english_word_dict.update({
     "agent_reconcile": "Record reviewed outcome",
     "agent_prune": "Prune expired task cache"
 })
+
+english_word_dict.update({
+    "agent_request_key": "Submission key (optional)",
+    "agent_trigger_id": "Trigger ID",
+    "agent_trigger_operation": "Trigger operation",
+    "agent_trigger_kind": "Trigger source",
+    "agent_event_key": "Event key",
+    "agent_trigger_config": "Trigger settings / event payload",
+    "agent_trigger_apply": "Apply trigger operation",
+    "agent_trigger_register": "Create binding",
+    "agent_trigger_list": "List bindings",
+    "agent_trigger_get": "Inspect binding",
+    "agent_trigger_enable": "Enable binding",
+    "agent_trigger_disable": "Disable binding",
+    "agent_trigger_fire": "Deliver event",
+    "agent_trigger_remove": "Remove binding",
+    "agent_trigger_kind_interval": "Interval",
+    "agent_trigger_kind_cron": "Cron schedule",
+    "agent_trigger_kind_file": "File version",
+    "agent_trigger_kind_event": "External event"
+})

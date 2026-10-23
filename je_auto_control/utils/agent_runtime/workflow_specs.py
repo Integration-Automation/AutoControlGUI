@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
-from je_auto_control.utils.agent_runtime.policy import TaskPolicy
+from je_auto_control.utils.agent_runtime.policy import TaskPolicy, canonical_spec
 
 WORKFLOWS = ("download_archive", "batch_form", "transfer", "workspace")
 
@@ -23,7 +23,7 @@ def draft_agent_workflow(workflow: str, config: Mapping[str, Any]) -> dict[str, 
     value = detached(config)
     if not isinstance(value, dict):
         raise AgentTaskError("workflow configuration must be an object")
-    spec = _base(workflow, value)
+    spec = canonical_spec(AgentTaskSpec.from_dict(_base(workflow, value))).to_dict()
     builders = {"download_archive": _downloads, "batch_form": _forms, "transfer": _transfer,
                 "workspace": _workspace}
     try:

@@ -18,10 +18,11 @@ def run_task(runtime: Any, task_id: str, *, backend: Any = None) -> AgentTaskRes
     spec = AgentTaskSpec.from_dict(row["spec"])
     if spec.mode == "external":
         raise AgentTaskError("external tasks are driven through observe/act/finish")
-    if spec.mode == "ollama" and backend is None:
-        backend = OllamaTaskBackend(spec)
     guard = LoopGuard()
     try:
+        if spec.mode == "ollama" and backend is None:
+            with runtime._scope(row):
+                backend = OllamaTaskBackend(spec)
         return _loop(runtime, task_id, spec, backend, guard)
     except CancelledError:
         runtime._settle_control(task_id)

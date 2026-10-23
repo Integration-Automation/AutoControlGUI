@@ -1488,3 +1488,24 @@ simplified_chinese_word_dict.update({
     "agent_reconcile": "记录已确认的结果",
     "agent_prune": "清理过期任务缓存"
 })
+
+simplified_chinese_word_dict.update({
+    "agent_request_key": "提交标识（选填）",
+    "agent_trigger_id": "绑定标识",
+    "agent_trigger_operation": "绑定操作",
+    "agent_trigger_kind": "触发来源",
+    "agent_event_key": "事件标识",
+    "agent_trigger_config": "触发设置／事件数据",
+    "agent_trigger_apply": "应用绑定操作",
+    "agent_trigger_register": "创建绑定",
+    "agent_trigger_list": "列出绑定",
+    "agent_trigger_get": "查看绑定",
+    "agent_trigger_enable": "启用绑定",
+    "agent_trigger_disable": "停用绑定",
+    "agent_trigger_fire": "送入事件",
+    "agent_trigger_remove": "移除绑定",
+    "agent_trigger_kind_interval": "固定间隔",
+    "agent_trigger_kind_cron": "Cron 排程",
+    "agent_trigger_kind_file": "文件版本",
+    "agent_trigger_kind_event": "外部事件"
+})

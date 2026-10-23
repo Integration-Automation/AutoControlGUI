@@ -1489,3 +1489,24 @@ traditional_chinese_word_dict.update({
     "agent_reconcile": "記錄已確認的結果",
     "agent_prune": "清理過期任務快取"
 })
+
+traditional_chinese_word_dict.update({
+    "agent_request_key": "提交識別碼（選填）",
+    "agent_trigger_id": "綁定識別碼",
+    "agent_trigger_operation": "綁定操作",
+    "agent_trigger_kind": "觸發來源",
+    "agent_event_key": "事件識別碼",
+    "agent_trigger_config": "觸發設定／事件資料",
+    "agent_trigger_apply": "套用綁定操作",
+    "agent_trigger_register": "建立綁定",
+    "agent_trigger_list": "列出綁定",
+    "agent_trigger_get": "檢視綁定",
+    "agent_trigger_enable": "啟用綁定",
+    "agent_trigger_disable": "停用綁定",
+    "agent_trigger_fire": "送入事件",
+    "agent_trigger_remove": "移除綁定",
+    "agent_trigger_kind_interval": "固定間隔",
+    "agent_trigger_kind_cron": "Cron 排程",
+    "agent_trigger_kind_file": "檔案版本",
+    "agent_trigger_kind_event": "外部事件"
+})
