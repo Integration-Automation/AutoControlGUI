@@ -1673,3 +1673,20 @@ english_word_dict.update({
     "agent_trigger_kind_file": "File version",
     "agent_trigger_kind_event": "External event"
 })
+
+english_word_dict.update({
+    'agent_page_task': 'Task',
+    'agent_page_workflow': 'Workflow',
+    'agent_page_triggers': 'Triggers',
+    'agent_page_skills': 'Skills',
+    'agent_page_recovery': 'Recovery',
+    'agent_page_observation': 'Observation / action',
+    'agent_workflow_config': 'Workflow settings',
+    'agent_action': 'Action request',
+    'agent_review': 'Review uncertain action',
+    'agent_act': 'Perform observed action',
+    'agent_element_index': 'Index',
+    'agent_element_name': 'Name',
+    'agent_element_role': 'Role',
+    'agent_element_bounds': 'Bounds'
+})

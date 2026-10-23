@@ -7,15 +7,17 @@ from typing import Any
 
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module  # reason: compiled Qt exports, tested offscreen
     QComboBox, QFormLayout, QLabel, QLineEdit, QPlainTextEdit,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.task_controller import TaskController, TaskOutcome
+from je_auto_control.gui.agent_observation_view import AgentObservationView
 from je_auto_control.utils.agent_runtime.client import AgentRuntimeClient
 from je_auto_control.utils.agent_runtime.api import start_agent_runtime, stop_agent_runtime
-from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
+from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, AgentActionRequest
+from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow, WORKFLOWS
 from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGER_OPERATIONS
 from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILL_OPERATIONS
@@ -46,8 +48,30 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._tr_init()
         self._controller = TaskController(self)
         self._handle: Any = None
+        self._view_task = ""
+        self._labels: list[tuple[QLabel, str]] = []
+        self._pages = QTabWidget()
+        self._page_keys: list[str] = []
+        self._setup_fields()
+        self._setup_pages()
+        self._output = QPlainTextEdit()
+        self._output.setReadOnly(True)
+        self._table = QTableWidget(0, 4)
+        self._table.cellClicked.connect(self._select)
+        self._status = QLabel()
+        self._task_id.textChanged.connect(self._clear_observation)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self._task_id)
+        layout.addWidget(self._pages)
+        layout.addWidget(self._status)
+        layout.addWidget(self._table)
+        layout.addWidget(self._output)
+        self.retranslate()
+
+    def _setup_fields(self) -> None:
         self._goal, self._target, self._task_id = QLineEdit(), QLineEdit("local-desktop"), QLineEdit()
         self._recovery_note = QLineEdit()
+        self._review = QPlainTextEdit('{"action_id": "", "decision": "not_applied", "note": ""}')
         self._skill_operation, self._skill_request = QComboBox(), QPlainTextEdit("{}")
         for name in SKILL_OPERATIONS:
             self._skill_operation.addItem(_translate("agent_skill_" + name), name)
@@ -55,6 +79,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._mode.addItems(["external", "skill", "ollama"])
         self._workflow = QComboBox()
         self._workflow.addItems(list(WORKFLOWS))
+        self._workflow_config = QPlainTextEdit("{}")
         self._request_key, self._trigger_id, self._event_key = QLineEdit(), QLineEdit(), QLineEdit()
         self._trigger_operation, self._trigger_kind = QComboBox(), QComboBox()
         for name in TRIGGER_OPERATIONS:
@@ -66,35 +91,39 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._scope.setPlainText(json.dumps({"apps": [], "roots": [], "allowed_tools": ["AC_control_get_value"],
                                              "success_criteria": [{"kind": "result_equals", "key": "value",
                                                                     "value": "expected"}]}, indent=2))
-        self._output = QPlainTextEdit()
-        self._output.setReadOnly(True)
-        self._table = QTableWidget(0, 4)
-        self._table.cellClicked.connect(self._select)
-        self._status = QLabel()
-        self._labels: list[tuple[QLabel, str]] = []
+        self._action = QPlainTextEdit()
+        self._action.setPlainText(json.dumps({"tool": "AC_click_mouse", "arguments": {"mouse_keycode": "left"},
+                                              "observation_id": ""}, indent=2))
+        self._observation = AgentObservationView()
+        self._observation.picked.connect(self._pick_reference)
+
+    def _setup_pages(self) -> None:
+        self._page("agent_page_task", (("agent_goal", self._goal), ("agent_target", self._target),
+                   ("agent_mode", self._mode), ("agent_scope", self._scope),
+                   ("agent_request_key", self._request_key)))
+        self._page("agent_page_workflow", (("agent_workflow", self._workflow),
+                   ("agent_workflow_config", self._workflow_config)))
+        self._page("agent_page_triggers", (("agent_trigger_id", self._trigger_id),
+                   ("agent_trigger_operation", self._trigger_operation), ("agent_trigger_kind", self._trigger_kind),
+                   ("agent_event_key", self._event_key), ("agent_trigger_config", self._trigger_config)))
+        self._page("agent_page_skills", (("agent_skill_operation", self._skill_operation),
+                   ("agent_skill_request", self._skill_request)))
+        self._page("agent_page_recovery", (("agent_recovery_note", self._recovery_note),
+                   ("agent_review", self._review)))
+        self._page("agent_page_observation", (("agent_action", self._action),))
+        self._pages.widget(self._pages.count() - 1).layout().addWidget(self._observation)
+
+    def _page(self, key: str, fields: tuple) -> None:
+        page = QWidget()
         form = QFormLayout()
-        for key, control in (("agent_goal", self._goal), ("agent_target", self._target),
-                             ("agent_mode", self._mode), ("agent_scope", self._scope),
-                             ("agent_workflow", self._workflow),
-                             ("agent_request_key", self._request_key), ("agent_trigger_id", self._trigger_id),
-                             ("agent_trigger_operation", self._trigger_operation),
-                             ("agent_trigger_kind", self._trigger_kind), ("agent_event_key", self._event_key),
-                             ("agent_trigger_config", self._trigger_config),
-                             ("agent_skill_operation", self._skill_operation),
-                             ("agent_skill_request", self._skill_request),
-                             ("agent_task_id", self._task_id)):
+        for label_key, control in fields:
             label = QLabel()
-            self._labels.append((label, key))
+            self._labels.append((label, label_key))
             form.addRow(label, control)
-        recovery_label = QLabel()
-        self._labels.append((recovery_label, "agent_recovery_note"))
-        form.addRow(recovery_label, self._recovery_note)
-        layout = QVBoxLayout(self)
+        layout = QVBoxLayout(page)
         layout.addLayout(form)
-        layout.addWidget(self._status)
-        layout.addWidget(self._table)
-        layout.addWidget(self._output)
-        self.retranslate()
+        self._pages.addTab(page, _translate(key))
+        self._page_keys.append(key)
 
     def retranslate(self) -> None:
         """Translate cached controls without starting a service or reading task data."""
@@ -104,6 +133,10 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._table.setHorizontalHeaderLabels([_translate(key) for key in
                                                 ("agent_task_id", "agent_goal", "agent_state", "agent_reason")])
         self._status.setText(_translate("agent_background_note"))
+        self._task_id.setPlaceholderText(_translate("agent_task_id"))
+        for index, key in enumerate(self._page_keys):
+            self._pages.setTabText(index, _translate(key))
+        self._observation.retranslate()
         for combo, prefix in ((self._trigger_operation, "agent_trigger_"), (self._trigger_kind, "agent_trigger_kind_")):
             for index in range(combo.count()):
                 combo.setItemText(index, _translate(prefix + combo.itemData(index)))
@@ -116,6 +149,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_stop_service", partial(self._dispatch, "stop")),
                 ("agent_stop_all", partial(self._dispatch, "stop_all", {})),
                 ("agent_preview", self._preview),
+                ("agent_act", self._act),
                 ("agent_reconcile", self._reconcile),
                 ("agent_recover_target", self._recover_target),
                 ("agent_prune", partial(self._dispatch, "prune", {})),
@@ -129,15 +163,41 @@ class AgentTasksTab(TranslatableMixin, QWidget):
 
     def _preview(self) -> None:
         try:
-            config = json.loads(self._scope.toPlainText())
+            config = json.loads(self._workflow_config.toPlainText())
         except (ValueError, TypeError) as error:
             self._status.setText(str(error))
             return
         self._dispatch("draft", {"workflow": self._workflow.currentText(), "config": config})
 
+    def _clear_observation(self, _task_id: str = "") -> None:
+        self._observation.clear()
+
+    def _pick_reference(self, reference: dict) -> None:
+        try:
+            action = json.loads(self._action.toPlainText())
+            if not isinstance(action, dict) or not isinstance(action.get("arguments", {}), dict):
+                raise AgentTaskError("action must contain an arguments object")
+            arguments = {key: value for key, value in action.get("arguments", {}).items() if key not in {"x", "y"}}
+            action.update(arguments=arguments, reference=reference, observation_id=self._observation.observation_id)
+            self._action.setPlainText(json.dumps(AgentActionRequest.from_dict(action).to_dict(),
+                                                  ensure_ascii=False, indent=2))
+        except (ValueError, TypeError) as error:
+            self._status.setText(str(error))
+
+    def _act(self) -> None:
+        try:
+            action = AgentActionRequest.from_dict(json.loads(self._action.toPlainText()))
+            if not self._observation.observation_id or action.observation_id != self._observation.observation_id:
+                raise AgentTaskError("observe the selected task before submitting its action")
+        except (ValueError, TypeError) as error:
+            self._status.setText(str(error))
+            return
+        self._dispatch("act", {"task_id": self._task_id.text(), "action": action.to_dict()})
+        self._clear_observation()
+
     def _reconcile(self) -> None:
         try:
-            review = json.loads(self._scope.toPlainText())
+            review = json.loads(self._review.toPlainText())
         except (ValueError, TypeError) as error:
             self._status.setText(str(error))
             return
@@ -197,11 +257,14 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         task_operation = operation not in {"start", "stop", "list", "stop_all", "prune"}
         default = {"task_id": self._task_id.text()} if task_operation else {}
         data = payload or default
+        self._view_task = str(data.get("task_id", ""))
         self._handle = self._controller.submit(partial(_request, operation, data), owner=self)
         self._handle.finished.connect(self._completed)
 
     def _completed(self, outcome: TaskOutcome) -> None:
         if self._handle is not None and outcome.task_id != self._handle.task_id:
+            return
+        if self._view_task and self._view_task != self._task_id.text():
             return
         if outcome.status != "ok":
             self._status.setText(outcome.error or outcome.status)
@@ -221,6 +284,11 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             self._scope.setPlainText(json.dumps(draft, ensure_ascii=False, indent=2))
         if "task_id" in result:
             self._task_id.setText(result["task_id"])
+        if "observation_id" in result:
+            try:
+                self._observation.present(result)
+            except AgentTaskError as error:
+                self._status.setText(str(error))
         if "trigger_id" in result:
             self._trigger_id.setText(result["trigger_id"])
         rows = result.get("tasks", [])

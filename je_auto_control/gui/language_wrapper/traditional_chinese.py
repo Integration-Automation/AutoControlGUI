@@ -1523,3 +1523,20 @@ traditional_chinese_word_dict.update({
     "agent_trigger_kind_file": "檔案版本",
     "agent_trigger_kind_event": "外部事件"
 })
+
+traditional_chinese_word_dict.update({
+    'agent_page_task': '任務',
+    'agent_page_workflow': '工作流程',
+    'agent_page_triggers': '觸發器',
+    'agent_page_skills': '技能',
+    'agent_page_recovery': '恢復',
+    'agent_page_observation': '觀察／動作',
+    'agent_workflow_config': '工作流程設定',
+    'agent_action': '動作請求',
+    'agent_review': '審閱不明動作',
+    'agent_act': '執行觀察動作',
+    'agent_element_index': '索引',
+    'agent_element_name': '名稱',
+    'agent_element_role': '角色',
+    'agent_element_bounds': '範圍'
+})

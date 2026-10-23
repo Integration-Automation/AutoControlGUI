@@ -466,3 +466,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261023-10 | 2026-10-23 | Retain live origin ceilings and isolate MCP client root lifetimes | #done #agent #scope | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-01 | 2026-10-24 | Resolve observation-local targets and audit native coordinate grounding | #done #agent #observation | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-02 | [Task observation and action editor](2026-10-c.md#u-20261024-02) | #done #agent #gui |

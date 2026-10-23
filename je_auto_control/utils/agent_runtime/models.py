@@ -188,6 +188,13 @@ class AgentActionRequest:
     arguments: Mapping[str, Any] = field(default_factory=dict)
     reference: Mapping[str, Any] | None = None
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return detached action arguments and optional observation-local target."""
+        data = {"tool": self.tool, "observation_id": self.observation_id, "arguments": thaw(self.arguments)}
+        if self.reference is not None:
+            data["reference"] = thaw(self.reference)
+        return data
+
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> AgentActionRequest:
         """Reject private, unexpected and non-object action inputs."""

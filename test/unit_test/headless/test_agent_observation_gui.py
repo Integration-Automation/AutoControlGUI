@@ -1,0 +1,130 @@
+"""Observation selection edits grounded requests without emitting desktop input."""
+import base64
+import io
+import json
+import os
+from types import SimpleNamespace
+
+import pytest
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+pytest.importorskip("PySide6")
+from PySide6.QtCore import QPointF, Qt  # noqa: E402  # reason: optional Qt after skip
+from PySide6.QtGui import QMouseEvent  # noqa: E402  # reason: optional Qt after skip
+from PySide6.QtWidgets import QApplication  # noqa: E402  # reason: optional Qt after skip
+
+from je_auto_control.gui.agent_tasks_tab import AgentTasksTab  # noqa: E402  # reason: optional Qt after skip
+from je_auto_control.gui.task_controller import TaskOutcome  # noqa: E402  # reason: optional Qt after skip
+
+
+@pytest.fixture
+def tab():
+    import shiboken6
+    app = QApplication.instance() or QApplication([])
+    widget = AgentTasksTab()
+    yield widget
+    widget.close()
+    shiboken6.delete(widget)
+    app.processEvents()
+
+
+def observation(task="task-a", frame="frame-a"):
+    from PIL import Image
+    buffer = io.BytesIO()
+    Image.new("RGB", (20, 10), "black").save(buffer, format="JPEG")
+    return {"task_id": task, "observation_id": frame, "captured_at": 10,
+            "data": {"identity": "fixture", "elements": [
+                {"index": 0, "name": "Save", "role": "button", "bounds": [10, 20, 30, 40]}],
+                "image": {"format": "jpeg", "redacted_by": "strict", "image_size": [20, 10],
+                          "data": base64.b64encode(buffer.getvalue()).decode("ascii")}}}
+
+
+def test_element_selection_only_edits_action_and_actions_submit_it(tab, monkeypatch):
+    calls = []
+    monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))
+    tab._present_result(observation())
+    tab._observation._elements.cellClicked.emit(0, 0)
+    action = json.loads(tab._action.toPlainText())
+    assert action["observation_id"] == "frame-a"
+    assert action["reference"] == {"element_index": 0}
+    assert calls == []
+    dict(tab.menu_actions())["agent_act"]()
+    assert calls == [("act", {"task_id": "task-a", "action": action})]
+
+
+def test_image_click_uses_unscaled_rendered_pixels_and_never_dispatches(tab, monkeypatch):
+    calls = []
+    monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))
+    tab._present_result(observation())
+    preview = tab._observation._image
+    assert preview.pixmap().devicePixelRatio() == 1.0
+    assert (preview.width(), preview.height()) == (20, 10)
+    event = QMouseEvent(QMouseEvent.Type.MouseButtonPress, QPointF(12, 7), QPointF(12, 7),
+                        Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+    preview.mousePressEvent(event)
+    assert json.loads(tab._action.toPlainText())["reference"] == {"image_point": [12, 7]}
+    assert calls == []
+
+
+def test_changing_task_invalidates_frame_and_prevents_old_action(tab, monkeypatch):
+    calls = []
+    monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))
+    tab._present_result(observation())
+    tab._task_id.setText("task-b")
+    assert tab._observation._elements.rowCount() == 0
+    assert tab._observation._image.pixmap().isNull()
+    dict(tab.menu_actions())["agent_act"]()
+    assert calls == []
+
+
+def test_stale_view_reply_cannot_replace_new_task_selection(tab, monkeypatch):
+    signal = SimpleNamespace(connect=lambda _slot: None)
+    monkeypatch.setattr(tab._controller, "submit", lambda *_args, **_kwargs:
+                        SimpleNamespace(task_id=17, finished=signal, outcome=None))
+    tab._task_id.setText("task-a")
+    tab._dispatch("observe")
+    tab._task_id.setText("task-b")
+    tab._completed(TaskOutcome(17, "ok", observation()))
+    assert tab._task_id.text() == "task-b"
+    assert tab._observation._elements.rowCount() == 0
+
+
+def test_untrusted_image_clears_existing_preview(tab):
+    tab._present_result(observation())
+    image = observation(frame="frame-b")
+    image["data"]["image"]["image_size"] = [2000, 1000]
+    tab._present_result(image)
+    assert tab._observation._image.pixmap().isNull()
+    assert tab._observation._elements.rowCount() == 1
+
+
+def test_new_frame_requires_reselection_before_reusing_an_old_index(tab, monkeypatch):
+    calls = []
+    monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))
+    tab._present_result(observation())
+    tab._observation._elements.cellClicked.emit(0, 0)
+    tab._present_result(observation(frame="frame-b"))
+    dict(tab.menu_actions())["agent_act"]()
+    assert calls == []
+    tab._observation._elements.cellClicked.emit(0, 0)
+    dict(tab.menu_actions())["agent_act"]()
+    assert calls[0][1]["action"]["observation_id"] == "frame-b"
+
+
+def test_pixel_selection_floors_fractional_positions_at_the_frame_edge(tab):
+    tab._present_result(observation())
+    preview = tab._observation._image
+    event = QMouseEvent(QMouseEvent.Type.MouseButtonPress, QPointF(19.9, 9.9), QPointF(19.9, 9.9),
+                        Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+    preview.mousePressEvent(event)
+    assert json.loads(tab._action.toPlainText())["reference"] == {"image_point": [19, 9]}
+
+
+def test_malformed_action_cannot_escape_the_gui_dispatch_boundary(tab, monkeypatch):
+    calls = []
+    monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))
+    tab._present_result(observation())
+    tab._action.setPlainText('{"tool":"AC_click_mouse","observation_id":"frame-a","unexpected":true}')
+    dict(tab.menu_actions())["agent_act"]()
+    assert calls == []
+    assert tab._status.text()

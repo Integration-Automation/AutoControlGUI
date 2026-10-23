@@ -1522,3 +1522,20 @@ simplified_chinese_word_dict.update({
     "agent_trigger_kind_file": "文件版本",
     "agent_trigger_kind_event": "外部事件"
 })
+
+simplified_chinese_word_dict.update({
+    'agent_page_task': '任务',
+    'agent_page_workflow': '工作流程',
+    'agent_page_triggers': '触发器',
+    'agent_page_skills': '技能',
+    'agent_page_recovery': '恢复',
+    'agent_page_observation': '观察／动作',
+    'agent_workflow_config': '工作流程设置',
+    'agent_action': '动作请求',
+    'agent_review': '审核不明动作',
+    'agent_act': '执行观察动作',
+    'agent_element_index': '索引',
+    'agent_element_name': '名称',
+    'agent_element_role': '角色',
+    'agent_element_bounds': '范围'
+})

@@ -13,6 +13,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add grouped agent task configuration, read-only observation previews and an Actions-menu grounded
+  action editor. Task changes invalidate previews; closing a view preserves service-owned tasks.
+
 - Managed Windows vision renders only its scoped window; unsupported rendering pauses without a
   desktop-crop fallback. Managed pointer input rejects foreign overlays and confirms positioning.
 

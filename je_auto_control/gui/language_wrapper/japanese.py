@@ -1560,3 +1560,20 @@ japanese_word_dict.update({
     "agent_trigger_kind_file": "ファイル版",
     "agent_trigger_kind_event": "外部イベント"
 })
+
+japanese_word_dict.update({
+    'agent_page_task': 'タスク',
+    'agent_page_workflow': 'ワークフロー',
+    'agent_page_triggers': 'トリガー',
+    'agent_page_skills': 'スキル',
+    'agent_page_recovery': '復旧',
+    'agent_page_observation': '観察／操作',
+    'agent_workflow_config': 'ワークフロー設定',
+    'agent_action': '操作リクエスト',
+    'agent_review': '不明な操作の確認',
+    'agent_act': '観察した操作を実行',
+    'agent_element_index': '索引',
+    'agent_element_name': '名前',
+    'agent_element_role': 'ロール',
+    'agent_element_bounds': '領域'
+})
