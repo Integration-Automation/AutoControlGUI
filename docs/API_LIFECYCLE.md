@@ -1,5 +1,14 @@
 # Public API lifecycle
 
+Managed browser startup now requires the exact WebRunner `ManagedBrowserSession.contract_version == 1`
+contract before constructing its policy or opening a proxy/browser. Missing, boolean, string, older or
+unknown markers fail with an actionable readiness reason. SDK source `575e5d2` provides complete text/value
+readback: at most 8,000 UTF-16 code units, with over-limit/invalid Unicode refusal instead of truncation.
+AutoControl applies matching Unicode bounds to browser arguments and workflow preview data before effects.
+The consumer/SDK source contract is tested through the real owned helper with fake Chromium; deployment
+and real-browser/native acceptance remain separate from that evidence.
+
+
 `draft_agent_workflow("batch_form", config)` and `transfer` accept `backend: browser` with
 explicit `allowed_origins` and a reviewed browser target. CSV/XLSX sources stay rooted; browser drafts
 emit only `AC_browser_*` actions and never fall back to desktop input. Forms take `url`, CSS `fields`,
@@ -11,8 +20,8 @@ fill and read back destination fields, then verify saving. A stale confirmation 
 `wait_seconds` defaults to 5, is capped by the action budget, and late matching replies are refused.
 It never repeats a fill or click. Python/core, catalog/model schemas, MCP, CLI/REST task operations,
 Builder and GUI workflow preview use the shared compiler. Browser readback can serve as independent
-skill evidence. Actual application acceptance and reviewed upload/download grants remain open;
-SDK over-limit readback refusal is tracked in `Progress.md` until its companion change lands.
+skill evidence. Actual application acceptance and reviewed upload/download grants remain open.
+Managed browser startup requires WebRunner contract version 1 with complete bounded readback.
 
 Managed browser profiles (`kind: browser`) now delegate to the owned `je_web_runner` SDK from
 WebRunner (`D:\Codes\WebRunner`; integration source on its isolated managed-session branch).

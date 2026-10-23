@@ -31,6 +31,12 @@ def browser_session_scope(session: Any) -> Iterator[None]:
 def _bounded(value: str, name: str, maximum: int, *, empty: bool = False) -> None:
     if not isinstance(value, str) or len(value) > maximum or (not value and not empty):
         raise AgentTaskError(f"browser {name} must be bounded text")
+    try:
+        units = len(value.encode("utf-16-le")) // 2
+    except UnicodeError:
+        raise AgentTaskError("browser text contains invalid Unicode") from None
+    if units > maximum:
+        raise AgentTaskError(f"browser {name} exceeds its UTF-16 text limit")
 
 
 def _execute(name: str, arguments: dict, operation: str, *, timeout: float | None = None) -> Any:

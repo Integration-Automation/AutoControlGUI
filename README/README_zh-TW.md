@@ -1,5 +1,13 @@
 # AutoControl
 
+受管瀏覽器啟動前，必須先確認 WebRunner 的 `ManagedBrowserSession.contract_version == 1`，
+通過後才建立 policy 或開啟代理／瀏覽器。缺少、布林、文字、過舊或未知標記會保留可處理的
+就緒錯誤。SDK 來源 `575e5d2` 提供完整 text／value 讀回：最多 8,000 個 UTF-16 code unit，
+超限或無效 Unicode 就拒絕，不截短。AutoControl 對瀏覽器參數與流程預覽資料套用相同 Unicode
+上限，在副作用前拒絕。跨來源契約透過真正的自有 helper 與替身 Chromium 驗證；部署與實際
+瀏覽器／原生驗收保持分列。
+
+
 `draft_agent_workflow("batch_form", config)` 與 `transfer` 可設定 `backend: browser`，
 並提供明確的 `allowed_origins` 與已審閱 browser target。CSV／XLSX 來源仍受 roots 限制；
 瀏覽器草稿只產生 `AC_browser_*` 動作，不退回桌面輸入。填表提供 `url`、CSS `fields`、
@@ -10,7 +18,7 @@
 預設 5 秒，受 action budget 限制，逾時才回來的相符結果仍拒絕，不重播填入或點擊。
 Python/core、共用 catalog／模型 schema、MCP、CLI／REST 任務操作、Builder 及 GUI 流程預覽
 使用同一編譯器。瀏覽器讀回可作為獨立技能證據。實際應用驗收、已審閱上／下載許可仍待完成；
-SDK 超限讀回必須拒絕的配套修正暫列 `Progress.md`。
+SDK 啟動前須通過完整有界讀回契約版本 1 的檢查。
 
 受管瀏覽器 profile（`kind: browser`）統一委派給 WebRunner 的 `je_web_runner` SDK；
 開發來源為 `D:\Codes\WebRunner`，整合來源位於其隔離的受管 session 功能分支。

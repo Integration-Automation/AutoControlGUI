@@ -486,3 +486,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-10 | 2026-10-24 | Managed WebRunner targets and DOM references | #done #agent #browser | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-11 | 2026-10-24 | Browser forms, transfers and bounded readback | #done #agent #workflow | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-12 | 2026-10-24 | Exact WebRunner readback compatibility | #done #agent #verification | [2026-10-c](2026-10-c.md) |

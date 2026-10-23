@@ -239,3 +239,34 @@ def test_read_reference_accepts_disabled_visible_field_but_effects_refuse_it():
     assert evidence["element"]["enabled"] is False
     with pytest.raises(AgentTaskError, match="not actionable"):
         resolve_action("AC_browser_click", {}, {"element_index": 0}, data)
+
+
+@pytest.mark.parametrize("version", [None, True, 0, 2, "1", 1.0])
+def test_sdk_contract_marker_is_checked_before_policy_or_browser_start(monkeypatch, version):
+    from je_auto_control.utils.agent_runtime.browser_target import _open_session
+    origin_policy = Mock()
+    sdk = SimpleNamespace(contract_version=version, open=Mock())
+    monkeypatch.setitem(sys.modules, "je_web_runner.api.ai",
+                        SimpleNamespace(BrowserOriginPolicy=origin_policy, ManagedBrowserSession=sdk))
+    with pytest.raises(AgentTaskError, match="contract version 1"):
+        _open_session(("https://allowed.test",))
+    sdk.open.assert_not_called()
+    origin_policy.assert_not_called()
+
+
+@pytest.mark.parametrize("value", ["😀" * 4001, "invalid\ud800"], ids=["overlimit", "invalid-unicode"])
+def test_browser_fill_rejects_incompatible_unicode_before_sdk_effect(fake_sdk, value):
+    from je_auto_control.utils.agent_runtime.browser_commands import browser_session_scope
+    session = fake_sdk[0]
+    with operation_scope(TaskOperation(spec(), lambda: None, None)), browser_session_scope(session):
+        with pytest.raises(AgentTaskError):
+            browser_fill("#field", value)
+    assert session.actions == []
+
+
+def test_readiness_keeps_actionable_trusted_sdk_compatibility_failure(fake_sdk):
+    session, opener = fake_sdk
+    opener.side_effect = AgentTaskError("managed browser contract version 1 is required before startup")
+    with pytest.raises(AgentTaskError, match="contract version 1"):
+        BrowserTarget().ready(spec())
+    assert session.actions == []

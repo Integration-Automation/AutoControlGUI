@@ -152,3 +152,13 @@ def test_browser_wait_allows_newly_appearing_element_without_reading_absent_cont
     assert session.visible.call_count == 2
     assert session.timeout < 1
     assert session.actions == []
+
+
+def test_browser_draft_rejects_overlimit_unicode_before_session_or_effect(fake_sdk, tmp_path):
+    config = form_config(tmp_path)
+    from pathlib import Path
+    Path(config["source"]).write_text("name\n" + "😀" * 4001 + "\n", encoding="utf-8")
+    with pytest.raises(AgentTaskError):
+        draft_agent_workflow("batch_form", config)
+    fake_sdk[1].assert_not_called()
+    assert fake_sdk[0].actions == []

@@ -9,6 +9,7 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.policy import TaskPolicy
 from je_auto_control.utils.agent_runtime.target_config import browser_origins
 from je_auto_control.utils.agent_runtime.workflow_values import transformed
+from je_auto_control.utils.agent_runtime.browser_commands import _bounded
 
 
 def browser_options(config: dict) -> dict:
@@ -28,8 +29,7 @@ def browser_workflow(workflow: str, config: dict, policy: TaskPolicy) -> dict:
 
 
 def _text(value: Any, name: str, *, empty: bool = False, maximum: int = 8000) -> str:
-    if not isinstance(value, str) or len(value) > maximum or (not empty and not value):
-        raise AgentTaskError(f"browser workflow {name} must be bounded text")
+    _bounded(value, "workflow " + name, maximum, empty=empty)
     return value
 
 

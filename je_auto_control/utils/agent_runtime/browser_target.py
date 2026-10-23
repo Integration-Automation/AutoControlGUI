@@ -16,6 +16,9 @@ def _open_session(origins: tuple[str, ...]) -> Any:
     except ImportError:
         raise AgentTaskError(
             "install reviewed je_web_runner with managed-session support in the helper environment") from None
+    version = getattr(ManagedBrowserSession, "contract_version", None)
+    if not isinstance(version, int) or isinstance(version, bool) or version != 1:
+        raise AgentTaskError("je_web_runner managed browser contract version 1 is required before startup")
     return ManagedBrowserSession.open(BrowserOriginPolicy(origins))
 
 
@@ -43,6 +46,9 @@ class BrowserTarget:
             self._session.set_timeout(spec.budget.action_seconds)
             self._spec = spec
             self._identity = uuid.uuid4().hex
+        except AgentTaskError:
+            self.cleanup()
+            raise
         except Exception:  # noqa: BLE001 - contain optional SDK errors without publishing raw browser data
             self.cleanup()
             raise AgentTaskError("managed WebRunner startup failed; check installed SDK/browser readiness") from None

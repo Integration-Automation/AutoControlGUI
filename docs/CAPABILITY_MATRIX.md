@@ -1,6 +1,6 @@
 # Capability matrix
 
-Browser workflow drafts: experimental. Fake SDK/application evidence covers rooted two-row forms, captured/transformed transfers, stale confirmations, mismatched readback, absent elements and late replies. Browser/native acceptance, reviewed file transfers and the SDK over-limit readback companion fix remain unverified/pending.
+Browser workflow drafts: experimental. Fake SDK/application evidence covers rooted two-row forms, captured/transformed transfers, stale confirmations, mismatched readback, absent elements and late replies. Browser/native acceptance, reviewed file transfers remain unverified/pending. Exact readback contract version 1 is required before SDK startup.
 
 Managed browser target: experimental and SDK-dependent; exact profile/task origins, fake Chromium, real SDK source-to-source, owned helper/loopback and timeout/uncertainty tests. Passive readiness remains not_probed and native_evidence not_recorded until separately accepted. Reviewed upload/download grants and real-browser acceptance remain open.
 
