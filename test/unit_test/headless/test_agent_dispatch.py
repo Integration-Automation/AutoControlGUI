@@ -55,3 +55,20 @@ def test_single_dispatch_restores_executor_and_strictness():
         executor.execute_one("AC_fail", {})
     assert getattr(_RUNNING, "value", None) is previous
     assert not getattr(_STRICT_BODIES, "value", False)
+
+
+def test_task_guard_survives_parallel_worker_boundary():
+    from je_auto_control.utils.executor.action_executor import Executor
+    from je_auto_control.utils.executor.dispatch import command_guard
+    from je_auto_control.utils.exception.exceptions import AutoControlException
+    executor = Executor()
+    calls = []
+    executor.event_dict["AC_forbidden_test"] = lambda: calls.append(True)
+
+    def guard(name, _arguments):
+        if name == "AC_forbidden_test":
+            raise AutoControlException("task guard refused child")
+
+    with command_guard(guard), pytest.raises(AutoControlException, match="refused"):
+        executor.execute_one("AC_parallel", {"branches": [[["AC_forbidden_test"]]]})
+    assert calls == []

@@ -125,3 +125,13 @@ Single-command dispatch
 interpolation, cancellation and journal capture while returning raw command results.
 Private executor arguments are rejected. Identity-scoped calls require command capability.
 
+Managed tasks
+-------------
+
+Start the local task service explicitly with ``je_auto_control agent-task start``.
+Python, AC, MCP, REST, CLI and the Agent Tasks view share submit/observe/act/finish,
+pause/resume/cancel and owner-scoped status. Completion requires deterministic evidence;
+model stop text is not proof. Skills use WorkQueue and local inference uses a configured
+Ollama model without downloads, redirects or external fallback. Closing the view leaves
+submitted work owned by the service. Native/platform acceptance and remaining workflows
+are tracked in ``Progress.md``; full contracts are in ``docs/AGENT_TASKS.md``.

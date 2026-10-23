@@ -13,6 +13,14 @@ macOS, Linux X11, Linux Wayland, Android and iOS.
 
 ## 2. Layers and directories
 
+Managed task entry points share a local runtime service, authenticated REST routes and one command
+catalogue for AC/MCP/Builder. AgentRuntime owns detached specs, principal references, SQLite task/action
+state, a process lock and fenced target ownership. Internal skill/Ollama jobs reuse WorkQueue; external
+agents use the same observe/act/finish operations. Completion is independently verified. TaskController
+owns GUI requests only, so closing a view does not own or retire committed background tasks.
+The Ollama adapter uses bounded loopback HTTP without redirects or remote fallback. Existing native
+backend interruption, platform acceptance, richer workflows and origin-policy lifecycle remain open.
+
 Agent tool calls share `Executor.execute_one` with the existing per-action pipeline.
 `executor/dispatch.py` binds strict executor ownership, raw-result capture and intersecting
 context-local guards. Guards run after variable interpolation on nested commands as well;

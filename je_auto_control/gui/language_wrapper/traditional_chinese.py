@@ -1456,3 +1456,26 @@ traditional_chinese_word_dict.update({
     'config_sync_script_opened': '已在 Builder 開啟腳本快照；仍須明確執行 Run。',
     'config_sync_loaded_preferences_applied': '已套用載入的 GUI 偏好快照',
 })
+
+traditional_chinese_word_dict.update({
+    "tab_agent_tasks": "Agent 任務",
+    "agent_goal": "目標",
+    "agent_target": "目標裝置",
+    "agent_mode": "執行方式",
+    "agent_scope": "授權範圍與完成條件",
+    "agent_task_id": "任務識別碼",
+    "agent_state": "狀態",
+    "agent_reason": "原因",
+    "agent_background_note": "關閉此面板後，已提交任務仍由服務執行。",
+    "agent_start": "啟動服務",
+    "agent_submit": "提交任務",
+    "agent_refresh": "重新整理任務",
+    "agent_get": "任務詳情",
+    "agent_observe": "觀察目標",
+    "agent_finish": "驗證完成",
+    "agent_pause": "暫停／接回控制",
+    "agent_resume": "恢復任務",
+    "agent_cancel": "取消任務"
+})
+
+traditional_chinese_word_dict["agent_stop_service"] = '停止服務'

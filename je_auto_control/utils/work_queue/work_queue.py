@@ -187,6 +187,11 @@ class WorkQueue:
             (self._name, STATUS_NEW, STATUS_IN_PROGRESS, cutoff)).fetchone()
 
     @sqlite_errors_as(WorkQueueError)
+    def defer(self, item_id: int, *, claim: int) -> None:
+        """Return an owned item to the queue without spending an application retry."""
+        self._set_status(item_id, STATUS_NEW, claim=claim)
+
+    @sqlite_errors_as(WorkQueueError)
     def complete(self, item_id: int, *, output: Any = None,
                  claim: Optional[int] = None) -> None:
         """Mark an item successfully processed (refused if ``claim`` is stale)."""

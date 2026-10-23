@@ -148,6 +148,7 @@ TAB_SPECS: Tuple[TabSpec, ...] = (
     TabSpec("live_hud", "tab_live_hud", "detection", f"{_GUI}.live_hud_tab", "LiveHUDTab"),
     TabSpec("llm_planner", "tab_llm_planner", "detection", f"{_GUI}.llm_planner_tab", "LLMPlannerTab"),
     TabSpec("computer_use", "tab_computer_use", "detection", f"{_GUI}.computer_use_tab", "ComputerUseTab"),
+    TabSpec("agent_tasks", "tab_agent_tasks", "automation", f"{_GUI}.agent_tasks_tab", "AgentTasksTab"),
     TabSpec("scheduler", "tab_scheduler", "automation", f"{_GUI}.scheduler_tab", "SchedulerTab"),
     TabSpec("hotkeys", "tab_hotkeys", "automation", f"{_GUI}.hotkeys_tab", "HotkeysTab"),
     TabSpec("triggers", "tab_triggers", "automation", f"{_GUI}.triggers_tab", "TriggersTab"),

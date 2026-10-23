@@ -1493,3 +1493,26 @@ japanese_word_dict.update({
     ),
     'config_sync_loaded_preferences_applied': '読み込み済み GUI 設定を適用しました',
 })
+
+japanese_word_dict.update({
+    "tab_agent_tasks": "エージェントタスク",
+    "agent_goal": "目標",
+    "agent_target": "対象",
+    "agent_mode": "実行モード",
+    "agent_scope": "権限と完了条件",
+    "agent_task_id": "タスク ID",
+    "agent_state": "状態",
+    "agent_reason": "理由",
+    "agent_background_note": "画面を閉じても送信済みタスクはサービスで実行されます。",
+    "agent_start": "サービス開始",
+    "agent_submit": "タスク送信",
+    "agent_refresh": "タスク更新",
+    "agent_get": "タスク詳細",
+    "agent_observe": "対象を観察",
+    "agent_finish": "完了を検証",
+    "agent_pause": "一時停止／操作を戻す",
+    "agent_resume": "タスク再開",
+    "agent_cancel": "タスク中止"
+})
+
+japanese_word_dict["agent_stop_service"] = 'サービス停止'

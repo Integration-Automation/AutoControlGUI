@@ -31,6 +31,7 @@ from je_auto_control.utils.executor.action_schema import (
 )
 from je_auto_control.utils.executor.flags import as_bool as _as_bool
 from je_auto_control.utils.executor.dispatch import dispatch_checkpoint
+from je_auto_control.utils.agent_runtime.commands import COMMANDS as AGENT_TASK_COMMANDS
 from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue, MacroDepthExceeded,
 )
@@ -7233,6 +7234,7 @@ class Executor:
         self.macros: Dict[str, Any] = {}
         # 事件字典，對應字串名稱到函式
         self.event_dict: dict = {
+            **AGENT_TASK_COMMANDS,
             # Mouse 滑鼠相關
             **MOUSE_BUTTON_COMMANDS,
             "AC_click_mouse": click_mouse,

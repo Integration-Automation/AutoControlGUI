@@ -641,3 +641,10 @@ This lifetime evidence does not by itself identify or accept the outstanding nat
 Existing loopback clipboard and GUI/registry/host-access cases remain passing. Controlled channels
 do not claim new WS framing or real native-clipboard acceptance: framing has its existing tests,
 native clipboard providers are replaced, and physical/paid acceptance stays deferred.
+Managed task runtime
+--------------------
+
+Managed external/skill/local-model tasks have deterministic fake-target and loopback HTTP coverage.
+Shared Python/AC/MCP/REST/CLI/GUI surfaces enforce task ownership and independent completion evidence.
+Native desktop/mobile acceptance, reliable activity detection and helper isolation remain unverified;
+Progress.md records these gaps. A passive capability snapshot or configured timeout grants no authority.

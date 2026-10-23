@@ -4,6 +4,12 @@ Agent tool calls use `executor.execute_one(name, arguments)`, returning the raw 
 the same authorization, variable interpolation, cancellation and journal boundaries as action scripts.
 Private executor arguments are rejected. Managed task delivery is tracked in `Progress.md`.
 
+Experimental [managed agent tasks](docs/AGENT_TASKS.md) provide owner-scoped submit/observe/act/verify,
+pause/resume/cancel, fenced target control, durable action receipts, WorkQueue delivery, local Ollama
+inference and a background service shared by Python, AC, MCP, REST, CLI and the Agent Tasks view.
+Start explicitly with `je_auto_control agent-task start`; new flows have no mandatory external service.
+Native platform acceptance and the remaining workflow/lifecycle work are tracked in `Progress.md`.
+
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -22,7 +28,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 810 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 822 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -124,7 +130,7 @@ Optional extras, installed only when you need them:
 
 | Extra | Enables |
 |---|---|
-| `gui` | PySide6 desktop application (49 tabs): a searchable navigation panel (`Ctrl+K`) lists every feature by category, tabs are built the first time they are opened, and **View → Theme** switches dark / light. Pages scroll in narrow windows; theme, text size, navigation visibility (`Ctrl+B`) and width are saved in `~/.je_auto_control/gui.ini` on close. Themes use Qt directly; `qt-material` is not required. |
+| `gui` | PySide6 desktop application (50 tabs): a searchable navigation panel (`Ctrl+K`) lists every feature by category, tabs are built the first time they are opened, and **View → Theme** switches dark / light. Pages scroll in narrow windows; theme, text size, navigation visibility (`Ctrl+B`) and width are saved in `~/.je_auto_control/gui.ini` on close. Themes use Qt directly; `qt-material` is not required. |
 | `webrtc` | WebRTC remote desktop, USB passthrough (`aiortc`, `av`) |
 | `signaling` | Standalone signaling / rendezvous server (`fastapi`, `uvicorn`) |
 | `discovery` | mDNS / Zeroconf LAN host discovery |
@@ -237,7 +243,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 810 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 822 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -342,7 +348,7 @@ under a relative name are written below that directory.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 711 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 723 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |

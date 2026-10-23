@@ -31,6 +31,7 @@ class ToolCallContext:
     )
     cancelled_event: threading.Event = field(default_factory=threading.Event)
     path_policy: Optional[PathPolicy] = field(default=None, repr=False)
+    session_id: str = ""
 
     @property
     def cancelled(self) -> bool:

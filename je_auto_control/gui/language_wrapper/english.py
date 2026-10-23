@@ -1606,3 +1606,26 @@ english_word_dict.update({
     'config_sync_script_opened': 'Script snapshot opened in Builder; Run remains explicit.',
     'config_sync_loaded_preferences_applied': 'Loaded GUI preference snapshot applied',
 })
+
+english_word_dict.update({
+    "tab_agent_tasks": "Agent Tasks",
+    "agent_goal": "Goal",
+    "agent_target": "Target",
+    "agent_mode": "Execution mode",
+    "agent_scope": "Authorization and completion criteria",
+    "agent_task_id": "Task ID",
+    "agent_state": "State",
+    "agent_reason": "Reason",
+    "agent_background_note": "Submitted tasks run in the service after this view closes.",
+    "agent_start": "Start service",
+    "agent_submit": "Submit task",
+    "agent_refresh": "Refresh tasks",
+    "agent_get": "Task details",
+    "agent_observe": "Observe target",
+    "agent_finish": "Verify completion",
+    "agent_pause": "Pause / take back control",
+    "agent_resume": "Resume task",
+    "agent_cancel": "Cancel task"
+})
+
+english_word_dict["agent_stop_service"] = 'Stop service'

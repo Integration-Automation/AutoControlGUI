@@ -3,6 +3,12 @@
 Agent 工具呼叫經 `executor.execute_one(name, arguments)` 回傳原始結果，與動作腳本共用
 授權、變數插值、取消及日誌邊界；拒絕私有 executor 參數。受管任務交付進度見 `Progress.md`。
 
+實驗性的[受管 Agent 任務](../docs/AGENT_TASKS.md)提供擁有者範圍內的提交、觀察、動作、驗證、
+暫停、恢復、取消、控制權世代、持久化回執、WorkQueue 派送與本機 Ollama 推論。
+Python、AC、MCP、REST、CLI 與 Agent 任務面板共用背景服務，明確執行
+`je_auto_control agent-task start` 才啟動；新流程不強制依賴外部服務。
+原生平台驗收與其餘流程／生命週期待辦列在 `Progress.md`。
+
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
@@ -21,7 +27,7 @@ Agent 工具呼叫經 `executor.execute_one(name, arguments)` 回傳原始結果
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 810 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 822 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -117,7 +123,7 @@ pip install je_auto_control[gui]       # 加上 PySide6 桌面應用程式
 
 | Extra | 啟用的功能 |
 |---|---|
-| `gui` | PySide6 桌面應用程式（49 個分頁）：左側可搜尋的導覽面板（`Ctrl+K`）依分類列出全部功能，分頁在第一次開啟時才建立，**View → Theme** 切換深色／淺色。窄視窗的內容可捲動；關閉視窗時，主題、字級、導覽面板顯示（`Ctrl+B`）與寬度會存入 `~/.je_auto_control/gui.ini`。主題直接使用 Qt，不需要 `qt-material`。 |
+| `gui` | PySide6 桌面應用程式（50 個分頁）：左側可搜尋的導覽面板（`Ctrl+K`）依分類列出全部功能，分頁在第一次開啟時才建立，**View → Theme** 切換深色／淺色。窄視窗的內容可捲動；關閉視窗時，主題、字級、導覽面板顯示（`Ctrl+B`）與寬度會存入 `~/.je_auto_control/gui.ini`。主題直接使用 Qt，不需要 `qt-material`。 |
 | `webrtc` | WebRTC 遠端桌面、USB 直通（`aiortc`、`av`） |
 | `signaling` | 獨立的訊令／rendezvous 伺服器（`fastapi`、`uvicorn`） |
 | `discovery` | mDNS / Zeroconf 區網主機探索 |
@@ -223,7 +229,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 810 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 822 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -321,7 +327,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 711 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用：完整的 `ac_*` 工具介面，以及常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 723 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用：完整的 `ac_*` 工具介面，以及常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 提供 fixture 與供 pytest-bdd／behave 使用的 Gherkin step library。 |

@@ -1455,3 +1455,26 @@ simplified_chinese_word_dict.update({
     'config_sync_script_opened': '已在 Builder 打开脚本快照；仍须明确执行 Run。',
     'config_sync_loaded_preferences_applied': '已应用加载的 GUI 偏好快照',
 })
+
+simplified_chinese_word_dict.update({
+    "tab_agent_tasks": "Agent 任务",
+    "agent_goal": "目标",
+    "agent_target": "目标设备",
+    "agent_mode": "执行方式",
+    "agent_scope": "授权范围与完成条件",
+    "agent_task_id": "任务标识",
+    "agent_state": "状态",
+    "agent_reason": "原因",
+    "agent_background_note": "关闭此面板后，已提交任务仍由服务执行。",
+    "agent_start": "启动服务",
+    "agent_submit": "提交任务",
+    "agent_refresh": "刷新任务",
+    "agent_get": "任务详情",
+    "agent_observe": "观察目标",
+    "agent_finish": "验证完成",
+    "agent_pause": "暂停／接回控制",
+    "agent_resume": "恢复任务",
+    "agent_cancel": "取消任务"
+})
+
+simplified_chinese_word_dict["agent_stop_service"] = '停止服务'

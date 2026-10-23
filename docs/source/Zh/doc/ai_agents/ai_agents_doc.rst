@@ -120,3 +120,12 @@ AI 控制的 GUI process 具有主機操作權限。
 ``executor.execute_one(name, arguments)`` 與 ``run_tool_call`` 共用腳本的授權、
 插值、取消與日誌邊界，回傳原始結果。私有 executor 參數被拒絕；身分範圍內檢查指令能力。
 
+受管任務
+--------
+
+明確執行 ``je_auto_control agent-task start`` 啟動本機任務服務。
+Python、AC、MCP、REST、CLI 與 Agent 任務面板共用提交、觀察、動作、驗證、暫停、恢復、
+取消與擁有者範圍內的狀態。完成須有確定性證據，模型停止文字不代表成功。
+技能經 WorkQueue 派送；本機推論使用明確設定的 Ollama 模型，不下載、不重新導向或切換外部服務。
+關閉面板後已提交工作仍由服務擁有。原生平台驗收與其餘流程列在 ``Progress.md``；
+完整契約見 ``docs/AGENT_TASKS.md``。

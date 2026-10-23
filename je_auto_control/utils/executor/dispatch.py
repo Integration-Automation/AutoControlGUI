@@ -31,6 +31,21 @@ def dispatch_checkpoint(name: str, arguments: Any) -> None:
         guard(name, arguments)
 
 
+def capture_command_guards() -> tuple[CommandGuard, ...]:
+    """Capture the complete immutable guard chain for an explicitly owned local worker."""
+    return _GUARDS.get()
+
+
+@contextmanager
+def bound_command_guards(guards: tuple[CommandGuard, ...]) -> Iterator[None]:
+    """Bind the parent's exact chain, replacing unrelated worker ambient state."""
+    binding = _GUARDS.set(guards)
+    try:
+        yield
+    finally:
+        _GUARDS.reset(binding)
+
+
 def execute_one(executor: Executor, name: str, arguments: Optional[Mapping[str, Any]] = None) -> Any:
     """Execute one validated public command, returning its raw value and propagating failures."""
     from je_auto_control.utils.action_journal.capture import action_step

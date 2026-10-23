@@ -1,5 +1,13 @@
 # Public API lifecycle
 
+The experimental managed-task API adds AgentTaskSpec/Budget/Handle/Result, AgentObservation,
+AgentActionRequest/Result, AgentRuntime, AgentTaskError/ControlBusy, submit/get/list/observe/act/
+finish/pause/resume/cancel_agent_task and explicit start/stop/status service functions. Import has no
+service/native side effects. The shared AC/MCP/Builder catalogue preserves existing command names.
+See AGENT_TASKS.md for contracts, completion certainty, ownership and remaining native limitations.
+WorkQueue.defer(item_id, claim=...) is additive; it returns a currently owned delivery to new without
+consuming an application retry and refuses stale claims.
+
 `Executor.execute_one(name, arguments=None)` is additive and returns the raw command result.
 `run_tool_call` now uses it: configured identities must possess the command capability,
 private top-level arguments are refused, runtime variables interpolate, cancellation propagates,

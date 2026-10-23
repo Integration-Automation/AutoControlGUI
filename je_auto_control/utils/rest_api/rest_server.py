@@ -46,6 +46,7 @@ from je_auto_control.utils.rest_api.rest_handlers import (
 )
 from je_auto_control.utils.rest_api.rest_metrics import RestMetrics
 from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
+from je_auto_control.utils.agent_runtime.routes import route as agent_route, OPERATIONS as AGENT_OPERATIONS
 
 
 # What a route handler is allowed to fail with. AutoControlException is the
@@ -99,6 +100,9 @@ _POST_ROUTES: Dict[str, HandlerFn] = {
     "/usb/loopback/open": handle_usb_loopback_open,
     "/usb/remote/open": handle_usb_remote_open,
 }
+
+_GET_ROUTES.update({"/agent/tasks": agent_route("list"), "/agent/task": agent_route("get")})
+_POST_ROUTES.update({f"/agent/{operation}": agent_route(operation) for operation in AGENT_OPERATIONS})
 
 # /health is intentionally unauthenticated so probes / load balancers
 # can liveness-check without holding the bearer token.
@@ -202,7 +206,8 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
                 return
         if self._refuse_privileged_commands(method, parsed.path, client_ip, caller, body):
             return
-        ctx = RouteContext(query=parsed.query, body=body, client_ip=client_ip)
+        ctx = RouteContext(query=parsed.query, body=body, client_ip=client_ip,
+                           agent_runtime=getattr(self.server, "agent_runtime", None))
         try:
             # The scope is what lets the executor refuse a privileged command
             # found in an action file, which nothing here has read.
@@ -293,12 +298,26 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
             result = authenticate(client_ip=client_ip, header_value=header)
         else:
             result = AuthResult(gate.check(client_ip=client_ip, header_value=header))
+        if result.verdict == "ok" and getattr(self.server, "agent_runtime", None) is not None:
+            result = self._forwarded_principal(result)
         # This flag belongs to the server configuration, independently of a
         # replacement gate. An identityless "ok" must never disable RBAC.
         if (getattr(self.server, "rbac_enabled", False)
                 and result.verdict == "ok" and result.context is None):
             return AuthResult("unauthorized")
         return result
+
+    def _forwarded_principal(self, result: AuthResult) -> AuthResult:
+        from je_auto_control.utils.agent_runtime.delegation import HEADER, verify_principal
+        from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+        forwarded = self.headers.get(HEADER)
+        if not forwarded:
+            return result
+        try:
+            principal = verify_principal(forwarded, getattr(self.server, "agent_token"), urlparse(self.path).path)
+            return AuthResult("ok", principal)
+        except (AgentTaskError, AutoControlException):
+            return AuthResult("unauthorized")
 
     def _metrics(self) -> RestMetrics:
         return self.server.metrics  # type: ignore[attr-defined]
@@ -491,7 +510,8 @@ class RestApiServer:
     def __init__(self, host: str = "127.0.0.1", port: int = 9939,
                  *, token: Optional[str] = None,
                  enable_audit: bool = True,
-                 user_store: Optional[UserStore] = None) -> None:
+                 user_store: Optional[UserStore] = None, agent_runtime: Any = None,
+                 use_environment_users: bool = True) -> None:
         """``user_store`` switches RBAC on; ``None`` reads ``JE_AUTOCONTROL_RBAC_USERS``.
 
         With neither, every authenticated request holds the one shared
@@ -503,10 +523,12 @@ class RestApiServer:
         self._server: Optional[ThreadingHTTPServer] = None
         self._thread: Optional[threading.Thread] = None
         self._token = token if token else generate_token()
-        self._users = user_store if user_store is not None else user_store_from_env()
+        self._users = user_store if user_store is not None else (
+            user_store_from_env() if use_environment_users else None)
         self._auth = RestAuthGate(expected_token=self._token, user_store=self._users)
         self._audit_log = self._open_audit_log() if enable_audit else None
         self._metrics = RestMetrics()
+        self._agent_runtime = agent_runtime
 
     @staticmethod
     def _open_audit_log() -> Any:
@@ -556,6 +578,8 @@ class RestApiServer:
         setattr(server, "rbac_enabled", self._users is not None)
         server.audit_log = self._audit_log  # type: ignore[attr-defined]
         server.metrics = self._metrics  # type: ignore[attr-defined]
+        setattr(server, "agent_runtime", self._agent_runtime)
+        setattr(server, "agent_token", self._token)
         # `server_address` is typed for every address family a socketserver
         # can bind; an AF_INET HTTP server always answers with (host, port).
         bound_host, bound_port = server.server_address[:2]

@@ -298,6 +298,15 @@ _ENDPOINT_METADATA: Dict[Tuple[str, str], Dict[str, Any]] = {
 }
 
 
+for _operation in ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown"):
+    _ENDPOINT_METADATA[("POST", f"/agent/{_operation}")] = {
+        "summary": f"Managed task {_operation}; preserves caller authority and host ownership.",
+        "tag": "agent", "request_body": {"type": "object"},
+    }
+_ENDPOINT_METADATA[("GET", "/agent/tasks")] = {"summary": "List owned managed tasks.", "tag": "agent"}
+_ENDPOINT_METADATA[("GET", "/agent/task")] = {"summary": "Read one owned task.", "tag": "agent"}
+
+
 def known_endpoints() -> List[Tuple[str, str]]:
     """Return ``(method, path)`` tuples for every documented endpoint."""
     return list(_ENDPOINT_METADATA.keys())

@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add experimental managed tasks across Python/AC/MCP/REST/CLI/GUI, with detached task contracts,
+  owner-scoped service transport, fenced target control, durable receipts, independent completion
+  checks, WorkQueue delivery and configured local Ollama decisions. Native acceptance remains open.
+  Add WorkQueue.defer with required claim fencing without consuming application retries.
+
 - Route agent tool calls through validated, authorized, cancellable executor dispatch and journal capture.
   Add `Executor.execute_one` with raw results. Private top-level tool arguments are rejected;
   configured viewer identities cannot drive input through `run_tool_call`.

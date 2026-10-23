@@ -306,9 +306,18 @@ def _run_until_signal(shutdown: Callable[[], None]) -> None:
         shutdown()
 
 
+def cmd_agent_task(args: argparse.Namespace) -> int:
+    """Operate the explicitly started managed agent service."""
+    from je_auto_control.utils.agent_runtime.cli import run
+    print(json.dumps(run(args), ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="je_auto_control")
     sub = parser.add_subparsers(dest="command", required=True)
+    from je_auto_control.utils.agent_runtime.cli import register_parser
+    register_parser(sub, cmd_agent_task)
 
     p_run = sub.add_parser("run", help="Execute an action JSON file")
     p_run.add_argument("script")

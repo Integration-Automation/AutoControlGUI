@@ -6,6 +6,7 @@ owns the JSON Schemas, descriptions, and annotation choices that the
 MCP client surfaces to the model.
 """
 from typing import List
+from je_auto_control.utils.mcp_server.tools._agent_tasks import agent_task_tools
 from je_auto_control.utils.mcp_server.tools._capabilities import capability_tools
 from je_auto_control.utils.mcp_server.tools._diagnostics import diagnostic_tools
 from je_auto_control.utils.mcp_server.tools._healing_evaluation import healing_evaluation_tools
@@ -9201,6 +9202,7 @@ def media_assert_tools() -> List[MCPTool]:
 
 
 ALL_FACTORIES = (
+    agent_task_tools,
     capability_tools, diagnostic_tools,
     journal_tools, healing_evaluation_tools, healing_run_tools, healing_source_tools, template_candidate_tools,
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,

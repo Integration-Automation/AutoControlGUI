@@ -9,6 +9,7 @@ the MCP stdio spec.
 import contextlib
 import itertools
 import json
+import secrets
 import sys
 import threading
 import time
@@ -91,6 +92,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         self.argument_policy = ArgumentPolicy.from_env()
         self._stop = threading.Event()
         self._initialized = False
+        self._agent_session = secrets.token_hex(16)
         self._peer_era: Optional[str] = None  # the stdio peer's; see _note_peer_era
         self._request_states = RequestStateSigner()
         # tools/call runs on a worker thread under the stdio transport, so a
@@ -710,6 +712,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             request_id=msg_id, progress_token=progress_token,
             notifier=self._notifier,
             path_policy=self.argument_policy.path_policy,
+            session_id=f"{self._agent_session}:{self._connection_id}",
         )
 
 

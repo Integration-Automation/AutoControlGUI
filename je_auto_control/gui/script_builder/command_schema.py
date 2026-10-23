@@ -64,6 +64,7 @@ _BOXES_JSON_PLACEHOLDER = '[{"role":"button","x":0,"y":0}]'
 
 def _build_specs() -> List[CommandSpec]:
     specs: List[CommandSpec] = []
+    _add_agent_task_specs(specs)
     _add_mouse_specs(specs)
     _add_keyboard_specs(specs)
     _add_screen_specs(specs)
@@ -81,6 +82,15 @@ def _build_specs() -> List[CommandSpec]:
     ))
     _add_misc_specs(specs)
     return specs
+
+
+def _add_agent_task_specs(specs: List[CommandSpec]) -> None:
+    from je_auto_control.utils.agent_runtime.commands import CATALOG
+    for name, (function, properties, required, _readonly, _management) in CATALOG.items():
+        fields = tuple(FieldSpec(key, FieldType.JSON if value["type"] == "object" else FieldType.STRING,
+                                 optional=key not in required) for key, value in properties.items())
+        specs.append(CommandSpec(name, "Agent Tasks", name.removeprefix("AC_").replace("_", " "),
+                                 fields=fields, description=function.__doc__ or name))
 
 
 def _add_template_candidate_specs(specs: List[CommandSpec]) -> None:

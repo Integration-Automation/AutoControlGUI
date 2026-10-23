@@ -3,6 +3,14 @@ import all wrapper function
 """
 
 # callback
+from je_auto_control.utils.agent_runtime import (
+    AgentActionRequest, AgentActionResult, AgentControlBusy, AgentObservation, AgentRuntime,
+    AgentTaskBudget, AgentTaskError, AgentTaskHandle, AgentTaskResult, AgentTaskSpec,
+    act_agent_task, agent_runtime_status, cancel_agent_task, finish_agent_task, get_agent_task,
+    list_agent_tasks, observe_agent_task, pause_agent_task, resume_agent_task,
+    start_agent_runtime, stop_agent_runtime, submit_agent_task,
+)
+
 from je_auto_control.utils.callback.callback_function_executor import \
     callback_executor
 # Critical
@@ -1364,6 +1372,12 @@ def start_autocontrol_gui(*args, **kwargs):
     return _impl(*args, **kwargs)
 
 __all__ = [
+    "AgentActionRequest", "AgentActionResult", "AgentControlBusy", "AgentObservation", "AgentRuntime",
+    "AgentTaskBudget", "AgentTaskError", "AgentTaskHandle", "AgentTaskResult", "AgentTaskSpec",
+    "act_agent_task", "agent_runtime_status", "cancel_agent_task", "finish_agent_task", "get_agent_task",
+    "list_agent_tasks", "observe_agent_task", "pause_agent_task", "resume_agent_task", "start_agent_runtime",
+    "submit_agent_task",
+    "stop_agent_runtime",
     "SyncWorkspace", "SyncWorkspaceError", "WorkspaceSyncResult",
     "load_sync_profile", "LoadedSyncProfile",
     "SyncAssetBlob", "SyncAssetReference", "SyncAssetStore",
