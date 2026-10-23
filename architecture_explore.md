@@ -19,13 +19,13 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,300 |
-| 程式碼總行數 | 191,403 |
+| Python 模組總數（含周邊子專案） | 1,301 |
+| 程式碼總行數 | 191,600 |
 | `je_auto_control/utils/` 子套件數 | 311 |
-| `AC_*` 動作指令數（`known_commands()` 實測） | 847 |
-| 套件門面 `__all__` 公開名稱數 | 1436 |
+| `AC_*` 動作指令數（`known_commands()` 實測） | 848 |
+| 套件門面 `__all__` 公開名稱數 | 1437 |
 | GUI 分頁數（`main_widget` 註冊） | 50 |
-| MCP 工具數（`build_default_tool_registry()` 實測） | 751 |
+| MCP 工具數（`build_default_tool_registry()` 實測） | 752 |
 | `test_*.py` 測試檔／測試函式 | 846 / 8,825 |
 | 範例腳本 | 43 |
 
@@ -92,7 +92,7 @@ USB/IP 協定、Prometheus 指標），以維持這條輕相依基線。
 | 模式 | 落點 | 說明 |
 | --- | --- | --- |
 | **Strategy** | `wrapper/platform_wrapper.py` | 依 `sys.platform` 只匯入當前 OS 的 `keyboard`／`mouse`／`screen`／`recorder` 實作；Linux 再細分 Wayland／X11，Wayland 後端不可用時自動退回 XWayland 並記警告。新增平台不需要改 wrapper。 |
-| **Facade** | `je_auto_control/__init__.py` | 把 1436 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
+| **Facade** | `je_auto_control/__init__.py` | 把 1437 個公開名稱集中再匯出，使用者只 `import je_auto_control`。`api/core.py` 另提供一個小而穩定的版本化門面（7 個名稱）給新整合使用。 |
 | **Command** | `utils/executor/action_executor.py` | `Executor.event_dict` 是字串 → callable 的分派表；JSON 動作檔即指令序列，因此可錄製、序列化、重播、簽章。 |
 | **Observer** | `utils/callback/`、`utils/observer/`、`utils/triggers/` | 動作完成後觸發回呼；畫面出現／消失／變化與外部事件（webhook／IMAP／檔案）驅動腳本。 |
 | **Template Method** | `utils/generate_report/` | HTML／JSON／XML 三個產生器共用「收集紀錄 → 格式化 → 寫檔」骨架，各自實作渲染。 |
@@ -157,7 +157,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `je_auto_control/__init__.py` | 2,118 | **套件門面**。集中匯入並再匯出 1436 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
+| `je_auto_control/__init__.py` | 2,118 | **套件門面**。集中匯入並再匯出 1437 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
 | `je_auto_control/__main__.py` | 106 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
 | `je_auto_control/cli.py` | 453 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`／`--journal`）、`journal`（依 run 篩選與有界遮罩快照）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`。所有子命令延遲匯入，確保不碰 Qt。 |
 | `je_auto_control/api/__init__.py` | 27 | 版本化整合進入點。 |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 32,483 行。
+> 14 個套件、約 32,679 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 6,923 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 7,119 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -515,7 +515,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 372 | 自然語言 → action list 規劃器 + Anthropic／null 後端；規劃執行隔離頂層變數並沿用巢狀範圍 |
 | `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 20,964 | **無頭 MCP 伺服器**（預設註冊 751 個工具＝732 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 20,964 | **無頭 MCP 伺服器**（預設註冊 752 個工具＝733 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 191 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 132 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 616 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -638,7 +638,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 3,620 行。
+> 13 個套件、約 3,621 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -647,7 +647,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/governance/` | 242 | 治理：maker-checker 核准閘門與即時憑證租約 |
 | `utils/license_policy/` | 240 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 126 | SLSA 建置來源證明（in-toto v1） |
-| `utils/rbac/` | 887 | 角色型存取控制：使用者與權杖驗證、REST／MCP／executor 的能力政策，`deferred.py` 將背景工作綁定註冊者並在觸發時重新驗證來源 store；不保存 bearer token。；MCP 敏感讀取獨立於唯讀提示要求 operator |
+| `utils/rbac/` | 888 | 角色型存取控制：使用者與權杖驗證、REST／MCP／executor 的能力政策，`deferred.py` 將背景工作綁定註冊者並在觸發時重新驗證來源 store；不保存 bearer token。；MCP 敏感讀取獨立於唯讀提示要求 operator |
 | `utils/redaction/` | 508 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
 | `utils/sbom/` | 170 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 238 | URI scheme 形式的值參照解析 |
@@ -716,7 +716,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 | `flags.py` | 19 | 旗標讀取 `as_bool`：依拼法（`"true"`／`"yes"`／`"on"`／`"1"`）而非 Python 真值判斷，所以 JSON、CLI、MCP 傳來的 `"false"` 是關；所有 adapter 與流程指令共用。 |
 
-#### `utils/mcp_server/`（20,964 行，751 個工具）— 最大子系統
+#### `utils/mcp_server/`（20,964 行，752 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -989,21 +989,22 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（6,923 行／64 檔）
+#### `utils/agent_runtime/`（7,119 行／65 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `__init__.py` | 44 | Managed computer tasks with explicit authority, fenced input and verified outcomes. |
+| `__init__.py` | 45 | Managed computer tasks with explicit authority, fenced input and verified outcomes. |
 | `__main__.py` | 24 | Explicit service entry point; no native target is operated during startup. |
 | `activity.py` | 66 | Physical activity gates with explicit idle acquisition and manual takeover semantics. |
 | `activity_windows.py` | 102 | Owned Win32 presence-only hooks; no key values, coordinates or input contents are retained. |
 | `api.py` | 192 | Public service-backed task functions; imports never start services or operate targets. |
-| `browser_commands.py` | 107 | Closed browser commands operate only inside an owned WebRunner helper session. |
+| `browser_commands.py` | 139 | Closed browser commands operate only inside an owned WebRunner helper session. |
 | `browser_target.py` | 95 | Own a WebRunner SDK session inside a managed helper, without importing browser engines. |
+| `browser_workflows.py` | 143 | Compile rooted CSV forms and captured field transfers into reviewed WebRunner task actions. |
 | `budget_clock.py` | 34 | Persistent monotonic task budgets that cannot be extended by wall-clock rollback or restart. |
 | `cli.py` | 94 | Managed-task CLI parsing; the existing CLI owns terminal output. |
 | `client.py` | 42 | Shared local service client for GUI, CLI, MCP and Python task operations. |
-| `commands.py` | 95 | One command catalogue shared by executor, MCP and the visual script editor. |
+| `commands.py` | 101 | One command catalogue shared by executor, MCP and the visual script editor. |
 | `context.py` | 48 | Host-owned operation context shared with local workers, never serialized model authority. |
 | `delegation.py` | 43 | Short-lived, authenticated principal forwarding across the local service boundary. |
 | `dialog_scope.py` | 54 | Pause managed desktop work at unsaved-content or unrecognized modal windows. |
@@ -1053,7 +1054,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `window_pixels.py` | 118 | Capture only an identified Windows window, with no desktop-pixel fallback. |
 | `workflow_desktop.py` | 70 | Reviewed semantic control and document operations within the current task's application scope. |
 | `workflow_files.py` | 128 | Rooted, bounded and idempotent download/archive operations for managed workflows. |
-| `workflow_specs.py` | 229 | Compile four reviewed workflows into inspectable, bounded managed-task specifications. |
+| `workflow_specs.py` | 243 | Compile four reviewed workflows into inspectable, bounded managed-task specifications. |
 | `workflow_values.py` | 88 | Resolve receipt-backed workflow variables and compare explicit per-step expectations. |
 | `workflow_wait.py` | 31 | Bounded, cancellable semantic read-back polling never repeats an input operation. |
 | `workspace_scope.py` | 36 | Bounded workspace bootstrap only focuses explicitly approved application windows. |
@@ -1357,8 +1358,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 862 | 78,623 |
-| **總計** | **1,292** | **191,234** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 863 | 78,820 |
+| **總計** | **1,293** | **191,431** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

@@ -12,13 +12,19 @@ from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIG
 from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILL_OPERATIONS
 from je_auto_control.utils.agent_runtime.target_profiles import OPERATIONS as TARGET_OPERATIONS
 from je_auto_control.utils.agent_runtime.browser_commands import (
-    browser_navigate, browser_click, browser_fill, browser_select, browser_check, browser_read,
+    browser_navigate, browser_click, browser_fill, browser_select, browser_check, browser_read, browser_wait,
 )
 
 _ID = {"task_id": {"type": "string", "minLength": 1}}
 
 # name: (function, JSON properties, required, read_only, host_management)
 CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
+    "AC_browser_wait": (browser_wait, {"operation": {"type": "string", "enum": ["text", "value"]},
+                                       "selector": {"type": "string", "maxLength": 4096},
+                                       "expected": {"type": "string", "maxLength": 8000},
+                                       "frame": {"type": "string", "maxLength": 4096},
+                                       "timeout_seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 60}},
+                        ("operation", "selector", "expected"), True, False),
     "AC_browser_navigate": (browser_navigate, {"url": {"type": "string", "maxLength": 4096}},
                             ("url",), False, False),
     "AC_browser_click": (browser_click, {"selector": {"type": "string", "maxLength": 4096},

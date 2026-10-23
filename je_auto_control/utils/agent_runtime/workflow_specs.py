@@ -23,11 +23,19 @@ def draft_agent_workflow(workflow: str, config: Mapping[str, Any]) -> dict[str, 
     value = detached(config)
     if not isinstance(value, dict):
         raise AgentTaskError("workflow configuration must be an object")
+    backend = value.get("backend", "desktop")
+    if not isinstance(backend, str) or backend not in {"desktop", "browser"}:
+        raise AgentTaskError("workflow backend must be desktop or browser")
     spec = canonical_spec(AgentTaskSpec.from_dict(_base(workflow, value))).to_dict()
     builders = {"download_archive": _downloads, "batch_form": _forms, "transfer": _transfer,
                 "workspace": _workspace}
     try:
-        spec.update(builders[workflow](value, TaskPolicy(AgentTaskSpec.from_dict(spec))))
+        policy = TaskPolicy(AgentTaskSpec.from_dict(spec))
+        if value.get("backend") == "browser":
+            from je_auto_control.utils.agent_runtime.browser_workflows import browser_workflow
+            spec.update(browser_workflow(workflow, value, policy))
+        else:
+            spec.update(builders[workflow](value, policy))
     except (KeyError, OSError, TypeError, ValueError, ImportError) as error:
         raise AgentTaskError(f"invalid {workflow} configuration: {type(error).__name__}") from error
     spec["allowed_tools"] = sorted({action["tool"] for action in spec["actions"]})
@@ -43,11 +51,17 @@ def draft_agent_workflow(workflow: str, config: Mapping[str, Any]) -> dict[str, 
 
 
 def _base(workflow: str, config: dict) -> dict:
+    options = {"workflow": workflow}
+    default = "local-files" if workflow == "download_archive" else "local-desktop"
+    if config.get("backend") == "browser":
+        from je_auto_control.utils.agent_runtime.browser_workflows import browser_options
+        options.update(browser_options(config))
+        default = "reviewed-browser"
     return {"goal": config.get("goal", workflow.replace("_", " ")), "mode": "skill",
-            "target": config.get("target", "local-files" if workflow == "download_archive" else "local-desktop"),
+            "target": config.get("target", default),
             "roots": config.get("roots", []), "apps": config.get("apps", []),
             "allowed_tools": ["AC_workflow_download"], "success_criteria": [{"kind": "actions_complete"}],
-            "actions": [], "options": {"workflow": workflow}}
+            "actions": [], "options": options}
 
 
 def _items(config: dict, name: str) -> list[dict]:

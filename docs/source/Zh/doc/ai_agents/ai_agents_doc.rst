@@ -240,3 +240,19 @@ Skill 可導頁、填入 CSS selector，再獨立讀回 value，以 ``expect_res
 外部 agent 先觀察，再以目前 observation ID 和 ``reference: {"element_index": 0}``
 呼叫 ``act_agent_task``；arguments 僅提供填入值／讀取操作，不混入另一個 selector／frame。
 初始分頁為空白；明確授權導頁後才會出現可選 DOM 參照。
+
+
+瀏覽器填表與欄位轉填草稿
+----------------------------------------------------------------------
+
+``draft_agent_workflow("batch_form", config)`` 與 ``transfer`` 可設定 ``backend: browser``，
+並提供明確的 ``allowed_origins`` 與已審閱 browser target。CSV／XLSX 來源仍受 roots 限制；
+瀏覽器草稿只產生 ``AC_browser_*`` 動作，不退回桌面輸入。填表提供 ``url``、CSS ``fields``、
+可選 frame／新增資料控制項、送出與確認 selector；每次填入都有獨立的精確 value 讀回。
+可用 ``confirmation_column`` 從每列取得預期確認文字。轉填提供 ``source_url``／``destination_url``，
+擷取 text／value、套用白名單轉換、填入並讀回目的欄位，再驗證儲存；送出前拒絕陳舊確認。
+``AC_browser_wait``／``browser_wait`` 只輪詢 text／value，也支援稍後才出現的元素；``wait_seconds``
+預設 5 秒，受 action budget 限制，逾時才回來的相符結果仍拒絕，不重播填入或點擊。
+Python/core、共用 catalog／模型 schema、MCP、CLI／REST 任務操作、Builder 及 GUI 流程預覽
+使用同一編譯器。瀏覽器讀回可作為獨立技能證據。實際應用驗收、已審閱上／下載許可仍待完成；
+SDK 超限讀回必須拒絕的配套修正暫列 ``Progress.md``。

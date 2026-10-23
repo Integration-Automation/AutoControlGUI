@@ -60,5 +60,5 @@ def independent_evidence(spec: dict) -> bool:
 
 
 def _read_back(action: dict) -> bool:
-    return (action["tool"] == "AC_workflow_wait" or
+    return (action["tool"] in {"AC_workflow_wait", "AC_browser_wait", "AC_browser_read"} or
             action["tool"] == "AC_workflow_control" and action["arguments"].get("operation") in {"get", "state"})

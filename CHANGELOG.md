@@ -1,5 +1,7 @@
 # Changelog
 
+Experimental: add explicit browser backends for batch_form and transfer workflow previews, plus AC_browser_wait with read-only bounded polling and late-result refusal. Desktop workflows keep their default behavior; unsupported browser workflows are rejected. Browser readback is recognized as independent skill evidence. SDK over-limit readback refusal remains a tracked companion change.
+
 Experimental: add browser host profiles and six managed browser commands through the reviewed WebRunner SDK. Existing browser bridge APIs remain delegated to je_web_runner. DOM indexes use observation-local grounding; repeated readiness preserves one session. SDK absence fails before browser startup; no dependency or browser is installed automatically.
 
 Preserve MCP async caller authority, session roots and accepted tool availability; retired views/policies refuse late calls. HTTP plugin notifications reach live sessions exactly once per stream, and header publication is atomic with stream registration. Existing argument, rate-limit, confirmation and invocation gates remain in use. Add a metadata-only schema/latency benchmark and dated results without native input or browser execution.

@@ -1,5 +1,19 @@
 # Public API lifecycle
 
+`draft_agent_workflow("batch_form", config)` and `transfer` accept `backend: browser` with
+explicit `allowed_origins` and a reviewed browser target. CSV/XLSX sources stay rooted; browser drafts
+emit only `AC_browser_*` actions and never fall back to desktop input. Forms take `url`, CSS `fields`,
+optional frame selectors/new-record control, and submit plus confirmation selectors. Each fill has an
+independent exact value readback. Optional `confirmation_column` supplies a per-row expected marker.
+Transfers take `source_url`/`destination_url`, capture text/value fields, apply an allowlisted transform,
+fill and read back destination fields, then verify saving. A stale confirmation is refused before submit.
+`AC_browser_wait` / `browser_wait` polls text/value reads only, including a newly visible element;
+`wait_seconds` defaults to 5, is capped by the action budget, and late matching replies are refused.
+It never repeats a fill or click. Python/core, catalog/model schemas, MCP, CLI/REST task operations,
+Builder and GUI workflow preview use the shared compiler. Browser readback can serve as independent
+skill evidence. Actual application acceptance and reviewed upload/download grants remain open;
+SDK over-limit readback refusal is tracked in `Progress.md` until its companion change lands.
+
 Managed browser profiles (`kind: browser`) now delegate to the owned `je_web_runner` SDK from
 WebRunner (`D:\Codes\WebRunner`; integration source on its isolated managed-session branch).
 Profiles require exact `settings.allowed_origins`, browser-only tools and no desktop apps; every task

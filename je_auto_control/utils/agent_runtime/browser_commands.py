@@ -5,13 +5,15 @@ from __future__ import annotations
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any, Iterator
+import threading
+import time
 
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentHumanReview
 from je_auto_control.utils.agent_runtime.policy import TaskPolicy
 
 BROWSER_TOOLS = frozenset({"AC_browser_navigate", "AC_browser_click", "AC_browser_fill", "AC_browser_select",
-                           "AC_browser_check", "AC_browser_read"})
+                           "AC_browser_check", "AC_browser_read", "AC_browser_wait"})
 BROWSER_ELEMENT_TOOLS = BROWSER_TOOLS - {"AC_browser_navigate"}
 _SESSION: ContextVar[Any] = ContextVar("owned_managed_browser", default=None)
 
@@ -31,14 +33,15 @@ def _bounded(value: str, name: str, maximum: int, *, empty: bool = False) -> Non
         raise AgentTaskError(f"browser {name} must be bounded text")
 
 
-def _execute(name: str, arguments: dict, operation: str) -> Any:
+def _execute(name: str, arguments: dict, operation: str, *, timeout: float | None = None) -> Any:
     context, session = current_operation(), _SESSION.get()
     if context is None or session is None:
         raise AgentTaskError("browser command requires its managed WebRunner session")
     context.checkpoint()
     TaskPolicy(context.spec).check(name, arguments)
     try:
-        session.set_timeout(context.spec.budget.action_seconds)
+        session.set_timeout(min(context.spec.budget.action_seconds, timeout) if timeout is not None
+                            else context.spec.budget.action_seconds)
         result = _sdk_call(session, operation, arguments)
     except Exception as error:  # noqa: BLE001 - optional SDK errors have a separate exception hierarchy
         if getattr(error, "reason", "") == "human_review_required":
@@ -50,6 +53,8 @@ def _execute(name: str, arguments: dict, operation: str) -> Any:
 
 def _sdk_call(session: Any, operation: str, arguments: dict) -> Any:
     if operation == "read":
+        if "expected" in arguments and not session.visible(arguments["selector"], arguments["frame"]):
+            return None
         functions = {"text": session.text, "value": session.read_value, "visible": session.visible}
         return functions[arguments["operation"]](arguments["selector"], arguments["frame"])
     try:
@@ -105,3 +110,30 @@ def browser_read(operation: str, selector: str, frame: str = "") -> Any:
     _bounded(selector, "selector", 4096)
     _bounded(frame, "frame", 4096, empty=True)
     return _execute("AC_browser_read", {"operation": operation, "selector": selector, "frame": frame}, "read")
+
+
+def browser_wait(operation: str, selector: str, expected: str, frame: str = "", timeout_seconds: float = 5) -> str:
+    """Poll a read-only text/value postcondition; never repeat a click, fill or submission."""
+    from je_auto_control.utils.agent_runtime.models import positive
+    positive(timeout_seconds, "browser wait", 60)
+    if not isinstance(operation, str) or operation not in {"text", "value"}:
+        raise AgentTaskError("browser wait operation must be text or value")
+    _bounded(selector, "selector", 4096)
+    _bounded(frame, "frame", 4096, empty=True)
+    _bounded(expected, "expected", 8000, empty=True)
+    arguments = {"operation": operation, "selector": selector, "frame": frame, "expected": expected,
+                 "timeout_seconds": timeout_seconds}
+    context = current_operation()
+    seconds = min(timeout_seconds, context.spec.budget.action_seconds) if context is not None else timeout_seconds
+    deadline = time.monotonic() + seconds
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise AgentTaskError("browser read-back deadline exhausted")
+        result = _execute("AC_browser_wait", arguments, "read", timeout=remaining)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise AgentTaskError("browser read-back deadline exhausted")
+        if result == expected:
+            return str(result)
+        threading.Event().wait(min(.05, remaining))

@@ -278,7 +278,7 @@ def test_public_skill_api_and_http_service_share_verified_publication(tmp_path, 
         while time.monotonic() < deadline:
             if api.get_agent_task(trial["task_id"])["state"] == "succeeded":
                 break
-            threading.Event().wait(0.01)
+            threading.Event().wait(0.1)  # At most 50 polls within the live service's request budget.
         accepted = api.manage_agent_skill("accept", {"candidate_id": candidate["id"], "task_id": trial["task_id"],
                                                    "expected_version": 0, "note": "Reviewed HTTP fake-target evidence"})
         assert accepted["version"] == 1 and accepted["publication"]["task_id"] == trial["task_id"]

@@ -1,5 +1,19 @@
 # AutoControl
 
+`draft_agent_workflow("batch_form", config)` and `transfer` accept `backend: browser` with
+explicit `allowed_origins` and a reviewed browser target. CSV/XLSX sources stay rooted; browser drafts
+emit only `AC_browser_*` actions and never fall back to desktop input. Forms take `url`, CSS `fields`,
+optional frame selectors/new-record control, and submit plus confirmation selectors. Each fill has an
+independent exact value readback. Optional `confirmation_column` supplies a per-row expected marker.
+Transfers take `source_url`/`destination_url`, capture text/value fields, apply an allowlisted transform,
+fill and read back destination fields, then verify saving. A stale confirmation is refused before submit.
+`AC_browser_wait` / `browser_wait` polls text/value reads only, including a newly visible element;
+`wait_seconds` defaults to 5, is capped by the action budget, and late matching replies are refused.
+It never repeats a fill or click. Python/core, catalog/model schemas, MCP, CLI/REST task operations,
+Builder and GUI workflow preview use the shared compiler. Browser readback can serve as independent
+skill evidence. Actual application acceptance and reviewed upload/download grants remain open;
+SDK over-limit readback refusal is tracked in `Progress.md` until its companion change lands.
+
 Managed browser profiles (`kind: browser`) now delegate to the owned `je_web_runner` SDK from
 WebRunner (`D:\Codes\WebRunner`; integration source on its isolated managed-session branch).
 Profiles require exact `settings.allowed_origins`, browser-only tools and no desktop apps; every task
@@ -95,7 +109,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 847 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 848 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -310,7 +324,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 847 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 848 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -415,7 +429,7 @@ under a relative name are written below that directory.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 751 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 752 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |
