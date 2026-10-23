@@ -1708,5 +1708,9 @@ english_word_dict.update({
     'mcp_discovery_name': 'Tool name for schema inspection',
     'mcp_discovery_readonly': 'Limit discovery to read-only tools',
     'mcp_discovery_search': 'Search MCP tools',
-    'mcp_discovery_schema': 'Inspect MCP tool schema'
+    'mcp_discovery_schema': 'Inspect MCP tool schema',
+    'mcp_disclosure_profile': 'Initial/static tool names, separated by commas',
+    'mcp_disclosure_mode': 'Tool availability mode for the planned server',
+    'mcp_disclosure_page_size': 'Tools per progressive/static page',
+    'mcp_disclosure_plan': 'Preview MCP server configuration'
 })

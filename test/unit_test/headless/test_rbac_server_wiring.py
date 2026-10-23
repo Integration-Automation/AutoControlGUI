@@ -420,12 +420,12 @@ def test_mcp_rbac_refuses_the_shared_token_and_unknown_roles(mcp_http, users):
 def test_mcp_unconfigured_rbac_keeps_shared_token(mcp_http):
     server = mcp_http(auth_token="shared-secret")
     assert _rpc(server, "tools/list")[0] == 401
-    assert _tool_names(server, "shared-secret") == ["peek", "poke", "ac_load_plugins"]
+    assert _tool_names(server, "shared-secret") == ["peek", "poke"]
     _status, body = _rpc(server, "tools/call", {"name": "ac_load_plugins", "arguments": {}},
                          "shared-secret")
     assert "result" in body
     assert "user_id" not in _audit_entries(server)[0]
-    assert _tool_names(mcp_http(), None) == ["peek", "poke", "ac_load_plugins"]
+    assert _tool_names(mcp_http(), None) == ["peek", "poke"]
 
 
 def test_default_registry_offers_a_viewer_only_read_only_tools(users):

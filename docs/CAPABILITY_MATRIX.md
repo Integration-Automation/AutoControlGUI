@@ -1,6 +1,6 @@
 # Capability matrix
 
-MCP metadata discovery: experimental, platform-neutral; fake-registry and offscreen GUI checks. Search/single-schema lookup are implemented; session disclosure, pagination and static profiles remain pending.
+MCP metadata discovery: experimental, platform-neutral; fake-registry and offscreen GUI checks. Search/single-schema lookup are implemented; session disclosure, pagination and static profiles use controlled HTTP/offscreen checks; full cross-feature policy/notification audit and cost measurement remain pending.
 
 Selected dev pushes run `.github/workflows/ei-lifecycle.yml` in an isolated
 libei/libeis container, retaining versions and both native logs for 14 days in

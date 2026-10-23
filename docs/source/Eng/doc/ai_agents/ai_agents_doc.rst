@@ -191,4 +191,20 @@ Search returns bounded summaries with category and required capability; full sch
 single-tool lookup. Both queries refresh role authority and respect the registry's read-only filter.
 MCP queries use that server's live registry, including plugin changes. CLI inspection:
 ``je_auto_control_mcp --search-tools document --limit 5`` or ``--tool-schema ac_mcp_tool_search``.
-This increment preserves the existing full tool list; per-session progressive views are still pending.
+
+MCP session tool availability
+------------------------------------------------------------
+
+MCP supports opt-in session disclosure: ``je_auto_control_mcp --tool-mode progressive`` starts
+with five discovery controls; ``ac_mcp_tools_enable`` / ``ac_mcp_tools_disable`` change only that session.
+``--tool-mode static --tool-profile ac_screen_size,ac_list_windows`` supplies a fixed profile for clients
+that do not refresh tool lists. The default ``full`` mode retains its unpaginated permitted list.
+Progressive/static pages use opaque, single-use cursors bound to a snapshot and caller; changed tools,
+roles, view configuration or expired cursors require restarting ``tools/list``. Enable/disable notify
+the owning connection. Session closure retires outstanding metadata callbacks and clears cursors.
+Use ``MCPServer.configure_tool_disclosure(...)`` for HTTP/embedded servers, or host environment
+``JE_AUTOCONTROL_MCP_DISCLOSURE`` and comma-separated ``JE_AUTOCONTROL_MCP_TOOL_PROFILE``.
+``plan_mcp_tool_profile(...)`` and Diagnostics Actions preview startup arguments without starting a server.
+Stateless requests use a fixed, unpaginated initial profile; they do not retain session enablement.
+Read-only ceilings cover later plugin registrations. Unauthenticated/shared-token peers see operator
+tools, matching their existing invocation ceiling; host-management tools require authenticated authority.

@@ -1,12 +1,26 @@
 # AutoControl
 
+MCP supports opt-in session disclosure: `je_auto_control_mcp --tool-mode progressive` starts
+with five discovery controls; `ac_mcp_tools_enable` / `ac_mcp_tools_disable` change only that session.
+`--tool-mode static --tool-profile ac_screen_size,ac_list_windows` supplies a fixed profile for clients
+that do not refresh tool lists. The default `full` mode retains its unpaginated permitted list.
+Progressive/static pages use opaque, single-use cursors bound to a snapshot and caller; changed tools,
+roles, view configuration or expired cursors require restarting `tools/list`. Enable/disable notify
+the owning connection. Session closure retires outstanding metadata callbacks and clears cursors.
+Use `MCPServer.configure_tool_disclosure(...)` for HTTP/embedded servers, or host environment
+`JE_AUTOCONTROL_MCP_DISCLOSURE` and comma-separated `JE_AUTOCONTROL_MCP_TOOL_PROFILE`.
+`plan_mcp_tool_profile(...)` and Diagnostics Actions preview startup arguments without starting a server.
+Stateless requests use a fixed, unpaginated initial profile; they do not retain session enablement.
+Read-only ceilings cover later plugin registrations. Unauthenticated/shared-token peers see operator
+tools, matching their existing invocation ceiling; host-management tools require authenticated authority.
+
 MCP tool discovery is available through `search_mcp_tools(query, limit=10)` and
 `get_mcp_tool_schema(name)`, corresponding AC/MCP commands, and Diagnostics → Actions.
 Search returns bounded summaries with category and required capability; full schemas require a
 single-tool lookup. Both queries refresh role authority and respect the registry's read-only filter.
 MCP queries use that server's live registry, including plugin changes. CLI inspection:
 `je_auto_control_mcp --search-tools document --limit 5` or `--tool-schema ac_mcp_tool_search`.
-This increment preserves the existing full tool list; per-session progressive views are still pending.
+Full mode remains the default; opt-in session disclosure is described alongside this metadata API.
 
 Agent tool calls use `executor.execute_one(name, arguments)`, returning the raw result through
 the same authorization, variable interpolation, cancellation and journal boundaries as action scripts.
@@ -371,7 +385,7 @@ under a relative name are written below that directory.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 742 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 745 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |

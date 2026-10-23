@@ -1,5 +1,7 @@
 """Stable, headless AutoControl API façade."""
 
+from je_auto_control.utils.mcp_server.disclosure import ToolView, ToolPage, plan_mcp_tool_profile
+
 from je_auto_control.utils.mcp_server.discovery import (
     ToolDiscoveryError, ToolIndex, ToolSummary, search_mcp_tools, get_mcp_tool_schema,
 )
@@ -34,6 +36,7 @@ from je_auto_control.utils.failure_bundle import (
 )
 
 __all__ = [
+    "ToolView", "ToolPage", "plan_mcp_tool_profile",
     "ToolDiscoveryError", "ToolIndex", "ToolSummary", "search_mcp_tools", "get_mcp_tool_schema",
     "AgentTargetProfile", "manage_agent_target", "list_agent_targets",
     "AgentHumanReview", "AgentObservationStale",

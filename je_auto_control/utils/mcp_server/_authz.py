@@ -7,8 +7,9 @@ store is configured -- the caller's identity. :func:`visible_tools` and
 what the caller may call, and ``tools/call`` refuses the rest, so the two
 answers cannot disagree.
 
-Without a user store nothing here identifies anyone: the transport keeps
-its optional shared token and the dispatcher offers every tool, as before.
+Without a user store the transport keeps its optional shared token. Live
+MCP peers have the operator ceiling at invocation and discovery; a shared
+token does not identify an administrator. Authenticated roles remain opt-in.
 """
 import hmac
 from typing import Any, Dict, List, Optional, Tuple

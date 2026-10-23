@@ -100,6 +100,12 @@ class ToolIndex:
                 raise ToolDiscoveryError("tool is not available")
         return deepcopy(entry[1])
 
+    def names(self) -> tuple[str, ...]:
+        """List authorized names in registry order without copying their schemas."""
+        with DeferredAuthorization.capture().context_scope() as caller:
+            return tuple(name for name, (summary, _) in self._entries.items()
+                         if caller is None or caller.allows(summary["capability"]))
+
 
 def search_mcp_tools(query: str, *, limit: int = 10, read_only: bool | None = None) -> list[ToolSummary]:
     """Search the current default registry without starting a transport or loading native backends."""
@@ -122,8 +128,13 @@ class ToolCatalogMixin:
     if TYPE_CHECKING:
         _tools_lock: threading.Lock
         _tools: dict[str, MCPTool]
+        _read_only_tools: bool
 
     def tool_index(self) -> ToolIndex:
         """Copy metadata under the registry lock; queries never invoke plugin handlers."""
+        return self._filtered_tool_index(self._read_only_tools)
+
+    def _filtered_tool_index(self, read_only: bool) -> ToolIndex:
         with self._tools_lock:
-            return ToolIndex(self._tools.values())
+            return ToolIndex(tool for tool in self._tools.values()
+                             if not read_only or tool.annotations.read_only)

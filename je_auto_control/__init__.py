@@ -1100,6 +1100,7 @@ from je_auto_control.utils.gamepad import (
     is_available as is_virtual_gamepad_available,
 )
 # MCP server (headless stdio bridge for Claude / other MCP clients)
+from je_auto_control.utils.mcp_server.disclosure import ToolView, ToolPage, plan_mcp_tool_profile
 from je_auto_control.utils.mcp_server.discovery import (
     ToolDiscoveryError, ToolIndex, ToolSummary, search_mcp_tools, get_mcp_tool_schema,
 )
@@ -1857,6 +1858,7 @@ __all__ = [
     "CanonicalLogLine", "JSONLogFormatter", "bind_trace_context",
     "attributes_to_otlp", "spans_to_otlp", "write_otlp",
     # MCP server
+    "ToolView", "ToolPage", "plan_mcp_tool_profile",
     "ToolDiscoveryError", "ToolIndex", "ToolSummary", "search_mcp_tools", "get_mcp_tool_schema",
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

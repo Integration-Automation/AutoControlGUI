@@ -31,6 +31,12 @@ def test_metadata_controls_only_scan_through_actions(monkeypatch):
         view.name.setText("fixture")
         actions["mcp_discovery_schema"]()
         assert json.loads(view.output.toPlainText())["name"] == "fixture"
+        view.mode.setCurrentText("static")
+        view.profile.setText("ac_screen_size")
+        actions["mcp_disclosure_plan"]()
+        plan = json.loads(view.output.toPlainText())
+        assert plan["mode"] == "static" and plan["read_only"] is True
+        assert plan["names"] == ["ac_screen_size"]
     finally:
         tab.close()
         tab.deleteLater()

@@ -182,4 +182,18 @@ MCP 工具探索提供 ``search_mcp_tools(query, limit=10)``、``get_mcp_tool_sc
 須指定單一工具查閱。兩種查詢都重新驗證角色，並遵守 registry 的唯讀篩選；MCP 查詢使用該
 server 的即時 registry，包含外掛變更。CLI 可執行
 ``je_auto_control_mcp --search-tools document --limit 5`` 或 ``--tool-schema ac_mcp_tool_search``。
-本階段維持既有完整工具清單；各 session 的逐步揭露仍待完成。
+
+MCP session 工具清單
+------------------------------------------------------------
+
+MCP 可選擇 session 逐步揭露：``je_auto_control_mcp --tool-mode progressive`` 初始只提供五個
+探索控制工具；``ac_mcp_tools_enable``／``ac_mcp_tools_disable`` 只改變該 session。
+不會更新工具清單的客戶端可使用 ``--tool-mode static --tool-profile ac_screen_size,ac_list_windows``；
+預設 ``full`` 保留不分頁的授權工具清單。逐步／固定模式的 cursor 不透明、只能使用一次，並綁定
+快照與呼叫者；工具、角色或清單設定變更，以及 cursor 過期時，須重新執行 ``tools/list``。
+啟停只通知擁有者連線；session 結束會回收 cursor 並使尚在執行中的 metadata callback 失效。
+HTTP／嵌入式使用 ``MCPServer.configure_tool_disclosure(...)``；主機環境變數為
+``JE_AUTOCONTROL_MCP_DISCLOSURE`` 與逗號分隔的 ``JE_AUTOCONTROL_MCP_TOOL_PROFILE``。
+``plan_mcp_tool_profile(...)`` 及 Diagnostics Actions 可預覽啟動參數，不會啟動服務。
+無狀態協定使用不分頁的初始固定清單，不保留 session 啟用狀態。唯讀限制也涵蓋後續新增的外掛。
+未驗證／共享 token 連線顯示 operator 工具，與既有呼叫上限一致；主機管理工具仍須已驗證身分。

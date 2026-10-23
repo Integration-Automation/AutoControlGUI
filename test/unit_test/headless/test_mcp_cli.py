@@ -65,3 +65,12 @@ def test_no_flags_starts_stdio_server(monkeypatch):
     main(["--read-only"])
     # None leaves JE_AUTOCONTROL_MCP_READONLY in charge; the flag forces it on.
     assert started == [None, True]
+
+
+def test_disclosure_start_options_reach_the_existing_stdio_entry_point(monkeypatch):
+    import je_auto_control.utils.mcp_server.__main__ as cli_mod
+    started = []
+    monkeypatch.setattr(cli_mod, "start_mcp_stdio_server", lambda **options: started.append(options))
+    main(["--tool-mode", "static", "--tool-profile", "ac_screen_size,ac_get_mouse_position", "--tool-page-size", "5"])
+    assert started == [{"read_only": None, "disclosure": "static", "page_size": 5,
+                        "tool_profile": ["ac_screen_size", "ac_get_mouse_position"]}]

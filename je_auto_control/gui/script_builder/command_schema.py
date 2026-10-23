@@ -4569,6 +4569,14 @@ def _add_tooling_specs(specs: List[CommandSpec]) -> None:
                     "writes a file when 'path' is set.",
     ))
     specs.append(CommandSpec(
+        "AC_start_mcp_server", "Tools", "Start MCP Stdio Server",
+        fields=(FieldSpec("read_only", FieldType.BOOL, optional=True),
+                FieldSpec("disclosure", FieldType.ENUM, optional=True, choices=("full", "progressive", "static")),
+                FieldSpec("tool_profile", FieldType.JSON, optional=True),
+                FieldSpec("page_size", FieldType.INT, optional=True, default=50, min_value=1, max_value=100)),
+        description="Start the foreground MCP stdio server with a reviewed tool availability profile.",
+    ))
+    specs.append(CommandSpec(
         "AC_mcp_tool_search", "Tools", "Search MCP Tools",
         fields=(FieldSpec("query", FieldType.STRING),
                 FieldSpec("limit", FieldType.INT, optional=True, default=10),

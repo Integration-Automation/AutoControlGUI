@@ -1595,5 +1595,9 @@ japanese_word_dict.update({
     'mcp_discovery_name': 'スキーマを確認するツール名',
     'mcp_discovery_readonly': '読み取り専用ツールに限定',
     'mcp_discovery_search': 'MCP ツールを検索',
-    'mcp_discovery_schema': 'MCP ツールのスキーマを確認'
+    'mcp_discovery_schema': 'MCP ツールのスキーマを確認',
+    'mcp_disclosure_profile': '初期／固定ツール名をコンマで区切る',
+    'mcp_disclosure_mode': 'サーバー設定のツール公開モード',
+    'mcp_disclosure_page_size': '段階／固定モードのページ件数',
+    'mcp_disclosure_plan': 'MCP サーバー設定をプレビュー'
 })

@@ -1,11 +1,23 @@
 # AutoControl
 
+MCP 可选择 session 渐进揭露：`je_auto_control_mcp --tool-mode progressive` 初始只提供五个
+探索控制工具；`ac_mcp_tools_enable`／`ac_mcp_tools_disable` 只改变该 session。
+不会更新工具列表的客户端可使用 `--tool-mode static --tool-profile ac_screen_size,ac_list_windows`；
+默认 `full` 保留不分页的授权工具列表。渐进／固定模式的 cursor 不透明、只能使用一次，并绑定
+快照与调用者；工具、角色或列表设置变更，以及 cursor 过期时，须重新运行 `tools/list`。
+启停只通知拥有者连接；session 结束会回收 cursor 并使尚在运行的 metadata callback 失效。
+HTTP／嵌入式使用 `MCPServer.configure_tool_disclosure(...)`；主机环境变量为
+`JE_AUTOCONTROL_MCP_DISCLOSURE` 与逗号分隔的 `JE_AUTOCONTROL_MCP_TOOL_PROFILE`。
+`plan_mcp_tool_profile(...)` 及 Diagnostics Actions 可预览启动参数，不会启动服务。
+无状态协议使用不分页的初始固定列表，不保留 session 启用状态。只读限制也覆盖后续新增的插件。
+未验证／共享 token 连接显示 operator 工具，与既有调用上限一致；主机管理工具仍须已验证身份。
+
 MCP 工具探索提供 `search_mcp_tools(query, limit=10)`、`get_mcp_tool_schema(name)`、
 对应 AC／MCP 命令及 Diagnostics → Actions。搜索返回有界摘要、分类与所需权限；完整 schema
 须指定单一工具查看。两种查询都重新验证角色，并遵守 registry 的只读筛选；MCP 查询使用该
 server 的实时 registry，包含插件变更。CLI 可运行
 `je_auto_control_mcp --search-tools document --limit 5` 或 `--tool-schema ac_mcp_tool_search`。
-本阶段保留既有完整工具列表；各 session 的逐步揭露仍待完成。
+完整模式仍为默认；各 session 的渐进揭露可按前述设置启用。
 
 Agent 工具调用经 `executor.execute_one(name, arguments)` 返回原始结果，与动作脚本共用
 授权、变量插值、取消及日志边界；拒绝私有 executor 参数。受管任务交付进度见 `Progress.md`。
@@ -349,7 +361,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 742 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 745 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |

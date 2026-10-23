@@ -1557,5 +1557,9 @@ simplified_chinese_word_dict.update({
     'mcp_discovery_name': '要查看 schema 的工具名称',
     'mcp_discovery_readonly': '只探索只读工具',
     'mcp_discovery_search': '搜索 MCP 工具',
-    'mcp_discovery_schema': '查看 MCP 工具 schema'
+    'mcp_discovery_schema': '查看 MCP 工具 schema',
+    'mcp_disclosure_profile': '初始／固定工具名称，以逗号分隔',
+    'mcp_disclosure_mode': '预览服务器的工具列表模式',
+    'mcp_disclosure_page_size': '渐进／固定模式的每页工具数',
+    'mcp_disclosure_plan': '预览 MCP 服务器设置'
 })

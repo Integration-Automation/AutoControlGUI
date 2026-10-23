@@ -1,5 +1,7 @@
 # Changelog
 
+Add opt-in MCP progressive/static availability and snapshot pagination. Default full mode keeps an unpaginated authorized list. Anonymous/shared-token listings now match their existing operator invocation ceiling, so host administration names are hidden. Read-only host ceilings also filter newly registered plugins. Existing stdio import paths and the default AC_run_agent tool collection remain available.
+
 Add experimental MCP summary search and single-tool schema inspection across Python/core/AC/MCP/CLI/Builder and Diagnostics Actions. Existing full-registry listing and AC_run_agent tool selection stay unchanged.
 
 This file records user-visible compatibility changes. Detailed development

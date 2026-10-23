@@ -98,6 +98,9 @@ def _listen_filter(params: Dict[str, Any]) -> Tuple[bool, List[str]]:
     return wanted.get("toolsListChanged") is True, list(dict.fromkeys(uris))
 
 
+_ALL_TOOL_CONNECTIONS = object()
+
+
 class SubscriptionMixin:
     """Subscription handlers, mixed into :class:`MCPServer`.
 
@@ -120,14 +123,13 @@ class SubscriptionMixin:
         def _connection_id(self) -> Any:
             """Identity of the connection the current request arrived on."""
 
-    def _notify_tools_list_changed(self) -> None:
-        with self._listeners_lock:
-            listening = [(key, listener) for key, listener in self._listeners.items()
-                         if listener.tools_list_changed]
+    def _notify_tools_list_changed(self, connection_id: Any = _ALL_TOOL_CONNECTIONS) -> None:
+        listening = self._tool_change_listeners(connection_id)
         for key, listener in listening:
             if not listener.notify("notifications/tools/list_changed", {}):
                 self._end_listener(key, graceful=False)
-        notifier = self._unsolicited_notifier()
+        notifier = (self._unsolicited_notifier()
+                    if connection_id is _ALL_TOOL_CONNECTIONS or connection_id == self._connection_id else None)
         if notifier is None:
             return
         try:
@@ -136,6 +138,12 @@ class SubscriptionMixin:
             autocontrol_logger.exception(
                 "MCP failed to send tools/list_changed",
             )
+
+    def _tool_change_listeners(self, connection_id: Any) -> list:
+        with self._listeners_lock:
+            return [(key, listener) for key, listener in self._listeners.items()
+                    if listener.tools_list_changed
+                    and (connection_id is _ALL_TOOL_CONNECTIONS or key[0] == connection_id)]
 
     # --- 2026-07-28: subscriptions/listen -------------------------------------
 

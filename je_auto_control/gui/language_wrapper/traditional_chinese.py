@@ -1558,5 +1558,9 @@ traditional_chinese_word_dict.update({
     'mcp_discovery_name': '要查閱 schema 的工具名稱',
     'mcp_discovery_readonly': '只探索唯讀工具',
     'mcp_discovery_search': '搜尋 MCP 工具',
-    'mcp_discovery_schema': '查閱 MCP 工具 schema'
+    'mcp_discovery_schema': '查閱 MCP 工具 schema',
+    'mcp_disclosure_profile': '初始／固定工具名稱，以逗號分隔',
+    'mcp_disclosure_mode': '預覽伺服器的工具清單模式',
+    'mcp_disclosure_page_size': '逐步／固定模式的每頁工具數',
+    'mcp_disclosure_plan': '預覽 MCP 伺服器設定'
 })

@@ -39,6 +39,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--tool-schema", metavar="NAME", help="Print one permitted tool descriptor and exit.",
     )
     parser.add_argument("--limit", type=int, default=10, help="Tool search result limit (1-50).")
+    parser.add_argument("--tool-mode", choices=("full", "progressive", "static"), default=None,
+                        help="Tool availability mode (default: environment or full).")
+    parser.add_argument("--tool-profile", default=None, metavar="NAMES",
+                        help="Comma-separated tool names for the initial/static profile.")
+    parser.add_argument("--tool-page-size", type=int, default=None, help="Progressive/static list page size (1-100).")
     parser.add_argument(
         "--list-resources", action="store_true",
         help="Print all resource descriptors as JSON and exit.",
@@ -72,7 +77,7 @@ def main(argv: Optional[list] = None) -> None:
     if any(listing_modes):
         _print_listings(args)
         return
-    start_mcp_stdio_server(read_only=True if args.read_only else None)
+    start_mcp_stdio_server(read_only=True if args.read_only else None, **_server_options(args))
 
 
 def _print_listings(args: argparse.Namespace) -> None:
@@ -107,6 +112,14 @@ def _discovery_listings(args: argparse.Namespace) -> dict[str, Any]:
     if args.tool_schema is not None:
         listings["schema"] = index.get_schema(args.tool_schema)
     return listings
+
+
+def _server_options(args: argparse.Namespace) -> dict[str, Any]:
+    options = {key: value for key, value in (("disclosure", args.tool_mode), ("page_size", args.tool_page_size))
+               if value is not None}
+    if args.tool_profile is not None:
+        options["tool_profile"] = [item.strip() for item in args.tool_profile.split(",") if item.strip()]
+    return options
 
 
 if __name__ == "__main__":

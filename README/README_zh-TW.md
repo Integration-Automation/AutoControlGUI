@@ -1,11 +1,23 @@
 # AutoControl
 
+MCP 可選擇 session 逐步揭露：`je_auto_control_mcp --tool-mode progressive` 初始只提供五個
+探索控制工具；`ac_mcp_tools_enable`／`ac_mcp_tools_disable` 只改變該 session。
+不會更新工具清單的客戶端可使用 `--tool-mode static --tool-profile ac_screen_size,ac_list_windows`；
+預設 `full` 保留不分頁的授權工具清單。逐步／固定模式的 cursor 不透明、只能使用一次，並綁定
+快照與呼叫者；工具、角色或清單設定變更，以及 cursor 過期時，須重新執行 `tools/list`。
+啟停只通知擁有者連線；session 結束會回收 cursor 並使尚在執行中的 metadata callback 失效。
+HTTP／嵌入式使用 `MCPServer.configure_tool_disclosure(...)`；主機環境變數為
+`JE_AUTOCONTROL_MCP_DISCLOSURE` 與逗號分隔的 `JE_AUTOCONTROL_MCP_TOOL_PROFILE`。
+`plan_mcp_tool_profile(...)` 及 Diagnostics Actions 可預覽啟動參數，不會啟動服務。
+無狀態協定使用不分頁的初始固定清單，不保留 session 啟用狀態。唯讀限制也涵蓋後續新增的外掛。
+未驗證／共享 token 連線顯示 operator 工具，與既有呼叫上限一致；主機管理工具仍須已驗證身分。
+
 MCP 工具探索提供 `search_mcp_tools(query, limit=10)`、`get_mcp_tool_schema(name)`、
 對應 AC／MCP 指令及 Diagnostics → Actions。搜尋回傳有界摘要、分類與所需權限；完整 schema
 須指定單一工具查閱。兩種查詢都重新驗證角色，並遵守 registry 的唯讀篩選；MCP 查詢使用該
 server 的即時 registry，包含外掛變更。CLI 可執行
 `je_auto_control_mcp --search-tools document --limit 5` 或 `--tool-schema ac_mcp_tool_search`。
-本階段維持既有完整工具清單；各 session 的逐步揭露仍待完成。
+完整模式仍為預設；各 session 的逐步揭露可依前述設定啟用。
 
 Agent 工具呼叫經 `executor.execute_one(name, arguments)` 回傳原始結果，與動作腳本共用
 授權、變數插值、取消及日誌邊界；拒絕私有 executor 參數。受管任務交付進度見 `Progress.md`。
@@ -348,7 +360,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 742 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用：完整的 `ac_*` 工具介面，以及常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 745 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用：完整的 `ac_*` 工具介面，以及常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 提供 fixture 與供 pytest-bdd／behave 使用的 Gherkin step library。 |
