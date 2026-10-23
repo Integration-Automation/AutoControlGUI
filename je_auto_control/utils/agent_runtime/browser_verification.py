@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from je_auto_control.utils.agent_runtime.browser_commands import _bounded, _url_origin, browser_session_scope
+from je_auto_control.utils.agent_runtime.browser_commands import browser_session_scope
+from je_auto_control.utils.agent_runtime.browser_validation import (
+    bounded as _bounded, browser_url_origin as _url_origin,
+)
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec

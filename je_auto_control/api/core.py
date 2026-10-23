@@ -8,6 +8,7 @@ from je_auto_control.utils.mcp_server.discovery import (
 
 from je_auto_control.utils.agent_runtime import (
     browser_navigate, browser_click, browser_fill, browser_select, browser_check, browser_read, browser_wait,
+    browser_link, browser_download, browser_upload,
     draft_agent_workflow, workflow_download, workflow_manifest, workflow_control, workflow_open, workflow_wait,
     AgentActionRequest, AgentActionResult, AgentControlBusy, AgentObservation, AgentRuntime,
     AgentTaskBudget, AgentTaskError, AgentTaskHandle, AgentTaskResult, AgentTaskSpec,
@@ -43,7 +44,7 @@ __all__ = [
     "AgentHumanReview", "AgentObservationStale",
     "draft_agent_workflow", "workflow_download", "workflow_manifest", "workflow_control", "workflow_open",
     "workflow_wait", "browser_navigate", "browser_click", "browser_fill", "browser_select", "browser_check",
-    "browser_read", "browser_wait",
+    "browser_read", "browser_wait", "browser_link", "browser_download", "browser_upload",
     "AgentActionRequest", "AgentActionResult", "AgentControlBusy", "AgentObservation", "AgentRuntime",
     "AgentTaskBudget", "AgentTaskError", "AgentTaskHandle", "AgentTaskResult", "AgentTaskSpec",
     "get_agent_task_receipts", "reconcile_agent_task", "prune_agent_tasks",

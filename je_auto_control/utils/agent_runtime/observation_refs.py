@@ -113,7 +113,7 @@ def _browser_element(tool: str, kwargs: dict, reference: Mapping, data: Mapping,
     if "element_index" not in reference or {"selector", "frame"} & set(kwargs):
         raise AgentTaskError("browser reference requires one DOM index without explicit selector or frame")
     index = reference["element_index"]
-    element = _observed_dom_element(index, data, require_enabled=tool != "AC_browser_read")
+    element = _observed_dom_element(index, data, require_enabled=tool not in {"AC_browser_read", "AC_browser_link"})
     selector, frame = element.get("selector"), element.get("frame", "")
     if not isinstance(selector, str) or not selector or not isinstance(frame, str):
         raise AgentTaskError("observed DOM locator is unavailable")

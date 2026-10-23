@@ -1,5 +1,16 @@
 # AutoControl
 
+受管瀏覽器檔案命令 `browser_link`、`browser_download`、`browser_upload`（對應 `AC_browser_*`）
+委派給 WebRunner 傳輸契約版本 1。上／下載授權必須具有明確的主機及任務根目錄；下載讓瀏覽器
+Cookie 保留於自有 SDK／helper，核對完整長度及可選 SHA256，且不覆寫既有檔案；重用必須符合
+指定 SHA256。上傳將最多 4 MiB 的單一一般檔案讀成核對過的不可變快照，驗證可選 SHA256 與
+SDK 中繼資料，不自動提交表單。網路操作仍全部位於 `je_web_runner`。
+瀏覽器 `download_archive` 預覽接受查詢頁 `url`、明確 `allowed_origins`、授權範圍內 `directory`，
+以及具有單純 `name`、`url` 或連結 `selector`／可選 `frame` 的 `files`；每檔可用 `page_url` 覆寫
+查詢頁。流程擷取新連結、下載每檔最多 16 MiB，並產生供獨立核對名稱／大小／雜湊的歸檔清單。
+GUI Actions 只草擬檔案目標／流程／上傳範例，不啟動資源；MCP／REST／CLI／Builder／模型工具
+共用命令，連結讀取仍需輸入控制權限。部署與實際瀏覽器驗收仍待完成，既有驗收暫停保持生效。
+
 瀏覽器任務可固定完成條件，例如
 `{"kind":"browser","operation":"value","selector":"#field","value":"expected"}`。
 操作為精確的 `text`、`value`、`visible`（布林）或 `url`（不含定位）；必須明確授權
@@ -114,7 +125,7 @@ Windows 共用桌面須解鎖並閒置 60 秒，實體鍵鼠活動會觸發暫�
 
 - **一套 API，七個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
   Windows、macOS、X11 與 Wayland 上都不需要改寫。
-- **不寫 Python 也能腳本化。** 848 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+- **不寫 Python 也能腳本化。** 851 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
@@ -316,7 +327,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 腳本 | `execute_action`、`execute_files` | 全部 848 個指令 | Script、Script Builder |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 851 個指令 | Script、Script Builder |
 | 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
@@ -414,7 +425,7 @@ je_auto_control version
 
 | 介面 | 啟動方式 | 說明 |
 |---|---|---|
-| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 752 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用：完整的 `ac_*` 工具介面，以及常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 755 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用：完整的 `ac_*` 工具介面，以及常用 GUI 操作的短名稱 alias。除了以 `initialize` 握手的各版協定，也支援無狀態的 MCP 2026-07-28。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
 | **pytest 外掛** | 安裝後自動生效 | 提供 fixture 與供 pytest-bdd／behave 使用的 Gherkin step library。 |

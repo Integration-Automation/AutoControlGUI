@@ -7,15 +7,20 @@ from contextvars import ContextVar
 from typing import Any, Iterator
 import threading
 import time
-from urllib.parse import urlsplit
+from concurrent.futures import CancelledError
 
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentHumanReview
 from je_auto_control.utils.agent_runtime.policy import TaskPolicy
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.agent_runtime.browser_validation import bounded as _bounded
 
-BROWSER_TOOLS = frozenset({"AC_browser_navigate", "AC_browser_click", "AC_browser_fill", "AC_browser_select",
+BROWSER_CORE_TOOLS = frozenset({"AC_browser_navigate", "AC_browser_click", "AC_browser_fill", "AC_browser_select",
                            "AC_browser_check", "AC_browser_read", "AC_browser_wait"})
-BROWSER_ELEMENT_TOOLS = BROWSER_TOOLS - {"AC_browser_navigate"}
+BROWSER_TRANSFER_TOOLS = frozenset({"AC_browser_link", "AC_browser_download", "AC_browser_upload"})
+BROWSER_TOOLS = BROWSER_CORE_TOOLS | BROWSER_TRANSFER_TOOLS
+BROWSER_ADAPTER_TOOLS = BROWSER_TOOLS | {"AC_workflow_manifest"}
+BROWSER_ELEMENT_TOOLS = (BROWSER_CORE_TOOLS - {"AC_browser_navigate"}) | {"AC_browser_link", "AC_browser_upload"}
 _SESSION: ContextVar[Any] = ContextVar("owned_managed_browser", default=None)
 
 
@@ -29,28 +34,6 @@ def browser_session_scope(session: Any) -> Iterator[None]:
         _SESSION.reset(token)
 
 
-def _bounded(value: Any, name: str, maximum: int, *, empty: bool = False) -> None:
-    if not isinstance(value, str) or len(value) > maximum or (not value and not empty):
-        raise AgentTaskError(f"browser {name} must be bounded text")
-    try:
-        units = len(value.encode("utf-16-le")) // 2
-    except UnicodeError:
-        raise AgentTaskError("browser text contains invalid Unicode") from None
-    if units > maximum:
-        raise AgentTaskError(f"browser {name} exceeds its UTF-16 text limit")
-
-
-def _url_origin(url: str) -> str:
-    from je_auto_control.utils.agent_runtime.workflow_specs import url_origin
-    try:
-        parsed = urlsplit(url)
-        if parsed.username is not None or parsed.port == 0:
-            raise AgentTaskError("browser URL credentials or port zero are not supported")
-        return url_origin(parsed._replace(fragment="").geturl())
-    except ValueError:
-        raise AgentTaskError("browser URL authority is invalid") from None
-
-
 def _execute(name: str, arguments: dict, operation: str, *, timeout: float | None = None) -> Any:
     context, session = current_operation(), _SESSION.get()
     if context is None or session is None:
@@ -61,6 +44,8 @@ def _execute(name: str, arguments: dict, operation: str, *, timeout: float | Non
         session.set_timeout(min(context.spec.budget.action_seconds, timeout) if timeout is not None
                             else context.spec.budget.action_seconds)
         result = _sdk_call(session, operation, arguments)
+    except (AutoControlException, CancelledError):
+        raise
     except Exception as error:  # noqa: BLE001 - optional SDK errors have a separate exception hierarchy
         if getattr(error, "reason", "") == "human_review_required":
             raise AgentHumanReview("browser dialog requires human review") from None
@@ -70,6 +55,9 @@ def _execute(name: str, arguments: dict, operation: str, *, timeout: float | Non
 
 
 def _sdk_call(session: Any, operation: str, arguments: dict) -> Any:
+    if operation in {"link", "download", "upload"}:
+        from je_auto_control.utils.agent_runtime.browser_transfers import sdk_transfer
+        return sdk_transfer(session, operation, arguments)
     if operation == "read":
         if "expected" in arguments and not session.visible(arguments["selector"], arguments["frame"]):
             return None
@@ -92,6 +80,29 @@ def browser_navigate(url: str) -> bool:
     """Navigate once through the WebRunner origin fence in the current managed browser."""
     _bounded(url, "URL", 4096)
     return bool(_execute("AC_browser_navigate", {"url": url}, "navigate"))
+
+
+def browser_link(selector: str, frame: str = "") -> str:
+    """Read a complete reviewed-origin link through the owned WebRunner session."""
+    _bounded(selector, "selector", 4096)
+    _bounded(frame, "frame", 4096, empty=True)
+    return str(_execute("AC_browser_link", {"selector": selector, "frame": frame}, "link"))
+
+
+def browser_download(url: str, directory: str, name: str, sha256: str = "") -> dict:
+    """Download through WebRunner and publish a complete file within explicit task roots."""
+    _bounded(url, "URL", 4096)
+    _bounded(name, "filename", 255)
+    return dict(_execute("AC_browser_download", {"url": url, "directory": directory, "name": name,
+                                               "sha256": sha256}, "download"))
+
+
+def browser_upload(selector: str, path: str, sha256: str = "", frame: str = "") -> dict:
+    """Send one rooted bounded file as immutable bytes; never submit the form automatically."""
+    _bounded(selector, "selector", 4096)
+    _bounded(frame, "frame", 4096, empty=True)
+    return dict(_execute("AC_browser_upload", {"selector": selector, "path": path, "sha256": sha256,
+                                             "frame": frame}, "upload"))
 
 
 def _element(name: str, operation: str, selector: str, frame: str, value: str = "") -> bool:

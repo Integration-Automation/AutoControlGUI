@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from functools import partial
 from typing import Any
+from pathlib import Path
 
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module  # reason: compiled Qt exports, tested offscreen
     QComboBox, QFormLayout, QLabel, QLineEdit, QPlainTextEdit,
@@ -24,7 +25,9 @@ from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILL_
 from je_auto_control.utils.agent_runtime.trigger_config import KINDS as TRIGGER_KINDS
 from je_auto_control.utils.agent_runtime.target_profiles import OPERATIONS as TARGET_OPERATIONS
 from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile
-from je_auto_control.utils.agent_runtime.browser_commands import BROWSER_TOOLS, BROWSER_ELEMENT_TOOLS
+from je_auto_control.utils.agent_runtime.browser_commands import (
+    BROWSER_CORE_TOOLS, BROWSER_ADAPTER_TOOLS, BROWSER_ELEMENT_TOOLS,
+)
 from je_auto_control.utils.exception.cancellation import CancellationToken
 
 
@@ -171,6 +174,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_target_apply", self._target_apply),
                 ("agent_browser_example", self._browser_example),
                 ("agent_browser_completion_example", self._browser_completion_example),
+                ("agent_browser_files_example", self._browser_files_example),
                 ("agent_target_list", partial(self._dispatch, "targets", {})),
                 ("agent_submit", self._submit), ("agent_refresh", partial(self._dispatch, "list")),
                 *[("agent_" + name, partial(self._dispatch, name)) for name in
@@ -186,7 +190,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
 
     def _browser_example(self) -> None:
         profile = AgentTargetProfile(name="reviewed-browser", kind="browser",
-                                     allowed_tools=tuple(sorted(BROWSER_TOOLS)),
+                                     allowed_tools=tuple(sorted(BROWSER_CORE_TOOLS)),
                                      settings={"allowed_origins": ["https://example.invalid"]})
         self._target_request.setPlainText(json.dumps(profile.to_dict(), ensure_ascii=False, indent=2))
         self._pages.setCurrentIndex(self._page_keys.index("agent_page_targets"))
@@ -202,6 +206,21 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         spec.pop("goal")
         self._scope.setPlainText(json.dumps(spec, ensure_ascii=False, indent=2))
         self._pages.setCurrentIndex(self._page_keys.index("agent_page_task"))
+
+    def _browser_files_example(self) -> None:
+        root = str(Path.cwd() / "agent-files")
+        profile = AgentTargetProfile(name="reviewed-browser", kind="browser", roots=(root,),
+            allowed_tools=tuple(sorted(BROWSER_ADAPTER_TOOLS)),
+            settings={"allowed_origins": ["https://example.invalid"]})
+        self._target_request.setPlainText(json.dumps(profile.to_dict(), ensure_ascii=False, indent=2))
+        self._workflow.setCurrentText("download_archive")
+        self._workflow_config.setPlainText(json.dumps({"backend": "browser", "roots": [root],
+            "directory": root, "url": "https://example.invalid/reports", "target": "reviewed-browser",
+            "allowed_origins": ["https://example.invalid"],
+            "files": [{"name": "report.bin", "selector": "#download"}]}, ensure_ascii=False, indent=2))
+        self._action.setPlainText(json.dumps({"tool": "AC_browser_upload", "arguments": {
+            "selector": "input[type=file]", "path": str(Path(root) / "upload.bin"), "sha256": ""}}, indent=2))
+        self._pages.setCurrentIndex(self._page_keys.index("agent_page_targets"))
 
     def _clear_observation(self, _task_id: str = "") -> None:
         self._observation.clear()

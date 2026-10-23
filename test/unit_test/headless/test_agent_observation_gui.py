@@ -78,6 +78,23 @@ def test_browser_completion_example_edits_scope_without_starting_or_dispatching(
     assert calls == []
 
 
+def test_browser_file_examples_only_edit_reviewable_grants_and_workflow(tab, monkeypatch, tmp_path):
+    from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
+    from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile
+    from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow
+    monkeypatch.chdir(tmp_path)
+    calls = []
+    monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))
+    dict(tab.menu_actions())["agent_browser_files_example"]()
+    profile = AgentTargetProfile.from_dict(json.loads(tab._target_request.toPlainText()))
+    assert profile.roots == (str(tmp_path / "agent-files"),)
+    draft = draft_agent_workflow("download_archive", json.loads(tab._workflow_config.toPlainText()))
+    profile.check(AgentTaskSpec.from_dict(draft))
+    assert json.loads(tab._action.toPlainText())["tool"] == "AC_browser_upload"
+    assert calls == []
+    assert not (tmp_path / "agent-files").exists()
+
+
 def test_browser_dom_selection_replaces_locator_only(tab, monkeypatch):
     calls = []
     monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))

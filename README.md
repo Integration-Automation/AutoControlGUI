@@ -1,5 +1,18 @@
 # AutoControl
 
+Managed browser file commands `browser_link`, `browser_download` and `browser_upload` (with matching
+`AC_browser_*` commands) delegate to WebRunner transfer contract version 1. Download and upload grants
+require explicit host/task roots. Downloads preserve scoped browser cookies inside the owned SDK/helper,
+check complete length and optional SHA256, and publish without overwriting an existing file; reuse
+requires its matching SHA256. Uploads read one regular file up to 4 MiB into a checked immutable snapshot,
+verify optional SHA256 and SDK metadata, and never submit a form. Network operations remain in `je_web_runner`.
+The browser `download_archive` preview accepts a query `url`, explicit `allowed_origins`, rooted `directory`
+and `files` with a plain `name` and either `url` or link `selector`/optional `frame`; `page_url` can override
+the query page per file. It captures fresh links, downloads at most 16 MiB per file and writes a manifest
+whose names/sizes/hashes are independently verified. GUI Actions draft file target/workflow/upload examples
+without starting resources. MCP/REST/CLI/Builder/model tools share these commands; link reads still require
+drive-input authority. Deployment and real-browser acceptance remain open; existing acceptance pauses hold.
+
 Browser tasks accept pinned completion clauses such as
 `{"kind":"browser","operation":"value","selector":"#field","value":"expected"}`.
 Operations are exact `text`, `value`, `visible` (boolean), or `url` (no locator). They require an explicit
@@ -130,7 +143,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 848 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 851 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -345,7 +358,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 848 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 851 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -450,7 +463,7 @@ under a relative name are written below that directory.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 752 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 755 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |

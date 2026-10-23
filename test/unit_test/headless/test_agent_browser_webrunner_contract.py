@@ -13,7 +13,7 @@ from je_auto_control.utils.agent_runtime.native_target import NativeDesktopTarge
 from je_auto_control.utils.agent_runtime.runner import run_task  # noqa: E402
 
 
-def fake_runtime(*, hang=False):
+def fake_runtime(*, hang=False, transfers=False):
     """The real SDK lifecycle sees an event-capable fake page; no engine API is imported."""
     state = {"value": "", "url": "about:blank"}
     events = {}
@@ -21,6 +21,7 @@ def fake_runtime(*, hang=False):
     del page.execute_script  # Match Playwright's interface; do not accidentally select Selenium dispatch.
     page.url = "about:blank"
     context.on.side_effect = lambda name, callback: events.setdefault(name, []).append(callback)
+    context.cookies.return_value = []
 
     def new_page():
         context.route.assert_called_once()
@@ -50,7 +51,20 @@ def fake_runtime(*, hang=False):
     element.is_visible.return_value = True
     element.is_enabled.return_value = True
     element.fill.side_effect = fill
-    element.evaluate.side_effect = lambda *_args: state["value"]
+    def evaluate(script):
+        if transfers and "element.tagName === 'INPUT'" in script:
+            return True
+        if transfers and "[...element.files]" in script:
+            return state.get("files", [])
+        if transfers and "element.href" in script:
+            return state["url"].rsplit("/", 1)[0] + "/file"
+        return state["value"]
+
+    def upload(payload):
+        state["files"] = [{"name": payload["name"], "size": len(payload["buffer"])}]
+
+    element.evaluate.side_effect = evaluate
+    element.set_input_files.side_effect = upload
 
     def navigate(url, **_options):
         page.url = url
@@ -83,13 +97,13 @@ def test_exact_origin_contract_agrees_without_starting_a_browser():
     assert not policy.allows("https://outside.test/form")
 
 
-def owned_target(tmp_path, monkeypatch, *, hang=False):
+def owned_target(tmp_path, monkeypatch, *, hang=False, transfers=False):
     from je_auto_control.utils.agent_runtime import target_profiles
     script = (
         "import sys; sys.path.insert(0,sys.argv[1]); "
         "from headless.test_agent_browser_webrunner_contract import fake_runtime; "
         "from je_web_runner.webdriver import playwright_wrapper as module; "
-        f"module._require_playwright=lambda:fake_runtime(hang={hang!r}); "
+        f"module._require_playwright=lambda:fake_runtime(hang={hang!r},transfers={transfers!r}); "
         "from je_auto_control.utils.agent_runtime.native_worker import main; main()"
     )
     adapter = NativeDesktopTarget(argv=[sys.executable, "-u", "-c", script, str(Path(__file__).parent.parent)],
@@ -156,3 +170,85 @@ def test_pinned_browser_criterion_reads_real_sdk_in_same_owned_helper(tmp_path, 
         assert adapter._channel is None
     finally:
         runtime.close()
+
+
+def test_real_sdk_rooted_transfers_keep_cookie_and_bytes_inside_owned_helper(tmp_path, monkeypatch):
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    import hashlib
+    import threading
+    from je_auto_control.utils.agent_runtime import draft_agent_workflow
+    records = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            records.append((self.path, dict(self.headers)))
+            self.send_response(200)
+            self.send_header("Content-Length", "6")
+            self.end_headers()
+            self.wfile.write(b"report")
+
+        def log_message(self, *_args):
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": .05}, daemon=True)
+    thread.start()
+    origin = f"http://127.0.0.1:{server.server_port}"
+    reviewed = AgentTargetProfile(name="reviewed-browser", kind="browser", roots=(str(tmp_path),),
+        allowed_tools=("AC_browser_navigate", "AC_browser_link", "AC_browser_download", "AC_workflow_manifest",
+                       "AC_browser_upload"), settings={"allowed_origins": [origin]})
+    monkeypatch.setattr(sys.modules[__name__], "configuration", lambda: reviewed)
+    adapter = owned_target(tmp_path, monkeypatch, transfers=True)
+    runtime = AgentRuntime(tmp_path / "runtime.sqlite", targets={})
+    try:
+        runtime.target_profiles.control("register", reviewed.to_dict())
+        draft = draft_agent_workflow("download_archive", {"backend": "browser", "roots": [str(tmp_path)],
+            "directory": str(tmp_path / "archive"), "url": origin + "/query", "allowed_origins": [origin],
+            "files": [{"name": "report.bin", "selector": "#download"}]})
+        draft["allowed_tools"].append("AC_browser_upload")
+        draft["actions"].insert(-1, {"tool": "AC_browser_upload", "arguments": {
+            "selector": "#upload", "path": str(tmp_path / "archive" / "report.bin"),
+            "sha256": hashlib.sha256(b"report").hexdigest()}})
+        handle = runtime.submit(draft)
+        result = run_task(runtime, handle.task_id)
+        assert result.state == "succeeded", result.reason
+        assert records[0][0] == "/file"
+        assert "Proxy-Authorization" not in records[0][1]
+        assert (tmp_path / "archive" / "report.bin").read_bytes() == b"report"
+        assert adapter._channel is None
+        assert adapter._resource is None
+        assert_real_sdk_download_cancellation(tmp_path, origin)
+    finally:
+        runtime.close()
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def assert_real_sdk_download_cancellation(root, origin):
+    """Foreign SDK containment must preserve the host's cancellation while closing the owned response."""
+    from concurrent.futures import CancelledError
+    from unittest.mock import patch
+    from je_auto_control.utils.agent_runtime.browser_target import BrowserTarget
+    from je_auto_control.utils.agent_runtime.context import TaskOperation, operation_scope
+    spec = AgentTaskSpec.from_dict({"goal": "cancelled download", "target": "reviewed-browser",
+        "roots": [str(root)], "allowed_tools": ["AC_browser_navigate", "AC_browser_download"],
+        "options": {"allowed_origins": [origin]}, "success_criteria": [{"kind": "actions_complete"}]})
+
+    def checkpoint():
+        if list(root.glob(".agent-*.part")):
+            raise CancelledError()
+
+    target = BrowserTarget()
+    try:
+        with patch("je_web_runner.webdriver.playwright_wrapper._require_playwright", return_value=fake_runtime()):
+            target.ready(spec)
+        with operation_scope(TaskOperation(spec, checkpoint, None)):
+            target.perform("AC_browser_navigate", {"url": origin + "/query"})
+            with pytest.raises(CancelledError):
+                target.perform("AC_browser_download", {"url": origin + "/file", "directory": str(root),
+                                                       "name": "cancelled.bin"})
+        assert not (root / "cancelled.bin").exists()
+        assert not list(root.glob(".agent-*.part"))
+    finally:
+        target.cleanup()

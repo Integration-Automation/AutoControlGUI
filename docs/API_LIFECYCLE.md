@@ -1,5 +1,18 @@
 # Public API lifecycle
 
+Managed browser file commands `browser_link`, `browser_download` and `browser_upload` (with matching
+`AC_browser_*` commands) delegate to WebRunner transfer contract version 1. Download and upload grants
+require explicit host/task roots. Downloads preserve scoped browser cookies inside the owned SDK/helper,
+check complete length and optional SHA256, and publish without overwriting an existing file; reuse
+requires its matching SHA256. Uploads read one regular file up to 4 MiB into a checked immutable snapshot,
+verify optional SHA256 and SDK metadata, and never submit a form. Network operations remain in `je_web_runner`.
+The browser `download_archive` preview accepts a query `url`, explicit `allowed_origins`, rooted `directory`
+and `files` with a plain `name` and either `url` or link `selector`/optional `frame`; `page_url` can override
+the query page per file. It captures fresh links, downloads at most 16 MiB per file and writes a manifest
+whose names/sizes/hashes are independently verified. GUI Actions draft file target/workflow/upload examples
+without starting resources. MCP/REST/CLI/Builder/model tools share these commands; link reads still require
+drive-input authority. Deployment and real-browser acceptance remain open; existing acceptance pauses hold.
+
 Browser tasks accept pinned completion clauses such as
 `{"kind":"browser","operation":"value","selector":"#field","value":"expected"}`.
 Operations are exact `text`, `value`, `visible` (boolean), or `url` (no locator). They require an explicit

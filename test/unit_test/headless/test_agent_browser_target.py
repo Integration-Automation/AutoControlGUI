@@ -9,7 +9,7 @@ from unittest.mock import Mock
 import pytest
 
 from je_auto_control.utils.agent_runtime import AgentRuntime, AgentTargetProfile, AgentTaskSpec, AgentTaskError
-from je_auto_control.utils.agent_runtime.browser_commands import BROWSER_TOOLS, browser_fill, browser_read
+from je_auto_control.utils.agent_runtime.browser_commands import BROWSER_CORE_TOOLS, browser_fill, browser_read
 from je_auto_control.utils.agent_runtime.browser_target import BrowserTarget
 from je_auto_control.utils.agent_runtime.context import TaskOperation, operation_scope
 from je_auto_control.utils.agent_runtime.errors import AgentHumanReview, AgentObservationStale
@@ -18,12 +18,12 @@ from je_auto_control.utils.agent_runtime.runner import run_task
 
 def profile(**changes):
     return AgentTargetProfile.from_dict({"name": "reviewed-browser", "kind": "browser",
-        "allowed_tools": sorted(BROWSER_TOOLS), "settings": {"allowed_origins": ["https://allowed.test"]}, **changes})
+        "allowed_tools": sorted(BROWSER_CORE_TOOLS), "settings": {"allowed_origins": ["https://allowed.test"]}, **changes})
 
 
 def spec(**changes):
     return AgentTaskSpec.from_dict({"goal": "fill and verify", "target": "reviewed-browser", "mode": "skill",
-        "allowed_tools": sorted(BROWSER_TOOLS), "options": {"allowed_origins": ["https://allowed.test"]},
+        "allowed_tools": sorted(BROWSER_CORE_TOOLS), "options": {"allowed_origins": ["https://allowed.test"]},
         "actions": [{"tool": "AC_browser_fill", "arguments": {"selector": "#field", "value": "reviewed"}},
                     {"tool": "AC_browser_read", "arguments": {"operation": "value", "selector": "#field"},
                      "expect_result": "reviewed"}], "success_criteria": [{"kind": "actions_complete"}], **changes})

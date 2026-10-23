@@ -138,6 +138,7 @@ _FIELD_SAMPLES: Dict[FieldType, Callable[[FieldSpec], Any]] = {
     FieldType.ENUM: lambda field: field.choices[0] if field.choices else "",
     FieldType.FILE_PATH: lambda field: "sample.txt",
     FieldType.RGB: lambda field: [1, 2, 3],
+    FieldType.JSON: lambda field: {},
 }
 
 

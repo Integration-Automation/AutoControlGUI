@@ -27,6 +27,8 @@ class TaskPolicy:
         self.validate_snapshot()
         if any(name.startswith(_FORBIDDEN) for name in spec.allowed_tools):
             raise AgentTaskError("tool is not allowed in the managed task profile")
+        if set(spec.allowed_tools) & {"AC_browser_upload", "AC_browser_download"} and not spec.roots:
+            raise AgentTaskError("browser file transfers require explicit task roots")
         for criterion in spec.success_criteria:
             if criterion.get("kind") == "browser":
                 from je_auto_control.utils.agent_runtime.browser_verification import validate_browser_scope
@@ -60,6 +62,15 @@ class TaskPolicy:
             raise AgentTaskError("managed commands require named arguments")
         if any(not isinstance(key, str) or key.startswith("_") for key in arguments):
             raise AgentTaskError("private command arguments are not allowed")
+        if name in {"AC_browser_navigate", "AC_browser_download"} and isinstance(arguments.get("url"), str):
+            from je_auto_control.utils.agent_runtime.browser_validation import (
+                bounded as _bounded, browser_url_origin as _url_origin,
+            )
+            url = arguments["url"]
+            _bounded(url, "URL", 4096)
+            origins = {_url_origin(value) for value in self.spec.options.get("allowed_origins", ())}
+            if _url_origin(url) not in origins:
+                raise AgentTaskError("browser URL is outside the reviewed task origins")
         self._walk_paths(arguments)
 
     def _walk_paths(self, value: Any) -> None:

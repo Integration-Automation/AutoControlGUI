@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from typing import Any
+from pathlib import Path
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.policy import TaskPolicy
 from je_auto_control.utils.agent_runtime.target_config import browser_origins
 from je_auto_control.utils.agent_runtime.workflow_values import transformed
-from je_auto_control.utils.agent_runtime.browser_commands import _bounded, _url_origin
+from je_auto_control.utils.agent_runtime.browser_validation import (
+    bounded as _bounded, browser_url_origin as _url_origin,
+)
 
 
 def browser_options(config: dict) -> dict:
@@ -24,7 +27,43 @@ def browser_workflow(workflow: str, config: dict, policy: TaskPolicy) -> dict:
         return {"actions": _forms(config, policy)}
     if workflow == "transfer":
         return {"actions": _transfer(config, policy)}
-    raise AgentTaskError("browser backend currently supports batch_form and transfer")
+    if workflow == "download_archive":
+        return _downloads(config, policy)
+    raise AgentTaskError("browser backend currently supports batch_form, transfer and download_archive")
+
+
+def _downloads(config: dict, policy: TaskPolicy) -> dict:
+    from je_auto_control.utils.agent_runtime.workflow_specs import _items
+    from je_auto_control.utils.agent_runtime.workflow_files import _destination
+    from je_auto_control.utils.agent_runtime.browser_transfers import _expected
+    directory = policy.path(config.get("directory"))
+    entries = _items(config, "files")
+    names, actions = [], []
+    for index, entry in enumerate(entries):
+        if set(entry) - {"name", "sha256", "url", "selector", "frame", "page_url"}:
+            raise AgentTaskError("browser download contains unreviewed settings")
+        if bool(entry.get("url")) == bool(entry.get("selector")):
+            raise AgentTaskError("browser download requires exactly one URL or link selector")
+        path = _destination(policy, directory, _text(entry.get("name"), "filename", maximum=255))
+        _text(path.name, "filename", maximum=255)
+        names.append(path.name)
+        actions.append(_navigate(entry.get("page_url", config.get("url")), policy))
+        url = entry.get("url")
+        if url:
+            _navigate(url, policy)  # Validate only; a browser navigation could trigger an ungranted download.
+        else:
+            variable = f"download_url_{index}"
+            actions.append({**_action("AC_browser_link", _locator(entry["selector"], entry.get("frame", ""))),
+                            "capture": variable})
+            url = {"$capture": variable}
+        actions.append(_action("AC_browser_download", {"url": url, "directory": directory, "name": path.name,
+                                                       "sha256": _expected(entry.get("sha256", ""))}))
+    if len({name.casefold() for name in names}) != len(names):
+        raise AgentTaskError("browser archive filenames must be unique")
+    manifest = policy.path(config.get("manifest", str(Path(directory) / "manifest.json")))
+    actions.append(_action("AC_workflow_manifest", {"directory": directory, "path": manifest, "names": names}))
+    return {"actions": actions, "success_criteria": [{"kind": "actions_complete"},
+            {"kind": "file_manifest", "path": manifest, "directory": directory, "names": names}]}
 
 
 def _text(value: Any, name: str, *, empty: bool = False, maximum: int = 8000) -> str:

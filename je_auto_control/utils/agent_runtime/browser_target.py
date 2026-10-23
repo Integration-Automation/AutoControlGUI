@@ -6,13 +6,15 @@ from typing import Any, Mapping
 import uuid
 from concurrent.futures import CancelledError
 
-from je_auto_control.utils.agent_runtime.browser_commands import BROWSER_TOOLS, browser_session_scope
+from je_auto_control.utils.agent_runtime.browser_commands import (
+    BROWSER_ADAPTER_TOOLS, BROWSER_TRANSFER_TOOLS, browser_session_scope,
+)
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentHumanReview
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
-def _open_session(origins: tuple[str, ...]) -> Any:
+def _open_session(origins: tuple[str, ...], *, transfer: bool = False) -> Any:
     try:
         from je_web_runner.api.ai import BrowserOriginPolicy, ManagedBrowserSession
     except ImportError:
@@ -21,7 +23,26 @@ def _open_session(origins: tuple[str, ...]) -> Any:
     version = getattr(ManagedBrowserSession, "contract_version", None)
     if not isinstance(version, int) or isinstance(version, bool) or version != 1:
         raise AgentTaskError("je_web_runner managed browser contract version 1 is required before startup")
+    if transfer:
+        _require_transfers(ManagedBrowserSession)
     return ManagedBrowserSession.open(BrowserOriginPolicy(origins))
+
+
+def _require_transfers(session_class: Any) -> None:
+    marker = getattr(session_class, "transfer_contract_version", None)
+    methods = ("link", "open_download", "upload")
+    if not isinstance(marker, int) or isinstance(marker, bool) or marker != 1 or not all(
+            callable(getattr(session_class, key, None)) for key in methods):
+        raise AgentTaskError("je_web_runner managed transfer contract version 1 is required before startup")
+
+
+def _task_origins(spec: AgentTaskSpec) -> tuple[str, ...]:
+    origins = spec.options.get("allowed_origins", ())
+    if spec.apps or not origins or not set(spec.allowed_tools) <= BROWSER_ADAPTER_TOOLS:
+        raise AgentTaskError("browser tasks require explicit origins and reviewed browser-only tools")
+    if not isinstance(origins, (list, tuple)) or len(origins) > 50:
+        raise AgentTaskError("browser task origins must be bounded")
+    return tuple(origins)
 
 
 class BrowserTarget:
@@ -38,13 +59,10 @@ class BrowserTarget:
             if self._spec != spec:
                 raise AgentTaskError("managed browser session cannot be rebound to another task scope")
             return True, ""
-        origins = spec.options.get("allowed_origins", ())
-        if spec.apps or not origins or not set(spec.allowed_tools) <= BROWSER_TOOLS:
-            raise AgentTaskError("browser tasks require explicit origins and reviewed browser-only tools")
-        if not isinstance(origins, (list, tuple)) or len(origins) > 50:
-            raise AgentTaskError("browser task origins must be bounded")
+        origins = _task_origins(spec)
         try:
-            self._session = _open_session(tuple(origins))
+            self._session = (_open_session(tuple(origins), transfer=True)
+                             if set(spec.allowed_tools) & BROWSER_TRANSFER_TOOLS else _open_session(tuple(origins)))
             self._session.set_timeout(spec.budget.action_seconds)
             self._spec = spec
             self._identity = uuid.uuid4().hex
@@ -82,7 +100,7 @@ class BrowserTarget:
 
     def perform(self, name: str, arguments: dict) -> Any:
         """Use the shared command authority gates, with the session bound only for this dispatch."""
-        if name not in BROWSER_TOOLS or self._session is None:
+        if name not in BROWSER_ADAPTER_TOOLS or self._session is None:
             raise AgentTaskError("command is outside the reviewed browser adapter")
         from je_auto_control.utils.tool_use_schema import run_tool_call
         with browser_session_scope(self._session):

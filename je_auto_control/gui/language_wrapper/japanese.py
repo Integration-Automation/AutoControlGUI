@@ -1582,6 +1582,7 @@ japanese_word_dict.update({
     'agent_page_targets': 'ホスト対象',
     'agent_browser_example': 'ブラウザ対象の例を作成',
     'agent_browser_completion_example': 'ブラウザ完了条件の例を作成',
+    'agent_browser_files_example': 'ブラウザファイルの例を作成',
     'agent_target_operation': '対象操作',
     'agent_target_request': '確認済みの対象設定',
     'agent_target_apply': '対象操作を適用',

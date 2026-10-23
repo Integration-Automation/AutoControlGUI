@@ -20,8 +20,8 @@ def reviewed_tools(kind: str) -> frozenset[str]:
     """List implemented adapter commands without loading a platform SDK or connecting a target."""
     from je_auto_control.utils.agent_runtime.file_target import FILE_TOOLS
     from je_auto_control.utils.agent_runtime.targets import DESKTOP_TOOLS
-    from je_auto_control.utils.agent_runtime.browser_commands import BROWSER_TOOLS
-    kinds = {"files": FILE_TOOLS, "desktop": DESKTOP_TOOLS, "browser": BROWSER_TOOLS}
+    from je_auto_control.utils.agent_runtime.browser_commands import BROWSER_ADAPTER_TOOLS
+    kinds = {"files": FILE_TOOLS, "desktop": DESKTOP_TOOLS, "browser": BROWSER_ADAPTER_TOOLS}
     if kind not in kinds:
         raise AgentTaskError("target kind does not have an implemented managed adapter")
     return kinds[kind]
@@ -135,8 +135,16 @@ def _check_resource_scope(kind: str, spec: AgentTaskSpec) -> None:
         raise AgentTaskError("file target profiles require explicit roots and no desktop applications")
     if kind == "desktop" and not spec.apps:
         raise AgentTaskError("desktop target profiles require explicit application names")
-    if kind == "browser" and spec.apps:
+    if kind == "browser":
+        _browser_resource_scope(spec)
+
+
+def _browser_resource_scope(spec: AgentTaskSpec) -> None:
+    if spec.apps:
         raise AgentTaskError("browser target profiles cannot grant desktop applications")
+    if set(spec.allowed_tools) & {
+            "AC_browser_upload", "AC_browser_download", "AC_workflow_manifest"} and not spec.roots:
+        raise AgentTaskError("browser file transfers require explicit filesystem roots")
 
 
 def browser_origins(values: Any) -> list[str]:

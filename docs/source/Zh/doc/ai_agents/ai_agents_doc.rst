@@ -279,3 +279,17 @@ WebRunner 完整讀回相容契約
 保持未知；比較不符保持失敗。取消、權限撤銷及人工審閱錯誤保留原類型。
 GUI Actions 可草擬不啟動資源的瀏覽器完成範例；API／MCP／REST／CLI finish 共用驗證器。
 SPA URL fragment 會保留，origin 比對僅略去 fragment。實際瀏覽器／應用驗收及已審閱傳輸仍待完成。
+
+授權路徑內的瀏覽器檔案傳輸
+----------------------------------------------------------------------
+
+受管瀏覽器檔案命令 ``browser_link``、``browser_download``、``browser_upload``（對應 ``AC_browser_*``）
+委派給 WebRunner 傳輸契約版本 1。上／下載授權必須具有明確的主機及任務根目錄；下載讓瀏覽器
+Cookie 保留於自有 SDK／helper，核對完整長度及可選 SHA256，且不覆寫既有檔案；重用必須符合
+指定 SHA256。上傳將最多 4 MiB 的單一一般檔案讀成核對過的不可變快照，驗證可選 SHA256 與
+SDK 中繼資料，不自動提交表單。網路操作仍全部位於 ``je_web_runner``。
+瀏覽器 ``download_archive`` 預覽接受查詢頁 ``url``、明確 ``allowed_origins``、授權範圍內 ``directory``，
+以及具有單純 ``name``、``url`` 或連結 ``selector``／可選 ``frame`` 的 ``files``；每檔可用 ``page_url`` 覆寫
+查詢頁。流程擷取新連結、下載每檔最多 16 MiB，並產生供獨立核對名稱／大小／雜湊的歸檔清單。
+GUI Actions 只草擬檔案目標／流程／上傳範例，不啟動資源；MCP／REST／CLI／Builder／模型工具
+共用命令，連結讀取仍需輸入控制權限。部署與實際瀏覽器驗收仍待完成，既有驗收暫停保持生效。

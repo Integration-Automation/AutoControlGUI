@@ -13,12 +13,26 @@ from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILL_
 from je_auto_control.utils.agent_runtime.target_profiles import OPERATIONS as TARGET_OPERATIONS
 from je_auto_control.utils.agent_runtime.browser_commands import (
     browser_navigate, browser_click, browser_fill, browser_select, browser_check, browser_read, browser_wait,
+    browser_link, browser_download, browser_upload,
 )
 
 _ID = {"task_id": {"type": "string", "minLength": 1}}
 
 # name: (function, JSON properties, required, read_only, host_management)
 CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
+    "AC_browser_link": (browser_link, {"selector": {"type": "string", "maxLength": 4096},
+                                       "frame": {"type": "string", "maxLength": 4096}},
+                        ("selector",), True, False),
+    "AC_browser_download": (browser_download, {"url": {"type": "string", "maxLength": 4096},
+                                               "directory": {"type": "string", "format": "path"},
+                                               "name": {"type": "string", "maxLength": 255},
+                                               "sha256": {"type": "string", "maxLength": 64}},
+                            ("url", "directory", "name"), False, False),
+    "AC_browser_upload": (browser_upload, {"selector": {"type": "string", "maxLength": 4096},
+                                           "path": {"type": "string", "format": "path"},
+                                           "sha256": {"type": "string", "maxLength": 64},
+                                           "frame": {"type": "string", "maxLength": 4096}},
+                          ("selector", "path"), False, False),
     "AC_browser_wait": (browser_wait, {"operation": {"type": "string", "enum": ["text", "value"]},
                                        "selector": {"type": "string", "maxLength": 4096},
                                        "expected": {"type": "string", "maxLength": 8000},

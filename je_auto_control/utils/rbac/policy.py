@@ -166,6 +166,7 @@ COMMAND_CAPABILITIES: Dict[str, str] = {
 
 #: MCP tools whose capability is not the one their read-only hint implies.
 TOOL_CAPABILITIES: Dict[str, str] = {
+    "ac_browser_link": _DRIVE,
     "ac_browser_wait": _DRIVE,
     "ac_browser_read": _DRIVE,
     "ac_agent_target": _HOSTS,
