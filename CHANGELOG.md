@@ -1,5 +1,7 @@
 # Changelog
 
+Experimental: add pinned browser text/value/visibility/URL completion criteria, requiring browser-read and origin grants. Finish uses fresh owned-helper SDK state rather than receipts or previews; unsupported results are unknown. Cancellation, authorization revocation and human review propagate through verification. Existing non-browser criteria and three-argument verifier callers remain compatible. Browser workflow URLs now preserve SPA fragments.
+
 Experimental: add explicit browser backends for batch_form and transfer workflow previews, plus AC_browser_wait with read-only bounded polling and late-result refusal. Desktop workflows keep their default behavior; unsupported browser workflows are rejected. Browser readback is recognized as independent skill evidence. Startup requires exact WebRunner managed browser contract version 1.
 
 Experimental: add browser host profiles and six managed browser commands through the reviewed WebRunner SDK. Existing browser bridge APIs remain delegated to je_web_runner. DOM indexes use observation-local grounding; repeated readiness preserves one session. SDK absence fails before browser startup; no dependency or browser is installed automatically.

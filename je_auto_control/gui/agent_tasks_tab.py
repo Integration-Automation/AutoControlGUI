@@ -170,6 +170,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_skill_list", partial(self._dispatch, "skill", {"operation": "list"})),
                 ("agent_target_apply", self._target_apply),
                 ("agent_browser_example", self._browser_example),
+                ("agent_browser_completion_example", self._browser_completion_example),
                 ("agent_target_list", partial(self._dispatch, "targets", {})),
                 ("agent_submit", self._submit), ("agent_refresh", partial(self._dispatch, "list")),
                 *[("agent_" + name, partial(self._dispatch, name)) for name in
@@ -189,6 +190,18 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                                      settings={"allowed_origins": ["https://example.invalid"]})
         self._target_request.setPlainText(json.dumps(profile.to_dict(), ensure_ascii=False, indent=2))
         self._pages.setCurrentIndex(self._page_keys.index("agent_page_targets"))
+
+    def _browser_completion_example(self) -> None:
+        spec = AgentTaskSpec(goal="Review browser completion", target="reviewed-browser",
+            allowed_tools=("AC_browser_navigate", "AC_browser_read"),
+            options={"allowed_origins": ["https://example.invalid"]},
+            success_criteria=({"kind": "browser", "operation": "text", "selector": "#confirmation",
+                               "value": "expected"},)).to_dict()
+        self._target.setText(spec.pop("target"))
+        self._mode.setCurrentText(spec.pop("mode"))
+        spec.pop("goal")
+        self._scope.setPlainText(json.dumps(spec, ensure_ascii=False, indent=2))
+        self._pages.setCurrentIndex(self._page_keys.index("agent_page_task"))
 
     def _clear_observation(self, _task_id: str = "") -> None:
         self._observation.clear()

@@ -2,12 +2,14 @@
 # pylint: disable=import-outside-toplevel  # reason: optional SDK and executor imports must remain lazy
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping
 import uuid
+from concurrent.futures import CancelledError
 
 from je_auto_control.utils.agent_runtime.browser_commands import BROWSER_TOOLS, browser_session_scope
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentHumanReview
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 def _open_session(origins: tuple[str, ...]) -> Any:
@@ -95,6 +97,18 @@ class BrowserTarget:
                 raise AgentTaskError("managed browser cleanup is unconfirmed") from None
             self._session = None
             self._spec = None
+
+    def verify_browser(self, clause: Mapping[str, Any]) -> bool:
+        """Check only a criterion pinned in this session's task, using fresh explicit SDK reads."""
+        if self._spec is None or self._session is None or clause not in self._spec.success_criteria:
+            raise AgentTaskError("browser verification criterion is outside the owned task")
+        from je_auto_control.utils.agent_runtime.browser_verification import evaluate_browser_clause
+        try:
+            return evaluate_browser_clause(self._spec, self._session, clause)
+        except (AutoControlException, CancelledError):
+            raise
+        except Exception:  # noqa: BLE001 - SDK URL/read failures must not expose raw browser data
+            raise AgentTaskError("managed browser verification is unavailable") from None
 
     def validate_input(self, _event: dict) -> None:
         """Browser sessions grant no native mouse, keyboard, clipboard or file-dialog access."""

@@ -3,14 +3,16 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
+from concurrent.futures import CancelledError
 
-from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentHumanReview
+from je_auto_control.utils.rbac.authorization import AuthorizationError
 from je_auto_control.utils.agent_runtime.policy import TaskPolicy
 from je_auto_control.utils.postcondition import check_postcondition
 
 KINDS = frozenset({"result_equals", "file_exists", "file_sha256", "file_text", "file_manifest", "screen",
-                   "actions_complete"})
+                   "actions_complete", "browser"})
 
 
 def validate_criteria(criteria: Sequence[Mapping[str, Any]]) -> None:
@@ -23,6 +25,9 @@ def validate_criteria(criteria: Sequence[Mapping[str, Any]]) -> None:
 
 
 def _validate_clause(kind: str, clause: Mapping[str, Any]) -> None:
+    if kind == "browser":
+        from je_auto_control.utils.agent_runtime.browser_verification import validate_browser_clause
+        validate_browser_clause(clause)
     if kind == "file_manifest":
         from je_auto_control.utils.agent_runtime.manifest_evidence import validate_manifest_clause
         validate_manifest_clause(clause)
@@ -35,22 +40,28 @@ def _validate_clause(kind: str, clause: Mapping[str, Any]) -> None:
 
 
 def verify(policy: TaskPolicy, receipts: Sequence[Mapping[str, Any]],
-           observation: Mapping[str, Any]) -> list[dict[str, Any]]:
+           observation: Mapping[str, Any], *,
+           browser_read: Callable[[Mapping], Any] | None = None) -> list[dict[str, Any]]:
     """Evaluate all clauses against confirmed results and fresh target observations."""
     reports = []
     for clause in policy.spec.success_criteria:
         try:
-            passed = _evaluate(clause, policy, receipts, observation)
+            passed = _evaluate(clause, policy, receipts, observation, browser_read)
             status = "unknown" if passed is None else ("passed" if passed else "failed")
             reports.append({"kind": clause["kind"], "status": status})
+        except (CancelledError, AuthorizationError, AgentHumanReview):
+            raise
         except (OSError, UnicodeError, TypeError, ValueError, LookupError, AgentTaskError) as error:
             reports.append({"kind": clause["kind"], "status": "unknown", "reason": type(error).__name__})
     return reports
 
 
 def _evaluate(clause: Mapping[str, Any], policy: TaskPolicy, receipts: Sequence[Mapping[str, Any]],
-              observation: Mapping[str, Any]) -> bool | None:
+              observation: Mapping[str, Any], browser_read: Callable[[Mapping], Any] | None) -> bool | None:
     kind = clause["kind"]
+    if kind == "browser":
+        value = browser_read(clause) if browser_read is not None else None
+        return value if isinstance(value, bool) else None
     if kind == "file_manifest":
         from je_auto_control.utils.agent_runtime.manifest_evidence import manifest_matches
         return manifest_matches(clause, policy)

@@ -287,3 +287,18 @@ readback: at most 8,000 UTF-16 code units, with over-limit/invalid Unicode refus
 AutoControl applies matching Unicode bounds to browser arguments and workflow preview data before effects.
 The consumer/SDK source contract is tested through the real owned helper with fake Chromium; deployment
 and real-browser/native acceptance remain separate from that evidence.
+
+Independent browser completion checks
+----------------------------------------------------------------------
+
+Browser tasks accept pinned completion clauses such as
+``{"kind":"browser","operation":"value","selector":"#field","value":"expected"}``.
+Operations are exact ``text``, ``value``, ``visible`` (boolean), or ``url`` (no locator). They require an explicit
+``AC_browser_read`` grant and task origins; completion cannot add permissions. At finish, the same owned
+helper checks a current allowed HTTP(S) page and independently reads the full SDK value through guarded
+read commands. Receipts, bounded previews and model stop messages do not substitute for those reads.
+Blank/unavailable/out-of-scope pages, refused readbacks and invalid verifier replies remain unknown;
+failed comparisons remain failed. Cancellation, authority revocation and human-review errors propagate.
+GUI Actions can draft an inert browser completion example; API/MCP/REST/CLI finish share the verifier.
+SPA URL fragments remain intact while origin checks exclude only the fragment. Browser/native
+application acceptance and reviewed transfers remain open.

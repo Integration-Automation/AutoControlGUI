@@ -144,6 +144,10 @@ class NativeWorker:
             return self._target.observe()
         if operation == "perform":
             return self._target.perform(payload["tool"], payload["arguments"])
+        if operation == "verify_browser":
+            if self._profile_kind != "browser" and not self._custom_target:
+                raise AgentTaskError("browser verification is unavailable on this target")
+            return self._target.verify_browser(payload["clause"])
         raise AgentTaskError("unknown native worker operation")
 
     def _ready_activity(self) -> None:

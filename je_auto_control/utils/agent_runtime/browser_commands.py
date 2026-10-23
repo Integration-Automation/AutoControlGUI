@@ -7,6 +7,7 @@ from contextvars import ContextVar
 from typing import Any, Iterator
 import threading
 import time
+from urllib.parse import urlsplit
 
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentHumanReview
@@ -28,7 +29,7 @@ def browser_session_scope(session: Any) -> Iterator[None]:
         _SESSION.reset(token)
 
 
-def _bounded(value: str, name: str, maximum: int, *, empty: bool = False) -> None:
+def _bounded(value: Any, name: str, maximum: int, *, empty: bool = False) -> None:
     if not isinstance(value, str) or len(value) > maximum or (not value and not empty):
         raise AgentTaskError(f"browser {name} must be bounded text")
     try:
@@ -37,6 +38,17 @@ def _bounded(value: str, name: str, maximum: int, *, empty: bool = False) -> Non
         raise AgentTaskError("browser text contains invalid Unicode") from None
     if units > maximum:
         raise AgentTaskError(f"browser {name} exceeds its UTF-16 text limit")
+
+
+def _url_origin(url: str) -> str:
+    from je_auto_control.utils.agent_runtime.workflow_specs import url_origin
+    try:
+        parsed = urlsplit(url)
+        if parsed.username is not None or parsed.port == 0:
+            raise AgentTaskError("browser URL credentials or port zero are not supported")
+        return url_origin(parsed._replace(fragment="").geturl())
+    except ValueError:
+        raise AgentTaskError("browser URL authority is invalid") from None
 
 
 def _execute(name: str, arguments: dict, operation: str, *, timeout: float | None = None) -> Any:

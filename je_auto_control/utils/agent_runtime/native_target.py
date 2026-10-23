@@ -8,7 +8,7 @@ import socket
 import sys
 import threading
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Sequence, Mapping
 
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
@@ -163,6 +163,10 @@ class NativeDesktopTarget:
             self._persist()
             return result
         return self._request("perform", {"tool": name, "arguments": arguments})
+
+    def verify_browser(self, clause: Mapping[str, Any]) -> Any:
+        """Delegate a pinned read-only completion check to the same owned browser helper."""
+        return self._request("verify_browser", {"clause": clause})
 
     def cleanup(self) -> None:
         """Reap native calls and release only host-recorded keys/buttons before input transfer."""

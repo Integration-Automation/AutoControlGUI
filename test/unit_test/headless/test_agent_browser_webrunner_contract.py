@@ -19,6 +19,7 @@ def fake_runtime(*, hang=False):
     events = {}
     page, context, browser, runtime, factory = (MagicMock() for _index in range(5))
     del page.execute_script  # Match Playwright's interface; do not accidentally select Selenium dispatch.
+    page.url = "about:blank"
     context.on.side_effect = lambda name, callback: events.setdefault(name, []).append(callback)
 
     def new_page():
@@ -50,6 +51,12 @@ def fake_runtime(*, hang=False):
     element.is_enabled.return_value = True
     element.fill.side_effect = fill
     element.evaluate.side_effect = lambda *_args: state["value"]
+
+    def navigate(url, **_options):
+        page.url = url
+        state["url"] = url
+
+    page.goto.side_effect = navigate
     return factory
 
 
@@ -120,5 +127,32 @@ def test_hung_sdk_effect_reaps_only_owned_helper_and_preserves_uncertainty(tmp_p
         assert len(receipts) == 1 and receipts[0]["status"] == "uncertain"
         assert adapter._channel is None
         assert adapter._ledger.empty
+    finally:
+        runtime.close()
+
+
+def test_pinned_browser_criterion_reads_real_sdk_in_same_owned_helper(tmp_path, monkeypatch):
+    reviewed = AgentTargetProfile(name="contract-browser", kind="browser",
+        allowed_tools=("AC_browser_navigate", "AC_browser_fill", "AC_browser_read"),
+        settings={"allowed_origins": ["https://allowed.test"]})
+    monkeypatch.setattr(sys.modules[__name__], "configuration", lambda: reviewed)
+    adapter = owned_target(tmp_path, monkeypatch)
+    runtime = AgentRuntime(tmp_path / "runtime.sqlite", targets={})
+    try:
+        runtime.target_profiles.control("register", reviewed.to_dict())
+        handle = runtime.submit({"goal": "verify complete current browser value", "target": reviewed.name,
+            "allowed_tools": list(reviewed.allowed_tools), "options": {"allowed_origins": ["https://allowed.test"]},
+            "success_criteria": [{"kind": "browser", "operation": "value", "selector": "#field",
+                                  "value": "reviewed"}]})
+        for tool, arguments in [("AC_browser_navigate", {"url": "https://allowed.test/form"}),
+                                ("AC_browser_fill", {"selector": "#field", "value": "reviewed"})]:
+            observed = runtime.observe(handle.task_id)
+            runtime.act(handle.task_id, {"tool": tool, "arguments": arguments,
+                                        "observation_id": observed.observation_id})
+        result = runtime.finish(handle.task_id)
+        assert result.state == "succeeded", result.reason
+        assert result.verification[0]["status"] == "passed"
+        assert len(runtime.store.actions(handle.task_id)) == 2
+        assert adapter._channel is None
     finally:
         runtime.close()

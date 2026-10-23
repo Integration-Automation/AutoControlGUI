@@ -28,6 +28,9 @@ class TaskPolicy:
         if any(name.startswith(_FORBIDDEN) for name in spec.allowed_tools):
             raise AgentTaskError("tool is not allowed in the managed task profile")
         for criterion in spec.success_criteria:
+            if criterion.get("kind") == "browser":
+                from je_auto_control.utils.agent_runtime.browser_verification import validate_browser_scope
+                validate_browser_scope(spec, criterion)
             if criterion.get("kind", "").startswith("file_"):
                 self.path(criterion.get("path"))
         for action in spec.actions:

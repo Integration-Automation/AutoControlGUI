@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import urlsplit
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.policy import TaskPolicy
 from je_auto_control.utils.agent_runtime.target_config import browser_origins
 from je_auto_control.utils.agent_runtime.workflow_values import transformed
-from je_auto_control.utils.agent_runtime.browser_commands import _bounded
+from je_auto_control.utils.agent_runtime.browser_commands import _bounded, _url_origin
 
 
 def browser_options(config: dict) -> dict:
@@ -46,10 +45,8 @@ def _action(tool: str, arguments: dict, expected: Any = None) -> dict:
 
 
 def _navigate(url: Any, policy: TaskPolicy) -> dict:
-    from je_auto_control.utils.agent_runtime.workflow_specs import url_origin
     _text(url, "URL", maximum=4096)
-    parsed = urlsplit(url)
-    if parsed.username is not None or url_origin(url) not in policy.spec.options["allowed_origins"]:
+    if _url_origin(url) not in policy.spec.options["allowed_origins"]:
         raise AgentTaskError("browser workflow navigation is outside its reviewed origins")
     return _action("AC_browser_navigate", {"url": url}, True)
 

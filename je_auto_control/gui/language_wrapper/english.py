@@ -1694,6 +1694,7 @@ english_word_dict.update({
 english_word_dict.update({
     'agent_page_targets': 'Host targets',
     'agent_browser_example': 'Draft browser target example',
+    'agent_browser_completion_example': 'Draft browser completion example',
     'agent_target_operation': 'Target operation',
     'agent_target_request': 'Reviewed target configuration',
     'agent_target_apply': 'Apply target operation',

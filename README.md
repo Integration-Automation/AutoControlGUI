@@ -1,5 +1,17 @@
 # AutoControl
 
+Browser tasks accept pinned completion clauses such as
+`{"kind":"browser","operation":"value","selector":"#field","value":"expected"}`.
+Operations are exact `text`, `value`, `visible` (boolean), or `url` (no locator). They require an explicit
+`AC_browser_read` grant and task origins; completion cannot add permissions. At finish, the same owned
+helper checks a current allowed HTTP(S) page and independently reads the full SDK value through guarded
+read commands. Receipts, bounded previews and model stop messages do not substitute for those reads.
+Blank/unavailable/out-of-scope pages, refused readbacks and invalid verifier replies remain unknown;
+failed comparisons remain failed. Cancellation, authority revocation and human-review errors propagate.
+GUI Actions can draft an inert browser completion example; API/MCP/REST/CLI finish share the verifier.
+SPA URL fragments remain intact while origin checks exclude only the fragment. Browser/native
+application acceptance and reviewed transfers remain open.
+
 Managed browser startup now requires the exact WebRunner `ManagedBrowserSession.contract_version == 1`
 contract before constructing its policy or opening a proxy/browser. Missing, boolean, string, older or
 unknown markers fail with an actionable readiness reason. SDK source `575e5d2` provides complete text/value

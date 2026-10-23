@@ -1543,6 +1543,7 @@ simplified_chinese_word_dict.update({
 simplified_chinese_word_dict.update({
     'agent_page_targets': '主机目标',
     'agent_browser_example': '起草浏览器目标示例',
+    'agent_browser_completion_example': '起草浏览器完成条件示例',
     'agent_target_operation': '目标操作',
     'agent_target_request': '已审核的目标设置',
     'agent_target_apply': '应用目标操作',

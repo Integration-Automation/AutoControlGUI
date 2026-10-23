@@ -52,7 +52,7 @@ def test_element_selection_only_edits_action_and_actions_submit_it(tab, monkeypa
     assert calls == [("act", {"task_id": "task-a", "action": action})]
 
 
-def test_browser_example_is_inert_and_dom_selection_replaces_locator(tab, monkeypatch):
+def test_browser_target_example_is_inert(tab, monkeypatch):
     from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile
     calls = []
     monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))
@@ -61,6 +61,26 @@ def test_browser_example_is_inert_and_dom_selection_replaces_locator(tab, monkey
     assert configuration.kind == "browser"
     assert configuration.settings["allowed_origins"] == ("https://example.invalid:443",)
     assert calls == []
+
+
+def test_browser_completion_example_edits_scope_without_starting_or_dispatching(tab, monkeypatch):
+    from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
+    from je_auto_control.utils.agent_runtime.policy import TaskPolicy
+    calls = []
+    monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))
+    dict(tab.menu_actions())["agent_browser_completion_example"]()
+    scope = json.loads(tab._scope.toPlainText())
+    spec = AgentTaskSpec.from_dict({**scope, "goal": "reviewed", "target": tab._target.text(),
+                                    "mode": tab._mode.currentText()})
+    TaskPolicy(spec)
+    assert spec.success_criteria[0]["kind"] == "browser"
+    assert "AC_browser_read" in spec.allowed_tools
+    assert calls == []
+
+
+def test_browser_dom_selection_replaces_locator_only(tab, monkeypatch):
+    calls = []
+    monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))
     observed = observation()
     observed["data"]["elements"] = [{"index": 0, "name": "Save", "role": "button", "selector": "#save",
                                      "frame": "#form", "enabled": True, "visible": True}]

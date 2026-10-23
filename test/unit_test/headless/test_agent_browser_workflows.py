@@ -162,3 +162,10 @@ def test_browser_draft_rejects_overlimit_unicode_before_session_or_effect(fake_s
         draft_agent_workflow("batch_form", config)
     fake_sdk[1].assert_not_called()
     assert fake_sdk[0].actions == []
+
+
+def test_browser_navigation_draft_preserves_spa_fragment_without_expanding_origin(fake_sdk, tmp_path):
+    draft = draft_agent_workflow("batch_form", form_config(tmp_path, url="https://allowed.test/form#new"))
+    assert draft["actions"][0]["arguments"]["url"] == "https://allowed.test/form#new"
+    assert draft["options"]["allowed_origins"] == ["https://allowed.test:443"]
+    fake_sdk[1].assert_not_called()

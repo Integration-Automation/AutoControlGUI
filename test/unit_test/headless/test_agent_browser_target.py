@@ -36,6 +36,8 @@ class FakeSession:
         self.actions = []
         self.failure = None
         self.label = "Field"
+        self.url = "https://allowed.test/form"
+        self.policy = SimpleNamespace(require=Mock())
 
     def set_timeout(self, value):
         self.timeout = value

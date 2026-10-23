@@ -1,5 +1,15 @@
 # AutoControl
 
+浏览器任务可固定完成条件，例如
+`{"kind":"browser","operation":"value","selector":"#field","value":"expected"}`。
+操作为精确的 `text`、`value`、`visible`（布尔）或 `url`（不含定位）；必须明确授权
+`AC_browser_read` 与任务 origins，完成条件不会增加权限。Finish 由同一个自有 helper 检查
+当前页面位于允许的 HTTP(S) origin，再通过受控读取命令独立取得 SDK 完整值；既有 receipt、
+有界预览或模型停止信号不能代替读回。空白／不可用／范围外页面、被拒读回或错误验证回复
+保持未知；比较不符保持失败。取消、权限撤销及人工审核错误保留原类型。
+GUI Actions 可起草不启动资源的浏览器完成示例；API／MCP／REST／CLI finish 共用验证器。
+SPA URL fragment 会保留，origin 比较仅略去 fragment。实际浏览器／应用验收及已审核传输仍待完成。
+
 受管浏览器启动前，必须先确认 WebRunner 的 `ManagedBrowserSession.contract_version == 1`，
 通过后才创建 policy 或开启代理／浏览器。缺失、布尔、文本、过旧或未知标记会保留可处理的
 就绪错误。SDK 来源 `575e5d2` 提供完整 text／value 读回：最多 8,000 个 UTF-16 code unit，

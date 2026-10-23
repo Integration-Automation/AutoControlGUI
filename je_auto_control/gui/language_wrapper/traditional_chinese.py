@@ -1544,6 +1544,7 @@ traditional_chinese_word_dict.update({
 traditional_chinese_word_dict.update({
     'agent_page_targets': '主機目標',
     'agent_browser_example': '草擬瀏覽器目標範例',
+    'agent_browser_completion_example': '草擬瀏覽器完成條件範例',
     'agent_target_operation': '目標操作',
     'agent_target_request': '已審閱的目標設定',
     'agent_target_apply': '套用目標操作',

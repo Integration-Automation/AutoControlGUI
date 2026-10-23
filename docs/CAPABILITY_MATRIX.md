@@ -1,5 +1,7 @@
 # Capability matrix
 
+Browser completion: experimental; fake state/model-stop/receipt-change/blank-page/over-limit/control-error and offscreen GUI evidence, plus real WebRunner SDK with fake Chromium inside the owned helper. Four scoped criteria are independently read only at finish; native/application acceptance remains unrecorded.
+
 Browser workflow drafts: experimental. Fake SDK/application evidence covers rooted two-row forms, captured/transformed transfers, stale confirmations, mismatched readback, absent elements and late replies. Browser/native acceptance, reviewed file transfers remain unverified/pending. Exact readback contract version 1 is required before SDK startup.
 
 Managed browser target: experimental and SDK-dependent; exact profile/task origins, fake Chromium, real SDK source-to-source, owned helper/loopback and timeout/uncertainty tests. Passive readiness remains not_probed and native_evidence not_recorded until separately accepted. Reviewed upload/download grants and real-browser acceptance remain open.

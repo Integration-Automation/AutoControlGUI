@@ -357,7 +357,8 @@ class AgentRuntime:
                     with self.broker.dispatch(self._leases[task_id]):
                         observations = detached(self._target(row).observe())
                         receipts = self.store.actions(task_id)
-                        reports = verify(policy, receipts, observations)
+                        reports = verify(policy, receipts, observations,
+                                         browser_read=getattr(self._target(row), "verify_browser", None))
                     self._token(task_id).checkpoint()
                     complete = all(item["status"] == "passed" for item in reports)
                     uncertain = any(item["status"] == "uncertain" for item in receipts)
