@@ -6,7 +6,7 @@ from concurrent.futures import CancelledError
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 
-OPERATIONS = ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown")
+OPERATIONS = ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown", "draft")
 
 
 def route(operation: str) -> Callable[..., Any]:
@@ -37,13 +37,26 @@ def dispatch(runtime: Any, operation: str, body: Any = None, task_id: str | None
     if operation == "shutdown":
         return runtime.request_shutdown()
     if operation == "submit":
-        if set(body) != {"spec"}:
-            raise AgentTaskError("submit requires only spec")
-        task = runtime.submit(body["spec"])
-        if getattr(runtime, "background", None) is not None:
-            runtime.background.start(task.task_id)
-        return {"task_id": task.task_id, "state": task.state}
+        return _submit(runtime, body)
+    if operation == "draft":
+        return _draft(body)
     return _task_operation(runtime, operation, body)
+
+
+def _submit(runtime: Any, body: dict) -> dict:
+    if set(body) != {"spec"}:
+        raise AgentTaskError("submit requires only spec")
+    task = runtime.submit(body["spec"])
+    if getattr(runtime, "background", None) is not None:
+        runtime.background.start(task.task_id)
+    return {"task_id": task.task_id, "state": task.state}
+
+
+def _draft(body: dict) -> dict:
+    if set(body) != {"workflow", "config"}:
+        raise AgentTaskError("draft requires workflow and config")
+    from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow
+    return {"draft": draft_agent_workflow(body["workflow"], body["config"])}
 
 
 def _task_operation(runtime: Any, operation: str, body: dict[str, Any]) -> dict[str, Any]:
@@ -53,7 +66,8 @@ def _task_operation(runtime: Any, operation: str, body: dict[str, Any]) -> dict[
     task_id = body["task_id"]
     if operation == "act":
         return runtime.act(task_id, body["action"]).to_dict()
-    handlers = {name: getattr(runtime, name) for name in OPERATIONS if name not in {"submit", "act", "shutdown"}}
+    handlers = {name: getattr(runtime, name) for name in OPERATIONS
+                if name not in {"submit", "act", "shutdown", "draft"}}
     if operation not in handlers:
         raise AgentTaskError("unknown task operation")
     result = handlers[operation](task_id).to_dict()

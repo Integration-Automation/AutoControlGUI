@@ -138,3 +138,7 @@ are tracked in ``Progress.md``; full contracts are in ``docs/AGENT_TASKS.md``.
 
 Native calls use an owned helper process tree with cancellation/deadlines, a host input ledger
 and per-session exclusion across databases. Native platform acceptance remains deferred.
+
+Use ``draft_agent_workflow`` or ``agent-task draft`` to preview download/archive, CSV/XLSX form,
+cross-application transfer and workspace templates. Review the compiled scope, per-step read-back
+checks and completion conditions before submission. The Agent Tasks Actions menu exposes preview.

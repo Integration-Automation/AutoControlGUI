@@ -1,0 +1,24 @@
+{
+  "roots": [
+    "C:/Automation"
+  ],
+  "apps": [
+    "ExampleApp"
+  ],
+  "documents": [
+    "C:/Automation/report.txt"
+  ],
+  "windows": [
+    {
+      "window_title": "Report",
+      "position": "left",
+      "ready_selector": {
+        "app_name": "ExampleApp",
+        "name": "Document"
+      },
+      "ready_state": {
+        "read_only": false
+      }
+    }
+  ]
+}

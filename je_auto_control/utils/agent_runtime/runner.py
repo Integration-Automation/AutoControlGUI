@@ -9,6 +9,7 @@ from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTa
 from je_auto_control.utils.agent_runtime.models import AgentTaskResult, AgentTaskSpec, TERMINAL, thaw
 from je_auto_control.utils.agent_runtime.ollama import OllamaTaskBackend
 from je_auto_control.utils.loop_guard.loop_guard import LoopGuard, digest_result
+from je_auto_control.utils.agent_runtime.workflow_values import captures, expected, resolve
 
 
 def run_task(runtime: Any, task_id: str, *, backend: Any = None) -> AgentTaskResult:
@@ -47,9 +48,13 @@ def _loop(runtime: Any, task_id: str, spec: AgentTaskSpec, backend: Any, guard: 
             proposal = _decision(runtime, task_id, spec, backend, observation.data, receipts)
         if proposal.get("stop"):
             return runtime.finish(task_id)
-        action = {"tool": proposal["tool"], "arguments": proposal.get("arguments", {}),
+        values = captures(spec, receipts)
+        action = {"tool": proposal["tool"], "arguments": resolve(proposal.get("arguments", {}), values),
                   "observation_id": observation.observation_id}
         result = runtime.act(task_id, action)
+        required, value = expected(proposal, values)
+        if required and thaw(result.result) != value:
+            raise AgentTaskError("workflow read-back did not match; review before continuing")
         verdict = guard.observe(action["tool"], action["arguments"], digest_result(result.result))
         if verdict.level == "critical":
             raise AgentTaskError("agent has stopped making progress")

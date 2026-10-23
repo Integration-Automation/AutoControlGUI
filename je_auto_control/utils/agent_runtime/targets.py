@@ -18,6 +18,7 @@ DESKTOP_TOOLS = frozenset({
     "AC_control_toggle", "AC_handle_file_dialog", "AC_list_windows", "AC_focus_window",
     "AC_click_text", "AC_find_text", "AC_snap_window", "AC_read_workbook", "AC_read_document",
     "AC_extract_pdf_text", "AC_get_clipboard", "AC_set_clipboard",
+    "AC_workflow_control", "AC_workflow_open",
 })
 
 

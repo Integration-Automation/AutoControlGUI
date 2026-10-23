@@ -9,7 +9,7 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.policy import TaskPolicy
 from je_auto_control.utils.postcondition import check_postcondition
 
-KINDS = frozenset({"result_equals", "file_exists", "file_sha256", "file_text", "screen"})
+KINDS = frozenset({"result_equals", "file_exists", "file_sha256", "file_text", "screen", "actions_complete"})
 
 
 def validate_criteria(criteria: Sequence[Mapping[str, Any]]) -> None:
@@ -47,6 +47,9 @@ def verify(policy: TaskPolicy, receipts: Sequence[Mapping[str, Any]],
 def _evaluate(clause: Mapping[str, Any], policy: TaskPolicy, receipts: Sequence[Mapping[str, Any]],
               observation: Mapping[str, Any]) -> bool | None:
     kind = clause["kind"]
+    if kind == "actions_complete":
+        from je_auto_control.utils.agent_runtime.workflow_values import complete
+        return complete(policy.spec, receipts)
     if kind == "result_equals":
         confirmed = [row for row in receipts if row["status"] == "confirmed"]
         if not confirmed:

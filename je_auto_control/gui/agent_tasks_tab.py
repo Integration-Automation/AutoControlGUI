@@ -16,6 +16,7 @@ from je_auto_control.gui.task_controller import TaskController, TaskOutcome
 from je_auto_control.utils.agent_runtime.client import AgentRuntimeClient
 from je_auto_control.utils.agent_runtime.api import start_agent_runtime, stop_agent_runtime
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
+from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow, WORKFLOWS
 from je_auto_control.utils.exception.cancellation import CancellationToken
 
 
@@ -29,6 +30,11 @@ def _request(operation: str, payload: dict, token: CancellationToken) -> dict:
         return start_agent_runtime()
     if operation == "stop":
         return stop_agent_runtime()
+    if operation == "draft":
+        return {"draft": draft_agent_workflow(payload["workflow"], payload["config"])}
+    if operation in {"observe", "finish"}:
+        from je_auto_control.utils.agent_runtime import observe_agent_task, finish_agent_task
+        return {"observe": observe_agent_task, "finish": finish_agent_task}[operation](payload["task_id"])
     return AgentRuntimeClient().call(operation, payload or None)
 
 
@@ -43,6 +49,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._goal, self._target, self._task_id = QLineEdit(), QLineEdit("local-desktop"), QLineEdit()
         self._mode = QComboBox()
         self._mode.addItems(["external", "skill", "ollama"])
+        self._workflow = QComboBox()
+        self._workflow.addItems(list(WORKFLOWS))
         self._scope = QPlainTextEdit()
         self._scope.setPlainText(json.dumps({"apps": [], "roots": [], "allowed_tools": ["AC_control_get_value"],
                                              "success_criteria": [{"kind": "result_equals", "key": "value",
@@ -56,6 +64,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         form = QFormLayout()
         for key, control in (("agent_goal", self._goal), ("agent_target", self._target),
                              ("agent_mode", self._mode), ("agent_scope", self._scope),
+                             ("agent_workflow", self._workflow),
                              ("agent_task_id", self._task_id)):
             label = QLabel()
             self._labels.append((label, key))
@@ -80,9 +89,18 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         """Expose lifecycle commands through the common Actions menu."""
         return [("agent_start", partial(self._dispatch, "start")),
                 ("agent_stop_service", partial(self._dispatch, "stop")),
+                ("agent_preview", self._preview),
                 ("agent_submit", self._submit), ("agent_refresh", partial(self._dispatch, "list")),
                 *[("agent_" + name, partial(self._dispatch, name)) for name in
                   ("get", "observe", "finish", "pause", "resume", "cancel")]]
+
+    def _preview(self) -> None:
+        try:
+            config = json.loads(self._scope.toPlainText())
+        except (ValueError, TypeError) as error:
+            self._status.setText(str(error))
+            return
+        self._dispatch("draft", {"workflow": self._workflow.currentText(), "config": config})
 
     def _submit(self) -> None:
         try:
@@ -109,6 +127,12 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._output.setPlainText(json.dumps(result, ensure_ascii=False, indent=2))
         if not isinstance(result, dict):
             return
+        if "draft" in result:
+            draft = result["draft"]
+            self._goal.setText(draft["goal"])
+            self._target.setText(draft["target"])
+            self._mode.setCurrentText(draft["mode"])
+            self._scope.setPlainText(json.dumps(draft, ensure_ascii=False, indent=2))
         if "task_id" in result:
             self._task_id.setText(result["task_id"])
         rows = result.get("tasks", [])

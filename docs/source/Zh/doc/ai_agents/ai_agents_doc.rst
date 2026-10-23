@@ -132,3 +132,6 @@ Python、AC、MCP、REST、CLI 與 Agent 任務面板共用提交、觀察、動
 
 原生操作使用專屬 helper 程序樹，支援取消、逾時、主服務輸入清理與跨資料庫桌面排他。
 原生平台驗收仍暫緩。
+
+使用 ``draft_agent_workflow`` 或 ``agent-task draft`` 預覽下載歸檔、CSV/XLSX 填表、
+跨應用轉移與工作區範本；檢查權限範圍、逐步讀回及完成條件後提交。Agent 任務 Actions 提供預覽。

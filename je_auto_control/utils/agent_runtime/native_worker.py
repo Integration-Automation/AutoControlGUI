@@ -15,6 +15,7 @@ from je_auto_control.utils.executor.dispatch import command_guard
 from je_auto_control.utils.rbac.authorization import AuthorizationContext, authorization_scope
 from je_auto_control.utils.script_vars.execution import execution_scope
 from je_auto_control.wrapper._input_observer import input_observer
+from je_auto_control.utils.agent_runtime.context import TaskOperation, operation_scope
 
 _LIMIT = 1_100_000
 
@@ -24,7 +25,8 @@ class NativeWorker:
 
     def __init__(self, source: Any, sink: Any, *, target: Any = None) -> None:
         self._source, self._sink = source, sink
-        self._target = target if target is not None else DesktopTarget()
+        self._target: Any = target if target is not None else DesktopTarget()
+        self._custom_target = target is not None
         self._spec: AgentTaskSpec | None = None
         self._owner: AuthorizationContext | None = None
         self._request_id = ""
@@ -67,6 +69,9 @@ class NativeWorker:
         if operation == "configure":
             self._spec = AgentTaskSpec.from_dict(payload["spec"])
             self._owner = AuthorizationContext(**payload["owner"]) if payload.get("owner") else None
+            if not self._custom_target and self._spec.target == "local-files":
+                from je_auto_control.utils.agent_runtime.file_target import FileTarget
+                self._target = FileTarget()
         if self._spec is None:
             raise AgentTaskError("native worker must be configured by its owner")
         with ExitStack() as stack:
@@ -74,6 +79,7 @@ class NativeWorker:
             stack.enter_context(command_guard(TaskPolicy(self._spec).check))
             stack.enter_context(execution_scope(dict(self._spec.inputs)))
             stack.enter_context(input_observer(self._input))
+            stack.enter_context(operation_scope(TaskOperation(self._spec, lambda: None, self._owner)))
             return self._operation(operation, payload)
 
     def _operation(self, operation: str, payload: dict) -> Any:

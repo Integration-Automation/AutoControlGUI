@@ -169,7 +169,7 @@ class AgentRuntime:
             if not ready:
                 raise AgentTaskError(reason or "target is not ready")
             self.store.start(row["id"])
-        except (CancelledError, AgentTaskError):
+        except (CancelledError, *_ERRORS):
             self._retire(row["id"])
             raise
         return self._row(row["id"])
@@ -344,4 +344,6 @@ class AgentRuntime:
 
 def _default_targets() -> dict[str, Any]:
     from je_auto_control.utils.agent_runtime.native_target import NativeDesktopTarget
-    return {"local-desktop": NativeDesktopTarget()}
+    return {"local-desktop": NativeDesktopTarget(),
+            "local-files": NativeDesktopTarget(resource_path=Path.home() / ".je_auto_control" /
+                                                "input_ownership" / "file-workflows.lock")}

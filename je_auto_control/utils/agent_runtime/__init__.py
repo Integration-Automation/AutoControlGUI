@@ -5,6 +5,9 @@ from je_auto_control.utils.agent_runtime.models import (
     AgentTaskHandle, AgentTaskResult, AgentTaskSpec,
 )
 from je_auto_control.utils.agent_runtime.runtime import AgentRuntime
+from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow
+from je_auto_control.utils.agent_runtime.workflow_files import workflow_download, workflow_manifest
+from je_auto_control.utils.agent_runtime.workflow_desktop import workflow_control, workflow_open
 from je_auto_control.utils.agent_runtime.api import (
     act_agent_task, agent_runtime_status, cancel_agent_task, finish_agent_task, get_agent_task,
     list_agent_tasks, observe_agent_task, pause_agent_task, resume_agent_task,
@@ -12,6 +15,7 @@ from je_auto_control.utils.agent_runtime.api import (
 )
 
 __all__ = [
+    "draft_agent_workflow", "workflow_download", "workflow_manifest", "workflow_control", "workflow_open",
     "act_agent_task", "agent_runtime_status", "cancel_agent_task", "finish_agent_task", "get_agent_task",
     "list_agent_tasks", "observe_agent_task", "pause_agent_task", "resume_agent_task", "start_agent_runtime",
     "submit_agent_task",

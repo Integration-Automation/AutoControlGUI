@@ -1,0 +1,28 @@
+{
+  "roots": [
+    "C:/Automation"
+  ],
+  "apps": [
+    "ExampleApp"
+  ],
+  "source": "C:/Automation/input.csv",
+  "window_title": "Example Form",
+  "fields": [
+    {
+      "column": "name",
+      "selector": {
+        "app_name": "ExampleApp",
+        "name": "Name"
+      }
+    }
+  ],
+  "submit_selector": {
+    "app_name": "ExampleApp",
+    "name": "Save"
+  },
+  "confirmation_selector": {
+    "app_name": "ExampleApp",
+    "name": "Status"
+  },
+  "confirmation_value": "Saved"
+}

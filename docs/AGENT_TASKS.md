@@ -41,7 +41,7 @@ extension, not a model-supplied plugin. Native desktop calls run in a hidden, ow
 Cancellation retires the owned process tree; a host ledger releases only announced keys/buttons before
 control transfers. Independent databases share a per-session input lock. Window/control scope is checked
 again at input dispatch; pointer geometry and redacted window vision currently require Windows.
-Reliable physical activity monitoring, richer adapters and complete workflow templates remain in Progress.
+Reliable physical activity monitoring, richer adapters remain in Progress.
 
 ## External agent lifecycle
 
@@ -87,3 +87,38 @@ action receipts and control generations. Prepared/dispatched/confirmed/uncertain
 dispatch from evidence. WorkQueue claim numbers fence stale delivery settlements; busy targets may
 defer delivery without spending application retries. Retention, history/journal links, screenshots
 and complete artifact lifecycle remain tracked rather than implicitly implemented.
+
+## Review and run workflows
+
+`draft_agent_workflow(workflow, config)` compiles `download_archive`, `batch_form`, `transfer` or
+`workspace` into an immutable task specification without submitting it or operating an application.
+CSV/XLSX preview reads only an explicitly rooted input file. Review the returned apps, roots, actions,
+expected read-back values and budgets before `submit_agent_task(draft)`. Example configurations live
+in `examples/agent_workflow_*.json`; replace their paths and semantic selectors for your applications.
+
+```powershell
+je_auto_control agent-task draft download_archive examples/agent_workflow_download_archive.json
+```
+
+The Agent Tasks view has a workflow selector and an Actions → Preview workflow command. Put a workflow
+configuration in the JSON editor, preview it, then submit the resulting task. `AC_agent_task_draft`,
+`ac_agent_task_draft` and authenticated POST `/agent/draft` expose the same compiler.
+
+- **Download/archive:** the `local-files` target runs approved-origin HTTP(S) downloads in its owned
+  helper, without desktop input. Redirects are refused. Downloads are limited to 16 MiB, checked for
+  complete length and optional SHA256, then linked to a portable archive name without overwriting.
+  A manifest records each filename, size and digest. Existing files require the expected digest.
+- **Batch form:** validate CSV/XLSX columns first, fill each mapped semantic field, read it back,
+  invoke the configured submit button, and read the configured confirmation value. Every row has
+  its own durable action receipts. A mismatch stops before proceeding to another submission.
+- **Transfer:** focus the source, capture explicit fields from confirmed receipts, apply one of
+  identity/strip/upper/lower/collapse_whitespace, fill the destination, read it back and verify save.
+- **Workspace:** open explicitly approved existing documents, focus uniquely matched windows,
+  optionally snap them, and check the configured control state. Document suffixes are allowlisted;
+  this profile does not accept executable paths or command-line arguments.
+
+`actions_complete` completion independently compares every pinned action, resolved argument and
+expected result with confirmed receipts. Control selectors require an explicit application and
+accessible name; ambiguous, disabled or password controls are refused. Uncertain side effects stop
+without replay. These workflows have fake-application and local-file/HTTP acceptance; real
+application layouts and platform behavior still need the deferred native acceptance.

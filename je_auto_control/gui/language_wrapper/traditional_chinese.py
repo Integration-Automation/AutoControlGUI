@@ -1479,3 +1479,5 @@ traditional_chinese_word_dict.update({
 })
 
 traditional_chinese_word_dict["agent_stop_service"] = '停止服務'
+
+traditional_chinese_word_dict.update({"agent_workflow": "工作流程範本", "agent_preview": "預覽工作流程"})

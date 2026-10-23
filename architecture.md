@@ -596,3 +596,7 @@ first. `AC_*` command names and the legacy CLI flags are public too (action file
   target moves, or the log file name or location changes.
 - A hard rule in CLAUDE.md is added or changed.
 - On every edit, refresh the "Last verified" line. Module-level changes belong in `architecture_explore.md`, not here.
+
+Workflow specs compile four reviewed templates into pinned skill actions. Receipt-backed captures
+and allowlisted text transforms cannot select commands or widen scope. A separate local-files target
+uses the same helper protocol without desktop input; semantic desktop steps refuse ambiguous controls.

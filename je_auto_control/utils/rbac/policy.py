@@ -162,6 +162,7 @@ TOOL_CAPABILITIES: Dict[str, str] = {
     "ac_agent_runtime_status": _DRIVE,
     "ac_agent_task_get": _DRIVE,
     "ac_agent_task_list": _DRIVE,
+    "ac_agent_task_draft": _DRIVE,
     "ac_journal_capture": _DRIVE,
     "ac_journal_read": _DRIVE,
     "ac_remote_host_start": _HOSTS,

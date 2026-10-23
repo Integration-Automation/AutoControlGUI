@@ -1,0 +1,12 @@
+{
+  "roots": [
+    "C:/Automation"
+  ],
+  "directory": "C:/Automation/archive",
+  "files": [
+    {
+      "url": "http://127.0.0.1:8080/report.csv",
+      "name": "report.csv"
+    }
+  ]
+}

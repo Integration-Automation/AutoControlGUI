@@ -498,3 +498,7 @@ read and again before network send. Ambient callback-thread users never supply a
 No clipboard OS watcher, automatic forwarder or implicit reconnection replay is introduced.
 Existing SDK methods and the GUI Push clipboard button share these contracts without new root,
 AC, MCP, Builder or wire fields. Native providers remain lazy; controlled tests replace them.
+
+Workflow additions: draft_agent_workflow compiles inspectable task specs; workflow_download,
+workflow_manifest, workflow_control and workflow_open require a managed operation scope.
+AC/MCP/Builder share their schemas; REST adds POST /agent/draft and CLI adds agent-task draft.

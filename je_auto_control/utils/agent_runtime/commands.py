@@ -4,11 +4,27 @@ from __future__ import annotations
 from typing import Any
 
 from je_auto_control.utils.agent_runtime import api
+from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow, WORKFLOWS
+from je_auto_control.utils.agent_runtime.workflow_files import workflow_download, workflow_manifest
+from je_auto_control.utils.agent_runtime.workflow_desktop import workflow_control, workflow_open
 
 _ID = {"task_id": {"type": "string", "minLength": 1}}
 
 # name: (function, JSON properties, required, read_only, host_management)
 CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
+    "AC_agent_task_draft": (draft_agent_workflow, {"workflow": {"type": "string", "enum": list(WORKFLOWS)},
+                                                  "config": {"type": "object"}}, ("workflow", "config"), True, False),
+    "AC_workflow_download": (workflow_download, {"url": {"type": "string"}, "directory": {"type": "string"},
+                               "name": {"type": "string"}, "sha256": {"type": "string"}},
+                              ("url", "directory", "name"), False, False),
+    "AC_workflow_manifest": (workflow_manifest, {"directory": {"type": "string"}, "path": {"type": "string"},
+                               "names": {"type": "array", "items": {"type": "string"}}},
+                              ("directory", "path", "names"), False, False),
+    "AC_workflow_control": (workflow_control, {"operation": {"type": "string",
+                                                          "enum": ["get", "set", "invoke", "state"]},
+                              "selector": {"type": "object"}, "value": {"type": "string"}},
+                             ("operation", "selector"), False, False),
+    "AC_workflow_open": (workflow_open, {"path": {"type": "string"}}, ("path",), False, False),
     "AC_agent_runtime_stop": (api.stop_agent_runtime, {}, (), False, True),
     "AC_agent_runtime_start": (api.start_agent_runtime, {"directory": {"type": "string", "format": "path"}},
                                (), False, True),

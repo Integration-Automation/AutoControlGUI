@@ -298,7 +298,7 @@ _ENDPOINT_METADATA: Dict[Tuple[str, str], Dict[str, Any]] = {
 }
 
 
-for _operation in ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown"):
+for _operation in ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown", "draft"):
     _ENDPOINT_METADATA[("POST", f"/agent/{_operation}")] = {
         "summary": f"Managed task {_operation}; preserves caller authority and host ownership.",
         "tag": "agent", "request_body": {"type": "object"},

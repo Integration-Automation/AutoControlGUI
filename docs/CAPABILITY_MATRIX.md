@@ -649,3 +649,7 @@ Shared Python/AC/MCP/REST/CLI/GUI surfaces enforce task ownership and independen
 Owned helper cancellation/deadlines, input cleanup and cross-database session exclusion have IPC-only
 fixture coverage. Windows window/control scoping and redacted vision are implemented without native
 acceptance. Physical activity detection and desktop/mobile acceptance remain open in Progress.md. A passive capability snapshot or configured timeout grants no authority.
+
+Four managed workflow templates have deterministic fake-application and local HTTP/file coverage;
+the local-files target also runs through a real owned helper without desktop input. Native application
+acceptance remains deferred. Read-back mismatch and uncertain submission prevent automatic continuation.

@@ -15,13 +15,17 @@ def register_parser(subparsers: Any, handler: Callable[..., int]) -> None:
     parser = subparsers.add_parser("agent-task", help="Manage explicitly authorized agent tasks")
     operations = parser.add_subparsers(dest="agent_operation", required=True)
     for operation in ("start", "stop", "status", "submit", "list", "get", "observe", "act", "finish",
-                      "pause", "resume", "cancel"):
+                      "pause", "resume", "cancel", "draft"):
         item = operations.add_parser(operation)
         item.set_defaults(func=handler)
         if operation == "start":
             item.add_argument("--directory")
         elif operation == "submit":
             item.add_argument("spec", help="JSON task specification")
+        elif operation == "draft":
+            from je_auto_control.utils.agent_runtime.workflow_specs import WORKFLOWS
+            item.add_argument("workflow", choices=WORKFLOWS)
+            item.add_argument("config", help="JSON workflow configuration")
         elif operation not in {"list", "status", "stop"}:
             item.add_argument("task_id")
             if operation == "act":
@@ -39,6 +43,9 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
         return api.stop_agent_runtime()
     if operation == "submit":
         return api.submit_agent_task(_read(arguments.spec))
+    if operation == "draft":
+        from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow
+        return {"draft": draft_agent_workflow(arguments.workflow, _read(arguments.config))}
     if operation == "list":
         return api.list_agent_tasks()
     body: dict[str, Any] = {"task_id": arguments.task_id}
