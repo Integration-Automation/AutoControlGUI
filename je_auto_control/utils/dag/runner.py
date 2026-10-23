@@ -172,6 +172,7 @@ def _spawn_ready_nodes(pending: Set[str], inflight: Dict[Future, str],
                        nodes_by_id: Dict[str, DagNode],
                        local: NodeRunner, remote: NodeRunner,
                        pool: ThreadPoolExecutor) -> None:
+    from je_auto_control.utils.agent_runtime.origin_policy import current_origin
     for nid in sorted(pending):
         node = nodes_by_id[nid]
         deps_done = {results[d].status for d in node.depends_on}
@@ -184,7 +185,8 @@ def _spawn_ready_nodes(pending: Set[str], inflight: Dict[Future, str],
         results[nid].status = STATUS_RUNNING
         results[nid].started_at = time.monotonic()
         runner = local if node.host == LOCAL_HOST else remote
-        future = pool.submit(_run_one, node, results[nid], runner, nodes_by_id, current_secret_scope())
+        future = pool.submit(_run_one, node, results[nid], runner, nodes_by_id,
+                             current_secret_scope(), current_origin())
         inflight[future] = nid
         pending.discard(nid)
 
@@ -237,10 +239,11 @@ def _record_future(nid: str, finished: Future,
 
 
 def _run_one(node: DagNode, result: NodeResult, runner: NodeRunner, _nodes: Dict[str, DagNode],
-             secret_scope: Optional[SecretLogScope] = None) -> None:
+             secret_scope: Optional[SecretLogScope] = None, origin: Optional[str] = None) -> None:
     """Keep node execution, outcome handling and final diagnostics in one mask."""
     binding = current_secret_scope() if secret_scope is None else secret_scope
-    with bound_secret_scope(binding):
+    from je_auto_control.utils.agent_runtime.origin_policy import origin_scope
+    with bound_secret_scope(binding), origin_scope(origin):
         try:
             outcome = runner(node, _build_proxy_definition(node, _nodes))
         except _NodeStopped:

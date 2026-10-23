@@ -723,3 +723,7 @@ Security notes
 - Subprocess calls (``ac_launch_process`` / ``ac_shell``) accept
   argv lists or a command line (POSIX-split, or passed to
   ``CreateProcess`` as written on Windows) — never an OS shell.
+
+Accepted tasks, trigger templates and skill trials retain live origin policy references. A private witness contains only current root ceilings; missing/revoked/corrupt witnesses fail closed. Authenticated local HTTP forwards the current caller's additional restrictive ceiling without granting identity or capability. Every operation checkpoint and lease maintenance rechecks roots. MCP client roots and asynchronous roots refresh are session-local; stale replies cannot renew retired authorities. Static host policies persist until replacement, while retiring client-supplied root authority revokes its references. HTTP client roots do not overwrite the shared resource provider's configured workspace. Workers/maintenance run in fresh contexts, shutdown tracks actual in-flight deliveries before lease acquisition, and unstarted queued work remains durable.
+
+Legacy MCP wrappers and parallel/local DAG workers retain the intersection of source ceilings. Pure tool-context binding stays inert; task-aware dispatch resolves the metadata lazily.

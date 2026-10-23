@@ -28,6 +28,7 @@ from je_auto_control.utils.agent_runtime.evidence import TaskEvidence
 from je_auto_control.utils.agent_runtime.receipts import reconcile, row_report
 from je_auto_control.utils.agent_runtime.task_triggers import AgentTriggers
 from je_auto_control.utils.agent_runtime.task_skills import AgentSkills
+from je_auto_control.utils.agent_runtime.origin_policy import bind_origin, validate_origins
 from je_auto_control.utils.agent_runtime.store import AgentTaskStore
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
@@ -97,6 +98,7 @@ class AgentRuntime:
     def _validated_spec(self, spec: AgentTaskSpec | Mapping[str, Any]) -> AgentTaskSpec:
         spec = spec if isinstance(spec, AgentTaskSpec) else AgentTaskSpec.from_dict(spec)
         spec = canonical_spec(spec)
+        spec = bind_origin(spec)
         if spec.target not in self._targets:
             raise AgentTaskError("task target has not been configured")
         TaskPolicy(spec)
@@ -181,8 +183,10 @@ class AgentRuntime:
         owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
         try:
             policy = TaskPolicy(spec)
-        except AgentTaskError:
-            self.pause(row["id"])
+        except AgentTaskError as error:
+            paused = self.pause(row["id"])
+            if paused.state == "paused":
+                self.store.update(row["id"], "paused", reason=f"task scope requires review: {error}")
             raise
 
         def checkpoint() -> None:
@@ -469,10 +473,14 @@ class AgentRuntime:
             owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
             try:
                 validate_root_snapshot(row["spec"]["roots"])
+                validate_origins(AgentTaskSpec.from_dict(row["spec"]))
                 with DeferredAuthorization(owner).scope():
                     pass
             except (AutoControlException, OSError, ValueError):
-                self.cancel(task_id)
+                stopped = self.cancel(task_id)
+                if stopped.state == "cancelled":
+                    self.store.update(task_id, "cancelled",
+                                      reason="owner authorization or origin scope requires review")
         self._settle_stopped()
         self.evidence.flush()
         if time.monotonic() >= self._next_retention:

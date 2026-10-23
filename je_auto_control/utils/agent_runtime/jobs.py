@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import threading
+from contextvars import Context
 from typing import Any
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
@@ -20,6 +21,7 @@ class BackgroundTasks:
         self._workers: list[threading.Thread] = []
         self._stop = threading.Event()
         self._lock = threading.Lock()
+        self._running: set[str] = set()
         with runtime.store.connection(write=True) as connection:
             connection.execute("UPDATE work_items SET status='new',claim=claim+1 WHERE queue='agent_runtime' "
                                "AND status='in_progress'")
@@ -38,10 +40,11 @@ class BackgroundTasks:
             return
         self._queue.add({"task_id": task_id}, reference=task_id)
         with self._lock:
-            if self._workers:
+            if self._workers or self._stop.is_set():
                 return
             for index in range(4):
-                thread = threading.Thread(target=self._drain, name=f"AgentWorker-{index}", daemon=True)
+                thread = threading.Thread(target=lambda: Context().run(self._drain),
+                                          name=f"AgentWorker-{index}", daemon=True)
                 self._workers.append(thread)
                 thread.start()
 
@@ -52,17 +55,29 @@ class BackgroundTasks:
                 self._stop.wait(0.1)
                 continue
             task_id = item.data["task_id"]
-            try:
-                outcome = run_task(self._runtime, task_id)
-                if outcome.state == "queued":
+            with self._lock:
+                if self._stop.is_set():
                     self._queue.defer(item.id, claim=item.claim)
-                    self._stop.wait(0.25)
-                else:
-                    self._queue.complete(item.id, claim=item.claim, output=outcome.to_dict())
-                    self._handoff_resume(task_id)
-            except (AutoControlException, OSError, RuntimeError, TypeError, ValueError) as error:
-                self._queue.fail(item.id, type(error).__name__, kind="business", claim=item.claim)
-                self._review_failure(task_id)
+                    return
+                self._running.add(task_id)
+            self._run_item(item)
+
+    def _run_item(self, item: Any) -> None:
+        task_id = item.data["task_id"]
+        try:
+            outcome = run_task(self._runtime, task_id)
+            if outcome.state == "queued":
+                self._queue.defer(item.id, claim=item.claim)
+                self._stop.wait(0.25)
+            else:
+                self._queue.complete(item.id, claim=item.claim, output=outcome.to_dict())
+                self._handoff_resume(task_id)
+        except (AutoControlException, OSError, RuntimeError, TypeError, ValueError) as error:
+            self._queue.fail(item.id, type(error).__name__, kind="business", claim=item.claim)
+            self._review_failure(task_id)
+        finally:
+            with self._lock:
+                self._running.discard(task_id)
 
     def _handoff_resume(self, task_id: str) -> None:
         with self._runtime.store.connection() as connection:
@@ -81,10 +96,13 @@ class BackgroundTasks:
 
     def close(self) -> None:
         """Cancel running tasks, retire workers, then permit the service to release input."""
-        self._stop.set()
-        for row in self._runtime.store.list(1000):
-            if row["state"] in {"running", "verifying", "pausing", "cancelling"}:
-                self._runtime.cancel(row["id"])
+        with self._lock:
+            self._stop.set()
+            running = tuple(self._running)
+        for task_id in running:
+            self._runtime._token(task_id).cancel()
+        for task_id in running:
+            self._runtime.cancel(task_id)
         for thread in self._workers:
             thread.join(timeout=2)
             if thread.is_alive():

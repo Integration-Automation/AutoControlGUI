@@ -207,7 +207,8 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         if self._refuse_privileged_commands(method, parsed.path, client_ip, caller, body):
             return
         ctx = RouteContext(query=parsed.query, body=body, client_ip=client_ip,
-                           agent_runtime=getattr(self.server, "agent_runtime", None))
+                           agent_runtime=getattr(self.server, "agent_runtime", None),
+                           agent_origin=self.headers.get("X-AutoControl-Agent-Origin"))
         try:
             # The scope is what lets the executor refuse a privileged command
             # found in an action file, which nothing here has read.

@@ -45,7 +45,9 @@ class TaskPolicy:
 
     def validate_snapshot(self) -> None:
         """A stored canonical root cannot silently become a symlink to newly authorized data."""
+        from je_auto_control.utils.agent_runtime.origin_policy import validate_origins
         validate_root_snapshot(self.spec.roots)
+        validate_origins(self.spec)
 
     def check(self, name: str, arguments: Any) -> None:
         """Guard every resolved command, including commands nested in action scripts."""

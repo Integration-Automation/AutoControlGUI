@@ -484,7 +484,9 @@ class _ParallelRun:
         self._command_guards = capture_command_guards()
         self._cancellation = current_cancellation_token()
         from je_auto_control.utils.agent_runtime.context import current_operation
+        from je_auto_control.utils.agent_runtime.origin_policy import current_origin
         self._task_operation = current_operation()
+        self._origin = current_origin()
         self.results: list = [None] * len(branches)
         self._failures: list = [0] * len(branches)
         self._errors: Dict[int, str] = {}
@@ -513,13 +515,14 @@ class _ParallelRun:
         if not branch:
             return  # an empty branch is a no-op, as everywhere else
         from je_auto_control.utils.agent_runtime.context import operation_scope
+        from je_auto_control.utils.agent_runtime.origin_policy import origin_scope
         _MACRO_DEPTH.value = self._macro_depth
         self._module.reset_recorded_failures()
         try:
             with (authorization_scope(self._caller), bound_journal(self._journal),
                   bound_secret_scope(self._secret_scope), bound_history(self._history),
                   bound_command_guards(self._command_guards), cancellation_scope(self._cancellation),
-                  operation_scope(self._task_operation)):
+                  operation_scope(self._task_operation), origin_scope(self._origin)):
                 self.results[index] = self._branch_executor().execute_action(
                     branch, raise_on_error=self._strict, _validated=True)
             self._failures[index] = self._module.recorded_failures()

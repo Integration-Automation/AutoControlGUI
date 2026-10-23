@@ -18,7 +18,7 @@ from __future__ import annotations
 import os
 import threading
 from pathlib import Path
-from typing import Iterable, Mapping, Optional, Tuple
+from typing import Any, Iterable, Mapping, Optional, Tuple
 
 from je_auto_control.utils.path_guard.path_guard import (
     PathNotAllowedError, _canonical, _is_within,
@@ -46,7 +46,9 @@ class PathPolicy:
         self._static: Tuple[Path, ...] = tuple(_canonical(root) for root in roots)
         self._use_client_roots = bool(use_client_roots)
         self._client: Tuple[Path, ...] = ()
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+        self._origin_witness: Any = None
+        self._origin_closed = False
 
     @classmethod
     def from_env(cls, environ: Optional[Mapping[str, str]] = None) -> "PathPolicy":
@@ -77,7 +79,34 @@ class PathPolicy:
             return
         resolved = tuple(_canonical(root) for root in roots)
         with self._lock:
+            if self._origin_closed:
+                raise PathNotAllowedError("origin path policy has retired")
+            if self._origin_witness is not None:
+                self._origin_witness.update(self._static + resolved)
             self._client = resolved
+
+    def fork_for_client(self) -> PathPolicy:
+        """Retain configured roots while isolating each client's reported workspace roots."""
+        return PathPolicy(self._static, use_client_roots=self._use_client_roots)
+
+    def managed_origin(self) -> str | None:
+        """Issue a private live ceiling only on an explicit managed tool operation."""
+        if not self.enabled:
+            return None
+        with self._lock:
+            if self._origin_closed:
+                raise PathNotAllowedError("origin path policy has retired")
+            if self._origin_witness is None:
+                from je_auto_control.utils.agent_runtime.origin_policy import OriginWitness
+                self._origin_witness = OriginWitness(self._static + self._client)
+            return str(self._origin_witness.identifier)
+
+    def revoke_managed_origin(self) -> None:
+        """Retire a replaced/disconnected source so late replies cannot renew its authority."""
+        with self._lock:
+            self._origin_closed = True
+            if self._origin_witness is not None:
+                self._origin_witness.revoke()
 
     def roots(self) -> Tuple[Path, ...]:
         """Every root currently in force, configured ones first."""

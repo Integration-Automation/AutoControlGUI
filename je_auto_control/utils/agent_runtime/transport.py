@@ -31,6 +31,9 @@ def request_json(url: str, *, body: Any = None, token: str | None = None,
         try:
             headers = {"Authorization": f"Bearer {token}"} if token else {}
             if token:
+                from je_auto_control.utils.agent_runtime.origin_policy import HEADER as ORIGIN_HEADER, current_origin
+                if current_origin() is not None:
+                    headers[ORIGIN_HEADER] = str(current_origin())
                 from urllib.parse import urlparse
                 from je_auto_control.utils.agent_runtime.delegation import HEADER, sign_principal
                 from je_auto_control.utils.rbac.authorization import current_authorization

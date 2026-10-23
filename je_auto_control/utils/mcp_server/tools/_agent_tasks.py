@@ -6,6 +6,7 @@ from concurrent.futures import CancelledError
 
 from je_auto_control.utils.agent_runtime.commands import CATALOG
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.origin_policy import origin_scope
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
 from je_auto_control.utils.mcp_server.context import ToolCallContext
 from je_auto_control.utils.mcp_server.tools._base import MCPTool, NON_DESTRUCTIVE, READ_ONLY
@@ -25,7 +26,8 @@ def _handler(command: str) -> Any:
             if ctx is None or not ctx.session_id:
                 raise AgentTaskError("managed MCP tasks require an authenticated caller or a live session")
             identity = AuthorizationContext("mcp:" + ctx.session_id, "operator")
-        with authorization_scope(identity), cancellation_scope(token):
+        origin = ctx.path_policy.managed_origin() if ctx is not None and ctx.path_policy is not None else None
+        with authorization_scope(identity), cancellation_scope(token), origin_scope(origin):
             try:
                 return function(**arguments)
             except CancelledError:

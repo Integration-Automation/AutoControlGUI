@@ -42,6 +42,7 @@ from je_auto_control.utils.mcp_server.tools._validation import (
     undeclared_arguments, validate_arguments,
 )
 from je_auto_control.utils.mcp_server._argument_policy import ArgumentPolicy
+from je_auto_control.utils.mcp_server._origin_policies import OriginPoliciesMixin
 from je_auto_control.utils.mcp_server._client_requests import (
     ClientRequestMixin,
 )
@@ -64,7 +65,7 @@ from je_auto_control.utils.mcp_server._protocol import (
 WORKER_DRAIN_TIMEOUT = 10.0
 
 
-class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
+class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin, OriginPoliciesMixin):
     """JSON-RPC 2.0 MCP server with a configurable tool registry."""
 
     def __init__(self, tools: Optional[List[MCPTool]] = None,
@@ -89,6 +90,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         self._log_bridge = log_bridge
         #: Path roots and env:// allowlist for tool arguments; off unless the
         #: environment configures them. Assign another to change it.
+        self._init_origin_policies()
         self.argument_policy = ArgumentPolicy.from_env()
         self._stop = threading.Event()
         self._initialized = False
@@ -224,6 +226,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         """
         if connection_id is None:
             return
+        self._forget_origin_policy(connection_id)
         with self._caps_lock:
             self._client_caps_by_conn.pop(connection_id, None)
         self._end_listeners(lambda conn: conn == connection_id, graceful=False)
@@ -255,6 +258,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
     def stop(self) -> None:
         """Request the stdio loop to exit at its next iteration."""
         self._stop.set()
+        self._close_client_origin_policies()
 
     def serve_stdio(self, stdin: Optional[TextIO] = None,
                     stdout: Optional[TextIO] = None) -> None:
@@ -292,6 +296,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
             # EOF is still running, and its reply has nowhere to go once the
             # writer is swapped back.
             self._join_workers()
+            self._close_client_origin_policies()
             self.end_subscriptions(stdio=True)
             self._detach_log_bridge_if_configured()
             self._notifier = prior_notifier
@@ -633,7 +638,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         if violation is not None:
             raise _InvalidToolArguments(f"Invalid arguments for {name}: {violation}")
         try:
-            arguments = self.argument_policy.apply(name, tool.input_schema, arguments)
+            arguments = self._active_argument_policy.apply(name, tool.input_schema, arguments)
         except AutoControlException as error:
             raise _InvalidToolArguments(f"Invalid arguments for {name}: {error}") from error
         if self._rate_limiter is not None and not self._rate_limiter.try_acquire():
@@ -711,7 +716,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin):
         return ToolCallContext(
             request_id=msg_id, progress_token=progress_token,
             notifier=self._notifier,
-            path_policy=self.argument_policy.path_policy,
+            path_policy=self._active_argument_policy.path_policy,
             session_id=f"{self._agent_session}:{self._connection_id}",
         )
 

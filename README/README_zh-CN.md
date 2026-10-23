@@ -7,6 +7,8 @@ Agent 工具调用经 `executor.execute_one(name, arguments)` 返回原始结果
 
 受管技能将已验证的语义流程录制为不可变候选。`manage_agent_skill` 可预览具有类型的参数、执行独立验证任务，并在明确审核该候选的成功证据后发布编号版本。定位器修复会产生须重新验证的候选；任务固定使用原版本与摘要。AC／MCP／REST／CLI 与 Agent Tasks 的 Actions 菜单提供相同操作。
 
+受管任务保留来源路径策略：移除根目录后，后续动作、事件触发及技能验证会受阻。MCP 客户端根目录按会话隔离，来源授权结束后撤销；主机配置的固定策略则在明确更换前保留。服务停止会取消实际执行中的工作，包括取得输入前的模型初始化，尚未启动的投递则持续保存。
+
 实验性的[受管 Agent 任务](../docs/AGENT_TASKS.md)提供所有者范围内的提交、观察、动作、验证、
 暂停、恢复、取消、控制权代次、持久化回执、WorkQueue 派送与本机 Ollama 推理。
 Python、AC、MCP、REST、CLI 与 Agent 任务面板共用后台服务，明确执行
@@ -620,3 +622,5 @@ helper 隔离仍待完成。设备暂停与序号回读仍未验证；受控 soc
 - **主页**：https://github.com/Integration-Automation/AutoControlGUI
 - **PyPI**：https://pypi.org/project/je_auto_control/
 - **文档**：https://autocontrol.readthedocs.io/en/latest/
+
+旧式 MCP 动作包装、并行分支及本机 DAG worker 也会保留相同的来源限制。

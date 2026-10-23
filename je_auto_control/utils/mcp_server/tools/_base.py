@@ -142,9 +142,14 @@ class MCPTool:
         actions (``ac_execute_actions``, the circuit / bulkhead / saga
         tools) used to leave its variables in the module executor for the
         next call, possibly another client's.
+
+        A source path policy follows managed submissions through legacy wrappers.
+        Task-aware dispatch resolves this lazily carried policy's private metadata.
         """
         from je_auto_control.utils.script_vars.execution import execution_scope
-        with execution_scope():
+        from je_auto_control.utils.agent_runtime.origin_policy import source_policy_scope
+        policy = getattr(ctx, "path_policy", None)
+        with execution_scope(), source_policy_scope(policy):
             if ctx is not None and _handler_accepts_ctx(self.handler):
                 return self.handler(ctx=ctx, **arguments)
             return self.handler(**arguments)

@@ -3104,3 +3104,5 @@ No compatibility changes.
 - Managed input now requires explicit host review after an unfinished crash witness; approved workspace applications survive task input cleanup.
 
 - Add immutable managed skill recording, typed parameters, candidate validation and explicitly reviewed version publication. Legacy SkillLibrary is unchanged.
+
+- Managed tasks retain live origin ceilings. MCP client roots are session-local and no longer replace the shared HTTP resource workspace. Worker shutdown cancels model initialization before lease acquisition.

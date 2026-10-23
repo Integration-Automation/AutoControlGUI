@@ -17,7 +17,9 @@ def route(operation: str) -> Callable[..., Any]:
         if runtime is None:
             return 503, {"error": "agent runtime is not enabled on this server"}
         try:
-            return 200, dispatch(runtime, operation, context.body, context.query_first("task_id"))
+            from je_auto_control.utils.agent_runtime.origin_policy import origin_scope
+            with origin_scope(getattr(context, "agent_origin", None)):
+                return 200, dispatch(runtime, operation, context.body, context.query_first("task_id"))
         except AgentTaskError as error:
             return 409, {"error": str(error)}
         except CancelledError:

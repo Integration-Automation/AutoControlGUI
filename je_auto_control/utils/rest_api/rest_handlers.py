@@ -30,6 +30,7 @@ class RouteContext:
     body: Optional[Any]
     client_ip: str
     agent_runtime: Any = None
+    agent_origin: Optional[str] = None
 
     def query_params(self) -> Dict[str, List[str]]:
         return parse_qs(self.query) if self.query else {}

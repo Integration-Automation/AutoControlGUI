@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import secrets
 import threading
+from contextvars import Context
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -54,9 +55,11 @@ class AgentRuntimeService:
             raise
         self._server = server
         self._jobs.start_pending()
-        self._maintenance = threading.Thread(target=self._maintain, name="AgentLeaseWatch", daemon=True)
+        self._maintenance = threading.Thread(target=lambda: Context().run(self._maintain),
+                                             name="AgentLeaseWatch", daemon=True)
         self._maintenance.start()
-        self._triggers = threading.Thread(target=self._poll_triggers, name="AgentTriggerWatch", daemon=True)
+        self._triggers = threading.Thread(target=lambda: Context().run(self._poll_triggers),
+                                          name="AgentTriggerWatch", daemon=True)
         self._triggers.start()
         return self.status()
 
