@@ -12,6 +12,7 @@ from je_auto_control.utils.agent_runtime.browser_commands import (
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentHumanReview
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.agent_runtime.browser_continuity import require_browser_continuity
 
 
 def _open_session(origins: tuple[str, ...], *, transfer: bool = False) -> Any:
@@ -73,6 +74,10 @@ class BrowserTarget:
             self.cleanup()
             raise AgentTaskError("managed WebRunner startup failed; check installed SDK/browser readiness") from None
         return True, ""
+
+    def check_resume(self, spec: AgentTaskSpec, receipts: list[dict]) -> None:
+        """Refuse a finite prefix after context retirement; an unchanged live context remains usable."""
+        require_browser_continuity(spec, receipts, self._session is not None and self._spec == spec)
 
     def observe(self) -> dict:
         """Flatten semantic main/frame elements into observation-local indexes; no values or image files."""

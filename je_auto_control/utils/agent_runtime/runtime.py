@@ -251,6 +251,9 @@ class AgentRuntime:
         self._check_budget(row["id"])
         spec = AgentTaskSpec.from_dict(row["spec"])
         self._token(row["id"]).checkpoint()
+        check_resume = getattr(self._target(row), "check_resume", None)
+        if callable(check_resume):
+            check_resume(spec, self.store.actions(row["id"]))
         if row["id"] not in self._leases:
             lease = self.broker.acquire(spec.target, row["id"])
             with self._mutex:

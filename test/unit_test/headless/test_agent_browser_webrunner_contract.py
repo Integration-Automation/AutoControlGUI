@@ -252,3 +252,33 @@ def assert_real_sdk_download_cancellation(root, origin):
         assert not list(root.glob(".agent-*.part"))
     finally:
         target.cleanup()
+
+
+def test_owned_browser_helper_refuses_cold_skill_prefix_before_relaunch(tmp_path, monkeypatch):
+    reviewed = AgentTargetProfile(name="contract-browser", kind="browser",
+        allowed_tools=("AC_browser_navigate", "AC_browser_fill", "AC_browser_read"),
+        settings={"allowed_origins": ["https://allowed.test"]})
+    monkeypatch.setattr(sys.modules[__name__], "configuration", lambda: reviewed)
+    adapter = owned_target(tmp_path, monkeypatch)
+    runtime = AgentRuntime(tmp_path / "runtime.sqlite", targets={})
+    try:
+        runtime.target_profiles.control("register", reviewed.to_dict())
+        steps = [{"tool": "AC_browser_navigate", "arguments": {"url": "https://allowed.test/form"}},
+                 {"tool": "AC_browser_fill", "arguments": {"selector": "#field", "value": "reviewed"}},
+                 {"tool": "AC_browser_read", "arguments": {"operation": "value", "selector": "#field"},
+                  "expect_result": "reviewed"}]
+        handle = runtime.submit({"goal": "preserve browser continuity", "target": reviewed.name, "mode": "skill",
+            "allowed_tools": list(reviewed.allowed_tools), "options": {"allowed_origins": ["https://allowed.test"]},
+            "actions": steps, "success_criteria": [{"kind": "actions_complete"}]})
+        for step in steps[:2]:
+            observed = runtime.observe(handle.task_id)
+            runtime.act(handle.task_id, {**step, "observation_id": observed.observation_id})
+        runtime.pause(handle.task_id)
+        assert adapter._channel is None
+        runtime.resume(handle.task_id)
+        outcome = run_task(runtime, handle.task_id)
+        assert outcome.state == "waiting_user" and "browser context" in outcome.reason
+        assert adapter._channel is None and adapter._resource is None
+        assert len(runtime.store.actions(handle.task_id)) == 2
+    finally:
+        runtime.close()

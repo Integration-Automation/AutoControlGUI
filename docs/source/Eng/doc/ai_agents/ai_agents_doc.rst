@@ -332,3 +332,14 @@ Concurrent budget readers sample clocks inside the exclusive database transactio
 task timeouts when readers acquire locks in a different order. Actual clock rollback remains fail-closed.
 GUI/MCP/REST/CLI share these repaired client and API contracts. Production checkouts and existing
 native/browser/device/24-hour acceptance pauses remain unchanged.
+
+Browser skill context continuity
+----------------------------------------------------------------------
+
+A finite browser skill's verified prefix now requires its original live browser/helper context.
+After pause, cleanup, helper loss or runtime restart, retained action history cannot prove that the
+form still contains its previous values. Continuation enters human review before launching a replacement
+helper or sending the next action. Review the remaining steps and create a new task explicitly.
+Pausing before any retained attempt and attempts reviewed as failed/not-applied permit a fresh start.
+External owners can reobserve a new context and plan fresh scoped actions; ordinary uninterrupted skills
+continue on their existing session. Restoring authenticated/draft browser state remains open work.

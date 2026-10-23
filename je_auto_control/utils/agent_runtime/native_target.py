@@ -19,6 +19,7 @@ from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
 from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile
 from je_auto_control.utils.agent_runtime.native_channel import OwnedChannel
 from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock
+from je_auto_control.utils.agent_runtime.browser_continuity import require_browser_continuity
 
 
 def _desktop_lock_path() -> Path:
@@ -74,6 +75,12 @@ class NativeDesktopTarget:
             context = current_operation()
             self._channel = self._launch(context.checkpoint if context is not None else lambda: None, self._control)
         return self._channel
+
+    def check_resume(self, spec: AgentTaskSpec, receipts: list[dict]) -> None:
+        """Fence browser prefixes before launching a replacement helper; other adapters retain their own recovery."""
+        if self._profile is not None and self._profile.kind == "browser":
+            connected = self._channel is not None and not self._channel.retired
+            require_browser_continuity(spec, receipts, connected)
 
     def _launch(self, check: Callable[[], None], control: Callable[[str], None] | None = None) -> OwnedChannel:
         self._channel = OwnedChannel(self._argv, on_control=control)

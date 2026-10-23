@@ -494,3 +494,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-14 | 2026-10-24 | Rooted WebRunner browser transfers | #done #agent #transfers | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-15 | 2026-10-24 | Runtime authority, exports and budget race closure | #done #agent #contracts | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-16 | 2026-10-24 | Fence retired browser skill contexts | #done #agent #recovery | [2026-10-c](2026-10-c.md) |

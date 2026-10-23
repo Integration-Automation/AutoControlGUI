@@ -1,5 +1,7 @@
 # Capability matrix
 
+Browser continuity: a retained finite prefix requires the original live SDK/helper context. Reproduced pause/restart empty-form submission is refused before replacement startup; history and explicit review remain available. Source-to-source real SDK/owned-helper tests verify the fence. Authenticated/draft state restoration remains open; native evidence remains separate.
+
 Runtime contract closure: versioned API names now resolve consistently, all shipped commands appear in IDE stubs, local authority forwarding stays on explicit loopback runtime calls, and reordered concurrent budget readers cannot cause false clock rollback. Evidence uses deterministic transaction ordering, fake HTTP and owned loopback; native/device/browser evidence remains separate.
 
 Browser file transfers: experimental; explicit roots and exact origins, byte-only uploads (4 MiB), complete atomic downloads (16 MiB), no overwrite, SHA256 and independent manifests. Evidence uses fake engines, real WebRunner SDK with owned helper/loopback, cancellation and offscreen GUI tests. Deployment/native evidence remains unrecorded.

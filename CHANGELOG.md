@@ -1,5 +1,7 @@
 # Changelog
 
+Experimental browser recovery now refuses a finite skill prefix when its original context has retired. The shared activation gate runs before helper replacement/input ownership, enters human review and retains history; users review remaining steps into a new task. Uninterrupted sessions, fresh starts and external reobservation remain supported. This closes a reproduced empty-form submission after pause/restart; it does not implement browser state restoration.
+
 Fix generic HTTP transport forwarding local principals/root witnesses: only explicit validated local runtime client calls delegate metadata. Complete versioned API exports and shipped command stubs, including recovery/skills/browser operations; unknown postponed stub types follow the existing Any fallback. Sample persistent budget clocks after acquiring the database transaction to prevent concurrent readers from falsely expiring a task. Public task and GUI operation signatures remain compatible.
 
 Experimental: add rooted browser link/download/upload commands via je_web_runner transfer contract version 1. Add browser download_archive previews with independent manifest verification and inert GUI file examples. Browser URL scope checks run before dispatch; cancellation and authority errors retain control semantics. Existing core browser grants remain compatible without transfer support.

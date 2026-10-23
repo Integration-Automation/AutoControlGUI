@@ -77,5 +77,3 @@ def test_versioned_namespace_exposes_every_managed_task_public_api():
         assert getattr(core, name) is expected
         assert getattr(api, name) is expected
         assert getattr(je_auto_control, name) is expected
-
-
