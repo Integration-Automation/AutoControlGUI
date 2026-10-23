@@ -142,3 +142,7 @@ and per-session exclusion across databases. Native platform acceptance remains d
 Use ``draft_agent_workflow`` or ``agent-task draft`` to preview download/archive, CSV/XLSX form,
 cross-application transfer and workspace templates. Review the compiled scope, per-step read-back
 checks and completion conditions before submission. The Agent Tasks Actions menu exposes preview.
+
+Windows shared-desktop tasks require unlocked inactivity for sixty seconds. Physical input requests
+pause through an independent helper notice. ``stop_all_agent_tasks`` or ``agent-task stop-all`` cancels
+visible tasks. Other shared desktops need an activity adapter. Monotonic budget history survives restart.

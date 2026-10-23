@@ -135,3 +135,7 @@ Python、AC、MCP、REST、CLI 與 Agent 任務面板共用提交、觀察、動
 
 使用 ``draft_agent_workflow`` 或 ``agent-task draft`` 預覽下載歸檔、CSV/XLSX 填表、
 跨應用轉移與工作區範本；檢查權限範圍、逐步讀回及完成條件後提交。Agent 任務 Actions 提供預覽。
+
+Windows 共用桌面需解鎖並閒置 60 秒，實體鍵鼠活動經 helper 獨立通知主服務暫停。
+``stop_all_agent_tasks`` 或 ``agent-task stop-all`` 停止可見任務；其他共用桌面需活動 adapter。
+單調時間預算跨重啟保留，不因系統時間倒退而延長。

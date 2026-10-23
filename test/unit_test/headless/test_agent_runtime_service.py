@@ -63,6 +63,18 @@ def test_bridge_keeps_owner_identity(service):
             client.call("get", {"task_id": task["task_id"]})
 
 
+def test_emergency_stop_keeps_other_principals_tasks(service):
+    client, instance = service
+    with authorization_scope(AuthorizationContext("alice", "operator")):
+        left = client.call("submit", {"spec": spec()})
+    with authorization_scope(AuthorizationContext("bob", "operator")):
+        right = client.call("submit", {"spec": spec()})
+        result = client.call("stop_all", {})
+    assert {task["task_id"] for task in result["tasks"]} == {right["task_id"]}
+    assert instance.runtime.get(left["task_id"]).state == "queued"
+    assert instance.runtime.get(right["task_id"]).state == "cancelled"
+
+
 def test_viewer_cannot_become_local_operator(service):
     client, instance = service
     with authorization_scope(AuthorizationContext("reader", "viewer")):
@@ -75,6 +87,18 @@ def test_status_contains_no_credential(service):
     _client, instance = service
     metadata = json.loads((instance.directory / "agent_runtime.json").read_text(encoding="utf-8"))
     assert metadata["token"] not in json.dumps(instance.status())
+
+
+def test_abandoned_external_lease_expires_without_another_client_request(service):
+    import time
+    client, instance = service
+    task = client.call("submit", {"spec": {**spec(), "budget": {"wall_seconds": 1}}})
+    client.call("observe", {"task_id": task["task_id"]})
+    deadline = time.monotonic() + 4
+    while instance.runtime.get(task["task_id"]).state != "timed_out" and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert instance.runtime.get(task["task_id"]).state == "timed_out"
+    assert not instance.runtime._leases
 
 
 def test_second_runtime_cannot_recover_live_tasks(service):

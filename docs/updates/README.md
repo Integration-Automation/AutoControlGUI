@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261023-05 | 2026-10-23 | Gate shared desktop acquisition and preserve cancellation budgets | #done #agent #ownership | [2026-10-c](2026-10-c.md) |
 | U-20261023-04 | 2026-10-23 | Add reviewable managed workflow templates and semantic read-back | #done #agent #workflows | [2026-10-c](2026-10-c.md) |
 | U-20261023-03 | 2026-10-23 | Isolate native agent calls and retire owned input before transfer | #done #agent #runtime | [2026-10-c](2026-10-c.md) |
 | U-20261023-02 | 2026-10-23 | Add experimental managed task core and service surfaces | #done #agent #runtime | [2026-10-c](2026-10-c.md) |

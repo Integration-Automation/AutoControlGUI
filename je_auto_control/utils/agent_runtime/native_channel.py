@@ -12,7 +12,7 @@ import time
 import uuid
 from typing import Any, Callable, Sequence
 
-from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError
 from je_auto_control.utils.agent_runtime.models import detached, positive
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
 
@@ -22,13 +22,14 @@ _PACKET_LIMIT = 1_100_000
 class OwnedChannel:
     """One serial native RPC owner; late replies and expired generations cannot be reused."""
 
-    def __init__(self, argv: Sequence[str]) -> None:
+    def __init__(self, argv: Sequence[str], *, on_control: Callable[[str], None] | None = None) -> None:
         self._lock = threading.RLock()
         self._stop = threading.Event()
         self._replies: queue.Queue[Any] = queue.Queue(maxsize=32)
         self._outbound: queue.Queue[bytes] = queue.Queue(maxsize=2)
         self._retired = False
         self._job: Any = None
+        self._on_control = on_control
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform == "win32" else 0
         self._process = subprocess.Popen(  # nosec B603  # reason: trusted host factory supplies explicit argv
             list(argv), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -70,9 +71,18 @@ class OwnedChannel:
                     raise AgentTaskError("native helper closed its reply pipe")
                 if len(line) > _PACKET_LIMIT or not line.endswith(b"\n"):
                     raise AgentTaskError("native helper reply exceeds its bound")
-                self._emit(json.loads(line))
+                message = json.loads(line)
+                if isinstance(message, dict) and "control" in message:
+                    self._control(message["control"])
+                else:
+                    self._emit(message)
         except (OSError, ValueError) as error:
             self._emit(AgentTaskError(f"native helper protocol failed: {type(error).__name__}"))
+
+    def _control(self, value: Any) -> None:
+        if value != "physical_input" or self._on_control is None:
+            raise AgentTaskError("unexpected native control notification")
+        self._on_control(value)
 
     def _write(self) -> None:
         stream = self._process.stdin
@@ -140,7 +150,8 @@ class OwnedChannel:
                 self._event(reply["event"], on_event, check)
                 continue
             if "error" in reply:
-                raise AgentTaskError(str(reply["error"]))
+                error_type = AgentControlBusy if reply.get("error_type") == "AgentControlBusy" else AgentTaskError
+                raise error_type(str(reply["error"]))
             check()
             return detached(reply.get("result"))
         raise AgentTaskError("native helper deadline exhausted")

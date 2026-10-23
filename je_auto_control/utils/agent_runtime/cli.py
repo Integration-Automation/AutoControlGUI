@@ -15,7 +15,7 @@ def register_parser(subparsers: Any, handler: Callable[..., int]) -> None:
     parser = subparsers.add_parser("agent-task", help="Manage explicitly authorized agent tasks")
     operations = parser.add_subparsers(dest="agent_operation", required=True)
     for operation in ("start", "stop", "status", "submit", "list", "get", "observe", "act", "finish",
-                      "pause", "resume", "cancel", "draft"):
+                      "pause", "resume", "cancel", "draft", "stop-all"):
         item = operations.add_parser(operation)
         item.set_defaults(func=handler)
         if operation == "start":
@@ -26,7 +26,7 @@ def register_parser(subparsers: Any, handler: Callable[..., int]) -> None:
             from je_auto_control.utils.agent_runtime.workflow_specs import WORKFLOWS
             item.add_argument("workflow", choices=WORKFLOWS)
             item.add_argument("config", help="JSON workflow configuration")
-        elif operation not in {"list", "status", "stop"}:
+        elif operation not in {"list", "status", "stop", "stop-all"}:
             item.add_argument("task_id")
             if operation == "act":
                 item.add_argument("action", help="JSON grounded action request")
@@ -41,6 +41,8 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
         return api.agent_runtime_status()
     if operation == "stop":
         return api.stop_agent_runtime()
+    if operation == "stop-all":
+        return api.stop_all_agent_tasks()
     if operation == "submit":
         return api.submit_agent_task(_read(arguments.spec))
     if operation == "draft":
@@ -48,9 +50,12 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
         return {"draft": draft_agent_workflow(arguments.workflow, _read(arguments.config))}
     if operation == "list":
         return api.list_agent_tasks()
+    operations = {"observe": api.observe_agent_task, "finish": api.finish_agent_task}
+    if operation in operations:
+        return operations[operation](arguments.task_id)
     body: dict[str, Any] = {"task_id": arguments.task_id}
     if operation == "act":
-        body["action"] = _read(arguments.action)
+        return api.act_agent_task(arguments.task_id, _read(arguments.action))
     return AgentRuntimeClient().call(operation, body)
 
 

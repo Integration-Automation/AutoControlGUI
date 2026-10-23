@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from je_auto_control.utils.agent_runtime.runtime import AgentRuntime
+from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 def default_connection_path() -> Path:
@@ -25,6 +28,7 @@ class AgentRuntimeService:
         self._stop = threading.Event()
         self._connection = self.directory / "agent_runtime.json"
         self._generation = secrets.token_hex(16)
+        self._maintenance: threading.Thread | None = None
         from je_auto_control.utils.agent_runtime.jobs import BackgroundTasks
         self._jobs = BackgroundTasks(self.runtime)
         self.runtime.background = self._jobs
@@ -49,7 +53,16 @@ class AgentRuntimeService:
             raise
         self._server = server
         self._jobs.start_pending()
+        self._maintenance = threading.Thread(target=self._maintain, name="AgentLeaseWatch", daemon=True)
+        self._maintenance.start()
         return self.status()
+
+    def _maintain(self) -> None:
+        while not self._stop.wait(0.25):
+            try:
+                self.runtime.maintain()
+            except (AutoControlException, OSError, RuntimeError, ValueError, TypeError) as error:
+                autocontrol_logger.warning("agent lease maintenance needs review: %s", type(error).__name__)
 
     def status(self) -> dict[str, Any]:
         """Return inert service metadata; credentials never appear in status or logs."""
@@ -62,6 +75,11 @@ class AgentRuntimeService:
 
     def close(self) -> None:
         """Retire owned task input, listener and matching connection metadata."""
+        self._stop.set()
+        if self._maintenance is not None:
+            self._maintenance.join(timeout=3)
+            if self._maintenance.is_alive():
+                raise AgentTaskError("agent lease maintenance has not retired")
         self._jobs.close()
         self.runtime.close()
         if self._server is not None:

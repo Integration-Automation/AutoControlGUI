@@ -9,7 +9,7 @@ from je_auto_control.utils.agent_runtime import (
     AgentTaskBudget, AgentTaskError, AgentTaskHandle, AgentTaskResult, AgentTaskSpec,
     act_agent_task, agent_runtime_status, cancel_agent_task, finish_agent_task, get_agent_task,
     list_agent_tasks, observe_agent_task, pause_agent_task, resume_agent_task,
-    start_agent_runtime, stop_agent_runtime, submit_agent_task,
+    start_agent_runtime, stop_agent_runtime, submit_agent_task, stop_all_agent_tasks,
 )
 
 from je_auto_control.utils.callback.callback_function_executor import \
@@ -1379,7 +1379,7 @@ __all__ = [
     "act_agent_task", "agent_runtime_status", "cancel_agent_task", "finish_agent_task", "get_agent_task",
     "list_agent_tasks", "observe_agent_task", "pause_agent_task", "resume_agent_task", "start_agent_runtime",
     "submit_agent_task",
-    "stop_agent_runtime",
+    "stop_agent_runtime", "stop_all_agent_tasks",
     "SyncWorkspace", "SyncWorkspaceError", "WorkspaceSyncResult",
     "load_sync_profile", "LoadedSyncProfile",
     "SyncAssetBlob", "SyncAssetReference", "SyncAssetStore",

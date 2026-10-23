@@ -600,3 +600,7 @@ first. `AC_*` command names and the legacy CLI flags are public too (action file
 Workflow specs compile four reviewed templates into pinned skill actions. Receipt-backed captures
 and allowlisted text transforms cannot select commands or widen scope. A separate local-files target
 uses the same helper protocol without desktop input; semantic desktop steps refuse ambiguous controls.
+
+Presence-only Win32 hooks live inside the owned native helper. A control-notice channel remains
+independent of action replies; the host requests pause on a separate controller thread before retiring
+the input owner. Persistent monotonic budget high-water marks prevent clock rollback or restart resets.

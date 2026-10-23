@@ -1631,3 +1631,5 @@ english_word_dict.update({
 english_word_dict["agent_stop_service"] = 'Stop service'
 
 english_word_dict.update({"agent_workflow": "Workflow template", "agent_preview": "Preview workflow"})
+
+english_word_dict["agent_stop_all"] = "Stop all tasks"

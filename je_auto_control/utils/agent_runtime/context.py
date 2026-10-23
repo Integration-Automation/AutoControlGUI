@@ -17,6 +17,7 @@ class TaskOperation:
     spec: AgentTaskSpec
     checkpoint: Callable[[], None]
     owner: AuthorizationContext | None
+    takeover: Callable[[], None] | None = None
 
 
 _CURRENT: ContextVar[TaskOperation | None] = ContextVar("agent_task_operation", default=None)

@@ -92,3 +92,27 @@ def test_independent_databases_cannot_both_own_one_native_input_resource(tmp_pat
     finally:
         first.close()
         second.close()
+
+
+def test_wall_deadline_during_grounding_retires_before_input_cleanup(tmp_path):
+    helper = HELPER.replace("counter = 0", "counter = 0\nobservations = 0")
+    helper = helper.replace("elif operation=='observe':", "elif operation=='observe':\n"
+        "        observations += 1\n        if observations == 4: time.sleep(30)")
+    adapter = NativeDesktopTarget(argv=[sys.executable, "-u", "-c", helper], resource_path=tmp_path / "input.lock")
+    runtime = AgentRuntime(tmp_path / "one.sqlite", targets={"fixture": adapter})
+    try:
+        specification = spec()
+        specification["budget"] = {"wall_seconds": 2, "action_seconds": 5}
+        task = runtime.submit(specification)
+        frame = runtime.observe(task.task_id)
+        runtime.act(task.task_id, {"tool": "AC_increment", "arguments": {"hold": True},
+                                   "observation_id": frame.observation_id})
+        frame = runtime.observe(task.task_id)
+        with pytest.raises(AgentTaskError, match="budget"):
+            runtime.act(task.task_id, {"tool": "AC_increment", "observation_id": frame.observation_id})
+        assert runtime.get(task.task_id).state == "timed_out"
+        assert adapter._ledger.empty
+        assert adapter._channel is None
+        assert not runtime._leases
+    finally:
+        runtime.close()

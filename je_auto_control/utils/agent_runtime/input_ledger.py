@@ -14,7 +14,7 @@ def _key(event: dict) -> str:
     value = event.get("keycode")
     if isinstance(value, bool) or not isinstance(value, (str, int)):
         raise AgentTaskError("native input requires a concrete key code")
-    return json.dumps(value)
+    return ("unicode:" if event.get("unicode") else "key:") + json.dumps(value)
 
 
 class InputLedger:
@@ -54,10 +54,14 @@ class InputLedger:
         if not isinstance(shifted, bool):
             raise AgentTaskError("native modifier flag must be boolean")
         self._keys[key] = {"keycode": event["keycode"], "is_shift": shifted}
+        if event.get("unicode"):
+            self._keys[key]["unicode"] = True
 
     def _key_release(self, event: dict) -> None:
         if _key(event) not in self._keys:
             raise AgentTaskError("cannot release a key this task does not own")
+        if self._keys[_key(event)]["is_shift"] != event.get("is_shift", False):
+            raise AgentTaskError("cannot change a held key's modifier ownership")
 
     def _key_released(self, event: dict) -> None:
         self._key_release(event)

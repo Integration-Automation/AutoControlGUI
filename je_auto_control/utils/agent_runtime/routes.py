@@ -6,7 +6,7 @@ from concurrent.futures import CancelledError
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 
-OPERATIONS = ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown", "draft")
+OPERATIONS = ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown", "draft", "stop_all")
 
 
 def route(operation: str) -> Callable[..., Any]:
@@ -36,6 +36,8 @@ def dispatch(runtime: Any, operation: str, body: Any = None, task_id: str | None
         raise AgentTaskError("request body must be an object")
     if operation == "shutdown":
         return runtime.request_shutdown()
+    if operation == "stop_all":
+        return _stop_all(runtime, body)
     if operation == "submit":
         return _submit(runtime, body)
     if operation == "draft":
@@ -50,6 +52,12 @@ def _submit(runtime: Any, body: dict) -> dict:
     if getattr(runtime, "background", None) is not None:
         runtime.background.start(task.task_id)
     return {"task_id": task.task_id, "state": task.state}
+
+
+def _stop_all(runtime: Any, body: dict) -> dict:
+    if body:
+        raise AgentTaskError("stop_all requires an empty body")
+    return runtime.stop_all()
 
 
 def _draft(body: dict) -> dict:
@@ -67,7 +75,7 @@ def _task_operation(runtime: Any, operation: str, body: dict[str, Any]) -> dict[
     if operation == "act":
         return runtime.act(task_id, body["action"]).to_dict()
     handlers = {name: getattr(runtime, name) for name in OPERATIONS
-                if name not in {"submit", "act", "shutdown", "draft"}}
+                if name not in {"submit", "act", "shutdown", "draft", "stop_all"}}
     if operation not in handlers:
         raise AgentTaskError("unknown task operation")
     result = handlers[operation](task_id).to_dict()

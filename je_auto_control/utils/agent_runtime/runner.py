@@ -1,7 +1,6 @@
 """Autonomous skill/local-model driver over exactly the external task operations."""
 from __future__ import annotations
 
-import time
 from concurrent.futures import CancelledError
 from typing import Any
 
@@ -67,7 +66,7 @@ def _decision(runtime: Any, task_id: str, spec: AgentTaskSpec, backend: Any, obs
     for _attempt in range(spec.budget.retries + 1):
         runtime._token(task_id).checkpoint()
         row = runtime._row(task_id)
-        remaining = spec.budget.wall_seconds - (time.time() - row["started"])
+        remaining = runtime.clock.remaining(row)
         if remaining <= 0:
             runtime._check_budget(task_id)
         try:

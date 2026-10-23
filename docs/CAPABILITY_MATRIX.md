@@ -653,3 +653,7 @@ acceptance. Physical activity detection and desktop/mobile acceptance remain ope
 Four managed workflow templates have deterministic fake-application and local HTTP/file coverage;
 the local-files target also runs through a real owned helper without desktop input. Native application
 acceptance remains deferred. Read-back mismatch and uncertain submission prevent automatic continuation.
+
+Windows presence gating has synthetic hook-metadata, idle/lock/listener-loss and IPC takeover tests.
+No native hooks were installed during acceptance. Other shared-desktop activity adapters remain open.
+Persistent budget rollback/restart/regression handling and owner-scoped emergency stop have offline coverage.

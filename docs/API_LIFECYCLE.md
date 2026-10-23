@@ -502,3 +502,7 @@ AC, MCP, Builder or wire fields. Native providers remain lazy; controlled tests 
 Workflow additions: draft_agent_workflow compiles inspectable task specs; workflow_download,
 workflow_manifest, workflow_control and workflow_open require a managed operation scope.
 AC/MCP/Builder share their schemas; REST adds POST /agent/draft and CLI adds agent-task draft.
+
+stop_all_agent_tasks is additive across Python/AC/MCP/REST/CLI/GUI and respects task visibility.
+Shared-desktop acquisition now requires a supported physical activity adapter; Windows uses an owned
+presence-only hook. Budgets persist monotonic elapsed high-water marks without resetting on resume.

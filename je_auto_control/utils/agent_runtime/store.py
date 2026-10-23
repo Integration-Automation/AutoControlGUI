@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS agent_actions (
 CREATE INDEX IF NOT EXISTS agent_actions_task ON agent_actions(task_id,created);
 CREATE TABLE IF NOT EXISTS agent_control (
  target TEXT PRIMARY KEY, owner TEXT NOT NULL, generation INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_clocks (
+ task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE,
+ started REAL NOT NULL, last_seen REAL NOT NULL, spent REAL NOT NULL);
 """
 
 

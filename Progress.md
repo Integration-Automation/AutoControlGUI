@@ -3,9 +3,9 @@
 ## Agent 電腦接管與任務自動化
 
 `WIP` — 依 `docs/superpowers/plans/2026-10-23-agent-runtime.md` 交付受管任務。
-尚缺可靠真人活動偵測、全域停止／自動閒置接管、
+尚缺非 Windows 共用桌面的真人活動 adapter、Windows presence hook 原生驗收、
 更深入應用／瀏覽器互動及四條範本的原生應用驗收、
-持久化單調期限、原生能力診斷、origin 路徑政策生命週期、背景排程／事件綁定、
+原生能力診斷、origin 路徑政策生命週期、背景排程／事件綁定、
 結果不明的對帳與恢復、history/journal/產物連結、保留期限與遮罩擷取、
 跨平台／行動 adapter、MCP 逐步揭露、GUI 目標預覽、P8 多 agent/多機及 P9 技能版本。
 既有原生桌面與真機驗收暫緩限制沿用；新流程不新增付費依賴。

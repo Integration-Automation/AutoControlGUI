@@ -8,6 +8,11 @@ from typing import Any, Callable, Iterator
 _OBSERVER: ContextVar[Callable[[dict[str, Any]], None] | None] = ContextVar("native_input_observer", default=None)
 
 
+def has_input_observer() -> bool:
+    """Whether native input must expose individually owned press/release boundaries."""
+    return _OBSERVER.get() is not None
+
+
 @contextmanager
 def input_observer(callback: Callable[[dict[str, Any]], None]) -> Iterator[None]:
     """Bind an owned helper's observer without installing any global OS hook."""

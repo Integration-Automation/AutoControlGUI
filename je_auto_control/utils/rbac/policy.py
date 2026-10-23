@@ -72,7 +72,8 @@ REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
     ("POST", "/usb/acl/default"): _HOSTS,
 }
 REST_ROUTE_CAPABILITIES.update({("POST", f"/agent/{operation}"): _DRIVE
-                                for operation in ("submit", "observe", "act", "finish", "pause", "resume", "cancel")})
+                                for operation in ("submit", "observe", "act", "finish", "pause", "resume",
+                                                  "cancel", "draft", "stop_all")})
 
 #: Commands that need more than ``drive_input``. Every other command is
 #: covered by the capability of the surface that submitted the action list.

@@ -41,7 +41,7 @@ extension, not a model-supplied plugin. Native desktop calls run in a hidden, ow
 Cancellation retires the owned process tree; a host ledger releases only announced keys/buttons before
 control transfers. Independent databases share a per-session input lock. Window/control scope is checked
 again at input dispatch; pointer geometry and redacted window vision currently require Windows.
-Reliable physical activity monitoring, richer adapters remain in Progress.
+Additional platform activity adapters remain in Progress.
 
 ## External agent lifecycle
 
@@ -122,3 +122,29 @@ expected result with confirmed receipts. Control selectors require an explicit a
 accessible name; ambiguous, disabled or password controls are refused. Uncertain side effects stop
 without replay. These workflows have fake-application and local-file/HTTP acceptance; real
 application layouts and platform behavior still need the deferred native acceptance.
+
+## Human takeover and persistent budgets
+
+The default Windows shared-desktop helper installs owned, presence-only keyboard/mouse hooks before
+acquiring input. It requires the Default input desktop, no held physical key and at least 60 seconds
+of inactivity. Physical hook notifications contain only presence; no key values or pointer positions
+are recorded. Native injected-event flags distinguish automation from human presence. A physical
+notice crosses the private IPC independently of an active native call, requests host pause, kills
+the owned blocked helper if necessary, and cleans recorded input before transfer. Resume is explicit.
+An unavailable listener or noninteractive session refuses the next action. Queued workers defer busy
+acquisition without spending retries. Other shared-desktop platforms currently require a trusted
+activity adapter; their default acquisition reports unavailable rather than claiming idle detection.
+Windows native-hook acceptance is still deferred; tests use fake listeners and synthetic IPC notices.
+
+`stop_all_agent_tasks()`, `AC_agent_task_stop_all`, MCP, POST `/agent/stop_all`, CLI `agent-task stop-all`
+and the Agent Tasks Actions menu cancel visible tasks. Operators affect their own tasks; host admins
+can stop all owners. Active dispatch/cleanup can leave a task temporarily cancelling.
+
+Wall budgets persist monotonic anchors and elapsed high-water marks in SQLite. Wall-clock rollback
+and service restart cannot replenish them. A regressed monotonic clock expires an existing budget
+conservatively. Paused time counts; queued waiting before first acquisition does not. Native action
+and model deadlines remain independently bounded.
+
+The service checks active lease budgets and refreshed owner authority between requests, so an abandoned
+external client cannot retain input indefinitely. Tracked Unicode packets and modifiers participate
+in the same input ledger; cleanup never claims a modifier that was not part of the original press.

@@ -20,12 +20,13 @@ from je_auto_control.utils.agent_runtime.models import (
 from je_auto_control.utils.agent_runtime.ownership import ControlBroker, ControlLease
 from je_auto_control.utils.agent_runtime.policy import TaskPolicy, durable_payload
 from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock
+from je_auto_control.utils.agent_runtime.budget_clock import BudgetClock
 from je_auto_control.utils.agent_runtime.store import AgentTaskStore
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.dispatch import command_guard
-from je_auto_control.utils.rbac.authorization import AuthorizationContext, current_authorization
+from je_auto_control.utils.rbac.authorization import AuthorizationContext, AuthorizationError, current_authorization
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.script_vars.execution import execution_scope
 
@@ -50,6 +51,7 @@ class AgentRuntime:
         self.store = AgentTaskStore(path)
         self._owner_lock = RuntimeLock(str(self.store.path) + ".lock")
         self.broker = ControlBroker(self.store)
+        self.clock = BudgetClock(self.store)
         self._targets = dict(targets) if targets is not None else _default_targets()
         self._tokens: dict[str, CancellationToken] = {}
         self._executing: set[str] = set()
@@ -137,15 +139,26 @@ class AgentRuntime:
             if lease is not None:
                 self.broker.validate(lease)
 
-        with DeferredAuthorization(owner).scope(), cancellation_scope(self._token(row["id"])):
-            with (command_guard(guard), execution_scope(thaw(spec.inputs)),
-                  operation_scope(TaskOperation(spec, checkpoint, owner))):
-                yield policy
+        def takeover() -> None:
+            self.pause(row["id"])
+
+        task_id = row["id"]
+        self._executing.add(task_id)
+        try:
+            with DeferredAuthorization(owner).scope(), cancellation_scope(self._token(task_id)):
+                with (command_guard(guard), execution_scope(thaw(spec.inputs)),
+                      operation_scope(TaskOperation(spec, checkpoint, owner, takeover))):
+                    yield policy
+        except AuthorizationError:
+            self.cancel(task_id)
+            raise
+        finally:
+            self._executing.discard(task_id)
+            self._settle_control(task_id)
 
     def _check_budget(self, task_id: str) -> None:
         row = self._row(task_id)
-        limits = row["spec"]["budget"]
-        if row["started"] is not None and time.time() - row["started"] >= limits["wall_seconds"]:
+        if self.clock.remaining(row) <= 0:
             self._budget_failure(task_id, "task wall budget exhausted", "timed_out")
 
     def _budget_failure(self, task_id: str, reason: str, state: str) -> None:
@@ -169,6 +182,7 @@ class AgentRuntime:
             if not ready:
                 raise AgentTaskError(reason or "target is not ready")
             self.store.start(row["id"])
+            self._check_budget(row["id"])
         except (CancelledError, *_ERRORS):
             self._retire(row["id"])
             raise
@@ -220,7 +234,6 @@ class AgentRuntime:
         self._observations.pop(task_id, None)
         arguments = thaw(request.arguments)
         action_id = self.store.prepare(task_id, request.tool, durable_payload(arguments))
-        self._executing.add(task_id)
         try:
             self._token(task_id).checkpoint()
             self.store.settle(action_id, "dispatched")
@@ -234,7 +247,6 @@ class AgentRuntime:
                 self.store.update(task_id, "waiting_user", reason="action outcome requires review")
             raise
         finally:
-            self._executing.discard(task_id)
             self._settle_control(task_id)
 
     def finish(self, task_id: str) -> AgentTaskResult:
@@ -269,6 +281,14 @@ class AgentRuntime:
     def cancel(self, task_id: str) -> AgentTaskResult:
         """Request cancellation without closing another worker's native resources."""
         return self._request_stop(task_id, "cancelling", "cancelled")
+
+    def stop_all(self) -> dict[str, Any]:
+        """Cancel every visible task; operators cannot stop another principal's work."""
+        stopped = []
+        for result in self.list(1000):
+            if result.state not in TERMINAL:
+                stopped.append(self.cancel(result.task_id).to_dict())
+        return {"tasks": stopped}
 
     def _request_stop(self, task_id: str, pending: str, settled: str) -> AgentTaskResult:
         row = self._row(task_id)
@@ -328,6 +348,20 @@ class AgentRuntime:
                 raise AgentTaskError("runtime still has active input or cleanup")
         self._closed = True
         self._owner_lock.close()
+
+    def maintain(self) -> None:
+        """Expire abandoned leases and retire revoked owners even between client requests."""
+        for task_id in list(self._leases):
+            row = self.store.get(task_id)
+            if self.clock.remaining(row) <= 0:
+                self._request_stop(task_id, "cancelling", "timed_out")
+                continue
+            owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
+            try:
+                with DeferredAuthorization(owner).scope():
+                    pass
+            except AuthorizationError:
+                self.cancel(task_id)
 
     def request_shutdown(self) -> dict[str, Any]:
         """Stop only after every active input owner has completed cancellation and cleanup."""

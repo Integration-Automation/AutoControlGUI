@@ -12,6 +12,7 @@ _ID = {"task_id": {"type": "string", "minLength": 1}}
 
 # name: (function, JSON properties, required, read_only, host_management)
 CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
+    "AC_agent_task_stop_all": (api.stop_all_agent_tasks, {}, (), False, False),
     "AC_agent_task_draft": (draft_agent_workflow, {"workflow": {"type": "string", "enum": list(WORKFLOWS)},
                                                   "config": {"type": "object"}}, ("workflow", "config"), True, False),
     "AC_workflow_download": (workflow_download, {"url": {"type": "string"}, "directory": {"type": "string"},

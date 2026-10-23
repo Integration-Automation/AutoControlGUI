@@ -94,7 +94,7 @@ def _task_call(operation: str, task_id: str, extra: dict | None = None) -> dict[
     client = AgentRuntimeClient()
     try:
         return client.call(operation, {"task_id": task_id, **(extra or {})})
-    except CancelledError:
+    except (CancelledError, KeyboardInterrupt):
         try:
             with cancellation_scope(None):
                 client.call("pause", {"task_id": task_id}, timeout=3)
@@ -116,6 +116,11 @@ def resume_agent_task(task_id: str) -> dict[str, Any]:
 def cancel_agent_task(task_id: str) -> dict[str, Any]:
     """Cancel future operations and retire owned input."""
     return AgentRuntimeClient().call("cancel", {"task_id": task_id})
+
+
+def stop_all_agent_tasks() -> dict[str, Any]:
+    """Emergency-stop all tasks visible to this caller, retaining uncertain receipts for review."""
+    return AgentRuntimeClient().call("stop_all", {})
 
 
 def agent_runtime_status() -> dict[str, Any]:

@@ -11,7 +11,7 @@ from je_auto_control.utils.agent_runtime.workflow_desktop import workflow_contro
 from je_auto_control.utils.agent_runtime.api import (
     act_agent_task, agent_runtime_status, cancel_agent_task, finish_agent_task, get_agent_task,
     list_agent_tasks, observe_agent_task, pause_agent_task, resume_agent_task,
-    start_agent_runtime, stop_agent_runtime, submit_agent_task,
+    start_agent_runtime, stop_agent_runtime, submit_agent_task, stop_all_agent_tasks,
 )
 
 __all__ = [
@@ -19,7 +19,7 @@ __all__ = [
     "act_agent_task", "agent_runtime_status", "cancel_agent_task", "finish_agent_task", "get_agent_task",
     "list_agent_tasks", "observe_agent_task", "pause_agent_task", "resume_agent_task", "start_agent_runtime",
     "submit_agent_task",
-    "stop_agent_runtime",
+    "stop_agent_runtime", "stop_all_agent_tasks",
     "AgentActionRequest", "AgentActionResult", "AgentControlBusy", "AgentObservation", "AgentRuntime",
     "AgentTaskBudget", "AgentTaskError", "AgentTaskHandle", "AgentTaskResult", "AgentTaskSpec",
 ]

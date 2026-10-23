@@ -6,6 +6,7 @@ import hashlib
 import os
 import socket
 import sys
+import threading
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -44,6 +45,8 @@ class NativeDesktopTarget:
         self._resource: RuntimeLock | None = None
         self._channel: OwnedChannel | None = None
         self._ledger = InputLedger()
+        self._takeover: Any = None
+        self._takeover_sent = threading.Event()
 
     def _ensure(self) -> OwnedChannel:
         if self._resource is None:
@@ -51,8 +54,17 @@ class NativeDesktopTarget:
         if self._channel is None or self._channel.retired:
             if not self._ledger.empty:
                 raise AgentTaskError("native input cleanup is required before another operation")
-            self._channel = OwnedChannel(self._argv)
+            self._takeover_sent.clear()
+            self._channel = OwnedChannel(self._argv, on_control=self._control)
         return self._channel
+
+    def _control(self, _kind: str) -> None:
+        if self._takeover is None or self._takeover_sent.is_set():
+            return
+        self._takeover_sent.set()
+        # The reader must stay available while cancellation/cleanup retires
+        # its channel; it cannot join itself from a control notification.
+        threading.Thread(target=self._takeover, name="AgentTakeover", daemon=True).start()
 
     def _request(self, operation: str, payload: dict) -> Any:
         context = current_operation()
@@ -69,6 +81,7 @@ class NativeDesktopTarget:
         if context is None or context.spec != spec:
             raise AgentTaskError("native target scope does not match its owner")
         owner = context.owner
+        self._takeover = context.takeover
         identity = {"user_id": owner.user_id, "role": owner.role,
                     "store_path": owner.store_path} if owner is not None else {}
         result = self._request("configure", {"spec": spec.to_dict(), "owner": identity})

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
+import threading
 from contextlib import ExitStack
 from typing import Any
 
@@ -31,16 +32,26 @@ class NativeWorker:
         self._owner: AuthorizationContext | None = None
         self._request_id = ""
         self._cleanup = False
+        self._activity: Any = None
+        self._control_event = threading.Event()
+        self._sink_lock = threading.Lock()
 
     def _reply(self, payload: dict) -> None:
         packet = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8") + b"\n"
         if len(packet) > _LIMIT:
             raise AgentTaskError("native response is too large")
-        self._sink.write(packet)
-        self._sink.flush()
+        with self._sink_lock:
+            self._sink.write(packet)
+            self._sink.flush()
+
+    def _physical_takeover(self) -> None:
+        self._control_event.wait()
+        self._reply({"control": "physical_input"})
 
     def _input(self, event: dict) -> None:
         if not self._cleanup:
+            if self._activity is not None:
+                self._activity.check()
             self._target.validate_input(event)
         self._reply({"id": self._request_id, "event": event})
         line = self._source.readline(_LIMIT + 1)
@@ -61,7 +72,8 @@ class NativeWorker:
                 result = self._dispatch(request["operation"], request["payload"])
                 self._reply({"id": self._request_id, "result": durable_payload(result)})
             except (AutoControlException, OSError, RuntimeError, TypeError, ValueError, LookupError) as error:
-                self._reply(durable_payload({"id": self._request_id, "error": f"{type(error).__name__}: {error}"}))
+                self._reply(durable_payload({"id": self._request_id, "error": f"{type(error).__name__}: {error}",
+                                             "error_type": type(error).__name__}))
 
     def _dispatch(self, operation: str, payload: dict) -> Any:
         if operation == "cleanup":
@@ -76,16 +88,26 @@ class NativeWorker:
             raise AgentTaskError("native worker must be configured by its owner")
         with ExitStack() as stack:
             stack.enter_context(authorization_scope(self._owner))
-            stack.enter_context(command_guard(TaskPolicy(self._spec).check))
+            policy = TaskPolicy(self._spec)
+            stack.enter_context(command_guard(lambda name, arguments: self._guard(policy, name, arguments)))
             stack.enter_context(execution_scope(dict(self._spec.inputs)))
             stack.enter_context(input_observer(self._input))
-            stack.enter_context(operation_scope(TaskOperation(self._spec, lambda: None, self._owner)))
+            stack.enter_context(operation_scope(TaskOperation(self._spec, self._check_activity, self._owner)))
             return self._operation(operation, payload)
+
+    def _check_activity(self) -> None:
+        if self._activity is not None:
+            self._activity.check()
+
+    def _guard(self, policy: TaskPolicy, name: str, arguments: Any) -> None:
+        self._check_activity()
+        policy.check(name, arguments)
 
     def _operation(self, operation: str, payload: dict) -> Any:
         if operation == "configure":
             if self._spec is None:
                 raise AgentTaskError("native worker has no configured scope")
+            self._ready_activity()
             ready, reason = self._target.ready(self._spec)
             return {"ready": ready, "reason": reason}
         if operation == "observe":
@@ -94,8 +116,17 @@ class NativeWorker:
             return self._target.perform(payload["tool"], payload["arguments"])
         raise AgentTaskError("unknown native worker operation")
 
+    def _ready_activity(self) -> None:
+        if self._custom_target or self._spec is None or self._spec.target == "local-files":
+            return
+        if self._activity is None:
+            from je_auto_control.utils.agent_runtime.activity import desktop_activity_gate
+            self._activity = desktop_activity_gate(self._control_event.set)
+            threading.Thread(target=self._physical_takeover, name="AgentPresenceNotice", daemon=True).start()
+        self._activity.ready()
+
     def _release_owned(self, payload: dict) -> dict:
-        from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key
+        from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key, _release_unicode_unit
         from je_auto_control.wrapper.auto_control_mouse import release_mouse
         if set(payload) != {"keys", "buttons"}:
             raise AgentTaskError("cleanup payload is invalid")
@@ -105,7 +136,10 @@ class NativeWorker:
             with input_observer(self._input):
                 for key in reversed(payload["keys"]):
                     try:
-                        release_keyboard_key(key["keycode"], key["is_shift"], skip_record=True)
+                        if key.get("unicode"):
+                            _release_unicode_unit(key["keycode"])
+                        else:
+                            release_keyboard_key(key["keycode"], key["is_shift"], skip_record=True)
                     except AutoControlException as error:
                         failures.append(type(error).__name__)
                 for button in reversed(payload["buttons"]):
