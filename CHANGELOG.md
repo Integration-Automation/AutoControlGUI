@@ -13,6 +13,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- Add AgentHumanReview for managed dialog/unsaved-content gates; external observation also records
+  waiting_user and retires input. Windows UIA lookup requires the exact owned root window.
+  Managed file-dialog selection is exact, unique and PID-scoped; paths are canonicalized before typing.
+
 - New workflow drafts require a fresh post-submit confirmation and independently recheck archive files.
   Configure new_record_selector when an application retains a previous confirmation between batch rows.
   Add workflow_wait / AC_workflow_wait for bounded read-only settling; existing frozen plans stay pinned.

@@ -12,7 +12,7 @@ import time
 import uuid
 from typing import Any, Callable, Sequence
 
-from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError
+from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError, AgentHumanReview
 from je_auto_control.utils.agent_runtime.models import detached, positive
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
 
@@ -126,7 +126,7 @@ class OwnedChannel:
                 check()
                 request_id = uuid.uuid4().hex
                 self._send({"id": request_id, "operation": operation, "payload": detached(payload)})
-                return self._receive(request_id, time.monotonic() + timeout, check, on_event)
+                return self._receive(request_id, time.monotonic() + timeout, check, on_event, operation)
             except BaseException as primary:  # reason: every failed/cancelled RPC must retire its owned native process
                 try:
                     self.close()
@@ -135,7 +135,7 @@ class OwnedChannel:
                 raise
 
     def _receive(self, request_id: str, deadline: float, check: Callable[[], None],
-                 on_event: Callable[[dict], None] | None) -> Any:
+                 on_event: Callable[[dict], None] | None, operation: str = "operation") -> Any:
         while time.monotonic() < deadline:
             check()
             try:
@@ -150,11 +150,12 @@ class OwnedChannel:
                 self._event(reply["event"], on_event, check)
                 continue
             if "error" in reply:
-                error_type = AgentControlBusy if reply.get("error_type") == "AgentControlBusy" else AgentTaskError
+                error_type = {"AgentControlBusy": AgentControlBusy, "AgentHumanReview": AgentHumanReview}.get(
+                    str(reply.get("error_type")), AgentTaskError)
                 raise error_type(str(reply["error"]))
             check()
             return detached(reply.get("result"))
-        raise AgentTaskError("native helper deadline exhausted")
+        raise AgentTaskError(f"native helper {operation} deadline exhausted")
 
     def _event(self, event: Any, callback: Callable[[dict], None] | None, check: Callable[[], None]) -> None:
         if not isinstance(event, dict) or callback is None:

@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, Mapping, List
 
-from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentObservationStale
+from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentObservationStale, AgentHumanReview
 from je_auto_control.utils.agent_runtime.context import TaskOperation, operation_scope
 from je_auto_control.utils.agent_runtime.models import (
     AgentActionRequest, AgentActionResult, AgentObservation, AgentTaskHandle, AgentTaskResult,
@@ -216,6 +216,11 @@ class AgentRuntime:
                     yield policy
         except AuthorizationError:
             self.cancel(task_id)
+            raise
+        except AgentHumanReview as error:
+            state = self.store.get(task_id)["state"]
+            if state not in TERMINAL and state not in {"pausing", "cancelling"}:
+                self.store.update(task_id, "waiting_user", reason=str(error))
             raise
         finally:
             with self._mutex:
@@ -448,6 +453,7 @@ class AgentRuntime:
 
     def _retire(self, task_id: str) -> bool:
         self._observations.pop(task_id, None)
+        self._observation_times.pop(task_id, None)
         lease = self._leases.get(task_id)
         if lease is None:
             return True

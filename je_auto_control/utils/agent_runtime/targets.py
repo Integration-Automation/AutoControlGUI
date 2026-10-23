@@ -5,8 +5,9 @@ import base64
 import io
 import os
 from typing import Any
+from contextlib import nullcontext
 
-from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentHumanReview
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
 from je_auto_control.utils.agent_runtime.workspace_scope import bootstrap_allowed, focus_approved
 
@@ -53,17 +54,17 @@ class DesktopTarget:
             raise AgentTaskError("foreground target cannot be identified")
         elements = list_accessibility_elements(max_results=20, window_title=window[1])
         self._app_name = _application_name(elements, process_id, self._spec.apps)
+        from je_auto_control.utils.agent_runtime.dialog_scope import check_review
+        check_review(int(window[0]), window[1], elements, workspace=self._spec.options.get("workflow") == "workspace")
         return int(window[0]), window[1], int(process_id)
 
     def observe(self) -> dict[str, Any]:
         """Observe bounded scoped controls; optional images stay in the observation's memory only."""
         from je_auto_control.utils.accessibility.accessibility_api import list_accessibility_elements
-        try:
-            hwnd, title, pid = self._check_foreground()
-        except AgentTaskError:
-            if bootstrap_allowed(self._spec):
-                return {"identity": "approved-window-bootstrap", "elements": [], "state": "waiting_for_window"}
-            raise
+        window = self._observation_window()
+        if window is None:
+            return {"identity": "approved-window-bootstrap", "elements": [], "state": "waiting_for_window"}
+        hwnd, title, pid = window
         controls = list_accessibility_elements(max_results=200, window_title=title)
         elements: list[dict[str, Any]] = []
         for item in controls:
@@ -83,6 +84,16 @@ class DesktopTarget:
         if (current_hwnd, current_pid) != (hwnd, pid):
             raise AgentTaskError("foreground target changed during observation")
         return result
+
+    def _observation_window(self) -> tuple[int, str, int] | None:
+        try:
+            return self._check_foreground()
+        except AgentHumanReview:
+            raise
+        except AgentTaskError:
+            if bootstrap_allowed(self._spec):
+                return None
+            raise
 
     @staticmethod
     def _image(hwnd: int, elements: list[dict]) -> dict[str, Any]:
@@ -113,7 +124,9 @@ class DesktopTarget:
             arguments = {**arguments, "app_name": self._app_name}
         from je_auto_control.utils.agent_runtime.native_scope import control_owner_scope, check_window_arguments
         check_window_arguments(arguments, self._spec)
-        with control_owner_scope(pid):
+        from je_auto_control.utils.agent_runtime.file_dialog_scope import scoped_file_dialog
+        driver = scoped_file_dialog(self, hwnd, pid, arguments) if name == "AC_handle_file_dialog" else nullcontext()
+        with control_owner_scope(pid, hwnd), driver:
             return run_tool_call(name, arguments)
 
     def validate_input(self, event: dict) -> None:

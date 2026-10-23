@@ -470,3 +470,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-02 | [Task observation and action editor](2026-10-c.md#u-20261024-02) | #done #agent #gui |
 
 | U-20261024-03 | [Finite workflow progress and fresh evidence](2026-10-c.md#u-20261024-03) | #done #agent #workflow |
+
+| U-20261024-04 | [Dialog review and native window scope](2026-10-c.md#u-20261024-04) | #done #agent #scope |

@@ -143,6 +143,18 @@ def test_workspace_opens_only_explicit_documents_and_checks_window_readiness(app
     assert target.opened == [str(document)]
 
 
+def test_workspace_pauses_on_an_explicit_dirty_indicator_before_changing_layout(apps):
+    runtime, target = apps
+    target.values["Dirty"] = "yes"
+    task, result = execute(runtime, "workspace", {"apps": ["fixture"], "windows": [
+        {"window_title": "Editor", "position": "left", "unsaved_selector": selector("Dirty"),
+         "unsaved_value": "yes", "ready_selector": selector("Document"), "ready_state": {"read_only": False}}]})
+    assert result.state == "waiting_user"
+    receipts = runtime.store.actions(task.task_id)
+    assert len(receipts) == 2
+    assert not any(receipt["command"] == "AC_snap_window" for receipt in receipts)
+
+
 def test_download_archive_checks_content_and_writes_manifest(apps, tmp_path):
     runtime, _target = apps
     data = b"local fixture content"

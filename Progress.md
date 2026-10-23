@@ -6,7 +6,7 @@
 尚缺非 Windows 共用桌面的真人活動 adapter、Windows presence hook 原生驗收、
 更深入應用／瀏覽器互動及四條範本的原生應用驗收、
 原生能力診斷、
-已知對話框及未儲存內容的暫停 gate、
+非 Windows 的對話框及未儲存內容暫停 gate、
 跨平台／行動 adapter、MCP 逐步揭露、P8 多 agent／多機協調。
 既有原生桌面與真機驗收暫緩限制沿用；新流程不新增付費依賴。
 

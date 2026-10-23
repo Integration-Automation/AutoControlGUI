@@ -190,12 +190,22 @@ def _workspace(config: dict, policy: TaskPolicy) -> dict:
         actions.append(_action("AC_workflow_open", {"path": path}, True))
     for entry in _items(config, "windows"):
         actions.append(_focus(entry))
+        actions.extend(_dirty_document_check(entry))
         if entry.get("position"):
             actions.append(_action("AC_snap_window", {"title": entry["window_title"],
                                                         "position": entry["position"]}, {"moved": True}))
         actions.append(_action("AC_workflow_wait", {"selector": entry["ready_selector"], "state": True,
                                                     "expected": entry["ready_state"]}, entry["ready_state"]))
     return {"actions": actions, "options": {"workflow": "workspace", "approved_documents": launches}}
+
+
+def _dirty_document_check(entry: dict) -> list[dict]:
+    if not entry.get("unsaved_selector"):
+        return []
+    if "unsaved_value" not in entry:
+        raise AgentTaskError("an unsaved-content selector requires its explicit unsaved value")
+    return [{**_action("AC_workflow_control", {"operation": "get", "selector": entry["unsaved_selector"]}),
+             "expect_not_result": str(entry["unsaved_value"])}]
 
 
 def _validate_actions(spec: AgentTaskSpec) -> None:

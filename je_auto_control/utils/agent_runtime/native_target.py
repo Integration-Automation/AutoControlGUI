@@ -75,7 +75,7 @@ class NativeDesktopTarget:
 
     def _launch(self, check: Callable[[], None], control: Callable[[str], None] | None = None) -> OwnedChannel:
         self._channel = OwnedChannel(self._argv, on_control=control)
-        reply = self._channel.request("bootstrap", {}, timeout=5, check=check)
+        reply = self._channel.request("bootstrap", {}, timeout=15, check=check)
         if not isinstance(reply, dict) or type(reply.get("protocol")) is not int or reply["protocol"] != 1:
             self._channel.close()
             raise AgentTaskError("native helper bootstrap protocol is incompatible")

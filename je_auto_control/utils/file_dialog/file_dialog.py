@@ -10,6 +10,9 @@ real dialog; the default driver uses the window + keyboard wrappers.
 Imports no ``PySide6``.
 """
 import time
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Iterator
 from typing import Dict, Optional
 
 _DEFAULT_TITLES = {"open": "Open", "save": "Save As", "folder": "Select Folder"}
@@ -51,6 +54,18 @@ class FileDialogDriver:
         type_keyboard(resolve_key_name(str(key)))
 
 
+_DRIVER: ContextVar[Optional[FileDialogDriver]] = ContextVar("autocontrol_file_dialog_driver", default=None)
+
+
+@contextmanager
+def _driver_scope(driver: FileDialogDriver) -> Iterator[None]:
+    token = _DRIVER.set(driver)
+    try:
+        yield
+    finally:
+        _DRIVER.reset(token)
+
+
 def handle_file_dialog(path: str, *, action: str = "open",
                        window_title: Optional[str] = None,
                        timeout_s: float = 10.0, confirm_key: str = "enter",
@@ -63,7 +78,7 @@ def handle_file_dialog(path: str, *, action: str = "open",
     :returns: ``{"handled": bool, "title": str}``.
     """
     title = window_title or _DEFAULT_TITLES.get(action, _DEFAULT_TITLES["open"])
-    drv = driver or FileDialogDriver()
+    drv = driver or _DRIVER.get() or FileDialogDriver()
     if not drv.wait_window(title, float(timeout_s)):
         return {"handled": False, "title": title}
     drv.type_path(str(path))

@@ -12,3 +12,7 @@ class AgentControlBusy(AgentTaskError):
 
 class AgentObservationStale(AgentTaskError):
     """No action was dispatched because its observation is missing, expired or changed."""
+
+
+class AgentHumanReview(AgentTaskError):
+    """A dialog or unsaved-content gate requires explicit human review before continuing."""

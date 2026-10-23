@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Callable
 from concurrent.futures import CancelledError
 
-from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentObservationStale
+from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentObservationStale, AgentHumanReview
 
 OPERATIONS = ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown", "draft", "stop_all",
               "receipts", "reconcile", "prune", "trigger", "recover_target", "skill")
@@ -23,6 +23,8 @@ def route(operation: str) -> Callable[..., Any]:
         except AgentTaskError as error:
             if isinstance(error, AgentObservationStale):
                 return 409, {"error": str(error), "error_type": "stale_observation"}
+            if isinstance(error, AgentHumanReview):
+                return 409, {"error": str(error), "error_type": "human_review"}
             return 409, {"error": str(error)}
         except CancelledError:
             return 409, {"error": "agent operation was cancelled"}

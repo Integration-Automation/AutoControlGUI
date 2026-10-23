@@ -73,6 +73,9 @@ def _raise_reply_error(reply: dict) -> NoReturn:
     detail = payload.get("error", "operation failed") if isinstance(payload, dict) else "invalid JSON reply"
     if isinstance(payload, dict) and payload.get("error_type") == "stale_observation":
         raise AgentObservationStale(f"local HTTP observation changed: {detail}")
+    if isinstance(payload, dict) and payload.get("error_type") == "human_review":
+        from je_auto_control.utils.agent_runtime.errors import AgentHumanReview
+        raise AgentHumanReview(f"local HTTP human review required: {detail}")
     raise AgentTaskError(f"local HTTP operation failed ({reply.get('status', 0)}): {detail}")
 
 

@@ -32,6 +32,7 @@ def _hit_library() -> Any:
     user = ctypes.WinDLL("user32", use_last_error=True)
     user.WindowFromPoint.argtypes, user.WindowFromPoint.restype = [wintypes.POINT], wintypes.HWND
     user.GetAncestor.argtypes, user.GetAncestor.restype = [wintypes.HWND, wintypes.UINT], wintypes.HWND
+    user.GetForegroundWindow.argtypes, user.GetForegroundWindow.restype = [], wintypes.HWND
     return user
 
 
@@ -64,23 +65,47 @@ def _allowed_process(title: str, process: int | None, apps: tuple[str, ...]) -> 
 
 
 @contextmanager
-def control_owner_scope(process_id: int) -> Iterator[None]:
-    """Bound UIA pattern lookup in a serial helper to the verified foreground process."""
+def control_owner_scope(process_id: int, window_id: int) -> Iterator[None]:
+    """Bound UIA pattern lookup in a serial helper to the verified foreground window and process."""
     if sys.platform != "win32":
         yield
         return
     from je_auto_control.utils.accessibility.backends import get_backend
     backend: Any = get_backend()
     original = backend._find_raw
+    errors = getattr(sys.modules.get(type(backend).__module__), "_UIA_ERRORS",
+                     (OSError, AttributeError, ValueError, TypeError))
 
     def scoped(*args: Any, **kwargs: Any) -> Any:
-        raw = original(*args, **kwargs)
-        if raw is not None and int(raw.CurrentProcessId) != process_id:
-            raise AgentTaskError("native control belongs to another process")
-        return raw
+        try:
+            raw = original(*args, **kwargs)
+            if raw is not None:
+                _check_control_window(backend, raw, process_id, window_id)
+            return raw
+        except AgentTaskError:
+            raise
+        except errors as error:
+            raise AgentTaskError("native control window ownership is unavailable") from error
 
     backend._find_raw = scoped
     try:
         yield
     finally:
         backend._find_raw = original
+
+
+def _check_control_window(backend: Any, raw: Any, process_id: int, window_id: int) -> None:
+    user = _hit_library()
+    walker = backend._ensure_automation().ControlViewWalker
+    for _depth in range(64):
+        if raw is None or not raw:
+            break
+        if int(raw.CurrentProcessId) != process_id:
+            raise AgentTaskError("native control ancestor belongs to another process")
+        handle = int(raw.CurrentNativeWindowHandle or 0)
+        if handle:
+            if user.GetAncestor(handle, 2) != window_id or user.GetForegroundWindow() != window_id:
+                raise AgentTaskError("native control belongs to another window or focus changed")
+            return
+        raw = walker.GetParentElement(raw)
+    raise AgentTaskError("native control window ownership could not be proved")

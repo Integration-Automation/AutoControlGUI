@@ -69,7 +69,7 @@ def test_helper_bootstrap_has_a_separate_bound_without_extending_action_deadline
     try:
         task = runtime.submit(spec())
         runtime.observe(task.task_id)
-        assert calls[0] == ("bootstrap", 5)
+        assert calls[0] == ("bootstrap", 15)
         assert all(timeout == 1 for operation, timeout in calls if operation != "bootstrap")
     finally:
         runtime.close()
