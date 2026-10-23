@@ -19,6 +19,8 @@ class OriginPoliciesMixin:
         _concurrent_tools: Any
         connection_scope: Callable[..., Any]
         _refresh_roots_safely: Callable[[], None]
+        def _session_tool_view(self, *, stateless: bool | None = None) -> Any:
+            """Obtain the host's accepted availability view."""
 
         @property
         def _connection_id(self) -> Any:
@@ -48,6 +50,9 @@ class OriginPoliciesMixin:
 
     @property
     def _active_argument_policy(self) -> ArgumentPolicy:
+        captured = getattr(self._local, "dispatch_argument_policy", None)
+        if captured is not None:
+            return captured
         connection = self._connection_id
         base = self.argument_policy
         if connection is None or not base.path_policy.use_client_roots:
@@ -87,3 +92,23 @@ class OriginPoliciesMixin:
                     del self._local.root_refresh_policy
 
         return lambda: context.run(refresh)
+
+    def _capture_tool_worker(self, callback: Callable[[], None], *, view: Any = None) -> Callable[[], None]:
+        """Retain accepted authority and exact session policy/view across a fresh worker thread."""
+        context = copy_context()
+        policy = self._active_argument_policy
+        view = view if view is not None else self._session_tool_view()
+        scope = {"notifier": self._notifier, "writer": self._writer,
+                 "concurrent_tools": self._concurrent_tools, "connection_id": self._connection_id}
+
+        def run() -> None:
+            prior = (getattr(self._local, "dispatch_argument_policy", None),
+                     getattr(self._local, "accepted_tool_view", None))
+            with self.connection_scope(**scope):
+                self._local.dispatch_argument_policy, self._local.accepted_tool_view = policy, view
+                try:
+                    callback()
+                finally:
+                    self._local.dispatch_argument_policy, self._local.accepted_tool_view = prior
+
+        return lambda: context.run(run)

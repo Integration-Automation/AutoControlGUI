@@ -1,5 +1,19 @@
 # Public API lifecycle
 
+MCP asynchronous calls preserve the accepting caller's role, session, exact root policy and
+disclosure view; retired sessions and path policies reject late dispatch. Stateless async calls keep
+their fixed profile. HTTP tool-list changes reach all live session streams for plugin updates, while
+session enable/disable targets one owner and avoids duplicate delivery. Stream registration and HTTP
+headers share one lock so an early notification cannot precede the response headers.
+The metadata-only `benchmarks/mcp_discovery.py --repeats 20` benchmark records count, JSON bytes,
+warm in-process handshake, search and enable latency. The captured Windows/Python 3.14.4 run has
+732 permitted tools / 358,029 initial response bytes in full mode and 5 / 2,029 in progressive mode
+(99.43% fewer response bytes). Handshake is 58.263 / 47.439 ms; search median is 16.243 / 19.718 ms.
+Progressive enable median is 42.486 ms. These local timings exclude cold imports and native work.
+See the dated JSON report under `docs/benchmarks/`; argument-policy coverage limits remain in `Progress.md`.
+
+Retired PathPolicy.validate calls now raise PathNotAllowedError. Public signatures and tool names remain unchanged.
+
 MCP supports opt-in session disclosure: `je_auto_control_mcp --tool-mode progressive` starts
 with five discovery controls; `ac_mcp_tools_enable` / `ac_mcp_tools_disable` change only that session.
 `--tool-mode static --tool-profile ac_screen_size,ac_list_windows` supplies a fixed profile for clients

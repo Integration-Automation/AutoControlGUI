@@ -480,3 +480,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-07 | 2026-10-24 | Authorized MCP summary and schema discovery | #done #mcp #discovery | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-08 | 2026-10-24 | MCP session availability and snapshot pages | #done #mcp #sessions | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-09 | 2026-10-24 | MCP worker authority, notifications and measurements | #done #mcp #scope | [2026-10-c](2026-10-c.md) |

@@ -57,6 +57,7 @@ from je_auto_control.utils.mcp_server.http_sessions import (
     HttpSession, SESSION_HEADER, SessionRegistry, session_id_from_headers,
 )
 from je_auto_control.utils.mcp_server.server import MCPServer
+from je_auto_control.utils.mcp_server._tool_notifications import HTTPToolNotifications
 from je_auto_control.utils.rbac.authorization import (
     AuthorizationContext, authorization_scope, user_store_from_env,
 )
@@ -436,13 +437,15 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         # Claim the slot before writing headers, and write them under the
         # same lock, so an elicitation racing the handshake cannot land in
         # front of the status line.
-        if not session.attach_stream(emit):
-            self._send_json(
-                {"error": "session already has an open stream"}, status=409,
-            )
-            return
+        claimed = False
         try:
             with send_lock:
+                if not session.attach_stream(emit):
+                    self._send_json(
+                        {"error": "session already has an open stream"}, status=409,
+                    )
+                    return
+                claimed = True
                 self.send_response(200)
                 self.send_header("Content-Type",
                                   f"{_SSE_MEDIA_TYPE}; charset=utf-8")
@@ -459,7 +462,8 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
                 "MCP session stream %s ended: %r", session.id, error,
             )
         finally:
-            session.detach_stream(emit)
+            if claimed:
+                session.detach_stream(emit)
 
     def _heartbeat_until_closed(self, registry: SessionRegistry,
                                 session: HttpSession,
@@ -587,11 +591,19 @@ class _MCPHttpServer(ThreadingHTTPServer):
         self.sessions = SessionRegistry(
             on_drop=lambda session: mcp.forget_connection(session.id),
         )
+        self._tool_notifications = HTTPToolNotifications(mcp, self.sessions)
         # No sse_lock: SSE requests used to swap server-wide notifier/writer
         # state and needed serialising. They now bind that state to their own
         # thread via MCPServer.connection_scope, so concurrent SSE streams no
         # longer race — and, unlike the lock, plain POSTs can no longer read
         # another connection's notifier either.
+
+    def server_close(self) -> None:
+        """Detach the notification sink, including when binding failed during construction."""
+        notifications = getattr(self, "_tool_notifications", None)
+        if notifications is not None:
+            notifications.close()
+        super().server_close()
 
     def get_request(self) -> Tuple[Any, Any]:
         """Accept a connection, time-boxing any TLS handshake.

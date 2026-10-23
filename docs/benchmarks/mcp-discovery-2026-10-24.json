@@ -1,0 +1,47 @@
+{
+  "python": "3.14.4",
+  "platform": "Windows",
+  "repeats": 20,
+  "measurement": "warm in-process server construction, initialize and first tools/list; no native tools",
+  "modes": {
+    "full": {
+      "count": 732,
+      "response_json_bytes": 358029,
+      "descriptor_json_bytes": 336015,
+      "handshake_ms": 58.263,
+      "search": {
+        "median_ms": 16.243,
+        "p95_ms": 17.503
+      },
+      "search_response_json_bytes": 3186,
+      "enable": null
+    },
+    "progressive": {
+      "count": 5,
+      "response_json_bytes": 2029,
+      "descriptor_json_bytes": 1740,
+      "handshake_ms": 47.439,
+      "search": {
+        "median_ms": 19.718,
+        "p95_ms": 26.728
+      },
+      "search_response_json_bytes": 3186,
+      "enable": {
+        "median_ms": 42.486,
+        "p95_ms": 50.544
+      }
+    },
+    "static": {
+      "count": 6,
+      "response_json_bytes": 2291,
+      "descriptor_json_bytes": 1984,
+      "handshake_ms": 55.825,
+      "search": {
+        "median_ms": 22.188,
+        "p95_ms": 26.267
+      },
+      "search_response_json_bytes": 3186,
+      "enable": null
+    }
+  }
+}

@@ -71,6 +71,12 @@ class ToolView:
             raise ToolDiscoveryError("tool view is closed")
         return self._provider()
 
+    def check_open(self) -> None:
+        """Refuse a retired accepted call without querying or recreating any session metadata."""
+        with self._lock:
+            if self._provider is None:
+                raise ToolDiscoveryError("tool view is closed")
+
     def _visible(self, index: ToolIndex) -> tuple[str, ...]:
         names = index.names()
         return names if self._mode == "full" else tuple(name for name in names if name in self._enabled | CORE_TOOLS)

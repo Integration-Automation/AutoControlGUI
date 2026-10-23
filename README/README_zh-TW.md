@@ -1,5 +1,15 @@
 # AutoControl
 
+MCP 非同步呼叫會保留接受請求時的角色、session、原路徑政策與工具清單；session 或路徑政策
+結束後，延遲分派會被拒絕。非同步無狀態呼叫仍使用固定 profile。外掛工具清單變更會送達所有
+有效 HTTP session 串流；session 啟停只通知擁有者，並避免重複發送。串流註冊與 HTTP 標頭
+共用鎖，避免提早送出的通知破壞 HTTP 回應。
+純 metadata 的 `benchmarks/mcp_discovery.py --repeats 20` 量測工具數、JSON bytes、暖機後的
+程序內交握、搜尋與啟用耗時。Windows／Python 3.14.4 的紀錄中，完整模式初始有 732 個授權工具、
+358,029 bytes；逐步模式為 5 個、2,029 bytes，回應大小減少 99.43%。交握為 58.263／47.439 ms，
+搜尋中位數為 16.243／19.718 ms；逐步啟用中位數為 42.486 ms。此本機量測不含冷啟動匯入及原生操作。
+有日期的 JSON 紀錄位於 `docs/benchmarks/`；既有參數政策的涵蓋限制仍列於 `Progress.md`。
+
 MCP 可選擇 session 逐步揭露：`je_auto_control_mcp --tool-mode progressive` 初始只提供五個
 探索控制工具；`ac_mcp_tools_enable`／`ac_mcp_tools_disable` 只改變該 session。
 不會更新工具清單的客戶端可使用 `--tool-mode static --tool-profile ac_screen_size,ac_list_windows`；

@@ -7,9 +7,9 @@ import threading
 from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator
 
 from je_auto_control.utils.mcp_server.discovery import ToolCatalogMixin, ToolDiscoveryError
-from je_auto_control.utils.mcp_server.disclosure import ToolView, validate_tool_profile
+from je_auto_control.utils.mcp_server.disclosure import CORE_TOOLS, ToolView, validate_tool_profile
 from je_auto_control.utils.mcp_server._protocol import _MCPError
-from je_auto_control.utils.mcp_server.tools._base import read_only_env_flag
+from je_auto_control.utils.mcp_server.tools._base import MCPTool, read_only_env_flag
 from je_auto_control.utils.rbac.authorization import AuthorizationContext, current_authorization
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 
@@ -22,6 +22,8 @@ class DisclosureServerMixin(ToolCatalogMixin):
         _connection_id: Any
         _stateless_request: Any
         _notify_tools_list_changed: Callable[..., None]
+        _local: Any
+        _capture_tool_worker: Callable[..., Callable[[], None]]
 
     def _init_tool_disclosure(self) -> None:
         self._disclosure_lock = threading.RLock()
@@ -75,11 +77,13 @@ class DisclosureServerMixin(ToolCatalogMixin):
                         page_size=self._disclosure_page_size,
                         changed=lambda: self._notify_tools_list_changed(connection_id=connection))
 
-    def _session_tool_view(self) -> ToolView:
+    def _session_tool_view(self, *, stateless: bool | None = None) -> ToolView:
         with self._disclosure_lock:
             if self._disclosure_closed:
                 raise ToolDiscoveryError("tool disclosure is closed")
-            if self._stateless_request is not None:
+            if stateless is None:
+                stateless = self._stateless_request is not None
+            if stateless:
                 return self._new_tool_view(True)
             connection = self._connection_id
             if connection not in self._disclosure_views:
@@ -88,18 +92,39 @@ class DisclosureServerMixin(ToolCatalogMixin):
                 self._disclosure_views[connection] = self._new_tool_view(False)
             return self._disclosure_views[connection]
 
+    def _tool_worker_for_request(self, callback: Callable[[], None], params: dict) -> Callable[[], None]:
+        meta = params.get("_meta")
+        stateless = isinstance(meta, dict) and "io.modelcontextprotocol/protocolVersion" in meta
+        return self._capture_tool_worker(callback, view=self._session_tool_view(stateless=stateless))
+
     def _call_tool_catalog(self, view: ToolView | None = None) -> Callable[[], ToolView]:
         view = view if view is not None else self._session_tool_view()
         return lambda: view
 
-    def _require_disclosed_tool(self, name: str, view: ToolView | None = None) -> None:
+    def _accepted_tool_view(self) -> ToolView:
+        view = getattr(self._local, "accepted_tool_view", None)
+        view = view if view is not None else self._session_tool_view()
+        try:
+            view.check_open()
+        except ToolDiscoveryError as error:
+            raise _MCPError(-32602, str(error)) from error
+        return view
+
+    def _require_disclosed_tool(self, name: str, view: ToolView | None = None, tool: MCPTool | None = None) -> None:
         if self._disclosure_mode == "full" and not self._read_only_tools:
             return
         try:
+            if self._core_tool_available(tool):
+                (view if view is not None else self._session_tool_view()).check_open()
+                return
             with self._discovery_authority():
                 (view if view is not None else self._session_tool_view()).require_available(name)
         except ToolDiscoveryError as error:
             raise _MCPError(-32602, str(error)) from error
+
+    def _core_tool_available(self, tool: MCPTool | None) -> bool:
+        return (tool is not None and tool.name in CORE_TOOLS
+                and (not self._read_only_tools or tool.annotations.read_only))
 
     def _handle_tools_list(self, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """List one availability snapshot, preserving full-mode and stateless response compatibility."""

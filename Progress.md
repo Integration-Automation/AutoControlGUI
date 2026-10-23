@@ -3,7 +3,7 @@
 ## Agent 電腦接管與任務自動化
 
 `WIP` — 依使用者後續要求繼續執行
-`docs/superpowers/plans/2026-10-23-agent-runtime.md` 的完整交付，仍缺七大類工作：
+`docs/superpowers/plans/2026-10-23-agent-runtime.md` 的完整交付，仍缺六大類工作：
 
 1. **瀏覽器及應用深化**：受管瀏覽器 adapter、網站範圍、表單／下載與四條流程的實際應用驗收。
    瀏覽器一律使用 WebRunner（`je_web_runner`），本機來源 `D:\Codes\WebRunner`；
@@ -12,16 +12,15 @@
    以及 Windows 跨任務的持續 presence／閒置來源；原生證據仍缺。
 3. **Android／iOS**：指定裝置與 app 的受管 adapter、遠端動作逾時及清理確證。
 4. **多 agent／遠端多機**：P8 規劃／執行／驗證角色、DAG 派送及同資源序列／不同資源並行協調。
-5. **MCP 逐步揭露**：仍缺 G3 的跨功能政策／外掛通知稽核與 descriptor／JSON bytes／首次交握／搜尋啟用耗時量測；需保持任務權限及 root 一致。
-6. **能力與就緒診斷**：主機目標目前只有被動宣告；仍須權限、平台／裝置就緒及未驗證狀態的完整接合。
-7. **整體驗收**：全套測試與覆蓋率、文件／套件建置，以及 P0–P9 逐條現況稽核及跨功能回歸。
+5. **能力與就緒診斷**：主機目標目前只有被動宣告；仍須權限、平台／裝置就緒及未驗證狀態的完整接合。
+6. **整體驗收**：全套測試與覆蓋率、文件／套件建置，以及 P0–P9 逐條現況稽核及跨功能回歸。
 
 既有原生桌面與真機驗收暫緩限制沿用；新流程不新增付費依賴。
 
 ## 跨平台與 GUI 全面改版
 
 `TODO` — 重設 UI、重寫並優化 GUI、修正 Wayland 與函式庫問題、跨機器同步、
-深化全套 mypy、補齊 iOS／Android、MCP 逐步揭露、自愈定位器量測、動作日誌 codegen、
+深化全套 mypy、補齊 iOS／Android、自愈定位器量測、動作日誌 codegen、
 完整範例與文件。涉及 `gui/`、`linux_wayland/`、`android/`、`ios/`、
 `utils/{config_sync,remote_desktop,mcp_server,self_healing,codegen,executor}/` 與型別／文件驗證。
 核准設計：[跨平台自動化與 GUI 改版](docs/superpowers/specs/2026-10-02-platform-gui-modernization-design.md)。
@@ -34,7 +33,7 @@
 計畫 D1 仍缺 portal session 關閉／恢復、compositor 重啟的狀態與原生驗收、
 擷取結果與擁有者 context 的接合，以及原生 session 的重試／取消／停止控制。
 D2 仍缺 helper 隔離與半開交握資源回收；D3 的錄製／全域停止／Windows 原生崩潰證據仍缺，詳見計畫與下方生命週期待辦。
-計畫 E（Android／iOS）、H（型別深化與總驗收）尚未開始；G 的跨功能稽核及成本量測仍待完成。F 還缺：
+計畫 E（Android／iOS）、H（型別深化與總驗收）尚未開始。F 還缺：
 
 - **Remote Desktop 與 Script Builder 仍在啟動時建立**（預設開啟），啟動時間 2.6–2.7 秒裡大半是它們與門面匯入。
 - **F1 的遺留面板釋放**：擁有者直接建立的核心表單與 Remote Desktop 在關閉時仍保留 widget；需隨 F3 遷移直接控制項引用、執行中工作與連線生命週期，再啟用銷毀。

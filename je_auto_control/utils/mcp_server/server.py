@@ -136,6 +136,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin,
         self._subscriptions_lock = threading.Lock()
         self._listeners: Dict[Any, Any] = {}  # open subscriptions/listen, by (connection, id)
         self._listeners_lock = threading.Lock()
+        self._tool_change_sinks: Dict[Any, Callable[[Any], set[Any]]] = {}
         self._init_tool_disclosure()
 
     # --- connection-scoped state ------------------------------------------
@@ -431,9 +432,13 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin,
                 )
                 return
             writer(payload)
-        thread = threading.Thread(
-            target=worker, daemon=True, name=f"MCPCall-{msg_id}",
-        )
+        try:
+            target = self._tool_worker_for_request(worker, params)
+        except AutoControlException as error:
+            if writer is not None:
+                writer(_error_response(msg_id, -32602, str(error)))
+            return
+        thread = threading.Thread(target=target, daemon=True, name=f"MCPCall-{msg_id}")
         with self._workers_lock:
             self._workers = [live for live in self._workers if live.is_alive()]
             self._workers.append(thread)
@@ -631,7 +636,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin,
         if tool is None:
             raise _MCPError(-32602, f"Unknown tool: {name}")
         authorize_tool_call(tool, arguments, self._audit)  # RBAC; a no-op without a user
-        self._require_disclosed_tool(name, tool_view)
+        self._require_disclosed_tool(name, tool_view, tool)
         violation = (validate_arguments(tool.input_schema, arguments)
                      or undeclared_arguments(tool.input_schema, arguments))
         if violation is not None:
@@ -649,7 +654,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin,
     def _handle_tools_call(self, msg_id: Any,
                            params: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            view = self._session_tool_view()
+            view = self._accepted_tool_view()
             name, tool, arguments = self._prepare_tool_call(params, view)
         except _InvalidToolArguments as error:
             return {"content": [{"type": "text", "text": str(error)}], "isError": True}

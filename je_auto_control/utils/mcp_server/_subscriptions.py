@@ -115,6 +115,7 @@ class SubscriptionMixin:
         _subscriptions_lock: threading.Lock
         _listeners: Dict[Any, Listener]
         _listeners_lock: threading.Lock
+        _tool_change_sinks: Dict[Any, Callable[[Any], set[Any]]]
         _writer: Optional[Callable[[str], None]]
         #: The notifier for a notification no request asked for, or ``None``.
         _unsolicited_notifier: Callable[[], Optional[Callable[[str, Dict[str, Any]], None]]]
@@ -128,8 +129,8 @@ class SubscriptionMixin:
         for key, listener in listening:
             if not listener.notify("notifications/tools/list_changed", {}):
                 self._end_listener(key, graceful=False)
-        notifier = (self._unsolicited_notifier()
-                    if connection_id is _ALL_TOOL_CONNECTIONS or connection_id == self._connection_id else None)
+        delivered = self._emit_tool_change_sinks(connection_id)
+        notifier = self._current_tool_change_notifier(connection_id, delivered)
         if notifier is None:
             return
         try:
@@ -144,6 +145,32 @@ class SubscriptionMixin:
             return [(key, listener) for key, listener in self._listeners.items()
                     if listener.tools_list_changed
                     and (connection_id is _ALL_TOOL_CONNECTIONS or key[0] == connection_id)]
+
+    def _register_tool_change_sink(self, owner: Any, sink: Callable[[Any], set[Any]]) -> None:
+        with self._listeners_lock:
+            self._tool_change_sinks[owner] = sink
+
+    def _unregister_tool_change_sink(self, owner: Any) -> None:
+        with self._listeners_lock:
+            self._tool_change_sinks.pop(owner, None)
+
+    def _emit_tool_change_sinks(self, connection_id: Any) -> set[Any]:
+        with self._listeners_lock:
+            sinks = list(self._tool_change_sinks.values())
+        delivered: set[Any] = set()
+        for sink in sinks:
+            try:
+                delivered.update(sink(connection_id))
+            except (OSError, RuntimeError, ValueError):
+                autocontrol_logger.exception("MCP tool-list transport notification failed")
+        return delivered
+
+    def _current_tool_change_notifier(self, connection_id: Any, delivered: set[Any]) -> Any:
+        if self._connection_id in delivered:
+            return None
+        if connection_id is not _ALL_TOOL_CONNECTIONS and connection_id != self._connection_id:
+            return None
+        return self._unsolicited_notifier()
 
     # --- 2026-07-28: subscriptions/listen -------------------------------------
 

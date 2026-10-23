@@ -122,6 +122,7 @@ class PathPolicy:
         because callers differ on whether they expand it.
         """
         text = os.fspath(path)
+        self._check_origin_active()
         if not text or "\x00" in text:
             raise PathNotAllowedError(f"{operation}: invalid path {text!r}")
         candidate = _canonical(text)
@@ -137,6 +138,11 @@ class PathPolicy:
                     f"{operation}: {text!r} resolves to {reading}, outside the allowed "
                     f"roots ({', '.join(str(root) for root in roots) or 'none known yet'})")
         return candidate
+
+    def _check_origin_active(self) -> None:
+        with self._lock:
+            if self._origin_closed:
+                raise PathNotAllowedError("origin path policy has retired")
 
 
 __all__ = ["MCP_CLIENT_ROOTS_ENV", "MCP_PATH_ROOTS_ENV", "PathPolicy"]

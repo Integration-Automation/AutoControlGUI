@@ -202,6 +202,17 @@ class SessionRegistry:
         self._announce(sessions)
         return sessions
 
+    def stream_writers(self) -> list[tuple[str, Callable[[str], None]]]:
+        """Snapshot live session streams without extending idle lifetimes or holding locks while writing."""
+        with self._lock:
+            sessions = list(self._sessions.values())
+        result = []
+        for session in sessions:
+            writer = session.stream_writer
+            if writer is not None and not session.closed.is_set():
+                result.append((session.id, writer))
+        return result
+
     def _expired_locked(self, now: float) -> List[HttpSession]:
         """Remove idle sessions; caller holds the lock and announces."""
         if self._idle_timeout <= 0:

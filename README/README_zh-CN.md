@@ -1,5 +1,15 @@
 # AutoControl
 
+MCP 异步调用会保留接受请求时的角色、session、原路径策略与工具列表；session 或路径策略
+结束后，延迟分派会被拒绝。异步无状态调用仍使用固定 profile。插件工具列表变更会送达所有
+有效 HTTP session 流；session 启停只通知拥有者，并避免重复发送。流注册与 HTTP 标头
+共用锁，避免提早发送的通知破坏 HTTP 响应。
+纯 metadata 的 `benchmarks/mcp_discovery.py --repeats 20` 测量工具数、JSON bytes、预热后的
+进程内握手、搜索与启用耗时。Windows／Python 3.14.4 的记录中，完整模式初始有 732 个授权工具、
+358,029 bytes；渐进模式为 5 个、2,029 bytes，响应大小减少 99.43%。握手为 58.263／47.439 ms，
+搜索中位数为 16.243／19.718 ms；渐进启用中位数为 42.486 ms。此本机测量不含冷启动导入及原生操作。
+有日期的 JSON 记录位于 `docs/benchmarks/`；既有参数策略的覆盖限制仍列于 `Progress.md`。
+
 MCP 可选择 session 渐进揭露：`je_auto_control_mcp --tool-mode progressive` 初始只提供五个
 探索控制工具；`ac_mcp_tools_enable`／`ac_mcp_tools_disable` 只改变该 session。
 不会更新工具列表的客户端可使用 `--tool-mode static --tool-profile ac_screen_size,ac_list_windows`；

@@ -197,3 +197,16 @@ HTTP／嵌入式使用 ``MCPServer.configure_tool_disclosure(...)``；主機環�
 ``plan_mcp_tool_profile(...)`` 及 Diagnostics Actions 可預覽啟動參數，不會啟動服務。
 無狀態協定使用不分頁的初始固定清單，不保留 session 啟用狀態。唯讀限制也涵蓋後續新增的外掛。
 未驗證／共享 token 連線顯示 operator 工具，與既有呼叫上限一致；主機管理工具仍須已驗證身分。
+
+MCP 權限傳遞與 metadata 量測
+----------------------------------------------------------------------
+
+MCP 非同步呼叫會保留接受請求時的角色、session、原路徑政策與工具清單；session 或路徑政策
+結束後，延遲分派會被拒絕。非同步無狀態呼叫仍使用固定 profile。外掛工具清單變更會送達所有
+有效 HTTP session 串流；session 啟停只通知擁有者，並避免重複發送。串流註冊與 HTTP 標頭
+共用鎖，避免提早送出的通知破壞 HTTP 回應。
+純 metadata 的 ``benchmarks/mcp_discovery.py --repeats 20`` 量測工具數、JSON bytes、暖機後的
+程序內交握、搜尋與啟用耗時。Windows／Python 3.14.4 的紀錄中，完整模式初始有 732 個授權工具、
+358,029 bytes；逐步模式為 5 個、2,029 bytes，回應大小減少 99.43%。交握為 58.263／47.439 ms，
+搜尋中位數為 16.243／19.718 ms；逐步啟用中位數為 42.486 ms。此本機量測不含冷啟動匯入及原生操作。
+有日期的 JSON 紀錄位於 ``docs/benchmarks/``；既有參數政策的涵蓋限制仍列於 ``Progress.md``。
