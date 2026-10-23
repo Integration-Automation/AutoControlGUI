@@ -26,8 +26,8 @@ class DesktopTarget:
 
     def __init__(self) -> None:
         self._spec: AgentTaskSpec | None = None
-        self._owned_keys: set[str] = set()
-        self._owned_buttons: set[str] = set()
+        self._action_identity: tuple[int, int] | None = None
+        self._app_name = ""
 
     def ready(self, spec: AgentTaskSpec) -> tuple[bool, str]:
         """Check interactive-session and application scope without claiming permissions."""
@@ -49,10 +49,7 @@ class DesktopTarget:
         if not window or not process_id or self._spec is None:
             raise AgentTaskError("foreground target cannot be identified")
         elements = list_accessibility_elements(max_results=20, window_title=window[1])
-        names = {item.app_name.casefold() for item in elements if item.process_id == process_id and item.app_name}
-        names.update(os.path.basename(name) for name in tuple(names))
-        if not names.intersection(name.casefold() for name in self._spec.apps):
-            raise AgentTaskError("foreground application is outside the task scope")
+        self._app_name = _application_name(elements, process_id, self._spec.apps)
         return int(window[0]), window[1], int(process_id)
 
     def observe(self) -> dict[str, Any]:
@@ -92,35 +89,47 @@ class DesktopTarget:
         from je_auto_control.utils.tool_use_schema import run_tool_call
         if name not in DESKTOP_TOOLS:
             raise AgentTaskError("tool lacks a reviewed desktop adapter")
-        self._check_foreground()
-        self._track(name, arguments)
-        result = run_tool_call(name, arguments)
-        self._released(name, arguments)
-        return result
+        hwnd, _title, pid = self._check_foreground()
+        self._action_identity = hwnd, pid
+        if name.startswith("AC_control_"):
+            if arguments.get("app_name", self._app_name).casefold() != self._app_name.casefold():
+                raise AgentTaskError("control application is outside the current target")
+            arguments = {**arguments, "app_name": self._app_name}
+        from je_auto_control.utils.agent_runtime.native_scope import control_owner_scope, check_window_arguments
+        check_window_arguments(arguments, self._spec)
+        with control_owner_scope(pid):
+            return run_tool_call(name, arguments)
 
-    def _track(self, name: str, arguments: dict[str, Any]) -> None:
-        if name == "AC_press_keyboard_key":
-            self._owned_keys.add(str(arguments.get("keycode", "")))
-        elif name == "AC_press_mouse":
-            self._owned_buttons.add(str(arguments.get("mouse_keycode", "mouse_left")))
-
-    def _released(self, name: str, arguments: dict[str, Any]) -> None:
-        if name == "AC_release_keyboard_key":
-            self._owned_keys.discard(str(arguments.get("keycode", "")))
-        elif name == "AC_release_mouse":
-            self._owned_buttons.discard(str(arguments.get("mouse_keycode", "mouse_left")))
+    def validate_input(self, event: dict) -> None:
+        """Refuse new input after focus changes or a point leaves the authorized window."""
+        if event["kind"] in {"key_release", "key_released", "mouse_release", "mouse_released"}:
+            return
+        hwnd, _title, pid = self._check_foreground()
+        if self._action_identity is not None and self._action_identity != (hwnd, pid):
+            raise AgentTaskError("foreground target changed during native input")
+        if event["kind"] == "scroll":
+            from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
+            point = get_mouse_position()
+            if point is None:
+                raise AgentTaskError("scroll target cannot be identified")
+            event = {**event, "x": point[0], "y": point[1]}
+        if event["kind"] in {"pointer", "mouse_press", "scroll"}:
+            from je_auto_control.utils.agent_runtime.native_scope import check_pointer
+            check_pointer(hwnd, event)
 
     def cleanup(self) -> None:
-        """Release only keys/buttons explicitly held by this adapter's current task."""
-        from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key
-        from je_auto_control.wrapper.auto_control_mouse import release_mouse
-        for key in tuple(self._owned_keys):
-            release_keyboard_key(key)
-            self._owned_keys.discard(key)
-        for button in tuple(self._owned_buttons):
-            release_mouse(button)
-            self._owned_buttons.discard(button)
+        """Retire helper-local scope; the host ledger owns every key/button release."""
         self._spec = None
+        self._action_identity = None
+
+
+def _application_name(elements: list[Any], process_id: int, apps: tuple[str, ...]) -> str:
+    names = [item.app_name for item in elements if item.process_id == process_id and item.app_name]
+    allowed = {name.casefold() for name in apps}
+    for name in names:
+        if {name.casefold(), os.path.basename(name).casefold()} & allowed:
+            return name
+    raise AgentTaskError("foreground application is outside the task scope")
 
 
 def _window_frame(hwnd: int) -> tuple[Any, tuple[int, int]]:

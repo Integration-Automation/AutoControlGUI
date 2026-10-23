@@ -30,6 +30,7 @@ from je_auto_control.utils.text_unicode.text_unicode import CONTROL_KEYS, unicod
 from je_auto_control.wrapper.platform_wrapper import (
     keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
 )
+from je_auto_control.wrapper._input_observer import input_event
 
 def get_keyboard_keys_table() -> dict:
     """
@@ -133,6 +134,7 @@ def press_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
     autocontrol_logger.info(f"press_keyboard_key, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
     try:
         keycode = _resolve_keycode(keycode)
+        input_event("key_press", keycode=keycode, is_shift=is_shift)
         # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
         # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
         # Branch spelling explained in the module docstring.
@@ -169,6 +171,7 @@ def release_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
     autocontrol_logger.info(f"release_keyboard_key, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
     try:
         keycode = _resolve_keycode(keycode)
+        input_event("key_release", keycode=keycode, is_shift=is_shift)
         # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
         # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
         # Branch spelling explained in the module docstring.
@@ -182,6 +185,7 @@ def release_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
 
         if not skip_record:
             record_action_to_list("release_key", {"keycode": keycode, "is_shift": is_shift})
+        input_event("key_released", keycode=keycode, is_shift=is_shift)
         return str(keycode)
 
     except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
@@ -325,6 +329,7 @@ def _write_char_via_unicode(single_char: str) -> bool:
     if not callable(type_unicode_unit):
         return False
     for unit in unicode_code_units(single_char):
+        input_event("text")
         type_unicode_unit(unit)
     return True
 

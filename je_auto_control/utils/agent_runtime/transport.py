@@ -12,16 +12,18 @@ from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
 from je_auto_control.utils.http_client.http_client import build_call, urllib_transport
 
 _SLOTS = threading.BoundedSemaphore(4)
+_CONTROL_SLOTS = threading.BoundedSemaphore(2)
 
 
 def request_json(url: str, *, body: Any = None, token: str | None = None,
-                 timeout: float = 30, check: Callable[[], None] = cancellation_checkpoint) -> dict[str, Any]:
+                 timeout: float = 30, check: Callable[[], None] = cancellation_checkpoint,
+                 control: bool = False) -> dict[str, Any]:
     """Use existing egress/redirect checks and bound resource use across cancelled callers."""
     from je_auto_control.utils.agent_runtime.models import positive
     positive(timeout, "HTTP timeout", 3600)
     check()
-    if not _SLOTS.acquire(blocking=False):
-        raise AgentTaskError("local HTTP request capacity is busy")
+    slots = _CONTROL_SLOTS if control else _SLOTS
+    _acquire(slots, timeout if control else 0, check)
     replies: queue.Queue[Any] = queue.Queue(maxsize=1)
     context = copy_context()
 
@@ -44,7 +46,7 @@ def request_json(url: str, *, body: Any = None, token: str | None = None,
         except BaseException as error:  # reason: hand controls back to the owning caller; no failure is swallowed
             replies.put(error)
         finally:
-            _SLOTS.release()
+            slots.release()
 
     threading.Thread(target=lambda: context.run(fetch), daemon=True, name="AgentHTTP").start()
     deadline = time.monotonic() + timeout
@@ -63,3 +65,14 @@ def request_json(url: str, *, body: Any = None, token: str | None = None,
             raise AgentTaskError(f"local HTTP operation failed ({reply.get('status', 0)}): {detail}")
         return reply["json"]
     raise AgentTaskError("local HTTP request timed out")
+
+
+def _acquire(slots: Any, timeout: float, check: Callable[[], None]) -> None:
+    deadline = time.monotonic() + timeout
+    while True:
+        check()
+        if slots.acquire(blocking=False):
+            return
+        if time.monotonic() >= deadline:
+            raise AgentTaskError("local HTTP request capacity is busy")
+        time.sleep(0.01)

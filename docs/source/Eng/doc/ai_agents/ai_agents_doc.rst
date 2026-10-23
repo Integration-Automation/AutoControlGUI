@@ -135,3 +135,6 @@ model stop text is not proof. Skills use WorkQueue and local inference uses a co
 Ollama model without downloads, redirects or external fallback. Closing the view leaves
 submitted work owned by the service. Native/platform acceptance and remaining workflows
 are tracked in ``Progress.md``; full contracts are in ``docs/AGENT_TASKS.md``.
+
+Native calls use an owned helper process tree with cancellation/deadlines, a host input ledger
+and per-session exclusion across databases. Native platform acceptance remains deferred.

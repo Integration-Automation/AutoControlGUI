@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Iterator, Mapping
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.context import TaskOperation, operation_scope
 from je_auto_control.utils.agent_runtime.models import (
     AgentActionRequest, AgentActionResult, AgentObservation, AgentTaskHandle, AgentTaskResult,
     AgentTaskSpec, TERMINAL, detached, freeze, thaw,
@@ -123,6 +124,12 @@ class AgentRuntime:
         owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
         policy = TaskPolicy(spec)
 
+        def checkpoint() -> None:
+            self._token(row["id"]).checkpoint()
+            self._check_budget(row["id"])
+            with DeferredAuthorization(owner).scope():
+                pass
+
         def guard(name: str, arguments: Any) -> None:
             self._check_budget(row["id"])
             policy.check(name, arguments)
@@ -131,7 +138,8 @@ class AgentRuntime:
                 self.broker.validate(lease)
 
         with DeferredAuthorization(owner).scope(), cancellation_scope(self._token(row["id"])):
-            with command_guard(guard), execution_scope(thaw(spec.inputs)):
+            with (command_guard(guard), execution_scope(thaw(spec.inputs)),
+                  operation_scope(TaskOperation(spec, checkpoint, owner))):
                 yield policy
 
     def _check_budget(self, task_id: str) -> None:
@@ -149,9 +157,6 @@ class AgentRuntime:
             raise AgentTaskError(f"task cannot operate while {row['state']}")
         self._check_budget(row["id"])
         spec = AgentTaskSpec.from_dict(row["spec"])
-        ready, reason = self._target(row).ready(spec)
-        if not ready:
-            raise AgentTaskError(reason or "target is not ready")
         self._token(row["id"]).checkpoint()
         if row["id"] not in self._leases:
             lease = self.broker.acquire(spec.target, row["id"])
@@ -159,6 +164,10 @@ class AgentRuntime:
                 self._leases[row["id"]] = lease
         try:
             self._token(row["id"]).checkpoint()
+            with self.broker.dispatch(self._leases[row["id"]]):
+                ready, reason = self._target(row).ready(spec)
+            if not ready:
+                raise AgentTaskError(reason or "target is not ready")
             self.store.start(row["id"])
         except (CancelledError, AgentTaskError):
             self._retire(row["id"])
@@ -334,5 +343,5 @@ class AgentRuntime:
 
 
 def _default_targets() -> dict[str, Any]:
-    from je_auto_control.utils.agent_runtime.targets import DesktopTarget
-    return {"local-desktop": DesktopTarget()}
+    from je_auto_control.utils.agent_runtime.native_target import NativeDesktopTarget
+    return {"local-desktop": NativeDesktopTarget()}

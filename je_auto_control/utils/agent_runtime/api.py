@@ -6,6 +6,7 @@ import os
 import subprocess  # nosec B404  # reason: explicit owned runtime process with a fixed argv list
 import sys
 import time
+from concurrent.futures import CancelledError
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -15,6 +16,9 @@ from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
 from je_auto_control.utils.agent_runtime.service import default_connection_path
 from je_auto_control.utils.rbac.authorization import AuthorizationError, current_authorization
 from je_auto_control.utils.rbac.users import Capability
+from je_auto_control.utils.exception.cancellation import cancellation_scope
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 def start_agent_runtime(directory: str | None = None) -> dict[str, Any]:
@@ -73,17 +77,30 @@ def list_agent_tasks() -> dict[str, Any]:
 
 def observe_agent_task(task_id: str) -> dict[str, Any]:
     """Acquire the authorized target and obtain a fresh, versioned observation."""
-    return AgentRuntimeClient().call("observe", {"task_id": task_id})
+    return _task_call("observe", task_id)
 
 
 def act_agent_task(task_id: str, action: Mapping[str, Any]) -> dict[str, Any]:
     """Apply one grounded action through the host's current task policy."""
-    return AgentRuntimeClient().call("act", {"task_id": task_id, "action": dict(action)})
+    return _task_call("act", task_id, {"action": dict(action)})
 
 
 def finish_agent_task(task_id: str) -> dict[str, Any]:
     """Request deterministic completion verification; never force a success status."""
-    return AgentRuntimeClient().call("finish", {"task_id": task_id})
+    return _task_call("finish", task_id)
+
+
+def _task_call(operation: str, task_id: str, extra: dict | None = None) -> dict[str, Any]:
+    client = AgentRuntimeClient()
+    try:
+        return client.call(operation, {"task_id": task_id, **(extra or {})})
+    except CancelledError:
+        try:
+            with cancellation_scope(None):
+                client.call("pause", {"task_id": task_id}, timeout=3)
+        except (AutoControlException, OSError, RuntimeError, ValueError, TypeError, LookupError) as error:
+            autocontrol_logger.warning("host pause after cancellation is unconfirmed: %s", type(error).__name__)
+        raise
 
 
 def pause_agent_task(task_id: str) -> dict[str, Any]:

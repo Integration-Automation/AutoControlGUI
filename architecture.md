@@ -18,8 +18,10 @@ catalogue for AC/MCP/Builder. AgentRuntime owns detached specs, principal refere
 state, a process lock and fenced target ownership. Internal skill/Ollama jobs reuse WorkQueue; external
 agents use the same observe/act/finish operations. Completion is independently verified. TaskController
 owns GUI requests only, so closing a view does not own or retire committed background tasks.
-The Ollama adapter uses bounded loopback HTTP without redirects or remote fallback. Existing native
-backend interruption, platform acceptance, richer workflows and origin-policy lifecycle remain open.
+The Ollama adapter uses bounded loopback HTTP without redirects or remote fallback. Native calls use an owned helper process tree with cancellable IPC, a host input ledger and a shared
+per-session input lock. Runtime operation context follows parallel/DAG workers. Cancelled HTTP calls
+request host pause through separate control capacity. Physical activity monitoring, native acceptance,
+richer workflows and origin-policy lifecycle remain open.
 
 Agent tool calls share `Executor.execute_one` with the existing per-action pipeline.
 `executor/dispatch.py` binds strict executor ownership, raw-result capture and intersecting

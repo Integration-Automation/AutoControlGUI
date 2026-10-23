@@ -646,5 +646,6 @@ Managed task runtime
 
 Managed external/skill/local-model tasks have deterministic fake-target and loopback HTTP coverage.
 Shared Python/AC/MCP/REST/CLI/GUI surfaces enforce task ownership and independent completion evidence.
-Native desktop/mobile acceptance, reliable activity detection and helper isolation remain unverified;
-Progress.md records these gaps. A passive capability snapshot or configured timeout grants no authority.
+Owned helper cancellation/deadlines, input cleanup and cross-database session exclusion have IPC-only
+fixture coverage. Windows window/control scoping and redacted vision are implemented without native
+acceptance. Physical activity detection and desktop/mobile acceptance remain open in Progress.md. A passive capability snapshot or configured timeout grants no authority.

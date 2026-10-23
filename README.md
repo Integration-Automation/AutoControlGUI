@@ -8,7 +8,8 @@ Experimental [managed agent tasks](docs/AGENT_TASKS.md) provide owner-scoped sub
 pause/resume/cancel, fenced target control, durable action receipts, WorkQueue delivery, local Ollama
 inference and a background service shared by Python, AC, MCP, REST, CLI and the Agent Tasks view.
 Start explicitly with `je_auto_control agent-task start`; new flows have no mandatory external service.
-Native platform acceptance and the remaining workflow/lifecycle work are tracked in `Progress.md`.
+Native calls use an owned helper with cancellation/deadlines, recorded input cleanup and per-session
+exclusion across runtime databases. Native acceptance and the remaining workflows are in `Progress.md`.
 
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)

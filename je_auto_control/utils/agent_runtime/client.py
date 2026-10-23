@@ -17,7 +17,7 @@ class AgentRuntimeClient:
     def __init__(self, connection_path: str | Path | None = None) -> None:
         self._path = Path(connection_path) if connection_path is not None else default_connection_path()
 
-    def call(self, operation: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+    def call(self, operation: str, body: dict[str, Any] | None = None, *, timeout: float = 30) -> dict[str, Any]:
         """Perform a known local task operation without accepting arbitrary URLs or methods."""
         allowed = {"list", "get", "submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown"}
         if operation not in allowed:
@@ -34,4 +34,5 @@ class AgentRuntimeClient:
             return request_json(url + "/agent/tasks", token=metadata["token"])
         if operation == "get":
             return request_json(url + "/agent/task?" + urlencode(body or {}), token=metadata["token"])
-        return request_json(url + f"/agent/{operation}", body=body, token=metadata["token"])
+        return request_json(url + f"/agent/{operation}", body=body, token=metadata["token"], timeout=timeout,
+                            control=operation in {"pause", "cancel", "shutdown"})

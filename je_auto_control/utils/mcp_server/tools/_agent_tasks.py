@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any
+from concurrent.futures import CancelledError
 
 from je_auto_control.utils.agent_runtime.commands import CATALOG
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
@@ -25,7 +26,12 @@ def _handler(command: str) -> Any:
                 raise AgentTaskError("managed MCP tasks require an authenticated caller or a live session")
             identity = AuthorizationContext("mcp:" + ctx.session_id, "operator")
         with authorization_scope(identity), cancellation_scope(token):
-            return function(**arguments)
+            try:
+                return function(**arguments)
+            except CancelledError:
+                if ctx is not None:
+                    ctx.check_cancelled()
+                raise
     return handle
 
 

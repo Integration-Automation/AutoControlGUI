@@ -330,12 +330,14 @@ def _current_run_local_runner() -> NodeRunner:
     from je_auto_control.utils.exception.cancellation import cancellation_scope, current_cancellation_token
     command_guards = capture_command_guards()
     cancellation = current_cancellation_token()
+    from je_auto_control.utils.agent_runtime.context import current_operation, operation_scope
+    operation = current_operation()
     secret_scope = current_secret_scope()
     history = current_history()
 
     def run(node: DagNode, definition: DagDefinition) -> Any:
         with (bound_scope(scope), bound_journal(journal), bound_secret_scope(secret_scope), bound_history(history),
-              bound_command_guards(command_guards), cancellation_scope(cancellation)):
+              bound_command_guards(command_guards), cancellation_scope(cancellation), operation_scope(operation)):
             return _default_local_runner(node, definition, runner)
     return run
 

@@ -1,0 +1,124 @@
+"""Private native helper entry point; stdout is a bounded owner-only JSON protocol."""
+from __future__ import annotations
+
+import json
+import sys
+from contextlib import ExitStack
+from typing import Any
+
+from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
+from je_auto_control.utils.agent_runtime.policy import TaskPolicy, durable_payload
+from je_auto_control.utils.agent_runtime.targets import DesktopTarget
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.executor.dispatch import command_guard
+from je_auto_control.utils.rbac.authorization import AuthorizationContext, authorization_scope
+from je_auto_control.utils.script_vars.execution import execution_scope
+from je_auto_control.wrapper._input_observer import input_observer
+
+_LIMIT = 1_100_000
+
+
+class NativeWorker:
+    """Only the owning process can configure this helper or acknowledge its input."""
+
+    def __init__(self, source: Any, sink: Any, *, target: Any = None) -> None:
+        self._source, self._sink = source, sink
+        self._target = target if target is not None else DesktopTarget()
+        self._spec: AgentTaskSpec | None = None
+        self._owner: AuthorizationContext | None = None
+        self._request_id = ""
+        self._cleanup = False
+
+    def _reply(self, payload: dict) -> None:
+        packet = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8") + b"\n"
+        if len(packet) > _LIMIT:
+            raise AgentTaskError("native response is too large")
+        self._sink.write(packet)
+        self._sink.flush()
+
+    def _input(self, event: dict) -> None:
+        if not self._cleanup:
+            self._target.validate_input(event)
+        self._reply({"id": self._request_id, "event": event})
+        line = self._source.readline(_LIMIT + 1)
+        if not line or len(line) > _LIMIT or json.loads(line) != {"ack": True}:
+            raise AgentTaskError("native input was not acknowledged by its owner")
+
+    def run(self) -> None:
+        """Serve one serial stream; native exceptions remain confined to this owned process."""
+        while True:
+            line = self._source.readline(_LIMIT + 1)
+            if not line:
+                return
+            if len(line) > _LIMIT or not line.endswith(b"\n"):
+                return
+            request = json.loads(line)
+            self._request_id = str(request.get("id", ""))
+            try:
+                result = self._dispatch(request["operation"], request["payload"])
+                self._reply({"id": self._request_id, "result": durable_payload(result)})
+            except (AutoControlException, OSError, RuntimeError, TypeError, ValueError, LookupError) as error:
+                self._reply(durable_payload({"id": self._request_id, "error": f"{type(error).__name__}: {error}"}))
+
+    def _dispatch(self, operation: str, payload: dict) -> Any:
+        if operation == "cleanup":
+            return self._release_owned(payload)
+        if operation == "configure":
+            self._spec = AgentTaskSpec.from_dict(payload["spec"])
+            self._owner = AuthorizationContext(**payload["owner"]) if payload.get("owner") else None
+        if self._spec is None:
+            raise AgentTaskError("native worker must be configured by its owner")
+        with ExitStack() as stack:
+            stack.enter_context(authorization_scope(self._owner))
+            stack.enter_context(command_guard(TaskPolicy(self._spec).check))
+            stack.enter_context(execution_scope(dict(self._spec.inputs)))
+            stack.enter_context(input_observer(self._input))
+            return self._operation(operation, payload)
+
+    def _operation(self, operation: str, payload: dict) -> Any:
+        if operation == "configure":
+            if self._spec is None:
+                raise AgentTaskError("native worker has no configured scope")
+            ready, reason = self._target.ready(self._spec)
+            return {"ready": ready, "reason": reason}
+        if operation == "observe":
+            return self._target.observe()
+        if operation == "perform":
+            return self._target.perform(payload["tool"], payload["arguments"])
+        raise AgentTaskError("unknown native worker operation")
+
+    def _release_owned(self, payload: dict) -> dict:
+        from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key
+        from je_auto_control.wrapper.auto_control_mouse import release_mouse
+        if set(payload) != {"keys", "buttons"}:
+            raise AgentTaskError("cleanup payload is invalid")
+        failures = []
+        self._cleanup = True
+        try:
+            with input_observer(self._input):
+                for key in reversed(payload["keys"]):
+                    try:
+                        release_keyboard_key(key["keycode"], key["is_shift"], skip_record=True)
+                    except AutoControlException as error:
+                        failures.append(type(error).__name__)
+                for button in reversed(payload["buttons"]):
+                    try:
+                        release_mouse(button["keycode"], button["x"], button["y"])
+                    except AutoControlException as error:
+                        failures.append(type(error).__name__)
+        finally:
+            self._cleanup = False
+        if failures:
+            raise AgentTaskError("owned native input cleanup is incomplete")
+        self._target.cleanup()
+        return {"cleaned": True}
+
+
+def main() -> None:
+    """Run only when explicitly launched by a host-owned NativeDesktopTarget."""
+    NativeWorker(sys.stdin.buffer, sys.stdout.buffer).run()
+
+
+if __name__ == "__main__":
+    main()

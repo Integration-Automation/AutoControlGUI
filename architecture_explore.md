@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,245 |
-| 程式碼總行數 | 184,374 |
+| Python 模組總數（含周邊子專案） | 1,253 |
+| 程式碼總行數 | 185,146 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 822 |
 | 套件門面 `__all__` 公開名稱數 | 1402 |
@@ -181,8 +181,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `wrapper/_platform_osx.py` | 162 | macOS 後端組裝（Quartz 事件 + osx 虛擬鍵表）。 |
 | `wrapper/_platform_linux.py` | 278 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
 | `wrapper/_platform_wayland.py` | 63 | Wayland 後端組裝（libei／ydotool／grim）。 |
-| `wrapper/auto_control_mouse.py` | 575 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
-| `wrapper/auto_control_keyboard.py` | 521 | 鍵盤 API：鍵表查詢、`keyboard_key_name` 反查標準鍵名（不回別名）、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。**`type_keyboard` 與 `hotkey` 的放開走 `finally`**（見下）。 |
+| `wrapper/_input_observer.py` | 25 | Optional context-local native input announcements; legacy callers remain unaffected. |
+| `wrapper/auto_control_mouse.py` | 584 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
+| `wrapper/auto_control_keyboard.py` | 526 | 鍵盤 API：鍵表查詢、`keyboard_key_name` 反查標準鍵名（不回別名）、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。**`type_keyboard` 與 `hotkey` 的放開走 `finally`**（見下）。 |
 | `wrapper/auto_control_screen.py` | 111 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
 | `wrapper/auto_control_image.py` | 85 | 影像 API：`locate_all_image`、`locate_image_center`、`locate_and_click`。 |
 | `wrapper/auto_control_record.py` | 124 | 錄製 API：`record`／`stop_record`／`record_to_json`（支援 stop event 與逾時）。 |
@@ -277,7 +278,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 25 個套件、約 17,132 行。
+> 25 個套件、約 17,138 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -285,11 +286,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/action_signing/` | 716 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
 | `utils/checkpoint/` | 129 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 1,094 | 由 action list 或結構化日誌產生 pytest／Python／Robot 候選；來源清單、靜態／乾跑驗證與原子 ZIP 審閱匯出。 |
-| `utils/dag/` | 589 | 跨主機 DAG 編排器；node 的完整錯誤處理綁定擁有者秘密遮罩，含獨立呼叫與自訂 local runner |
+| `utils/dag/` | 591 | 跨主機 DAG 編排器；node 的完整錯誤處理綁定擁有者秘密遮罩，含獨立呼叫與自訂 local runner |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
 | `utils/action_journal/` | 855 | 結構化動作日誌：schema v1、寫入前遮罩、跨行程排序／尾端復原、executor 明確 scope 擷取與本機 parallel／DAG parent 傳遞；門面、AC／MCP、Script Builder 與 CLI 擷取／有界查閱；observer／路徑政策隨巢狀根與 workers 保留，Run History 查閱與手動 history 關聯共用相同來源。 |
-| `utils/executor/` | 9,869 | **核心**。`Executor` 指令分派表（774 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
+| `utils/executor/` | 9,873 | **核心**。`Executor` 指令分派表（774 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 166 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 462 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 99 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
@@ -500,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 26,547 行。
+> 14 個套件、約 27,274 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 1,902 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 2,623 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -514,7 +515,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 372 | 自然語言 → action list 規劃器 + Anthropic／null 後端；規劃執行隔離頂層變數並沿用巢狀範圍 |
 | `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 20,049 | **無頭 MCP 伺服器**（預設註冊 723 個工具＝704 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 20,055 | **無頭 MCP 伺服器**（預設註冊 723 個工具＝704 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 191 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 132 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 616 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -703,19 +704,19 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 上表以子套件為單位；以下把行數最大的幾個子系統展開到檔案層。
 
-#### `utils/executor/`（9,869 行）— 執行核心
+#### `utils/executor/`（9,873 行）— 執行核心
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
 | `action_executor.py` | 8,514 | `Executor` 類別與 `event_dict` 分派表（774 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
-| `flow_control.py` | 683 | 真正的流程控制：`AC_loop`／`AC_for_each`／`AC_while_*`／`AC_if_*`／`AC_try`／`AC_retry`／`AC_parallel`／`AC_define_macro`／`AC_call_macro`／變數指令（`AC_set_var`／`AC_get_var`／`AC_inc_var`）。`LoopBreak`／`LoopContinue` 以例外實作。34 個區塊指令的分派表 `BLOCK_COMMANDS` 也在這裡，含下一列匯入的資料來源指令。 |
+| `flow_control.py` | 687 | 真正的流程控制：`AC_loop`／`AC_for_each`／`AC_while_*`／`AC_if_*`／`AC_try`／`AC_retry`／`AC_parallel`／`AC_define_macro`／`AC_call_macro`／變數指令（`AC_set_var`／`AC_get_var`／`AC_inc_var`）。`LoopBreak`／`LoopContinue` 以例外實作。34 個區塊指令的分派表 `BLOCK_COMMANDS` 也在這裡，含下一列匯入的資料來源指令。 |
 | `flow_data_commands.py` | 272 | `AC_*_to_var` 資料來源與轉換指令：shell、時鐘、亂數、PDF、TOTP、SQL、檔案、HTTP、OCR，加上 `AC_assert_var`／`AC_assert_db`／`AC_assert_duration`／`AC_transform_var`。都不執行巢狀 action list，所以沒有迴圈／分支語意。 |
 | `action_schema.py` | 161 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
 | `action_redaction.py` | 86 | 記錄與紀錄鍵用的遮蔽：`AC_secret_*` 的參數（金庫通行碼、機密值）在寫進 log、當成結果紀錄的鍵之前換成 `***`，巢狀在區塊指令裡的也一樣。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 | `flags.py` | 19 | 旗標讀取 `as_bool`：依拼法（`"true"`／`"yes"`／`"on"`／`"1"`）而非 Python 真值判斷，所以 JSON、CLI、MCP 傳來的 `"false"` 是關；所有 adapter 與流程指令共用。 |
 
-#### `utils/mcp_server/`（20,049 行，723 個工具）— 最大子系統
+#### `utils/mcp_server/`（20,055 行，723 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -980,15 +981,15 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（1,902 行／22 檔）
+#### `utils/agent_runtime/`（2,623 行／29 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
 | `__init__.py` | 21 | Managed computer tasks with explicit authority, fenced input and verified outcomes. |
 | `__main__.py` | 24 | Explicit service entry point; no native target is operated during startup. |
-| `api.py` | 115 | Public service-backed task functions; imports never start services or operate targets. |
+| `api.py` | 132 | Public service-backed task functions; imports never start services or operate targets. |
 | `cli.py` | 54 | Managed-task CLI parsing; the existing CLI owns terminal output. |
-| `client.py` | 37 | Shared local service client for GUI, CLI, MCP and Python task operations. |
+| `client.py` | 38 | Shared local service client for GUI, CLI, MCP and Python task operations. |
 | `commands.py` | 27 | One command catalogue shared by executor, MCP and the visual script editor. |
 | `delegation.py` | 43 | Short-lived, authenticated principal forwarding across the local service boundary. |
 | `errors.py` | 10 | Typed failures for managed tasks, observations and control ownership. |
@@ -997,15 +998,23 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `ollama.py` | 78 | Local-only Ollama decisions over bounded HTTP, without an SDK or remote fallback. |
 | `ownership.py` | 86 | Fenced input ownership; running dispatch must retire before ownership transfers. |
 | `policy.py` | 73 | Explicit task scopes, rooted data paths and secret-safe durable payloads. |
-| `routes.py` | 59 | Authenticated REST adapters for the runtime explicitly owned by a server. |
+| `routes.py` | 62 | Authenticated REST adapters for the runtime explicitly owned by a server. |
 | `runner.py` | 76 | Autonomous skill/local-model driver over exactly the external task operations. |
-| `runtime.py` | 338 | Shared managed-task lifecycle with fenced dispatch and evidence-based completion. |
+| `runtime.py` | 347 | Shared managed-task lifecycle with fenced dispatch and evidence-based completion. |
 | `runtime_lock.py` | 40 | Cross-process ownership for one runtime database; imports never acquire locks. |
 | `service.py` | 74 | Explicit local runtime service lifecycle over the existing authenticated REST server. |
 | `store.py` | 152 | Transactional task metadata, durable action receipts and input ownership. |
-| `targets.py` | 146 | Explicit target adapters; native imports occur only during requested operations. |
-| `transport.py` | 65 | Bounded HTTP requests; cancellation discards late inference replies before any input. |
+| `targets.py` | 155 | Explicit target adapters; native imports occur only during requested operations. |
+| `transport.py` | 78 | Bounded HTTP requests; cancellation discards late inference replies before any input. |
 | `verification.py` | 78 | Deterministic completion evidence with explicit passed, failed and unknown states. |
+
+| `context.py` | 37 | Host-owned operation context shared with local workers, never serialized model authority. |
+| `input_ledger.py` | 84 | Host-owned press announcements and acknowledged releases survive helper termination. |
+| `native_channel.py` | 187 | Bounded JSON IPC to an owned helper, with cancellable writes, replies and retirement. |
+| `native_job.py` | 69 | Own a Windows helper process tree through a kill-on-close Job Object. |
+| `native_scope.py` | 67 | Scope native window and control targets before their existing backend performs an action. |
+| `native_target.py` | 101 | Native desktop proxy with private IPC, host input ledger and cross-database ownership. |
+| `native_worker.py` | 124 | Private native helper entry point; stdout is a bounded owner-only JSON protocol. |
 
 #### 其他多檔子套件
 
@@ -1287,13 +1296,13 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `gui/` | 117 | 33,160 |
-| `utils/mcp_server/` | 45 | 20,049 |
+| `utils/mcp_server/` | 45 | 20,055 |
 | `utils/remote_desktop/` | 63 | 14,634 |
-| `utils/executor/` | 9 | 9,869 |
+| `utils/executor/` | 9 | 9,873 |
 | `utils/usb/` | 17 | 4,816 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,656 |
 | `utils/accessibility/` | 14 | 3,143 |
-| `wrapper/` | 20 | 4,382 |
+| `wrapper/` | 21 | 4,421 |
 | `windows/` | 23 | 2,154 |
 | `utils/rest_api/` | 8 | 2,098 |
 | `utils/agent/` | 9 | 2,142 |
@@ -1306,6 +1315,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 819 | 73,485 |
-| **總計** | **1,238** | **184,287** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 826 | 74,208 |
+| **總計** | **1,246** | **185,059** |
 

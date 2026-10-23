@@ -4,6 +4,8 @@ The experimental managed-task API adds AgentTaskSpec/Budget/Handle/Result, Agent
 AgentActionRequest/Result, AgentRuntime, AgentTaskError/ControlBusy, submit/get/list/observe/act/
 finish/pause/resume/cancel_agent_task and explicit start/stop/status service functions. Import has no
 service/native side effects. The shared AC/MCP/Builder catalogue preserves existing command names.
+The default desktop adapter now isolates native calls in an owned helper, enforces action deadlines
+and retains a host input ledger for cleanup before transfer. Cancelled clients request host pause.
 See AGENT_TASKS.md for contracts, completion certainty, ownership and remaining native limitations.
 WorkQueue.defer(item_id, claim=...) is additive; it returns a currently owned delivery to new without
 consuming an application retry and refuses stale claims.

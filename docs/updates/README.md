@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261023-03 | 2026-10-23 | Isolate native agent calls and retire owned input before transfer | #done #agent #runtime | [2026-10-c](2026-10-c.md) |
 | U-20261023-02 | 2026-10-23 | Add experimental managed task core and service surfaces | #done #agent #runtime | [2026-10-c](2026-10-c.md) |
 | U-20261023-01 | 2026-10-23 | Share agent and executor command boundaries | #done #agent #P0 | [2026-10-c](2026-10-c.md) |
 | U-20261021-14 | 2026-10-21 | Reject inconclusive live EI cleanup and inspect native evidence | #done #ci #D2 | [2026-10-b](2026-10-b.md) |

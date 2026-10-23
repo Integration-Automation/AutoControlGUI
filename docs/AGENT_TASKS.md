@@ -37,9 +37,11 @@ Criteria are `result_equals` (key/value in the last confirmed result), `file_exi
 Unknown evidence never proves success. Empty postconditions and unknown criterion kinds are refused.
 
 The reviewed default desktop tool set is intentionally limited. A custom adapter is a trusted Python
-extension, not a model-supplied plugin. Native helper deadlines, reliable activity monitoring, richer
-platform adapters and complete workflow templates remain open in Progress; configured limits alone
-do not prove that an existing uncooperative native backend is interruptible.
+extension, not a model-supplied plugin. Native desktop calls run in a hidden, owned helper with bounded JSON IPC and action deadlines.
+Cancellation retires the owned process tree; a host ledger releases only announced keys/buttons before
+control transfers. Independent databases share a per-session input lock. Window/control scope is checked
+again at input dispatch; pointer geometry and redacted window vision currently require Windows.
+Reliable physical activity monitoring, richer adapters and complete workflow templates remain in Progress.
 
 ## External agent lifecycle
 

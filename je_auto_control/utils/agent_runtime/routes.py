@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Callable
+from concurrent.futures import CancelledError
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 
@@ -18,6 +19,8 @@ def route(operation: str) -> Callable[..., Any]:
             return 200, dispatch(runtime, operation, context.body, context.query_first("task_id"))
         except AgentTaskError as error:
             return 409, {"error": str(error)}
+        except CancelledError:
+            return 409, {"error": "agent operation was cancelled"}
     return handle
 
 

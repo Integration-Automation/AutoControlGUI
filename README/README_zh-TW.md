@@ -7,7 +7,8 @@ Agent 工具呼叫經 `executor.execute_one(name, arguments)` 回傳原始結果
 暫停、恢復、取消、控制權世代、持久化回執、WorkQueue 派送與本機 Ollama 推論。
 Python、AC、MCP、REST、CLI 與 Agent 任務面板共用背景服務，明確執行
 `je_auto_control agent-task start` 才啟動；新流程不強制依賴外部服務。
-原生平台驗收與其餘流程／生命週期待辦列在 `Progress.md`。
+原生呼叫使用專屬 helper，支援取消、逾時、輸入記錄清理與跨資料庫的桌面排他控制。
+原生平台驗收與其餘流程待辦列在 `Progress.md`。
 
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)
