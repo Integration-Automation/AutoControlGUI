@@ -75,6 +75,21 @@ def list_agent_tasks() -> dict[str, Any]:
     return AgentRuntimeClient().call("list")
 
 
+def get_agent_task_receipts(task_id: str, offset: int = 0, limit: int = 100) -> dict[str, Any]:
+    """Read paged owner-scoped action receipts, review witnesses and workflow row outcomes."""
+    return AgentRuntimeClient().call("receipts", {"task_id": task_id, "offset": offset, "limit": limit})
+
+
+def reconcile_agent_task(task_id: str, review: Mapping[str, Any]) -> dict[str, Any]:
+    """Record a human-reviewed uncertain outcome; this neither resumes a task nor forces success."""
+    return AgentRuntimeClient().call("reconcile", {"task_id": task_id, "review": dict(review)})
+
+
+def prune_agent_tasks(keep_days: int = 30) -> dict[str, Any]:
+    """Prune expired visible metadata and owned artifacts, preserving user files and external journals."""
+    return AgentRuntimeClient().call("prune", {"keep_days": keep_days})
+
+
 def observe_agent_task(task_id: str) -> dict[str, Any]:
     """Acquire the authorized target and obtain a fresh, versioned observation."""
     return _task_call("observe", task_id)

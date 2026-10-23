@@ -9,6 +9,7 @@ from je_auto_control.utils.agent_runtime.models import AgentTaskResult, AgentTas
 from je_auto_control.utils.agent_runtime.ollama import OllamaTaskBackend
 from je_auto_control.utils.loop_guard.loop_guard import LoopGuard, digest_result
 from je_auto_control.utils.agent_runtime.workflow_values import captures, expected, resolve
+from je_auto_control.utils.agent_runtime.receipts import effective_actions
 
 
 def run_task(runtime: Any, task_id: str, *, backend: Any = None) -> AgentTaskResult:
@@ -38,7 +39,7 @@ def run_task(runtime: Any, task_id: str, *, backend: Any = None) -> AgentTaskRes
 def _loop(runtime: Any, task_id: str, spec: AgentTaskSpec, backend: Any, guard: LoopGuard) -> AgentTaskResult:
     while runtime.get(task_id).state in {"queued", "running"}:
         observation = runtime.observe(task_id)
-        receipts = runtime.store.actions(task_id)
+        receipts = effective_actions(runtime.store.actions(task_id))
         if spec.mode == "skill":
             if len(receipts) >= len(spec.actions):
                 return runtime.finish(task_id)

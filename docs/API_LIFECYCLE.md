@@ -506,3 +506,7 @@ AC/MCP/Builder share their schemas; REST adds POST /agent/draft and CLI adds age
 stop_all_agent_tasks is additive across Python/AC/MCP/REST/CLI/GUI and respects task visibility.
 Shared-desktop acquisition now requires a supported physical activity adapter; Windows uses an owned
 presence-only hook. Budgets persist monotonic elapsed high-water marks without resetting on resume.
+
+Task results add metadata provenance. get_agent_task_receipts, reconcile_agent_task and prune_agent_tasks
+are additive across Python/AC/MCP/REST/CLI/GUI. Committed receipts are immutable; uncertain outcomes
+need explicit owner review. Native task images persist only with strict-redaction opt-in and bounds.

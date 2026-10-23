@@ -126,6 +126,7 @@ def _forms(config: dict, policy: TaskPolicy) -> dict:
         raise AgentTaskError("batch form requires at most one thousand actions")
     actions = [_focus(config)]
     for index, row in enumerate(rows):
+        first_action = len(actions)
         if any(field.get("column") not in row for field in fields):
             raise AgentTaskError("a mapped column is missing from the input table")
         for field in fields:
@@ -135,6 +136,8 @@ def _forms(config: dict, policy: TaskPolicy) -> dict:
                                                            "value": value}, True))
             actions.append(_action("AC_workflow_control", {"operation": "get", "selector": selector}, value))
         _commit_actions(actions, config, str(index + 1))
+        for action in actions[first_action:]:
+            action["row"] = str(index + 1)
     return {"actions": actions}
 
 

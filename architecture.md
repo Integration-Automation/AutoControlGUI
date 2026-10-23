@@ -604,3 +604,8 @@ uses the same helper protocol without desktop input; semantic desktop steps refu
 Presence-only Win32 hooks live inside the owned native helper. A control-notice channel remains
 independent of action replies; the host requests pause on a separate controller thread before retiring
 the input owner. Persistent monotonic budget high-water marks prevent clock rollback or restart resets.
+
+TaskEvidence atomically links the runtime task with the existing HistoryStore schema in the same
+SQLite transaction. Append-only journals mirror receipt certainty; reports summarize per-row outcomes.
+Owner testimony reconciles uncertain attempts without automatic resume. Retention only removes validated
+generated cache files and matching private metadata; external journals and user outputs remain separate.

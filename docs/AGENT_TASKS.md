@@ -52,7 +52,7 @@ Additional platform activity adapters remain in Progress.
 5. `finish_agent_task(task_id)` checks completion independently; model text is not proof.
 
 Pause/resume/cancel and get/list functions use the same service. Pause retires input before releasing
-control; resume requires new observation. An uncertain action prevents blind replay after restart.
+control; resume requires new observation. An uncertain action requires explicit owner review before resume; it is never blindly replayed after restart.
 New control generations reject old workers. A model cannot set task state or private executor fields.
 
 The executor exposes `AC_agent_task_*` plus `AC_agent_runtime_start/status/stop`.
@@ -85,8 +85,8 @@ the service owns submitted tasks.
 The dedicated SQLite store records specs, owner references (never bearer tokens), task states,
 action receipts and control generations. Prepared/dispatched/confirmed/uncertain receipts distinguish
 dispatch from evidence. WorkQueue claim numbers fence stale delivery settlements; busy targets may
-defer delivery without spending application retries. Retention, history/journal links, screenshots
-and complete artifact lifecycle remain tracked rather than implicitly implemented.
+defer delivery without spending application retries. History links, action journals, structured reports
+and owned cache retention share the task lifecycle; images stay ephemeral unless explicitly opted in.
 
 ## Review and run workflows
 
@@ -148,3 +148,44 @@ and model deadlines remain independently bounded.
 The service checks active lease budgets and refreshed owner authority between requests, so an abandoned
 external client cannot retain input indefinitely. Tracked Unicode packets and modifiers participate
 in the same input ledger; cleanup never claims a modifier that was not part of the original press.
+
+## Receipts, reconciliation and artifacts
+
+`get_agent_task_receipts(task_id, offset=0, limit=100)` returns owner-scoped action attempts, review
+witnesses and success/failed/pending/not_started workflow row outcomes. Limit is at most 200.
+Prepared receipts precede input, dispatched effects can become uncertain, and committed outcomes
+cannot be silently rewritten. A restart marks dispatched attempts uncertain and prepared non-effects
+failed, preserving consumed steps. Failed/proven non-effects do not advance a pinned skill sequence.
+
+After independently checking an uncertain attempt, use `reconcile_agent_task(task_id, review)`:
+
+```json
+{"action_id": "receipt-id", "decision": "not_applied", "note": "Verified that no record was created"}
+```
+
+An `applied` decision also requires the reviewed `result`. This is explicit owner testimony, not
+new native verification evidence. The original outcome, note, timestamp and reviewing principal
+remain in an immutable review record. Reconciliation does not resume or force success. Resume
+reauthorizes and requires a new observation; finish still evaluates the configured completion criteria.
+Managed task profiles cannot call task-management commands or reconcile their own proposals.
+
+Task `metadata` links the existing HistoryStore schema, an append-only ActionJournal and private
+artifacts. History linkage and task metadata commit together in the runtime SQLite database.
+Reports contain verification, per-row status and bounded receipt summaries/digests; raw receipts
+remain available through the owner-scoped API. User output files remain in the explicitly authorized
+roots and are not treated as disposable task cache.
+
+Images are memory-only by default. `options.persist_images=true` requires a target image marked by
+the strict redaction pipeline, a verified JPEG at most 1280 pixels per side and 1 MiB, and at most 100
+images per task. Known vault values are scrubbed before durable publication. The generated cache
+uses private directories/files and never accepts artifact destinations supplied by model output.
+
+The service sweeps terminal tasks older than 30 days hourly. `prune_agent_tasks(keep_days=30)` and
+CLI `agent-task prune --keep-days 30` expose the same owner-scoped operation. Cleanup removes only
+recognized files in a validated generated task directory, its metadata/receipts, matching private
+history rows and completed delivery records. User outputs and externally linked journals are preserved;
+unrecognized cache files and symlink escapes refuse cleanup for review.
+
+AC/MCP expose receipts/reconcile/prune; REST adds POST `/agent/receipts|reconcile|prune`. The task view
+Actions menu exposes receipts, owner review and expired-cache cleanup. Put the review object in the
+JSON editor for the selected task; the operation records it without automatically resuming.

@@ -50,6 +50,9 @@ def test_service_round_trip_preserves_raw_results(service):
     result = client.call("act", {"task_id": task["task_id"], "action": action})
     assert result["result"] == {"value": 1}
     assert client.call("finish", {"task_id": task["task_id"]})["state"] == "succeeded"
+    receipts = client.call("receipts", {"task_id": task["task_id"], "limit": 1})
+    assert receipts["total"] == 1
+    assert receipts["actions"][0]["status"] == "confirmed"
 
 
 def test_bridge_keeps_owner_identity(service):

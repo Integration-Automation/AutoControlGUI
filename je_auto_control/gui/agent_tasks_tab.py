@@ -91,9 +91,11 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_stop_service", partial(self._dispatch, "stop")),
                 ("agent_stop_all", partial(self._dispatch, "stop_all", {})),
                 ("agent_preview", self._preview),
+                ("agent_reconcile", self._reconcile),
+                ("agent_prune", partial(self._dispatch, "prune", {})),
                 ("agent_submit", self._submit), ("agent_refresh", partial(self._dispatch, "list")),
                 *[("agent_" + name, partial(self._dispatch, name)) for name in
-                  ("get", "observe", "finish", "pause", "resume", "cancel")]]
+                  ("get", "observe", "finish", "pause", "resume", "cancel", "receipts")]]
 
     def _preview(self) -> None:
         try:
@@ -102,6 +104,14 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             self._status.setText(str(error))
             return
         self._dispatch("draft", {"workflow": self._workflow.currentText(), "config": config})
+
+    def _reconcile(self) -> None:
+        try:
+            review = json.loads(self._scope.toPlainText())
+        except (ValueError, TypeError) as error:
+            self._status.setText(str(error))
+            return
+        self._dispatch("reconcile", {"task_id": self._task_id.text(), "review": review})
 
     def _submit(self) -> None:
         try:
@@ -116,7 +126,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
     def _dispatch(self, operation: str, payload: dict | None = None) -> None:
         if self._handle is not None and self._handle.outcome is None:
             return
-        default = {} if operation in {"start", "stop", "list", "stop_all"} else {"task_id": self._task_id.text()}
+        task_operation = operation not in {"start", "stop", "list", "stop_all", "prune"}
+        default = {"task_id": self._task_id.text()} if task_operation else {}
         data = payload or default
         self._handle = self._controller.submit(partial(_request, operation, data), owner=self)
         self._handle.finished.connect(self._completed)

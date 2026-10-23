@@ -657,3 +657,7 @@ acceptance remains deferred. Read-back mismatch and uncertain submission prevent
 Windows presence gating has synthetic hook-metadata, idle/lock/listener-loss and IPC takeover tests.
 No native hooks were installed during acceptance. Other shared-desktop activity adapters remain open.
 Persistent budget rollback/restart/regression handling and owner-scoped emergency stop have offline coverage.
+
+Receipt review, non-effect retry, atomic history/journal linkage, image opt-in and owner-scoped 30-day
+retention have fake-effect/cache coverage. These are persistence guarantees, not new native acceptance.
+Cleanup preserves user outputs, external journal files and unrecognized cache content.

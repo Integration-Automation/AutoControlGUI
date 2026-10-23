@@ -21,6 +21,8 @@ from je_auto_control.utils.agent_runtime.ownership import ControlBroker, Control
 from je_auto_control.utils.agent_runtime.policy import TaskPolicy, durable_payload
 from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock
 from je_auto_control.utils.agent_runtime.budget_clock import BudgetClock
+from je_auto_control.utils.agent_runtime.evidence import TaskEvidence
+from je_auto_control.utils.agent_runtime.receipts import reconcile, row_report
 from je_auto_control.utils.agent_runtime.store import AgentTaskStore
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
@@ -52,6 +54,7 @@ class AgentRuntime:
         self._owner_lock = RuntimeLock(str(self.store.path) + ".lock")
         self.broker = ControlBroker(self.store)
         self.clock = BudgetClock(self.store)
+        self.evidence = TaskEvidence(self.store)
         self._targets = dict(targets) if targets is not None else _default_targets()
         self._tokens: dict[str, CancellationToken] = {}
         self._executing: set[str] = set()
@@ -63,6 +66,7 @@ class AgentRuntime:
         self._closed = False
         self.background: Any = None
         self.shutdown_requested = threading.Event()
+        self._next_retention = 0.0
         try:
             self.store.recover()
         except BaseException:  # reason: construction failure must release only the newly owned OS lock
@@ -94,13 +98,43 @@ class AgentRuntime:
         validate_criteria(spec.success_criteria)
         with DeferredAuthorization.capture().scope():
             task_id = self.store.create(durable_payload(spec.to_dict()), _identity_dict())
+        self.evidence.ensure(task_id)
         return AgentTaskHandle(task_id)
 
     def get(self, task_id: str) -> AgentTaskResult:
         """Read owner-scoped task status without observing the desktop."""
         row = self._row(task_id)
         return AgentTaskResult(task_id, row["state"], row["spec"]["goal"], row["reason"], row["steps"],
-                               tuple(freeze(row["verification"])))
+                               tuple(freeze(row["verification"])), freeze(self.evidence.metadata(task_id)))
+
+    def receipts(self, task_id: str, offset: int = 0, limit: int = 100) -> dict[str, Any]:
+        """Inspect owner-scoped receipts, immutable reviews and per-row completion status."""
+        row = self._row(task_id)
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise AgentTaskError("receipt offset must be a nonnegative integer")
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 200:
+            raise AgentTaskError("receipt limit must be between one and two hundred")
+        actions = self.store.actions(task_id)
+        with self.store.connection() as connection:
+            reviews = [dict(item) for item in connection.execute("SELECT * FROM agent_reviews WHERE task_id=?",
+                                                                 (task_id,))]
+        return {"task_id": task_id, "actions": actions[offset:offset + limit], "total": len(actions),
+                "offset": offset, "reviews": reviews[-200:],
+                "rows": row_report(AgentTaskSpec.from_dict(row["spec"]), actions)}
+
+    def reconcile(self, task_id: str, review: Mapping[str, Any]) -> AgentTaskResult:
+        """Record an explicit owner's witness for one uncertain attempt; resume remains a separate action."""
+        with self._lock(task_id):
+            row = self._row(task_id)
+            if row["state"] not in {"waiting_user", "recovering", "paused"} or task_id in self._leases:
+                raise AgentTaskError("reconciliation requires a stopped task with no active input owner")
+            owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
+            with DeferredAuthorization(owner).scope():
+                reconcile(self.store, task_id, review)
+            receipt = next(item for item in self.store.actions(task_id) if item["id"] == review["action_id"])
+            self.evidence.action(task_id, receipt, finished=True)
+            self.evidence.publish(task_id)
+            return self.get(task_id)
 
     def list(self, limit: int = 100) -> list[AgentTaskResult]:
         """List only tasks visible to the current principal."""
@@ -200,6 +234,8 @@ class AgentRuntime:
                         self._token(task_id).checkpoint()
                     observation = AgentObservation(uuid.uuid4().hex, task_id, time.time(), freeze(data))
                     self._observations[task_id] = observation
+                    if row["spec"]["options"].get("persist_images") and data.get("image"):
+                        self.evidence.image(task_id, observation.observation_id, data["image"])
                     return observation
                 finally:
                     self._settle_control(task_id)
@@ -236,13 +272,18 @@ class AgentRuntime:
         action_id = self.store.prepare(task_id, request.tool, durable_payload(arguments))
         try:
             self._token(task_id).checkpoint()
+            self.evidence.action(task_id, self.store.actions(task_id)[-1])
             self.store.settle(action_id, "dispatched")
             result = self._target(row).perform(request.tool, arguments)
             result = durable_payload(result)
             self.store.settle(action_id, "confirmed", result)
+            self.evidence.action(task_id, self.store.actions(task_id)[-1], finished=True)
             return AgentActionResult(action_id, freeze(result))
         except (CancelledError, *_ERRORS) as error:
-            self.store.settle(action_id, "uncertain", {"error": type(error).__name__})
+            receipt = self.store.actions(task_id)[-1]
+            if receipt["status"] in {"prepared", "dispatched"}:
+                status = "uncertain" if receipt["status"] == "dispatched" else "failed"
+                self.store.settle(action_id, status, {"error": type(error).__name__})
             if not self._token(task_id).is_cancelled:
                 self.store.update(task_id, "waiting_user", reason="action outcome requires review")
             raise
@@ -300,6 +341,7 @@ class AgentRuntime:
         self.store.update(task_id, pending)
         if task_id not in self._executing and self._retire(task_id):
             self.store.update(task_id, settled)
+            self.evidence.publish(task_id)
         return self.get(task_id)
 
     def _settle_control(self, task_id: str) -> None:
@@ -307,6 +349,7 @@ class AgentRuntime:
         stops = {"pausing": "paused", "cancelling": "cancelled"}
         if state in stops and self._retire(task_id):
             self.store.update(task_id, self._stop_final.get(task_id, stops[state]))
+            self.evidence.publish(task_id)
         elif state in TERMINAL or state == "waiting_user":
             self._retire(task_id)
 
@@ -320,6 +363,7 @@ class AgentRuntime:
             return False
         with self._mutex:
             self._leases.pop(task_id, None)
+        self.evidence.publish(task_id)
         return True
 
     def resume(self, task_id: str) -> AgentTaskResult:
@@ -347,6 +391,7 @@ class AgentRuntime:
             if not self._retire(task_id):
                 raise AgentTaskError("runtime still has active input or cleanup")
         self._closed = True
+        self.evidence.history.close()
         self._owner_lock.close()
 
     def maintain(self) -> None:
@@ -362,6 +407,14 @@ class AgentRuntime:
                     pass
             except AuthorizationError:
                 self.cancel(task_id)
+        if time.monotonic() >= self._next_retention:
+            self.prune()
+            self._next_retention = time.monotonic() + 3600
+
+    def prune(self, keep_days: int = 30) -> dict[str, Any]:
+        """Remove expired visible metadata and owned artifacts, preserving user output and external journals."""
+        from je_auto_control.utils.agent_runtime.retention import prune_tasks
+        return prune_tasks(self, keep_days)
 
     def request_shutdown(self) -> dict[str, Any]:
         """Stop only after every active input owner has completed cancellation and cleanup."""

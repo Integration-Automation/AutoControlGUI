@@ -12,6 +12,12 @@ _ID = {"task_id": {"type": "string", "minLength": 1}}
 
 # name: (function, JSON properties, required, read_only, host_management)
 CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
+    "AC_agent_task_receipts": (api.get_agent_task_receipts, {**_ID, "offset": {"type": "integer", "minimum": 0},
+                                   "limit": {"type": "integer", "minimum": 1, "maximum": 200}},
+                                  ("task_id",), True, False),
+    "AC_agent_task_reconcile": (api.reconcile_agent_task, {**_ID, "review": {"type": "object"}},
+                               ("task_id", "review"), False, False),
+    "AC_agent_task_prune": (api.prune_agent_tasks, {"keep_days": {"type": "integer", "minimum": 1}}, (), False, False),
     "AC_agent_task_stop_all": (api.stop_all_agent_tasks, {}, (), False, False),
     "AC_agent_task_draft": (draft_agent_workflow, {"workflow": {"type": "string", "enum": list(WORKFLOWS)},
                                                   "config": {"type": "object"}}, ("workflow", "config"), True, False),

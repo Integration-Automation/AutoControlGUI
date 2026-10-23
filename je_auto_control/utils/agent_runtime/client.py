@@ -20,7 +20,7 @@ class AgentRuntimeClient:
     def call(self, operation: str, body: dict[str, Any] | None = None, *, timeout: float = 30) -> dict[str, Any]:
         """Perform a known local task operation without accepting arbitrary URLs or methods."""
         allowed = {"list", "get", "submit", "observe", "act", "finish", "pause", "resume", "cancel",
-                   "shutdown", "draft", "stop_all"}
+                   "shutdown", "draft", "stop_all", "receipts", "reconcile", "prune"}
         if operation not in allowed:
             raise AgentTaskError("unknown task operation")
         try:

@@ -15,48 +15,52 @@ def register_parser(subparsers: Any, handler: Callable[..., int]) -> None:
     parser = subparsers.add_parser("agent-task", help="Manage explicitly authorized agent tasks")
     operations = parser.add_subparsers(dest="agent_operation", required=True)
     for operation in ("start", "stop", "status", "submit", "list", "get", "observe", "act", "finish",
-                      "pause", "resume", "cancel", "draft", "stop-all"):
+                      "pause", "resume", "cancel", "draft", "stop-all", "receipts", "reconcile", "prune"):
         item = operations.add_parser(operation)
         item.set_defaults(func=handler)
-        if operation == "start":
-            item.add_argument("--directory")
-        elif operation == "submit":
-            item.add_argument("spec", help="JSON task specification")
-        elif operation == "draft":
-            from je_auto_control.utils.agent_runtime.workflow_specs import WORKFLOWS
-            item.add_argument("workflow", choices=WORKFLOWS)
-            item.add_argument("config", help="JSON workflow configuration")
-        elif operation not in {"list", "status", "stop", "stop-all"}:
-            item.add_argument("task_id")
-            if operation == "act":
-                item.add_argument("action", help="JSON grounded action request")
+        _operation_arguments(item, operation)
+
+
+def _operation_arguments(item: Any, operation: str) -> None:
+    if operation == "start":
+        item.add_argument("--directory")
+    elif operation == "submit":
+        item.add_argument("spec", help="JSON task specification")
+    elif operation == "prune":
+        item.add_argument("--keep-days", type=int, default=30)
+    elif operation == "draft":
+        from je_auto_control.utils.agent_runtime.workflow_specs import WORKFLOWS
+        item.add_argument("workflow", choices=WORKFLOWS)
+        item.add_argument("config", help="JSON workflow configuration")
+    elif operation not in {"list", "status", "stop", "stop-all"}:
+        item.add_argument("task_id")
+        if operation in {"act", "reconcile"}:
+            item.add_argument("action" if operation == "act" else "review", help="JSON action request or owner review")
 
 
 def run(arguments: argparse.Namespace) -> dict[str, Any]:
     """Run one parsed operation and return a JSON-compatible result."""
     operation = arguments.agent_operation
-    if operation == "start":
-        return api.start_agent_runtime(arguments.directory)
-    if operation == "status":
-        return api.agent_runtime_status()
-    if operation == "stop":
-        return api.stop_agent_runtime()
-    if operation == "stop-all":
-        return api.stop_all_agent_tasks()
-    if operation == "submit":
-        return api.submit_agent_task(_read(arguments.spec))
-    if operation == "draft":
-        from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow
-        return {"draft": draft_agent_workflow(arguments.workflow, _read(arguments.config))}
-    if operation == "list":
-        return api.list_agent_tasks()
-    operations = {"observe": api.observe_agent_task, "finish": api.finish_agent_task}
+    operations = {"start": lambda: api.start_agent_runtime(arguments.directory),
+                  "status": api.agent_runtime_status, "stop": api.stop_agent_runtime,
+                  "stop-all": api.stop_all_agent_tasks, "list": api.list_agent_tasks,
+                  "submit": lambda: api.submit_agent_task(_read(arguments.spec)),
+                  "draft": lambda: _draft(arguments), "prune": lambda: api.prune_agent_tasks(arguments.keep_days),
+                  "reconcile": lambda: api.reconcile_agent_task(arguments.task_id, _read(arguments.review))}
     if operation in operations:
-        return operations[operation](arguments.task_id)
+        return operations[operation]()
+    task_operations = {"observe": api.observe_agent_task, "finish": api.finish_agent_task}
+    if operation in task_operations:
+        return task_operations[operation](arguments.task_id)
     body: dict[str, Any] = {"task_id": arguments.task_id}
     if operation == "act":
         return api.act_agent_task(arguments.task_id, _read(arguments.action))
     return AgentRuntimeClient().call(operation, body)
+
+
+def _draft(arguments: argparse.Namespace) -> dict:
+    from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow
+    return {"draft": draft_agent_workflow(arguments.workflow, _read(arguments.config))}
 
 
 def _read(path: str) -> Any:

@@ -224,6 +224,7 @@ class AgentTaskResult:
     reason: str = ""
     steps: int = 0
     verification: tuple[Mapping[str, Any], ...] = ()
+    metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Return independent JSON-compatible status and evidence."""

@@ -82,7 +82,7 @@ class DesktopTarget:
         redacted.thumbnail((1280, 1280))
         buffer = io.BytesIO()
         redacted.convert("RGB").save(buffer, format="JPEG", quality=65)
-        return {"format": "jpeg", "data": base64.b64encode(buffer.getvalue()).decode("ascii"),
+        return {"format": "jpeg", "redacted_by": "strict", "data": base64.b64encode(buffer.getvalue()).decode("ascii"),
                 "origin": list(origin), "original_size": list(original), "image_size": list(redacted.size)}
 
     def perform(self, name: str, arguments: dict[str, Any]) -> Any:

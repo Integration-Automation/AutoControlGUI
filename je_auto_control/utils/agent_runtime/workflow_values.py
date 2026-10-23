@@ -51,15 +51,20 @@ def expected(action: Mapping[str, Any], values: Mapping[str, Any]) -> tuple[bool
 
 def complete(spec: AgentTaskSpec, receipts: Sequence[Mapping[str, Any]]) -> bool:
     """Require every pinned action and expectation; partial submission never counts as complete."""
+    receipts = [receipt for receipt in receipts if receipt["status"] not in {"not_applied", "failed"}]
     if not spec.actions or len(receipts) != len(spec.actions):
         return False
     values = captures(spec, receipts)
     for action, receipt in zip(spec.actions, receipts):
-        if receipt["status"] != "confirmed" or receipt["command"] != action["tool"]:
-            return False
-        if receipt["arguments"] != resolve(action.get("arguments", {}), values):
-            return False
-        required, value = expected(action, values)
-        if required and receipt["result"] != value:
+        if not _matches_action(action, receipt, values):
             return False
     return True
+
+
+def _matches_action(action: Mapping, receipt: Mapping, values: Mapping) -> bool:
+    if receipt["status"] != "confirmed" or receipt["command"] != action["tool"]:
+        return False
+    if receipt["arguments"] != resolve(action.get("arguments", {}), values):
+        return False
+    required, value = expected(action, values)
+    return not required or receipt["result"] == value

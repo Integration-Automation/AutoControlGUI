@@ -6,7 +6,8 @@ from concurrent.futures import CancelledError
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 
-OPERATIONS = ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown", "draft", "stop_all")
+OPERATIONS = ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown", "draft", "stop_all",
+              "receipts", "reconcile", "prune")
 
 
 def route(operation: str) -> Callable[..., Any]:
@@ -34,14 +35,11 @@ def dispatch(runtime: Any, operation: str, body: Any = None, task_id: str | None
         return runtime.get(task_id).to_dict()
     if not isinstance(body, dict):
         raise AgentTaskError("request body must be an object")
-    if operation == "shutdown":
-        return runtime.request_shutdown()
-    if operation == "stop_all":
-        return _stop_all(runtime, body)
-    if operation == "submit":
-        return _submit(runtime, body)
-    if operation == "draft":
-        return _draft(body)
+    operations = {"shutdown": lambda: runtime.request_shutdown(), "stop_all": lambda: _stop_all(runtime, body),
+                  "submit": lambda: _submit(runtime, body), "draft": lambda: _draft(body),
+                  "prune": lambda: _prune(runtime, body)}
+    if operation in operations:
+        return operations[operation]()
     return _task_operation(runtime, operation, body)
 
 
@@ -67,18 +65,33 @@ def _draft(body: dict) -> dict:
     return {"draft": draft_agent_workflow(body["workflow"], body["config"])}
 
 
+def _prune(runtime: Any, body: dict) -> dict:
+    if set(body) - {"keep_days"}:
+        raise AgentTaskError("prune accepts only keep_days")
+    return runtime.prune(body.get("keep_days", 30))
+
+
 def _task_operation(runtime: Any, operation: str, body: dict[str, Any]) -> dict[str, Any]:
-    expected = {"task_id", "action"} if operation == "act" else {"task_id"}
-    if set(body) != expected or not isinstance(body.get("task_id"), str):
-        raise AgentTaskError("invalid task operation fields")
+    _check_task_fields(operation, body)
     task_id = body["task_id"]
     if operation == "act":
         return runtime.act(task_id, body["action"]).to_dict()
+    if operation == "reconcile":
+        return runtime.reconcile(task_id, body["review"]).to_dict()
+    if operation == "receipts":
+        return runtime.receipts(task_id, body.get("offset", 0), body.get("limit", 100))
     handlers = {name: getattr(runtime, name) for name in OPERATIONS
-                if name not in {"submit", "act", "shutdown", "draft", "stop_all"}}
+                if name not in {"submit", "act", "shutdown", "draft", "stop_all", "prune", "reconcile", "receipts"}}
     if operation not in handlers:
         raise AgentTaskError("unknown task operation")
     result = handlers[operation](task_id).to_dict()
     if operation == "resume" and getattr(runtime, "background", None) is not None:
         runtime.background.start(task_id)
     return result
+
+
+def _check_task_fields(operation: str, body: dict) -> None:
+    required = {"task_id"} | {"act": {"action"}, "reconcile": {"review"}}.get(operation, set())
+    optional = {"offset", "limit"} if operation == "receipts" else set()
+    if not required <= set(body) or set(body) - required - optional or not isinstance(body.get("task_id"), str):
+        raise AgentTaskError("invalid task operation fields")

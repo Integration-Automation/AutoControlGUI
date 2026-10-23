@@ -28,7 +28,20 @@ CREATE TABLE IF NOT EXISTS agent_control (
 CREATE TABLE IF NOT EXISTS agent_clocks (
  task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE,
  started REAL NOT NULL, last_seen REAL NOT NULL, spent REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_reviews (
+ action_id TEXT PRIMARY KEY REFERENCES agent_actions(id), task_id TEXT NOT NULL REFERENCES agent_tasks(id),
+ decision TEXT NOT NULL, note TEXT NOT NULL, original_result TEXT, reviewed REAL NOT NULL, actor TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_evidence (
+ task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE,
+ history_id INTEGER NOT NULL, journal_path TEXT NOT NULL);
 """
+
+
+def _open_connection(driver: Any, path: str) -> Any:
+    try:
+        return driver.connect(path, timeout=5, isolation_level=None)
+    except driver.Error as error:
+        raise AgentTaskError("agent runtime database could not be opened") from error
 
 
 class AgentTaskStore:
@@ -42,10 +55,11 @@ class AgentTaskStore:
     def connection(self, *, write: bool = False) -> Iterator[Any]:
         """Own a connection and atomically commit or roll back a write transaction."""
         driver = require_sqlite3()
-        Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-        connection = driver.connect(self.path, timeout=5, isolation_level=None)
-        connection.row_factory = driver.Row
+        Path(self.path).parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        connection = _open_connection(driver, self.path)
         try:
+            Path(self.path).chmod(0o600)
+            connection.row_factory = driver.Row
             connection.execute("PRAGMA foreign_keys=ON")
             if not self._ready:
                 connection.executescript(_SCHEMA)
@@ -132,6 +146,9 @@ class AgentTaskStore:
             row = connection.execute("SELECT task_id,status FROM agent_actions WHERE id=?", (action_id,)).fetchone()
             if row is None:
                 raise AgentTaskError("unknown action receipt")
+            allowed = {"prepared": {"dispatched", "failed"}, "dispatched": {"confirmed", "uncertain", "failed"}}
+            if status not in allowed.get(row["status"], set()):
+                raise AgentTaskError("action receipt cannot change after its outcome was committed")
             connection.execute("UPDATE agent_actions SET status=?,result=? WHERE id=?",
                                (status, json.dumps(detached(result)), action_id))
             if status in {"confirmed", "uncertain", "failed"} and row["status"] in {"prepared", "dispatched"}:
@@ -141,7 +158,9 @@ class AgentTaskStore:
     def actions(self, task_id: str) -> List[dict[str, Any]]:
         """Return independent action receipts in their original execution order."""
         with self.connection() as connection:
-            rows = connection.execute("SELECT * FROM agent_actions WHERE task_id=? ORDER BY created,rowid",
+            rows = connection.execute("SELECT a.*,r.actor AS reviewed_by,r.decision AS review_decision "
+                                      "FROM agent_actions a LEFT JOIN agent_reviews r ON a.id=r.action_id "
+                                      "WHERE a.task_id=? ORDER BY a.created,a.rowid",
                                       (task_id,)).fetchall()
         return [{**dict(row), "arguments": json.loads(row["arguments"]),
                  "result": json.loads(row["result"]) if row["result"] is not None else None} for row in rows]
@@ -150,6 +169,10 @@ class AgentTaskStore:
         """Mark abandoned live work for review; never replay an uncertain effect."""
         with self.connection(write=True) as connection:
             connection.execute("UPDATE agent_actions SET status='uncertain' WHERE status='dispatched'")
+            connection.execute("UPDATE agent_actions SET status='failed' WHERE status='prepared'")
+            connection.execute("UPDATE agent_tasks SET steps=MAX(steps,(SELECT COUNT(*) FROM agent_actions "
+                               "WHERE task_id=agent_tasks.id "
+                               "AND status IN ('confirmed','uncertain','failed','not_applied')))")
             connection.execute("UPDATE agent_tasks SET state='recovering',reason='runtime restarted' "
                                "WHERE state IN ('running','verifying','pausing','cancelling')")
             connection.execute("UPDATE agent_control SET owner=''")

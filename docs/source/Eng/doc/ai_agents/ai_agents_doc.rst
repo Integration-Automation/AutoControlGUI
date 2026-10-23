@@ -146,3 +146,8 @@ checks and completion conditions before submission. The Agent Tasks Actions menu
 Windows shared-desktop tasks require unlocked inactivity for sixty seconds. Physical input requests
 pause through an independent helper notice. ``stop_all_agent_tasks`` or ``agent-task stop-all`` cancels
 visible tasks. Other shared desktops need an activity adapter. Monotonic budget history survives restart.
+
+Use ``get_agent_task_receipts`` for per-row results and ``reconcile_agent_task`` to record an explicit
+owner witness for an uncertain effect before resume. Task metadata links history, journal and reports.
+Generated cache expires after thirty days; user outputs and external journals are preserved. Images
+are ephemeral unless strict-redacted persistence is explicitly enabled.

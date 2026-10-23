@@ -1520,3 +1520,9 @@ japanese_word_dict["agent_stop_service"] = 'サービス停止'
 japanese_word_dict.update({"agent_workflow": "ワークフローテンプレート", "agent_preview": "ワークフローをプレビュー"})
 
 japanese_word_dict["agent_stop_all"] = "すべてのタスクを停止"
+
+japanese_word_dict.update({
+    "agent_receipts": "アクション記録／行別結果",
+    "agent_reconcile": "確認済み結果を記録",
+    "agent_prune": "期限切れキャッシュを削除"
+})
