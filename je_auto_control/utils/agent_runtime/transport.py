@@ -17,7 +17,7 @@ _CONTROL_SLOTS = threading.BoundedSemaphore(2)
 
 def request_json(url: str, *, body: Any = None, token: str | None = None,
                  timeout: float = 30, check: Callable[[], None] = cancellation_checkpoint,
-                 control: bool = False) -> dict[str, Any]:
+                 control: bool = False, delegate_local: bool = False) -> dict[str, Any]:
     """Use existing egress/redirect checks and bound resource use across cancelled callers."""
     from je_auto_control.utils.agent_runtime.models import positive
     positive(timeout, "HTTP timeout", 3600)
@@ -29,17 +29,7 @@ def request_json(url: str, *, body: Any = None, token: str | None = None,
 
     def fetch() -> None:
         try:
-            headers = {"Authorization": f"Bearer {token}"} if token else {}
-            if token:
-                from je_auto_control.utils.agent_runtime.origin_policy import HEADER as ORIGIN_HEADER, current_origin
-                if current_origin() is not None:
-                    headers[ORIGIN_HEADER] = str(current_origin())
-                from urllib.parse import urlparse
-                from je_auto_control.utils.agent_runtime.delegation import HEADER, sign_principal
-                from je_auto_control.utils.rbac.authorization import current_authorization
-                identity = current_authorization()
-                if identity is not None:
-                    headers[HEADER] = sign_principal(identity, token, urlparse(url).path)
+            headers = _headers(url, token, delegate_local)
             from je_auto_control.utils.egress.egress_policy import get_egress_policy
             get_egress_policy().check(url)
             call = build_call(url, method="POST" if body is not None else "GET",
@@ -66,6 +56,36 @@ def request_json(url: str, *, body: Any = None, token: str | None = None,
             _raise_reply_error(reply)
         return reply["json"]
     raise AgentTaskError("local HTTP request timed out")
+
+
+def _headers(url: str, token: str | None, delegate_local: bool) -> dict[str, str]:
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    if not delegate_local:
+        return headers
+    path = _local_path(url, token)
+    from je_auto_control.utils.agent_runtime.origin_policy import HEADER as ORIGIN_HEADER, current_origin
+    if current_origin() is not None:
+        headers[ORIGIN_HEADER] = str(current_origin())
+    from je_auto_control.utils.agent_runtime.delegation import HEADER, sign_principal
+    from je_auto_control.utils.rbac.authorization import current_authorization
+    identity = current_authorization()
+    if identity is not None:
+        headers[HEADER] = sign_principal(identity, str(token), path)
+    return headers
+
+
+def _local_path(url: str, token: str | None) -> str:
+    from urllib.parse import urlsplit
+    try:
+        parsed = urlsplit(url)
+        checks = (parsed.scheme == "http", parsed.hostname == "127.0.0.1", parsed.port is not None,
+                  parsed.port != 0, parsed.username is None, parsed.password is None, not parsed.fragment,
+                  parsed.path.startswith("/agent/"))
+        if not all(checks) or not isinstance(token, str) or not token:
+            raise AgentTaskError("delegation requires an explicit authenticated local service route")
+        return parsed.path
+    except (TypeError, ValueError):
+        raise AgentTaskError("delegation requires an explicit authenticated local service route") from None
 
 
 def _raise_reply_error(reply: dict) -> NoReturn:

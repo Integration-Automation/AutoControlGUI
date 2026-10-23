@@ -208,6 +208,15 @@ def test_the_shipped_stub_lists_every_executor_command():
         f"missing: {sorted(live - shipped)[:10]} stale: {sorted(shipped - live)[:10]}")
 
 
+def test_postponed_project_types_never_become_unresolved_stub_names():
+    """Unknown forward names must follow the generator's existing Any fallback policy."""
+    from je_auto_control.utils.stubs.generator import _annotation_str
+    for annotation in ("AgentTaskSpec | Mapping[str, Any]", "list[ToolSummary]", "MCPServer"):
+        assert _annotation_str(annotation, default="Any") == "Any"
+    assert _annotation_str("dict[str, Any] | None", default="Any") == "dict[str, Any] | None"
+    assert _annotation_str("Path", default="Any") == "Path"
+
+
 def test_a_long_docstring_line_is_wrapped_too():
     """The stub is linted at 120 columns; a handler's summary is unbounded."""
     from je_auto_control.utils.stubs import generator as gen

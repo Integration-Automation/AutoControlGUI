@@ -1,5 +1,7 @@
 # Changelog
 
+Fix generic HTTP transport forwarding local principals/root witnesses: only explicit validated local runtime client calls delegate metadata. Complete versioned API exports and shipped command stubs, including recovery/skills/browser operations; unknown postponed stub types follow the existing Any fallback. Sample persistent budget clocks after acquiring the database transaction to prevent concurrent readers from falsely expiring a task. Public task and GUI operation signatures remain compatible.
+
 Experimental: add rooted browser link/download/upload commands via je_web_runner transfer contract version 1. Add browser download_archive previews with independent manifest verification and inert GUI file examples. Browser URL scope checks run before dispatch; cancellation and authority errors retain control semantics. Existing core browser grants remain compatible without transfer support.
 
 Experimental: add pinned browser text/value/visibility/URL completion criteria, requiring browser-read and origin grants. Finish uses fresh owned-helper SDK state rather than receipts or previews; unsupported results are unknown. Cancellation, authorization revocation and human review propagate through verification. Existing non-browser criteria and three-argument verifier callers remain compatible. Browser workflow URLs now preserve SPA fragments.

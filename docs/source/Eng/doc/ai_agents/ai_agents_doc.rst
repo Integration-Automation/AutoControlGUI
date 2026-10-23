@@ -318,3 +318,17 @@ the query page per file. It captures fresh links, downloads at most 16 MiB per f
 whose names/sizes/hashes are independently verified. GUI Actions draft file target/workflow/upload examples
 without starting resources. MCP/REST/CLI/Builder/model tools share these commands; link reads still require
 drive-input authority. Deployment and real-browser acceptance remain open; existing acceptance pauses hold.
+
+Local authority, API and concurrent budgets
+----------------------------------------------------------------------
+
+Local runtime principal and live-root forwarding now requires an explicit local-service call.
+Generic authenticated HTTP requests carry the supplied bearer token; local user/store/witness metadata
+is attached only by the runtime client after validating the loopback service destination and route.
+The versioned ``je_auto_control.api`` namespace exposes every advertised ``api.core`` name, including
+managed browser commands, target recovery and skills. Executor typing stubs include all shipped commands;
+unresolved postponed project types use the generator's existing ``Any`` fallback instead of invalid names.
+Concurrent budget readers sample clocks inside the exclusive database transaction, preventing false
+task timeouts when readers acquire locks in a different order. Actual clock rollback remains fail-closed.
+GUI/MCP/REST/CLI share these repaired client and API contracts. Production checkouts and existing
+native/browser/device/24-hour acceptance pauses remain unchanged.

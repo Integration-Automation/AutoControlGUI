@@ -66,3 +66,16 @@ def test_service_routes_have_explicit_operator_or_host_capabilities():
     for operation in OPERATIONS:
         assert capability_for_route("POST", f"/agent/{operation}") == (
             "manage_hosts" if operation in {"shutdown", "recover_target", "target"} else "drive_input")
+def test_versioned_namespace_exposes_every_managed_task_public_api():
+    """The versioned namespace must offer the same managed contracts as the package root."""
+    import je_auto_control
+    from je_auto_control import api
+    from je_auto_control.api import core
+    from je_auto_control.utils import agent_runtime
+    for name in agent_runtime.__all__:
+        expected = getattr(agent_runtime, name)
+        assert getattr(core, name) is expected
+        assert getattr(api, name) is expected
+        assert getattr(je_auto_control, name) is expected
+
+

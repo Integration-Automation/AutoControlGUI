@@ -1,5 +1,7 @@
 # Capability matrix
 
+Runtime contract closure: versioned API names now resolve consistently, all shipped commands appear in IDE stubs, local authority forwarding stays on explicit loopback runtime calls, and reordered concurrent budget readers cannot cause false clock rollback. Evidence uses deterministic transaction ordering, fake HTTP and owned loopback; native/device/browser evidence remains separate.
+
 Browser file transfers: experimental; explicit roots and exact origins, byte-only uploads (4 MiB), complete atomic downloads (16 MiB), no overwrite, SHA256 and independent manifests. Evidence uses fake engines, real WebRunner SDK with owned helper/loopback, cancellation and offscreen GUI tests. Deployment/native evidence remains unrecorded.
 
 Browser completion: experimental; fake state/model-stop/receipt-change/blank-page/over-limit/control-error and offscreen GUI evidence, plus real WebRunner SDK with fake Chromium inside the owned helper. Four scoped criteria are independently read only at finish; native/application acceptance remains unrecorded.

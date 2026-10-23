@@ -124,6 +124,78 @@ def AC_admin_remove_host(label: str) -> Dict[str, Any]:
 def AC_agent_card(path: str | None = ...) -> Dict[str, Any]:
     """Adapter: build (or write) the A2A agent card."""
 
+def AC_agent_runtime_start(directory: str | None = ...) -> dict[str, Any]:
+    """Explicitly start a hidden, independent local service, or attach to the current one."""
+
+def AC_agent_runtime_status() -> dict[str, Any]:
+    """Return inert local connection metadata without reading or returning credentials."""
+
+def AC_agent_runtime_stop() -> dict[str, Any]:
+    """Request service cancellation and retirement; an active input owner prevents shutdown."""
+
+def AC_agent_skill(operation: str, request: Mapping[str, Any] | None = ...) -> dict[str, Any]:
+    """Record, parameterize, validate, explicitly publish or run an immutable managed skill version."""
+
+def AC_agent_skill_list() -> dict[str, Any]:
+    """List owner-visible immutable skill candidates and published versions."""
+
+def AC_agent_target(operation: str, request: Mapping[str, Any] | None = ...) -> dict[str, Any]:
+    """Register an immutable host-reviewed target or explicitly change its availability."""
+
+def AC_agent_target_list() -> dict[str, Any]:
+    """Read passive target names and declared support without connecting or exposing host configuration."""
+
+def AC_agent_target_recover(target: str, note: str) -> dict[str, Any]:
+    """Review host-crash input ownership after manually releasing held keys/buttons."""
+
+def AC_agent_task_act(task_id: str, action: Mapping[str, Any]) -> dict[str, Any]:
+    """Apply one grounded action through the host's current task policy."""
+
+def AC_agent_task_cancel(task_id: str) -> dict[str, Any]:
+    """Cancel future operations and retire owned input."""
+
+def AC_agent_task_draft(workflow: str, config: Mapping[str, Any]) -> dict[str, Any]:
+    """Preview a deterministic task; this function never submits or operates an application."""
+
+def AC_agent_task_finish(task_id: str) -> dict[str, Any]:
+    """Request deterministic completion verification; never force a success status."""
+
+def AC_agent_task_get(task_id: str) -> dict[str, Any]:
+    """Read one owner-scoped task snapshot."""
+
+def AC_agent_task_list() -> dict[str, Any]:
+    """List task snapshots visible to the current caller."""
+
+def AC_agent_task_observe(task_id: str) -> dict[str, Any]:
+    """Acquire the authorized target and obtain a fresh, versioned observation."""
+
+def AC_agent_task_pause(task_id: str) -> dict[str, Any]:
+    """Pause input and release control after owned work retires."""
+
+def AC_agent_task_prune(keep_days: int = ...) -> dict[str, Any]:
+    """Prune expired visible metadata and owned artifacts, preserving user files and external journals."""
+
+def AC_agent_task_receipts(task_id: str, offset: int = ..., limit: int = ...) -> dict[str, Any]:
+    """Read paged owner-scoped action receipts, review witnesses and workflow row outcomes."""
+
+def AC_agent_task_reconcile(task_id: str, review: Mapping[str, Any]) -> dict[str, Any]:
+    """Record a human-reviewed uncertain outcome; this neither resumes a task nor forces success."""
+
+def AC_agent_task_resume(task_id: str) -> dict[str, Any]:
+    """Reauthorize and queue a task that can safely resume."""
+
+def AC_agent_task_stop_all() -> dict[str, Any]:
+    """Emergency-stop all tasks visible to this caller, retaining uncertain receipts for review."""
+
+def AC_agent_task_submit(spec: Any, idempotency_key: str | None = ...) -> dict[str, Any]:
+    """Validate and submit a task to the explicitly running local service."""
+
+def AC_agent_trigger(operation: str, request: Mapping[str, Any] | None = ...) -> dict[str, Any]:
+    """Register, inspect, pause or fire a durable, preauthorized task trigger."""
+
+def AC_agent_trigger_list() -> dict[str, Any]:
+    """List durable trigger metadata visible to this caller without firing or observing a target."""
+
 def AC_allow_sleep() -> Dict[str, Any]:
     """Adapter: release a previously-started keep-awake."""
 
@@ -441,6 +513,42 @@ def AC_bidi_strip(text: str) -> Dict[str, Any]:
 
 def AC_bring_to_front(title: str) -> Dict[str, Any]:
     """Adapter: raise a window to the top of the z-order."""
+
+def AC_browser_check(selector: str, frame: str = ...) -> bool:
+    """Check one unique enabled checkbox through the owned WebRunner session."""
+
+def AC_browser_click(selector: str, frame: str = ...) -> bool:
+    """Click one unique visible enabled element once, without retrying submissions."""
+
+def AC_browser_download(url: str, directory: str, name: str, sha256: str = ...) -> dict:
+    """Download through WebRunner and publish a complete file within explicit task roots."""
+
+def AC_browser_fill(selector: str, value: str, frame: str = ...) -> bool:
+    """Fill one unique element through the owned WebRunner session."""
+
+def AC_browser_link(selector: str, frame: str = ...) -> str:
+    """Read a complete reviewed-origin link through the owned WebRunner session."""
+
+def AC_browser_navigate(url: str) -> bool:
+    """Navigate once through the WebRunner origin fence in the current managed browser."""
+
+def AC_browser_read(operation: str, selector: str, frame: str = ...) -> Any:
+    """Read visible text, non-secret form value or visibility without collecting screenshots."""
+
+def AC_browser_select(selector: str, value: str, frame: str = ...) -> bool:
+    """Select one option through the owned WebRunner session."""
+
+def AC_browser_upload(selector: str, path: str, sha256: str = ..., frame: str = ...) -> dict:
+    """Send one rooted bounded file as immutable bytes; never submit the form automatically."""
+
+def AC_browser_wait(
+    operation: str,
+    selector: str,
+    expected: str,
+    frame: str = ...,
+    timeout_seconds: float = ...,
+) -> str:
+    """Poll a read-only text/value postcondition; never repeat a click, fill or submission."""
 
 def AC_build_critic_record(
     action: Any,
@@ -1881,6 +1989,12 @@ def AC_match_with_trust(
 def AC_mcp_manifest(path: str | None = ..., include_tools: bool = ...) -> Dict[str, Any]:
     """Adapter: build (or write) the MCP registry server.json manifest."""
 
+def AC_mcp_tool_schema(name: str, *, read_only: bool | None = ...) -> dict[str, Any]:
+    """Inspect a single current default-registry schema under the caller's role and read-only filter."""
+
+def AC_mcp_tool_search(query: str, *, limit: int = ..., read_only: bool | None = ...) -> Any:
+    """Search the current default registry without starting a transport or loading native backends."""
+
 def AC_memory_forget(db: str, episode_id: int) -> Dict[str, Any]:
     """Adapter: delete an episode."""
 
@@ -2037,7 +2151,7 @@ def AC_ocr_status() -> Dict[str, Any]:
     """Executor adapter: whether Tesseract OCR can work here, as a dict."""
 
 def AC_open_path(target: str, verb: str = ...) -> Dict[str, Any]:
-    """Adapter: open a file with its default app / a URL in the browser."""
+    """Adapter: open a file with its registered app / a URL through je_web_runner."""
 
 def AC_outbox_enqueue(name: str, event: Any) -> Dict[str, Any]:
     """Adapter: enqueue an event into a named outbox."""
@@ -2832,8 +2946,14 @@ def AC_start_mcp_http_server(
 ) -> Any:
     """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
 
-def AC_start_mcp_server(read_only: bool | None = ...) -> Any:
-    """Start a stdio MCP server in the foreground; blocks until EOF."""
+def AC_start_mcp_server(
+    read_only: bool | None = ...,
+    *,
+    disclosure: str | None = ...,
+    tool_profile: list[str] | None = ...,
+    page_size: int = ...,
+) -> Any:
+    """Start the shared dispatcher in the foreground, respecting the read-only environment by default."""
 
 def AC_start_remote_host(
     token: str,
@@ -3518,6 +3638,21 @@ def AC_windows_for_pid(pid: int, titled_only: bool = ...) -> Dict[str, Any]:
 
 def AC_with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
+
+def AC_workflow_control(operation: str, selector: dict[str, Any], value: str = ...) -> Any:
+    """Read, set or invoke one uniquely identified semantic control, refusing password fields."""
+
+def AC_workflow_download(url: str, directory: str, name: str, sha256: str = ...) -> dict[str, Any]:
+    """Download an approved URL without redirects and archive a verified complete file."""
+
+def AC_workflow_manifest(directory: str, path: str, names: list[str]) -> dict[str, Any]:
+    """Write a bounded archive manifest without replacing existing, different content."""
+
+def AC_workflow_open(path: str) -> bool:
+    """Open one explicitly approved existing document with its registered application."""
+
+def AC_workflow_wait(selector: dict, expected: Any, state: bool = ..., timeout_seconds: float = ...) -> Any:
+    """Wait for one scoped control's exact value/state without replaying set, invoke or submit."""
 
 def AC_write(write_string: str, is_shift: bool = ...) -> str | None:
     """模擬輸入整個字串"""

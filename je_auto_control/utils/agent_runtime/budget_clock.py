@@ -19,9 +19,10 @@ class BudgetClock:
         budget = float(row["spec"]["budget"]["wall_seconds"])
         if row["started"] is None:
             return budget
-        now = self._monotonic()
-        wall_elapsed = max(0.0, self._wall() - row["started"])
         with self._store.connection(write=True) as connection:
+            # Sample only after BEGIN IMMEDIATE; an older waiting reader is not a clock rollback.
+            now = self._monotonic()
+            wall_elapsed = max(0.0, self._wall() - row["started"])
             record = connection.execute("SELECT * FROM agent_clocks WHERE task_id=?", (row["id"],)).fetchone()
             if record is None:
                 started, spent = now, wall_elapsed

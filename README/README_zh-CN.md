@@ -1,5 +1,14 @@
 # AutoControl
 
+本机 runtime 的用户及实时根目录授权转发，现在必须由明确的本机服务调用启用。
+普通具验证的 HTTP 请求仅携带指定的 Bearer token；runtime client 验证 loopback 服务目的地与
+路由后，才附上本机用户／来源存储库／witness 信息。版本化 `je_auto_control.api` 现在提供
+所有已声明的 `api.core` 名称，包含受管浏览器命令、目标恢复及技能；动作类型 stub 也涵盖
+所有出货命令。未解析的延后项目类型沿用生成器原有的 `Any` 策略，避免生成无效名称。
+并发预算读取改在数据库独占事务内采样时钟，避免锁获取顺序不同造成任务误判超时；真正的
+时钟倒退仍会停止任务。GUI／MCP／REST／CLI 共用这些修复；正式工作树及现有原生／浏览器／
+设备／24 小时验收暂停保持原状。
+
 受管浏览器文件命令 `browser_link`、`browser_download`、`browser_upload`（对应 `AC_browser_*`）
 委派给 WebRunner 传输契约版本 1。上／下载授权必须具有明确的主机及任务根目录；下载让浏览器
 Cookie 保留于自有 SDK／helper，核对完整长度及可选 SHA256，且不覆盖现有文件；复用必须符合

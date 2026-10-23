@@ -18,6 +18,7 @@ to date.
 from __future__ import annotations
 
 import argparse
+import ast
 import inspect
 import sys
 import textwrap
@@ -154,6 +155,9 @@ _BUILTIN_TYPES = frozenset({
     "int", "list", "memoryview", "object", "range", "set", "str", "tuple",
     "type", "None",
 })
+_ANNOTATION_NAMES = _BUILTIN_TYPES | {
+    "Any", "Callable", "Dict", "List", "Mapping", "Optional", "Sequence", "Tuple", "Union", "Path",
+}
 
 
 def _annotation_str(annotation: Any, *, default: str) -> str:
@@ -177,9 +181,18 @@ def _annotation_str(annotation: Any, *, default: str) -> str:
     # owning module imported into the stub. Rather than transitively
     # import the world, fall back to ``Any``; the function name still
     # autocompletes, the precise type just shows as Any.
-    if _has_module_reference(text):
+    if _has_module_reference(text) or not _known_annotation(text):
         return "Any"
     return text
+
+
+def _known_annotation(text: str) -> bool:
+    """Postponed annotations need the same unresolved-project-class fallback as real types."""
+    try:
+        tree = ast.parse(text, mode="eval")
+    except SyntaxError:
+        return False
+    return all(node.id in _ANNOTATION_NAMES for node in ast.walk(tree) if isinstance(node, ast.Name))
 
 
 def _has_module_reference(text: str) -> bool:
