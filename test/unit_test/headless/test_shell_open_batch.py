@@ -11,7 +11,7 @@ def test_plan_url_goes_to_browser():
     plan = plan_open("https://example.com/x")
     assert plan["kind"] == "url"
     assert plan["scheme"] == "https"
-    assert plan["backend"] == "webbrowser"
+    assert plan["backend"] == "je_web_runner"
 
 
 def test_plan_mailto_and_tel():
@@ -49,7 +49,7 @@ def test_open_path_dispatches_plan_to_injected_opener():
         return True
 
     assert open_path("https://x.io", opener=fake_opener) is True
-    assert captured["backend"] == "webbrowser"
+    assert captured["backend"] == "je_web_runner"
     assert captured["target"] == "https://x.io"
 
 
@@ -57,12 +57,35 @@ def test_open_path_returns_opener_result():
     assert open_path("report.pdf", opener=lambda plan: False) is False
 
 
+def test_url_opening_delegates_to_webrunner_without_a_default_browser_fallback(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    from je_auto_control.utils import webrunner_bridge
+    calls = []
+    monkeypatch.setattr(webrunner_bridge, "web_open", lambda url: calls.append(url))
+    monkeypatch.setitem(sys.modules, "webbrowser", SimpleNamespace(
+        open=lambda *_args, **_kwargs: pytest.fail("URL opened outside je_web_runner")))
+    assert open_path("https://example.invalid/workflow") is True
+    assert calls == ["https://example.invalid/workflow"]
+
+
+def test_missing_webrunner_is_a_typed_failure_without_browser_fallback(monkeypatch):
+    from je_auto_control.utils import webrunner_bridge
+
+    def unavailable(_url):
+        raise webrunner_bridge.WebRunnerBridgeError("je_web_runner unavailable")
+
+    monkeypatch.setattr(webrunner_bridge, "web_open", unavailable)
+    with pytest.raises(webrunner_bridge.WebRunnerBridgeError, match="unavailable"):
+        open_path("https://example.invalid/workflow")
+
+
 # --- wiring ---------------------------------------------------------------
 
 def test_executor_pure_plan_path():
     from je_auto_control.utils.executor.action_executor import _plan_open
     plan = _plan_open("https://example.com")
-    assert plan["backend"] == "webbrowser" and plan["kind"] == "url"
+    assert plan["backend"] == "je_web_runner" and plan["kind"] == "url"
 
 
 def test_wiring():

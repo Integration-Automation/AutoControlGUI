@@ -1,16 +1,15 @@
-以預設程式開啟檔案 / URL
-========================
+以預設程式開檔 / WebRunner URL
+==============================
 
 框架原本能啟動字面執行檔(``start_exe`` / ``shell_process``),卻無法做最常見的「交接給另一個應用程式」
-RPA 步驟:用註冊的應用程式開啟 ``report.pdf``、``print`` 一份文件,或在預設瀏覽器開啟 URL。
-``shell_open`` 補上這點,依作業系統路由到 ``os.startfile`` / ``open`` / ``xdg-open`` /
-``webbrowser``。
+RPA 步驟:用註冊的應用程式開啟 ``report.pdf``、``print`` 一份文件,或透過 WebRunner 開啟 URL。
+檔案依作業系統使用 ``os.startfile`` / ``open`` / ``xdg-open``；URL 統一使用 ``je_web_runner`` 橋接。
 
 * :func:`plan_open` ——純 planner:分類目標(URL 或檔案路徑)、驗證(URL scheme 白名單;檔案用
   ``realpath``)並回傳分派描述子,
 * :func:`open_path` ——透過可注入的 ``opener`` 接縫執行計畫(預設為真正的 OS 呼叫)。
 
-純標準庫;透過可注入的 ``opener``,分派邏輯可在不真正開啟任何東西的情況下單元測試。不匯入
+純計畫使用標準庫；實際 URL 執行需要 WebRunner。透過可注入的 ``opener``,分派邏輯可在不真正開啟任何東西的情況下單元測試。不匯入
 ``PySide6``。
 
 無頭 API
@@ -22,10 +21,10 @@ RPA 步驟:用註冊的應用程式開啟 ``report.pdf``、``print`` 一份文�
 
     open_path("report.pdf")                 # 預設 PDF 檢視器
     open_path("invoice.pdf", verb="print")  # 列印
-    open_path("https://example.com")        # 預設瀏覽器
+    open_path("https://example.com")        # je_web_runner
 
     plan_open("https://example.com")
-    # {"kind": "url", "scheme": "https", "target": "...", "backend": "webbrowser",
+    # {"kind": "url", "scheme": "https", "target": "...", "backend": "je_web_runner",
     #  "verb": "open"}
     plan_open("report.pdf")
     # {"kind": "file", "target": "<realpath>", "backend": "startfile", ...}

@@ -2505,7 +2505,7 @@ def process_and_shell_tools() -> List[MCPTool]:
         MCPTool(
             name="ac_open_path",
             description=("Open a file with its OS-registered default app (or a "
-                         "'verb' like print), or a URL in the default browser. "
+                         "'verb' like print), or a URL through je_web_runner. "
                          "'target' is a path or URL. Returns {opened}."),
             input_schema=schema({"target": {"type": "string"},
                                  "verb": {"type": "string"}},

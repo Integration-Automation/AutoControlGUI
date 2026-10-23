@@ -106,7 +106,7 @@ from je_auto_control.utils.selection_view import (
 )
 # Reactive UIA event waits (focus-changed)
 from je_auto_control.utils.ax_events import wait_for_focus_change
-# Open a file with its default app / a URL in the default browser
+# Open a file with its registered app / a URL through je_web_runner
 from je_auto_control.utils.shell_open import open_path, plan_open
 # Detect user-idle time and keep the machine awake during unattended runs
 from je_auto_control.utils.idle_keepawake import (

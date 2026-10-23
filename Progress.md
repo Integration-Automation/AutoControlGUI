@@ -2,11 +2,10 @@
 
 ## Agent 電腦接管與任務自動化
 
-`WIP` — 依使用者要求暫停；恢復後繼續
+`WIP` — 依使用者後續要求繼續執行
 `docs/superpowers/plans/2026-10-23-agent-runtime.md` 的完整交付，仍缺七大類工作：
 
 1. **瀏覽器及應用深化**：受管瀏覽器 adapter、網站範圍、表單／下載與四條流程的實際應用驗收。
-   先完成使用者追加要求的既有 `shell_open.open_path(URL)` 遷移，再暫停；目前該路徑仍呼叫 `webbrowser`。
    瀏覽器一律使用 WebRunner（`je_web_runner`），本機來源 `D:\Codes\WebRunner`；
    不在 AutoControlGUI 另建瀏覽器引擎。目前共用 `.venv` 未安裝／連結該套件，後續需在隔離環境接合。
 2. **跨平台桌面**：macOS／X11／Wayland 的真人活動、觀察與輸入隔離，非 Windows 對話框／未儲存 gate，

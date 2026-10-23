@@ -2758,7 +2758,7 @@ def _plan_open(target: str, verb: str = "open") -> Dict[str, Any]:
 
 
 def _open_path(target: str, verb: str = "open") -> Dict[str, Any]:
-    """Adapter: open a file with its default app / a URL in the browser."""
+    """Adapter: open a file with its registered app / a URL through je_web_runner."""
     from je_auto_control.utils.shell_open import open_path
     return {"opened": bool(open_path(str(target), verb=str(verb)))}
 

@@ -13,6 +13,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ## Unreleased
 
+- URL opening through open_path / AC_open_path now delegates to je_web_runner, including legacy
+  callers. URL plan backend changes from webbrowser to je_web_runner; update descriptor comparisons.
+  Missing WebRunner raises WebRunnerBridgeError, with no OS-browser fallback. Local-file opening
+  and the public function signatures remain compatible.
+
 - Add immutable host target profiles, durable enable controls and passive target metadata across all
   task surfaces. Named tasks pin resource policy; enabling never automatically resumes paused work.
 - Live anonymous MCP tool sessions now execute as operator across direct and nested wrappers. MCP

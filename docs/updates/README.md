@@ -474,3 +474,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-04 | 2026-10-24 | Dialog review and native window scope | #done #agent #scope | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-05 | 2026-10-24 | Host target ceilings and MCP session authority | #done #agent #targets #auth | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-06 | 2026-10-24 | Legacy URL opening through je_web_runner | #done #browser #migration | [2026-10-c](2026-10-c.md) |

@@ -692,7 +692,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/file_dialog/` | 92 | 驅動原生檔案 開啟／儲存／資料夾選擇 對話框 |
 | `utils/file_drop/` | 124 | 以 WM_DROPFILES 把檔案拖放到視窗 |
 | `utils/rich_clipboard/` | 133 | 豐富剪貼簿格式 — HTML（CF_HTML）建構／解析／存取 |
-| `utils/shell_open/` | 99 | 以預設應用開啟檔案，或以預設瀏覽器開啟 URL |
+| `utils/shell_open/` | 99 | Open files with their registered applications and delegate URLs to WebRunner. |
 | `utils/system_volume/` | 212 | 讀取與控制系統主音量與靜音狀態 |
 | `utils/trash/` | 93 | 把檔案移到系統資源回收筒（可復原刪除） |
 | `utils/window_capture/` | 379 | 逐視窗截圖、視窗版面儲存／還原、貼齊與排列 |

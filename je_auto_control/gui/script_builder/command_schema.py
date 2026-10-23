@@ -4671,14 +4671,14 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("shell_command", FieldType.STRING),),
     ))
     specs.append(CommandSpec(
-        "AC_open_path", "Shell", "Open File / URL (default app)",
+        "AC_open_path", "Shell", "Open File / WebRunner URL",
         fields=(
             FieldSpec("target", FieldType.STRING,
                       placeholder="report.pdf  or  https://example.com"),
             FieldSpec("verb", FieldType.STRING, optional=True, default="open",
                       placeholder="open / print / edit"),
         ),
-        description="Open a file with its default app, or a URL in the browser.",
+        description="Open a file with its registered app, or a URL through je_web_runner.",
     ))
     specs.append(CommandSpec(
         "AC_plan_open", "Shell", "Plan Open (classify)",
