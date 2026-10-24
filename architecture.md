@@ -13,6 +13,14 @@ Caller/proof authority is checked again after writes. Public completion_review c
 IDs/hashes without private principals, preserving the existing thirty-day reader retention. The thin
 Actions example edits the shared accept request without task execution or publication.
 
+Skill recording also adopts explicit read-only evidence for a stopped original workflow. Its semantic
+actions come from skill_recording.recording_template after private proof checks, preserving the
+recorded_spec succeeded-source API. AgentSkills shares candidate construction/insertion with _save;
+reviewed recording uses one BEGIN IMMEDIATE writer for source/proof checks, draft insertion and
+post-write authority checks. Provenance retains only historical reader IDs/hashes. The draft requires
+its own exact validation before publication; the action-free reader is never a fabricated trial.
+An additional thin Actions example prepares a record request with separate source and reader IDs.
+
 control_admission classifies only fixed stop routes and closed DAG pause bodies. The shared client
 uses existing reserved transport slots and an internal marker for multiplexed DAG pauses. REST
 selects a separate bounded per-IP bucket in the exact built-in auth gate, then retains live principal,

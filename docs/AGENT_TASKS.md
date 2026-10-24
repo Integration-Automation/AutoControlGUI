@@ -295,16 +295,27 @@ Bootstrap observations disclose no unrelated foreground controls. Only focus arg
 
 ## Recorded skills and reviewed repair versions
 
-Managed skill candidates store sealed task scopes, typed explicit data slots and source-task provenance in the runtime SQLite database. Recording requires confirmed receipts and independently verified success. Validation creates a distinct pinned task; publication requires verified completion evidence for that exact trial, an explicit review note and a compare-and-set version. Semantic selector repairs create new candidates. In-flight tasks retain their original version/digest; arbitrary pointer receipts are not guessed into semantic skills. Legacy mutable SkillLibrary behavior is preserved.
+Managed skill candidates store sealed task scopes, typed explicit data slots and source-task provenance in the runtime SQLite database. Recording requires confirmed receipts and independently verified completion. Validation creates a distinct pinned task; publication requires verified completion evidence for that exact trial, an explicit review note and a compare-and-set version. Semantic selector repairs create new candidates. In-flight tasks retain their original version/digest; arbitrary pointer receipts are not guessed into semantic skills. Legacy mutable SkillLibrary behavior is preserved.
 
 Call `manage_agent_skill(operation, request)` or `AC_agent_skill`; MCP uses `ac_agent_skill`, REST uses POST `/agent/skill`, and CLI uses `agent-task skill OP REQUEST.json`. The Agent Tasks view provides a skill operation selector, JSON request editor and Actions menu. `list_agent_skills` / `AC_agent_skill_list` inspect owner-visible candidates. Even read-only skill inspection requires drive-input authority because snapshots can contain application data. These task management operations are excluded from managed task tool scopes.
 
-1. **record**: supply `task_id`, `name`, and optional `parameters` / `validation_criteria`. A source must have verified success, confirmed receipts, and explicit independent criteria or semantic read-back. Additional criteria augment the original checks. Raw pointer steps require authoring reviewed selectors first.
+1. **record**: supply `task_id`, `name`, and optional `parameters` / `validation_criteria` / `completion_task_id`. A source must have independently verified completion, confirmed receipts, and explicit independent criteria or semantic read-back. Additional criteria augment the original checks. Raw pointer steps require authoring reviewed selectors first.
 2. **preview**: supply `candidate_id` and optional literal `parameters`. Each parameter definition has a `type` (`string`, `integer`, `number`, `boolean`) and explicit JSON `paths`. Slots address existing action arguments, read-back `expect_result`, inputs or criterion values; defaults must agree, and overlaps/unknown parameters/interpolation expressions are refused. Tool names, roots, apps, target and budgets are fixed. Parameterize both a form's fill value and read-back expectation where needed.
 3. **validate**: use the same candidate/parameters to create a real task. Only approved scope may execute; normal human activity, ownership, budgets and deterministic completion checks apply. Poll its task ID.
 4. **accept**: supply `candidate_id`, that candidate's successful validation `task_id`, `expected_version` (zero for the first version), and a review `note`. An unrelated success, altered snapshot, unconfirmed effect, failed read-back or stale version cannot publish. Publication metadata records actor/note/trial.
 5. **run**: supply `skill_id`, an explicit positive `version`, and optional `parameters`. Task metadata contains a service-bound `skill_pin` with version and digest. New publications never alter queued/running tasks.
 6. **repair**: supply an accepted `candidate_id`, a review `note`, and `changes` containing `path` / `value`. Only existing selector `name`, `role` or `automation_id` values may change. Validate the resulting candidate and explicitly accept it against the current version. No automatic overwrite, tool/root expansion or silent locator application occurs.
+
+For a stopped source, explicitly select `completion_task_id` on `record`, keeping `task_id`
+equal to the original workflow. Its actual confirmed semantic actions, not the reader's empty plan,
+become the draft. An ordinary external workflow needs no pre-existing validation-trial row. Private
+reader admission, exact derived scope, real ancestry, independent completion/retirement and current
+caller/source-owner/reviewer authority are required. Source/proof checks and candidate insertion use
+one SQLite write transaction, with post-write proof and live authority rechecks; failures leave no
+draft. `provenance.completion_review` is historical IDs/hashes and grants no live authority after reader
+retention. The new draft still requires its own exact validation trial; added `validation_criteria`
+cannot inherit the old reader's result. Source state and receipts stay intact, with no replay or
+fabricated trial. GUI Actions prepare the request without recording or publishing.
 
 If a validation trial is stopped after all its actions are confirmed, `accept` also accepts an optional
 `completion_task_id` naming a separately reviewed and successfully finished permanent read-only child.
@@ -315,10 +326,9 @@ live through the publication transaction. Version/publication/adoption writes ar
 trial remains stopped. `publication.task_id` keeps its original meaning and optional
 `publication.completion_review` records historical reader IDs/hashes. Reader evidence may expire after
 publication; an unpublished adoption cannot use expired/missing evidence. The GUI Actions example
-prepares the explicit request without publishing. Stopped-source semantic recording and partial
-executable-recovery trial adoption are still outstanding.
+prepares the explicit request without publishing. Partial executable-recovery trial adoption remains outstanding.
 
-The five `examples/agent_skill_*.json` files are editable request examples, not executable tasks. `agent_skill_completion_accept.json` shows explicit read-only completion adoption. Skill definitions and publication records remain in the library when transient task caches expire; accepting an unpublished candidate still needs its retained verified task evidence. Native application acceptance remains separate from the deterministic fake-target regression evidence.
+The six `examples/agent_skill_*.json` files are editable request examples, not executable tasks. `agent_skill_completion_accept.json` shows explicit read-only publication evidence; `agent_skill_completion_record.json` prepares stopped-source recording. Skill definitions and publication records remain in the library when transient task caches expire; accepting an unpublished candidate still needs its retained verified task evidence. Native application acceptance remains separate from the deterministic fake-target regression evidence.
 
 ## Origin path policy lifetime
 

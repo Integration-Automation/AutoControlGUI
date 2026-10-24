@@ -364,8 +364,17 @@ original `task_id` and optional `completion_task_id`. Publication retains the ex
 hash/pin, up to sixteen real read-only recovery links, fresh authority and independently verified
 retirement. The original stays stopped; its actions are not replayed. The Actions menu can prepare
 the request for review. Publication keeps historical completion IDs/hashes after transient reader
-evidence expires; unpublished adoption still needs retained evidence. Stopped-source recording and
-partial executable-recovery trial adoption remain in `Progress.md`.
+evidence expires; unpublished adoption still needs retained evidence. Partial executable-recovery
+trial adoption remains in `Progress.md`.
+
+`manage_agent_skill("record", request)` also accepts `completion_task_id` for a stopped original
+workflow. Keep `task_id` equal to that workflow: its confirmed semantic actions become a draft,
+while the separate reader supplies private, independently verified completion evidence. Recording
+does not replay actions or change the source state. Source/proof checks and draft insertion share
+one transaction with live authority rechecks. Historical `provenance.completion_review` survives
+reader retention without granting current authority. The draft, including added validation criteria,
+still needs its own new exact validation trial before publication. The Actions menu prepares the
+record request without executing it.
 
 Managed tasks retain live origin path ceilings: removing a source root blocks later actions, trigger fires and skill trials. MCP client roots are isolated per session; retiring that client authority revokes its ceilings. Static host policy remains valid until explicitly replaced. Worker shutdown cancels actual running work, including model initialization before input acquisition, while unstarted deliveries remain durable.
 

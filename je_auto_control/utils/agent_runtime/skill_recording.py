@@ -15,6 +15,11 @@ def recorded_spec(runtime: Any, task_id: str, criteria: Any = None) -> dict:
     """Record a succeeded flow without inventing success from an agent's stop signal."""
     row = runtime._row(task_id)
     assert_verified(row)
+    return recording_template(runtime, row, criteria)
+
+
+def recording_template(runtime: Any, row: dict, criteria: Any = None) -> dict:
+    """Derive semantic actions after the trusted caller has separately verified source completion."""
     spec = detached(row["spec"])
     spec["actions"] = _actions(runtime, row)
     spec["mode"] = "skill"

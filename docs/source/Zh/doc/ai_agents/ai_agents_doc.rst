@@ -213,13 +213,26 @@ manage_agent_skill 的 record／preview／validate／accept／run／repair 操�
 caller／owner／reviewer 的即時權限，版本、發布與採認證據共同提交或回滾；原試跑停止且不重播。
 撤權回傳可處理的審閱拒絕。Actions 可準備待審閱請求，並不發布。
 ``publication.completion_review`` 在 reader 保留期後仍是歷史 ID／摘要，不能當成當前證據；
-尚未採認時若證據已遺失仍拒絕。停止來源錄製與分段復原試跑採認仍列於 ``Progress.md``。
+尚未採認時若證據已遺失仍拒絕。分段復原試跑採認仍列於 ``Progress.md``。
 
 明確審閱復原且唯讀驗證成功後的範例::
 
     {"candidate_id":"reviewed-candidate", "task_id":"original-validation-trial",
      "completion_task_id":"verified-read-only-child", "expected_version":0,
      "note":"Reviewed actual trial and separate completion evidence"}
+
+停止的原流程也可透過 ``manage_agent_skill("record", request)`` 明確提供 ``completion_task_id``。
+``task_id`` 仍指原流程，草稿保留其已確認語義動作，另採認唯讀 reader 的私有獨立完成證據。
+錄製不重播動作、不改來源狀態；來源／證據檢查與草稿寫入共用交易，並重驗即時權限。
+``provenance.completion_review`` 在 reader 保留期後只是歷史紀錄，不授予當前權限。
+草稿與新增驗證條件仍須自己的新驗證試跑，不能直接發布；Actions 選單只準備錄製請求。
+
+來源可以是尚無 validation trial 的一般外部流程；證據不符、來源／caller／reviewer 撤權或來源過期時拒絕建立，寫入後撤權亦回滾草稿。
+
+錄製請求範例::
+
+    {"task_id":"original-workflow", "completion_task_id":"verified-read-only-child",
+     "name":"Reviewed workflow"}
 
 受管任務、觸發範本及技能驗證持續檢查來源根目錄政策。撤銷、遺失或損壞的政策紀錄會阻止後續操作。MCP 客戶端根目錄與非同步更新依連線階段隔離，過期回覆不能恢復已終止的授權。主機固定政策在更換前保留；客戶端政策在來源結束時撤銷。HTTP 客戶端根目錄不再改寫共用資源提供者的工作目錄。服務停止會取消所有實際執行中的 worker，包含尚未取得 lease 的模型初始化；尚未啟動的派送保留供服務重啟。
 

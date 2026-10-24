@@ -1,5 +1,16 @@
 # Public API lifecycle
 
+manage_agent_skill record adds optional completion_task_id while task_id remains the original
+workflow. Confirmed semantic source actions become a draft only after private independently completed
+read-only evidence is checked. recording_template derives data after trusted proof validation;
+recorded_spec keeps its succeeded-source signature and gate. One writer owns source/proof checks,
+shared candidate insertion and post-write authority checks; _save retains ordinary record/repair and
+origin-reauthorization deduplication. No nested writer, source rewrite, replay or fabricated trial.
+Candidate provenance.completion_review contains historical IDs/hashes, not live authority. Added
+criteria require the new candidate's own validation. Authority loss rolls back and returns managed
+HTTP409. Existing API/AC/MCP/REST/CLI/Builder share the field; one inert Actions example and four
+locale labels prepare the record request. Publication semantics stay compatible.
+
 manage_agent_skill accept adds optional completion_task_id while task_id retains the original real
 validation trial. Shared completion_contract validation has no service/DAG transport dependency;
 managed_tasks.validate_recorded_completion keeps its existing signature and completion rules. Runtime

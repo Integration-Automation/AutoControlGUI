@@ -9,7 +9,7 @@
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-接續完成第 5 組停止來源的語義錄製、分段復原試跑採認、唯讀完成重新授權及 browser／remote
+接續完成第 5 組分段復原試跑採認、唯讀完成重新授權及 browser／remote
 reader，並核對第 4 組真實裝置控制／擷取來源、其餘實作及第 8 組交付核對。
 
 1. **P4：瀏覽器與正式環境接合**
@@ -86,8 +86,6 @@ reader，並核對第 4 組真實裝置控制／擷取來源、其餘實作及�
      指標步驟提供可信新來源與語義轉換，不能把舊索引／座標或歷史欄位值直接移入新 session。
    - 補實際應用的語義錄製、參數化、候選修復、驗證 trial、人工接受／版本發布及執行中固定版本
      的完整驗收；持續拒絕沒有完整動作確認或獨立完成證據的試跑，不能僅憑舊收據發布。
-     為 `skill_recording.recorded_spec` 接合停止來源的唯讀完成證據，保留原語義動作來源並產生待驗證
-     草稿；目前原來源未成功、唯讀子任務又沒有動作時，仍不能直接錄製技能。
      分段執行的復原試跑亦須另有精確候選／完整動作鏈的採認契約；本批原 trial 必須已確認全部動作，
      不能把普通復原子任務或其完成收據當成原候選的新 validation trial。
    - 為已存在且由其他 caller 持有的復原子任務提供明確可撤銷的唯讀成果移交；新 source_owner

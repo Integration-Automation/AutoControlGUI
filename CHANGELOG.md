@@ -1,13 +1,20 @@
 # Changelog
 
+Allow explicit completion_task_id on managed skill record for stopped original workflows. Preserve
+their confirmed semantic actions and source identity in a new draft, with private read-only evidence
+and historical completion_review provenance. Verify current proof/authority before and after insertion
+under one write transaction; failures roll back. Keep ordinary recording/repair/reauthorization and
+recorded_spec compatible. A fresh exact validation trial is still required, including added criteria;
+do not replay or rewrite the source or publish from the action-free reader. Add an inert GUI Actions
+request example and four locale labels. Partial executable-recovery trial adoption remains outstanding.
+
 Allow explicit completion_task_id on managed skill acceptance after all original validation effects
 are confirmed. Preserve the exact original candidate/spec hash/pin and publication.task_id; validate
 private read-only proof, real ancestry, exact scope, independent success/retirement and live authority.
 Atomically publish the version with optional historical completion_review proof; failures roll back.
 Recheck candidate integrity inside the write transaction and return typed review refusal on authority
 loss. Add a non-executing GUI Actions request example and four labels; existing operation surfaces and
-ordinary publication remain compatible. Stopped-source recording and partial recovery trial adoption
-remain separate outstanding work.
+ordinary publication remain compatible. Partial recovery trial adoption remains outstanding.
 
 Reserve independently bounded per-IP REST admission for existing runtime pause/cancel/stop_all/shutdown
 and closed DAG batch/node pauses. Ordinary polling keeps its existing limits and cannot consume the

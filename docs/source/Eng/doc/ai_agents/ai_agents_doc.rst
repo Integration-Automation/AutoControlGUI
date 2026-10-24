@@ -313,7 +313,7 @@ idempotency key; CLI and Actions expose trigger controls. Managed scopes reject 
 
 Input ownership writes a private, fsynced per-resource crash witness before native dispatch and input ACK. An unfinished witness blocks new owners across databases. Explicit host-only recovery requires a review note and a trusted no-held-input probe, never replays persisted input or signals persisted PIDs, and does not reconcile/resume the old task. POSIX input helpers monitor their actual parent and retire only their own live session group. Approved document handoff runs outside the input helper tree, so user applications survive normal task cleanup; bounded, preapproved focus steps wait for scoped windows. Observations also expire against a host monotonic clock. Native desktop/device acceptance remains unverified.
 
-Managed skill candidates store sealed task scopes, typed explicit data slots and source-task provenance in the runtime SQLite database. Recording requires confirmed receipts and independently verified success. Validation creates a distinct pinned task; publication requires verified completion evidence for that exact trial, an explicit review note and a compare-and-set version. Semantic selector repairs create new candidates. In-flight tasks retain their original version/digest; arbitrary pointer receipts are not guessed into semantic skills. Legacy mutable SkillLibrary behavior is preserved.
+Managed skill candidates store sealed task scopes, typed explicit data slots and source-task provenance in the runtime SQLite database. Recording requires confirmed receipts and independently verified completion. Validation creates a distinct pinned task; publication requires verified completion evidence for that exact trial, an explicit review note and a compare-and-set version. Semantic selector repairs create new candidates. In-flight tasks retain their original version/digest; arbitrary pointer receipts are not guessed into semantic skills. Legacy mutable SkillLibrary behavior is preserved.
 
 When all actions of an interrupted trial are confirmed, finish its separately reviewed read-only
 completion task, then ``manage_agent_skill("accept", request)`` may include ``completion_task_id``.
@@ -331,7 +331,23 @@ Example after explicit recovery review and successful reader finish::
      "completion_task_id":"verified-read-only-child", "expected_version":0,
      "note":"Reviewed the actual trial and separate completion evidence"}
 
-Stopped-source recording and adoption of partial executable-recovery trials remain in ``Progress.md``.
+For a stopped source, explicitly select ``completion_task_id`` on ``record``, keeping ``task_id``
+equal to the original workflow. Its actual confirmed semantic actions, not the reader's empty plan,
+become the draft. An ordinary external workflow needs no pre-existing validation-trial row. Private
+reader admission, exact derived scope, real ancestry, independent completion/retirement and current
+caller/source-owner/reviewer authority are required. Source/proof checks and candidate insertion use
+one SQLite write transaction, with post-write proof and live authority rechecks; failures leave no
+draft. ``provenance.completion_review`` is historical IDs/hashes and grants no live authority after reader
+retention. The new draft still requires its own exact validation trial; added ``validation_criteria``
+cannot inherit the old reader's result. Source state and receipts stay intact, with no replay or
+fabricated trial. GUI Actions prepare the request without recording or publishing.
+
+Example recording request::
+
+    {"task_id":"original-workflow", "completion_task_id":"verified-read-only-child",
+     "name":"Reviewed workflow"}
+
+Adoption of partial executable-recovery trials remains in ``Progress.md``.
 
 Accepted tasks, trigger templates and skill trials retain live origin policy references. A private witness contains only current root ceilings; missing/revoked/corrupt witnesses fail closed. Authenticated local HTTP forwards the current caller's additional restrictive ceiling without granting identity or capability. Every operation checkpoint and lease maintenance rechecks roots. MCP client roots and asynchronous roots refresh are session-local; stale replies cannot renew retired authorities. Static host policies persist until replacement, while retiring client-supplied root authority revokes its references. HTTP client roots do not overwrite the shared resource provider's configured workspace. Workers/maintenance run in fresh contexts, shutdown tracks actual in-flight deliveries before lease acquisition, and unstarted queued work remains durable.
 

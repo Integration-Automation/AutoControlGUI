@@ -1,12 +1,20 @@
 # Capability matrix
 
+Stopped-source recording: actual owned-file helper effects and a separately reviewed permanent
+read-only child supply a draft containing the original semantic actions. Ordinary external sources
+need no prior trial. Tests exercise independent fresh validation, added criteria, malformed/forged/
+unrelated/stale proof, retirement, current ownership/reviewer/caller revocation, atomic rollback,
+expired origin refusal, retention/restart and shared Python/AC/CLI/authenticated MCP/HTTP/offscreen GUI.
+Recorded provenance is historical; it grants no current authority. Source state/actions stay intact.
+No actual application/device/browser input or native acceptance is exercised.
+
 Skill completion adoption: owned-file normal helpers execute the real recording source and original
 validation action; a separately admitted permanent read-only helper verifies independent file criteria.
 Regression covers exact candidate/pin/trial identity, private proof/real lineage, no replay/source rewrite,
 malformed/stale/forged evidence, retirement, caller/owner/reviewer revocation, transactional rollback,
 restart/retention, version competition and shared API/CLI/executor/MCP/HTTP/GUI requests. Publication
 audit is historical after evidence retention; original trial actions must already be confirmed.
-Stopped-source semantic recording and partial executable-recovery trial adoption remain outstanding.
+Partial executable-recovery trial adoption remains outstanding.
 No desktop/device/browser input or native acceptance is exercised.
 
 HTTP control admission: owned loopback regression covers ordinary-poll exhaustion, separate bounded

@@ -1544,6 +1544,7 @@ japanese_word_dict.update({
     "agent_skill_request": "スキル要求",
     "agent_skill_apply": "スキル操作を適用",
     'agent_skill_completion_example': '検証結果を使うスキル公開を準備',
+    'agent_skill_recording_completion_example': '検証結果を使うスキル記録を準備',
     "agent_skill_record": "検証済みタスクを記録",
     "agent_skill_repair": "意味的修復の候補を作成",
     "agent_skill_list": "スキルの版を一覧",

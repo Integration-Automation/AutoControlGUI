@@ -1,4 +1,4 @@
-"""Explicit skill publication adopts private read-only proof without replacing the original validation trial."""
+"""Private read-only evidence for skill recording and publication preserves original workflow identity."""
 from __future__ import annotations
 
 import json
@@ -46,7 +46,7 @@ def _binding(connection: Any, task_id: str, trial_id: str) -> dict:
     details = _decode_binding(row['details'])
     if (details.get('source_task') != row['source_task'] or details.get('source_snapshot') != row['snapshot']
             or details.get('effect_task') != trial_id):
-        raise AgentTaskError('skill completion does not belong to the original validation trial')
+        raise AgentTaskError('skill completion does not belong to the original workflow')
     return details
 
 
@@ -65,7 +65,7 @@ def _lineage(connection: Any, task_id: str, trial_id: str) -> dict:
 
 def check_skill_completion(runtime: Any, connection: Any, trial: dict, task_id: Any,
                            authority_check: Callable, verification_spec: Callable, snapshot_digest: Callable) -> dict:
-    """Revalidate a separately succeeded reader under the publication's SQLite write transaction."""
+    """Revalidate a separately succeeded reader under the skill library's SQLite write transaction."""
     if not isinstance(task_id, str) or not 1 <= len(task_id) <= 256 or task_id == trial['id']:
         raise AgentTaskError('completion_task_id must identify a separate reviewed completion task')
     # pylint: disable-next=protected-access  # reason: retain the caller's ordinary task ownership boundary

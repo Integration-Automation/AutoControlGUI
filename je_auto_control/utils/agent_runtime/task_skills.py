@@ -10,7 +10,7 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import detached
 from je_auto_control.utils.agent_runtime.policy import owns_task, durable_payload
 from je_auto_control.utils.agent_runtime.skill_parameters import digest, instantiate, parameter_schema, repair_data
-from je_auto_control.utils.agent_runtime.skill_recording import recorded_spec, assert_verified
+from je_auto_control.utils.agent_runtime.skill_recording import recorded_spec, recording_template, assert_verified
 from je_auto_control.utils.agent_runtime.skill_completion import check_skill_completion, publication_details
 from je_auto_control.utils.agent_runtime.skill_reauthorization import (
     SkillReauthorization, OPERATIONS as AUTHORIZATION_OPERATIONS, existing_authorization,
@@ -88,30 +88,68 @@ class AgentSkills:
         return {"candidates": [self._get(identifier) for identifier in identifiers[:200]], "total": len(identifiers)}
 
     def _record(self, request: dict) -> dict:
-        self._fields(request, {"task_id", "name"}, {"parameters", "validation_criteria"})
+        self._fields(request, {"task_id", "name"}, {"parameters", "validation_criteria", "completion_task_id"})
+        if 'completion_task_id' in request:
+            try:
+                with DeferredAuthorization.capture().scope():
+                    return self._record_completed(request)
+            except AuthorizationError as error:
+                raise AgentTaskError('skill recording authority changed; review again') from error
         row = self.runtime._row(request["task_id"])
         spec = recorded_spec(self.runtime, row["id"], request.get("validation_criteria"))
         parameters = parameter_schema(spec, request.get("parameters", {}))
         return self._save(request["name"], uuid.uuid4().hex, row["owner"], spec, parameters,
                           {"source_task": row["id"], "kind": "semantic_recording", "parent_version": 0})
 
+    def _record_completed(self, request: dict) -> dict:
+        with self.runtime.store.connection(write=True) as connection:
+            # pylint: disable-next=protected-access  # reason: retain the runtime's live source ownership boundary
+            row = self.runtime._row(request['task_id'])
+            proof = self._completion_proof(connection, row, request['completion_task_id'])
+            spec = recording_template(self.runtime, row, request.get('validation_criteria'))
+            parameters = parameter_schema(spec, request.get('parameters', {}))
+            provenance = {'source_task': row['id'], 'kind': 'semantic_recording', 'parent_version': 0,
+                          'completion_review': proof}
+            candidate = self._candidate(request['name'], uuid.uuid4().hex, row['owner'], spec, parameters, provenance)
+            candidate_id = self._insert_candidate(connection, candidate)
+            if self._completion_proof(connection, row, request['completion_task_id']) != proof:
+                raise AgentTaskError('skill recording proof changed during creation')
+            with DeferredAuthorization.capture().scope():
+                if not owns_task(row['owner'], current_authorization()):
+                    raise AgentTaskError('skill recording ownership changed')
+        return self._get(candidate_id)
+
     def _save(self, name: str, skill_id: str, owner: dict, spec: dict, parameters: dict, provenance: dict) -> dict:
+        candidate = self._candidate(name, skill_id, owner, spec, parameters, provenance)
+        with self.runtime.store.connection(write=True) as connection:
+            candidate_id = self._insert_candidate(connection, candidate)
+        return self._get(candidate_id)
+
+    @staticmethod
+    def _candidate(name: str, skill_id: str, owner: dict, spec: dict, parameters: dict, provenance: dict) -> dict:
         if not isinstance(name, str) or not name.strip() or len(name) > 200:
             raise AgentTaskError("skill name must have between one and two hundred characters")
-        candidate_id = uuid.uuid4().hex
-        snapshot = digest({"spec": spec, "parameters": parameters})
-        with self.runtime.store.connection(write=True) as connection:
-            existing = existing_authorization(connection, provenance, snapshot)
-            if existing is not None:
-                candidate_id = existing
-            else:
-                connection.execute("INSERT INTO agent_skill_candidates VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                    (candidate_id, skill_id, name, json.dumps(owner), json.dumps(spec), json.dumps(parameters),
-                     json.dumps(provenance), snapshot, "draft", 0, time.time()))
-                if provenance.get("kind") == "origin_reauthorization":
-                    connection.execute("INSERT INTO agent_skill_authorizations VALUES (?,?,?,?)",
-                        (provenance["parent"], provenance["reauthorization"]["review"], snapshot, candidate_id))
-        return self._get(candidate_id)
+        return {'id': uuid.uuid4().hex, 'skill_id': skill_id, 'name': name, 'owner': owner, 'spec': spec,
+                'parameters': parameters, 'provenance': provenance,
+                'digest': digest({'spec': spec, 'parameters': parameters}),
+                'state': 'draft', 'version': 0, 'created': time.time()}
+
+    @staticmethod
+    def _insert_candidate(connection: Any, candidate: dict) -> str:
+        provenance = candidate['provenance']
+        existing = existing_authorization(connection, provenance, candidate['digest'])
+        if existing is not None:
+            return existing
+        fields = ('id', 'skill_id', 'name', 'owner', 'spec', 'parameters', 'provenance',
+                  'digest', 'state', 'version', 'created')
+        values = tuple(json.dumps(candidate[field]) if field in {'owner', 'spec', 'parameters', 'provenance'}
+                       else candidate[field] for field in fields)
+        connection.execute('INSERT INTO agent_skill_candidates VALUES (?,?,?,?,?,?,?,?,?,?,?)', values)
+        if provenance.get('kind') == 'origin_reauthorization':
+            connection.execute('INSERT INTO agent_skill_authorizations VALUES (?,?,?,?)',
+                               (provenance['parent'], provenance['reauthorization']['review'],
+                                candidate['digest'], candidate['id']))
+        return candidate['id']
 
     def _repair(self, request: dict) -> dict:
         self._fields(request, {"candidate_id", "changes", "note"})
