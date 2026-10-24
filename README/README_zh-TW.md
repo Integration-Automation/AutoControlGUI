@@ -1,11 +1,17 @@
 # AutoControl
 
+已發布技能可用 `manage_agent_skill("review_authorization", {"candidate_id":"..."})`，再明確
+`create_authorized`，提供 `candidate_id`、`snapshot`、`authorization_review`、經審閱的 `spec` 與
+`note`。完整計畫與參數定義固定；保留原根目錄上限及仍有效限制，與目前權限取交集。流程只建立
+同一技能的新草稿及稽核證據，須重新驗證並明確發布下一版，舊版本不變。相同核准去重，過期版本／
+授權內容拒絕。API／AC／MCP／REST／CLI／Builder 與 GUI 技能操作選單共用此流程；trigger 更新另列待辦。
+
 來源授權失效的停止任務，可明確使用 `review_authorization`，再以 `create_authorized` 提供
 `task_id`、`snapshot`、經審閱的 `spec`、`note` 與 `authorization_review`。新任務保留所有仍有效的
 來源限制，將目前權限與原根目錄上限取交集；根目錄只可維持或縮小，其餘權限、模式／模型、預算及
 完成條件固定。核准證據與唯一新任務在同一交易保存；來源及已撤銷的見證不變。既有共用介面均提供
 這兩種操作，GUI Actions 另有授權審閱／建立命令，詳見[恢復指南](../docs/source/Zh/doc/ai_agents/agent_recovery_doc.rst)。
-此流程不更新已發布 skill／trigger、不解除輸入隔離，也不重建應用狀態。
+任務恢復不更新 trigger、不解除輸入隔離，也不重建應用狀態；技能更新使用上方獨立流程。
 
 停止的任務可用 `manage_agent_recovery("preview", {"task_id": "..."})` 審閱來源收據與快照，
 不接觸應用程式。有限 skill 提供剩餘動作及逐筆結果；外部 agent／本機模型任務則提供空白目標的

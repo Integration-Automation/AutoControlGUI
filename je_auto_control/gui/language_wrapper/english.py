@@ -1654,6 +1654,8 @@ english_word_dict.update({
     "agent_skill_validate": "Run candidate validation",
     "agent_skill_accept": "Publish reviewed version",
     "agent_skill_run": "Run pinned version",
+    "agent_skill_review_authorization": "Review skill authorization",
+    "agent_skill_create_authorized": "Create reauthorized skill candidate",
     "agent_recover_target": "Recover reviewed input ownership",
     "agent_remainder_request": "Reviewed successor request (JSON)",
     "agent_remainder_preview": "Review remaining work / replan",

@@ -1504,6 +1504,8 @@ traditional_chinese_word_dict.update({
     "agent_skill_validate": "執行候選驗證",
     "agent_skill_accept": "發布已審閱版本",
     "agent_skill_run": "執行指定版本",
+    "agent_skill_review_authorization": "審閱技能授權",
+    "agent_skill_create_authorized": "建立重新授權的技能候選",
     "agent_recover_target": "恢復已審閱的輸入控制權",
     "agent_remainder_request": "經審閱的新任務請求（JSON）",
     "agent_remainder_preview": "審閱剩餘工作／重新規劃",

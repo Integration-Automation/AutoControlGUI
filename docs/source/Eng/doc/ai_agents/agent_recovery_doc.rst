@@ -95,5 +95,37 @@ All four operations require owner/operator ``drive_input``. API/AC/MCP/REST/Buil
 CLI uses ``agent-task recovery review_authorization|create_authorized request.json``. Agent tasks Actions
 adds **Review successor authorization** and **Create reauthorized successor**. Review fills the dedicated
 Recovery editor, with an empty note; creation always requires the separate explicit action.
-Deterministic targets, authenticated loopback HTTP and offscreen Qt validate these contracts. Published
-skill/trigger renewal, application-state restoration and actual model/native acceptance remain open.
+Deterministic targets, authenticated loopback HTTP and offscreen Qt validate these contracts. Published skill renewal is described below; trigger renewal, application-state restoration and
+actual model/native acceptance remain open.
+
+Published skill authorization renewal
+-------------------------------------
+
+Skills use a separate protocol from stopped-task recovery. Call
+``manage_agent_skill("review_authorization", {"candidate_id": published_id})`` for the current published
+version. Review returns ``snapshot``, ``authorization_review``, clipped ``authorization`` and ``spec``.
+It does not observe, execute or publish. If fixed actions/criteria are incompatible with the narrowed
+scope, ``spec=null`` and ``authorization_scope_unavailable`` prevent a runnable approval.
+
+Explicit ``manage_agent_skill("create_authorized", request)`` requires ``candidate_id``, ``snapshot``,
+``authorization_review``, reviewed ``spec`` and a nonempty ``note``. Every live old restriction remains;
+unavailable references may be replaced by current authority, with equal/narrower roots inside the
+original ceiling. Goal, full actions, tools, apps, inputs, mode/settings, budgets, completion criteria
+and parameter schema stay fixed. Changing semantic data uses a later reviewed repair candidate.
+
+The result is a draft in the same skill lineage, version zero, with parent version and actor/context/
+approved-root provenance. It inherits neither publication nor validation trials. Run ``validate``,
+verify independent success, then explicitly ``accept`` with the parent ``expected_version`` and note.
+Old trials cannot publish this candidate. Old versions and running task pins remain immutable.
+After publication, ``run`` must explicitly select the new version; revoked old versions still refuse.
+
+Candidate insertion and unique approval linkage commit together. Identical context/spec approval
+reuses the draft after restart/lost replies or concurrent caller requests. Stale parent versions or
+changed current authority require another review; publication races are checked in the insert
+transaction as well as review. Four-operation task recovery and trigger registration stay separate.
+Skill surfaces are ``AC_agent_skill``, MCP ``ac_agent_skill``, ``POST /agent/skill``, Builder and
+``agent-task skill review_authorization|create_authorized request.json``. GUI Skills offers both
+operations through its selector and explicit **Apply skill operation** Action; review never submits
+a task or publishes a version. Owner/operator ``drive_input`` is required even for direct review.
+Controlled fake application, authenticated loopback and offscreen GUI evidence do not replace native
+acceptance. Explicit trigger re-registration remains in Progress.md.

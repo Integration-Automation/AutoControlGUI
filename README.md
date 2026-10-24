@@ -1,5 +1,13 @@
 # AutoControl
 
+Published skills can use `manage_agent_skill("review_authorization", {"candidate_id":"..."})`,
+then explicit `create_authorized` with `candidate_id`, `snapshot`, `authorization_review`, reviewed
+`spec` and `note`. Renewal preserves the whole plan/parameter schema and source root ceiling, retaining
+live restrictions and intersecting current authority. It creates an audited draft in the same skill
+lineage; fresh validation and explicit next-version publication are required. Old versions remain
+unchanged. Identical approval deduplicates; stale versions/context fail. API/AC/MCP/REST/CLI/Builder and
+the GUI Skills operation selector share this flow. Trigger renewal remains separate work.
+
 Stopped tasks with retired origin authority can explicitly use `review_authorization`, then
 `create_authorized` with `task_id`, `snapshot`, reviewed `spec`, `note` and `authorization_review`.
 The successor retains every live source restriction and intersects current authority with the original
@@ -7,7 +15,7 @@ root ceiling; roots may only stay equal or shrink. Other permissions, mode/model
 conditions stay fixed. Approval is audited atomically with the unique successor; the source and its
 revoked witnesses stay unchanged. All recovery surfaces include these operations, with separate GUI
 Actions for authorization review and creation. See the [recovery guide](docs/source/Eng/doc/ai_agents/agent_recovery_doc.rst).
-This does not renew published skills or triggers, clear input quarantine or restore application state.
+Task recovery does not renew triggers, clear input quarantine or restore application state; skill renewal uses the separate flow above.
 
 Stopped tasks can use `manage_agent_recovery("preview", {"task_id": "..."})` to review source
 receipts and a source snapshot without touching an application. Finite skills expose remaining actions

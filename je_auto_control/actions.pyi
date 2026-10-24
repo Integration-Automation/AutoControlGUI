@@ -137,7 +137,7 @@ def AC_agent_runtime_stop() -> dict[str, Any]:
     """Request service cancellation and retirement; an active input owner prevents shutdown."""
 
 def AC_agent_skill(operation: str, request: Mapping[str, Any] | None = ...) -> dict[str, Any]:
-    """Record, parameterize, validate, explicitly publish or run an immutable managed skill version."""
+    """Record, reauthorize, validate, explicitly publish or run an immutable managed skill version."""
 
 def AC_agent_skill_list() -> dict[str, Any]:
     """List owner-visible immutable skill candidates and published versions."""

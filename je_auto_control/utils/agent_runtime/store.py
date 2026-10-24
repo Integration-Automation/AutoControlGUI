@@ -56,6 +56,10 @@ CREATE TABLE IF NOT EXISTS agent_skill_candidates (
  spec TEXT NOT NULL, parameters TEXT NOT NULL, provenance TEXT NOT NULL, digest TEXT NOT NULL,
  state TEXT NOT NULL, version INTEGER NOT NULL, created REAL NOT NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS agent_skill_versions ON agent_skill_candidates(skill_id,version) WHERE version > 0;
+CREATE TABLE IF NOT EXISTS agent_skill_authorizations (
+ source_candidate TEXT NOT NULL REFERENCES agent_skill_candidates(id), review TEXT NOT NULL,
+ spec_hash TEXT NOT NULL, candidate_id TEXT NOT NULL UNIQUE REFERENCES agent_skill_candidates(id),
+ PRIMARY KEY(source_candidate,review,spec_hash));
 CREATE TABLE IF NOT EXISTS agent_skill_trials (
  task_id TEXT PRIMARY KEY, candidate_id TEXT NOT NULL REFERENCES agent_skill_candidates(id),
  spec_hash TEXT NOT NULL, purpose TEXT NOT NULL, created REAL NOT NULL);

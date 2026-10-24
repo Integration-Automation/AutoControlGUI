@@ -11,9 +11,12 @@ from je_auto_control.utils.agent_runtime.models import detached
 from je_auto_control.utils.agent_runtime.policy import owns_task, durable_payload
 from je_auto_control.utils.agent_runtime.skill_parameters import digest, instantiate, parameter_schema, repair_data
 from je_auto_control.utils.agent_runtime.skill_recording import recorded_spec, assert_verified
+from je_auto_control.utils.agent_runtime.skill_reauthorization import (
+    SkillReauthorization, OPERATIONS as AUTHORIZATION_OPERATIONS, existing_authorization,
+)
 from je_auto_control.utils.rbac.authorization import current_authorization
 
-OPERATIONS = ("record", "repair", "list", "get", "preview", "validate", "accept", "run")
+OPERATIONS = ("record", "repair", "list", "get", "preview", "validate", "accept", "run") + AUTHORIZATION_OPERATIONS
 
 
 class AgentSkills:
@@ -27,6 +30,8 @@ class AgentSkills:
         request = durable_payload(detached({} if request is None else request))
         if not isinstance(request, dict) or not isinstance(operation, str) or operation not in OPERATIONS:
             raise AgentTaskError("unknown skill operation or invalid request")
+        if operation in AUTHORIZATION_OPERATIONS:
+            return SkillReauthorization(self).control(operation, request)
         handlers = {"record": self._record, "repair": self._repair, "list": self._list,
                     "get": self._get_request, "preview": self._preview, "validate": self._validate,
                     "accept": self._accept, "run": self._run}
@@ -91,9 +96,16 @@ class AgentSkills:
         candidate_id = uuid.uuid4().hex
         snapshot = digest({"spec": spec, "parameters": parameters})
         with self.runtime.store.connection(write=True) as connection:
-            connection.execute("INSERT INTO agent_skill_candidates VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                (candidate_id, skill_id, name, json.dumps(owner), json.dumps(spec), json.dumps(parameters),
-                 json.dumps(provenance), snapshot, "draft", 0, time.time()))
+            existing = existing_authorization(connection, provenance, snapshot)
+            if existing is not None:
+                candidate_id = existing
+            else:
+                connection.execute("INSERT INTO agent_skill_candidates VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    (candidate_id, skill_id, name, json.dumps(owner), json.dumps(spec), json.dumps(parameters),
+                     json.dumps(provenance), snapshot, "draft", 0, time.time()))
+                if provenance.get("kind") == "origin_reauthorization":
+                    connection.execute("INSERT INTO agent_skill_authorizations VALUES (?,?,?,?)",
+                        (provenance["parent"], provenance["reauthorization"]["review"], snapshot, candidate_id))
         return self._get(candidate_id)
 
     def _repair(self, request: dict) -> dict:

@@ -1,5 +1,10 @@
 # Capability matrix
 
+Published skill reauthorization: explicit review/new-draft creation retains the entire plan and
+parameter schema within original/live/current authority. Fresh validation/publication, old-version
+immutability, owner/role isolation, atomic retry/race/rollback and HTTP/CLI/offscreen GUI have controlled
+evidence. This does not establish real application/native acceptance or renew trigger templates.
+
 Successor reauthorization: explicit review/create_authorized preserves original root ceilings,
 all live old restrictions and current caller limits; only narrower roots and replaced unavailable
 origin references are allowed. Transactional audit, stale-review rejection, retention, owner isolation,

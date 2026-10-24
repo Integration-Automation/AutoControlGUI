@@ -827,3 +827,10 @@ references the recovery tombstone, so child pruning retains proof until source p
 Public recovery metadata exposes actor/context/approved roots. The same four-operation protocol flows
 through routes/API/catalog/CLI/Builder and separate thin GUI Actions; only explicit creation dispatches.
 Input lease/quarantine, source receipts and source status remain independent of authorization renewal.
+
+Skill authorization: skill_reauthorization.py reuses bounded origin review to bind a current published
+candidate to a new draft. The full plan and parameter schema stay fixed. task_skills.py inserts draft
+and agent_skill_authorizations linkage atomically, with concurrent-caller deduplication and a latest-version
+check inside the write transaction. Provenance holds actor/context/approved roots. Existing trial/pin/
+publication contracts require fresh validation and explicit next-version acceptance; old candidates
+and task pins never mutate. Shared operation enums reach API/catalog/CLI/Builder and thin GUI selectors.

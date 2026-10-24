@@ -1,5 +1,10 @@
 # Changelog
 
+Add explicit origin reauthorization of the current published skill into a new immutable draft.
+Preserve plan, parameter schema and authority ceilings, require fresh validation and next-version
+publication, and audit/deduplicate approval atomically. Existing versions and running pins remain
+unchanged. Expose both operations through the shared skill protocol and GUI operation selector.
+
 Add explicit reviewed successor reauthorization for retired origin policies. Preserve the original
 root ceiling and every live restriction, intersect current authority, and allow only equal/narrower
 roots while retaining other scope/settings and completion conditions. Audit approval atomically with

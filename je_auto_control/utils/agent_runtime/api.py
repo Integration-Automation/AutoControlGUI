@@ -126,7 +126,7 @@ def recover_agent_target(target: str, note: str) -> dict[str, Any]:
 
 
 def manage_agent_skill(operation: str, request: Mapping[str, Any] | None = None) -> dict[str, Any]:
-    """Record, parameterize, validate, explicitly publish or run an immutable managed skill version."""
+    """Record, reauthorize, validate, explicitly publish or run an immutable managed skill version."""
     return AgentRuntimeClient().call("skill", {"operation": operation, "request": dict(request or {})})
 
 

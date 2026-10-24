@@ -78,4 +78,29 @@ Recovery JSON 編輯器及空白註記，不填入或提交一般任務表單；
 CLI 為 ``agent-task recovery review_authorization|create_authorized request.json``；GUI Actions
 新增「審閱新任務授權」及「建立重新授權的新任務」。審閱只填獨立 Recovery 編輯器，註記留空，
 須另行明確建立。證據使用確定性假目標、已驗證身分的 loopback HTTP 及 offscreen Qt；
-已發布 skill／trigger 更新、應用狀態重建與實際模型／原生驗收仍列待辦。
+技能更新見下節；trigger 更新、應用狀態重建與實際模型／原生驗收仍列待辦。
+
+已發布技能的授權更新
+--------------------------------
+
+技能使用獨立於停止任務恢復的流程。對目前已發布版本呼叫
+``manage_agent_skill("review_authorization", {"candidate_id": published_id})``，取得 ``snapshot``、
+``authorization_review``、裁切後的 ``authorization`` 與 ``spec``。審閱不觀察、不執行、不發布；
+固定動作／完成條件超出縮小範圍時回傳 ``spec=null`` 與 ``authorization_scope_unavailable``。
+
+明確 ``manage_agent_skill("create_authorized", request)`` 須提供 ``candidate_id``、``snapshot``、
+``authorization_review``、經審閱的 ``spec`` 與非空 ``note``。保留仍有效的舊限制，只為新候選
+取代失效來源；根目錄只能維持或縮小，受原上限與目前權限交集限制。目標、完整動作、工具、app、
+inputs、模式／設定、預算、完成條件及參數定義固定；語義內容變更須另走後續修復候選流程。
+
+結果是同一技能系譜的新草稿，版本為零，保存父版本、操作人／授權內容／核准目錄證據，不繼承發布
+或驗證 trial。須重新 ``validate``、獨立驗證成功，再明確 ``accept``，提供父 ``expected_version``
+及註記；舊 trial 不能發布新候選。舊版本及執行中 pin 不變，``run`` 須明確選擇新版本，來源失效的
+舊版本仍拒絕執行。候選及唯一核准關聯在同一交易提交，相同內容重試、重啟或並行呼叫均去重；
+父版本／目前授權變更須重新審閱，寫入交易內也核對發布競爭。
+
+共用介面為 ``AC_agent_skill``、MCP ``ac_agent_skill``、``POST /agent/skill``、Builder 與
+``agent-task skill review_authorization|create_authorized request.json``；GUI 技能操作選單提供兩種
+操作，須明確執行 Actions 的技能操作，不會自動建立任務或發布版本。直接審閱也須 owner／operator
+的 ``drive_input``。證據限假應用、已驗證身分的 loopback 與 offscreen GUI；原生驗收及 trigger
+明確重新註冊仍列於 Progress.md。
