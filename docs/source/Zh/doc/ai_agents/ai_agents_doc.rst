@@ -442,3 +442,24 @@ SDK parser。Shell 必須指定數字 transport ID、使用 shell-v2 raw 封包�
 可能重用數字 ID；有限 adapter 還須在同一命令連線內核對實體裝置／boot／app，接上耐久
 副作用防護與獨立完成證據。Shell 退出不等於輸入已釋放；尚未新增受管 Android profile 或
 原生就緒宣告。協定來源為英文頁列出的固定 AOSP 原始碼。
+
+Android 身分 session 與有限提案
+----------------------------------------------------------------------
+
+內部 ``AndroidDeviceSession`` 只選取指定連線序號、唯一且就緒的數字 transport。唯讀證據須
+符合預期的實體 ``ro.serialno``、kernel boot UUID，以及顯示器零上的唯一 app／裝置使用者
+焦點。以固定 AOSP 格式解析有界資料，不保留原始 window dump；未知 OEM 格式拒絕。
+通過即時檢查後以原子方式固定 boot，之後或並行檢查不得換成別的 boot。查詢與身分讀取
+共用原始時限，不自動啟動 app 或重設裝置。
+
+``compile_android_action`` 只接受既有 tap／swipe／text／key 名稱與封閉參數，產生主機內部
+提案，原始 shell 不提供給模型。同一命令連線會在有限輸入前後核對實體、boot、顯示器及
+window／activity 焦點。尾端標記保留 shell 命令替換原本會吃掉的空白重複欄位。文字限制為
+有界可列印 ASCII、拒絕會失真的 literal ``%s``，並套用 shell 引用；按鍵是有限 app 輸入集。
+座標、時長及編碼後整段命令都有限制。成功只輸出固定標記；動作失敗或後續 scope 改變都
+拒絕，不重試，也不視為獨立完成證據。
+
+提案維持 ``input_authorized=false``。焦點身分不能替代輸入視窗命中、遮擋、解鎖及真人活動
+證據。自有 worker／副作用防護、受限 hierarchy 觀察、獨立完成條件、主機 profile 與共用
+使用介面仍列於 ``Progress.md``，原生／真機驗收維持暫緩。已識別的焦點欄位來源為英文頁
+列出的固定 AOSP Android 14 原始碼。

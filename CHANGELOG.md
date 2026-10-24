@@ -1,5 +1,12 @@
 # Changelog
 
+Add internal Android identity sessions and finite host-only command proposals. Validate an exact endpoint,
+physical serial, kernel boot UUID and one focused app/user on display zero; pin boot atomically and refuse
+adoption after restart. Commands check identity/focus before and after input on the same connection,
+preserve empty duplicate-field evidence, bound literal text/keys/coordinates/duration and emit fixed results.
+No proposal grants input authority or adds a managed device profile. Input-window/presence gates and worker
+integration remain pending; the legacy Android API and command catalog are unchanged.
+
 Add an internal bounded ADB smart-socket transport for future managed Android adapters. Require an
 explicit loopback server and transport ID, shell-v2 exit framing and closed streams; never invoke an ADB
 CLI, manage a daemon, retry an ambiguous command or fall back to a legacy shell. Preserve cancellation

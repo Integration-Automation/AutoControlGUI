@@ -503,3 +503,33 @@ Protocol references: `AOSP smart-socket overview
 <https://android.googlesource.com/platform/packages/modules/adb/+/refs/tags/android-14.0.0_r27/client/adb_client.cpp>`_
 and `AOSP shell packet layout
 <https://android.googlesource.com/platform/packages/modules/adb/+/refs/tags/android-14.0.0_r27/shell_protocol.h>`_.
+
+Android identity sessions and finite proposals
+----------------------------------------------------------------------
+
+Internal ``AndroidDeviceSession`` selects only an exact reviewed connection serial with one ready,
+nonambiguous numeric transport. Read-only evidence validates the expected physical ``ro.serialno``,
+kernel boot UUID and a single app/user focus on display zero. Bounded fixed-format AOSP window evidence
+is parsed without retaining the raw window dump; unknown OEM formats fail closed. A boot is pinned
+atomically after live checks and cannot be replaced by a later or concurrent inspection. Discovery and
+identity reads share one deadline. No app is started and no device reset is requested.
+
+``compile_android_action`` accepts only the existing tap/swipe/text/key names with closed arguments.
+It builds a host-only proposal, never a model shell tool. The same selected command connection checks
+physical identity, boot, focused display/window/activity both before and after its finite input.
+A trailing sentinel preserves empty duplicate fields that shell command substitution otherwise strips.
+Text is bounded printable ASCII, rejects lossy literal ``%s`` and is shell-quoted; keys are a finite
+app-input set. Coordinate/duration and combined encoded command limits are checked before dispatch.
+Only a fixed success marker may be emitted; post-action scope changes or command failure are errors,
+never automatic retries or independent completion evidence.
+
+Proposals retain ``input_authorized=false``. Focus identity alone is not an input-window hit test,
+occlusion proof, unlock check or human-activity gate. Owned-worker/remote-effect integration, scoped
+hierarchy observations, independent completion checks, target profiles and shared user surfaces remain
+open in ``Progress.md``. The existing native/device acceptance pause remains unchanged.
+
+The recognized focus fields are based on the fixed AOSP Android 14 implementations of
+`DisplayContent.dump
+<https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-14.0.0_r27/services/core/java/com/android/server/wm/DisplayContent.java>`_
+and `WindowManagerService.dumpWindowsNoHeaderLocked
+<https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-14.0.0_r27/services/core/java/com/android/server/wm/WindowManagerService.java>`_.

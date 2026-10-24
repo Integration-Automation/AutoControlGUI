@@ -730,3 +730,12 @@ cover framing; failures preserve control exceptions and redact remote diagnostic
 server management, reconnect, command retry or legacy shell fallback occurs. Server restart can reuse
 transport IDs: physical-device/boot/app checks in the same command connection, finite tool construction,
 remote-effect fencing and public managed target wiring remain required before Android is advertised.
+
+Android identity/proposal boundary: android_scope.py validates bounded serial/boot/default-display
+window/activity evidence and discards raw dumps. android_session.py selects one exact ready endpoint,
+shares a deadline and atomically pins boot after live checks; it never launches an app or adopts a new
+boot. android_commands.py compiles only four finite existing input names with closed arguments and
+same-connection pre/post identity guards, sentinel-preserved field evidence, literal text, fixed results
+and the transport byte limit. Proposals carry input_authorized=false. Input-window/occlusion/unlock/
+presence gates, observation grounding and owned-worker/remote-effect integration are still required;
+no managed device profile, SDK execution authority or new catalog command is advertised.

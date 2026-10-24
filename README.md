@@ -8,6 +8,10 @@ is implied; remaining integration is in `Progress.md`.
 The internal Android transport connects only to an explicit existing loopback ADB server, with no CLI,
 daemon management, retry or legacy-shell fallback. Shell-v2 exit evidence has bounded framing/output;
 it does not establish app completion, physical-device identity or input retirement.
+Internal Android sessions now inspect an exact endpoint, validate physical serial/boot/default-display
+focus and pin one boot atomically. Finite input proposals recheck identity and focus on the selected
+command connection, with literal bounded text and fixed results. Proposals grant no input authority;
+input-window, occlusion, lock/presence and owned-worker integration remain required.
 
 `lookup_agent_task("key", reviewed_spec)` optionally compares the destination-normalized specification
 with the immutable digest stored for the original owner's request. The response advertises

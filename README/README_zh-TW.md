@@ -7,6 +7,9 @@ Android／iOS 受管 adapter 仍未提供。內部遠端副作用防護會依實
 內部 Android 傳輸只連明確設定的既有 loopback ADB server，不呼叫 CLI、不管理 daemon、
 不重試或退回舊 shell；shell-v2 的退出證據有封包／輸出上限，但不代表應用完成、實體裝置
 身分或輸入已釋放。
+內部 Android session 會核對指定端點、實體序號、boot 與預設顯示器焦點，並以原子方式固定
+boot。有限輸入提案在命令連線內重驗身分／焦點，限制文字與結果；提案不授權輸入，仍須接合
+輸入視窗、遮擋、鎖定／真人活動與自有 worker。
 
 `lookup_agent_task("鍵", reviewed_spec)` 可選擇由目的地主機正規化規格，與原擁有者提交時保存的
 不可變摘要比對；回覆宣告 `spec_match_contract=1`，並提供一致／不同／無法核對／查無紀錄。

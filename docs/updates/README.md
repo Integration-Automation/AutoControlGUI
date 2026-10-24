@@ -518,3 +518,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-26 | 2026-10-24 | Quarantine remote effects independently of local helper retirement | #done #agent #devices | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-27 | 2026-10-24 | Bound managed ADB transport without daemon management or command replay | #done #agent #android | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-28 | 2026-10-24 | Pin Android identity before finite host-only command proposals | #done #agent #scope | [2026-10-c](2026-10-c.md) |
