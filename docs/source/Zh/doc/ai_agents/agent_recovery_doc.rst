@@ -1,6 +1,29 @@
 任務恢復與重新授權
 ================================================
 
+明確保留來源擁有者
+--------------------------------
+
+管理員可在 preview／review_authorization 請求加入 ``owner_policy="source_owner"``，預覽會另回覆
+ownership（contract／policy／review／owner UID／actor UID）。明確 create／create_authorized
+另帶相同 owner_policy 及 ownership.review 作為 ownership_review，並保留既有 snapshot／spec／
+note 與選填 authorization_review。審閱固定來源快照、雙方使用者資料庫 namespace 及目前角色；
+權限變更須重新審閱，不能自填任意 owner 或 actor。
+
+服務以目前來源 owner 建立子任務，交易內另記真正審閱者、lineage、ownership proof 與獨立來源授權
+更新。原工具／根目錄／計畫審閱、獨立完成與隔離契約不變；scope／checkpoint／巢狀 guard／實際
+輸入前與維護持續核對雙方 Drive，以及審閱者是否仍能管理來源 owner。管理員降為 operator 後
+不能繼續其他 owner 的輸入。相同重試沿用已接受政策，另一審閱者、變更歸屬或舊 caller-owned
+子任務不能補造此證明。
+
+metadata.recovery.ownership 僅提供有限稽核，不揭露私有使用者資料庫路徑；子任務到期後，紀錄與
+復原 tombstone 一起保留，直到來源清理才串聯移除。原 owner 可正常讀取並由 DAG 採認真實、獨立
+完成的來源擁有者後繼，無須擴大其他任務讀權。省略政策仍由真正建立者持有；既有 caller-owned
+成果的明確唯讀移交仍列於 Progress.md。
+
+API／AC／MCP／REST／CLI／Builder 共用附加欄位；GUI 提供擁有者選擇，預覽只準備註記留空的
+JSON，仍須明確建立。選取變更後須重新審閱，不自動移轉既有任務。
+
 經審閱的新任務
 ----------------
 

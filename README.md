@@ -34,6 +34,13 @@ The exact spec/key is admitted as the original owner, with the real caller recor
 checks refresh both identities and the live attempt before input; losing admin authority over another
 owner's work also blocks execution. Existing requests without this trusted admission are never backfilled.
 Task metadata exposes bounded `local_dag_admission` audit data; accepted input retains its cleanup contract.
+For a reviewed recovery successor that must remain readable to its original owner, pass
+`owner_policy="source_owner"` to recovery preview/review_authorization, then carry its
+`ownership.review` as `ownership_review` into explicit create/create_authorized. The child retains the
+source owner and records the real reviewer atomically; both identities remain live input checks.
+The recovery GUI offers this owner selection. Omitted policy keeps caller ownership and ordinary read
+isolation. DAGs can adopt an independently completed source-owned child through normal recovery evidence.
+Existing caller-owned children are not automatically transferred or backfilled into this policy.
 See [the continuation protocol](docs/source/Eng/doc/ai_agents/agent_dag_batches_doc.rst).
 
 Triggers can explicitly use `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`,

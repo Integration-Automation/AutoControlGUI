@@ -177,9 +177,12 @@ running／waiting_review／approved 批次不自動到期；所有仍保留的�
 尚缺步驟
 --------------------------------
 
-跨 owner 復原子任務的證據可見性仍列於 Progress.md；一般 TaskRecovery 子任務屬於真正建立者，
-整圖查證仍使用原 owner。須使用原 owner 可讀的後繼任務或明確審閱的證據移交，不會為採認自動
-放寬其他任務的可見性。
+管理員替其他 owner 復原本機任務時，可在 preview／review_authorization 加入
+``owner_policy="source_owner"``，明確 create／create_authorized 另帶 ``ownership.review`` 為
+``ownership_review``。子任務保留來源 owner，另記真正審閱者，輸入前持續驗證雙方權限；整圖
+沿用原 owner 讀取與真實 recovery chain，即可採認獨立完成的子任務。GUI 提供擁有者選擇，須有
+相符預覽。省略政策仍由真正建立者持有；已存在的 caller-owned 子任務不自動移轉或補造接收紀錄，
+其明確唯讀成果移交仍列於 Progress.md。不會為採認自動放寬其他任務可見性。
 
 舊圖不能事後自動當作已綁定批次；採認只證明
 歷史邏輯階段，不重建登入／視窗或宣稱目前應用狀態。假目標、自有本機／雙主機 HTTP 與 offscreen

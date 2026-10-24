@@ -1,5 +1,11 @@
 # Changelog
 
+Add explicit source_owner recovery ownership to preview/review_authorization and create/create_authorized.
+Bind ownership_review to the source snapshot and current owner/reviewer identities; atomically store the
+original-owner child, lineage and separate ownership/authorization audits. Refresh both principals and
+cross-owner management authority before input and during maintenance. Preserve default caller ownership,
+request isolation and no-backfill retries. The GUI owner selection requires a matching fresh preview.
+
 Extend existing task pruning and hourly maintenance with owner-scoped DAG retention. Expire unused
 registrations and independently settled successful batches after the selected retention period;
 preserve active/review/approved batches, referenced tasks/recovery descendants, uncertain actions,

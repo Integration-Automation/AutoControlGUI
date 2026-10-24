@@ -228,9 +228,14 @@ cross-host evidence retention and transfer require an explicit handoff contract.
 Current limits
 ----------------------------------------------------------------------
 
-Cross-owner recovery-child evidence remains in Progress.md. Ordinary TaskRecovery creates a child
-owned by its actual creator, while whole-batch evidence reads as the original owner. Use an original-
-owner-readable successor or an explicit reviewed evidence handoff; task visibility is never widened
+When an administrator recovers another owner's local task, use recovery preview/review_authorization
+with ``owner_policy="source_owner"``, then carry ``ownership.review`` as ``ownership_review`` into
+explicit create/create_authorized. The child keeps its source owner, separately audits the reviewer
+and refreshes both principals before input. Whole-batch evidence can then use its existing original-owner
+reads and genuine recovery chain to adopt that independently completed child. The GUI recovery page
+offers this owner selection and requires a matching preview. Ordinary recovery still creates a child
+owned by its actual caller. Existing caller-owned children are not transferred or backfilled; a reviewed
+read-only handoff for such legacy evidence remains in Progress.md. Task visibility is never widened
 automatically to make a successor adoptable.
 
 Legacy graphs cannot be retroactively treated as bound batches. Adoption certifies a historical logical stage; it does not

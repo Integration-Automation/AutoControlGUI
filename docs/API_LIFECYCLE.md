@@ -18,7 +18,24 @@ pause permits precise retirement after the batch is fenced or original owner los
 Caller and service modes use this same bridge. Per-scope, pre-dispatch and maintenance checks refresh
 original owner, actual actor, cross-owner management authority and live claim/attempt. Metadata adds
 local_dag_admission contract/batch/node/actor UID, withholding attempt capabilities and user-store paths.
-Ordinary submit stays caller-owned. Cross-owner recovery-child evidence visibility remains in Progress.md.
+Ordinary submit stays caller-owned.
+
+Recovery preview/review_authorization optionally accept owner_policy="source_owner" and return bounded
+ownership contract/policy/review/owner UID/actor UID. Explicit create/create_authorized then require the
+same owner_policy plus ownership_review, in addition to the existing snapshot/spec/note and optional
+authorization_review. No arbitrary owner or actor field is accepted. The token binds the source snapshot,
+both user-store namespaces and their current roles; changes require another review. Creation uses the
+fresh source owner while separately recording the actual reviewer in agent_recovery_owners, atomically
+with the task/lineage and any independent origin authorization renewal. Matching retries keep the exact
+accepted ownership; ordinary children are never backfilled into a different policy. Default recovery
+ownership remains the actual caller. API/AC/MCP/REST/CLI/Builder share the existing recovery operation.
+GUI owner selection prepares these fields and rejects a changed selection before dispatching creation.
+Task recovery metadata adds bounded ownership audit data; private store paths remain service-side.
+Runtime scope/checkpoints/nested guard/pre-input and maintenance refresh original-owner Drive and the
+reviewer's live ability to manage that owner. Input retirement/quarantine remain unchanged. The audit
+survives child task retention with the recovery tombstone until source retention cascades it. DAG
+continuation can read and adopt a source-owned child with normal original-owner visibility, genuine
+recovery provenance and independent completion; other task visibility is never widened.
 
 manage_agent_dag adds register/get/list/begin/claim/record/finish/inspect on POST /agent/dag and
 AC_agent_dag / MCP ac_agent_dag / CLI agent-task dag / Builder. Register accepts an all-managed graph

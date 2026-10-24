@@ -9,7 +9,7 @@
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-接續優先完成第 5 組跨 owner 復原證據接合，並核對第 4 組真實裝置控制／擷取來源、
+接續優先完成第 5 組所有動作已確認後的唯讀完成驗證，並核對第 4 組真實裝置控制／擷取來源、
 其餘實作及第 8 組交付核對。
 
 1. **P4：瀏覽器與正式環境接合**
@@ -48,6 +48,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      在廣泛回歸中偶發的 `remote operation failed: AgentTaskError`；單獨重跑通過不足以證明已修復。
      本批 `test_new_input_requires_a_new_observation_instead_of_reusing_the_prepared_prefix` 也在首次
      tap 前出現同類錯誤；自有 SDK／shell 假裝置的單獨重跑通過，仍須補定位證據與真正修復。
+     本批另已觀察到假裝置 POSIX shell 的 5 秒期限觸發 TimeoutExpired，隨後 worker 回覆同類
+     AgentTaskError；這只能定位其中一次失敗，不能推定所有間歇錯誤同因，也不放寬期限。
      需保留敏感診斷遮罩、既有期限與未知副作用隔離，補可定位的受保護測試證據，不以放寬期限掩蓋。
    - 為 `utils/agent_runtime/android_adapter.py` 實作並審閱真實 `AndroidControlProvider`／
      `AndroidCommandLease` 來源；須有裝置端執行機制，在真人接回、取消／逾時後阻止舊寫入，
@@ -90,9 +92,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      指標步驟提供可信新來源與語義轉換，不能把舊索引／座標或歷史欄位值直接移入新 session。
    - 補實際應用的語義錄製、參數化、候選修復、驗證 trial、人工接受／版本發布及執行中固定版本
      的完整驗收；確認失敗／未知 trial 與沒有獨立證據的舊紀錄不能成為發布依據。
-   - 接合管理員跨 owner 建立復原子任務後的 DAG 證據可見性：一般 TaskRecovery 子任務使用實際
-     建立者的 owner；整圖續接仍以原 owner 查證。須由原 owner 建立可讀後繼任務，或實作明確且
-     可撤銷的成果證據授權，不能為採認後繼任務而放寬其他使用者的任務讀取／輸入權限。
+   - 為已存在且由其他 caller 持有的復原子任務提供明確可撤銷的唯讀成果移交；新 source_owner
+     模式不移轉或補造舊子任務的歸屬。移交須綁定原批次／節點／來源及真實復原鏈，持續驗證權限，
+     只能供獨立完成證據採認，不能擴大一般讀取／輸入權或重新派送舊任務。
    - 補所有動作已確認、但完成尚未發布就失去回覆／被 fence 的顯式唯讀完成驗證。現有
      TaskRecovery 對空剩餘流程回報 no_remaining_actions，舊 attempt 又不能恢復輸入；須新鮮
      核對獨立完成條件及輸入釋放，不可重做最後動作、繼承舊畫面結果或解除未知隔離來完成認證。

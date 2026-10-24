@@ -9,6 +9,10 @@ from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
 from je_auto_control.utils.agent_runtime.policy import durable_payload
 from je_auto_control.utils.agent_runtime.receipts import effective_actions, row_report
 from je_auto_control.utils.agent_runtime.store import request_spec_digest
+from je_auto_control.utils.agent_runtime.task_authority import (
+    validate_ownership_request, ownership_scope, ownership_review, public_ownership,
+    recovery_binding, require_matching_ownership,
+)
 from je_auto_control.utils.agent_runtime.recovery_authorization import (
     prepare_authorization, authorized_template, narrowed_template, authorization_details,
 )
@@ -31,15 +35,19 @@ _POINTER_TOOLS = ("AC_click_mouse", "AC_set_mouse_position", "AC_mouse_scroll", 
 def recovery_link(store: Any, task_id: str) -> dict:
     """Return durable successor provenance, without treating the source as completed."""
     with store.connection() as connection:
-        row = connection.execute("SELECT r.source_task,r.snapshot,r.note,r.created,a.details "
+        row = connection.execute("SELECT r.source_task,r.snapshot,r.note,r.created,a.details,o.details AS ownership "
                                  "FROM agent_task_recoveries r LEFT JOIN agent_task_authorizations a "
-                                 "ON a.task_id=r.task_id WHERE r.task_id=?", (task_id,)).fetchone()
+                                 "ON a.task_id=r.task_id LEFT JOIN agent_recovery_owners o "
+                                 "ON o.task_id=r.task_id WHERE r.task_id=?", (task_id,)).fetchone()
     if row is None:
         return {}
     result = dict(row)
     details = result.pop("details")
+    ownership = result.pop("ownership")
     if details is not None:
         result["reauthorization"] = json.loads(details)
+    if ownership is not None:
+        result["ownership"] = public_ownership(json.loads(ownership))
     return result
 
 
@@ -63,8 +71,7 @@ class AgentRecovery:
         request = durable_payload(detached(request))
         if not isinstance(operation, str) or operation not in OPERATIONS or not isinstance(request, dict):
             raise AgentTaskError("invalid recovery operation fields")
-        if set(request) != _REQUEST_FIELDS[operation]:
-            raise AgentTaskError("invalid recovery operation fields")
+        validate_ownership_request(operation, request, _REQUEST_FIELDS[operation])
         task_id = request["task_id"]
         if not isinstance(task_id, str) or not task_id:
             raise AgentTaskError("recovery requires a task_id")
@@ -73,10 +80,12 @@ class AgentRecovery:
             _require_operator()
             # pylint: disable-next=protected-access  # reason: reuse the runtime's owner and closed-state check
             row = self.runtime._row(task_id)
-            if operation in {"create", "create_authorized"}:
-                return self._create(row, request)
-            receipts, reviews = self._read(row)
-            return self._preview(row, receipts, reviews, reauthorize=operation == "review_authorization")
+            with ownership_scope(row, request) as ownership:
+                if operation in {"create", "create_authorized"}:
+                    return self._create(row, request, ownership)
+                receipts, reviews = self._read(row)
+                return self._preview(row, receipts, reviews, reauthorize=operation == "review_authorization",
+                                     ownership=ownership)
 
     def _read(self, row: dict) -> tuple[list[dict], list[dict]]:
         # pylint: disable-next=protected-access  # reason: a successor cannot bypass an unretired input owner
@@ -100,7 +109,8 @@ class AgentRecovery:
         # pylint: disable-next=protected-access  # reason: the shared host policy must normalize every review template
         return self.runtime._validated_spec(spec).to_dict()
 
-    def _preview(self, row: dict, receipts: list[dict], reviews: list[dict], *, reauthorize: bool = False) -> dict:
+    def _preview(self, row: dict, receipts: list[dict], reviews: list[dict], *, reauthorize: bool = False,
+                 ownership: dict | None = None) -> dict:
         active = effective_actions(receipts)
         source = AgentTaskSpec.from_dict(row["spec"])
         snapshot = _snapshot(row, receipts, reviews)
@@ -110,6 +120,9 @@ class AgentRecovery:
                 "source_receipts": [{key: item[key] for key in ("id", "command", "status")}
                                     for item in receipts[:200]], "source_receipt_total": len(receipts),
                 "approval_required": True, "source_completion_inherited": False}
+        owned = ownership_review(ownership, snapshot)
+        if owned is not None:
+            result["ownership"] = public_ownership(owned)
         if authorization is not None:
             result.update(authorization_review=authorization["review"], authorization=authorization["context"],
                           existing_successor=_successor(self.runtime.store, row["id"]))
@@ -147,8 +160,11 @@ class AgentRecovery:
             raise AgentTaskError("source authorization context changed; review authorization again")
         return self._template(row, authorization), authorization
 
-    def _create(self, row: dict, request: dict) -> dict:
+    def _create(self, row: dict, request: dict, ownership: dict | None = None) -> dict:
         note = _review_note(request["note"])
+        ownership = ownership_review(ownership, request["snapshot"])
+        if ownership is not None and request["ownership_review"] != ownership["review"]:
+            raise AgentTaskError("recovery ownership changed; review the source owner again")
         template, authorization = self._creation_scope(row, request)
         # pylint: disable-next=protected-access  # reason: reviewed successors use the same live host scope validation
         spec = self.runtime._validated_spec(request["spec"])
@@ -157,7 +173,7 @@ class AgentRecovery:
         _check_scope(template, spec.to_dict())
         _require_plan(spec)
         review = authorization["review"] if authorization is not None else None
-        existing = self._existing(row["id"], request["snapshot"], durable_payload(spec.to_dict()), review)
+        existing = self._existing(row["id"], request["snapshot"], durable_payload(spec.to_dict()), review, ownership)
         if existing is not None:
             return existing
         receipts, reviews = self._read(row)
@@ -168,11 +184,12 @@ class AgentRecovery:
         details = authorization_details(authorization, spec) if authorization is not None else None
         # pylint: disable-next=protected-access  # reason: atomically bind lineage and authorization in the task creator
         task = self.runtime._create_task(spec, None, recovery=(row["id"], request["snapshot"], note),
-                                         authorization=details)
+                                         authorization=recovery_binding(details, ownership))
         return {"task_id": task.task_id, "state": task.state,
                 "recovery": recovery_link(self.runtime.store, task.task_id)}
 
-    def _existing(self, source: str, snapshot: Any, spec: dict, review: str | None = None) -> dict | None:
+    def _existing(self, source: str, snapshot: Any, spec: dict, review: str | None = None,
+                  ownership: dict | None = None) -> dict | None:
         with self.runtime.store.connection() as connection:
             record = connection.execute("SELECT task_id,snapshot FROM agent_task_recoveries WHERE source_task=?",
                                         (source,)).fetchone()
@@ -180,6 +197,7 @@ class AgentRecovery:
             return None
         # pylint: disable-next=protected-access  # reason: an idempotent retry still requires ownership of its successor
         child = self.runtime._row(record["task_id"])
+        require_matching_ownership(self.runtime.store, child["id"], ownership)
         link = recovery_link(self.runtime.store, child["id"])
         if (record["snapshot"] != snapshot or child["spec"] != spec
                 or link.get("reauthorization", {}).get("review") != review):

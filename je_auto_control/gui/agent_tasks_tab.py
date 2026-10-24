@@ -78,6 +78,10 @@ class AgentTasksTab(TranslatableMixin, QWidget):
     def _setup_fields(self) -> None:
         self._goal, self._target, self._task_id = QLineEdit(), QLineEdit("local-desktop"), QLineEdit()
         self._recovery_note = QLineEdit()
+        owner_policy = QComboBox(self)
+        owner_policy.setObjectName("agent_recovery_owner_policy")
+        for name in ("caller", "source_owner"):
+            owner_policy.addItem(_translate("agent_owner_" + name), name)
         self._review = QPlainTextEdit('{"action_id": "", "decision": "not_applied", "note": ""}')
         remainder = QPlainTextEdit("{}", self)
         remainder.setObjectName("agent_remainder_request")
@@ -123,6 +127,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._page("agent_page_targets", (("agent_target_operation", self._target_operation),
                    ("agent_target_request", self._target_request)))
         self._page("agent_page_recovery", (("agent_recovery_note", self._recovery_note),
+                   ("agent_owner_policy", self._owner_policy),
                    ("agent_review", self._review), ("agent_remainder_request", self._remainder_request)))
         self._page("agent_page_observation", (("agent_action", self._action),))
         self._pages.widget(self._pages.count() - 1).layout().addWidget(self._observation)
@@ -151,7 +156,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         for index, key in enumerate(self._page_keys):
             self._pages.setTabText(index, _translate(key))
         self._observation.retranslate()
-        for combo, prefix in ((self._trigger_operation, "agent_trigger_"), (self._trigger_kind, "agent_trigger_kind_")):
+        for combo, prefix in ((self._trigger_operation, "agent_trigger_"), (self._trigger_kind, "agent_trigger_kind_"),
+                              (self._owner_policy, "agent_owner_")):
             for index in range(combo.count()):
                 combo.setItemText(index, _translate(prefix + combo.itemData(index)))
         for index in range(self._skill_operation.count()):
@@ -193,7 +199,17 @@ class AgentTasksTab(TranslatableMixin, QWidget):
 
     def _preview_remainder(self, operation: str = "preview") -> None:
         self._remainder_request.setPlainText("{}")
-        self._dispatch("recovery", {"operation": operation, "request": {"task_id": self._task_id.text()}})
+        request = {"task_id": self._task_id.text()}
+        if self._owner_policy.currentData() == "source_owner":
+            request["owner_policy"] = "source_owner"
+        self._dispatch("recovery", {"operation": operation, "request": request})
+
+    @property
+    def _owner_policy(self) -> QComboBox:
+        policy = self.findChild(QComboBox, "agent_recovery_owner_policy")
+        if policy is None:
+            raise AgentTaskError("recovery owner selection is unavailable")
+        return policy
 
     @property
     def _remainder_request(self) -> QPlainTextEdit:
@@ -207,6 +223,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             request = json.loads(self._remainder_request.toPlainText())
             if not isinstance(request, dict) or request.get("task_id") != self._task_id.text():
                 raise AgentTaskError("preview and review the selected task's remaining steps first")
+            if request.get("owner_policy", "caller") != self._owner_policy.currentData():
+                raise AgentTaskError("recovery owner selection changed; preview and review again")
         except (ValueError, TypeError) as error:
             self._status.setText(str(error))
             return
@@ -449,6 +467,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                    "spec": draft, "note": ""} if isinstance(draft, dict) else {}
         if request and "authorization_review" in result:
             request["authorization_review"] = result["authorization_review"]
+        if request and "ownership" in result:
+            request.update(owner_policy="source_owner", ownership_review=result["ownership"]["review"])
         self._remainder_request.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))
         self._pages.setCurrentIndex(self._page_keys.index("agent_page_recovery"))
 

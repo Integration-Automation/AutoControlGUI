@@ -1,5 +1,15 @@
 # AutoControl Architecture
 
+task_authority.py adds explicit source-owner recovery admission. ownership_scope preserves the fresh
+source owner separately from the actual reviewer; a snapshot/namespace/role-bound ownership review
+precedes creation. RecoveryBinding carries ownership beside optional origin authorization into the
+same task/lineage transaction. agent_recovery_owners retains private identities with the recovery
+tombstone; recovery_link exposes only bounded audit fields. Shared check_task_authority combines local
+DAG admission and explicit recovery owner/reviewer checks at scope/checkpoint/nested/pre-input and
+maintenance boundaries. Default recovery stays caller-owned. Thin GUI owner selection carries the
+review token without changing read ACLs. A source-owned independently completed recovery child can be
+adopted through existing DAG evidence under the original owner. No arbitrary owner transfer is exposed.
+
 dag_retention.py shares existing prune_agent_tasks/hourly maintenance: owner-scoped expiry of unused
 registrations and settled successful batches, plus host-only terminal orphan agent_dag delivery cleanup.
 The batch lock and write transaction recheck age/state, phases, related tasks/recovery descendants,
@@ -16,8 +26,8 @@ binding without backfilling. Runtime scope, pre-dispatch checkpoints and mainten
 original owner, cross-owner management authority and live claim/attempt. managed_local_scope overrides
 one copied node transport while preserving source checks; caller/background modes share the bridge.
 Task metadata projects only bounded admission identity. Exact pause can retire an admitted task after
-fencing; it does not grant submission, replay or another task's control. Cross-owner recovery evidence
-visibility remains in Progress.md; dag_retention.py protects these relationships until settled expiry.
+fencing; it does not grant submission, replay or another task's control. Explicit source-owner recovery
+preserves evidence visibility; dag_retention.py protects these relationships until settled expiry.
 
 Caller-bound DAG execution obtains AgentRuntimeClient.bound() before begin/approval, storing only an
 absolute owner-file path and endpoint/token/generation digest. Fresh metadata checks precede every
@@ -27,7 +37,7 @@ owning runtime without global client discovery, preserving current original-owne
 refreshing the actual caller. Admin inspection reads original-owner request keys. Remote host policy
 and credential forwarding stay destination-owned. Metadata replacement stops future calls, retaining
 durable uncertainty; it does not claim cleanup of already accepted input. Ordinary clients keep
-adaptive discovery. Cross-owner recovery evidence remains in Progress.md.
+adaptive discovery. Explicit source-owner successors preserve ordinary original-owner evidence access.
 
 dag_jobs.BackgroundDags uses the existing WorkQueue in the agent_dag namespace with four service
 workers and a 64-delivery pending ceiling. run_background consumes a registered/approved attempt and
@@ -669,7 +679,7 @@ historical path. Versioned-name checks and actual two-host evidence live in
 `test_agent_dag_batch_surfaces.py` and `test_agent_dag_batch_loopback.py`; continuation is covered by
 `test_agent_dag_continuation.py`, `test_agent_dag_continuation_guards.py` and
 `test_agent_dag_continuation_gui.py`. Background coordination and retention share the owning service;
-cross-owner recovery evidence and cross-host evidence handoff remain in Progress.md.
+source-owner recovery evidence shares existing ACLs; cross-host evidence handoff remains in Progress.md.
 
 ## 7. Design constraints
 

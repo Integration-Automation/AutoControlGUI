@@ -14,6 +14,7 @@ from je_auto_control.utils.agent_runtime.models import STATES, TERMINAL, detache
 from je_auto_control.utils.agent_runtime.trigger_history import bind_event
 from je_auto_control.utils.agent_runtime.submission import TaskAdmission
 from je_auto_control.utils.agent_runtime.dag_admission import bind_admission
+from je_auto_control.utils.agent_runtime.task_authority import RecoveryBinding, bind_recovery
 from je_auto_control.utils.sqlite_support import require_sqlite3
 
 _SCHEMA = """
@@ -115,6 +116,8 @@ CREATE TABLE IF NOT EXISTS agent_task_recoveries (
  snapshot TEXT NOT NULL, note TEXT NOT NULL, created REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_task_authorizations (
  task_id TEXT PRIMARY KEY REFERENCES agent_task_recoveries(task_id) ON DELETE CASCADE, details TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_recovery_owners (
+ task_id TEXT PRIMARY KEY REFERENCES agent_task_recoveries(task_id) ON DELETE CASCADE, details TEXT NOT NULL);
 """
 
 
@@ -202,7 +205,8 @@ class AgentTaskStore:
 
     def create(self, spec: dict | TaskAdmission, owner: dict, *, idempotency_key: str | None = None,
                trigger_event: tuple[str, str, str] | None = None,
-               recovery: tuple[str, str, str] | None = None, authorization: dict | None = None) -> str:
+               recovery: tuple[str, str, str] | None = None,
+               authorization: dict | RecoveryBinding | None = None) -> str:
         """Persist an immutable authorized task snapshot before it can execute."""
         identifier = uuid.uuid4().hex
         now = time.time()
@@ -230,8 +234,7 @@ class AgentTaskStore:
             if authorization is not None:
                 if recovery is None:
                     raise AgentTaskError("successor authorization requires a recovery link")
-                connection.execute("INSERT INTO agent_task_authorizations VALUES (?,?)",
-                                   (identifier, json.dumps(authorization)))
+                bind_recovery(connection, identifier, authorization, owner)
         return identifier
 
     def lookup_request(self, owner: dict, key: str) -> str | None:

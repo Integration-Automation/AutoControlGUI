@@ -4,7 +4,10 @@ Caller DAG service binding: owned two-service evidence verifies path capture, en
 replacement refusal before transport and local verification on the owning runtime. Admin inspection
 uses original-owner request keys. Local-task admission now preserves original ownership and atomically
 binds the actual actor; owned service tests cover revocation, management-role downgrade, exact contract
-refusal, rollback/no backfill and scoped retirement. Cross-owner recovery evidence remains open. Binding
+refusal, rollback/no backfill and scoped retirement. Explicit source-owner recovery has owned HTTP
+evidence for original-owner child visibility, actual-reviewer audit, DAG successor adoption, separate
+live owner/reviewer revocation, atomic rollback and restart/retention. Default caller ownership remains.
+Binding
 retains a fingerprint without caching bearer credentials, and legacy ordinary clients stay adaptive.
 
 Durable managed DAG batch identity: experimental; canonical topology/contract binding, host

@@ -33,7 +33,8 @@ from je_auto_control.utils.agent_runtime.origin_policy import bind_origin, valid
 from je_auto_control.utils.agent_runtime.store import AgentTaskStore, request_spec_digest
 from je_auto_control.utils.agent_runtime.dag_batches import DagBatches
 from je_auto_control.utils.agent_runtime.submission import TaskAdmission, submitted_digest, submission_metadata
-from je_auto_control.utils.agent_runtime.dag_admission import current_admission, check_admission
+from je_auto_control.utils.agent_runtime.dag_admission import current_admission
+from je_auto_control.utils.agent_runtime.task_authority import RecoveryBinding, check_task_authority
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -136,7 +137,8 @@ class AgentRuntime:
     def _create_task(self, spec: AgentTaskSpec, key: str | None,
                      event: tuple[str, str, str] | None = None,
                      recovery: tuple[str, str, str] | None = None,
-                     authorization: dict | None = None, submission: str | None = None) -> AgentTaskHandle:
+                     authorization: dict | RecoveryBinding | None = None,
+                     submission: str | None = None) -> AgentTaskHandle:
         with DeferredAuthorization.capture().scope():
             payload = durable_payload(spec.to_dict())
             payload = TaskAdmission(payload, submission, current_admission()) if submission is not None else payload
@@ -242,7 +244,7 @@ class AgentRuntime:
         spec = AgentTaskSpec.from_dict(row["spec"])
         owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
         try:
-            check_admission(self, row["id"])
+            check_task_authority(self, row["id"])
             self.target_profiles.check(spec)
             policy = TaskPolicy(spec)
         except AgentTaskError as error:
@@ -256,7 +258,7 @@ class AgentRuntime:
             self._check_budget(row["id"])
             policy.validate_snapshot()
             self.target_profiles.check(spec)
-            check_admission(self, row["id"])
+            check_task_authority(self, row["id"])
             with DeferredAuthorization(owner).scope():
                 pass
 
@@ -264,7 +266,7 @@ class AgentRuntime:
             self._check_budget(row["id"])
             self.target_profiles.check(spec)
             policy.check(name, arguments)
-            check_admission(self, row["id"])
+            check_task_authority(self, row["id"])
             lease = self._leases.get(row["id"])
             if lease is not None:
                 self.broker.validate(lease)
@@ -386,7 +388,7 @@ class AgentRuntime:
                                        grounding=durable_payload(grounding))
         try:
             self._token(task_id).checkpoint()
-            check_admission(self, task_id)
+            check_task_authority(self, task_id)
             self.evidence.action(task_id, self.store.actions(task_id)[-1])
             self.store.settle(action_id, "dispatched")
             result = self._target(row).perform(request.tool, arguments)
@@ -595,7 +597,7 @@ class AgentRuntime:
                 validate_root_snapshot(row["spec"]["roots"])
                 validate_origins(AgentTaskSpec.from_dict(row["spec"]))
                 self.target_profiles.check(AgentTaskSpec.from_dict(row["spec"]))
-                check_admission(self, task_id)
+                check_task_authority(self, task_id)
                 with DeferredAuthorization(owner).scope():
                     pass
             except (AutoControlException, OSError, ValueError):

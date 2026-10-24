@@ -1,6 +1,35 @@
 Task recovery and reauthorization
 ================================================
 
+Explicit source-owner successors
+--------------------------------
+
+An administrator can explicitly keep a recovered task under its source owner. Pass
+``{"task_id": source_id, "owner_policy": "source_owner"}`` to ``preview`` or
+``review_authorization``. The passive response adds ``ownership`` with contract/policy/review/owner UID/
+actor UID. Creation requires the same ``owner_policy`` and its ``ownership.review`` as
+``ownership_review``, alongside the existing snapshot/spec/note and optional authorization review.
+The token binds the source snapshot, both user-store namespaces and current roles; changed authority
+requires a fresh review. Callers cannot supply an arbitrary owner or reviewer identity.
+
+The service atomically creates the child as the fresh source owner and stores the actual reviewer,
+lineage, ownership proof and any separately reviewed origin renewal. Existing input scope, roots,
+plan review, independent completion and quarantine rules still apply. Both principals need current
+Drive authority and the reviewer must still manage the source owner's work at dispatch/checkpoints,
+nested guards, immediately before input and maintenance. Downgrading an admin to operator blocks further
+input into another owner's task. Exact matching retries keep the accepted policy; another reviewer,
+changed ownership or a legacy caller-owned child cannot be backfilled into the new policy.
+
+``metadata.recovery.ownership`` exposes bounded audit fields without private user-store paths. The proof
+survives child retention with the recovery tombstone until source retention. A genuine independently
+completed source-owned child is readable to its original owner, allowing normal DAG successor adoption
+without broader task read permissions. Default recovery remains caller-owned. Explicit read-only handoff
+for already existing caller-owned evidence remains in Progress.md.
+
+All existing recovery API/AC/MCP/REST/CLI/Builder surfaces accept the additive request fields. The recovery
+GUI provides an owner selector; preview only fills the review JSON with a blank note. Explicit creation
+rejects a changed owner selection until reviewed again. No view action implicitly transfers an old task.
+
 Reviewed successor tasks
 ------------------------
 

@@ -235,3 +235,38 @@ def test_recovery_menu_signals_keep_the_selected_operation_instead_of_the_checke
         tab.close()
         shiboken6.delete(tab)
         app.processEvents()
+
+
+@pytest.mark.parametrize("reauthorize", [False, True])
+def test_source_owner_recovery_requires_its_preview_and_cannot_reuse_another_owner_selection(monkeypatch, reauthorize):
+    import json
+    import shiboken6
+    app = QApplication.instance() or QApplication([])
+    tab, submitted = AgentTasksTab(), []
+    try:
+        monkeypatch.setattr(tab, "_dispatch", lambda *args: submitted.append(args))
+        tab._task_id.setText("source-task")
+        tab._owner_policy.setCurrentIndex(1)
+        operation = "review_authorization" if reauthorize else "preview"
+        tab._preview_remainder(operation)
+        assert submitted[-1] == ("recovery", {"operation": operation, "request": {
+            "task_id": "source-task", "owner_policy": "source_owner"}})
+        result = {"source_task": "source-task", "snapshot": "a" * 64, "draft": {"goal": "Reviewed remainder"},
+                  "ownership": {"review": "b" * 64, "owner": "alice", "actor": "admin"}}
+        if reauthorize:
+            result["authorization_review"] = "c" * 64
+        tab._present_remainder(result)
+        request = json.loads(tab._remainder_request.toPlainText())
+        assert request["owner_policy"] == "source_owner" and request["ownership_review"] == "b" * 64
+        request["note"] = "Reviewed original ownership and remainder"
+        tab._remainder_request.setPlainText(json.dumps(request))
+        create = "create_authorized" if reauthorize else "create"
+        tab._create_remainder(create)
+        assert submitted[-1] == ("recovery", {"operation": create, "request": request})
+        tab._owner_policy.setCurrentIndex(0)
+        tab._create_remainder(create)
+        assert len(submitted) == 2 and "selection changed" in tab._status.text()
+    finally:
+        tab.close()
+        shiboken6.delete(tab)
+        app.processEvents()

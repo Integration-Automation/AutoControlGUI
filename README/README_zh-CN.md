@@ -25,6 +25,11 @@ caller 协调的受管批次固定来源服务路径、端点、凭证指纹及�
 key，并在事务内记录真实 caller。输入前更新双方权限及 attempt；管理员失去跨 owner 管理权也会
 阻止执行。没有可信接收记录的旧请求不补造见证。任务 metadata 提供有限 `local_dag_admission`
 审计数据，已接受输入仍依既有清理契约处理。
+若恢复后继任务须让原所有者读取，preview／review_authorization 请求加入
+`owner_policy="source_owner"`，明确 create／create_authorized 时另带回 `ownership.review` 为
+`ownership_review`。后继任务保留来源所有者，事务内另记实际审核者，输入前持续验证双方权限。
+GUI 提供所有者选择；省略策略仍由创建者持有，沿用既有读取隔离。DAG 可用正常恢复证据采纳独立完成
+的原 owner 后继任务；已存在的 caller-owned 子任务不自动变更归属或补造此记录。
 详见[续接协议](../docs/source/Zh/doc/ai_agents/agent_dag_batches_doc.rst)。
 
 触发器可明确使用 `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`，再以
