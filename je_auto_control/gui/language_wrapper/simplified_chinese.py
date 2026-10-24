@@ -977,6 +977,7 @@ simplified_chinese_word_dict = {
     "dag_col_id": "ID",
     "dag_col_host": "主机",
     "dag_col_status": "状态",
+    "dag_col_task_id": "受管任务 ID",
     "dag_col_duration_ms": "毫秒",
     "dag_col_error": "错误",
 

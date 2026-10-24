@@ -1,5 +1,18 @@
 # AutoControl
 
+既有 `run_dag`／`AC_run_dag`／MCP `ac_run_dag`、REST／CLI 動作檔、Script Builder 與 DAG
+Actions 選單支援受管任務節點：以 `task` 取代 `actions`／`action_file`，內容包含 `spec`、必填的
+`idempotency_key` 與可選的 `wait_seconds`。省略 `host` 使用明確啟動的本機服務；遠端使用管理員
+已登錄的主機。該端須已配置有背景派送的授權 runtime，本功能不部署服務。規格限 skill 或明確
+配置的本機模型模式，工具、目的地主機路徑及完成條件由該端驗證。
+節點只提交一次，等待完成條件通過、持久完成契約及輸入釋放證據後才啟動下游。同一批次恢復
+須保留去重鍵；不自動恢復暫停任務或重播副作用。停止、逾時或通訊／權限失敗時，已知任務 ID
+才會提出有時限的暫停；未收到確證仍為未知。失敗結果保留 ID／去重鍵並阻擋相依節點，GUI
+表格顯示任務 ID。本機身分、使用者資料庫路徑及來源 witness 不送到遠端。正式多機部署及原生／
+裝置驗收仍分開追蹤。
+
+DAG 型別與函式亦可由 `je_auto_control.api`／`je_auto_control.api.core` 匯入。
+
 受管任務在確認輸入清理後才發布成功。清理失敗或仍忙碌時保留輸入租約並要求審閱；確認前
 中斷仍需恢復。完成發布採條件式狀態轉換，不覆寫同時到達的取消要求。既有 GUI／API 任務
 結果以 `metadata.input_released` 顯示釋放狀態；新成功紀錄保存 `completion_contract=1`，舊紀錄
@@ -8,8 +21,8 @@
 DAG 節點在執行緒池中保留呼叫者授權、取消與指令限制，自訂 runner 亦適用。每個節點執行前
 重新讀取使用者權限；已刪除的使用者會使節點失敗，後續相依節點略過，各操作依更新後的角色
 檢查權限。預設遠端節點在開啟主機通訊錄或動作檔案前要求 `manage_hosts`，避免透過主機憑證
-擴大本機操作權限。管理員及受信任的直接 Python 呼叫仍可遠端派送。跨主機受管任務的完成驗證
-與 DAG 整合仍待實作。
+擴大本機操作權限。管理員及受信任的直接 Python 呼叫仍可遠端派送。受管節點沿用上述完成
+驗證與停止契約；正式多機部署及原生驗收仍待完成。
 
 瀏覽器主機目標可透過可選的 `settings.helper_python` 指定已審閱且已安裝套件的 Python
 環境（本機絕對直譯器路徑）。明確指定的 helper 使用 `-I`，從該環境載入已安裝套件；虛擬環境
@@ -766,6 +779,6 @@ Agent 任務介面將任務範圍、工作流程設定、觸發器、技能及�
 
 AgentHumanReview 表示未儲存內容或未知對話框需人工審閱；包含外部觀察請求都會記錄 waiting_user 並釋放輸入控制權，明確恢復後仍會重新檢查。Windows 依原生對話框／停用擁有者及英中日已知未儲存文字判定。Workspace 也會拒絕標題首尾帶星號的文件，並可在視窗設定加入 unsaved_selector 與 unsaved_value，於改變排列前檢查應用特有指示；不宣稱能推斷所有程式的未儲存狀態。標準檔案對話框沿用 AC_handle_file_dialog 執行器，受管 driver 只接受唯一精確標題、相同 PID、已確認前景，以及授權根目錄內的絕對路徑。UIA 控制項須屬於實際指定的根視窗，同 PID 的其他視窗也會拒絕。模擬原生與本機 HTTP 測試已有覆蓋，實際平台驗收仍未驗證。
 
-主機目標以 AgentTargetProfile 與 manage_agent_target（AC_agent_target，register/get/disable/enable）設定。名稱及設定固定不可替換，目前提供 desktop／files adapter，未實作類型及可執行設定會被拒絕。任務固定主機設定摘要，不能擴大工具、應用、根目錄或網路來源。啟停狀態會跨重啟保存並於分派時檢查；停用會要求暫停及清理，重新啟用仍須明確恢復任務。list_agent_targets／AC_agent_target_list／CLI agent-task targets 只提供被動資訊，readiness=not_probed、native_evidence=not_recorded；完整設定需要 manage_hosts。CLI agent-task target 及 GUI「主機目標」頁使用同一服務。匿名有效 MCP 工具 session 的直接及舊式包裝呼叫都以 operator 權限執行；MCP 主機管理需要已驗證的管理員，可信任的直接 Python 呼叫維持原行為。瀏覽器自動化統一由 WebRunner（je_web_runner）提供，本機開發來源為 D:/Codes/WebRunner；這批目標註冊尚不含受管瀏覽器 adapter。
+主機目標以 AgentTargetProfile 與 manage_agent_target（AC_agent_target，register/get/disable/enable/probe）設定。名稱及設定固定不可替換，目前提供 desktop／files／browser adapter，未實作類型會被拒絕；瀏覽器可使用主機審閱的 helper_python。任務固定主機設定摘要，不能擴大工具、應用、根目錄或網路來源。啟停狀態會跨重啟保存並於分派時檢查；停用會要求暫停及清理，重新啟用仍須明確恢復任務。list_agent_targets／AC_agent_target_list／CLI agent-task targets 只提供被動資訊，readiness=not_probed、native_evidence=not_recorded；完整設定需要 manage_hosts。CLI agent-task target 及 GUI「主機目標」頁使用同一服務。匿名有效 MCP 工具 session 的直接及舊式包裝呼叫都以 operator 權限執行；MCP 主機管理需要已驗證的管理員，可信任的直接 Python 呼叫維持原行為。瀏覽器自動化統一由 WebRunner（je_web_runner）提供，本機開發來源為 D:/Codes/WebRunner；browser profile 使用受管 je_web_runner SDK 契約，依賴診斷不代表原生可用。
 
 既有瀏覽器自動化（包含 open_path(URL) 與 AC_open_path）統一交由 WebRunner，Python 套件名稱為 je_web_runner。URL 計畫的 backend 現為 je_web_runner，原本比較 webbrowser 描述值的呼叫端需改用新值；函式介面與本機檔案開啟維持相容。實際 URL 執行需要設定的 WebRunner 專案，缺少時傳出 WebRunnerBridgeError，不改用 OS 瀏覽器。本機開發來源為 D:/Codes/WebRunner；純計畫及注入 opener 測試不需要該套件。協定支援由 WebRunner 與其選用的瀏覽器決定。既有瀏覽器 GUI／MCP／AC 及錄製的 WR_* 動作都使用同一橋接。

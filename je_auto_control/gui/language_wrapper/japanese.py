@@ -994,6 +994,7 @@ japanese_word_dict = {
     "dag_col_id": "ID",
     "dag_col_host": "ホスト",
     "dag_col_status": "ステータス",
+    "dag_col_task_id": "管理タスク ID",
     "dag_col_duration_ms": "ミリ秒",
     "dag_col_error": "エラー",
 

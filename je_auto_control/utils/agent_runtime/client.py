@@ -36,7 +36,7 @@ class AgentRuntimeClient:
             path = {"list": "/agent/tasks", "targets": "/agent/targets", "get": "/agent/task"}[operation]
             if operation == "get":
                 path += "?" + urlencode(body or {})
-            return request_json(url + path, token=metadata["token"], delegate_local=True)
+            return request_json(url + path, token=metadata["token"], timeout=timeout, delegate_local=True)
         return request_json(url + f"/agent/{operation}", body={} if body is None else body,
                             token=metadata["token"], timeout=timeout,
                             control=operation in {"pause", "cancel", "shutdown", "stop_all"}, delegate_local=True)

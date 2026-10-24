@@ -1,6 +1,33 @@
 AI agents and computer use
 ===========================
 
+Managed tasks in a DAG
+----------------------
+
+The existing Python ``run_dag``, ``AC_run_dag``, MCP ``ac_run_dag``, REST action execution, CLI action
+files, Script Builder and DAG Actions accept a mutually exclusive ``task`` node payload::
+
+    {"nodes": [{"id": "collect", "host": "reviewed-host", "task": {
+        "spec": reviewed_spec, "idempotency_key": "batch-20261024-collect", "wait_seconds": 300}}]}
+
+DAG types and functions are also available from ``je_auto_control.api`` and ``je_auto_control.api.core``.
+
+``reviewed_spec`` is a skill or explicitly configured local-model specification with tools, destination
+roots and completion criteria. External mode is refused. Omit ``host`` for the explicitly started local
+service; remote hosts must already expose an authenticated runtime with background dispatch. No listener
+is deployed. Destination paths are interpreted and authorized at the destination, not on the coordinator.
+
+Nodes submit once, then poll the exact task. Only matching passed criteria, durable completion contract 1
+and confirmed input retirement allow dependants to run. The explicit deduplication key must remain stable
+for recovery of the same reviewed batch. Rerunning polls the same task; paused/recovering work is never
+automatically resumed. Stop, cancellation, timeout or a transport/authority error requests bounded pause
+when the task ID is known. Missing acknowledgements remain uncertain; no action replay or lease stealing
+is inferred. Failed results retain the task ID/key and skip dependants. GUI results show retained task IDs.
+Local role/store metadata and origin witnesses never cross the remote boundary; registered host tokens
+determine remote authority. Nested managed-task dispatch is refused. Destination resource locks serialize
+shared input; independent target resources may run concurrently. Production multi-host configuration,
+cross-host artifact transfer and native/device acceptance remain separately tracked.
+
 Completion and input retirement
 --------------------------------
 
@@ -19,8 +46,8 @@ managed operation context. Store-backed identity is refreshed before every node;
 fails dispatch and skips dependent nodes. Role changes apply to each operation's authorization check.
 Default remote nodes require ``manage_hosts`` before accessing the host address book or action files.
 Administrators and trusted direct Python retain remote dispatch. Caller contexts stay local; registered
-remote credentials determine remote authority. These checks harden the existing action DAG. A managed-task
-DAG with remote completion verification and uncertain-result recovery remains open.
+remote credentials determine remote authority. Managed task nodes use the lifecycle above; production
+configuration and native/device evidence remain open.
 
 AutoControl is an open-source, cross-platform computer-use and GUI automation framework for AI agents.
 
@@ -198,7 +225,7 @@ Managed workflow waits (workflow_wait / AC_workflow_wait) poll only exact scoped
 
 AgentHumanReview identifies an unsaved-content or unknown-dialog gate. It persists waiting_user and retires input ownership, including for external observe requests; explicit resume still rechecks the gate. Windows detection uses native dialog/disabled-owner evidence and known English/Chinese/Japanese unsaved labels. Workspace tasks also pause for leading/trailing asterisks in document titles; a window entry may supply unsaved_selector and unsaved_value for an application-specific indicator before layout changes. These checks do not infer every application's dirty state. Recognized standard file pickers use a context-local driver on the existing AC_handle_file_dialog executor: exact unique title, same PID, confirmed foreground and canonical rooted absolute paths. UIA control patterns must belong to the actual owned root window, even when another window shares its PID. All behavior has fake-native/loopback coverage; actual platform acceptance remains unverified.
 
-Host-reviewed targets use AgentTargetProfile and manage_agent_target (AC_agent_target; register/get/disable/enable). Names and configuration are immutable; desktop/file adapters are currently supported, and unimplemented kinds or executable settings are rejected. Tasks pin the host profile digest and cannot expand its tools, applications, roots or network origins. Availability persists across restart and is checked at dispatch; disabling requests pause/cleanup, while enabling requires explicit task resume. list_agent_targets / AC_agent_target_list / CLI agent-task targets expose passive metadata with readiness=not_probed and native_evidence=not_recorded. Full configuration requires manage_hosts; CLI agent-task target and the GUI Host targets page use the same service. Live anonymous MCP tool sessions have operator authority across direct and legacy wrapper calls; MCP host management requires an authenticated administrator. Trusted direct Python callers remain unchanged. Browser automation belongs to WebRunner (je_web_runner), with D:/Codes/WebRunner as the development source; the managed browser adapter is not part of these target registrations.
+Host-reviewed targets use AgentTargetProfile and manage_agent_target (AC_agent_target; register/get/disable/enable/probe). Names and configuration are immutable; desktop/file/browser adapters are currently supported; unimplemented kinds are rejected and optional browser helper_python is host-reviewed. Tasks pin the host profile digest and cannot expand its tools, applications, roots or network origins. Availability persists across restart and is checked at dispatch; disabling requests pause/cleanup, while enabling requires explicit task resume. list_agent_targets / AC_agent_target_list / CLI agent-task targets expose passive metadata with readiness=not_probed and native_evidence=not_recorded. Full configuration requires manage_hosts; CLI agent-task target and the GUI Host targets page use the same service. Live anonymous MCP tool sessions have operator authority across direct and legacy wrapper calls; MCP host management requires an authenticated administrator. Trusted direct Python callers remain unchanged. Browser automation belongs to WebRunner (je_web_runner), with D:/Codes/WebRunner as the development source; browser profiles use the managed je_web_runner SDK contract, and dependency probes do not establish native readiness.
 
 Existing browser automation, including open_path(URL) and AC_open_path, delegates to WebRunner (Python package je_web_runner). URL plans now report backend=je_web_runner; callers inspecting the previous webbrowser descriptor should use the new value. Signatures and local-file opening stay compatible. URL execution requires the configured WebRunner project and propagates WebRunnerBridgeError when unavailable, without opening an OS browser as a fallback. The development source is D:/Codes/WebRunner. Planning and injected-opener tests remain usable without that package; browser protocol support is determined by WebRunner and its selected browser. Existing dedicated browser GUI/MCP/AC paths and recorded WR_* actions share the same bridge.
 

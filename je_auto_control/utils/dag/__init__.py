@@ -1,9 +1,11 @@
 """Cross-host DAG orchestrator.
 
-Nodes carry ``(host, actions | action_file, depends_on)``. Local nodes
+Nodes carry ``(host, actions | action_file | task, depends_on)``. Local action nodes
 execute in-process; remote nodes go through the admin console's REST
 broadcast path. Failures cascade — every node whose ancestry contains
-a failure is reported as ``skipped`` rather than attempted.
+a failure is reported as ``skipped`` rather than attempted. Managed task nodes
+use closed submit/status/pause operations, fixed deduplication keys and
+destination completion/retirement evidence. Uncertainty requires review.
 
 Public surface::
 

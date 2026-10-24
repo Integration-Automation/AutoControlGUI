@@ -999,7 +999,10 @@ def dag_tools() -> List[MCPTool]:
             name="ac_run_dag",
             description=("Execute a cross-host DAG (directed acyclic graph) "
                          "of automation steps. Each node carries (host, "
-                         "actions|action_file, depends_on). Local nodes run "
+                         "actions|action_file|task, depends_on). Managed task nodes "
+                         "submit once with an explicit idempotency_key and wait for "
+                         "verified completion and input retirement. Stop requests "
+                         "pause managed tasks; uncertainty blocks downstream nodes. Local action nodes run "
                          "in-process; remote nodes go through the admin "
                          "console REST clients. Failures cascade — "
                          "downstream nodes are skipped, not retried."),

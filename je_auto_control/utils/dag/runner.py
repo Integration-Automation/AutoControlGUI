@@ -96,6 +96,8 @@ def run_dag(definition: Any,
     pure-Python fake — both default to the production paths. Once
     ``stop_event`` is set, no further node starts: the running ones finish
     and every pending node is ``skipped`` with the error ``"stopped"``.
+    Running managed task nodes request bounded pause and retain task identity
+    for review. They require destination completion and input-retirement evidence.
     """
     dag = _coerce_definition(definition)
     local = local_runner or _current_run_local_runner()
@@ -129,7 +131,9 @@ def _stoppable(runner: NodeRunner, stop_event: threading.Event) -> NodeRunner:
     def run(node: DagNode, definition: DagDefinition) -> Any:
         if stop_event.is_set():
             raise _NodeStopped(node.id)
-        return runner(node, definition)
+        from je_auto_control.utils.dag.managed_tasks import managed_stop_scope
+        with managed_stop_scope(stop_event):
+            return runner(node, definition)
     return run
 
 
@@ -266,6 +270,9 @@ def _run_one(node: DagNode, result: NodeResult, runner: NodeRunner, _nodes: Dict
                 result.error = f"{type(error).__name__}: run interrupted"
                 raise
             result.error = f"{type(error).__name__}: {error}"
+            from je_auto_control.utils.dag.managed_tasks import ManagedTaskDispatchError
+            if isinstance(error, ManagedTaskDispatchError):
+                result.result = error.outcome
             autocontrol_logger.warning(
                 f"DAG node {node.id!r} failed: {result.error}",
             )
@@ -353,6 +360,9 @@ def _current_run_local_runner() -> NodeRunner:
 def _default_local_runner(node: DagNode, _definition: DagDefinition,
                           runner: Any = None) -> Any:
     """Run a local node's actions on ``runner`` (default: the module executor)."""
+    if node.task is not None:
+        from je_auto_control.utils.dag.managed_tasks import run_managed_task
+        return run_managed_task(node.host, node.task)
     from je_auto_control.utils.json.json_file import read_executable_action_json
     if runner is None:
         from je_auto_control.utils.executor.action_executor import executor
@@ -371,6 +381,9 @@ def _default_remote_runner(node: DagNode,
     # The address book contains host credentials, independently of this
     # caller's local action permissions. Check before opening it or files.
     authorize_command("AC_admin_broadcast_execute")
+    if node.task is not None:
+        from je_auto_control.utils.dag.managed_tasks import run_managed_task
+        return run_managed_task(node.host, node.task)
     from je_auto_control.utils.admin.admin_client import default_admin_console
     console = default_admin_console()
     actions = _resolve_remote_actions(node)

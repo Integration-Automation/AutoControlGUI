@@ -1,6 +1,7 @@
 """DAG Runner tab: edit, validate, and execute cross-host DAGs."""
 import json
 import threading
+from contextvars import copy_context
 from typing import Optional
 
 from PySide6.QtCore import QObject, Qt, Signal
@@ -19,7 +20,7 @@ from je_auto_control.utils.dag import (
 )
 
 
-_COLUMNS = ("id", "host", "status", "duration_ms", "error")
+_COLUMNS = ("id", "host", "status", "task_id", "duration_ms", "error")
 
 
 def _t(key: str) -> str:
@@ -36,14 +37,15 @@ class _DagWorker(QObject):
         self._definition = definition
         self._max_parallel = max_parallel
         self._stop_event = stop_event
+        self._context = copy_context()
 
     def request_stop(self) -> None:
-        """Start no further node (thread-safe); running nodes finish."""
+        """Stop scheduling; managed nodes request owned pause, other running nodes finish."""
         self._stop_event.set()
 
     def run(self) -> None:
         try:
-            result = run_dag(self._definition,
+            result = self._context.run(run_dag, self._definition,
                              max_parallel=self._max_parallel,
                              stop_event=self._stop_event)
         except (DagDefinitionError, RuntimeError) as error:
@@ -181,8 +183,9 @@ class DagTab(TranslatableMixin, QWidget):
         nodes = list(result.nodes.values())
         self._table.setRowCount(len(nodes))
         for row, node in enumerate(nodes):
+            task_id = node.result.get("task_id", "") if isinstance(node.result, dict) else ""
             values = (
-                node.id, node.host, node.status,
+                node.id, node.host, node.status, task_id or "",
                 f"{node.duration_ms:.1f}", node.error or "",
             )
             for col, text in enumerate(values):

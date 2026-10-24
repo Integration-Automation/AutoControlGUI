@@ -1,5 +1,16 @@
 # AutoControl Architecture
 
+DAG task_contract.py validates and freezes a closed task envelope, preserving destination paths without
+local canonicalization. managed_tasks.py uses the local delegated client or a snapshot of a registered
+admin host's URL/token; remote requests never delegate local principal/origin metadata. It submits once
+with an explicit stable key, polls the exact task, checks matching criterion reports and durable completion
+contract 1 plus input_released, and returns only bounded recovery identity. Failure requests bounded pause
+with cancellation suspended; an unconfirmed acknowledgement never grants completion. Destination runtimes
+own physical resource exclusion; graph failures skip dependants. Running managed nodes see the DAG stop
+event; ordinary action runners retain their existing finish behavior. GUI workers capture caller context
+before offload and existing Actions show recovery task IDs. Nested managed-task dispatch is refused.
+DAG DTOs, parse_dag and run_dag are explicitly re-exported through api.core and api as well as the root.
+
 Completion stores verification while still verifying, retires input, then conditionally publishes the
 outcome only if control has not changed the state. Failed or busy retirement cannot publish success;
 unconfirmed cleanup retains the lease and requires review. A crash before retirement confirmation leaves
@@ -13,8 +24,8 @@ The DAG pool captures a fresh context for each node, preserving caller authoriza
 cancellation and managed operation state for default and custom runners. Node dispatch refreshes
 store-backed identity through DeferredAuthorization.context_scope; operation-specific checks use that
 current role. Default remote dispatch checks the existing host-management capability before address-book
-or action-file access. Contexts never cross the network. This is the action-DAG boundary; managed-task
-remote lifecycle, verification and uncertainty remain open in Progress.md.
+or action-file access. Contexts never cross the network. Managed nodes use the closed lifecycle above;
+production deployment and native/device evidence remain open in Progress.md.
 
 > Short overview for people and agents. Per-module detail lives in [`architecture_explore.md`](architecture_explore.md).
 > Last verified: 2026-10-19 on `dev`.

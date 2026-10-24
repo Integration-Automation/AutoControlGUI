@@ -7,6 +7,13 @@ hundreds of optional integrations.
 
 # pylint: disable-next=useless-import-alias  # reason: explicit PEP 484 re-exports mirror core
 from je_auto_control.api.core import (
+    DagDefinition as DagDefinition,
+    DagDefinitionError as DagDefinitionError,
+    DagNode as DagNode,
+    DagRunResult as DagRunResult,
+    NodeResult as NodeResult,
+    parse_dag as parse_dag,
+    run_dag as run_dag,
     ToolView as ToolView,
     ToolPage as ToolPage,
     plan_mcp_tool_profile as plan_mcp_tool_profile,

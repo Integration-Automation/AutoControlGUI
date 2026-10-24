@@ -504,3 +504,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-19 | 2026-10-24 | Preserve DAG caller authority before remote dispatch | #done #agent #security | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-20 | 2026-10-24 | Confirm input retirement before publishing task success | #done #agent #completion | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-21 | 2026-10-24 | Coordinate verified managed tasks through existing DAG surfaces | #done #agent #dag | [2026-10-c](2026-10-c.md) |

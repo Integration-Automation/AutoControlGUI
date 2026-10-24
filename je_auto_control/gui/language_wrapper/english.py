@@ -1105,6 +1105,7 @@ english_word_dict = {
     "dag_col_id": "ID",
     "dag_col_host": "Host",
     "dag_col_status": "Status",
+    "dag_col_task_id": "Managed task ID",
     "dag_col_duration_ms": "ms",
     "dag_col_error": "Error",
 
