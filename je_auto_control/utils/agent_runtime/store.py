@@ -14,7 +14,7 @@ from je_auto_control.utils.agent_runtime.models import STATES, TERMINAL, detache
 from je_auto_control.utils.agent_runtime.trigger_history import bind_event
 from je_auto_control.utils.agent_runtime.submission import TaskAdmission
 from je_auto_control.utils.agent_runtime.dag_admission import bind_admission
-from je_auto_control.utils.agent_runtime.task_authority import RecoveryBinding, bind_recovery
+from je_auto_control.utils.agent_runtime.task_authority import RecoveryBinding, CompletionBinding, bind_recovery
 from je_auto_control.utils.sqlite_support import require_sqlite3
 
 _SCHEMA = """
@@ -118,6 +118,8 @@ CREATE TABLE IF NOT EXISTS agent_task_authorizations (
  task_id TEXT PRIMARY KEY REFERENCES agent_task_recoveries(task_id) ON DELETE CASCADE, details TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_recovery_owners (
  task_id TEXT PRIMARY KEY REFERENCES agent_task_recoveries(task_id) ON DELETE CASCADE, details TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_readonly_completions (
+ task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE, details TEXT NOT NULL);
 """
 
 
@@ -206,7 +208,7 @@ class AgentTaskStore:
     def create(self, spec: dict | TaskAdmission, owner: dict, *, idempotency_key: str | None = None,
                trigger_event: tuple[str, str, str] | None = None,
                recovery: tuple[str, str, str] | None = None,
-               authorization: dict | RecoveryBinding | None = None) -> str:
+               authorization: dict | RecoveryBinding | CompletionBinding | None = None) -> str:
         """Persist an immutable authorized task snapshot before it can execute."""
         identifier = uuid.uuid4().hex
         now = time.time()

@@ -1,5 +1,23 @@
 # Public API lifecycle
 
+manage_agent_recovery adds preview_completion/create_completion to its existing API/AC/MCP/REST/CLI/Builder
+operation enum and thin GUI Actions. Preview returns source_task/effect_task/snapshot/verification_spec
+without target access. Create accepts only task_id/snapshot/note, plus the existing optional source_owner
+policy and ownership_review token; verification_spec is server-derived and is not a caller input.
+An additive private agent_readonly_completions binding is committed with the ordinary successor link.
+The new external-mode task has no actions, never starts a model, refuses act and ordinary executable
+recovery, and selects only a permanent read-only helper from the original host configuration. All finite
+skill actions must be confirmed; dynamic sources must have no dormant plan or unresolved effects. At
+least one independent criterion is mandatory. Original pinned receipts can satisfy action/result clauses,
+but current independent criteria and input retirement must succeed anew. Both owners and the actual
+reviewer remain live around reads and after cleanup; cancellation/restart and generation fences remain.
+Task metadata adds bounded completion_review provenance. Explicit retries retain original effect-owner
+authority and actual recovery lineage, enabling existing DAG successor adoption without changing the
+stopped original. Browser/remote readers, expired-origin renewal and native acceptance remain open.
+Repeated observe/finish operations send the same configuration to the existing read-only helper; only
+an exact canonical spec/owner/profile match can rerun current readiness. Different configuration still
+refuses, and no ready/observation result is cached across operations.
+
 NativeDesktopTarget.completion_reader(spec) adds an internal host seam for a fresh standard desktop/file
 observation context. A separate permanently read-only helper must report exact contract=1 and
 input_supported=false before any configuration. Both sides refuse executable tools/input ACKs; the
@@ -9,8 +27,8 @@ parent checkpoint and operation identity are checked around reads; browser crite
 Target summaries add readonly_completion={contract:1,status:"not_probed"} for declared standard proxies
 or {status:"not_supported"}. Existing API/AC/MCP/REST/CLI/Builder/GUI target views share this passive
 metadata. No custom property/native probe runs during summaries. Browser fresh-start and legacy/custom
-helper fallback remain refused. This does not add reviewed completion operations, restore UI state or
-publish task success; those workflows and browser/remote reader contracts remain in Progress.md.
+helper fallback remain refused. The host seam alone does not restore UI state or publish success;
+the reviewed task operations above perform independent verification and cleanup before publication.
 
 Android command compilation now extracts display/window/activity focus once per guard and exactly
 matches all six field orders. Nonempty labels preserve duplicate empty values through shell command

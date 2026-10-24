@@ -1523,6 +1523,8 @@ simplified_chinese_word_dict.update({
     "agent_remainder_preview": "审阅剩余工作／重新规划",
     "agent_remainder_create": "创建经审阅的新任务",
     "agent_reauthorize_preview": "审阅新任务授权",
+    "agent_completion_preview": "审核只读完成验证",
+    "agent_completion_create": "创建已审核的完成验证",
     "agent_reauthorize_create": "创建重新授权的新任务",
     "agent_prune": "清理过期任务缓存"
 })

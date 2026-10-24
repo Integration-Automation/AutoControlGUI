@@ -22,6 +22,14 @@ class RecoveryBinding:
     ownership: dict
 
 
+@dataclass(frozen=True)
+class CompletionBinding:
+    """Host-derived read-only proof admitted atomically with the real recovery lineage."""
+
+    recovery: dict | RecoveryBinding | None
+    details: dict
+
+
 def validate_ownership_request(operation: str, request: dict, fields: set[str]) -> None:
     """Accept an explicit source-owner policy and its reviewed token, never an arbitrary owner identity."""
     expected = set(fields)
@@ -29,7 +37,7 @@ def validate_ownership_request(operation: str, request: dict, fields: set[str]) 
         if request["owner_policy"] != "source_owner":
             raise AgentTaskError("recovery owner_policy must be source_owner when supplied")
         expected.add("owner_policy")
-        if operation in {"create", "create_authorized"}:
+        if operation in {"create", "create_authorized", "create_completion"}:
             expected.add("ownership_review")
     if set(request) != expected:
         raise AgentTaskError("invalid recovery operation fields")
@@ -75,8 +83,13 @@ def recovery_binding(authorization: dict | None, ownership: dict | None) -> dict
     return RecoveryBinding(authorization, ownership)
 
 
-def bind_recovery(connection: Any, task_id: str, binding: dict | RecoveryBinding | None, owner: dict) -> None:
+def bind_recovery(connection: Any, task_id: str,
+                  binding: dict | RecoveryBinding | CompletionBinding | None, owner: dict) -> None:
     """Atomically record ownership beside lineage and any separately reviewed origin renewal."""
+    if isinstance(binding, CompletionBinding):
+        connection.execute("INSERT INTO agent_readonly_completions VALUES (?,?)",
+                           (task_id, json.dumps(binding.details)))
+        binding = binding.recovery
     authorization = binding.authorization if isinstance(binding, RecoveryBinding) else binding
     if authorization is not None:
         connection.execute("INSERT INTO agent_task_authorizations VALUES (?,?)", (task_id, json.dumps(authorization)))
@@ -103,6 +116,9 @@ def check_task_authority(runtime: Any, task_id: str) -> None:
         row = connection.execute("SELECT details FROM agent_recovery_owners WHERE task_id=?", (task_id,)).fetchone()
     if row is not None:
         _check_pair(json.loads(row[0]))
+    # pylint: disable-next=import-outside-toplevel  # reason: optional completion collaborator depends on this envelope
+    from je_auto_control.utils.agent_runtime.completion_recovery import check_completion_authority
+    check_completion_authority(runtime, task_id)
 
 
 def _check_pair(value: dict) -> None:

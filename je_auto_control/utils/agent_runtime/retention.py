@@ -37,6 +37,8 @@ def prune_tasks(runtime: Any, keep_days: int = 30) -> dict[str, Any]:
             runtime._stop_final.pop(task_id, None)
             runtime._observations.pop(task_id, None)
             runtime._observation_times.pop(task_id, None)
+            # pylint: disable-next=protected-access  # reason: prune the same runtime-owned cache as its expired task
+            runtime._completion_targets.pop(task_id, None)
             deleted.append(task_id)
     return {"deleted": deleted, "keep_days": keep_days, **batches}
 

@@ -1,9 +1,12 @@
 # AutoControl
 
-host SDK 新增標準桌面／檔案代理的全新唯讀完成觀察介面；專用 helper 永久拒絕工具執行與輸入 ACK，
-關閉的 view 不會重新啟動 helper。目標診斷新增被動 `readonly_completion` 契約狀態，就緒仍為
-`not_probed`。這是審閱式完成恢復的前置介面；審閱／發布流程與 browser／remote reader 仍列於
-Progress.md，reader 清理完成本身不代表任務完成。
+已停止且副作用已確認的任務，可用 `manage_agent_recovery("preview_completion", {"task_id": id})`
+審閱獨立驗證任務，再將精確 task_id／snapshot 與審閱說明交給 `create_completion`，最後完成新任務。
+私有原子綁定只選擇永久唯讀 helper，不重播來源動作；須有新鮮獨立完成條件與輸入退休證據。
+skill 計畫須全部確認；動態任務不得含未處理的有限計畫或未知效果。
+可先 observe 再 finish；相同 helper 設定只重新檢查就緒，不替換權限，也不快取就緒結果。
+來源／審閱者權限持續有效，涵蓋清理後、明確重試與重啟。API／AC／MCP／REST／CLI／Builder 及 GUI Actions 共用此流程。
+browser／remote reader、過期 scope 重新授權仍列於 Progress.md；桌面能力仍須另行原生驗證。
 
 只有受管任務節點的 DAG，可用 `manage_agent_dag("register", {"definition": graph,
 "max_parallel": 4})` 註冊耐久批次，再明確 `run_dag(graph, batch_id=batch["batch_id"])`。

@@ -9,8 +9,8 @@
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-接續優先完成第 5 組所有動作已確認後的唯讀完成驗證，並核對第 4 組真實裝置控制／擷取來源、
-其餘實作及第 8 組交付核對。
+接續完成第 5 組唯讀完成的來源重新授權與 browser／remote reader，並核對第 4 組真實裝置
+控制／擷取來源、其餘實作及第 8 組交付核對。
 
 1. **P4：瀏覽器與正式環境接合**
    - 選定正式服務專用 helper Python、AutoControl／WebRunner 套件版本與受管 Chromium 安裝；
@@ -86,16 +86,18 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      指標步驟提供可信新來源與語義轉換，不能把舊索引／座標或歷史欄位值直接移入新 session。
    - 補實際應用的語義錄製、參數化、候選修復、驗證 trial、人工接受／版本發布及執行中固定版本
      的完整驗收；確認失敗／未知 trial 與沒有獨立證據的舊紀錄不能成為發布依據。
+     為 `task_skills._accept/_check_trial` 接合已審閱的唯讀完成後繼證據：目前仍要求原 trial task
+     具有精確 candidate／spec hash／skill_pin，不能直接採用已移除 skill_pin 的唯讀子任務。
+     須保留實際試跑／候選版本與效果鏈，不重跑已確認動作、不把唯讀驗證冒充新的試跑，亦不改寫
+     停止的原 trial 為成功。
    - 為已存在且由其他 caller 持有的復原子任務提供明確可撤銷的唯讀成果移交；新 source_owner
      模式不移轉或補造舊子任務的歸屬。移交須綁定原批次／節點／來源及真實復原鏈，持續驗證權限，
      只能供獨立完成證據採認，不能擴大一般讀取／輸入權或重新派送舊任務。
-   - 補所有動作已確認、但完成尚未發布就失去回覆／被 fence 的顯式唯讀完成驗證。現有
-     TaskRecovery 對空剩餘流程回報 no_remaining_actions，舊 attempt 又不能恢復輸入；須新鮮
-     核對獨立完成條件及輸入釋放，不可重做最後動作、繼承舊畫面結果或解除未知隔離來完成認證。
-     接合明確審閱／快照、獨立唯讀驗證任務／證據、取消／重啟 claim 與完成發布，再供整圖採認；
-     原 task state 與 Actions 目前不會因新的 readonly reader 前置介面而自動完成。
-     為 browser／remote target 補可信唯讀 reader；缺少原瀏覽器 context 時不可新開頁面當作舊狀態，
-     亦不可回退普通可操作 helper。原生／真機能力與驗收仍須分開確認。
+   - 將唯讀完成審閱／驗證／發布延伸至 browser／remote target：補可信唯讀 reader，來源副作用與
+     當前獨立條件須分別核對；缺少原瀏覽器 context 時不可新開頁面當作舊狀態，亦不可回退普通
+     可操作 helper、重做最後動作或解除未知隔離來完成認證。原生／真機能力與驗收仍須分開確認。
+   - 補過期來源 scope 的唯讀完成重新授權審閱；須明確固定新限制與原效果證據，不可藉由
+     刪除原限制、普通可操作復原子任務或更換 helper 繞過。目前保留明確拒絕。
    - 針對新增平台／裝置及恢復路徑重驗服務重啟、WorkQueue 去重、事件／排程重新授權、
      journal／history／產物關聯及 30 天保留／清理，不擴大既有權限。
 
@@ -127,6 +129,10 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      區分已實作、尚缺實作與只缺實測，不能用模擬目標取代原生驗收。
    - 於最後固定提交重跑完整 headless 與 `coverage run -m pytest`、跨功能／故障恢復回歸；
      目前較早固定版本的全套證據不能冒充最新工作樹結果。
+     `WIP`：完整套件曾在 `test_dag_managed_loopback.py::test_distinct_targets_run_concurrently_with_destination_verification`
+     偶發提交 HTTP 409，另一節點等待後限流；該次為 5,391 passed／17 skipped／1 failed。
+     單獨 20 次與整檔 60 次回歸均未重現；仍須取得最初拒絕原因，不能以後續通過宣稱已修復。
+     該次 pause 亦回傳 429；須核對大量狀態查詢下，已授權 pause／cancel／stop 的控制通道優先權。
    - 重跑三平台型別、Ruff／Bandit、檔案／函式／複雜度及文件計數，檢查新增 lint 問題；
      AutoControl 全套 Pylint 仍有既有問題，不能把局部模組通過當全套零問題。
      WebRunner 既有全套 mypy／flake8／嚴格 Sphinx 債務見其 `Progress.md` #23，不能標示全綠。

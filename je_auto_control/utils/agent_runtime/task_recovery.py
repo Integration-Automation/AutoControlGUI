@@ -25,6 +25,7 @@ _REQUEST_FIELDS = {
     "preview": {"task_id"}, "create": {"task_id", "snapshot", "spec", "note"},
     "review_authorization": {"task_id"},
     "create_authorized": {"task_id", "snapshot", "spec", "note", "authorization_review"},
+    "preview_completion": {"task_id"}, "create_completion": {"task_id", "snapshot", "note"},
 }
 OPERATIONS = tuple(_REQUEST_FIELDS)
 _STOPPED = frozenset({"paused", "waiting_user", "recovering", "cancelled", "timed_out", "failed"})
@@ -81,6 +82,10 @@ class AgentRecovery:
             # pylint: disable-next=protected-access  # reason: reuse the runtime's owner and closed-state check
             row = self.runtime._row(task_id)
             with ownership_scope(row, request) as ownership:
+                if operation in {"preview_completion", "create_completion"}:
+                    # pylint: disable-next=import-outside-toplevel  # reason: independent completion uses a closed collaborator
+                    from je_auto_control.utils.agent_runtime.completion_recovery import control_completion
+                    return control_completion(self, operation, row, request, ownership)
                 if operation in {"create", "create_authorized"}:
                     return self._create(row, request, ownership)
                 receipts, reviews = self._read(row)
@@ -161,6 +166,9 @@ class AgentRecovery:
         return self._template(row, authorization), authorization
 
     def _create(self, row: dict, request: dict, ownership: dict | None = None) -> dict:
+        # pylint: disable-next=import-outside-toplevel  # reason: ordinary recovery cannot upgrade a read-only admission
+        from je_auto_control.utils.agent_runtime.completion_recovery import require_executable_task
+        require_executable_task(self.runtime.store, row["id"])
         note = _review_note(request["note"])
         ownership = ownership_review(ownership, request["snapshot"])
         if ownership is not None and request["ownership_review"] != ownership["review"]:

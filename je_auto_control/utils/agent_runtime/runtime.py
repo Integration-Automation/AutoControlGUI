@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Iterator, Mapping, List
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentObservationStale, AgentHumanReview
-from je_auto_control.utils.agent_runtime.context import TaskOperation, operation_scope
+from je_auto_control.utils.agent_runtime.context import TaskOperation, operation_scope, current_operation
 from je_auto_control.utils.agent_runtime.models import (
     AgentActionRequest, AgentActionResult, AgentObservation, AgentTaskHandle, AgentTaskResult,
     AgentTaskSpec, TERMINAL, detached, freeze, thaw,
@@ -34,7 +34,10 @@ from je_auto_control.utils.agent_runtime.store import AgentTaskStore, request_sp
 from je_auto_control.utils.agent_runtime.dag_batches import DagBatches
 from je_auto_control.utils.agent_runtime.submission import TaskAdmission, submitted_digest, submission_metadata
 from je_auto_control.utils.agent_runtime.dag_admission import current_admission
-from je_auto_control.utils.agent_runtime.task_authority import RecoveryBinding, check_task_authority
+from je_auto_control.utils.agent_runtime.task_authority import RecoveryBinding, CompletionBinding, check_task_authority
+from je_auto_control.utils.agent_runtime.completion_recovery import (
+    completion_target, completion_evidence, completion_metadata, require_executable_task,
+)
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -69,6 +72,7 @@ class AgentRuntime:
         self.triggers = AgentTriggers(self)
         self.skills = AgentSkills(self)
         self._targets = dict(targets) if targets is not None else _default_targets()
+        self._completion_targets: dict[str, Any] = {}
         self._tokens: dict[str, CancellationToken] = {}
         self._executing: set[str] = set()
         self._stop_final: dict[str, str] = {}
@@ -137,7 +141,7 @@ class AgentRuntime:
     def _create_task(self, spec: AgentTaskSpec, key: str | None,
                      event: tuple[str, str, str] | None = None,
                      recovery: tuple[str, str, str] | None = None,
-                     authorization: dict | RecoveryBinding | None = None,
+                     authorization: dict | RecoveryBinding | CompletionBinding | None = None,
                      submission: str | None = None) -> AgentTaskHandle:
         with DeferredAuthorization.capture().scope():
             payload = durable_payload(spec.to_dict())
@@ -177,6 +181,7 @@ class AgentRuntime:
         """Read owner-scoped task status without observing the desktop."""
         row = self._row(task_id)
         metadata = self.evidence.metadata(task_id)
+        metadata.update(completion_metadata(self.store, task_id))
         if "dag_batch" in row["spec"]["options"]:
             metadata.update(submission_metadata(self.store, task_id))
         with self._mutex:
@@ -233,7 +238,7 @@ class AgentRuntime:
         target = self._targets.get(row["spec"]["target"])
         if target is None:
             raise AgentTaskError("task target is no longer configured")
-        return target
+        return completion_target(self, row, target)
 
     def _token(self, task_id: str) -> CancellationToken:
         with self._mutex:
@@ -366,6 +371,7 @@ class AgentRuntime:
         request = AgentActionRequest.from_dict(value)
         with self._lock(task_id):
             row = self._row(task_id)
+            require_executable_task(self.store, task_id)
             with self._scope(row) as policy:
                 row = self._activate(row)
                 policy.check(request.tool, request.arguments)
@@ -413,17 +419,18 @@ class AgentRuntime:
             row = self._row(task_id)
             if row["state"] in TERMINAL:
                 return self.get(task_id)
-            with self._scope(row) as policy:
+            with self._scope(row):
                 row = self._activate(row)
                 try:
                     if not self.store.transition(task_id, "running", "verifying"):
                         return self.get(task_id)
                     with self.broker.dispatch(self._leases[task_id]):
                         observations = detached(self._target(row).observe())
-                        receipts = self.store.actions(task_id)
-                        reports = verify(policy, receipts, observations,
+                        evidence_policy, receipts = completion_evidence(self, row)
+                        reports = verify(evidence_policy, receipts, observations,
                                          browser_read=getattr(self._target(row), "verify_browser", None))
                     self._token(task_id).checkpoint()
+                    check_task_authority(self, task_id)
                     complete = all(item["status"] == "passed" for item in reports)
                     uncertain = any(item["status"] == "uncertain" for item in receipts)
                     state = "succeeded" if complete and not uncertain else "waiting_user"
@@ -439,6 +446,13 @@ class AgentRuntime:
             return
         try:
             retired = self._retire(task_id)
+            if retired and self.store.get(task_id)["state"] == "verifying":
+                pending = "completion authority requires review before publication"
+                operation = current_operation()
+                if operation is not None:
+                    operation.checkpoint()
+                else:
+                    check_task_authority(self, task_id)
         except _ERRORS:
             self.store.transition(task_id, "verifying", "waiting_user", reason=pending, verification=reports)
             raise

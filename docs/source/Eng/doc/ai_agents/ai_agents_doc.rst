@@ -1,14 +1,47 @@
 AI agents and computer use
 ===========================
 
+Reviewed completion after confirmed effects
+-------------------------------------------
+
+When input has retired but a stopped task has not published completion, review a separate read-only task::
+
+    review = manage_agent_recovery("preview_completion", {"task_id": source_id})
+    child = manage_agent_recovery("create_completion", {
+        "task_id": source_id, "snapshot": review["snapshot"],
+        "note": "Reviewed confirmed effects and independent completion conditions",
+    })
+    result = finish_agent_task(child["task_id"])
+
+Read ``verification_spec`` before approval; it is derived by the host and is not accepted as a create
+argument. The exact source snapshot, human review note and private atomic proof bind one real successor.
+The original stays stopped. Finite skills require every action confirmed; dynamic sources require no
+dormant finite plan or unknown effects. Historical action/result clauses are never sufficient alone:
+fresh independent file/screen criteria and successful input retirement must also pass. Existing native
+capability diagnostics remain passive; native desktop acceptance is separate from owned-file tests.
+The child may be observed before finish. Exact identical helper configuration reruns readiness without
+replacing its authority; changed spec/owner/profile refuses. Readiness and observations are never cached.
+
+The new task runs no model or executable actions. Ordinary ``act`` and executable recovery upgrades
+refuse before action preparation. Roots/origins, both source/effect owners and the actual reviewer remain
+live, including after helper cleanup. Cancellation, restart, budgets and broker generations retain their
+existing gates. Explicit retry reviews preserve the original effect owner. Completed successors carry
+bounded ``completion_review`` metadata and can be adopted by the existing reviewed whole-DAG workflow.
+Use the existing explicit ``owner_policy="source_owner"`` and returned ``ownership.review`` token when
+creating a successor that must remain visible to the source owner; default caller ownership is unchanged.
+
+Python/API/AC/MCP/REST/CLI/Builder use the same recovery operation enum. The GUI exposes two Actions
+for preview/create and reuses the reviewed-request editor. Browser/remote readers and expired-scope
+completion renewal remain open; they never fall back to an ordinary helper or a new browser context.
+
 Fresh read-only completion observation seam
 -------------------------------------------
 
 The host SDK's standard desktop/file ``NativeDesktopTarget.completion_reader(spec)`` creates a separate
 owned helper under the exact parent operation and live scope. It requires source input retirement and
 the same host profile/resource, then negotiates exact read-only contract 1 with input_supported=false
-before configuration. This is a host integration seam; reviewed recovery/publication operations still
-remain in Progress.md. Merely opening or retiring a reader never marks a task complete.
+before configuration. The reviewed workflow above binds this host seam to a separately admitted task.
+Merely opening or retiring a reader never marks a task complete.
 
 The helper permanently refuses perform/upgrade RPC, nested executor calls, input acknowledgments and
 nonempty cleanup. The host proxy also refuses local workflow launch and resource recovery. Unexpected
@@ -20,7 +53,7 @@ different operations/owners cannot borrow a view, and browser clauses must be pi
 Target API/AC/MCP/REST/CLI/Builder and GUI views expose passive ``readonly_completion`` status only.
 Custom adapter descriptors are not evaluated, and no native readiness probe runs. Standard browser
 fresh-start, ordinary/custom helper fallback and unsupported remote readers remain refused. Future
-browser/remote observation contracts and the explicit reviewed completion workflow remain open.
+browser/remote observation contracts and expired-scope completion renewal remain open.
 Host adapters are trusted code; these protocol/dispatcher/input-observer guards are not an OS sandbox.
 
 Compare the accepted task specification

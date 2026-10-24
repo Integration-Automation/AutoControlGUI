@@ -1674,6 +1674,8 @@ english_word_dict.update({
     "agent_remainder_preview": "Review remaining work / replan",
     "agent_remainder_create": "Create reviewed successor task",
     "agent_reauthorize_preview": "Review successor authorization",
+    "agent_completion_preview": "Review read-only completion",
+    "agent_completion_create": "Create reviewed completion verification",
     "agent_reauthorize_create": "Create reauthorized successor",
     "agent_prune": "Prune expired task cache"
 })

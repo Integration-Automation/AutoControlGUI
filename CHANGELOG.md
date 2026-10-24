@@ -1,5 +1,14 @@
 # Changelog
 
+Add recovery preview_completion/create_completion for explicitly reviewed, separately owned read-only
+verification tasks after confirmed effects. Atomically bind source/effect snapshots, principals and actual
+successor lineage in a private additive table. Refuse action dispatch, ordinary executable recovery,
+unknown effects and unsupported helpers; refresh original criteria and retire input before success.
+Recheck authority after cleanup, retain original effect-owner checks through retries, and expose bounded
+completion_review metadata plus GUI Actions/locales. Browser/remote readers and expired-scope renewal remain open.
+Identical read-only helper configuration may repeat to rerun readiness for observe-then-finish; different
+specifications, owners or profiles still refuse before replacing any configured authority.
+
 Add a fresh read-only completion-reader host seam for standard desktop/file proxies, with a separate
 permanently restricted helper, live scope checks, host-side tool refusal and no input ACK/cleanup injection.
 Preserve unknown resource witnesses and reject ordinary/custom-helper fallback or fresh browser startup.

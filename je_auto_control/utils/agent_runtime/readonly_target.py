@@ -135,8 +135,8 @@ class CompletionReader:
                 self._closed = True
 
 
-def open_completion_reader(source: NativeDesktopTarget, spec: AgentTaskSpec) -> Any:
-    """Create a new helper only for the standard owned worker, preserving its host profile/resource."""
+def new_completion_target(source: NativeDesktopTarget) -> ReadOnlyNativeTarget:
+    """Build an inert permanent read-only proxy, preserving only host-owned interpreter/profile/resource."""
     # pylint: disable-next=protected-access  # reason: trusted native-target collaborator checks the source's ownership
     if source._resource is not None or source._channel is not None or not source._ledger.empty or source._pending:
         raise AgentTaskError("source input must retire before a fresh completion reader")
@@ -147,5 +147,9 @@ def open_completion_reader(source: NativeDesktopTarget, spec: AgentTaskSpec) -> 
     # pylint: disable-next=protected-access  # reason: retain the same physical resource and immutable host profile
     profile = source._profile.to_dict() if source._profile is not None else None
     # pylint: disable-next=protected-access  # reason: fresh read-only ownership must use the original resource lock/journal
-    adapter = ReadOnlyNativeTarget(argv=argv, resource_path=source._resource_path, profile=profile)
-    return CompletionReader(adapter, spec).session()
+    return ReadOnlyNativeTarget(argv=argv, resource_path=source._resource_path, profile=profile)
+
+
+def open_completion_reader(source: NativeDesktopTarget, spec: AgentTaskSpec) -> Any:
+    """Create a new helper only for the standard owned worker, preserving its host profile/resource."""
+    return CompletionReader(new_completion_target(source), spec).session()

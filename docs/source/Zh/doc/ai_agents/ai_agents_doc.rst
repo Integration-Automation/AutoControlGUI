@@ -1,13 +1,42 @@
 AI Agent 與 Computer Use
 ===========================
 
+副作用確認後的唯讀完成審閱
+-------------------------------------------
+
+輸入已退休、但停止的任務尚未發布完成時，可審閱獨立的唯讀驗證任務::
+
+    review = manage_agent_recovery("preview_completion", {"task_id": source_id})
+    child = manage_agent_recovery("create_completion", {
+        "task_id": source_id, "snapshot": review["snapshot"],
+        "note": "已審閱確認效果與獨立完成條件",
+    })
+    result = finish_agent_task(child["task_id"])
+
+批准前先讀 verification_spec；它由主機推導，不接受為 create 參數。精確來源快照、審閱說明及
+私有原子 proof 綁定唯一真實後繼任務，原任務保持停止。有限 skill 的動作須全部確認；動態來源
+不得有未處理的有限計畫或未知效果。歷史 action／result 條件不能單獨證明完成，亦須重新取得
+獨立檔案／畫面條件及輸入退休證據。原生診斷仍為被動，檔案 helper 測試不代表原生桌面驗收。
+子任務可先 observe 再 finish；helper 只接受完全相同的設定來重查當前就緒，不替換原權限。
+不同 spec／owner／profile 仍拒絕，就緒與觀察結果都不快取。
+
+新任務不執行模型或動作；一般 act 與可操作復原升級在準備動作前就拒絕。root／origin、來源與
+原效果擁有者、實際審閱者持續有效，涵蓋 helper 清理後。取消、重啟、預算與 broker 世代沿用
+現有 gate；明確重試仍保留原效果擁有者。完成的子任務提供有限 completion_review metadata，
+可供既有整圖審閱流程採認。需要原擁有者讀取時，明確指定 owner_policy="source_owner" 並回傳
+ownership.review token；預設 caller 歸屬不變。
+
+Python／API／AC／MCP／REST／CLI／Builder 共用 recovery operation；GUI 新增預覽／建立
+兩個 Actions，沿用審閱 request 編輯器。browser／remote reader 與過期 scope 完成重新授權仍
+待接合，不回退普通 helper，也不新開瀏覽器 context 冒充原狀態。
+
 全新唯讀完成觀察前置介面
 -------------------------------------------
 
 host SDK 的標準桌面／檔案 ``NativeDesktopTarget.completion_reader(spec)``，會在精確 parent
 operation 與即時 scope 下建立專用 helper。來源輸入須先退休，沿用原主機 profile／resource，
-設定前核對精確唯讀契約 1 與 input_supported=false。這是主機接合前置介面；明確審閱、恢復與
-完成發布仍列於 Progress.md，開啟或清理 reader 本身不會把任務標成完成。
+設定前核對精確唯讀契約 1 與 input_supported=false。上方審閱流程將此主機介面接至獨立任務；
+開啟或清理 reader 本身不會把任務標成完成。
 
 helper 永久拒絕 perform／upgrade RPC、巢狀 executor、輸入 ACK 與非空 cleanup；host proxy
 亦拒絕本機 workflow 啟動及 resource recovery。非預期輸入只留下紀錄，不 ACK 或注入釋放，
@@ -17,7 +46,7 @@ operation／owner，browser 條件也須固定於原規格。
 
 API／AC／MCP／REST／CLI／Builder 與 GUI 目標檢視只提供被動 readonly_completion 狀態，
 不執行自訂 adapter descriptor 或原生就緒探測。browser 新啟動、普通／自訂 helper 回退及未支援
-remote reader 仍拒絕；browser／remote 唯讀契約與審閱式完成流程仍待完成。
+remote reader 仍拒絕；browser／remote 唯讀契約與過期 scope 完成重新授權仍待完成。
 主機 adapter 是可信程式碼；協定、dispatcher 與輸入 observer 防護不是作業系統沙箱。
 
 AutoControl 是開源、跨平台的 **computer-use 與 GUI 自動化框架**，可以讓 AI agent 操作真實桌面，而不只依賴瀏覽器 DOM 或 API。

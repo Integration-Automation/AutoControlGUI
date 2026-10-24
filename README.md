@@ -1,10 +1,14 @@
 # AutoControl
 
-The host SDK now has a fresh read-only completion-reader seam for standard desktop/file proxies.
-Its separate helper permanently refuses tool execution/input ACKs, and closed views cannot restart it.
-Target diagnostics add passive `readonly_completion` contract status; readiness stays `not_probed`.
-This prepares reviewed completion recovery. Its review/publication workflow and browser/remote readers
-remain in Progress.md; a retired reader alone never completes a task.
+Stopped tasks with confirmed effects can use `manage_agent_recovery("preview_completion", {"task_id": id})`
+to review a separate verification task. Call `create_completion` with the exact task_id/snapshot and a
+review note, then finish the returned task. A private atomic binding selects a permanently read-only
+helper; source actions never replay and fresh independent criteria plus input retirement prove success.
+Skill plans must be fully confirmed; dynamic tasks must have no dormant finite plan or unknown effects.
+Observe may precede finish: identical helper configuration reruns readiness without replacing its authority.
+Source/reviewer authority stays live, including after helper cleanup and across explicit retries/restarts.
+Existing API/AC/MCP/REST/CLI/Builder and GUI Actions share the workflow. Browser/remote readers and
+expired-scope renewal remain in Progress.md; desktop capability still requires separate native evidence.
 
 Managed-only DAGs can register a durable whole-graph batch with
 `manage_agent_dag("register", {"definition": graph, "max_parallel": 4})`, then explicitly call

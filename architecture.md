@@ -1,7 +1,18 @@
 # AutoControl Architecture
 
+completion_recovery derives closed read-only task specifications from reviewed stopped sources. A trusted
+CompletionBinding inserts private proof alongside real recovery lineage in the task transaction; model
+options never select it. Runtime routes bound tasks to cached permanent ReadOnlyNativeTarget proxies,
+blocks act/ordinary recovery upgrades, and evaluates original effects against fresh independent target
+evidence. Existing broker generations, budgets, cancellation/restart and retirement/publication CAS remain
+authoritative. Source/effect snapshots and both owners plus the actual reviewer stay live; the final parent
+checkpoint now runs after helper retirement. Public completion_review metadata omits private stores.
+Existing DAG adoption accepts the independently completed successor; the old source stays stopped.
+
 readonly_worker.ReadOnlyWorker permanently restricts owned RPC to configuration/observation/verification
-and empty cleanup, rejecting executor calls, input ACKs and reconfiguration. readonly_target provides
+and empty cleanup, rejecting executor calls, input ACKs and authority replacement. Identical configuration
+may repeat to rerun current readiness, without replacing the target or caching readiness/observations.
+readonly_target provides
 a fresh ReadOnlyNativeTarget/CompletionReader with exact no-input negotiation, live owner/root/parent
 checks and closed-view fences. Host perform/recover overrides also block local workflow launch and
 witness recovery. Unexpected input is recorded but never ACKed/released; helper retirement preserves
@@ -9,7 +20,7 @@ resource quarantine. Standard NativeDesktopTarget.completion_reader clones only 
 profile and resource into the dedicated module after source retirement. It never reuses old observations.
 Passive target summaries declare readonly_completion only for the exact built-in proxy, without custom
 descriptor calls or readiness probes. Browser startup and ordinary/custom-worker fallback are refused.
-The reviewed task-completion workflow is still in Progress.md; this seam does not publish task success.
+The seam itself does not publish success; completion_recovery binds it to the reviewed task workflow above.
 
 Android focus guards use one labeled sed extraction of display/window/activity and an exact quoted
 comparison against six field-order permutations. Nonempty labels retain duplicate empty values through

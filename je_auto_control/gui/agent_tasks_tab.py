@@ -178,6 +178,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_remainder_create", self._create_remainder),
                 ("agent_reauthorize_preview", partial(self._preview_remainder, "review_authorization")),
                 ("agent_reauthorize_create", partial(self._create_remainder, "create_authorized")),
+                ("agent_completion_preview", partial(self._preview_remainder, "preview_completion")),
+                ("agent_completion_create", partial(self._create_remainder, "create_completion")),
                 ("agent_recover_target", self._recover_target),
                 ("agent_prune", partial(self._dispatch, "prune", {})),
                 ("agent_trigger_apply", self._trigger_apply),
@@ -465,6 +467,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             draft = result.get("review_template")
         request = {"task_id": result["source_task"], "snapshot": result["snapshot"],
                    "spec": draft, "note": ""} if isinstance(draft, dict) else {}
+        if isinstance(result.get("verification_spec"), dict):
+            request = {"task_id": result["source_task"], "snapshot": result["snapshot"], "note": ""}
         if request and "authorization_review" in result:
             request["authorization_review"] = result["authorization_review"]
         if request and "ownership" in result:

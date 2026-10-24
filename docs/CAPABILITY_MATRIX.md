@@ -3,8 +3,12 @@
 Read-only completion seam: standard host desktop/file proxies declare a passive contract, not native
 readiness. Owned helpers/fake targets verify fresh file observations, no executable operations/input ACKs,
 no host workflow launch or witness recovery, exact capability versions, closed/owner/operation fences,
-revocation and unexpected-input quarantine. Reviewed completion publication and browser/remote readers
-remain unfinished; existing task success rules do not change.
+revocation and unexpected-input quarantine. Reviewed completion tasks now cover owned-file helper reads,
+atomic approval/provenance, original effect/reviewer authority, dynamic/finite sources, independent
+criteria, cancel/restart, cleanup-time races, retention, GUI/shared surfaces and actual DAG adoption.
+Observe-then-finish rechecks current readiness on identical configuration; scope/owner/profile changes refuse.
+Source receipts in these tests are owned fixtures; this is not native application/device acceptance.
+Browser/remote readers and expired-scope completion renewal remain unfinished.
 
 Android guard latency: owned POSIX/smart-socket/worker evidence verifies one-pass focus extraction,
 all field orders, empty/nonempty duplicates before/after input, byte-exact fixture reads and redacted

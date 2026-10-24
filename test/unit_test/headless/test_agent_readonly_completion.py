@@ -187,9 +187,25 @@ def test_worker_configuration_cannot_be_replaced_or_upgraded(tmp_path):
     worker = ReadOnlyWorker(io.BytesIO(), io.BytesIO(), target=target)
     payload = {"spec": spec(tmp_path).to_dict(), "owner": {}}
     worker._dispatch("configure", payload)
+    payload["spec"]["goal"] = "Different unreviewed authority"
     with pytest.raises(AgentTaskError, match="replace"):
         worker._dispatch("configure", payload)
     assert target.ready.call_count == 1
+
+
+def test_identical_readonly_configuration_rechecks_current_readiness_without_replacing_authority(tmp_path):
+    class Target:
+        available = True
+
+        def ready(self, _spec):
+            return self.available, "" if self.available else "current target unavailable"
+
+    target = Target()
+    worker = ReadOnlyWorker(io.BytesIO(), io.BytesIO(), target=target)
+    payload = {"spec": spec(tmp_path).to_dict(), "owner": {}}
+    assert worker._dispatch("configure", payload) == {"ready": True, "reason": ""}
+    target.available = False
+    assert worker._dispatch("configure", payload) == {"ready": False, "reason": "current target unavailable"}
 
 
 def test_browser_configuration_never_starts_a_fresh_browser():

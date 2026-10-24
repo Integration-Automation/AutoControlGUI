@@ -1,6 +1,7 @@
 """Permanently read-only owned helper: observation never upgrades to native input or task execution."""
 from __future__ import annotations
 
+import json
 import sys
 from typing import Any
 
@@ -15,6 +16,10 @@ from je_auto_control.wrapper._input_observer import input_observer
 class ReadOnlyWorker(NativeWorker):
     """Keep the read-only boundary in the helper, independently of the host's restricted view."""
 
+    def __init__(self, source: Any, sink: Any, *, target: Any = None) -> None:
+        super().__init__(source, sink, target=target)
+        self._configuration: str | None = None
+
     def _dispatch(self, operation: str, payload: dict) -> Any:
         if operation == "readonly_capabilities" and payload == {}:
             return {"contract": 1, "input_supported": False}
@@ -23,9 +28,15 @@ class ReadOnlyWorker(NativeWorker):
         return super()._dispatch(operation, payload)
 
     def _configure_scope(self, payload: dict) -> None:
-        if self._spec is not None or set(payload) - {"spec", "owner", "profile"}:
+        if set(payload) - {"spec", "owner", "profile"}:
             raise AgentTaskError("read-only helper cannot replace its configured authority")
+        configuration = json.dumps(payload, sort_keys=True, allow_nan=False)
+        if self._spec is not None:
+            if configuration != self._configuration:
+                raise AgentTaskError("read-only helper cannot replace its configured authority")
+            return
         super()._configure_scope(payload)
+        self._configuration = configuration
 
     def _operation(self, operation: str, payload: dict) -> Any:
         if operation == "configure":
