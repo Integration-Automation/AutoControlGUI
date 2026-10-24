@@ -37,6 +37,7 @@ from je_auto_control.utils.agent_runtime.dag_admission import current_admission
 from je_auto_control.utils.agent_runtime.task_authority import RecoveryBinding, CompletionBinding, check_task_authority
 from je_auto_control.utils.agent_runtime.completion_recovery import (
     completion_target, completion_evidence, completion_metadata, require_executable_task,
+    check_completion_authority, completion_spec,
 )
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
@@ -70,7 +71,8 @@ class AgentRuntime:
         self.clock = BudgetClock(self.store)
         self.evidence = TaskEvidence(self.store)
         self.triggers = AgentTriggers(self)
-        self.skills = AgentSkills(self)
+        self.skills = AgentSkills(self, completion_authority=check_completion_authority,
+                                  completion_template=completion_spec)
         self._targets = dict(targets) if targets is not None else _default_targets()
         self._completion_targets: dict[str, Any] = {}
         self._tokens: dict[str, CancellationToken] = {}

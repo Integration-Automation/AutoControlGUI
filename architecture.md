@@ -1,5 +1,18 @@
 # AutoControl Architecture
 
+skill_completion validates private read-only admission, a bounded real recovery chain, exact derived
+scope and live original/reviewer authority. The neutral completion_contract module checks independent
+completion/retirement for both skill and DAG consumers. Runtime injects its existing authority/scope
+checks, and AgentSkills supplies its existing snapshot digest; the evidence module stays a leaf.
+managed_tasks.validate_recorded_completion
+keeps its interface without making skill publication depend on DAG transport initialization. AgentSkills
+accept optionally identifies completion_task_id while keeping the real pinned validation trial as
+publication.task_id. Candidate integrity and the actual trial/pin are checked in BEGIN IMMEDIATE;
+version CAS, publication and optional agent_skill_completions proof commit or roll back together.
+Caller/proof authority is checked again after writes. Public completion_review contains historical
+IDs/hashes without private principals, preserving the existing thirty-day reader retention. The thin
+Actions example edits the shared accept request without task execution or publication.
+
 control_admission classifies only fixed stop routes and closed DAG pause bodies. The shared client
 uses existing reserved transport slots and an internal marker for multiplexed DAG pauses. REST
 selects a separate bounded per-IP bucket in the exact built-in auth gate, then retains live principal,

@@ -1,5 +1,21 @@
 # Public API lifecycle
 
+manage_agent_skill accept adds optional completion_task_id while task_id retains the original real
+validation trial. Shared completion_contract validation has no service/DAG transport dependency;
+managed_tasks.validate_recorded_completion keeps its existing signature and completion rules. Runtime
+injects its existing authority/scope checks; AgentSkills supplies its existing snapshot digest. The
+evidence module has no reverse service/model dependency, and ordinary AgentSkills construction remains valid.
+Unrelated candidates, spec/pin mismatch, executable-recovery trials, missing private
+admission/real ancestry, changed scope, unresolved effects, unretired readers and authority loss refuse.
+The fixed derived completion_spec is shared by admission and consumers. Add agent_skill_completions,
+an optional proof row atomically linked to the original five-column publication. Existing publication
+task_id semantics remain; get/list add completion_review only for actual adopted publication. Caller,
+owner/reviewer checks and candidate integrity are revalidated under BEGIN IMMEDIATE before version CAS;
+post-write authority/proof failure rolls back all publication/adoption writes. Library authority loss
+is a typed managed review refusal and HTTP returns 409. Historical proof remains after transient reader
+retention; it grants no current task/input/read authority. Existing shared operations inherit the field;
+one thin GUI Actions example and four locale labels prepare a request without executing it.
+
 Existing HTTP pause/cancel/stop_all/shutdown routes use an independent per-IP token bucket with the
 same default 120 requests/minute and burst 30 as ordinary requests. Authentication and failed-token
 lockout, live RBAC/delegation, owner scope, audit/metrics and retirement remain mandatory. Normal

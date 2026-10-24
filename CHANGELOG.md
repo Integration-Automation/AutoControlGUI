@@ -1,5 +1,14 @@
 # Changelog
 
+Allow explicit completion_task_id on managed skill acceptance after all original validation effects
+are confirmed. Preserve the exact original candidate/spec hash/pin and publication.task_id; validate
+private read-only proof, real ancestry, exact scope, independent success/retirement and live authority.
+Atomically publish the version with optional historical completion_review proof; failures roll back.
+Recheck candidate integrity inside the write transaction and return typed review refusal on authority
+loss. Add a non-executing GUI Actions request example and four labels; existing operation surfaces and
+ordinary publication remain compatible. Stopped-source recording and partial recovery trial adoption
+remain separate outstanding work.
+
 Reserve independently bounded per-IP REST admission for existing runtime pause/cancel/stop_all/shutdown
 and closed DAG batch/node pauses. Ordinary polling keeps its existing limits and cannot consume the
 stop reserve. Shared clients use existing control transport slots and mark only closed DAG pauses;

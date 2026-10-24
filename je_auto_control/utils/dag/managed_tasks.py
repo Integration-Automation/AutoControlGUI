@@ -10,6 +10,7 @@ from typing import Any, Callable, Iterator, Mapping
 from urllib.parse import urlencode, urlsplit
 
 from je_auto_control.utils.agent_runtime.context import current_operation
+from je_auto_control.utils.agent_runtime.completion_contract import require_completion as _require_completion
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import STATES, thaw
 from je_auto_control.utils.dag.batch_contract import host_fingerprint
@@ -243,22 +244,3 @@ def validate_recorded_completion(reply: dict[str, Any], spec: Mapping[str, Any])
     if reply.get("state") != "succeeded":
         raise AgentTaskError("recorded task has not succeeded")
     _require_completion(reply, spec)
-
-
-def _require_completion(reply: dict[str, Any], spec: Mapping[str, Any]) -> None:
-    metadata, reports = reply.get("metadata"), reply.get("verification")
-    if not isinstance(metadata, dict) or not isinstance(reports, list):
-        raise AgentTaskError("completion evidence is missing")
-    version = metadata.get("completion_contract")
-    if type(version) is not int or version != 1 or metadata.get("input_released") is not True:
-        raise AgentTaskError("completion retirement contract is unconfirmed")
-    criteria = spec["success_criteria"]
-    if len(reports) != len(criteria):
-        raise AgentTaskError("completion criteria count changed")
-    for report, clause in zip(reports, criteria):
-        _require_clause(report, clause)
-
-
-def _require_clause(report: Any, clause: Mapping[str, Any]) -> None:
-    if not isinstance(report, dict) or report.get("kind") != clause["kind"] or report.get("status") != "passed":
-        raise AgentTaskError("completion criteria were not independently confirmed")

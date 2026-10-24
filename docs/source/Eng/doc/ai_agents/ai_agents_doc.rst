@@ -313,7 +313,25 @@ idempotency key; CLI and Actions expose trigger controls. Managed scopes reject 
 
 Input ownership writes a private, fsynced per-resource crash witness before native dispatch and input ACK. An unfinished witness blocks new owners across databases. Explicit host-only recovery requires a review note and a trusted no-held-input probe, never replays persisted input or signals persisted PIDs, and does not reconcile/resume the old task. POSIX input helpers monitor their actual parent and retire only their own live session group. Approved document handoff runs outside the input helper tree, so user applications survive normal task cleanup; bounded, preapproved focus steps wait for scoped windows. Observations also expire against a host monotonic clock. Native desktop/device acceptance remains unverified.
 
-Managed skill candidates store sealed task scopes, typed explicit data slots and source-task provenance in the runtime SQLite database. Recording requires confirmed receipts and independently verified success. Validation creates a distinct pinned task; publication requires that exact trial's successful completion, an explicit review note and a compare-and-set version. Semantic selector repairs create new candidates. In-flight tasks retain their original version/digest; arbitrary pointer receipts are not guessed into semantic skills. Legacy mutable SkillLibrary behavior is preserved.
+Managed skill candidates store sealed task scopes, typed explicit data slots and source-task provenance in the runtime SQLite database. Recording requires confirmed receipts and independently verified success. Validation creates a distinct pinned task; publication requires verified completion evidence for that exact trial, an explicit review note and a compare-and-set version. Semantic selector repairs create new candidates. In-flight tasks retain their original version/digest; arbitrary pointer receipts are not guessed into semantic skills. Legacy mutable SkillLibrary behavior is preserved.
+
+When all actions of an interrupted trial are confirmed, finish its separately reviewed read-only
+completion task, then ``manage_agent_skill("accept", request)`` may include ``completion_task_id``.
+``task_id`` remains the original real validation trial. Its exact candidate/spec hash/pin and the
+reader's private proof, derived scope, independent completion/retirement and up to sixteen real recovery
+links are required. The SQLite publication transaction checks live caller/owner/reviewer authority and
+records both identities without changing the stopped source or replaying effects. Lost authority is a
+typed review refusal; version/publication/adoption writes roll back together. Actions can prepare the
+request without publishing. ``publication.completion_review`` stores historical IDs/hashes after reader
+retention; it is not a live-evidence claim. Missing evidence before acceptance still refuses.
+
+Example after explicit recovery review and successful reader finish::
+
+    {"candidate_id":"reviewed-candidate", "task_id":"original-validation-trial",
+     "completion_task_id":"verified-read-only-child", "expected_version":0,
+     "note":"Reviewed the actual trial and separate completion evidence"}
+
+Stopped-source recording and adoption of partial executable-recovery trials remain in ``Progress.md``.
 
 Accepted tasks, trigger templates and skill trials retain live origin policy references. A private witness contains only current root ceilings; missing/revoked/corrupt witnesses fail closed. Authenticated local HTTP forwards the current caller's additional restrictive ceiling without granting identity or capability. Every operation checkpoint and lease maintenance rechecks roots. MCP client roots and asynchronous roots refresh are session-local; stale replies cannot renew retired authorities. Static host policies persist until replacement, while retiring client-supplied root authority revokes its references. HTTP client roots do not overwrite the shared resource provider's configured workspace. Workers/maintenance run in fresh contexts, shutdown tracks actual in-flight deliveries before lease acquisition, and unstarted queued work remains durable.
 

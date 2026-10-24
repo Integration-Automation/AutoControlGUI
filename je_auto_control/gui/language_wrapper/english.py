@@ -1656,6 +1656,7 @@ english_word_dict.update({
     "agent_skill_operation": "Skill operation",
     "agent_skill_request": "Skill request",
     "agent_skill_apply": "Apply skill operation",
+    'agent_skill_completion_example': 'Prepare skill publication with completion evidence',
     "agent_skill_record": "Record verified task",
     "agent_skill_repair": "Propose semantic repair",
     "agent_skill_list": "List skill versions",

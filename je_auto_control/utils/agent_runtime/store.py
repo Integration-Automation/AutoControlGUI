@@ -106,6 +106,9 @@ CREATE TABLE IF NOT EXISTS agent_skill_trials (
 CREATE TABLE IF NOT EXISTS agent_skill_publications (
  candidate_id TEXT PRIMARY KEY REFERENCES agent_skill_candidates(id), task_id TEXT NOT NULL,
  actor TEXT NOT NULL, note TEXT NOT NULL, created REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_skill_completions (
+ candidate_id TEXT PRIMARY KEY REFERENCES agent_skill_publications(candidate_id) ON DELETE CASCADE,
+ details TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_action_grounding (
  action_id TEXT PRIMARY KEY REFERENCES agent_actions(id) ON DELETE CASCADE, details TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_target_profiles (

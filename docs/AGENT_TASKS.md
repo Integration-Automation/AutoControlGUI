@@ -295,7 +295,7 @@ Bootstrap observations disclose no unrelated foreground controls. Only focus arg
 
 ## Recorded skills and reviewed repair versions
 
-Managed skill candidates store sealed task scopes, typed explicit data slots and source-task provenance in the runtime SQLite database. Recording requires confirmed receipts and independently verified success. Validation creates a distinct pinned task; publication requires that exact trial's successful completion, an explicit review note and a compare-and-set version. Semantic selector repairs create new candidates. In-flight tasks retain their original version/digest; arbitrary pointer receipts are not guessed into semantic skills. Legacy mutable SkillLibrary behavior is preserved.
+Managed skill candidates store sealed task scopes, typed explicit data slots and source-task provenance in the runtime SQLite database. Recording requires confirmed receipts and independently verified success. Validation creates a distinct pinned task; publication requires verified completion evidence for that exact trial, an explicit review note and a compare-and-set version. Semantic selector repairs create new candidates. In-flight tasks retain their original version/digest; arbitrary pointer receipts are not guessed into semantic skills. Legacy mutable SkillLibrary behavior is preserved.
 
 Call `manage_agent_skill(operation, request)` or `AC_agent_skill`; MCP uses `ac_agent_skill`, REST uses POST `/agent/skill`, and CLI uses `agent-task skill OP REQUEST.json`. The Agent Tasks view provides a skill operation selector, JSON request editor and Actions menu. `list_agent_skills` / `AC_agent_skill_list` inspect owner-visible candidates. Even read-only skill inspection requires drive-input authority because snapshots can contain application data. These task management operations are excluded from managed task tool scopes.
 
@@ -306,7 +306,19 @@ Call `manage_agent_skill(operation, request)` or `AC_agent_skill`; MCP uses `ac_
 5. **run**: supply `skill_id`, an explicit positive `version`, and optional `parameters`. Task metadata contains a service-bound `skill_pin` with version and digest. New publications never alter queued/running tasks.
 6. **repair**: supply an accepted `candidate_id`, a review `note`, and `changes` containing `path` / `value`. Only existing selector `name`, `role` or `automation_id` values may change. Validate the resulting candidate and explicitly accept it against the current version. No automatic overwrite, tool/root expansion or silent locator application occurs.
 
-The four `examples/agent_skill_*.json` files are editable request examples, not executable tasks. Skill definitions and publication records remain in the library when transient task caches expire; accepting an unpublished candidate still needs its retained verified task evidence. Native application acceptance remains separate from the deterministic fake-target regression evidence.
+If a validation trial is stopped after all its actions are confirmed, `accept` also accepts an optional
+`completion_task_id` naming a separately reviewed and successfully finished permanent read-only child.
+Keep `task_id` equal to the original real validation trial. Its candidate/spec hash/pin must match;
+the reader must have exact derived criteria, confirmed retirement and private admission plus a real
+recovery chain (at most sixteen read-only links). Caller, source/effect owners and actual reviewer stay
+live through the publication transaction. Version/publication/adoption writes are atomic; the original
+trial remains stopped. `publication.task_id` keeps its original meaning and optional
+`publication.completion_review` records historical reader IDs/hashes. Reader evidence may expire after
+publication; an unpublished adoption cannot use expired/missing evidence. The GUI Actions example
+prepares the explicit request without publishing. Stopped-source semantic recording and partial
+executable-recovery trial adoption are still outstanding.
+
+The five `examples/agent_skill_*.json` files are editable request examples, not executable tasks. `agent_skill_completion_accept.json` shows explicit read-only completion adoption. Skill definitions and publication records remain in the library when transient task caches expire; accepting an unpublished candidate still needs its retained verified task evidence. Native application acceptance remains separate from the deterministic fake-target regression evidence.
 
 ## Origin path policy lifetime
 

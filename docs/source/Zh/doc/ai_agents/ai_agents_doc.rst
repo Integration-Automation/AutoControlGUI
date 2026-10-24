@@ -205,7 +205,21 @@ HTTP 暫停／取消／停止全部／關閉服務使用獨立每 IP 配額（�
 
 受管輸入會先寫入持久崩潰紀錄。未完成的紀錄阻止新擁有者接手；主機管理者手動放開輸入後，以 recover_agent_target(target, note) 審閱恢復，不會重播按鍵或恢復舊任務。文件啟動程序與輸入 helper 分離，任務清理保留使用者應用程式；預先指定的聚焦步驟會等待授權視窗。原生桌面及真機驗收仍未驗證。
 
-manage_agent_skill 的 record／preview／validate／accept／run／repair 操作共用持久技能候選與版本。候選必須有自己的成功驗證任務，經明確審閱及版本比對才可發布。修復不會直接改寫使用中的版本；任務固定使用原版本及摘要。具型別的參數只能修改明確指定的資料值，不能改工具、應用或根目錄。
+manage_agent_skill 的 record／preview／validate／accept／run／repair 操作共用持久技能候選與版本。候選必須有精確綁定的驗證試跑與可採認的完成證據，經明確審閱及版本比對才可發布。修復不會直接改寫使用中的版本；任務固定使用原版本及摘要。具型別的參數只能修改明確指定的資料值，不能改工具、應用或根目錄。
+
+原試跑動作已全部確認後，可審閱／完成獨立唯讀驗證任務，並在 ``manage_agent_skill("accept", request)``
+明確加上 ``completion_task_id``；``task_id`` 仍是實際原驗證試跑。發布核對精確候選／spec hash／pin、
+私有證據與相同驗證範圍、最多十六層真實復原鏈及獨立成功／輸入退休。SQLite 發布交易內重驗
+caller／owner／reviewer 的即時權限，版本、發布與採認證據共同提交或回滾；原試跑停止且不重播。
+撤權回傳可處理的審閱拒絕。Actions 可準備待審閱請求，並不發布。
+``publication.completion_review`` 在 reader 保留期後仍是歷史 ID／摘要，不能當成當前證據；
+尚未採認時若證據已遺失仍拒絕。停止來源錄製與分段復原試跑採認仍列於 ``Progress.md``。
+
+明確審閱復原且唯讀驗證成功後的範例::
+
+    {"candidate_id":"reviewed-candidate", "task_id":"original-validation-trial",
+     "completion_task_id":"verified-read-only-child", "expected_version":0,
+     "note":"Reviewed actual trial and separate completion evidence"}
 
 受管任務、觸發範本及技能驗證持續檢查來源根目錄政策。撤銷、遺失或損壞的政策紀錄會阻止後續操作。MCP 客戶端根目錄與非同步更新依連線階段隔離，過期回覆不能恢復已終止的授權。主機固定政策在更換前保留；客戶端政策在來源結束時撤銷。HTTP 客戶端根目錄不再改寫共用資源提供者的工作目錄。服務停止會取消所有實際執行中的 worker，包含尚未取得 lease 的模型初始化；尚未啟動的派送保留供服務重啟。
 

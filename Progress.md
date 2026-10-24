@@ -9,8 +9,8 @@
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-接續完成第 5 組唯讀完成的來源重新授權與 browser／remote reader，並核對第 4 組真實裝置
-控制／擷取來源、其餘實作及第 8 組交付核對。
+接續完成第 5 組停止來源的語義錄製、分段復原試跑採認、唯讀完成重新授權及 browser／remote
+reader，並核對第 4 組真實裝置控制／擷取來源、其餘實作及第 8 組交付核對。
 
 1. **P4：瀏覽器與正式環境接合**
    - 選定正式服務專用 helper Python、AutoControl／WebRunner 套件版本與受管 Chromium 安裝；
@@ -85,11 +85,11 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
    - 將經審閱的新任務流程延伸至實際登入／欄位／視窗狀態重建與四條應用流程驗收；為舊 capture／
      指標步驟提供可信新來源與語義轉換，不能把舊索引／座標或歷史欄位值直接移入新 session。
    - 補實際應用的語義錄製、參數化、候選修復、驗證 trial、人工接受／版本發布及執行中固定版本
-     的完整驗收；確認失敗／未知 trial 與沒有獨立證據的舊紀錄不能成為發布依據。
-     為 `task_skills._accept/_check_trial` 接合已審閱的唯讀完成後繼證據：目前仍要求原 trial task
-     具有精確 candidate／spec hash／skill_pin，不能直接採用已移除 skill_pin 的唯讀子任務。
-     須保留實際試跑／候選版本與效果鏈，不重跑已確認動作、不把唯讀驗證冒充新的試跑，亦不改寫
-     停止的原 trial 為成功。
+     的完整驗收；持續拒絕沒有完整動作確認或獨立完成證據的試跑，不能僅憑舊收據發布。
+     為 `skill_recording.recorded_spec` 接合停止來源的唯讀完成證據，保留原語義動作來源並產生待驗證
+     草稿；目前原來源未成功、唯讀子任務又沒有動作時，仍不能直接錄製技能。
+     分段執行的復原試跑亦須另有精確候選／完整動作鏈的採認契約；本批原 trial 必須已確認全部動作，
+     不能把普通復原子任務或其完成收據當成原候選的新 validation trial。
    - 為已存在且由其他 caller 持有的復原子任務提供明確可撤銷的唯讀成果移交；新 source_owner
      模式不移轉或補造舊子任務的歸屬。移交須綁定原批次／節點／來源及真實復原鏈，持續驗證權限，
      只能供獨立完成證據採認，不能擴大一般讀取／輸入權或重新派送舊任務。

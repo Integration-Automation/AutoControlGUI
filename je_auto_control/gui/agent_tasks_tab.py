@@ -185,6 +185,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_trigger_apply", self._trigger_apply),
                 ("agent_trigger_list", partial(self._dispatch, "trigger", {"operation": "list"})),
                 ("agent_skill_apply", self._skill_apply),
+                ('agent_skill_completion_example', self._skill_completion_example),
                 ("agent_skill_list", partial(self._dispatch, "skill", {"operation": "list"})),
                 ("agent_target_apply", self._target_apply),
                 ("agent_browser_example", self._browser_example),
@@ -322,6 +323,14 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             self._status.setText(str(error))
             return
         self._dispatch("skill", {"operation": self._skill_operation.currentData(), "request": request})
+
+    def _skill_completion_example(self) -> None:
+        self._skill_operation.setCurrentIndex(self._skill_operation.findData('accept'))
+        request = {'candidate_id': '<candidate-id>', 'task_id': '<original-validation-task-id>',
+                   'completion_task_id': self._task_id.text() or '<completion-task-id>',
+                   'expected_version': 0, 'note': ''}
+        self._skill_request.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))
+        self._pages.setCurrentIndex(self._page_keys.index('agent_page_skills'))
 
     def _target_apply(self) -> None:
         try:

@@ -1,5 +1,14 @@
 # Capability matrix
 
+Skill completion adoption: owned-file normal helpers execute the real recording source and original
+validation action; a separately admitted permanent read-only helper verifies independent file criteria.
+Regression covers exact candidate/pin/trial identity, private proof/real lineage, no replay/source rewrite,
+malformed/stale/forged evidence, retirement, caller/owner/reviewer revocation, transactional rollback,
+restart/retention, version competition and shared API/CLI/executor/MCP/HTTP/GUI requests. Publication
+audit is historical after evidence retention; original trial actions must already be confirmed.
+Stopped-source semantic recording and partial executable-recovery trial adoption remain outstanding.
+No desktop/device/browser input or native acceptance is exercised.
+
 HTTP control admission: owned loopback regression covers ordinary-poll exhaustion, separate bounded
 pause/cancel/stop_all/shutdown admission, closed DAG pauses, client/server transport reserves, live
 principal ownership/role/token revocation, malformed/marked execution refusal and legacy gate refusal.

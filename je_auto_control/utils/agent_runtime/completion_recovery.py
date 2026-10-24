@@ -133,7 +133,8 @@ def _effect(runtime: Any, row: dict) -> dict:
     return effect
 
 
-def _template(runtime: Any, effect: dict) -> AgentTaskSpec:
+def completion_spec(runtime: Any, effect: dict) -> AgentTaskSpec:
+    """Derive the exact no-action verification scope shared by admission and evidence consumers."""
     spec = detached(effect["spec"])
     spec.update(goal="Reviewed completion: " + spec["goal"][:15940], mode="external", actions=[])
     for key in ("dag_batch", "skill_pin"):
@@ -159,7 +160,7 @@ def control_completion(recovery: Any, operation: str, row: dict, request: dict, 
     effect = _effect(runtime, row)
     # pylint: disable-next=protected-access  # reason: inspect only the host-configured original adapter, without probing
     _require_target(runtime._targets.get(effect["spec"]["target"]))
-    spec = _template(runtime, effect)
+    spec = completion_spec(runtime, effect)
     details = _details(runtime, row, effect, ownership)
     owned = ownership_review(ownership, details["source_snapshot"])
     if operation == "preview_completion":

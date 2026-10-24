@@ -4,17 +4,19 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from typing import Any
+from typing import Any, Callable
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import detached
 from je_auto_control.utils.agent_runtime.policy import owns_task, durable_payload
 from je_auto_control.utils.agent_runtime.skill_parameters import digest, instantiate, parameter_schema, repair_data
 from je_auto_control.utils.agent_runtime.skill_recording import recorded_spec, assert_verified
+from je_auto_control.utils.agent_runtime.skill_completion import check_skill_completion, publication_details
 from je_auto_control.utils.agent_runtime.skill_reauthorization import (
     SkillReauthorization, OPERATIONS as AUTHORIZATION_OPERATIONS, existing_authorization,
 )
-from je_auto_control.utils.rbac.authorization import current_authorization
+from je_auto_control.utils.rbac.authorization import current_authorization, AuthorizationError
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 
 OPERATIONS = ("record", "repair", "list", "get", "preview", "validate", "accept", "run") + AUTHORIZATION_OPERATIONS
 
@@ -22,8 +24,11 @@ OPERATIONS = ("record", "repair", "list", "get", "preview", "validate", "accept"
 class AgentSkills:
     """Keep reviewed skills in the task database, separate from mutable legacy action macros."""
 
-    def __init__(self, runtime: Any) -> None:
+    def __init__(self, runtime: Any, *, completion_authority: Callable | None = None,
+                 completion_template: Callable | None = None) -> None:
         self.runtime = runtime
+        self._completion_authority = completion_authority
+        self._completion_template = completion_template
 
     def control(self, operation: str, request: Any = None) -> dict:
         """Perform a fixed owner-scoped skill operation; accepted snapshots never mutate."""
@@ -59,7 +64,7 @@ class AgentSkills:
         with self.runtime.store.connection() as connection:
             publication = connection.execute("SELECT * FROM agent_skill_publications WHERE candidate_id=?",
                                              (candidate_id,)).fetchone()
-        result["publication"] = dict(publication) if publication is not None else None
+            result["publication"] = publication_details(connection, publication)
         return result
 
     def task_pin(self, row: dict) -> dict:
@@ -151,29 +156,58 @@ class AgentSkills:
                 "purpose": purpose, "digest": candidate["digest"]}
 
     def _accept(self, request: dict) -> dict:
-        self._fields(request, {"candidate_id", "task_id", "expected_version", "note"})
-        candidate = self._get(request["candidate_id"])
+        self._fields(request, {"candidate_id", "task_id", "expected_version", "note"}, {'completion_task_id'})
+        try:
+            with DeferredAuthorization.capture().scope():
+                return self._publish(request)
+        except AuthorizationError as error:
+            raise AgentTaskError('skill publication authority changed; review again') from error
+
+    def _publish(self, request: dict) -> dict:
         note = _note(request["note"])
         expected = request["expected_version"]
         if isinstance(expected, bool) or not isinstance(expected, int) or expected < 0:
             raise AgentTaskError("expected_version must be a nonnegative integer")
-        row = self.runtime._row(request["task_id"])
-        assert_verified(row)
         with self.runtime.store.connection(write=True) as connection:
+            candidate = self._get(request['candidate_id'])
+            row = self.runtime._row(request['task_id'])
+            proof = (self._completion_proof(connection, row, request['completion_task_id'])
+                     if 'completion_task_id' in request else None)
+            if proof is None:
+                assert_verified(row)
             self._check_trial(connection, candidate, row)
-            latest = connection.execute("SELECT COALESCE(MAX(version),0) FROM agent_skill_candidates "
-                                        "WHERE skill_id=?", (candidate["skill_id"],)).fetchone()[0]
-            if latest != expected or candidate["provenance"]["parent_version"] != expected:
-                raise AgentTaskError("skill version changed; review the current published version")
-            cursor = connection.execute("UPDATE agent_skill_candidates SET state='accepted',version=? "
-                "WHERE id=? AND state='draft'", (expected + 1, candidate["id"]))
-            if cursor.rowcount != 1:
-                raise AgentTaskError("skill candidate was already accepted")
-            identity = current_authorization()
-            connection.execute("INSERT INTO agent_skill_publications VALUES (?,?,?,?,?)",
-                               (candidate["id"], row["id"], identity.user_id if identity else "local-host",
-                                note, time.time()))
+            self._record_publication(connection, candidate, row, note, expected, proof)
+            if proof is not None:
+                if self._completion_proof(connection, row, request['completion_task_id']) != proof:
+                    raise AgentTaskError('skill completion proof changed during publication')
+            with DeferredAuthorization.capture().scope():
+                if not owns_task(candidate['owner'], current_authorization()):
+                    raise AgentTaskError('skill publication ownership changed')
         return self._get(candidate["id"])
+
+    def _completion_proof(self, connection: Any, row: dict, task_id: Any) -> dict:
+        if self._completion_authority is None or self._completion_template is None:
+            raise AgentTaskError('runtime has no reviewed skill completion provider')
+        return check_skill_completion(self.runtime, connection, row, task_id,
+                                      self._completion_authority, self._completion_template, digest)
+
+    @staticmethod
+    def _record_publication(connection: Any, candidate: dict, row: dict, note: str, expected: int,
+                            proof: dict | None) -> None:
+        latest = connection.execute('SELECT COALESCE(MAX(version),0) FROM agent_skill_candidates WHERE skill_id=?',
+                                    (candidate['skill_id'],)).fetchone()[0]
+        if latest != expected or candidate['provenance']['parent_version'] != expected:
+            raise AgentTaskError('skill version changed; review the current published version')
+        cursor = connection.execute("UPDATE agent_skill_candidates SET state='accepted',version=? "
+                                    "WHERE id=? AND state='draft'", (expected + 1, candidate['id']))
+        if cursor.rowcount != 1:
+            raise AgentTaskError('skill candidate was already accepted')
+        identity = current_authorization()
+        connection.execute('INSERT INTO agent_skill_publications VALUES (?,?,?,?,?)',
+                           (candidate['id'], row['id'], identity.user_id if identity else 'local-host',
+                            note, time.time()))
+        if proof is not None:
+            connection.execute('INSERT INTO agent_skill_completions VALUES (?,?)', (candidate['id'], json.dumps(proof)))
 
     @staticmethod
     def _check_trial(connection: Any, candidate: dict, row: dict) -> None:

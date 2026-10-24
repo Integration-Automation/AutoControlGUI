@@ -358,6 +358,15 @@ Crash-safe input ownership uses a durable resource witness before dispatch/input
 
 Managed skills record verified semantic flows into immutable candidates. `manage_agent_skill` previews typed parameters, runs a separate validation task, and publishes a numbered version only after explicit review of that candidate's verified success. Repairs are new selector candidates with fresh validation; tasks pin their version and digest. AC/MCP/REST/CLI and the Agent Tasks Actions menu share these operations.
 
+For an interrupted validation trial whose actions are all confirmed, explicitly review/create and
+finish a separate read-only completion task, then call `manage_agent_skill("accept", {...})` with the
+original `task_id` and optional `completion_task_id`. Publication retains the exact candidate/trial
+hash/pin, up to sixteen real read-only recovery links, fresh authority and independently verified
+retirement. The original stays stopped; its actions are not replayed. The Actions menu can prepare
+the request for review. Publication keeps historical completion IDs/hashes after transient reader
+evidence expires; unpublished adoption still needs retained evidence. Stopped-source recording and
+partial executable-recovery trial adoption remain in `Progress.md`.
+
 Managed tasks retain live origin path ceilings: removing a source root blocks later actions, trigger fires and skill trials. MCP client roots are isolated per session; retiring that client authority revokes its ceilings. Static host policy remains valid until explicitly replaced. Worker shutdown cancels actual running work, including model initialization before input acquisition, while unstarted deliveries remain durable.
 
 Experimental [managed agent tasks](docs/AGENT_TASKS.md) provide owner-scoped submit/observe/act/verify,
