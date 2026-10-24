@@ -1,5 +1,12 @@
 # AutoControl Architecture
 
+control_admission classifies only fixed stop routes and closed DAG pause bodies. The shared client
+uses existing reserved transport slots and an internal marker for multiplexed DAG pauses. REST
+selects a separate bounded per-IP bucket in the exact built-in auth gate, then retains live principal,
+role, ownership and ordinary handler checks. Marked non-pause DAG bodies refuse before dispatch;
+custom gates keep their own contract. Both lanes share authentication failure/lockout state while
+ordinary polls cannot spend stop tokens. Input cleanup and success publication are unchanged.
+
 completion_recovery derives closed read-only task specifications from reviewed stopped sources. A trusted
 CompletionBinding inserts private proof alongside real recovery lineage in the task transaction; model
 options never select it. Runtime routes bound tasks to cached permanent ReadOnlyNativeTarget proxies,

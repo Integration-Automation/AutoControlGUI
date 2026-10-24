@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Tuple
 
 from je_auto_control.utils.rbac.policy import capability_for_route
 from je_auto_control.utils.agent_runtime.routes import OPERATIONS as _AGENT_OPERATIONS
+from je_auto_control.utils.agent_runtime.control_admission import CONTROL_HEADER
 
 
 _BEARER_SCHEME_NAME = "BearerAuth"
@@ -307,6 +308,11 @@ for _operation in _AGENT_OPERATIONS:
 _ENDPOINT_METADATA[("GET", "/agent/tasks")] = {"summary": "List owned managed tasks.", "tag": "agent"}
 _ENDPOINT_METADATA[("GET", "/agent/targets")] = {"summary": "List passive managed target metadata.", "tag": "agent"}
 _ENDPOINT_METADATA[("GET", "/agent/task")] = {"summary": "Read one owned task.", "tag": "agent"}
+_ENDPOINT_METADATA[("POST", "/agent/dag")]['params'] = [{
+    'name': CONTROL_HEADER, 'in': 'header', 'required': False,
+    'schema': {'type': 'string', 'enum': ['1']},
+    'description': 'Use bounded control admission only for closed pause_batch or local_task-pause bodies.',
+}]
 
 
 def known_endpoints() -> List[Tuple[str, str]]:

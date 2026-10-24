@@ -132,7 +132,6 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      `WIP`：完整套件曾在 `test_dag_managed_loopback.py::test_distinct_targets_run_concurrently_with_destination_verification`
      偶發提交 HTTP 409，另一節點等待後限流；該次為 5,391 passed／17 skipped／1 failed。
      單獨 20 次與整檔 60 次回歸均未重現；仍須取得最初拒絕原因，不能以後續通過宣稱已修復。
-     該次 pause 亦回傳 429；須核對大量狀態查詢下，已授權 pause／cancel／stop 的控制通道優先權。
    - 重跑三平台型別、Ruff／Bandit、檔案／函式／複雜度及文件計數，檢查新增 lint 問題；
      AutoControl 全套 Pylint 仍有既有問題，不能把局部模組通過當全套零問題。
      WebRunner 既有全套 mypy／flake8／嚴格 Sphinx 債務見其 `Progress.md` #23，不能標示全綠。

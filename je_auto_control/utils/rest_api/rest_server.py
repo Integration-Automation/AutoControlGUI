@@ -47,6 +47,7 @@ from je_auto_control.utils.rest_api.rest_handlers import (
 from je_auto_control.utils.rest_api.rest_metrics import RestMetrics
 from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
 from je_auto_control.utils.agent_runtime.routes import route as agent_route, OPERATIONS as AGENT_OPERATIONS
+from je_auto_control.utils.agent_runtime.control_admission import CONTROL_HEADER, CONTROL_PATHS, control_request
 
 
 # What a route handler is allowed to fail with. AutoControlException is the
@@ -236,7 +237,9 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         The caller is ``None`` under the shared token: there is no user to
         hold a role, so there is nothing to authorise.
         """
-        result = self._authenticate(client_ip)
+        control = method == 'POST' and (path in CONTROL_PATHS
+                    or path == '/agent/dag' and self.headers.get(CONTROL_HEADER) == '1')
+        result = self._authenticate(client_ip, control=control)
         if result.verdict != "ok":
             if result.verdict == "unauthorized":
                 self._metrics().record_failed_auth()
@@ -255,6 +258,16 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
             return False, None
         return True, result.context
 
+    def _refuse_control_body(self, method: str, path: str, client_ip: str,
+                             caller: Optional[AuthorizationContext], body: Any) -> bool:
+        """A caller-marked multiplexed route must contain only a closed stop operation."""
+        if path != '/agent/dag' or self.headers.get(CONTROL_HEADER) != '1' or control_request(path, body):
+            return False
+        self._send_json({'error': 'control admission accepts only closed DAG pause requests'}, status=400)
+        self._audit(method, path, client_ip, 'invalid_control', caller)
+        self._metrics().record_request(method, path, 400)
+        return True
+
     def _refuse_privileged_commands(self, method: str, path: str, client_ip: str,
                                     caller: Optional[AuthorizationContext],
                                     body: Any) -> bool:
@@ -264,6 +277,8 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         not to run every command: signing a file or starting a server needs
         more. The whole body is refused before its first action runs.
         """
+        if self._refuse_control_body(method, path, client_ip, caller, body):
+            return True
         if caller is None or body is None:
             return False
         denied = denied_command_in(body, caller)
@@ -290,13 +305,15 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
     def _gate(self) -> RestAuthGate:
         return self.server.auth_gate  # type: ignore[attr-defined]
 
-    def _authenticate(self, client_ip: str) -> AuthResult:
+    def _authenticate(self, client_ip: str, *, control: bool = False) -> AuthResult:
         """Adapt check-only gates, requiring identity when the server uses RBAC."""
         gate = self._gate()
         authenticate = getattr(gate, "authenticate", None)
         header = self.headers.get("Authorization")
         result: AuthResult
-        if callable(authenticate):
+        if control and type(gate) is RestAuthGate:  # pylint: disable=unidiomatic-typecheck  # reason: custom gates retain their own authentication contract
+            result = gate.authenticate(client_ip=client_ip, header_value=header, control=True)
+        elif callable(authenticate):
             result = authenticate(client_ip=client_ip, header_value=header)
         else:
             result = AuthResult(gate.check(client_ip=client_ip, header_value=header))

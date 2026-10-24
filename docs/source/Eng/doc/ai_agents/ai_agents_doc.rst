@@ -294,6 +294,14 @@ Windows shared-desktop tasks require unlocked inactivity for sixty seconds. Phys
 pause through an independent helper notice. ``stop_all_agent_tasks`` or ``agent-task stop-all`` cancels
 visible tasks. Other shared desktops need an activity adapter. Monotonic budget history survives restart.
 
+HTTP pause/cancel/stop-all/shutdown use a separate per-IP bucket (120 requests/minute, burst 30).
+Status polling cannot consume this reserve; authentication, live roles, ownership and retirement remain.
+The shared client reserves transport slots for DAG pauses too. On ``POST /agent/dag``, the internal
+``X-AutoControl-Agent-Control: 1`` marker requires an exact ``pause_batch`` request or ``local_task``
+whose operation is ``pause`` and body contains only ``task_id``. Other marked bodies return 400 before
+dispatch; the reserve itself still returns 429 when exhausted. Custom gates retain their own contract.
+This is bounded HTTP admission, not an OS/network scheduling guarantee.
+
 Use ``get_agent_task_receipts`` for per-row results and ``reconcile_agent_task`` to record an explicit
 owner witness for an uncertain effect before resume. Task metadata links history, journal and reports.
 Generated cache expires after thirty days; user outputs and external journals are preserved. Images

@@ -6,8 +6,10 @@ import threading
 import time
 from contextvars import copy_context
 from typing import Any, Callable, NoReturn
+from urllib.parse import urlsplit
 
 from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError, AgentObservationStale
+from je_auto_control.utils.agent_runtime.control_admission import CONTROL_HEADER
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
 from je_auto_control.utils.http_client.http_client import build_call, urllib_transport
 
@@ -29,7 +31,7 @@ def request_json(url: str, *, body: Any = None, token: str | None = None,
 
     def fetch() -> None:
         try:
-            headers = _headers(url, token, delegate_local)
+            headers = _headers(url, token, delegate_local, control=control)
             from je_auto_control.utils.egress.egress_policy import get_egress_policy
             get_egress_policy().check(url)
             call = build_call(url, method="POST" if body is not None else "GET",
@@ -58,8 +60,10 @@ def request_json(url: str, *, body: Any = None, token: str | None = None,
     raise AgentTaskError("local HTTP request timed out")
 
 
-def _headers(url: str, token: str | None, delegate_local: bool) -> dict[str, str]:
+def _headers(url: str, token: str | None, delegate_local: bool, *, control: bool = False) -> dict[str, str]:
     headers = {"Authorization": f"Bearer {token}"} if token else {}
+    if control and urlsplit(url).path == '/agent/dag':
+        headers[CONTROL_HEADER] = '1'
     if not delegate_local:
         return headers
     path = _local_path(url, token)
@@ -75,7 +79,6 @@ def _headers(url: str, token: str | None, delegate_local: bool) -> dict[str, str
 
 
 def _local_path(url: str, token: str | None) -> str:
-    from urllib.parse import urlsplit
     try:
         parsed = urlsplit(url)
         checks = (parsed.scheme == "http", parsed.hostname == "127.0.0.1", parsed.port is not None,

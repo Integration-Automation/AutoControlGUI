@@ -1,5 +1,11 @@
 # Changelog
 
+Reserve independently bounded per-IP REST admission for existing runtime pause/cancel/stop_all/shutdown
+and closed DAG batch/node pauses. Ordinary polling keeps its existing limits and cannot consume the
+stop reserve. Shared clients use existing control transport slots and mark only closed DAG pauses;
+marked execution bodies refuse before dispatch. Live authentication, roles, ownership, audit and input
+retirement remain enforced; custom authentication gates preserve their existing contract.
+
 Add recovery preview_completion/create_completion for explicitly reviewed, separately owned read-only
 verification tasks after confirmed effects. Atomically bind source/effect snapshots, principals and actual
 successor lineage in a private additive table. Refuse action dispatch, ordinary executable recovery,

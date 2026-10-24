@@ -1,5 +1,11 @@
 # Capability matrix
 
+HTTP control admission: owned loopback regression covers ordinary-poll exhaustion, separate bounded
+pause/cancel/stop_all/shutdown admission, closed DAG pauses, client/server transport reserves, live
+principal ownership/role/token revocation, malformed/marked execution refusal and legacy gate refusal.
+Both buckets retain the configured per-IP rate/burst; control is not exempt from authentication or
+rate limits. This proves managed HTTP admission only, not native input retirement or OS/network QoS.
+
 Read-only completion seam: standard host desktop/file proxies declare a passive contract, not native
 readiness. Owned helpers/fake targets verify fresh file observations, no executable operations/input ACKs,
 no host workflow launch or witness recovery, exact capability versions, closed/owner/operation fences,

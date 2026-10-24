@@ -189,6 +189,12 @@ Windows 共用桌面需解鎖並閒置 60 秒，實體鍵鼠活動經 helper 獨
 ``stop_all_agent_tasks`` 或 ``agent-task stop-all`` 停止可見任務；其他共用桌面需活動 adapter。
 單調時間預算跨重啟保留，不因系統時間倒退而延長。
 
+HTTP 暫停／取消／停止全部／關閉服務使用獨立每 IP 配額（每分鐘 120 次、突發 30 次），狀態查詢
+不會耗用；登入、即時角色、任務歸屬及清理仍須通過。共用客戶端亦為 DAG 暫停保留傳輸容量。
+``POST /agent/dag`` 的內部 ``X-AutoControl-Agent-Control: 1`` 標頭僅接受精確的 ``pause_batch``，
+或 operation 為 ``pause``、body 僅有 ``task_id`` 的 ``local_task``。其他帶標記的 body 在派送前
+回傳 400；控制配額本身耗盡仍回傳 429。自訂驗證閘門保留自己的契約；此機制不保證 OS／網路排程。
+
 ``get_agent_task_receipts`` 提供逐筆結果；``reconcile_agent_task`` 記錄擁有者對不明結果的確認，
 不會自動恢復或標記成功。任務 metadata 連結歷史、journal 與報告。快取預設保留 30 天，
 保留使用者輸出與外部 journal；影像預設只留在記憶體，持久化需明確啟用且經嚴格遮罩。

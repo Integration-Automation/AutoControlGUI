@@ -551,3 +551,4 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261025-06 | 2026-10-25 | Reduce Android guard subprocess overhead without extending input deadlines | #done #agent #android #latency | [2026-10-c](2026-10-c.md) |
 | U-20261025-07 | 2026-10-25 | Add permanently read-only helpers for fresh completion observations | #done #agent #recovery #readonly | [2026-10-c](2026-10-c.md) |
 | U-20261025-08 | 2026-10-25 | Review confirmed effects through independent read-only completion tasks | #done #agent #recovery #verification | [2026-10-c](2026-10-c.md) |
+| U-20261025-09 | 2026-10-25 | Reserve bounded authenticated stop admission independently of status polling | #done #agent #control #http | [2026-10-c](2026-10-c.md) |

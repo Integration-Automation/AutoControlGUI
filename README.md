@@ -187,6 +187,13 @@ the task ID/key and block dependants. The GUI displays retained task IDs. Remote
 the administrator's registered host; local principal/store paths and origin witnesses stay local.
 Production multi-host setup and native/device acceptance remain separately tracked.
 
+Managed HTTP pause/cancel/stop-all/shutdown requests have a separate per-IP reserve with the same
+120-per-minute rate and 30-request burst as ordinary traffic, so polling cannot exhaust stop admission.
+Authentication, live roles, task ownership, audit and bounded input retirement still apply. The shared
+client also reserves transport capacity for DAG batch/node pauses; its control marker admits only closed
+pause requests on `/agent/dag`. Other marked DAG operations fail before dispatch. Custom auth gates
+retain their own admission contract. This does not guarantee priority over a saturated OS/network.
+
 Managed task success is published after input cleanup is confirmed. If cleanup fails or remains busy,
 the task requires review and keeps its input lease; a crash before confirmation remains recoverable.
 Completion uses conditional state transitions so concurrent cancellation retains priority. Status and

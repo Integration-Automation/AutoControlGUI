@@ -1,5 +1,14 @@
 # Public API lifecycle
 
+Existing HTTP pause/cancel/stop_all/shutdown routes use an independent per-IP token bucket with the
+same default 120 requests/minute and burst 30 as ordinary requests. Authentication and failed-token
+lockout, live RBAC/delegation, owner scope, audit/metrics and retirement remain mandatory. Normal
+request limits are unchanged. The shared client recognizes exact DAG pause_batch/local_task-pause
+bodies, reserves existing control transport slots and adds X-AutoControl-Agent-Control: 1 to /agent/dag.
+The server validates the closed body before dispatch; marked execution/unknown bodies return 400.
+Control exhaustion remains 429. Custom gates are called under their existing signature/policy instead
+of silently bypassed. No new public command or GUI action is needed: existing controls inherit it.
+
 manage_agent_recovery adds preview_completion/create_completion to its existing API/AC/MCP/REST/CLI/Builder
 operation enum and thin GUI Actions. Preview returns source_task/effect_task/snapshot/verification_spec
 without target access. Create accepts only task_id/snapshot/note, plus the existing optional source_owner

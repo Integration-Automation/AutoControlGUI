@@ -10,6 +10,7 @@ from urllib.parse import urlencode, urlparse
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.service import default_connection_path
 from je_auto_control.utils.agent_runtime.transport import request_json
+from je_auto_control.utils.agent_runtime.control_admission import control_request
 
 
 def _connection_identity(metadata: dict[str, Any]) -> str:
@@ -84,6 +85,7 @@ class AgentRuntimeClient:
             if operation == "get":
                 path += "?" + urlencode(body or {})
             return request_json(url + path, token=metadata["token"], timeout=timeout, delegate_local=True)
-        return request_json(url + f"/agent/{operation}", body={} if body is None else body,
+        payload = {} if body is None else body
+        return request_json(url + f"/agent/{operation}", body=payload,
                             token=metadata["token"], timeout=timeout,
-                            control=operation in {"pause", "cancel", "shutdown", "stop_all"}, delegate_local=True)
+                            control=control_request(f'/agent/{operation}', payload), delegate_local=True)
