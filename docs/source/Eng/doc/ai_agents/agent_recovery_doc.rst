@@ -95,8 +95,9 @@ All four operations require owner/operator ``drive_input``. API/AC/MCP/REST/Buil
 CLI uses ``agent-task recovery review_authorization|create_authorized request.json``. Agent tasks Actions
 adds **Review successor authorization** and **Create reauthorized successor**. Review fills the dedicated
 Recovery editor, with an empty note; creation always requires the separate explicit action.
-Deterministic targets, authenticated loopback HTTP and offscreen Qt validate these contracts. Published skill renewal is described below; trigger renewal, application-state restoration and
-actual model/native acceptance remain open.
+Deterministic targets, authenticated loopback HTTP and offscreen Qt validate these contracts. Skill and
+trigger renewal are described below; application-state restoration and actual model/native acceptance
+remain open.
 
 Published skill authorization renewal
 -------------------------------------
@@ -128,4 +129,38 @@ Skill surfaces are ``AC_agent_skill``, MCP ``ac_agent_skill``, ``POST /agent/ski
 operations through its selector and explicit **Apply skill operation** Action; review never submits
 a task or publishes a version. Owner/operator ``drive_input`` is required even for direct review.
 Controlled fake application, authenticated loopback and offscreen GUI evidence do not replace native
-acceptance. Explicit trigger re-registration remains in Progress.md.
+acceptance. Explicit trigger re-registration is described below; actual application/native acceptance remains open.
+
+Trigger authorization and event continuity
+------------------------------------------------------------
+
+Call ``manage_agent_trigger("review_authorization", {"trigger_id": source_id})`` to review the original
+template, fixed schedule/configuration and accepted event count without target access. Review returns
+``snapshot``, ``authorization_review``, clipped context and ``spec``. The snapshot includes the source
+row and a streamed digest of accepted event identities. Changed source/config/events or current authority
+require another review; an inaccessible fixed watch path or criterion withholds a runnable specification.
+
+Explicit ``create_authorized`` requires ``trigger_id``, ``snapshot``, ``authorization_review``, reviewed
+``spec`` and nonempty ``note``. Only unavailable old origins and equal/narrower roots may change, within
+the original/live/current intersection. Goal, full actions, inputs, tools/apps/settings/budgets/criteria,
+kind/config and ``max_pending`` stay fixed. Both caller and original owner must retain ``drive_input``.
+Creation atomically enables one new binding for future events, disables/retires its source and stores
+actor/context/approved-root proof. No task is resumed, no target acquired and no input quarantine cleared.
+Ordinary ``enable`` revalidates the original live authority; retired bindings cannot be enabled again.
+
+Accepted keys, payload hashes and original task IDs share one lineage history. Duplicates inherited from
+an earlier generation only return that task, including its expired tombstone, and never redispatch queued
+old work. New events count outstanding tasks across the lineage against the original pending limit.
+Events accepted by the current binding retain normal queued retry dispatch. Task creation, local event
+receipt and lineage receipt commit together. Schedule windows restart after creation without replaying
+missed slots; file configuration/checkpoints remain. Multiple renewals, restart and ancestor removal keep
+deduplication. Matching approval retries return the same replacement; a removed child stays retired.
+Proof/history remains while any lineage binding exists and clears after explicit removal of the family.
+``get`` exposes child ``reauthorization`` and parent ``replacement`` metadata, without mutating old specs.
+
+Use ``AC_agent_trigger``, MCP ``ac_agent_trigger``, ``POST /agent/trigger``, Builder or
+``agent-task trigger review_authorization|create_authorized request.json``. GUI Trigger operations
+provides both choices. Review prepares its authorization JSON request with an empty note; creation
+requires the separate explicit Action. Selection changes and late replies cannot apply another source's
+request, and review never fills the ordinary task form. Controlled fake/loopback/offscreen evidence
+does not replace actual source/application/native acceptance.

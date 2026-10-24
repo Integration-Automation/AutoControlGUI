@@ -1,17 +1,24 @@
 # AutoControl
 
+觸發器可明確使用 `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`，再以
+`create_authorized` 提供 `trigger_id`、`snapshot`、`authorization_review`、經審閱的 `spec` 與 `note`。
+新註冊保留完整模板／設定／待處理上限，受原授權、仍有效限制與目前權限交集約束；交易內退休舊綁定，
+並啟用未來通知。共用歷史讓已接受事件與未完成任務跨更新、移除及重啟保留，沿用的舊排隊事件不再派送。
+排程從未來時段開始，檔案檢查點保留。API／AC／MCP／REST／CLI／Builder 及 GUI 觸發器選單共用流程；
+一般啟用不能取代失效授權，審閱只準備註記留空的請求。
+
 已發布技能可用 `manage_agent_skill("review_authorization", {"candidate_id":"..."})`，再明確
 `create_authorized`，提供 `candidate_id`、`snapshot`、`authorization_review`、經審閱的 `spec` 與
 `note`。完整計畫與參數定義固定；保留原根目錄上限及仍有效限制，與目前權限取交集。流程只建立
 同一技能的新草稿及稽核證據，須重新驗證並明確發布下一版，舊版本不變。相同核准去重，過期版本／
-授權內容拒絕。API／AC／MCP／REST／CLI／Builder 與 GUI 技能操作選單共用此流程；trigger 更新另列待辦。
+授權內容拒絕。API／AC／MCP／REST／CLI／Builder 與 GUI 技能操作選單共用此流程；trigger 更新使用上方獨立流程。
 
 來源授權失效的停止任務，可明確使用 `review_authorization`，再以 `create_authorized` 提供
 `task_id`、`snapshot`、經審閱的 `spec`、`note` 與 `authorization_review`。新任務保留所有仍有效的
 來源限制，將目前權限與原根目錄上限取交集；根目錄只可維持或縮小，其餘權限、模式／模型、預算及
 完成條件固定。核准證據與唯一新任務在同一交易保存；來源及已撤銷的見證不變。既有共用介面均提供
 這兩種操作，GUI Actions 另有授權審閱／建立命令，詳見[恢復指南](../docs/source/Zh/doc/ai_agents/agent_recovery_doc.rst)。
-任務恢復不更新 trigger、不解除輸入隔離，也不重建應用狀態；技能更新使用上方獨立流程。
+任務恢復不解除輸入隔離，也不重建應用狀態；技能與 trigger 使用上方獨立更新流程。
 
 停止的任務可用 `manage_agent_recovery("preview", {"task_id": "..."})` 審閱來源收據與快照，
 不接觸應用程式。有限 skill 提供剩餘動作及逐筆結果；外部 agent／本機模型任務則提供空白目標的

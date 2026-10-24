@@ -200,7 +200,7 @@ def AC_agent_task_submit(spec: Any, idempotency_key: str | None = ...) -> dict[s
     """Validate and submit a task to the explicitly running local service."""
 
 def AC_agent_trigger(operation: str, request: Mapping[str, Any] | None = ...) -> dict[str, Any]:
-    """Register, inspect, pause or fire a durable, preauthorized task trigger."""
+    """Register, inspect, reauthorize, pause or fire a durable task trigger with event deduplication."""
 
 def AC_agent_trigger_list() -> dict[str, Any]:
     """List durable trigger metadata visible to this caller without firing or observing a target."""

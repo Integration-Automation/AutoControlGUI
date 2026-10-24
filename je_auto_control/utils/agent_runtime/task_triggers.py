@@ -13,11 +13,16 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
 from je_auto_control.utils.agent_runtime.policy import TaskPolicy, durable_payload, owns_task
 from je_auto_control.utils.agent_runtime.trigger_config import validate_config, next_due
+from je_auto_control.utils.agent_runtime.trigger_history import require_current, event_state, clear_unused_history
+from je_auto_control.utils.agent_runtime.trigger_registration import insert_registration
+from je_auto_control.utils.agent_runtime.trigger_reauthorization import (
+    TriggerReauthorization, OPERATIONS as AUTHORIZATION_OPERATIONS, authorization_metadata,
+)
 from je_auto_control.utils.rbac.authorization import AuthorizationContext, AuthorizationError, current_authorization
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
-OPERATIONS = ("register", "list", "get", "enable", "disable", "fire", "remove")
+OPERATIONS = ("register", "list", "get", "enable", "disable", "fire", "remove") + AUTHORIZATION_OPERATIONS
 
 
 def _digest(value: Any) -> str:
@@ -65,12 +70,7 @@ class AgentTriggers:
 
     def _insert(self, identifier: str, value: dict, spec: AgentTaskSpec, config: dict, owner: dict, now: float) -> None:
         with self.runtime.store.connection(write=True) as connection:
-            if connection.execute("SELECT COUNT(*) FROM agent_triggers").fetchone()[0] >= 200:
-                raise AgentTaskError("a runtime supports at most two hundred configured task triggers")
-            connection.execute("INSERT INTO agent_triggers VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                (identifier, value.get("name", spec.goal), value["kind"], json.dumps(durable_payload(spec.to_dict())),
-                 json.dumps(owner), json.dumps(config), 1, next_due(value["kind"], config, now), "",
-                 value.get("max_pending", 1), "", now))
+            insert_registration(connection, identifier, value, spec, config, owner, now)
 
     def list(self) -> dict[str, Any]:
         """List visible binding metadata without exposing another owner's task template."""
@@ -96,6 +96,8 @@ class AgentTriggers:
             raise AgentTaskError("trigger requests must be objects")
         if operation == "register":
             return self.register(value)
+        if operation in AUTHORIZATION_OPERATIONS:
+            return TriggerReauthorization(self).control(operation, value)
         if operation == "list":
             if value:
                 raise AgentTaskError("trigger list accepts an empty request")
@@ -108,7 +110,9 @@ class AgentTriggers:
         if operation == "fire":
             return self.fire(row, value["event_key"], value.get("payload", {}))
         if operation == "get":
-            return {"trigger": {key: item for key, item in row.items() if key != "owner"}}
+            with self.runtime.store.connection() as connection:
+                metadata = authorization_metadata(connection, row["id"])
+            return {"trigger": {**{key: item for key, item in row.items() if key != "owner"}, **metadata}}
         with self.runtime._lock("trigger:" + row["id"]):
             row = self._row(row["id"])
             if operation in {"enable", "disable"}:
@@ -120,12 +124,19 @@ class AgentTriggers:
     def _enabled(self, row: dict, enabled: bool) -> dict:
         owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
         if enabled:
+            with self.runtime.store.connection() as connection:
+                require_current(connection, row["id"])
             with DeferredAuthorization(owner).scope():
                 return self._set_enabled(row, True)
         return self._set_enabled(row, False)
 
     def _set_enabled(self, row: dict, enabled: bool) -> dict:
+        if enabled:
+            spec = self.runtime._validated_spec(row["spec"])
+            validate_config(row["kind"], row["config"], TaskPolicy(spec))
         with self.runtime.store.connection(write=True) as connection:
+            if enabled:
+                require_current(connection, row["id"])
             connection.execute("UPDATE agent_triggers SET enabled=?,error='',next_run=? WHERE id=?",
                                (int(enabled), next_due(row["kind"], row["config"], time.time()), row["id"]))
         return {"trigger_id": row["id"], "enabled": enabled}
@@ -134,6 +145,7 @@ class AgentTriggers:
         with self.runtime.store.connection(write=True) as connection:
             connection.execute("DELETE FROM agent_trigger_events WHERE trigger_id=?", (row["id"],))
             connection.execute("DELETE FROM agent_triggers WHERE id=?", (row["id"],))
+            clear_unused_history(connection, row["id"])
         self._stable.pop(row["id"], None)
         return {"trigger_id": row["id"], "removed": True}
 
@@ -155,17 +167,14 @@ class AgentTriggers:
             live = connection.execute("SELECT enabled FROM agent_triggers WHERE id=?", (row["id"],)).fetchone()
             if live is None or not live["enabled"]:
                 return {"deferred": True, "reason": "trigger is disabled or removed"}
-            previous = connection.execute("SELECT * FROM agent_trigger_events WHERE trigger_id=? AND event_hash=?",
-                                          (row["id"], digest)).fetchone()
-            pending = connection.execute("SELECT COUNT(*) FROM agent_trigger_events e "
-                "JOIN agent_tasks t ON t.id=e.task_id "
-                "WHERE e.trigger_id=? AND t.state NOT IN ('succeeded','failed','cancelled','timed_out')",
-                (row["id"],)).fetchone()[0]
+            require_current(connection, row["id"])
+            previous, pending = event_state(connection, row["id"], digest)
         if previous is not None:
             if previous["payload_hash"] != _digest(payload):
                 raise AgentTaskError("event_key was already used with a different payload")
             result = self._event_result(previous["task_id"], duplicate=True)
-            if result["state"] == "queued" and self.runtime.background is not None:
+            if (result["state"] == "queued" and previous["origin_trigger"] == row["id"]
+                    and self.runtime.background is not None):
                 self.runtime.background.start(previous["task_id"])
             return result
         if pending >= row["max_pending"]:

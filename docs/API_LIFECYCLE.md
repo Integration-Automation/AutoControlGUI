@@ -1,5 +1,18 @@
 # Public API lifecycle
 
+Trigger review_authorization takes trigger_id. Explicit create_authorized additionally requires
+snapshot/authorization_review/spec/nonempty note. Preserve template goal/actions/settings/criteria and
+kind/config/max_pending, allowing only reviewed origin replacement and equal/narrower roots. Creation
+atomically enables one future-event registration, disables/retires its source and stores bounded actor/
+context/root proof. Repeated matching approval returns the same binding, including a removed-child
+tombstone; a retired source cannot be reenabled. Ordinary enable now revalidates original live scope.
+Lineage event history retains accepted keys/payload hashes/original task IDs and counts outstanding
+tasks across generations. Inherited duplicates never redispatch queued old work; duplicates accepted
+by the current binding retain normal queued dispatch. Schedule backlogs do not replay, file checkpoints
+persist, and a new event's task/local receipt/lineage receipt commit together. Removing ancestors keeps
+deduplication; explicit removal of the entire lineage clears its proof/history. Shared API/AC/MCP/REST/
+CLI/Builder and separate GUI trigger review/creation use the same contract; no native cleanup is implied.
+
 Managed skills now expose review_authorization/create_authorized. Review takes candidate_id; explicit
 creation takes candidate_id/snapshot/authorization_review/spec/note. Only the current published version
 can be renewed; retain actions, goal, parameter schema, scope/settings and criteria, except unavailable
@@ -8,7 +21,7 @@ Create saves an audited draft in the same lineage, without executing, validating
 Fresh exact-candidate validation and explicit compare-and-set publication remain mandatory. Atomic
 deduplication handles concurrent callers/lost replies/restart; publication/context changes invalidate
 review. All shared skill surfaces and the GUI Skills operation selector expose both explicit operations.
-Neither old versions nor their in-flight pins mutate. Trigger renewal remains in Progress.md.
+Neither old versions nor their in-flight pins mutate. Trigger renewal uses the separate protocol above.
 
 Recovery also supports explicit `review_authorization` and `create_authorized`. Review requires
 `task_id`; creation adds `authorization_review` to the usual snapshot/spec/note request. Only this
@@ -18,8 +31,8 @@ completion criteria stay fixed. An invalid current policy fails closed. Context 
 again. Task/link/actor/context/approved-root evidence commit together; the audit outlives child pruning
 until source retention. Quarantine and old witness files remain unchanged. All four operations use
 owner/operator drive_input; only create/create_authorized dispatch work. CLI, Builder and separate
-GUI authorization Actions share the existing API/AC/MCP/REST route. Skill renewal uses the separate protocol above;
-trigger renewal and application-state restoration remain open. See the Sphinx recovery guide for the full protocol.
+GUI authorization Actions share the existing API/AC/MCP/REST route. Skills and triggers use the separate protocols above;
+application-state restoration remains open. See the Sphinx recovery guide for the full protocol.
 
 `manage_agent_recovery(operation, request)` adds owner/operator-scoped `preview` and `create` for stopped
 skill, external-agent and local-model tasks. Finite preview reports remaining semantic actions, row outcomes and a digest of the exact source

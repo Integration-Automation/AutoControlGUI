@@ -834,3 +834,13 @@ and agent_skill_authorizations linkage atomically, with concurrent-caller dedupl
 check inside the write transaction. Provenance holds actor/context/approved roots. Existing trial/pin/
 publication contracts require fresh validation and explicit next-version acceptance; old candidates
 and task pins never mutate. Shared operation enums reach API/catalog/CLI/Builder and thin GUI selectors.
+
+Trigger authorization: trigger_reauthorization.py binds approval to the source row, streamed event
+digest and effective origin intersection. trigger_registration.py shares bounded future-event insertion
+with ordinary registration. Creation atomically stores one replacement/proof, retires the source and
+seeds trigger_history.py's lineage ledger. Store event binding extends the original task/local-event
+transaction with a lineage receipt. Shared event/pending lookups span all generations; inherited task
+IDs are query-only duplicates and cannot trigger background restart. Original task provenance remains
+unchanged. Ancestor deletion retains history; explicit removal of the whole family clears proofs and
+tombstones. GUI review prepares a blank-note request, checks trigger selection for late responses and
+uses the same explicit operation selector; no business logic moves into Qt.

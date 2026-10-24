@@ -1,5 +1,10 @@
 # Changelog
 
+Add explicit trigger authorization review/replacement while retaining accepted event identities and
+pending limits across generations. Retire the source atomically, activate future notifications, retain
+file checkpoints and refuse schedule backlog replay or inherited queued-task dispatch. Ordinary enable
+revalidates original authority. Expose shared operations and GUI review with selection-bound requests.
+
 Add explicit origin reauthorization of the current published skill into a new immutable draft.
 Preserve plan, parameter schema and authority ceilings, require fresh validation and next-version
 publication, and audit/deduplicate approval atomically. Existing versions and running pins remain

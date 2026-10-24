@@ -1,5 +1,11 @@
 # Capability matrix
 
+Trigger authority renewal: reviewed future-event replacement with original/live/current scope,
+full-template/config preservation, atomic old-binding retirement, lineage deduplication/pending counts,
+retention/removal/restart and rollback evidence. Controlled HTTP/CLI/offscreen GUI confirms passive
+review, explicit creation, owner checks and no inherited queued-task dispatch. This does not prove
+real application/native/installed-model acceptance or restore an old task's application state.
+
 Published skill reauthorization: explicit review/new-draft creation retains the entire plan and
 parameter schema within original/live/current authority. Fresh validation/publication, old-version
 immutability, owner/role isolation, atomic retry/race/rollback and HTTP/CLI/offscreen GUI have controlled

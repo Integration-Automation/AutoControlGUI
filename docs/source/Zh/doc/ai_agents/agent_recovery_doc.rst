@@ -78,7 +78,7 @@ Recovery JSON 編輯器及空白註記，不填入或提交一般任務表單；
 CLI 為 ``agent-task recovery review_authorization|create_authorized request.json``；GUI Actions
 新增「審閱新任務授權」及「建立重新授權的新任務」。審閱只填獨立 Recovery 編輯器，註記留空，
 須另行明確建立。證據使用確定性假目標、已驗證身分的 loopback HTTP 及 offscreen Qt；
-技能更新見下節；trigger 更新、應用狀態重建與實際模型／原生驗收仍列待辦。
+技能與 trigger 更新見下節；應用狀態重建與實際模型／原生驗收仍列待辦。
 
 已發布技能的授權更新
 --------------------------------
@@ -102,5 +102,31 @@ inputs、模式／設定、預算、完成條件及參數定義固定；語義�
 共用介面為 ``AC_agent_skill``、MCP ``ac_agent_skill``、``POST /agent/skill``、Builder 與
 ``agent-task skill review_authorization|create_authorized request.json``；GUI 技能操作選單提供兩種
 操作，須明確執行 Actions 的技能操作，不會自動建立任務或發布版本。直接審閱也須 owner／operator
-的 ``drive_input``。證據限假應用、已驗證身分的 loopback 與 offscreen GUI；原生驗收及 trigger
-明確重新註冊仍列於 Progress.md。
+的 ``drive_input``。證據限假應用、已驗證身分的 loopback 與 offscreen GUI；原生驗收仍列於 Progress.md，trigger 明確重新註冊見下節。
+
+觸發器授權與事件延續
+--------------------------------
+
+``manage_agent_trigger("review_authorization", {"trigger_id": source_id})`` 審閱原模板、固定排程／
+設定及已接受事件數，不接觸目標。回傳 ``snapshot``、``authorization_review``、裁切後授權內容與
+``spec``；快照綁定來源資料列與串流計算的事件摘要。來源／事件／目前權限變更須重新審閱，固定
+監看路徑或完成條件不在新範圍時，不提供可執行規格。
+
+明確 ``create_authorized`` 須提供 ``trigger_id``、``snapshot``、``authorization_review``、
+經審閱的 ``spec`` 與非空 ``note``。只可替換失效舊來源、維持或縮小根目錄，保留原上限及所有仍
+有效限制，與目前權限取交集。目標、完整動作、inputs、工具／app／設定／預算／完成條件及
+kind／config／``max_pending`` 固定；caller 與原 owner 均須保有 ``drive_input``。
+交易內啟用新綁定的未來事件、停用並退休原綁定，保存操作人／授權內容／核准目錄證據。
+不恢復舊任務、不取得目標、不清除輸入隔離；一般 ``enable`` 重新驗證原授權，退休綁定不能重啟。
+
+同系譜共用已接受 key、payload 摘要與原任務 ID。沿用的舊事件只回傳原任務或到期 tombstone，
+不重派舊排隊工作；所有未完成任務共同計入原待處理上限。本代接受的事件保留原本排隊重試派送。
+新任務、本代事件收據及系譜收據在同一交易提交。排程從建立後的未來時段開始，不補跑過期時段；
+檔案設定與檢查點保留。多代更新、重啟與移除祖先仍去重；相同核准重試回傳同一綁定，已移除的
+子綁定不復活。系譜尚有綁定時保留證據／歷史，整個系譜明確移除後清理。``get`` 提供新綁定
+``reauthorization`` 與舊綁定 ``replacement``，不修改舊規格。
+
+共用介面為 ``AC_agent_trigger``、MCP ``ac_agent_trigger``、``POST /agent/trigger``、Builder 及
+``agent-task trigger review_authorization|create_authorized request.json``。GUI 觸發器操作選單
+提供兩種選擇：審閱只準備註記留空的授權 JSON，須另行明確執行建立；選取變更及晚到回覆不能套用
+其他來源的請求，也不改普通任務表單。假目標／loopback／offscreen 證據不代表實際應用或原生驗收。

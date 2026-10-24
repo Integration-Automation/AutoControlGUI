@@ -11,6 +11,7 @@ from typing import Any, Iterator, List
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import STATES, TERMINAL, detached
+from je_auto_control.utils.agent_runtime.trigger_history import bind_event
 from je_auto_control.utils.sqlite_support import require_sqlite3
 
 _SCHEMA = """
@@ -49,6 +50,13 @@ CREATE TABLE IF NOT EXISTS agent_triggers (
 CREATE TABLE IF NOT EXISTS agent_trigger_events (
  trigger_id TEXT NOT NULL REFERENCES agent_triggers(id), event_hash TEXT NOT NULL, payload_hash TEXT NOT NULL,
  task_id TEXT NOT NULL, created REAL NOT NULL, PRIMARY KEY(trigger_id,event_hash));
+CREATE TABLE IF NOT EXISTS agent_trigger_authorizations (
+ source_trigger TEXT PRIMARY KEY, trigger_id TEXT NOT NULL UNIQUE, lineage TEXT NOT NULL,
+ snapshot TEXT NOT NULL, spec_hash TEXT NOT NULL, details TEXT NOT NULL,
+ created REAL NOT NULL, contract INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_trigger_event_history (
+ lineage TEXT NOT NULL, event_hash TEXT NOT NULL, payload_hash TEXT NOT NULL,
+ task_id TEXT NOT NULL, origin_trigger TEXT NOT NULL, created REAL NOT NULL, PRIMARY KEY(lineage,event_hash));
 CREATE TABLE IF NOT EXISTS agent_evidence_pending (
  task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE);
 CREATE TABLE IF NOT EXISTS agent_skill_candidates (
@@ -119,6 +127,7 @@ def request_spec_digest(spec: dict) -> str:
 def _bind_trigger_event(connection: Any, event: tuple[str, str, str] | None, task_id: str, now: float) -> None:
     if event is not None:
         connection.execute("INSERT INTO agent_trigger_events VALUES (?,?,?,?,?)", (*event, task_id, now))
+        bind_event(connection, event, task_id, now)
 
 
 class AgentTaskStore:

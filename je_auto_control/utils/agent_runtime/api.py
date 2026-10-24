@@ -111,7 +111,7 @@ def prune_agent_tasks(keep_days: int = 30) -> dict[str, Any]:
 
 
 def manage_agent_trigger(operation: str, request: Mapping[str, Any] | None = None) -> dict[str, Any]:
-    """Register, inspect, pause or fire a durable, preauthorized task trigger."""
+    """Register, inspect, reauthorize, pause or fire a durable task trigger with event deduplication."""
     return AgentRuntimeClient().call("trigger", {"operation": operation, "request": dict(request or {})})
 
 

@@ -1,12 +1,21 @@
 # AutoControl
 
+Triggers can explicitly use `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`,
+then `create_authorized` with `trigger_id`, `snapshot`, `authorization_review`, reviewed `spec` and `note`.
+The new registration preserves its full template/config/pending limit within original/live/current
+authority, retires the old binding atomically and enables future notifications. Shared lineage history
+keeps accepted keys and outstanding tasks across renewal, removal and restart; inherited queued events
+are never redispatched. Schedule windows restart in the future and file checkpoints remain. API/AC/MCP/
+REST/CLI/Builder and the GUI trigger selector share this explicit flow; ordinary enable cannot replace
+expired authority. Review only prepares a request with a blank note.
+
 Published skills can use `manage_agent_skill("review_authorization", {"candidate_id":"..."})`,
 then explicit `create_authorized` with `candidate_id`, `snapshot`, `authorization_review`, reviewed
 `spec` and `note`. Renewal preserves the whole plan/parameter schema and source root ceiling, retaining
 live restrictions and intersecting current authority. It creates an audited draft in the same skill
 lineage; fresh validation and explicit next-version publication are required. Old versions remain
 unchanged. Identical approval deduplicates; stale versions/context fail. API/AC/MCP/REST/CLI/Builder and
-the GUI Skills operation selector share this flow. Trigger renewal remains separate work.
+the GUI Skills operation selector share this flow. Trigger renewal uses the separate flow above.
 
 Stopped tasks with retired origin authority can explicitly use `review_authorization`, then
 `create_authorized` with `task_id`, `snapshot`, reviewed `spec`, `note` and `authorization_review`.
@@ -15,7 +24,7 @@ root ceiling; roots may only stay equal or shrink. Other permissions, mode/model
 conditions stay fixed. Approval is audited atomically with the unique successor; the source and its
 revoked witnesses stay unchanged. All recovery surfaces include these operations, with separate GUI
 Actions for authorization review and creation. See the [recovery guide](docs/source/Eng/doc/ai_agents/agent_recovery_doc.rst).
-Task recovery does not renew triggers, clear input quarantine or restore application state; skill renewal uses the separate flow above.
+Task recovery does not clear input quarantine or restore application state; skills and triggers use their separate renewal flows above.
 
 Stopped tasks can use `manage_agent_recovery("preview", {"task_id": "..."})` to review source
 receipts and a source snapshot without touching an application. Finite skills expose remaining actions

@@ -333,6 +333,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         except (ValueError, TypeError) as error:
             self._status.setText(str(error))
             return
+        if operation == "review_authorization":
+            self._trigger_config.setPlainText("{}")
         self._dispatch("trigger", {"operation": operation, "request": request})
 
     def _trigger_request(self, operation: str) -> dict:
@@ -341,6 +343,11 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         if operation == "register":
             return {"kind": self._trigger_kind.currentData(), "config": json.loads(self._trigger_config.toPlainText()),
                     "spec": self._task_spec()}
+        if operation == "create_authorized":
+            request = json.loads(self._trigger_config.toPlainText())
+            if not isinstance(request, dict) or request.get("trigger_id") != self._trigger_id.text():
+                raise ValueError("reviewed trigger request must match the selected registration")
+            return request
         request = {"trigger_id": self._trigger_id.text()}
         if operation == "fire":
             request.update(event_key=self._event_key.text(), payload=json.loads(self._trigger_config.toPlainText()))
@@ -358,6 +365,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._view_task = str(data.get("task_id", ""))
         if operation == "recovery":
             self._view_task = str(data["request"]["task_id"])
+        if operation == "trigger" and "trigger_id" in data.get("request", {}):
+            self._view_task = "trigger:" + str(data["request"]["trigger_id"])
         self._lookup_view = (self._request_key.text(), self._task_id.text()) if operation == "lookup" else None
         self._handle = self._controller.submit(partial(_request, operation, data), owner=self)
         self._handle.finished.connect(self._completed)
@@ -365,7 +374,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
     def _completed(self, outcome: TaskOutcome) -> None:
         if self._handle is not None and outcome.task_id != self._handle.task_id:
             return
-        if self._view_task and self._view_task != self._task_id.text():
+        if not self._view_current():
             return
         if self._lookup_view is not None and self._lookup_view != (self._request_key.text(), self._task_id.text()):
             return
@@ -378,8 +387,15 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             return
         self._present_result(result)
 
+    def _view_current(self) -> bool:
+        if self._view_task.startswith("trigger:"):
+            return self._view_task == "trigger:" + self._trigger_id.text()
+        return not self._view_task or self._view_task == self._task_id.text()
+
     def _present_result(self, result: dict) -> None:
         self._present_lookup(result)
+        if not self._present_trigger_authorization(result):
+            return
         if "source_task" in result:
             self._present_remainder(result)
         elif isinstance(result.get("draft"), dict):
@@ -390,11 +406,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             self._scope.setPlainText(json.dumps(draft, ensure_ascii=False, indent=2))
         if "task_id" in result:
             self._task_id.setText(result["task_id"])
-        if "observation_id" in result:
-            try:
-                self._observation.present(result)
-            except AgentTaskError as error:
-                self._status.setText(str(error))
+        self._present_observation(result)
         if "trigger_id" in result:
             self._trigger_id.setText(result["trigger_id"])
         rows = result.get("tasks", [])
@@ -403,6 +415,26 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             for index, row in enumerate(rows):
                 for column, name in enumerate(("task_id", "goal", "state", "reason")):
                     self._table.setItem(index, column, QTableWidgetItem(str(row.get(name, ""))))
+
+    def _present_observation(self, result: dict) -> None:
+        if "observation_id" in result:
+            try:
+                self._observation.present(result)
+            except AgentTaskError as error:
+                self._status.setText(str(error))
+
+    def _present_trigger_authorization(self, result: dict) -> bool:
+        if "trigger_id" not in result or "approval_required" not in result:
+            return True
+        if result["trigger_id"] != self._trigger_id.text():
+            return False
+        spec = result.get("spec")
+        request = {"trigger_id": result["trigger_id"], "snapshot": result["snapshot"],
+                   "authorization_review": result["authorization_review"], "spec": spec,
+                   "note": ""} if isinstance(spec, dict) else {}
+        self._trigger_config.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))
+        self._pages.setCurrentIndex(self._page_keys.index("agent_page_triggers"))
+        return True
 
     def _present_lookup(self, result: dict) -> None:
         found = result.get("task")
