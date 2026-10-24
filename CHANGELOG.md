@@ -1,5 +1,11 @@
 # Changelog
 
+Add an internal bounded ADB smart-socket transport for future managed Android adapters. Require an
+explicit loopback server and transport ID, shell-v2 exit framing and closed streams; never invoke an ADB
+CLI, manage a daemon, retry an ambiguous command or fall back to a legacy shell. Preserve cancellation
+and authority revocation; suppress server/transport diagnostic content. Share existing device-list parsing
+with the legacy CLI without changing its behavior. Managed device profiles and public commands remain pending.
+
 Add an internal remote-effect lifecycle prerequisite for future Android/iOS adapters. Physical-device
 ownership, a closed remote protocol and fsynced begin/end acknowledgements fence unknown effects after
 local helper retirement. Recovery requires host-trusted post-retirement evidence and a later device epoch

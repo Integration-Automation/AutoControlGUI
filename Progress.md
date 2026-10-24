@@ -43,6 +43,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 4. **P7：Android／iOS 受管裝置**
    - 將 `utils/agent_runtime/{remote_journal,remote_target}.py` 的共用防護接入可信 SDK adapter，
      再接 `target_config.py`／`target_factory.py`。內部 guard 尚不代表 Android／iOS 可受管執行。
+     Android 須接 `android_transport.ManagedAdbServer` 的明確既有 server 路徑及有限命令 builder；
+     補實體裝置／boot／app 的同連線檢查，避免 server 重啟重用 transport ID 後誤送到其他裝置。
+     數字 transport ID、shell-v2 的退出碼或本機 socket 結束都不足以證明裝置／輸入安全。
    - 為 ADB／WDA 各自建立可信的實體裝置識別、舊 writer 退出與清理／世代證據來源；核對真實
      SDK 契約，證明新世代能使所有舊指令失效且不重播。沒有可信來源時維持拒絕恢復。
    - 部署時明定每台裝置唯一的權威服務與受保護資源位置。預設使用者目錄內的 OS lock 只協調

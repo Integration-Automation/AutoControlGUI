@@ -4,6 +4,9 @@ Android／iOS 受管 adapter 仍未提供。内部远程副作用防护按实体
 本地 helper 结束但动作未确认时，仍保留隔离。恢复须在 writer 退出后取得可信设备证据，再以
 后续能使旧指令失效的世代证明安全。尚无内置 SDK 证据来源、设备 profile 或原生验收；
 剩余接合列于 `Progress.md`。
+内部 Android 传输只连接明确设置的现有 loopback ADB server，不调用 CLI、不管理 daemon、
+不重试或退回旧 shell；shell-v2 的退出证据有封包／输出上限，但不代表应用完成、实体设备
+身份或输入已释放。
 
 `lookup_agent_task("键", reviewed_spec)` 可选择由目标主机规范化规格，与原所有者提交时保存的
 不可变摘要比较；回复声明 `spec_match_contract=1`，并提供一致／不同／无法核对／查无记录。

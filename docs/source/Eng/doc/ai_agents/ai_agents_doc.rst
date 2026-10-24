@@ -479,3 +479,27 @@ retired. It first persists a post-retirement epoch baseline, then requires a dif
 provider contract invalidates old commands without replay. SDK epochs and idle guarantees are not
 assumed. Generic desktop recovery cannot clear this witness. SDK adapters, app scope, device profiles,
 public surfaces, real-device proof providers and native acceptance remain open in ``Progress.md``.
+
+Explicit existing ADB server transport
+----------------------------------------------------------------------
+
+Internal ``android_transport.ManagedAdbServer`` uses the ADB smart-socket protocol against one reviewed
+literal loopback address and port. It never invokes the CLI or starts, kills, upgrades or reconnects a
+server. Device-list parsing is shared with the existing Android SDK. Shell calls select an exact numeric
+transport ID, require shell-v2 raw framing, close stdin and require a one-byte exit packet followed by EOF.
+A missing exit, late output, malformed/oversize frame, packet flood, timeout or disconnect is an error;
+there is no automatic retry or old-shell fallback. Byte limits cover stdout and stderr together.
+
+The original deadline covers the whole exchange; blocked reads/writes refresh cancellation and live
+authority. Failure diagnostics cannot publish typed command data or server-provided text. This is a
+host-only adapter prerequisite: raw shell is not in the task/model catalog. Numeric IDs can be reused
+when an ADB server restarts. A finite adapter still needs physical-device/boot/app checks on the same
+selected command connection, durable remote-effect fencing and independent completion evidence.
+Shell exit alone does not prove input retirement. No managed Android profile or native readiness is added.
+
+Protocol references: `AOSP smart-socket overview
+<https://android.googlesource.com/platform/packages/modules/adb/+/refs/tags/android-14.0.0_r27/OVERVIEW.TXT>`_,
+`AOSP transport selection
+<https://android.googlesource.com/platform/packages/modules/adb/+/refs/tags/android-14.0.0_r27/client/adb_client.cpp>`_
+and `AOSP shell packet layout
+<https://android.googlesource.com/platform/packages/modules/adb/+/refs/tags/android-14.0.0_r27/shell_protocol.h>`_.

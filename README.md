@@ -5,6 +5,9 @@ before/after acknowledgements against a physical-device identity and retains qua
 helper exits with an unconfirmed effect. Recovery requires a trusted device proof after writer retirement
 and a later epoch invalidating old commands. No built-in SDK proof, device profile or native acceptance
 is implied; remaining integration is in `Progress.md`.
+The internal Android transport connects only to an explicit existing loopback ADB server, with no CLI,
+daemon management, retry or legacy-shell fallback. Shell-v2 exit evidence has bounded framing/output;
+it does not establish app completion, physical-device identity or input retirement.
 
 `lookup_agent_task("key", reviewed_spec)` optionally compares the destination-normalized specification
 with the immutable digest stored for the original owner's request. The response advertises

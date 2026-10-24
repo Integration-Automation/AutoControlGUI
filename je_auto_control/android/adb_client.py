@@ -46,6 +46,26 @@ def _describe(args: Sequence[str]) -> str:
     return f"adb {args[0]}" + (" ..." if len(args) > 1 else "")
 
 
+def _parse_devices(output: bytes) -> List[AndroidDevice]:
+    """Share device-list interpretation between CLI and managed no-daemon transports."""
+    devices: List[AndroidDevice] = []
+    for line in output.decode("utf-8", errors="replace").splitlines():
+        line = line.strip()
+        if not line or line.startswith(("List of devices", "*")):
+            continue
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        serial, state, rest = parts[0], parts[1], parts[2:]
+        if line[len(serial):].lstrip().startswith("no permissions"):
+            state = "no permissions"
+        metadata = {key: value for token in rest if ":" in token
+                    for key, _, value in [token.partition(":")]}
+        devices.append(AndroidDevice(serial=serial, state=state, model=metadata.get("model", ""),
+            product=metadata.get("product", ""), transport_id=metadata.get("transport_id")))
+    return devices
+
+
 class AdbClient:
     """Wrap the ``adb`` binary so the rest of AutoControl never shells out.
 
@@ -112,32 +132,7 @@ class AdbClient:
     def list_devices(self) -> List[AndroidDevice]:
         """Parse ``adb devices -l`` into AndroidDevice records."""
         result = self.run(["devices", "-l"])
-        out = result.stdout.decode("utf-8", errors="replace")
-        devices: List[AndroidDevice] = []
-        for line in out.splitlines():
-            line = line.strip()
-            if not line or line.startswith("List of devices") or line.startswith("*"):
-                continue
-            parts = line.split()
-            if len(parts) < 2:
-                continue
-            serial, state, rest = parts[0], parts[1], parts[2:]
-            if line[len(serial):].lstrip().startswith("no permissions"):
-                # "no permissions (user in plugdev group; ...)": not the state "no".
-                state = "no permissions"
-            metadata = {
-                key: value
-                for token in rest
-                if ":" in token
-                for key, _, value in [token.partition(":")]
-            }
-            devices.append(AndroidDevice(
-                serial=serial, state=state,
-                model=metadata.get("model", ""),
-                product=metadata.get("product", ""),
-                transport_id=metadata.get("transport_id"),
-            ))
-        return devices
+        return _parse_devices(result.stdout)
 
     # --- input -------------------------------------------------------
 

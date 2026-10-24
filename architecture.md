@@ -722,3 +722,11 @@ resource and durable quarantine; desktop InputJournal recovery refuses remote wi
 recovery first records an epoch after all old writers retire, then requires a later epoch invalidating
 old commands without replay. No ADB/WDA proof is assumed. These are internal adapter prerequisites;
 Android/iOS factory profiles, SDK wiring, public surfaces and native readiness remain unavailable.
+
+android_transport.py is an internal ADB smart-socket prerequisite using an explicit existing loopback
+server. It shares android.adb_client._parse_devices, selects a numeric transport per connection and
+requires bounded shell-v2 stdout/stderr, an exact exit packet and EOF. One deadline and live checkpoints
+cover framing; failures preserve control exceptions and redact remote diagnostics. No CLI invocation,
+server management, reconnect, command retry or legacy shell fallback occurs. Server restart can reuse
+transport IDs: physical-device/boot/app checks in the same command connection, finite tool construction,
+remote-effect fencing and public managed target wiring remain required before Android is advertised.

@@ -427,3 +427,18 @@ Android／iOS 受管 adapter 仍未提供。內部 ``remote_journal``／``remote
 再要求能使舊指令失效且不重播的後續不同世代。不得假定 SDK 有提供這種世代／閒置保證。
 一般桌面恢復不能清除遠端紀錄。SDK adapter、app scope、裝置 profile、共用公開介面、真機
 證據 provider 與原生驗收仍列於 ``Progress.md``。
+
+明確既有 ADB server 傳輸
+----------------------------------------------------------------------
+
+內部 ``android_transport.ManagedAdbServer`` 只向已審閱的明確 loopback IP／port 使用 ADB
+smart-socket 協定，不呼叫 CLI、不啟動／終止／升級／重連 server。裝置清單共用既有 Android
+SDK parser。Shell 必須指定數字 transport ID、使用 shell-v2 raw 封包、關閉 stdin，並收到
+一個 byte 的 exit 封包與 EOF；缺少 exit、晚到資料、錯誤／過大封包、封包洪流、逾時或斷線
+都拒絕，不自動重試或退回舊 shell。stdout／stderr 共用位元組上限。
+
+整段交換共用原始時限，等待讀寫時持續檢查取消與授權；失敗訊息不公開命令內容或 server
+診斷。這是主機 adapter 的內部前置層，原始 shell 不在任務／模型工具目錄。ADB server 重啟
+可能重用數字 ID；有限 adapter 還須在同一命令連線內核對實體裝置／boot／app，接上耐久
+副作用防護與獨立完成證據。Shell 退出不等於輸入已釋放；尚未新增受管 Android profile 或
+原生就緒宣告。協定來源為英文頁列出的固定 AOSP 原始碼。
