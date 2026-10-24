@@ -967,6 +967,8 @@ traditional_chinese_word_dict = {
     "dag_batch_label": "受管批次 ID（選填）",
     "dag_batch_register_btn": "註冊受管批次（不執行）",
     "dag_batch_get_btn": "讀取受管批次紀錄",
+    "dag_background_run_btn": "交由服務背景執行批次",
+    "dag_background_continue_btn": "核准並交由服務背景續接",
     "dag_batch_recorded": "僅批次紀錄，須明確執行；恢復仍須另行審閱。",
     "dag_batch_fence_btn": "封鎖本批次後續派送",
     "dag_continuation_review_btn": "審閱整批續接",

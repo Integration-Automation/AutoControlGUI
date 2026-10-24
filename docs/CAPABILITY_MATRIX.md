@@ -6,8 +6,10 @@ owner isolation, restart and rollback have deterministic and owned local/two-hos
 CLI/AC/MCP/Builder and offscreen DAG Actions expose registration/read/initial execution. This is the
 initial execution and explicit continuation foundation. Whole-graph review, one-shot actor-bound
 approval, completed original/recovery-successor adoption, scope-narrowed pending dispatch, dependency
-revalidation and fencing have loopback/offscreen tests. Unknown claims remain blocked. Background batch
-jobs/retention and actual multi-host deployment/native acceptance remain open. Legacy node inspection
+revalidation and fencing have loopback/offscreen tests. Unknown claims remain blocked. Service-owned
+background batches have owned HTTP/two-host, actor/owner revocation, closed-view and actual process-exit
+restart evidence. Queued/running old deliveries require explicit review after restart. Batch retention
+and actual multi-host deployment/native acceptance remain open. Legacy node inspection
 does not authorize continuation. Fencing affects new coordinator dispatch, not accepted task cleanup.
 
 Trigger authority renewal: reviewed future-event replacement with original/live/current scope,

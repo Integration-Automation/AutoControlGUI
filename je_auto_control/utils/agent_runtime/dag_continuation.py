@@ -186,6 +186,7 @@ class DagContinuation:
         adopted = {item["decision"]["node_id"]: item["decision"]["task_id"] for item in review["reports"]
                    if item["decision"]["action"] != "dispatch"}
         return {"batch_id": batch["id"], "attempt": attempt, "hosts": batch["hosts"], "adopted": adopted,
+                "max_parallel": batch["max_parallel"],
                 "definition": bind_definition(batch["definition"], batch["id"], batch["graph_hash"], batch["bindings"])}
 
     def _start_context(self, batch: dict, request: dict, details: dict) -> None:

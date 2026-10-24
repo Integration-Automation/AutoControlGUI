@@ -20,6 +20,7 @@ from je_auto_control.utils.run_history.run_outcome import is_run_interruption
 
 Call = Callable[[str, dict[str, Any], float], dict[str, Any]]
 _STOP: ContextVar[threading.Event | None] = ContextVar("dag_managed_stop", default=None)
+_RUNTIME: ContextVar[tuple[Call, Callable[[], None]] | None] = ContextVar("dag_managed_runtime", default=None)
 _ACTIVE = frozenset({"queued", "running", "verifying", "pausing", "cancelling"})
 
 
@@ -29,6 +30,16 @@ class ManagedTaskDispatchError(AgentTaskError):
     def __init__(self, outcome: dict[str, Any]) -> None:
         super().__init__("DAG managed task requires review; no downstream completion was granted")
         self.outcome = outcome
+
+
+@contextmanager
+def managed_runtime_scope(local_call: Call, check: Callable[[], None]) -> Iterator[None]:
+    """Bind service-owned local transport and live source authority to copied node contexts."""
+    binding = _RUNTIME.set((local_call, check))
+    try:
+        yield
+    finally:
+        _RUNTIME.reset(binding)
 
 
 @contextmanager
@@ -55,6 +66,9 @@ def run_managed_task(host: str, task: Mapping[str, Any], *, host_binding: str | 
 
 def _authorize(owner: DeferredAuthorization, host: str) -> None:
     cancellation_checkpoint()
+    runtime = _RUNTIME.get()
+    if runtime is not None:
+        runtime[1]()
     with owner.scope():
         if host != "local":
             authorize_command("AC_admin_broadcast_execute")
@@ -79,6 +93,9 @@ def task_connection(host: str) -> Call:
 
 def _connection(host: str) -> Call:
     if host == "local":
+        runtime = _RUNTIME.get()
+        if runtime is not None:
+            return runtime[0]
         from je_auto_control.utils.agent_runtime.client import AgentRuntimeClient
         client = AgentRuntimeClient()
         return lambda operation, body, timeout: client.call(operation, body, timeout=timeout)

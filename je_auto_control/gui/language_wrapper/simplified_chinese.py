@@ -966,6 +966,8 @@ simplified_chinese_word_dict = {
     "dag_batch_label": "受管批次 ID（选填）",
     "dag_batch_register_btn": "注册受管批次（不执行）",
     "dag_batch_get_btn": "读取受管批次记录",
+    "dag_background_run_btn": "交由服务后台执行批次",
+    "dag_background_continue_btn": "批准并交由服务后台续接",
     "dag_batch_recorded": "仅批次记录，须明确执行；恢复仍须另行审阅。",
     "dag_batch_fence_btn": "阻止本批次后续派送",
     "dag_continuation_review_btn": "审阅整批续接",

@@ -77,6 +77,7 @@ class AgentRuntime:
         self._task_locks: dict[str, Any] = {}
         self._closed = False
         self.background: Any = None
+        self.background_dags: Any = None
         self.shutdown_requested = threading.Event()
         self._next_retention = 0.0
         try:
@@ -450,6 +451,7 @@ class AgentRuntime:
 
     def stop_all(self) -> dict[str, Any]:
         """Cancel every visible task; operators cannot stop another principal's work."""
+        self.batches.stop_all()
         identifiers = self._visible_live_ids()
         for task_id in identifiers:
             self._stop_final[task_id] = "cancelled"
@@ -516,18 +518,20 @@ class AgentRuntime:
             return self.get(task_id)
         self._stop_final[task_id] = settled
         self._token(task_id).cancel()
-        self.store.update(task_id, pending)
+        if not self.store.request_stop(task_id, pending):
+            self._retire(task_id)
+            return self.get(task_id)
         if task_id not in self._executing and self._retire(task_id):
-            self.store.update(task_id, settled)
-            self.evidence.publish(task_id)
+            if self.store.transition(task_id, pending, settled):
+                self.evidence.publish(task_id)
         return self.get(task_id)
 
     def _settle_control(self, task_id: str) -> None:
         state = self._row(task_id)["state"]
         stops = {"pausing": "paused", "cancelling": "cancelled"}
         if state in stops and self._retire(task_id):
-            self.store.update(task_id, self._stop_final.get(task_id, stops[state]))
-            self.evidence.publish(task_id)
+            if self.store.transition(task_id, state, self._stop_final.get(task_id, stops[state])):
+                self.evidence.publish(task_id)
         elif state in TERMINAL or state == "waiting_user":
             self._retire(task_id)
 

@@ -1094,6 +1094,8 @@ english_word_dict = {
     "dag_batch_label": "Managed batch ID (optional)",
     "dag_batch_register_btn": "Register managed batch (no execution)",
     "dag_batch_get_btn": "Read managed batch record",
+    "dag_background_run_btn": "Run managed batch in service background",
+    "dag_background_continue_btn": "Approve continuation in service background",
     "dag_batch_recorded": "Batch record only; run explicitly. Recovery requires a separate review.",
     "dag_batch_fence_btn": "Fence batch dispatch",
     "dag_continuation_review_btn": "Review whole-batch continuation",

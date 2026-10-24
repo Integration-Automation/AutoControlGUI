@@ -983,6 +983,8 @@ japanese_word_dict = {
     "dag_batch_label": "管理バッチ ID（任意）",
     "dag_batch_register_btn": "管理バッチを登録（実行しない）",
     "dag_batch_get_btn": "管理バッチの記録を読む",
+    "dag_background_run_btn": "サービスでバッチをバックグラウンド実行",
+    "dag_background_continue_btn": "継続を承認しサービスでバックグラウンド実行",
     "dag_batch_recorded": "バッチ記録のみ。実行は明示操作、復旧には別の確認が必要です。",
     "dag_batch_fence_btn": "以降のバッチ配信を停止",
     "dag_continuation_review_btn": "バッチ全体の続行を確認",

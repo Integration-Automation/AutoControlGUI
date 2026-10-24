@@ -15,7 +15,13 @@ Only independently completed originals or genuine completed recovery successors 
 dispatch requires a never-claimed pending node with no accepted destination request. Local authority
 can be renewed within equal/narrower roots. Unknown claims are never replayed. DAG Actions exposes
 fencing, review and explicit continuation; fencing stops new dispatch and leaves accepted tasks under
-their own lifecycle. Background batch coordination and retention remain in Progress.md.
+their own lifecycle. To delegate coordination to an explicitly started service, call
+`manage_agent_dag("run_background", {"batch_id": id, "definition": graph, "max_parallel": 4})`.
+Add `approval_id` for an explicitly approved continuation. DAG Actions exposes both background actions;
+closing the view leaves accepted service work alive. `get.background` reports bounded queue state.
+Restart fences old attempts and requires review, without replaying queued or unknown deliveries.
+Both original owner and submitting actor remain live checks; local tasks use their owning runtime.
+Batch retention/cleanup remains in Progress.md.
 See [the continuation protocol](docs/source/Eng/doc/ai_agents/agent_dag_batches_doc.rst).
 
 Triggers can explicitly use `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`,

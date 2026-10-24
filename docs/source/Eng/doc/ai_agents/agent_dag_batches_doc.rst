@@ -105,11 +105,60 @@ DAG Actions adds fence, review and explicit continuation controls with editable 
 note after reviewing; changed graph/batch selection invalidates stale review results. Read-only inspect
 and review keep resume_permitted=false; only explicit approval/start authorizes a new attempt.
 
+Service background coordination
+----------------------------------------------------------------------
+
+An explicitly started AgentRuntimeService can own coordination after the caller or view exits::
+
+    accepted = manage_agent_dag("run_background", {
+        "batch_id": identifier, "definition": graph, "max_parallel": 4})
+    record = manage_agent_dag("get", {"batch_id": identifier})
+
+For a stopped batch, review and approve the complete plan first, then delegate the approved attempt::
+
+    approved = manage_agent_dag("approve_continuation", request)
+    accepted = manage_agent_dag("run_background", {
+        "batch_id": identifier, "definition": graph, "max_parallel": 4,
+        "approval_id": approved["approval_id"]})
+
+The same operation is available through AC/MCP/REST/CLI/Builder. Without approval_id it uses initial
+begin; with approval_id it consumes start_continuation. Optional timeout_seconds applies to continuation
+evidence checks. Graph, parallelism, actor, owner and host binding rules remain unchanged. Repeated
+initial starts or consumed approvals fail; a lost acceptance reply must be inspected, never replayed.
+No import, registration or read starts a service. Unavailable/full services reject before consuming
+an attempt; a failed queue acceptance fences an already acquired attempt.
+
+The service uses the existing WorkQueue, with four coordinator workers and at most 64 pending/running
+deliveries. All nodes retain pre-delivery claims and independent destination completion checks. Both
+original owner and actual submitting actor are refreshed during dispatch/polling. Local destinations
+use their owning runtime directly, preserving original task ownership without reading a different
+global client connection file. Remote endpoints remain pinned and never receive local principals or
+origin witnesses. The service's task workers own local execution and physical input retirement.
+
+get/list add ``background=null`` for caller-only runs or a bounded state record using new/in_progress/
+success/failed. Failed deliveries require review; these states do not replace independently persisted
+batch/node evidence or certify native cleanup. Private delivery authority and attempt capabilities are
+withheld. DAG Actions adds **Run managed batch in service background** and **Approve continuation in
+service background**. They submit explicitly and return the batch record; closing the view leaves
+accepted service work alive. Read the batch record again for current progress.
+
+Service shutdown fences accepted attempts before retiring coordination and local task workers.
+Task stop requests and settlement preserve concurrently committed terminal completion evidence.
+stop_all also fences visible running/approved batches before cancelling visible local tasks; an
+operator cannot stop another owner's batch. Fencing stops future claims. Already accepted/in-flight
+destination operations keep their pause, cleanup and unknown-effect contract; remote cleanup is not
+inferred. An actual process exit leaves durable claims. Restart marks live batches waiting_review and
+old queued/in-progress deliveries failed without reclaiming them. Even an unclaimed old delivery
+requires explicit review; an absent destination lookup cannot reset a possible dispatch claim.
+
 Current limits
 ----------------------------------------------------------------------
 
-Background batch coordination and retention/cleanup remain in Progress.md. Legacy graphs cannot be
-retroactively treated as bound batches. Adoption certifies a historical logical stage; it does not
+Caller-driven runs still need generation-pinned coordinator/local transport routing; background mode
+binds its owning runtime. That caller-path follow-up is tracked separately in Progress.md.
+
+Batch retention/cleanup remains in Progress.md. Legacy graphs cannot be retroactively treated as bound
+batches. Adoption certifies a historical logical stage; it does not
 restore login/window state or assert current application state. Owned fake-target/local/two-host HTTP
 and offscreen evidence do not establish real deployment, installed-model or native acceptance.
 Browser automation remains on je_web_runner.

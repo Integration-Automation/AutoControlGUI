@@ -9,7 +9,7 @@
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-接續優先完成第 6 組的服務背景批次協調與保留／清理，再核對第 4 組真實裝置控制／擷取來源、
+接續優先固定第 6 組 caller 來源服務世代，再完成批次保留／清理，並核對第 4 組真實裝置控制／擷取來源、
 其餘實作及第 8 組交付核對。
 
 1. **P4：瀏覽器與正式環境接合**
@@ -98,8 +98,11 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      目錄／目標設定、部署／回復方法。受管任務 DAG 不會自動部署遠端服務。
    - 設計跨主機成果移交：明列讀寫權限、來源身分、摘要與目的地發布，不能以本機路徑當遠端
      檔案證據，不能轉送本機 principal／使用者資料庫路徑／來源 witness。
-   - 補 `utils/agent_runtime/dag_batches.py` 的服務獨立背景協調、停止／重啟與批次 30 天保留／清理；
-     現有 batch_id 路徑由 caller 協調，原服務只保存註冊及執行見證，不能宣稱已背景續跑整圖。
+   - 為 caller 協調的 `run_dag(batch_id=...)` 固定來源服務連線世代及本機目的端路由；目前來源 client
+     與本機 node transport 各自讀取連線檔，須拒絕執行中換檔／換服務，不得把舊 claim 交給新服務。
+     服務背景模式已綁定自有 runtime，caller 路徑仍須補同等保證及換檔／重啟回歸。
+   - 補 `utils/agent_runtime/dag_batches.py`／`dag_jobs.py` 的批次 30 天保留／清理，以及 WorkQueue
+     派送紀錄回收。逐任務清理須保護仍被批次採認／等待審閱的任務證據，避免破壞整圖來源關聯。
      清理前須保留未知派送、原批次及節點收據的關聯，不能因工作視圖關閉或個別任務到期而遺失。
    - 實際多機驗證斷線／晚到回覆、主機重啟、憑證撤銷／變更、協調端中斷及同資源序列／
      獨立資源並行；未知清理不得讓下游成功或搶走遠端控制權。

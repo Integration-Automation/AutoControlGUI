@@ -1,5 +1,14 @@
 # Changelog
 
+Add service-owned run_background for initial and explicitly approved managed DAG attempts. Persist
+deliveries through WorkQueue, bind local destinations to the owning runtime and refresh both original
+owner and actual submitting actor. Closing a client/view leaves accepted work alive. Add thin GUI
+Actions and bounded background state to batch reads. Queue failure, shutdown, stop_all and restart
+fence scheduling attempts; old queued/claimed work never replays automatically. Accepted destination
+tasks retain their own retirement contract. Batch retention/cleanup remains separate.
+Make task stop requests atomic against concurrently committed completion and conditionally settle
+retirement, preserving terminal evidence when a worker finishes during service shutdown.
+
 Add explicit whole-DAG continuation review, actor-bound one-shot approval and fresh evidence checks.
 Adopt independently completed original tasks or real TaskRecovery successors; dispatch only never-claimed
 pending nodes within preserved/narrowed authority. Keep unknown claims blocked and fence stale attempts.

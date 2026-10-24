@@ -34,6 +34,10 @@ class AgentRuntimeService:
         from je_auto_control.utils.agent_runtime.jobs import BackgroundTasks
         self._jobs = BackgroundTasks(self.runtime)
         self.runtime.background = self._jobs
+        # pylint: disable-next=import-outside-toplevel  # reason: bind service workers after runtime construction
+        from je_auto_control.utils.agent_runtime.dag_jobs import BackgroundDags
+        self._dag_jobs = BackgroundDags(self.runtime)
+        self.runtime.background_dags = self._dag_jobs
 
     def start(self) -> dict[str, Any]:
         """Bind loopback on an ephemeral port; publish credentials only in the local owner file."""
@@ -54,6 +58,7 @@ class AgentRuntimeService:
             self.runtime.close()
             raise
         self._server = server
+        self._dag_jobs.enable()
         self._jobs.start_pending()
         self._maintenance = threading.Thread(target=lambda: Context().run(self._maintain),
                                              name="AgentLeaseWatch", daemon=True)
@@ -95,6 +100,7 @@ class AgentRuntimeService:
             worker.join(timeout=3)
             if worker.is_alive():
                 raise AgentTaskError("agent lease maintenance has not retired")
+        self._dag_jobs.close()
         self._jobs.close()
         self.runtime.close()
         if self._server is not None:

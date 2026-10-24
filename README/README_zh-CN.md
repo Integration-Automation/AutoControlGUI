@@ -10,7 +10,11 @@ CLI／Builder 及 DAG Actions 的批次注册／读取、选填批次 ID 共享�
 与非空 `note` 放入 `run_dag(graph, batch_id=id, recovery=request)`，批准并使用一次续接机会。
 只能采纳独立完成的原任务或真实 recovery 后继任务；派送限从未 claim 且目标端未接收的 pending
 节点。本地授权可在相等或更窄根目录内更新，未知 claim 永不重放。DAG Actions 提供停止新派送、
-审阅及明确续接；已接受任务仍依自身生命周期处理。后台批次协调及保留／清理仍列于 Progress.md。
+审阅及明确续接；已接受任务仍依自身生命周期处理。将协调交给已明确启动的服务，可调用
+`manage_agent_dag("run_background", {"batch_id": id, "definition": graph, "max_parallel": 4})`；
+明确批准的续接另带 `approval_id`。DAG Actions 提供两个后台动作；关闭视图不停止已接受的服务工作，
+`get.background` 提供有限队列状态。重启使旧 attempt 失效并要求审阅，不重放排队或未知派送。
+原 owner 与提交者的权限持续重新验证，本地任务绑定所属 runtime。批次保留／清理仍列于 Progress.md。
 详见[续接协议](../docs/source/Zh/doc/ai_agents/agent_dag_batches_doc.rst)。
 
 触发器可明确使用 `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`，再以

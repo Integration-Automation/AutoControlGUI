@@ -15,17 +15,19 @@ from je_auto_control.utils.agent_runtime.dag_batch_recording import (
     bound_node, claim_node, record_node, verify_node, validate_receipt,
 )
 from je_auto_control.utils.agent_runtime.dag_continuation import DagContinuation, FIELDS as CONTINUATION_FIELDS
+from je_auto_control.utils.agent_runtime.dag_jobs import delivery_status
 from je_auto_control.utils.dag.batch_contract import batch_definition, bind_definition
 from je_auto_control.utils.dag.inspection import inspect_definition
 from je_auto_control.utils.dag.managed_tasks import task_host_binding
 from je_auto_control.utils.rbac.authorization import AuthorizationContext, current_authorization
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 
-OPERATIONS = ("register", "get", "list", "begin", "claim", "record", "finish", "inspect") + tuple(CONTINUATION_FIELDS)
+OPERATIONS = ("register", "get", "list", "begin", "claim", "record", "finish", "inspect",
+              "run_background") + tuple(CONTINUATION_FIELDS)
 _FIELDS = {"register": {"definition"}, "get": {"batch_id"}, "list": set(),
            "begin": {"batch_id", "definition", "max_parallel"}, "claim": {"batch_id", "attempt", "node_id"},
            "record": {"batch_id", "attempt", "node_id", "receipt"}, "finish": {"batch_id", "attempt"},
-           "inspect": {"batch_id"}}
+           "inspect": {"batch_id"}, "run_background": {"batch_id", "definition", "max_parallel"}}
 _FIELDS.update(CONTINUATION_FIELDS)
 
 
@@ -38,6 +40,8 @@ def _request(operation: Any, value: Any) -> dict:
         optional |= {"decisions", "timeout_seconds"}
     if operation == "start_continuation":
         optional |= {"timeout_seconds"}
+    if operation == "run_background":
+        optional |= {"approval_id", "timeout_seconds"}
     if not _FIELDS[operation] <= set(request) or set(request) - _FIELDS[operation] - optional:
         raise AgentTaskError("invalid batch operation fields")
     return request
@@ -84,14 +88,37 @@ class DagBatches:
                   "namespace": request_spec_digest({"store": identity.store_path})}
                  if identity else {"user_id": "local"})
         continuation = DagContinuation(self, actor)
-        if operation == "pause_batch":
-            return continuation.control(operation, batch, request)
+        if operation in {"pause_batch", "run_background"}:
+            return (continuation.control(operation, batch, request) if operation == "pause_batch"
+                    else self._background(batch, request, continuation))
         with DeferredAuthorization(owner).scope():
             if operation in CONTINUATION_FIELDS:
                 return continuation.control(operation, batch, request)
             if operation == "begin":
                 return self._begin(batch, request)
             return self._execution(operation, batch, request)
+
+    def _background(self, batch: dict, request: dict, continuation: DagContinuation) -> dict:
+        jobs = getattr(self.runtime, "background_dags", None)
+        if jobs is None:
+            raise AgentTaskError("background DAG execution requires an explicitly started service")
+        jobs.ensure_available()
+        actor = DeferredAuthorization.capture()
+        owner = AuthorizationContext(**batch["owner"]) if batch["owner"] else None
+        with DeferredAuthorization(owner).scope():
+            started = (continuation.control("start_continuation", batch, request) if "approval_id" in request
+                       else self._begin(batch, request))
+        jobs.enqueue(started, batch["owner"], actor)
+        return self._describe(self._row(batch["id"]))
+
+    def stop_all(self) -> None:
+        """Fence visible active/approved coordinators before stop-all snapshots destination tasks."""
+        with self.runtime.store.connection() as connection:
+            rows = connection.execute("SELECT id,owner FROM agent_dag_batches "
+                                      "WHERE state IN ('running','approved')").fetchall()
+        for row in rows:
+            if owns_task(json.loads(row["owner"]), current_authorization()):
+                self.control("pause_batch", {"batch_id": row["id"]})
 
     def _row(self, identifier: str) -> dict:
         # pylint: disable-next=protected-access  # reason: closed runtimes cannot accept new coordinator work
@@ -173,6 +200,7 @@ class DagBatches:
         return {"batch_id": batch["id"], "graph_hash": batch["graph_hash"], "definition": batch["definition"],
                 "input_definition": batch["input_definition"],
                 "continuations": continuations,
+                "background": delivery_status(self.runtime, batch["id"]),
                 "max_parallel": batch["max_parallel"], "state": batch["state"], "resume_permitted": False,
                 "nodes": [{"id": row["node_id"], "phase": row["phase"],
                            "receipt": json.loads(row["receipt"])} for row in rows]}
@@ -189,7 +217,7 @@ class DagBatches:
                 "WHERE id=? AND state='registered'", (attempt, time.time(), batch["id"]))
             if cursor.rowcount != 1:
                 raise AgentTaskError("batch was already started; explicit recovery is required")
-        return {"batch_id": batch["id"], "attempt": attempt, "hosts": hosts,
+        return {"batch_id": batch["id"], "attempt": attempt, "hosts": hosts, "max_parallel": batch["max_parallel"],
                 "definition": bind_definition(definition, batch["id"], batch["graph_hash"])}
 
     def _execution(self, operation: str, batch: dict, request: dict) -> dict:

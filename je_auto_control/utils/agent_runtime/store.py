@@ -271,6 +271,16 @@ class AgentTaskStore:
             connection.execute("UPDATE agent_tasks SET state=?,reason=?,updated=?,verification=? WHERE id=?",
                                (state, reason, time.time(), json.dumps(detached(verification or [])), task_id))
 
+    def request_stop(self, task_id: str, state: str) -> bool:
+        """Request control retirement atomically without overwriting concurrently committed completion."""
+        if state not in {"pausing", "cancelling"}:
+            raise AgentTaskError("invalid task stop request")
+        with self.connection(write=True) as connection:
+            cursor = connection.execute("UPDATE agent_tasks SET state=?,reason='',updated=?,verification='[]' "
+                "WHERE id=? AND state NOT IN ('succeeded','failed','cancelled','timed_out')",
+                (state, time.time(), task_id))
+            return cursor.rowcount == 1
+
     def transition(self, task_id: str, expected: str, state: str, *,
                    reason: str = "", verification: Any = None) -> bool:
         """Compare and publish nonterminal state without overwriting concurrent control requests."""

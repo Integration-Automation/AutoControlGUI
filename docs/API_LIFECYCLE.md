@@ -20,7 +20,17 @@ Revalidate adopted dependencies before claims. Local origin renewal may only pre
 original scope; remote authority remains destination-owned. Submission witnesses preserve historical
 identity, never authority; legacy tasks require live spec matching and are never backfilled on retry.
 pause_batch fences new coordinator dispatch, without pausing accepted destination tasks or claiming
-input cleanup. Background coordination and batch retention remain open. See the managed DAG guide.
+input cleanup. run_background takes batch_id/definition/max_parallel and optional approval_id/
+timeout_seconds. An explicitly started service consumes initial begin or the reviewed continuation
+approval, persists a WorkQueue delivery and coordinates independently of the client/view. Queue failure
+fences the attempt. Four workers and 64 pending deliveries bound service work. get/list add background
+state without authority, attempt capabilities or credentials. Local destination calls bind the owning
+runtime and retain original task ownership; the actual submitting actor is also refreshed on dispatch
+and polling. Remote hosts retain their own authority. Shutdown and stop_all fence visible coordinators;
+accepted destination work keeps its separate retirement contract. Restart fails old queued/running
+deliveries without reclaim/replay. Batch retention remains open. See the managed DAG guide.
+Task pause/cancel uses an atomic nonterminal stop request and conditional settlement, preserving
+concurrently committed terminal results instead of failing service shutdown or overwriting completion.
 
 Trigger review_authorization takes trigger_id. Explicit create_authorized additionally requires
 snapshot/authorization_review/spec/nonempty note. Preserve template goal/actions/settings/criteria and

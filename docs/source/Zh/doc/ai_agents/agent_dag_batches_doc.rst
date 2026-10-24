@@ -80,9 +80,50 @@ batch_id／definition／approval_id／不變的 max_parallel，重新驗證後�
 JSON；核對後填 note，圖／批次選取變更會使舊審閱失效。唯讀 inspect／review 維持
 resume_permitted=false，只有明確 approve／start 授權新 attempt。
 
+服務背景協調
+--------------------------------
+
+明確啟動 AgentRuntimeService 後，可將協調交給服務，讓 caller／視圖關閉後仍繼續::
+
+    accepted = manage_agent_dag("run_background", {
+        "batch_id": identifier, "definition": graph, "max_parallel": 4})
+    record = manage_agent_dag("get", {"batch_id": identifier})
+
+停止的批次先整圖審閱並明確批准，再將這一次已批准 attempt 交給服務::
+
+    approved = manage_agent_dag("approve_continuation", request)
+    accepted = manage_agent_dag("run_background", {
+        "batch_id": identifier, "definition": graph, "max_parallel": 4,
+        "approval_id": approved["approval_id"]})
+
+共用 AC／MCP／REST／CLI／Builder。未帶 approval_id 使用初次 begin；帶值則消耗 start_continuation。
+選填 timeout_seconds 只用於續接證據檢查。圖、並行數、真正提交者、原 owner、主機綁定規則不變；
+重複初次啟動或已消耗批准均拒絕，接受回覆遺失須讀取紀錄，不得重播。匯入、註冊或讀取不會啟動
+服務。服務未就緒／已滿時不消耗 attempt；取得 attempt 後若佇列接受失敗，則使其失效。
+
+服務沿用 WorkQueue，以四個協調 worker、最多 64 個待處理／執行中派送限制工作量。每個節點仍須
+先 claim，再取得目的端獨立完成證據。派送及輪詢持續更新原 owner 與真正提交者權限。本機目的端
+直接綁定所屬 runtime、保留原任務 owner，不讀取可能指向其他服務的全域連線檔；遠端沿用固定端點，
+不接收本機 principal／origin witness。本機實際執行及原生輸入釋放仍由服務的任務 worker 負責。
+
+get／list 新增 background：caller 協調時為 null，背景則只提供 new／in_progress／success／failed
+等有限狀態，失敗須審閱；不能替代持久批次／節點證據或證明原生清理，不揭露私有派送權限與 attempt。
+DAG Actions 新增「交由服務背景執行批次」及「核准並交由服務背景續接」，明確提交後即回傳批次紀錄。
+關閉視圖不停止服務已接受的工作，之後重新讀取批次紀錄查看進度。
+
+任務停止請求與後續狀態轉換使用資料庫條件更新，保留同時完成的終態與完成證據。
+服務關閉先使協調 attempt 失效，再回收協調與本機任務 worker；stop_all 也先停止可見 running／
+approved 批次的後續派送，再取消可見本機任務，operator 不能停止其他 owner 批次。此處只停止未來
+claim；目的端已接受／傳輸中的操作仍依 pause、清理及未知副作用契約處理，不推論遠端已清理。
+真實程序退出仍保留耐久 claim；重啟將 live 批次轉為 waiting_review、舊排隊／執行中派送轉失敗，
+不重新 claim 或重播。即使舊派送尚無節點 claim，也須明確審閱；查無目的端任務仍不能重設未知 claim。
+
 尚缺步驟
 --------------------------------
 
-服務背景批次協調及保留／清理仍列於 Progress.md。舊圖不能事後自動當作已綁定批次；採認只證明
+caller 協調路徑仍須固定來源服務／本機 transport 世代，背景模式已綁定自有 runtime；
+此 caller 換檔／重啟防護另列於 Progress.md。
+
+批次保留／清理仍列於 Progress.md。舊圖不能事後自動當作已綁定批次；採認只證明
 歷史邏輯階段，不重建登入／視窗或宣稱目前應用狀態。假目標、自有本機／雙主機 HTTP 與 offscreen
 證據不代表正式部署、實際模型或原生驗收。瀏覽器維持 je_web_runner。

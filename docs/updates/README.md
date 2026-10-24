@@ -543,3 +543,4 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-40 | 2026-10-24 | Renew trigger authority without replaying accepted events | #done #agent #triggers #authorization | [2026-10-c](2026-10-c.md) |
 | U-20261024-41 | 2026-10-24 | Bind initial managed DAG execution to a durable whole-graph batch | #done #agent #dag #recovery | [2026-10-c](2026-10-c.md) |
 | U-20261024-42 | 2026-10-24 | Require whole-graph review before managed DAG continuation | #done #agent #dag #recovery | [2026-10-c](2026-10-c.md) |
+| U-20261025-01 | 2026-10-25 | Delegate managed DAG coordination to the owning service | #done #agent #dag #persistence | [2026-10-c](2026-10-c.md) |

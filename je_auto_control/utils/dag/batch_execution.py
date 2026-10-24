@@ -30,6 +30,12 @@ def run_batch(dag: DagDefinition, batch_id: str, max_parallel: int,
         started = client.call("dag", {"operation": "start_continuation", "request": {
             "batch_id": batch_id, "definition": definition, "approval_id": approved["approval_id"],
             "max_parallel": max_parallel, "timeout_seconds": recovery.get("timeout_seconds", 30)}})
+    return execute_started(client, started, stop_event, execute, max_parallel)
+
+
+def execute_started(client: Any, started: dict, stop_event: threading.Event | None,
+                    execute: Callable[..., Any], max_parallel: int) -> Any:
+    """Coordinate one pre-authorized attempt with the same claims, verification and finalization path."""
     runner = _BatchRun(client, started)
     try:
         return execute(parse_definition(started["definition"]), max_parallel=max_parallel,

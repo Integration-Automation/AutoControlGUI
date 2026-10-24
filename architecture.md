@@ -1,5 +1,16 @@
 # AutoControl Architecture
 
+dag_jobs.BackgroundDags uses the existing WorkQueue in the agent_dag namespace with four service
+workers and a 64-delivery pending ceiling. run_background consumes a registered/approved attempt and
+persists its delivery; acceptance failure fences it. dag_service_client binds coordination/local task
+operations to the owning runtime with independent original-owner and actor refresh. A context-local
+managed_runtime_scope follows copied node contexts, avoiding global connection discovery without
+forwarding local principals/origins to remote hosts. Caller and service modes share execute_started,
+claims and independent completion. Close/stop_all fence coordinators before task retirement. Process
+restart fences running batches and marks old WorkQueue deliveries failed without reclaim or replay.
+GUI Actions submits/reads service records and can close independently. Background lifecycle evidence is
+in test_agent_dag_background.py, test_agent_dag_background_gui.py and test_agent_dag_background_crash.py.
+
 Whole-DAG continuation uses dag_continuation.py with separate evidence and per-node decision modules.
 Review binds the original graph/claims, current owner and real approving actor, pinned host configuration,
 independent completion and local authority ceilings. Approval stores an immutable audit and transactional
