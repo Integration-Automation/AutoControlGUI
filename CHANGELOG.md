@@ -1,5 +1,12 @@
 # Changelog
 
+Pin caller-coordinated registered DAGs to one local service owner-file path, endpoint, credential
+fingerprint and generation. Reuse that client for local node transport and reject replacement before
+future calls. Bind server-side inspection/completion evidence to its owning runtime and original-owner
+request-key namespace, independently refreshing the actual caller. Ordinary clients retain adaptive
+discovery; bound runs require generation-bearing metadata. Never cache bearer credentials or rebind an
+active attempt automatically. Caller cross-owner local-task dispatch remains a separate follow-up.
+
 Add service-owned run_background for initial and explicitly approved managed DAG attempts. Persist
 deliveries through WorkQueue, bind local destinations to the owning runtime and refresh both original
 owner and actual submitting actor. Closing a client/view leaves accepted work alive. Add thin GUI

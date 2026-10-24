@@ -9,7 +9,7 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.dag.batch_contract import definition_dict
 from je_auto_control.utils.dag.graph import DagDefinition, parse_definition
-from je_auto_control.utils.dag.managed_tasks import run_managed_task, ManagedTaskDispatchError
+from je_auto_control.utils.dag.managed_tasks import run_managed_task, ManagedTaskDispatchError, managed_runtime_scope
 from je_auto_control.utils.exception.cancellation import cancellation_scope
 
 
@@ -19,7 +19,7 @@ def run_batch(dag: DagDefinition, batch_id: str, max_parallel: int,
     """Begin the registered batch once; a later run requires explicit recovery rather than another submit."""
     if current_operation() is not None:
         raise AgentTaskError("a managed task cannot coordinate another managed batch")
-    client = AgentRuntimeClient()
+    client = AgentRuntimeClient().bound()
     definition = definition_dict(dag)
     if recovery is None:
         started = client.call("dag", {"operation": "begin", "request": {
@@ -30,7 +30,8 @@ def run_batch(dag: DagDefinition, batch_id: str, max_parallel: int,
         started = client.call("dag", {"operation": "start_continuation", "request": {
             "batch_id": batch_id, "definition": definition, "approval_id": approved["approval_id"],
             "max_parallel": max_parallel, "timeout_seconds": recovery.get("timeout_seconds", 30)}})
-    return execute_started(client, started, stop_event, execute, max_parallel)
+    with managed_runtime_scope(client.task_call, client.check_binding):
+        return execute_started(client, started, stop_event, execute, max_parallel)
 
 
 def execute_started(client: Any, started: dict, stop_event: threading.Event | None,

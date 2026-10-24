@@ -118,11 +118,28 @@ claim；目的端已接受／傳輸中的操作仍依 pause、清理及未知副
 真實程序退出仍保留耐久 claim；重啟將 live 批次轉為 waiting_review、舊排隊／執行中派送轉失敗，
 不重新 claim 或重播。即使舊派送尚無節點 claim，也須明確審閱；查無目的端任務仍不能重設未知 claim。
 
+caller 來源服務綁定
+--------------------------------
+
+``run_dag(..., batch_id=...)`` 在 begin 或續接批准前固定來源。AgentRuntimeClient.bound() 保存
+連線檔絕對路徑及 URL／token／服務世代摘要，每次請求仍重新讀取憑證，不快取 bearer。受管批次
+必須有有效世代；一般 client 保留動態連線行為，仍可使用沒有世代的舊資料。本機節點的 submit／
+get／pause 經執行 context 共用來源 client，全域預設探索變更不會把後續本機節點送往另一服務。
+來源 URL、token 或世代被替換時，在傳輸前停止後續呼叫，不會靜默替執行中 attempt 重新綁定。
+
+服務端批次檢視與完成驗證直接讀取所屬 runtime；保留目前原 owner 的 request-key 範圍，同時在查詢
+前後更新真正 caller 的權限。因此管理員檢視仍使用原 owner 的 key。遠端維持目的端憑證，不接收
+本機 principal／origin。Python／AC／MCP／Builder 及 GUI Run 共用此行為，不需另填憑證或新增命令。
+
+偵測替換不代表先前已接受工作完成清理，原 claim 持續保留，亦不把 pause／控制請求轉送替代服務。
+須透過另行確認的原服務連線檢視，並使用明確批次／任務審閱；還原檔案不重設 begin、未知 claim
+或已消耗批准。caller 跨 owner 本機派送仍須補與服務背景模式相同的接收／清理保證，列於下方待辦。
+
 尚缺步驟
 --------------------------------
 
-caller 協調路徑仍須固定來源服務／本機 transport 世代，背景模式已綁定自有 runtime；
-此 caller 換檔／重啟防護另列於 Progress.md。
+caller 跨 owner 本機派送仍列於 Progress.md；一般 submit 使用實際 caller 的 request-key namespace，
+服務背景模式已分開真正 actor 與原 owner。
 
 批次保留／清理仍列於 Progress.md。舊圖不能事後自動當作已綁定批次；採認只證明
 歷史邏輯階段，不重建登入／視窗或宣稱目前應用狀態。假目標、自有本機／雙主機 HTTP 與 offscreen

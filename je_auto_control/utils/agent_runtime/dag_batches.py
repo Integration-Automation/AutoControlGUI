@@ -16,6 +16,7 @@ from je_auto_control.utils.agent_runtime.dag_batch_recording import (
 )
 from je_auto_control.utils.agent_runtime.dag_continuation import DagContinuation, FIELDS as CONTINUATION_FIELDS
 from je_auto_control.utils.agent_runtime.dag_jobs import delivery_status
+from je_auto_control.utils.agent_runtime.local_evidence import runtime_evidence_scope
 from je_auto_control.utils.dag.batch_contract import batch_definition, bind_definition
 from je_auto_control.utils.dag.inspection import inspect_definition
 from je_auto_control.utils.dag.managed_tasks import task_host_binding
@@ -73,16 +74,18 @@ class DagBatches:
             # pylint: disable-next=protected-access  # reason: serialize this runtime's batch lifecycle transitions
             with self.runtime._lock("dag:" + identifier):
                 batch = self._row(identifier)
-                return self._existing(operation, batch, request)
+                with runtime_evidence_scope(self.runtime):
+                    return self._existing(operation, batch, request)
 
     def _existing(self, operation: str, batch: dict, request: dict) -> dict:
         if operation == "get":
             return self._describe(batch)
+        owner = AuthorizationContext(**batch["owner"]) if batch["owner"] else None
         if operation == "inspect":
             definition = bind_definition(batch["definition"], batch["id"], batch["graph_hash"], batch["bindings"])
-            result = inspect_definition(definition)
+            with DeferredAuthorization(owner).scope():
+                result = inspect_definition(definition)
             return {**result, "batch_id": batch["id"], "graph_hash": batch["graph_hash"], "batch_state": batch["state"]}
-        owner = AuthorizationContext(**batch["owner"]) if batch["owner"] else None
         identity = current_authorization()
         actor = ({"user_id": identity.user_id, "role": identity.role,
                   "namespace": request_spec_digest({"store": identity.store_path})}

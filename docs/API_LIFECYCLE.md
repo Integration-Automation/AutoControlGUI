@@ -1,5 +1,14 @@
 # Public API lifecycle
 
+Caller-driven bound DAG runs use AgentRuntimeClient.bound() to capture an absolute owner-file path
+and a hash of endpoint/token/generation. Every operation re-reads valid loopback metadata and refuses
+identity changes before transport. Local node submit/get/pause uses the same bound client; server-side
+inspection/completion evidence reads the owning runtime directly under current original-owner scope,
+while independently refreshing the actual caller. Ordinary clients remain adaptive and legacy metadata
+without a generation is still usable there; bound DAG runs require valid generation metadata. No
+credential cache or automatic rebind/replay is introduced. Existing Python/AC/MCP/Builder/GUI Run
+surfaces inherit this behavior. Caller cross-owner local-task dispatch parity remains in Progress.md.
+
 manage_agent_dag adds register/get/list/begin/claim/record/finish/inspect on POST /agent/dag and
 AC_agent_dag / MCP ac_agent_dag / CLI agent-task dag / Builder. Register accepts an all-managed graph
 and optional max_parallel (1..64), pins its canonical digest and registered host configuration, and

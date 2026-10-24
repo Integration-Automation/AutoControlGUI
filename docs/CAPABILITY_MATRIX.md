@@ -1,5 +1,10 @@
 # Capability matrix
 
+Caller DAG service binding: owned two-service evidence verifies path capture, endpoint/token/generation
+replacement refusal before transport and local verification on the owning runtime. Admin inspection
+uses original-owner request keys; caller cross-owner local-task dispatch parity remains open. Binding
+retains a fingerprint without caching bearer credentials, and legacy ordinary clients stay adaptive.
+
 Durable managed DAG batch identity: experimental; canonical topology/contract binding, host
 configuration pins, pre-delivery claims, exact independently checked completion, one-shot begin,
 owner isolation, restart and rollback have deterministic and owned local/two-host HTTP evidence.

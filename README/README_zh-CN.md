@@ -15,6 +15,9 @@ CLI／Builder 及 DAG Actions 的批次注册／读取、选填批次 ID 共享�
 明确批准的续接另带 `approval_id`。DAG Actions 提供两个后台动作；关闭视图不停止已接受的服务工作，
 `get.background` 提供有限队列状态。重启使旧 attempt 失效并要求审阅，不重放排队或未知派送。
 原 owner 与提交者的权限持续重新验证，本地任务绑定所属 runtime。批次保留／清理仍列于 Progress.md。
+caller 协调的受管批次固定来源服务路径、端点、凭证指纹及世代，本地节点共用同一 client；连接文件
+身份变更就停止后续调用并要求明确审阅。服务端批次证据直接读取所属 runtime，绑定不缓存 bearer
+凭证。普通非批次 client 保留动态连接行为；受管批次须有含世代的连接数据。
 详见[续接协议](../docs/source/Zh/doc/ai_agents/agent_dag_batches_doc.rst)。
 
 触发器可明确使用 `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`，再以

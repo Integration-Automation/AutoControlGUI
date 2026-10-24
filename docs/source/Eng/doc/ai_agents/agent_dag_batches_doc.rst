@@ -151,11 +151,34 @@ inferred. An actual process exit leaves durable claims. Restart marks live batch
 old queued/in-progress deliveries failed without reclaiming them. Even an unclaimed old delivery
 requires explicit review; an absent destination lookup cannot reset a possible dispatch claim.
 
+Caller service binding
+----------------------------------------------------------------------
+
+Caller-driven ``run_dag(..., batch_id=...)`` binds its source before begin or continuation approval.
+AgentRuntimeClient.bound() captures an absolute owner-file path and a digest of URL, token and service
+generation; bearer credentials remain fresh per request. Valid generation-bearing metadata is required
+for bound runs. Ordinary clients remain adaptive, including legacy metadata without a generation.
+Local node submit/get/pause reuses the source client through copied execution contexts. Changing global
+default discovery cannot move a later local node to another service. Replacing the source URL, token
+or generation stops subsequent calls before transport and never silently rebinds an active attempt.
+
+Server-side batch inspection and completion verification read the owning runtime directly. The current
+original-owner request-key scope is retained, while the actual caller's authority is refreshed around
+queries. Admin inspection therefore uses original-owner keys. Remote hosts retain destination-owned
+credentials and never receive local principal/origin data. Existing Python/AC/MCP/Builder and GUI Run
+surfaces inherit the same binding; no additional GUI command or credential input is needed.
+
+Replacement detection does not prove retirement of previously accepted work. Its claims remain
+durable, and no pause/control request is redirected to a replacement service. Inspect the original
+service through a separately verified connection and use explicit batch/task review; restoring a file
+does not reset begin, unknown claims or consumed approvals. Caller cross-owner local-task dispatch
+still needs original-owner admission/retirement parity with service background mode, as tracked below.
+
 Current limits
 ----------------------------------------------------------------------
 
-Caller-driven runs still need generation-pinned coordinator/local transport routing; background mode
-binds its owning runtime. That caller-path follow-up is tracked separately in Progress.md.
+Caller cross-owner local-task dispatch remains in Progress.md; ordinary submit uses the actual
+caller's request-key namespace. Service background mode already separates actor and original owner.
 
 Batch retention/cleanup remains in Progress.md. Legacy graphs cannot be retroactively treated as bound
 batches. Adoption certifies a historical logical stage; it does not

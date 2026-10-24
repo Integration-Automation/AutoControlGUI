@@ -22,6 +22,10 @@ closing the view leaves accepted service work alive. `get.background` reports bo
 Restart fences old attempts and requires review, without replaying queued or unknown deliveries.
 Both original owner and submitting actor remain live checks; local tasks use their owning runtime.
 Batch retention/cleanup remains in Progress.md.
+Caller-coordinated bound runs pin the local service path, endpoint, credential fingerprint and generation.
+All local node calls reuse that client; replaced metadata stops future calls and requires explicit review.
+Server-side batch evidence reads its owning runtime directly. No bearer credential is cached by binding.
+Ordinary non-batch clients retain adaptive discovery; bound batches require generation-bearing metadata.
 See [the continuation protocol](docs/source/Eng/doc/ai_agents/agent_dag_batches_doc.rst).
 
 Triggers can explicitly use `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`,
