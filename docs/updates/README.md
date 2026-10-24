@@ -514,3 +514,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-24 | 2026-10-24 | Bind DAG inspection to destination request-spec digests | #done #agent #recovery | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-25 | 2026-10-24 | Preserve remaining delivery steps before the requested pause | #docs #agent #handoff | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-26 | 2026-10-24 | Quarantine remote effects independently of local helper retirement | #done #agent #devices | [2026-10-c](2026-10-c.md) |

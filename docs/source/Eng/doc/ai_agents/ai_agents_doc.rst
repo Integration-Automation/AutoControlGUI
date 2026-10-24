@@ -462,3 +462,20 @@ are unchanged by probing. Disabled targets stay disabled. Desktop/device native 
 The prepared isolated environment installs wheels from both feature worktrees. Shared environments
 and production checkouts remain untouched; production service configuration and real-browser acceptance
 remain separate work. Browser automation still belongs entirely to WebRunner (``je_web_runner``).
+
+Remote-device lifecycle prerequisite
+----------------------------------------------------------------------
+
+Android/iOS managed adapters are not yet available. Internal ``remote_journal`` and
+``remote_target`` bind a host-proven physical device to an OS lock and a durable controller/sequence
+witness. A closed capability handshake is mandatory; begin/end events are fsynced before host ACK.
+Configure and observe cannot authorize effects. An unconfirmed effect survives local helper retirement
+and blocks transfer; cleanup never starts a replacement helper or replays remote commands.
+An end event must certify settled device work with no held input or queued writes; merely returning
+from a transport call is insufficient. This guarantee belongs to the trusted SDK adapter contract.
+
+Recovery requires a host-trusted provider certifying the same physical device and all old writers
+retired. It first persists a post-retirement epoch baseline, then requires a different epoch whose
+provider contract invalidates old commands without replay. SDK epochs and idle guarantees are not
+assumed. Generic desktop recovery cannot clear this witness. SDK adapters, app scope, device profiles,
+public surfaces, real-device proof providers and native acceptance remain open in ``Progress.md``.

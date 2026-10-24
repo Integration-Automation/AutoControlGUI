@@ -1,5 +1,11 @@
 # Changelog
 
+Add an internal remote-effect lifecycle prerequisite for future Android/iOS adapters. Physical-device
+ownership, a closed remote protocol and fsynced begin/end acknowledgements fence unknown effects after
+local helper retirement. Recovery requires host-trusted post-retirement evidence and a later device epoch
+that invalidates old commands. Generic local-input recovery refuses remote witnesses. No device profiles,
+SDK adapters, public commands or native readiness are added by this prerequisite.
+
 Extend keyed task lookup with an optional reviewed spec and additive spec_match_contract=1. Compare destination-normalized specs with the immutable accepted request digest without submission or activation. CLI lookup adds --spec; AC/MCP/REST/Builder share it. DAG inspection negotiates matching, validates stable task identity and preserves legacy unverified behavior. Local origin witnesses stay local. Node matching does not grant graph/batch approval or continuation; existing one-argument calls remain supported.
 
 Add inspect_agent_dag / AC_agent_dag_inspect across shared API/MCP/REST actions/CLI/Builder and DAG Actions. Inspect at most 100 keyed local/registered-host requests with bounded read-only lookup, live authorization, sanitized snapshots and no control operations. Recorded task completion never grants current-graph matching or resume approval. GUI results discard stale graph views. Preserve legacy local/remote action node objects that omit the optional task field; the remote transport adds only the closed lookup operation.

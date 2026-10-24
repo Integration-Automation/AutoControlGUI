@@ -1,5 +1,11 @@
 # AutoControl
 
+Android/iOS managed adapters remain unavailable. Their internal remote-effect guard now records
+before/after acknowledgements against a physical-device identity and retains quarantine when a local
+helper exits with an unconfirmed effect. Recovery requires a trusted device proof after writer retirement
+and a later epoch invalidating old commands. No built-in SDK proof, device profile or native acceptance
+is implied; remaining integration is in `Progress.md`.
+
 `lookup_agent_task("key", reviewed_spec)` optionally compares the destination-normalized specification
 with the immutable digest stored for the original owner's request. The response advertises
 `spec_match_contract=1` and reports `spec_match=matches|differs|unverifiable|not_found` when a spec is supplied.

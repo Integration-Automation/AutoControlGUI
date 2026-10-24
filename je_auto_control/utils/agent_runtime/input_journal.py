@@ -33,9 +33,16 @@ class InputJournal:
             data = json.loads(self.path.read_text(encoding="utf-8"))
             if not isinstance(data, dict) or data.get("version") != 1:
                 raise ValueError("unknown input witness")
+            self._validate_witness(data)
             return data
+        except AgentTaskError:
+            raise
         except (OSError, ValueError) as error:
             raise AgentTaskError("input recovery witness requires operator review") from error
+
+    def _validate_witness(self, data: dict) -> None:
+        if {"remote_protocol", "remote_effect", "remote_device", "recovery_epoch"} & data.keys():
+            raise AgentTaskError("remote input witness requires its device-specific recovery protocol")
 
     def acquire(self) -> None:
         """Refuse a previous host's unfinished ownership rather than replaying its input."""

@@ -1,5 +1,10 @@
 # AutoControl
 
+Android／iOS 受管 adapter 仍未提供。內部遠端副作用防護會依實體裝置識別保存動作前／後確認；
+本機 helper 結束但動作未確認時，仍保留隔離。恢復須在 writer 退出後取得可信裝置證據，並以
+後續能使舊指令失效的世代證明安全。尚無內建 SDK 證據來源、裝置 profile 或原生驗收；
+剩餘接合列於 `Progress.md`。
+
 `lookup_agent_task("鍵", reviewed_spec)` 可選擇由目的地主機正規化規格，與原擁有者提交時保存的
 不可變摘要比對；回覆宣告 `spec_match_contract=1`，並提供一致／不同／無法核對／查無紀錄。
 CLI 可加 `--spec reviewed.json`；AC／MCP／REST／Builder 共用可選物件。DAG 檢視先查鍵，再於

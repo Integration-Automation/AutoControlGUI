@@ -713,3 +713,12 @@ target_continuity.py rejects retained finite skill prefixes without their origin
 DesktopTarget now checks its live pinned scope before trusting a retained finite prefix. NativeDesktopTarget applies the same pure target_continuity validator to host-profiled desktop/browser targets and the built-in local desktop, before starting another channel; file profiles retain persistent evidence recovery. A fake semantic application proves that edited fields cannot be submitted after scope cleanup, while an uninterrupted flow still succeeds.
 
 Browser environment contract: host-only settings.helper_python selects a local absolute interpreter and preserves virtualenv executable symlinks; task options cannot override it. target_factory supplies fixed -I/-u/-m worker arguments for that interpreter. helper_environment.py probes dependencies in a separately owned, concurrency-bounded helper, without input-resource acquisition or reuse of a configured channel. NativeWorker accepts probe_browser only before configuration. browser_environment.py reuses the SDK readback/transfer contracts and delegates runtime imports to je_web_runner.webdriver.playwright_wrapper._require_playwright(); the returned factory is never started. This existing private SDK hook is now a cross-project dependency contract. Target management exposes probe on shared surfaces with host authority, keeps long probes outside the runtime mutex and publishes only bounded timestamped metadata. Python dependency success never establishes native/browser execution readiness or enables targets.
+
+Remote-device prerequisite: remote_journal.py binds a physical platform/device identity (not an app,
+profile or endpoint) to durable controller/sequence begin/end events. OwnedChannel ACK follows fsync.
+remote_target.py owns a fixed host-selected helper, requires remote_effect_protocol=1, denies writes
+outside perform and retires the local writer before release. An unmatched remote begin retains the OS
+resource and durable quarantine; desktop InputJournal recovery refuses remote witnesses. Host-trusted
+recovery first records an epoch after all old writers retire, then requires a later epoch invalidating
+old commands without replay. No ADB/WDA proof is assumed. These are internal adapter prerequisites;
+Android/iOS factory profiles, SDK wiring, public surfaces and native readiness remain unavailable.
