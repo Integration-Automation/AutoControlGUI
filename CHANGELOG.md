@@ -1,5 +1,10 @@
 # Changelog
 
+Replace the internal Android action marker with closed v2 phases and exact shell-exit matching.
+Distinguish pre-input refusal from failure or refusal after possible input; malformed/partial/legacy
+evidence stays unknown. Returned input cannot certify remote input retirement or task completion.
+No managed-device execution or public Android command behavior is changed.
+
 Add internal Android native input/security evidence and checked proposals. Parse current dispatcher
 windows, native server-channel/queue state and both keyguard views; reject busy, inconsistent or unknown
 critical formats. Check entire pointer paths against half-open region unions and front-to-back overlays,

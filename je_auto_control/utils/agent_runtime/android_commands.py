@@ -11,7 +11,6 @@ from je_auto_control.utils.agent_runtime.android_transport import _shell_service
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 
 ANDROID_INPUT_TOOLS = frozenset({"AC_android_tap", "AC_android_swipe", "AC_android_text", "AC_android_key"})
-ACTION_MARKER = b"__JE_ANDROID_ACTION_V1__\n"
 INPUT_MARKER = b"__JE_ANDROID_INPUT_V1__\n"
 POLICY_MARKER = b"__JE_ANDROID_POLICY_V1__\n"
 SAFETY_END = b"__JE_ANDROID_SAFETY_END_V1__\n"
@@ -141,6 +140,15 @@ def _check_evidence(evidence: AndroidInputEvidence, snapshot: AndroidSnapshot, n
         evidence.require_path((arguments["x1"], arguments["y1"]), (arguments["x2"], arguments["y2"]))
 
 
+def _phase_guard(guard: str, *, before: bool) -> str:
+    # A subshell contains the guard's exit, so a complete refusal identifies which side of input failed.
+    codes = "91|92|93|95" if before else "91|92|93"
+    marker = "refused" if before else "post_refused"
+    return ("if ( " + guard + " ) >/dev/null 2>&1; then :; else je_android_code=$?; "
+            + 'case "$je_android_code" in ' + codes + ") /system/bin/printf '" + marker
+            + ":%s\\n' \"$je_android_code\" || exit 96; exit \"$je_android_code\";; *) exit 96;; esac; fi")
+
+
 def compile_android_action(snapshot: AndroidSnapshot, name: str, arguments: dict[str, Any], *,
                            input_evidence: AndroidInputEvidence | None = None) -> str:
     """Build a host-only proposal; input-window/occlusion/lock authorization is still required.
@@ -156,8 +164,13 @@ def compile_android_action(snapshot: AndroidSnapshot, name: str, arguments: dict
     safety = ""
     if input_evidence is not None:
         _check_evidence(input_evidence, snapshot, name, arguments)
-        safety = _safety_guard(input_evidence) + "; "
-    script = (guard + "; " + safety + "/system/bin/input -d 0 " + command + " >/dev/null 2>&1 || exit 94; "
-              + guard + "; /system/bin/printf '__JE_ANDROID_ACTION_V1__\\n'")
+        safety = "; " + _safety_guard(input_evidence)
+    script = ("/system/bin/printf '__JE_ANDROID_ACTION_V2__\\n' || exit 96; "
+              + _phase_guard(guard + safety, before=True)
+              + "; /system/bin/printf 'attempted\\n' || exit 96; "
+              + "if /system/bin/input -d 0 " + command + " >/dev/null 2>&1; then "
+              + "/system/bin/printf 'returned\\n' || exit 96; else "
+              + "/system/bin/printf 'input_failed\\n' || exit 96; exit 94; fi; "
+              + _phase_guard(guard, before=False) + "; /system/bin/printf 'verified\\n' || exit 96")
     _shell_service(script)
     return script

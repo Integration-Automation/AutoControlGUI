@@ -16,6 +16,9 @@ Android checked proposals now bind current native input-window/queue and keyguar
 checks cover entire half-open touch-region paths and foreign interception/overlays; hashes are rechecked
 on the command connection. Old ANR/history cannot certify current state. Human presence, global-monitor
 review and owned-worker authorization remain separate, and managed device execution is still unavailable.
+Internal Android action protocol v2 distinguishes complete pre-input refusal from input failure,
+post-input refusal and returned input. Missing/malformed phases or mismatched shell exits remain unknown;
+even returned input does not certify remote input retirement or task completion. No retry is authorized.
 
 `lookup_agent_task("key", reviewed_spec)` optionally compares the destination-normalized specification
 with the immutable digest stored for the original owner's request. The response advertises

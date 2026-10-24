@@ -559,6 +559,14 @@ monitors are explicit metadata requiring separate trusted review, not implicit a
 proposals retain ``input_authorized=false``. Human activity/held-input gates, owned remote-worker/journal
 integration, observation grounding and independent completion remain open in ``Progress.md``.
 
+The internal action protocol v2 emits a closed ordered phase trace. A complete pre-input refusal has
+one fixed refusal phase and matching shell-v2 exit. Once input may have been invoked, failure and
+post-input refusal preserve that possibility, even when their exit codes match a pre-input check.
+``parse_android_action_result`` requires exact bytes, no stderr and a matching exit from a complete
+transport result. Old markers, truncation, transport errors and malformed traces remain unknown.
+The returned-input phase certifies the script path only: it cannot settle a remote journal, prove
+queues/held input retired, authorize retries or satisfy independent task completion.
+
 The pinned formats come from AOSP Android 14
 `InputDispatcher <https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-14.0.0_r27/services/inputflinger/dispatcher/InputDispatcher.cpp>`_,
 `WindowInfo <https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-14.0.0_r27/libs/gui/include/gui/WindowInfo.h>`_,

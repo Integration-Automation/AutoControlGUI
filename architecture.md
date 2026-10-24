@@ -748,3 +748,9 @@ history/old ANR data and are rechecked by android_commands.py before input on th
 AndroidDeviceSession.inspect_input/propose_checked share the deadline and preserve authority revocation.
 Evidence remains input_authorized=false; global monitors, physical activity/held inputs and owned-worker
 integration require separate trusted authorization before any managed Android target is advertised.
+
+Android action-result boundary: android_action_result.py accepts only complete v2 phase/exit pairs
+from ManagedAdbServer.shell. android_commands.py contains pre/post guard exits in separate subshells;
+only complete pre-input refusal proves this command did not invoke input. Input failure and post-input
+refusal retain possible effects; partial/legacy/malformed evidence stays unknown. A returned-input
+phase is not an idle, retirement, recovery or task-completion certificate and never permits replay.

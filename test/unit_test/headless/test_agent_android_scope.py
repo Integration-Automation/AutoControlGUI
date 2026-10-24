@@ -10,7 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from je_auto_control.utils.agent_runtime.android_commands import ACTION_MARKER, compile_android_action
+from je_auto_control.utils.agent_runtime.android_commands import compile_android_action
+from je_auto_control.utils.agent_runtime.android_action_result import ACTION_MARKER, parse_android_action_result
 from je_auto_control.utils.agent_runtime.android_commands import (
     INPUT_MARKER, POLICY_MARKER, SAFETY_END, compile_android_input_probe)
 from je_auto_control.utils.agent_runtime.android_geometry import AndroidRect, covers_android_path
@@ -91,6 +92,11 @@ fixture_dumpsys() {
 }
 fixture_input() {
     printf '%s\\n' "$@" >> "$FIXTURE_DIR/actions"
+    for field in device boot; do
+        if [ -f "$FIXTURE_DIR/after-$field" ]; then
+            command cat "$FIXTURE_DIR/after-$field" > "$FIXTURE_DIR/$field"
+        fi
+    done
     if [ -f "$FIXTURE_DIR/after" ]; then command cat "$FIXTURE_DIR/after" > "$FIXTURE_DIR/wm"; fi
     if [ -f "$FIXTURE_DIR/fail" ]; then return 1; fi
 }
@@ -144,7 +150,9 @@ def test_input_failure_never_emits_success_or_repeats_the_action(run_guard, tmp_
     (tmp_path / "fail").touch()
     result = run_guard()
     assert result.returncode == 94
-    assert result.stdout == b""
+    parsed = parse_android_action_result(AdbShellResult(result.stdout, result.stderr, result.returncode))
+    assert parsed.phase == "input_failed"
+    assert parsed.may_have_effect
     assert (tmp_path / "actions").read_text().splitlines().count("tap") == 1
 
 
@@ -160,7 +168,9 @@ def test_changed_reused_endpoint_or_ambiguous_scope_refuses_before_input(run_gua
     (tmp_path / name).write_text(content, encoding="utf-8", newline="")
     result = run_guard()
     assert result.returncode == code
-    assert result.stdout == b""
+    parsed = parse_android_action_result(AdbShellResult(result.stdout, result.stderr, result.returncode))
+    assert parsed.phase == "pre_input_refused"
+    assert not parsed.may_have_effect
     assert not (tmp_path / "actions").exists()
 
 
@@ -168,7 +178,21 @@ def test_scope_change_after_action_is_not_published_as_confirmed_completion(run_
     (tmp_path / "after").write_text(WM.replace(PACKAGE, "org.other.app"), encoding="utf-8", newline="")
     result = run_guard()
     assert result.returncode == 93
-    assert result.stdout == b""
+    parsed = parse_android_action_result(AdbShellResult(result.stdout, result.stderr, result.returncode))
+    assert parsed.phase == "post_input_refused"
+    assert parsed.may_have_effect
+    assert (tmp_path / "actions").read_text().splitlines().count("tap") == 1
+
+
+@pytest.mark.parametrize("field,content,code", [
+    ("device", "different-device\n", 91), ("boot", BOOT.replace("1", "2") + "\n", 92),
+])
+def test_identity_failure_after_input_never_masquerades_as_pre_input_refusal(run_guard, tmp_path, field, content, code):
+    (tmp_path / ("after-" + field)).write_text(content, encoding="utf-8", newline="")
+    result = run_guard()
+    assert result.returncode == code
+    parsed = parse_android_action_result(AdbShellResult(result.stdout, result.stderr, result.returncode))
+    assert parsed.phase == "post_input_refused" and parsed.may_have_effect
     assert (tmp_path / "actions").read_text().splitlines().count("tap") == 1
 
 
@@ -569,6 +593,8 @@ def test_same_command_connection_refuses_changed_native_input_before_any_write(r
     (tmp_path / "policy").write_bytes(policy)
     result = run_guard(input_evidence=proof)
     assert result.returncode == 95
+    parsed = parse_android_action_result(AdbShellResult(result.stdout, result.stderr, result.returncode))
+    assert parsed.phase == "pre_input_refused" and not parsed.may_have_effect
     assert not (tmp_path / "actions").exists()
 
 
