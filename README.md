@@ -19,6 +19,10 @@ review and owned-worker authorization remain separate, and managed device execut
 Internal Android action protocol v2 distinguishes complete pre-input refusal from input failure,
 post-input refusal and returned input. Missing/malformed phases or mismatched shell exits remain unknown;
 even returned input does not certify remote input retirement or task completion. No retry is authorized.
+The internal owned remote SDK worker now checks exact task/owner scope, refreshed authority and physical
+takeover; parent monitoring starts before the trusted host factory. Calls require a durable begin ACK,
+then matching device/epoch settlement before an end ACK. Missing proof keeps effects quarantined.
+Concrete Android/WDA adapters and trusted presence, held-input and remote-queue providers remain required.
 
 `lookup_agent_task("key", reviewed_spec)` optionally compares the destination-normalized specification
 with the immutable digest stored for the original owner's request. The response advertises

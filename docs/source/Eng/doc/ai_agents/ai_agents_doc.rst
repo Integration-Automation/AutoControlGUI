@@ -567,6 +567,24 @@ transport result. Old markers, truncation, transport errors and malformed traces
 The returned-input phase certifies the script path only: it cannot settle a remote journal, prove
 queues/held input retired, authorize retries or satisfy independent task completion.
 
+Owned remote SDK worker
+----------------------------------------------------------------------
+
+``remote_worker.serve_remote_worker`` starts parent retirement monitoring before invoking a fixed
+trusted host factory. No task/RPC field chooses the SDK, server, app binding or factory. The internal
+``RemoteDeviceAdapter`` contract requires read-only readiness/observation/preparation, live physical
+activity checks and a finite host-only ``PreparedRemoteAction``. Exact JSON scope binding distinguishes
+booleans, integers and floats; both the host proxy and child refuse owner/scope replacement.
+
+``RemoteEffectController`` waits for the host's durable begin ACK before invoking the SDK once.
+The worker refreshes store-backed authority around input, checks deadlines and latches physical
+takeover. An exact device/epoch proof must certify released input and an empty remote write queue before
+end is emitted and acknowledged. A shell return or parsed Android phase cannot supply that proof.
+Malformed/missing ACK, lost replies, revocation, timeout or failed settlement never trigger replay,
+replacement or desktop release input. Cleanup retires the owned helper; unknown remote effects remain
+quarantined. Concrete Android/WDA adapters, real trusted evidence providers, target profiles and shared
+user surfaces remain open; simulated SDK contracts do not establish native device readiness.
+
 The pinned formats come from AOSP Android 14
 `InputDispatcher <https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-14.0.0_r27/services/inputflinger/dispatcher/InputDispatcher.cpp>`_,
 `WindowInfo <https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-14.0.0_r27/libs/gui/include/gui/WindowInfo.h>`_,

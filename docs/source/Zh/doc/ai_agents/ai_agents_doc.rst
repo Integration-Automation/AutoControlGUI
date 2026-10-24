@@ -490,3 +490,18 @@ Android 原生輸入與安全證據
 保留副作用可能。``parse_android_action_result`` 要求完整傳輸結果、精確位元組、空 stderr 與
 相符退出碼；舊標記、截斷、傳輸錯誤及不合法階段仍屬未知。輸入返回只證明命令走到該階段，
 不能清除遠端 journal、證明佇列／按住輸入已清空、授權重試或取代獨立完成條件。
+
+自有遠端 SDK worker
+----------------------------------------------------------------------
+
+``remote_worker.serve_remote_worker`` 先啟動 parent 退出監看，再呼叫固定的可信主機 factory；
+任務／RPC 不可選 SDK、server、app 綁定或 factory。``RemoteDeviceAdapter`` 要求唯讀就緒／觀察／
+準備、即時真人活動檢查及有限的主機端 ``PreparedRemoteAction``；主機與子程序都會精確綁定
+任務／擁有者，區分 JSON 布林、整數與浮點，不允許更換範圍。
+
+``RemoteEffectController`` 必須等主機持久化 begin 並 ACK 後才呼叫一次 SDK；worker 在輸入前
+重新核對帳號權限、期限與真人接回。只有相符裝置／世代、輸入已釋放且遠端待送佇列清空的
+可信證據，才可送出並確認 end；shell 返回或 Android 階段不能提供這項證明。缺少／錯誤 ACK、
+撤權、逾時、晚到回覆及清理失敗都不重播、更換 helper 或代送桌面釋放。結束自有 helper 後，
+未知遠端副作用仍保留隔離。具體 Android／WDA adapter、可信證據來源、profile 與共用使用者介面
+仍待接合；模擬 SDK 測試不代表真機就緒。

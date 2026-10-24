@@ -43,7 +43,7 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      未知 worker／按住輸入／清理失敗時不得移交或竊取租約。
 
 4. **P7：Android／iOS 受管裝置**
-   - 將 `utils/agent_runtime/{remote_journal,remote_target}.py` 的共用防護接入可信 SDK adapter，
+   - 將 `utils/agent_runtime/{remote_worker,remote_effect,remote_journal,remote_target}.py` 接入具體可信 SDK adapter，
      再接 `target_config.py`／`target_factory.py`。內部 guard 尚不代表 Android／iOS 可受管執行。
      Android 須將 `android_session.AndroidDeviceSession.propose_checked` 接入自有 worker，每次寫入
      必須重驗對應的身分／輸入視窗／keyguard 證據；補可信真人活動、已按下輸入狀態與接回 gate，
@@ -51,11 +51,11 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      worker 須區分前置拒絕、已送出與未知結果，保存相符 ACK／journal；證據摘要不是完成或恢復證明。
      將 `android_action_result.parse_android_action_result` 的封閉 v2 階段／退出碼核對接入 worker；
      只有完整前置拒絕才證明此命令未呼叫輸入；返回／後置拒絕仍不能清除 journal 或授權重試。
-     自有 worker 須協商遠端協定並接 parent-watch，以可信主機設定綁定裝置、owner 與有限工具；
-     持久化 begin 後才 ACK／派送，end 須有無按住輸入與無待送指令的可信證據。
-     接合每次操作的授權／期限／取消及真人接回通知；不能讓 TaskSpec 或模型更換主機設定。
-     補真實自有 helper IPC 的 ACK 前拒絕、begin 後取消／逾時、錯誤裝置／世代、撤權、
-     唯讀路徑禁止輸入與清理失敗隔離測試；不得重播、更換 helper 繞過或代送桌面釋放事件。
+     具體 SDK 須實作 `RemoteDeviceAdapter` 的唯讀準備、即時接回檢查及有限呼叫，並提供
+     `PreparedRemoteAction.settle` 所需的實體裝置／世代、輸入釋放及遠端佇列清空證據；
+     不可用 shell 退出、Android 階段或模擬 SDK 的證明取代真實契約。
+     在實際 SDK 重驗 ACK 前拒絕、begin 後取消／逾時、錯誤裝置／世代、撤權、真人接回、
+     唯讀路徑禁止輸入與清理失敗隔離；不得重播、更換 helper 繞過或代送桌面釋放事件。
      數字 transport ID、shell-v2 的退出碼或本機 socket 結束都不足以證明裝置／輸入安全。
      補受限 hierarchy／元素輸入的 Unicode／IME 與讀回，以及旋轉／縮放／多顯示器、版本／OEM 格式核對；
      不可把有限 ASCII 提案或未知 dump 格式當作完整裝置輸入支援。

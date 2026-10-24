@@ -754,3 +754,12 @@ from ManagedAdbServer.shell. android_commands.py contains pre/post guard exits i
 only complete pre-input refusal proves this command did not invoke input. Input failure and post-input
 refusal retain possible effects; partial/legacy/malformed evidence stays unknown. A returned-input
 phase is not an idle, retirement, recovery or task-completion certificate and never permits replay.
+
+Owned remote SDK boundary: remote_worker.py serves a fixed host factory after parent_watch starts,
+with closed bounded RPC, typed JSON scope/owner pins, refreshed store-backed authority, deadlines and
+sticky physical takeover. RemoteDeviceAdapter supplies read-only preparation and trusted live checks;
+remote_effect.py invokes one PreparedRemoteAction only after durable begin ACK. End requires an exact
+device/epoch settlement proof of released input and no queued remote writes; return values never imply
+settlement. NativeRemoteTarget forwards owner provenance and physical takeover without reader self-join.
+Errors retire the helper and preserve unknown remote effects, with no replay or desktop input cleanup.
+This is an internal SDK seam: no built-in Android/WDA adapter, proof provider or managed profile is added.

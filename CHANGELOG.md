@@ -1,5 +1,10 @@
 # Changelog
 
+Add an internal owned remote SDK worker with exact scope/owner binding, refreshed authority, parent
+retirement monitoring and physical takeover. Invoke finite SDK calls once after durable begin ACK;
+require trusted matching device/epoch input/queue settlement before end ACK. Unknown effects retain
+quarantine without replay or desktop cleanup. Concrete Android/WDA adapters and public profiles remain pending.
+
 Replace the internal Android action marker with closed v2 phases and exact shell-exit matching.
 Distinguish pre-input refusal from failure or refusal after possible input; malformed/partial/legacy
 evidence stays unknown. Returned input cannot certify remote input retirement or task completion.

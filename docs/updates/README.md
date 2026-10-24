@@ -526,3 +526,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-30 | 2026-10-24 | Record remaining device integration and pause after handoff | #docs #agent #handoff | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-31 | 2026-10-24 | Distinguish complete Android pre-input refusal from possible effects | #done #agent #android | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-32 | 2026-10-24 | Gate owned remote SDK calls on durable ACK and trusted settlement | #done #agent #devices | [2026-10-c](2026-10-c.md) |

@@ -6,10 +6,11 @@ from pathlib import Path
 from typing import Any, Callable, Sequence
 
 from je_auto_control.utils.agent_runtime.context import current_operation
-from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.errors import AgentHumanReview, AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
 from je_auto_control.utils.agent_runtime.native_channel import OwnedChannel
 from je_auto_control.utils.agent_runtime.remote_journal import RemoteInputJournal, device_identity, device_resource
+from je_auto_control.utils.agent_runtime.remote_effect import remote_scope_key
 from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock
 from je_auto_control.utils.agent_runtime.target_continuity import require_context_continuity
 
@@ -29,6 +30,9 @@ class NativeRemoteTarget:  # pylint: disable=too-many-instance-attributes  # rea
         self._journal: RemoteInputJournal | None = None
         self._channel: OwnedChannel | None = None
         self._mutex = threading.RLock()
+        self._bound: str | None = None
+        self._takeover: Callable[[], None] | None = None
+        self._takeover_sent = threading.Event()
 
     @property
     def can_reobserve(self) -> bool:
@@ -66,7 +70,8 @@ class NativeRemoteTarget:  # pylint: disable=too-many-instance-attributes  # rea
         self._resource, self._journal = resource, journal
 
     def _launch(self, check: Callable[[], None]) -> None:
-        self._channel = OwnedChannel(self._argv)
+        self._takeover_sent.clear()
+        self._channel = OwnedChannel(self._argv, on_control=self._control)
         for operation, expected in (("bootstrap", {"protocol": 1}),
                                     ("remote_capabilities", {"remote_effect_protocol": 1})):
             reply = self._channel.request(operation, {}, timeout=15, check=check)
@@ -75,12 +80,30 @@ class NativeRemoteTarget:  # pylint: disable=too-many-instance-attributes  # rea
                 self._channel.close()
                 raise AgentTaskError("remote helper effect protocol is incompatible")
 
+    def _control(self, _kind: str) -> None:
+        if self._takeover is None:
+            raise AgentHumanReview("physical input requires an explicit remote takeover handler")
+        if not self._takeover_sent.is_set():
+            self._takeover_sent.set()
+            threading.Thread(target=self._takeover, name="RemoteTakeover", daemon=True).start()
+
+    @staticmethod
+    def _binding() -> dict:
+        context = current_operation()
+        if context is None:
+            raise AgentTaskError("remote target has no managed owner")
+        owner = context.owner
+        identity = {"user_id": owner.user_id, "role": owner.role, "store_path": owner.store_path} if owner else {}
+        return {"spec": context.spec.to_dict(), "owner": identity}
+
     def _request(self, operation: str, payload: dict) -> Any:
         with self._mutex:
             context = current_operation()
             if context is None:
                 raise AgentTaskError("remote targets require an explicitly managed operation scope")
             context.checkpoint()
+            if operation != "configure" and self._bound != remote_scope_key(self._binding()):
+                raise AgentTaskError("remote helper scope does not match its configured owner")
             channel, journal = self._ensure(context.checkpoint)
             if operation == "configure":
                 payload = {**payload, "remote_guard": {"controller": journal.owner,
@@ -97,13 +120,20 @@ class NativeRemoteTarget:  # pylint: disable=too-many-instance-attributes  # rea
 
     def ready(self, spec: AgentTaskSpec) -> tuple[bool, str]:
         """Send host identity guard only within this exact managed task scope."""
-        context = current_operation()
-        if context is None or context.spec != spec:
-            raise AgentTaskError("remote target scope does not match its owner")
-        result = self._request("configure", {"spec": spec.to_dict()})
-        if not isinstance(result, dict) or not isinstance(result.get("ready"), bool):
-            raise AgentTaskError("remote helper returned invalid readiness")
-        return result["ready"], str(result.get("reason", ""))
+        with self._mutex:
+            context = current_operation()
+            if context is None or context.spec != spec:
+                raise AgentTaskError("remote target scope does not match its owner")
+            binding = self._binding()
+            if self._bound is not None and remote_scope_key(binding) != self._bound:
+                raise AgentTaskError("remote helper cannot replace its configured owner")
+            self._takeover = context.takeover
+            result = self._request("configure", binding)
+            if not isinstance(result, dict) or not isinstance(result.get("ready"), bool):
+                raise AgentTaskError("remote helper returned invalid readiness")
+            if result["ready"]:
+                self._bound = remote_scope_key(binding)
+            return result["ready"], str(result.get("reason", ""))
 
     def observe(self) -> dict[str, Any]:
         """Read device evidence without granting permission for remote writes."""
@@ -119,6 +149,7 @@ class NativeRemoteTarget:  # pylint: disable=too-many-instance-attributes  # rea
             if self._channel is not None:
                 self._channel.close()
                 self._channel = None
+            self._bound = None
             if self._journal is not None:
                 self._journal.release()
                 self._journal = None
@@ -134,6 +165,7 @@ class NativeRemoteTarget:  # pylint: disable=too-many-instance-attributes  # rea
             if self._channel is not None:
                 self._channel.close()
                 self._channel = None
+                self._bound = None
             resource = self._resource or RuntimeLock(self._path)
             try:
                 result = RemoteInputJournal(self._path, self._device).recover(note, self._probe, actor)
