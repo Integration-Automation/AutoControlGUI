@@ -2,12 +2,14 @@
 
 ## Agent 電腦接管與任務自動化
 
-`WIP` — **依使用者恢復要求繼續交付；個別原生／真機／24 小時驗收仍暫緩。**
+`WIP` — **依使用者要求，本批收尾後整體暫停；待明確要求繼續後才恢復實作。**
+個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
+恢復後優先處理第 4 組的遠端 worker／ACK／取消接合，再依序完成其餘實作、共用介面與第 8 組交付核對。
 
 1. **P4：瀏覽器與正式環境接合**
    - 選定正式服務專用 helper Python、AutoControl／WebRunner 套件版本與受管 Chromium 安裝；
@@ -47,6 +49,13 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      必須重驗對應的身分／輸入視窗／keyguard 證據；補可信真人活動、已按下輸入狀態與接回 gate，
      以及全域監看器的可信審閱。提案／證據的 `input_authorized=false` 不得當成執行批准。
      worker 須區分前置拒絕、已送出與未知結果，保存相符 ACK／journal；證據摘要不是完成或恢復證明。
+     下一步先補封閉的階段／結果協定：目前身分／焦點退出碼可能發生在輸入前或輸入後，
+     不能以相同退出碼、缺少輸出標記或斷線推定未執行；完整前置拒絕證據才可認定沒有副作用。
+     自有 worker 須協商遠端協定並接 parent-watch，以可信主機設定綁定裝置、owner 與有限工具；
+     持久化 begin 後才 ACK／派送，end 須有無按住輸入與無待送指令的可信證據。
+     接合每次操作的授權／期限／取消及真人接回通知；不能讓 TaskSpec 或模型更換主機設定。
+     補真實自有 helper IPC 的 ACK 前拒絕、begin 後取消／逾時、錯誤裝置／世代、撤權、
+     唯讀路徑禁止輸入與清理失敗隔離測試；不得重播、更換 helper 繞過或代送桌面釋放事件。
      數字 transport ID、shell-v2 的退出碼或本機 socket 結束都不足以證明裝置／輸入安全。
      補受限 hierarchy／元素輸入的 Unicode／IME 與讀回，以及旋轉／縮放／多顯示器、版本／OEM 格式核對；
      不可把有限 ASCII 提案或未知 dump 格式當作完整裝置輸入支援。
@@ -103,6 +112,7 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
    - 於最後固定提交重跑完整 headless 與 `coverage run -m pytest`、跨功能／故障恢復回歸；
      目前較早固定版本的全套證據不能冒充最新工作樹結果。
    - 重跑三平台型別、Ruff／Bandit、檔案／函式／複雜度及文件計數，檢查新增 lint 問題；
+     AutoControl 全套 Pylint 仍有既有問題，不能把局部模組通過當全套零問題。
      WebRunner 既有全套 mypy／flake8／嚴格 Sphinx 債務見其 `Progress.md` #23，不能標示全綠。
    - 完成最終 wheel／隔離安裝／依賴一致性、嚴格文件建置，以及三語 README、Sphinx、架構、
      範例與公開契約一致性核對；避免舊說明把已支援的 browser profile 說成不支援。
