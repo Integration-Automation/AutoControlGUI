@@ -1,6 +1,25 @@
 AI Agent 與 Computer Use
 ===========================
 
+全新唯讀完成觀察前置介面
+-------------------------------------------
+
+host SDK 的標準桌面／檔案 ``NativeDesktopTarget.completion_reader(spec)``，會在精確 parent
+operation 與即時 scope 下建立專用 helper。來源輸入須先退休，沿用原主機 profile／resource，
+設定前核對精確唯讀契約 1 與 input_supported=false。這是主機接合前置介面；明確審閱、恢復與
+完成發布仍列於 Progress.md，開啟或清理 reader 本身不會把任務標成完成。
+
+helper 永久拒絕 perform／upgrade RPC、巢狀 executor、輸入 ACK 與非空 cleanup；host proxy
+亦拒絕本機 workflow 啟動及 resource recovery。非預期輸入只留下紀錄，不 ACK 或注入釋放，
+退休程序並保留隔離 witness；既有未知 witness 不能因觀察而清除。已關閉 view 不重新啟動
+helper，只有清理成功才確認 reader 退休。讀取前後核對 owner／root／parent，不能借給其他
+operation／owner，browser 條件也須固定於原規格。
+
+API／AC／MCP／REST／CLI／Builder 與 GUI 目標檢視只提供被動 readonly_completion 狀態，
+不執行自訂 adapter descriptor 或原生就緒探測。browser 新啟動、普通／自訂 helper 回退及未支援
+remote reader 仍拒絕；browser／remote 唯讀契約與審閱式完成流程仍待完成。
+主機 adapter 是可信程式碼；協定、dispatcher 與輸入 observer 防護不是作業系統沙箱。
+
 AutoControl 是開源、跨平台的 **computer-use 與 GUI 自動化框架**，可以讓 AI agent 操作真實桌面，而不只依賴瀏覽器 DOM 或 API。
 
 何時使用 AutoControl

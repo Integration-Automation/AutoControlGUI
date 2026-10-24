@@ -1,5 +1,11 @@
 # Changelog
 
+Add a fresh read-only completion-reader host seam for standard desktop/file proxies, with a separate
+permanently restricted helper, live scope checks, host-side tool refusal and no input ACK/cleanup injection.
+Preserve unknown resource witnesses and reject ordinary/custom-helper fallback or fresh browser startup.
+Target diagnostics add readonly_completion contract status without probing readiness. Reviewed completion
+recovery/publication and browser/remote readers remain separate unfinished work; no task state is changed.
+
 Reduce Android focus-guard subprocess overhead with one labeled extraction and exact comparison across
 all field orders. Keep missing/duplicate/empty-value rejection, pre/post checks, byte limits and deadlines.
 Owned POSIX fixtures use byte-exact Bash builtin reads with a portable external fallback and bounded

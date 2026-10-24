@@ -42,11 +42,13 @@ def _desktop_lock_path() -> Path:
 class NativeDesktopTarget:
     """Only trusted host code may select an argv/resource path; neither is task/model input."""
 
+    _worker_module = "je_auto_control.utils.agent_runtime.native_worker"
+
     def __init__(self, *, argv: Sequence[str] | None = None, resource_path: Path | None = None,
                  recovery_probe: Callable[[], None] = no_held_input, profile: dict | None = None) -> None:
         self._profile = AgentTargetProfile.from_dict(profile) if profile is not None else None
         self._argv = tuple(argv) if argv is not None else (
-            sys.executable, "-u", "-m", "je_auto_control.utils.agent_runtime.native_worker")
+            sys.executable, "-u", "-m", self._worker_module)
         self._resource_path = resource_path
         self._resource: RuntimeLock | None = None
         self._journal: InputJournal | None = None
@@ -83,6 +85,18 @@ class NativeDesktopTarget:
         if kind in {"browser", "desktop"}:
             connected = self._channel is not None and not self._channel.retired
             require_context_continuity(spec, receipts, connected, kind=kind)
+
+    @property
+    def supports_readonly_completion(self) -> bool:
+        """Declare a helper contract only; this is not a readiness or native-evidence probe."""
+        return (self._argv[-2:] == ("-m", "je_auto_control.utils.agent_runtime.native_worker")
+                and (self._profile is None or self._profile.kind != "browser"))
+
+    def completion_reader(self, spec: AgentTaskSpec) -> Any:
+        """Open fresh observation-only ownership; never continue an old input attempt."""
+        # pylint: disable-next=import-outside-toplevel  # reason: the read-only collaborator derives from this proxy
+        from je_auto_control.utils.agent_runtime.readonly_target import open_completion_reader
+        return open_completion_reader(self, spec)
 
     def probe(self) -> dict[str, Any]:
         """Inspect browser Python dependencies in a separate owned process; never reuse an input channel."""

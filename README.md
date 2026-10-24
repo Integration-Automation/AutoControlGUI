@@ -1,5 +1,11 @@
 # AutoControl
 
+The host SDK now has a fresh read-only completion-reader seam for standard desktop/file proxies.
+Its separate helper permanently refuses tool execution/input ACKs, and closed views cannot restart it.
+Target diagnostics add passive `readonly_completion` contract status; readiness stays `not_probed`.
+This prepares reviewed completion recovery. Its review/publication workflow and browser/remote readers
+remain in Progress.md; a retired reader alone never completes a task.
+
 Managed-only DAGs can register a durable whole-graph batch with
 `manage_agent_dag("register", {"definition": graph, "max_parallel": 4})`, then explicitly call
 `run_dag(graph, batch_id=batch["batch_id"])`. Registration performs no target operation. The stored

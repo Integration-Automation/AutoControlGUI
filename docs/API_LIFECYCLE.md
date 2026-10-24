@@ -1,5 +1,17 @@
 # Public API lifecycle
 
+NativeDesktopTarget.completion_reader(spec) adds an internal host seam for a fresh standard desktop/file
+observation context. A separate permanently read-only helper must report exact contract=1 and
+input_supported=false before any configuration. Both sides refuse executable tools/input ACKs; the
+host also refuses local workflow launch/recover and preserves unexpected-input quarantine. Closed
+views cannot restart a helper, and retired reports only successful reader cleanup. Live owner, roots,
+parent checkpoint and operation identity are checked around reads; browser criteria must be pinned.
+Target summaries add readonly_completion={contract:1,status:"not_probed"} for declared standard proxies
+or {status:"not_supported"}. Existing API/AC/MCP/REST/CLI/Builder/GUI target views share this passive
+metadata. No custom property/native probe runs during summaries. Browser fresh-start and legacy/custom
+helper fallback remain refused. This does not add reviewed completion operations, restore UI state or
+publish task success; those workflows and browser/remote reader contracts remain in Progress.md.
+
 Android command compilation now extracts display/window/activity focus once per guard and exactly
 matches all six field orders. Nonempty labels preserve duplicate empty values through shell command
 substitution. Serial/boot sentinels, same-connection pre/post checks, input-security digests, encoded

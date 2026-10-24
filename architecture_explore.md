@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,346 |
-| 程式碼總行數 | 198,505 |
+| Python 模組總數（含周邊子專案） | 1,348 |
+| 程式碼總行數 | 198,736 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 855 |
 | 套件門面 `__all__` 公開名稱數 | 1444 |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 38,384 行。
+> 14 個套件、約 38,615 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 12,817 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 13,048 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -989,7 +989,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（12,817 行／105 檔）
+#### `utils/agent_runtime/`（13,048 行／107 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1051,7 +1051,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `native_job.py` | 69 | Own a Windows helper process tree through a kill-on-close Job Object. |
 | `native_recovery.py` | 36 | Host-only input recovery checks never replay persisted keys or signal persisted PIDs. |
 | `native_scope.py` | 111 | Scope native window and control targets before their existing backend performs an action. |
-| `native_target.py` | 217 | Native desktop proxy with private IPC, host input ledger and cross-database ownership. |
+| `native_target.py` | 231 | Native desktop proxy with private IPC, host input ledger and cross-database ownership. |
 | `native_worker.py` | 211 | Private native helper entry point; stdout is a bounded owner-only JSON protocol. |
 | `observation_refs.py` | 151 | Resolve observation-local elements and thumbnail points into host-checked native coordinates. |
 | `ollama.py` | 82 | Local-only Ollama decisions over bounded HTTP, without an SDK or remote fallback. |
@@ -1059,6 +1059,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `ownership.py` | 86 | Fenced input ownership; running dispatch must retire before ownership transfers. |
 | `parent_watch.py` | 25 | POSIX helpers retire their own live process group when the owning parent disappears. |
 | `policy.py` | 119 | Explicit task scopes, rooted data paths and secret-safe durable payloads. |
+| `readonly_target.py` | 151 | Fresh isolated completion observations with live scope checks and permanent no-input helper contracts. |
+| `readonly_worker.py` | 59 | Permanently read-only owned helper: observation never upgrades to native input or task execution. |
 | `receipts.py` | 84 | Owner-reviewed uncertain outcomes and per-row workflow reports without blind replay. |
 | `recovery_authorization.py` | 99 | Review replacement origin ceilings for explicitly reauthorized successor tasks. |
 | `remote_effect.py` | 75 | Bracket trusted SDK calls with durable host ACKs and explicit remote settlement evidence. |
@@ -1079,7 +1081,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `target_config.py` | 198 | Immutable host-reviewed target configuration, distinct from untrusted task options. |
 | `target_continuity.py` | 16 | Require a live UI target context before trusting a finite skill's verified prefix. |
 | `target_factory.py` | 27 | Create inert managed adapters from host profiles; SDKs and native resources stay lazy. |
-| `target_profiles.py` | 165 | Durable target profiles, live controls and explicit dependency diagnostics separate from native evidence. |
+| `target_profiles.py` | 172 | Durable target profiles, live controls and explicit dependency diagnostics separate from native evidence. |
 | `targets.py` | 193 | Explicit target adapters; native imports occur only during requested operations. |
 | `task_authority.py` | 114 | Trusted source-owner recovery admission and live owner/reviewer authority checks. |
 | `task_recovery.py` | 334 | Review stopped tasks and create one explicitly approved successor without replay. |
@@ -1411,8 +1413,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 908 | 85,286 |
-| **總計** | **1,338** | **198,336** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 910 | 85,517 |
+| **總計** | **1,340** | **198,567** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

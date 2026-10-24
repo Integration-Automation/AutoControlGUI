@@ -10,6 +10,7 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached, thaw
 from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile, reviewed_tools
 from je_auto_control.utils.agent_runtime.target_factory import build_target
+from je_auto_control.utils.agent_runtime.native_target import NativeDesktopTarget
 from je_auto_control.utils.rbac.authorization import current_authorization
 
 OPERATIONS = ("register", "get", "disable", "enable", "probe")
@@ -153,6 +154,12 @@ class AgentTargetProfiles:
                 "declared_tools": tools,
                 "managed_profile": profile is not None, "readiness": "not_probed", "native_evidence": "not_recorded",
                 "digest": profile.digest if profile is not None else None}
+        # pylint: disable-next=protected-access  # reason: no custom adapter descriptor runs during passive diagnostics
+        adapter = self._runtime._targets[name]
+        # pylint: disable-next=unidiomatic-typecheck  # reason: only the built-in proxy's passive property is trusted here
+        declared = type(adapter) is NativeDesktopTarget and adapter.supports_readonly_completion
+        result["readonly_completion"] = {"contract": 1, "status": "not_probed"} if declared else {
+            "status": "not_supported"}
         if name in self._last_probes:
             result["last_probe"] = detached(self._last_probes[name])
         return result

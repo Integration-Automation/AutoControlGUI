@@ -1,5 +1,16 @@
 # AutoControl Architecture
 
+readonly_worker.ReadOnlyWorker permanently restricts owned RPC to configuration/observation/verification
+and empty cleanup, rejecting executor calls, input ACKs and reconfiguration. readonly_target provides
+a fresh ReadOnlyNativeTarget/CompletionReader with exact no-input negotiation, live owner/root/parent
+checks and closed-view fences. Host perform/recover overrides also block local workflow launch and
+witness recovery. Unexpected input is recorded but never ACKed/released; helper retirement preserves
+resource quarantine. Standard NativeDesktopTarget.completion_reader clones only its host interpreter,
+profile and resource into the dedicated module after source retirement. It never reuses old observations.
+Passive target summaries declare readonly_completion only for the exact built-in proxy, without custom
+descriptor calls or readiness probes. Browser startup and ordinary/custom-worker fallback are refused.
+The reviewed task-completion workflow is still in Progress.md; this seam does not publish task success.
+
 Android focus guards use one labeled sed extraction of display/window/activity and an exact quoted
 comparison against six field-order permutations. Nonempty labels retain duplicate empty values through
 command substitution; missing/extra/wrong values still refuse. Serial/boot sentinels, pre/post scope,

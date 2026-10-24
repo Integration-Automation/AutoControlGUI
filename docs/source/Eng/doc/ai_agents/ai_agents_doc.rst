@@ -1,6 +1,28 @@
 AI agents and computer use
 ===========================
 
+Fresh read-only completion observation seam
+-------------------------------------------
+
+The host SDK's standard desktop/file ``NativeDesktopTarget.completion_reader(spec)`` creates a separate
+owned helper under the exact parent operation and live scope. It requires source input retirement and
+the same host profile/resource, then negotiates exact read-only contract 1 with input_supported=false
+before configuration. This is a host integration seam; reviewed recovery/publication operations still
+remain in Progress.md. Merely opening or retiring a reader never marks a task complete.
+
+The helper permanently refuses perform/upgrade RPC, nested executor calls, input acknowledgments and
+nonempty cleanup. The host proxy also refuses local workflow launch and resource recovery. Unexpected
+input is recorded without ACK or release injection, the process is retired and its witness remains
+quarantined. Existing unknown witnesses cannot be cleared by observation. Closed views cannot restart
+helpers; retirement is confirmed only after successful cleanup. Owner/root/parent checks surround reads,
+different operations/owners cannot borrow a view, and browser clauses must be pinned to its specification.
+
+Target API/AC/MCP/REST/CLI/Builder and GUI views expose passive ``readonly_completion`` status only.
+Custom adapter descriptors are not evaluated, and no native readiness probe runs. Standard browser
+fresh-start, ordinary/custom helper fallback and unsupported remote readers remain refused. Future
+browser/remote observation contracts and the explicit reviewed completion workflow remain open.
+Host adapters are trusted code; these protocol/dispatcher/input-observer guards are not an OS sandbox.
+
 Compare the accepted task specification
 ----------------------------------------
 

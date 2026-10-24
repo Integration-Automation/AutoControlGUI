@@ -1,5 +1,11 @@
 # Capability matrix
 
+Read-only completion seam: standard host desktop/file proxies declare a passive contract, not native
+readiness. Owned helpers/fake targets verify fresh file observations, no executable operations/input ACKs,
+no host workflow launch or witness recovery, exact capability versions, closed/owner/operation fences,
+revocation and unexpected-input quarantine. Reviewed completion publication and browser/remote readers
+remain unfinished; existing task success rules do not change.
+
 Android guard latency: owned POSIX/smart-socket/worker evidence verifies one-pass focus extraction,
 all field orders, empty/nonempty duplicates before/after input, byte-exact fixture reads and redacted
 timeout diagnostics without extending the action budget. Real device-control providers/native acceptance
