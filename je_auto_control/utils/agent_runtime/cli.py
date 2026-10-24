@@ -33,6 +33,7 @@ def _operation_arguments(item: Any, operation: str) -> None:
         item.add_argument("--keep-days", type=int, default=30)
     elif operation == "lookup":
         item.add_argument("idempotency_key", help="Original owner's request key; inspect only, never submit")
+        item.add_argument("--spec", dest="lookup_spec", help="Optional reviewed JSON specification to compare")
     elif operation == "inspect-dag":
         item.add_argument("definition", help="Reviewed DAG JSON; lookup only")
         item.add_argument("--timeout-seconds", type=float, default=30)
@@ -74,7 +75,7 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
                   "target": lambda: api.manage_agent_target(arguments.target_operation,
                                                              _read(arguments.request) if arguments.request else {}),
                   "status": api.agent_runtime_status, "stop": api.stop_agent_runtime,
-                  "lookup": lambda: api.lookup_agent_task(arguments.idempotency_key),
+                  "lookup": lambda: _lookup(arguments),
                   "inspect-dag": lambda: api.inspect_agent_dag(_read(arguments.definition), arguments.timeout_seconds),
                   "stop-all": api.stop_all_agent_tasks, "list": api.list_agent_tasks,
                   "submit": lambda: api.submit_agent_task(_read(arguments.spec), arguments.idempotency_key),
@@ -94,6 +95,12 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
     if operation == "act":
         return api.act_agent_task(arguments.task_id, _read(arguments.action))
     return AgentRuntimeClient().call(operation, body)
+
+
+def _lookup(arguments: argparse.Namespace) -> dict:
+    if arguments.lookup_spec:
+        return api.lookup_agent_task(arguments.idempotency_key, _read(arguments.lookup_spec))
+    return api.lookup_agent_task(arguments.idempotency_key)
 
 
 def _draft(arguments: argparse.Namespace) -> dict:

@@ -169,8 +169,8 @@ def AC_agent_task_get(task_id: str) -> dict[str, Any]:
 def AC_agent_task_list() -> dict[str, Any]:
     """List task snapshots visible to the current caller."""
 
-def AC_agent_task_lookup(idempotency_key: str) -> dict[str, Any]:
-    """Inspect an accepted request by its original owner's key, without submission or resume."""
+def AC_agent_task_lookup(idempotency_key: str, spec: Any = ...) -> dict[str, Any]:
+    """Inspect an owner's keyed request and optionally compare a reviewed spec without dispatch."""
 
 def AC_agent_task_observe(task_id: str) -> dict[str, Any]:
     """Acquire the authorized target and obtain a fresh, versioned observation."""

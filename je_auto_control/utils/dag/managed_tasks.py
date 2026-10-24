@@ -187,6 +187,13 @@ class _TaskWaiter:
                 "input_released": released if type(released) is bool else None}
 
 
+def validate_recorded_completion(reply: dict[str, Any], spec: Mapping[str, Any]) -> None:
+    """Require succeeded state and exact independent completion/retirement evidence."""
+    if reply.get("state") != "succeeded":
+        raise AgentTaskError("recorded task has not succeeded")
+    _require_completion(reply, spec)
+
+
 def _require_completion(reply: dict[str, Any], spec: Mapping[str, Any]) -> None:
     metadata, reports = reply.get("metadata"), reply.get("verification")
     if not isinstance(metadata, dict) or not isinstance(reports, list):

@@ -90,7 +90,7 @@ def _request_identity(owner: dict, key: str) -> tuple[str, str]:
 
 def _request_key(connection: Any, owner: dict, key: str, spec: dict, identifier: str) -> str | None:
     owner_key, digest = _request_identity(owner, key)
-    spec_hash = hashlib.sha256(json.dumps(spec, sort_keys=True).encode("utf-8")).hexdigest()
+    spec_hash = request_spec_digest(spec)
     row = connection.execute("SELECT task_id,spec_hash FROM agent_request_keys WHERE owner_key=? AND key_hash=?",
                              (owner_key, digest)).fetchone()
     if row is not None:
@@ -100,6 +100,11 @@ def _request_key(connection: Any, owner: dict, key: str, spec: dict, identifier:
     # The deferred foreign key is satisfied by the task inserted in this transaction.
     connection.execute("INSERT INTO agent_request_keys VALUES (?,?,?,?)", (owner_key, digest, spec_hash, identifier))
     return None
+
+
+def request_spec_digest(spec: dict) -> str:
+    """Hash the exact normalized specification used by accepted request keys."""
+    return hashlib.sha256(json.dumps(spec, sort_keys=True).encode("utf-8")).hexdigest()
 
 
 def _bind_trigger_event(connection: Any, event: tuple[str, str, str] | None, task_id: str, now: float) -> None:
@@ -164,11 +169,17 @@ class AgentTaskStore:
 
     def lookup_request(self, owner: dict, key: str) -> str | None:
         """Read the exact owner's request key without creating or resubmitting a task."""
+        record = self.request_record(owner, key)
+        return record["task_id"] if record else None
+
+    def request_record(self, owner: dict, key: str) -> dict[str, Any] | None:
+        """Read accepted identity and immutable spec digest from the same request snapshot."""
         identity = _request_identity(owner, key)
         with self.connection() as connection:
-            row = connection.execute("SELECT task_id FROM agent_request_keys WHERE owner_key=? AND key_hash=?",
-                                     identity).fetchone()
-        return str(row[0]) if row else None
+            row = connection.execute(
+                "SELECT task_id,spec_hash FROM agent_request_keys "
+                "WHERE owner_key=? AND key_hash=?", identity).fetchone()
+        return dict(row) if row else None
 
     def get(self, task_id: str) -> dict[str, Any]:
         """Return one task or fail without revealing another identifier's data."""

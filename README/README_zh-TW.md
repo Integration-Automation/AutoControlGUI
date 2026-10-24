@@ -1,11 +1,19 @@
 # AutoControl
 
+`lookup_agent_task("鍵", reviewed_spec)` 可選擇由目的地主機正規化規格，與原擁有者提交時保存的
+不可變摘要比對；回覆宣告 `spec_match_contract=1`，並提供一致／不同／無法核對／查無紀錄。
+CLI 可加 `--spec reviewed.json`；AC／MCP／REST／Builder 共用可選物件。DAG 檢視先查鍵，再於
+目的地明確支援契約時核對已審閱的節點規格；舊端維持 `unverified`，本機來源 witness 不送到遠端。
+鍵改指向別的任務會使舊快照失效；比對一致時仍須核對完成報告的種類、數量與通過結果。
+節點比對不等於整張 DAG 拓樸／原批次批准，
+`resume_permitted=false` 仍保留明確續接審閱。
+
 `inspect_agent_dag(definition, timeout_seconds=30)` 可檢視本機／已登錄遠端主機的既有提交，
 不提交、不暫停、不續跑。提供 `AC_agent_dag_inspect`、MCP、REST 動作、CLI
 `agent-task inspect-dag reviewed.json`、Builder 與 DAG Actions。最多 100 節點、最長 300 秒；
 遠端仍須主機管理權限，不傳送本機身分／資料庫路徑／來源 metadata，不回傳遠端路徑或原始錯誤。
-`recorded_completion` 只描述查回的任務；`request_match=unverified`、`resume_permitted=false`
-表示尚未核對目前 DAG 規格，也未授權續接。查無紀錄不代表拒絕；GUI 在圖形編輯後捨棄舊檢視。
+`recorded_completion` 只描述查回的任務；節點規格可選擇核對，`resume_permitted=false` 仍表示尚未
+授權整張 DAG 續接。查無紀錄不代表拒絕；GUI 在圖形編輯後捨棄舊檢視。
 
 提交回覆遺失時，可用 `lookup_agent_task("原去重鍵")`、`AC_agent_task_lookup`、MCP、
 `POST /agent/lookup`、CLI `agent-task lookup 原去重鍵` 或任務視圖 Actions 查詢。只讀取原身分及

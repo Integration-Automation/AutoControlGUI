@@ -1,12 +1,23 @@
 # AutoControl
 
+`lookup_agent_task("key", reviewed_spec)` optionally compares the destination-normalized specification
+with the immutable digest stored for the original owner's request. The response advertises
+`spec_match_contract=1` and reports `spec_match=matches|differs|unverifiable|not_found` when a spec is supplied.
+CLI lookup accepts `--spec reviewed.json`; AC/MCP/REST/Builder share the optional object. Inspection first
+queries the key, then compares the reviewed node spec only when the destination advertises the exact
+contract. Old destinations stay `unverified`; local origin witnesses are never sent to remote matching.
+Changed request identity invalidates the earlier snapshot. Matched nodes also require the exact count,
+kinds and passed status of independent criterion reports before confirming recorded completion.
+`request_match` binds the node's task spec;
+DAG topology/batch approval and continuation remain separate, with `resume_permitted=false`.
+
 `inspect_agent_dag(definition, timeout_seconds=30)` looks up existing local/registered-host requests
 without submitting, pausing or resuming tasks. Use `AC_agent_dag_inspect`, MCP `ac_agent_dag_inspect`,
 REST action execution, CLI `agent-task inspect-dag reviewed.json`, Script Builder or DAG Actions.
 At most 100 nodes and a 300-second maximum budget bound inspection. Remote lookup needs host-management
 authority; local principal/store/origin metadata stays local. Results omit remote paths and raw errors.
-`recorded_completion` describes the found task only: `request_match=unverified` and
-`resume_permitted=false` explicitly leave graph matching and continuation unapproved. A missing record
+`recorded_completion` describes the found task only. Node-spec matching is optional; `resume_permitted=false`
+explicitly leaves graph/batch approval and continuation unapproved. A missing record
 does not prove rejection. GUI inspection is read-only and discards results after graph edits.
 
 Use `lookup_agent_task("original-key")` (`AC_agent_task_lookup`, MCP `ac_agent_task_lookup`,

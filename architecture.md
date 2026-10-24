@@ -1,9 +1,19 @@
 # AutoControl Architecture
 
+Request-key spec matching reuses the original normalized-spec digest calculation. Runtime.lookup can
+validate a reviewed spec at the destination and compare it with the same owner/key record's immutable
+hash, without dispatch or input acquisition. The additive spec_match_contract=1 capability permits DAG
+inspection to perform a second read-only lookup; missing/invalid capability leaves legacy snapshots
+unverified. Matching checks the same task ID and refreshes authorization/deadlines around each query.
+Local origin witnesses never enter remote spec matching. Node-spec identity does not approve DAG topology,
+batch identity or continuation; resume_permitted remains false.
+When node specs match, recorded completion shares the execution verifier's exact report count/kind/status,
+retirement and contract checks; a partial or mismatched report cannot certify completion.
+
 DAG inspection.py validates the whole graph before querying up to 100 task keys under a finite budget.
 It reuses managed_tasks connection policy and owner refresh, requests lookup only, strips remote metadata
 and raw diagnostics, and never schedules actions or sends control operations. recorded_completion concerns
-the recorded task alone; request_match stays unverified and resume_permitted is always false. Public
+the recorded task alone; node-spec matching is optional and resume_permitted is always false. Public
 API/AC/MCP/CLI/Builder and REST action execution share this read-only path. DAG Actions display snapshots
 and discard results when the graph editor changes; worker authority and stop context survive offload.
 

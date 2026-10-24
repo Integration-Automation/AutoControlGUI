@@ -7,7 +7,7 @@ from typing import Any, Mapping, cast
 
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
-from je_auto_control.utils.agent_runtime.models import STATES, detached, positive
+from je_auto_control.utils.agent_runtime.models import STATES, detached, positive, thaw
 from je_auto_control.utils.dag.graph import DagDefinition, DagDefinitionError, DagNode, parse_definition
 from je_auto_control.utils.dag import managed_tasks
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -16,7 +16,7 @@ from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 
 
 def inspect_definition(definition: Mapping[str, Any] | DagDefinition, timeout_seconds: float = 30) -> dict[str, Any]:
-    """Return bounded read-only snapshots; graph identity and resume approval remain unproven."""
+    """Return bounded keyed snapshots and optional node-spec matches without granting continuation."""
     positive(timeout_seconds, "DAG inspection timeout_seconds", 300)
     if current_operation() is not None:
         raise AgentTaskError("a managed task cannot inspect other managed tasks")
@@ -69,7 +69,61 @@ def _inspect_node(node: DagNode, owner: DeferredAuthorization, deadline: float) 
         report.update(_lookup_snapshot(reply))
     except AgentTaskError:
         report.update(lookup="unavailable", error="lookup_unavailable")
+        return report
+    if report["lookup"] == "found":
+        report.update(_match_request(node.host, node.task, owner, deadline, connection, reply))
     return report
+
+
+def _matching_supported(reply: Any) -> bool:
+    version = reply.get("spec_match_contract") if isinstance(reply, dict) else None
+    # pylint: disable-next=unidiomatic-typecheck  # reason: exact protocol integer excludes bool and subclasses
+    return type(version) is int and version == 1
+
+
+def _match_request(host: str, task: Mapping[str, Any], owner: DeferredAuthorization, deadline: float,
+                   connection: managed_tasks.Call, initial: dict) -> dict[str, Any]:
+    if not _matching_supported(initial):
+        return {}
+    spec = task["spec"]
+    if host != "local" and "origin_policies" in spec["options"]:
+        return {"request_match": "unverifiable"}
+    timeout = _checkpoint(owner, host, deadline)
+    try:
+        reply = connection("lookup", {"idempotency_key": task["idempotency_key"], "spec": thaw(spec)}, timeout)
+    except AuthorizationError:
+        raise
+    except (AutoControlException, OSError, RuntimeError, ValueError, TypeError, LookupError):
+        _checkpoint(owner, host, deadline)
+        return {"request_match": "unverifiable"}
+    _checkpoint(owner, host, deadline)
+    return _match_snapshot(initial, reply, spec)
+
+
+def _match_snapshot(initial: dict, reply: Any, spec: Mapping[str, Any]) -> dict[str, Any]:
+    if not _matching_supported(reply):
+        return {"request_match": "unverifiable"}
+    try:
+        snapshot = _lookup_snapshot(reply)
+    except AgentTaskError:
+        return {"request_match": "unverifiable"}
+    if snapshot.get("lookup") != "found" or snapshot.get("task_id") != initial["task"]["task_id"]:
+        return {"request_match": "unverifiable", "lookup": "unavailable", "task_state": "unknown",
+                "input_released": None, "recorded_completion": None, "error": "request_changed"}
+    match = reply.get("spec_match")
+    valid = isinstance(match, str) and match in {"matches", "differs", "unverifiable"}
+    snapshot["request_match"] = match if valid else "unverifiable"
+    if snapshot["request_match"] == "matches":
+        snapshot["recorded_completion"] = _matched_completion(reply["task"], spec)
+    return snapshot
+
+
+def _matched_completion(task: dict, spec: Mapping[str, Any]) -> bool:
+    try:
+        managed_tasks.validate_recorded_completion(task, spec)
+    except AgentTaskError:
+        return False
+    return True
 
 
 def _lookup_snapshot(reply: Any) -> dict[str, Any]:

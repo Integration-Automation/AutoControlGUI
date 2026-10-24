@@ -54,9 +54,11 @@ def dispatch(runtime: Any, operation: str, body: Any = None, task_id: str | None
 
 
 def _lookup(runtime: Any, body: dict) -> dict:
-    if set(body) != {"idempotency_key"}:
-        raise AgentTaskError("lookup requires only idempotency_key")
-    return runtime.lookup(body["idempotency_key"])
+    if "idempotency_key" not in body or set(body) - {"idempotency_key", "spec"}:
+        raise AgentTaskError("lookup requires idempotency_key and accepts an optional spec")
+    if "spec" in body and not isinstance(body["spec"], dict):
+        raise AgentTaskError("lookup spec must be an object")
+    return runtime.lookup(body["idempotency_key"], body.get("spec"))
 
 
 def _submit(runtime: Any, body: dict) -> dict:

@@ -1,6 +1,23 @@
 AI agents and computer use
 ===========================
 
+Compare the accepted task specification
+----------------------------------------
+
+``lookup_agent_task("key", reviewed_spec)`` optionally compares the destination-normalized spec with
+the immutable digest stored for the original owner's request. The additive ``spec_match_contract=1``
+response advertises matching support; a supplied spec yields ``spec_match`` of ``matches``, ``differs``,
+``unverifiable`` or ``not_found``. CLI lookup accepts ``--spec reviewed.json``; shared AC/MCP/REST/Builder
+use the optional ``spec`` object. Matching never submits or activates a task.
+
+DAG inspection first looks up the key. When the destination advertises the exact contract, it sends the
+reviewed node spec in a second read-only lookup and verifies the same task identity. Older destinations
+stay unverified; local origin witnesses are never sent to a remote destination. Changed request mappings
+invalidate the previous completion snapshot. Matching binds an individual task spec, not the graph's
+topology or original batch approval. Explicit continuation remains unapproved.
+Matched task completion also checks the exact count/kinds of independently passed criterion reports,
+the durable completion contract and input retirement; partial reports remain unconfirmed.
+
 Inspect an interrupted DAG
 ---------------------------
 
@@ -11,8 +28,8 @@ and DAG Actions share the operation. The maximum inspection budget is 300 second
 requires host-management authority. Local principals/store paths/origin metadata are never forwarded.
 Snapshots omit remote artifact paths and raw errors. GUI results are discarded after graph edits.
 
-``recorded_completion`` concerns the found task alone. ``request_match=unverified`` and
-``resume_permitted=false`` explicitly leave current-graph matching and continuation unapproved. Missing
+``recorded_completion`` concerns the found task alone. Node-spec matching is optional and
+``resume_permitted=false`` leaves graph/batch approval and continuation unapproved. Missing
 records remain snapshots, not rejection evidence. Review and specification binding are separate recovery
 steps; inspecting never replays effects or treats a recorded task as proof for an edited DAG.
 
@@ -21,7 +38,7 @@ Inspect a lost submission reply
 
 ``lookup_agent_task("original-key")`` reads the current principal/store namespace without submitting,
 resuming or acquiring input. The same operation is available as ``AC_agent_task_lookup``, MCP
-``ac_agent_task_lookup``, ``POST /agent/lookup`` with only ``idempotency_key``, CLI
+``ac_agent_task_lookup``, ``POST /agent/lookup`` with ``idempotency_key`` and optional ``spec``, CLI
 ``agent-task lookup original-key`` and the task view's Actions menu. Results contain ``found`` and an
 optional ``task`` status snapshot. Missing records are not proof of rejection: an outstanding request
 can arrive later. Task access remains required for this read-only lookup. GUI results are discarded if

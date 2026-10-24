@@ -70,9 +70,13 @@ def submit_agent_task(spec: AgentTaskSpec | Mapping[str, Any], idempotency_key: 
     return AgentRuntimeClient().call("submit", payload)
 
 
-def lookup_agent_task(idempotency_key: str) -> dict[str, Any]:
-    """Inspect an accepted request by its original owner's key, without submission or resume."""
-    return AgentRuntimeClient().call("lookup", {"idempotency_key": idempotency_key})
+def lookup_agent_task(idempotency_key: str, spec: AgentTaskSpec | Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Inspect an owner's keyed request and optionally compare a reviewed spec without dispatch."""
+    payload: dict[str, Any] = {"idempotency_key": idempotency_key}
+    if spec is not None:
+        expected = spec if isinstance(spec, AgentTaskSpec) else AgentTaskSpec.from_dict(spec)
+        payload["spec"] = expected.to_dict()
+    return AgentRuntimeClient().call("lookup", payload)
 
 
 def inspect_agent_dag(definition: Mapping[str, Any], timeout_seconds: float = 30) -> dict[str, Any]:

@@ -196,9 +196,10 @@ def test_real_registered_host_lookup_does_not_submit_even_when_reviewed_spec_dif
             result = inspect_agent_dag(graph)
         first = result["nodes"][0]
         assert first["task_id"] == accepted.task_id and first["recorded_completion"] is True
-        assert first["request_match"] == "unverified" and result["resume_permitted"] is False
-        assert len(calls) == 1 and calls[0][0].endswith("/agent/lookup")
+        assert first["request_match"] == "differs" and result["resume_permitted"] is False
+        assert len(calls) == 2 and all(call[0].endswith("/agent/lookup") for call in calls)
         assert calls[0][1]["body"] == {"idempotency_key": "reviewed-one"}
+        assert set(calls[1][1]["body"]) == {"idempotency_key", "spec"}
         assert target.calls == ["AC_increment"] and len(service.runtime.list()) == 1
         assert "history_path" not in str(result)
     finally:

@@ -17,7 +17,7 @@ def test_lookup_miss_then_late_acceptance_does_not_create_or_dispatch_work(tmp_p
     target = FakeTarget()
     runtime = AgentRuntime(tmp_path / "tasks.sqlite", targets={"fixture": target})
     try:
-        assert runtime.lookup("late-key") == {"found": False, "task": None}
+        assert runtime.lookup("late-key") == {"found": False, "task": None, "spec_match_contract": 1}
         assert runtime.list() == []
         task = runtime.submit(specification(), idempotency_key="late-key")
         result = runtime.lookup("late-key")

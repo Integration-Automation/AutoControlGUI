@@ -1,5 +1,7 @@
 # Changelog
 
+Extend keyed task lookup with an optional reviewed spec and additive spec_match_contract=1. Compare destination-normalized specs with the immutable accepted request digest without submission or activation. CLI lookup adds --spec; AC/MCP/REST/Builder share it. DAG inspection negotiates matching, validates stable task identity and preserves legacy unverified behavior. Local origin witnesses stay local. Node matching does not grant graph/batch approval or continuation; existing one-argument calls remain supported.
+
 Add inspect_agent_dag / AC_agent_dag_inspect across shared API/MCP/REST actions/CLI/Builder and DAG Actions. Inspect at most 100 keyed local/registered-host requests with bounded read-only lookup, live authorization, sanitized snapshots and no control operations. Recorded task completion never grants current-graph matching or resume approval. GUI results discard stale graph views. Preserve legacy local/remote action node objects that omit the optional task field; the remote transport adds only the closed lookup operation.
 
 Add owner/store-scoped lookup_agent_task and AC_agent_task_lookup across API/MCP/REST/CLI/Builder/GUI to inspect lost submission acknowledgements. Queries neither submit/resume nor acquire input; missing records remain snapshots rather than rejection proof. Refresh caller authority, retain task-access requirements for read-only MCP calls, and discard GUI lookup replies after selection changes. Existing submission key semantics are preserved; invalid Unicode keys now fail with AgentTaskError.

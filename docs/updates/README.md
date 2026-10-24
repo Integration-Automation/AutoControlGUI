@@ -510,3 +510,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-22 | 2026-10-24 | Inspect accepted requests without resubmitting tasks | #done #agent #recovery | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-23 | 2026-10-24 | Inspect registered-host DAG requests without scheduling effects | #done #agent #dag | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-24 | 2026-10-24 | Bind DAG inspection to destination request-spec digests | #done #agent #recovery | [2026-10-c](2026-10-c.md) |

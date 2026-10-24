@@ -29,7 +29,7 @@ from je_auto_control.utils.agent_runtime.receipts import reconcile, row_report
 from je_auto_control.utils.agent_runtime.task_triggers import AgentTriggers
 from je_auto_control.utils.agent_runtime.task_skills import AgentSkills
 from je_auto_control.utils.agent_runtime.origin_policy import bind_origin, validate_origins
-from je_auto_control.utils.agent_runtime.store import AgentTaskStore
+from je_auto_control.utils.agent_runtime.store import AgentTaskStore, request_spec_digest
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -124,12 +124,30 @@ class AgentRuntime:
         self.evidence.ensure(task_id)
         return AgentTaskHandle(task_id, self.store.get(task_id)["state"])
 
-    def lookup(self, idempotency_key: str) -> dict[str, Any]:
+    def lookup(self, idempotency_key: str, spec: AgentTaskSpec | Mapping[str, Any] | None = None) -> dict[str, Any]:
         """Inspect this principal's accepted request without acquiring input or dispatching work."""
         with DeferredAuthorization.capture().scope():
-            identifier = self.store.lookup_request(_identity_dict(), idempotency_key)
-            task = self.get(identifier).to_dict() if identifier is not None else None
-            return {"found": task is not None, "task": task}
+            expected = None
+            if spec is not None:
+                expected = spec if isinstance(spec, AgentTaskSpec) else AgentTaskSpec.from_dict(spec)
+            record = self.store.request_record(_identity_dict(), idempotency_key)
+            task = self.get(record["task_id"]).to_dict() if record is not None else None
+            result: dict[str, Any] = {"found": task is not None, "task": task, "spec_match_contract": 1}
+            if expected is not None:
+                result["spec_match"] = self._request_match(record, expected)
+            return result
+
+    def _request_match(self, record: dict[str, Any] | None, spec: AgentTaskSpec) -> str:
+        if record is None:
+            return "not_found"
+        try:
+            expected = self._validated_spec(spec)
+            digest = request_spec_digest(expected.to_dict())
+        except AuthorizationError:
+            raise
+        except (AgentTaskError, OSError, ValueError):
+            return "unverifiable"
+        return "matches" if digest == record["spec_hash"] else "differs"
 
     def get(self, task_id: str) -> AgentTaskResult:
         """Read owner-scoped task status without observing the desktop."""
