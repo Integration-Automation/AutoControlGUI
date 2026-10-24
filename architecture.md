@@ -816,3 +816,14 @@ this template without submitting the ordinary task form. BackgroundTasks leaves 
 caller-driven observe/act, while Ollama children construct a new backend and child-only recent history.
 No model API is called by preview. Existing source snapshots, owner/operator checks, unknown-effect
 reconciliation, atomic unique links, parent retirement and retention remain shared across all modes.
+
+Explicit successor authorization: recovery_authorization.py prepares a source-snapshot-bound digest
+from original roots, surviving source policies and current caller authority. Policy roots are clipped
+before disclosure; only unavailable old references may be replaced and approved roots may only shrink.
+task_recovery.py keeps ordinary recovery strict, revalidates all other scope, and checks the review
+again before creation. origin_policy.py reads current authority strictly without rewriting old files.
+store.py inserts authorization evidence with task/recovery in one transaction. Its authorization row
+references the recovery tombstone, so child pruning retains proof until source pruning cascades it.
+Public recovery metadata exposes actor/context/approved roots. The same four-operation protocol flows
+through routes/API/catalog/CLI/Builder and separate thin GUI Actions; only explicit creation dispatches.
+Input lease/quarantine, source receipts and source status remain independent of authorization renewal.

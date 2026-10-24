@@ -1,5 +1,16 @@
 # Public API lifecycle
 
+Recovery also supports explicit `review_authorization` and `create_authorized`. Review requires
+`task_id`; creation adds `authorization_review` to the usual snapshot/spec/note request. Only this
+explicit path may replace unavailable old origin references and narrow roots. Live old restrictions
+remain, current policies intersect the original root ceiling, and all other permissions/settings and
+completion criteria stay fixed. An invalid current policy fails closed. Context changes require review
+again. Task/link/actor/context/approved-root evidence commit together; the audit outlives child pruning
+until source retention. Quarantine and old witness files remain unchanged. All four operations use
+owner/operator drive_input; only create/create_authorized dispatch work. CLI, Builder and separate
+GUI authorization Actions share the existing API/AC/MCP/REST route. Published skill/trigger renewal
+and application-state restoration remain separate. See the Sphinx recovery guide for the full protocol.
+
 `manage_agent_recovery(operation, request)` adds owner/operator-scoped `preview` and `create` for stopped
 skill, external-agent and local-model tasks. Finite preview reports remaining semantic actions, row outcomes and a digest of the exact source
 task, receipts and reviews. It never observes a target or starts work. Create requires explicit snapshot,

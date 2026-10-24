@@ -134,6 +134,26 @@ def validate_origins(spec: AgentTaskSpec) -> None:
             raise AgentTaskError("managed origin roots changed; review the task scope") from error
 
 
+def review_origin_policies(spec: AgentTaskSpec) -> dict[str, Any]:
+    """Snapshot current live ceilings and classify unavailable prior references for explicit review."""
+    current = [_origin_record(identifier) for identifier in _current_identifiers()]
+    known = {item["id"]: item for item in current}
+    retained, unavailable = [], []
+    source = _identifiers(spec)
+    for identifier in source:
+        try:
+            state = known.get(identifier) or _origin_record(identifier)
+        except AgentTaskError:
+            unavailable.append(identifier)
+        else:
+            retained.append(state)
+    return {"source": list(source), "current": current, "retained": retained, "unavailable": unavailable}
+
+
+def _origin_record(identifier: str) -> dict:
+    return {"id": identifier, "roots": _read(identifier)["roots"]}
+
+
 def _identifiers(spec: AgentTaskSpec) -> tuple[str, ...]:
     identifiers = spec.options.get("origin_policies", ())
     if not isinstance(identifiers, (tuple, list)) or len(identifiers) > 16:

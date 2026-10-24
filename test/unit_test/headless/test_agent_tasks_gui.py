@@ -182,3 +182,56 @@ def test_dynamic_review_template_requires_manual_goal_and_note_without_submittin
         tab.close()
         shiboken6.delete(tab)
         app.processEvents()
+
+
+def test_authorization_review_and_creation_are_distinct_explicit_actions(monkeypatch):
+    import json
+    import shiboken6
+    app = QApplication.instance() or QApplication([])
+    tab, submitted = AgentTasksTab(), []
+    try:
+        monkeypatch.setattr(tab, "_dispatch", lambda *args: submitted.append(args))
+        tab._task_id.setText("source-task")
+        dict(tab.menu_actions())["agent_reauthorize_preview"]()
+        assert submitted == [("recovery", {"operation": "review_authorization", "request": {"task_id": "source-task"}})]
+        tab._present_result({"source_task": "source-task", "snapshot": "a" * 64, "authorization_review": "b" * 64,
+            "draft": {"goal": "reviewed remaining work", "roots": ["D:/reports"]}, "issues": []})
+        assert len(submitted) == 1
+        request = json.loads(tab._remainder_request.toPlainText())
+        assert request["authorization_review"] == "b" * 64 and request["note"] == ""
+        request["note"] = "Reviewed the new report root"
+        tab._remainder_request.setPlainText(json.dumps(request))
+        dict(tab.menu_actions())["agent_reauthorize_create"]()
+        assert submitted[-1] == ("recovery", {"operation": "create_authorized", "request": request})
+    finally:
+        tab.close()
+        shiboken6.delete(tab)
+        app.processEvents()
+
+
+def test_recovery_menu_signals_keep_the_selected_operation_instead_of_the_checked_flag(monkeypatch):
+    import json
+    import shiboken6
+    from PySide6.QtWidgets import QMenu
+    app = QApplication.instance() or QApplication([])
+    tab, submitted = AgentTasksTab(), []
+    menu = QMenu()
+    try:
+        monkeypatch.setattr(tab, "_dispatch", lambda *args: submitted.append(args))
+        tab._task_id.setText("source-task")
+        operations = {
+            "agent_remainder_preview": "preview", "agent_remainder_create": "create",
+            "agent_reauthorize_preview": "review_authorization", "agent_reauthorize_create": "create_authorized",
+        }
+        handlers = dict(tab.menu_actions())
+        for key, operation in operations.items():
+            tab._remainder_request.setPlainText(json.dumps({"task_id": "source-task", "note": "reviewed"}))
+            action = menu.addAction(key, handlers[key])
+            action.trigger()
+            assert submitted[-1][1]["operation"] == operation
+    finally:
+        menu.close()
+        shiboken6.delete(menu)
+        tab.close()
+        shiboken6.delete(tab)
+        app.processEvents()

@@ -170,6 +170,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_reconcile", self._reconcile),
                 ("agent_remainder_preview", self._preview_remainder),
                 ("agent_remainder_create", self._create_remainder),
+                ("agent_reauthorize_preview", partial(self._preview_remainder, "review_authorization")),
+                ("agent_reauthorize_create", partial(self._create_remainder, "create_authorized")),
                 ("agent_recover_target", self._recover_target),
                 ("agent_prune", partial(self._dispatch, "prune", {})),
                 ("agent_trigger_apply", self._trigger_apply),
@@ -189,9 +191,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
     def _lookup(self) -> None:
         self._dispatch("lookup", {"idempotency_key": self._request_key.text()})
 
-    def _preview_remainder(self) -> None:
+    def _preview_remainder(self, operation: str = "preview") -> None:
         self._remainder_request.setPlainText("{}")
-        self._dispatch("recovery", {"operation": "preview", "request": {"task_id": self._task_id.text()}})
+        self._dispatch("recovery", {"operation": operation, "request": {"task_id": self._task_id.text()}})
 
     @property
     def _remainder_request(self) -> QPlainTextEdit:
@@ -200,7 +202,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             raise AgentTaskError("recovery editor is unavailable")
         return editor
 
-    def _create_remainder(self) -> None:
+    def _create_remainder(self, operation: str = "create") -> None:
         try:
             request = json.loads(self._remainder_request.toPlainText())
             if not isinstance(request, dict) or request.get("task_id") != self._task_id.text():
@@ -208,7 +210,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         except (ValueError, TypeError) as error:
             self._status.setText(str(error))
             return
-        self._dispatch("recovery", {"operation": "create", "request": request})
+        self._dispatch("recovery", {"operation": operation, "request": request})
 
     def _preview(self) -> None:
         try:
@@ -413,6 +415,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             draft = result.get("review_template")
         request = {"task_id": result["source_task"], "snapshot": result["snapshot"],
                    "spec": draft, "note": ""} if isinstance(draft, dict) else {}
+        if request and "authorization_review" in result:
+            request["authorization_review"] = result["authorization_review"]
         self._remainder_request.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))
         self._pages.setCurrentIndex(self._page_keys.index("agent_page_recovery"))
 

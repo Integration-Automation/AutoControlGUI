@@ -538,3 +538,4 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-36 | 2026-10-24 | Review stopped workflow remainders through one durable successor | #done #agent #recovery | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-37 | 2026-10-24 | Replan external and local-model tasks with fresh successor evidence | #done #agent #recovery #models | [2026-10-c](2026-10-c.md) |
+| U-20261024-38 | 2026-10-24 | Explicitly reauthorize a successor within the original root ceiling | #done #agent #recovery #authorization | [2026-10-c](2026-10-c.md) |

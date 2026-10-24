@@ -1,5 +1,11 @@
 # Changelog
 
+Add explicit reviewed successor reauthorization for retired origin policies. Preserve the original
+root ceiling and every live restriction, intersect current authority, and allow only equal/narrower
+roots while retaining other scope/settings and completion conditions. Audit approval atomically with
+the unique successor; expose API/AC/MCP/REST/CLI/Builder and separate GUI Actions. Existing ordinary
+recovery, source witnesses and input quarantine retain their contracts.
+
 Extend reviewed task recovery to external agents and local models. Return an explicit blank-goal
 review template without guessing remaining steps or reusing history. Require a new reviewed goal,
 retain execution mode/model/endpoint and source scope, and start with fresh observations and results.

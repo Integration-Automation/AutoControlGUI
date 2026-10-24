@@ -1,5 +1,14 @@
 # AutoControl
 
+Stopped tasks with retired origin authority can explicitly use `review_authorization`, then
+`create_authorized` with `task_id`, `snapshot`, reviewed `spec`, `note` and `authorization_review`.
+The successor retains every live source restriction and intersects current authority with the original
+root ceiling; roots may only stay equal or shrink. Other permissions, mode/model, budgets and completion
+conditions stay fixed. Approval is audited atomically with the unique successor; the source and its
+revoked witnesses stay unchanged. All recovery surfaces include these operations, with separate GUI
+Actions for authorization review and creation. See the [recovery guide](docs/source/Eng/doc/ai_agents/agent_recovery_doc.rst).
+This does not renew published skills or triggers, clear input quarantine or restore application state.
+
 Stopped tasks can use `manage_agent_recovery("preview", {"task_id": "..."})` to review source
 receipts and a source snapshot without touching an application. Finite skills expose remaining actions
 and row outcomes. External-agent and local-model tasks provide `review_template` with a blank goal;

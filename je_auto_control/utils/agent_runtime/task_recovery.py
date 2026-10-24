@@ -2,18 +2,27 @@
 from __future__ import annotations
 
 from typing import Any
+import json
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentHumanReview
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
 from je_auto_control.utils.agent_runtime.policy import durable_payload
 from je_auto_control.utils.agent_runtime.receipts import effective_actions, row_report
 from je_auto_control.utils.agent_runtime.store import request_spec_digest
+from je_auto_control.utils.agent_runtime.recovery_authorization import (
+    prepare_authorization, authorized_template, narrowed_template, authorization_details,
+)
 from je_auto_control.utils.agent_runtime.workflow_values import verified_prefix, transformed
 from je_auto_control.utils.rbac.authorization import current_authorization, AuthorizationError
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.rbac.users import Capability
 
-OPERATIONS = ("preview", "create")
+_REQUEST_FIELDS = {
+    "preview": {"task_id"}, "create": {"task_id", "snapshot", "spec", "note"},
+    "review_authorization": {"task_id"},
+    "create_authorized": {"task_id", "snapshot", "spec", "note", "authorization_review"},
+}
+OPERATIONS = tuple(_REQUEST_FIELDS)
 _STOPPED = frozenset({"paused", "waiting_user", "recovering", "cancelled", "timed_out", "failed"})
 _POINTER_TOOLS = ("AC_click_mouse", "AC_set_mouse_position", "AC_mouse_scroll", "AC_press_mouse", "AC_release_mouse",
                   "AC_android_tap", "AC_android_swipe")
@@ -22,9 +31,16 @@ _POINTER_TOOLS = ("AC_click_mouse", "AC_set_mouse_position", "AC_mouse_scroll", 
 def recovery_link(store: Any, task_id: str) -> dict:
     """Return durable successor provenance, without treating the source as completed."""
     with store.connection() as connection:
-        row = connection.execute("SELECT source_task,snapshot,note,created FROM agent_task_recoveries "
-                                 "WHERE task_id=?", (task_id,)).fetchone()
-    return dict(row) if row is not None else {}
+        row = connection.execute("SELECT r.source_task,r.snapshot,r.note,r.created,a.details "
+                                 "FROM agent_task_recoveries r LEFT JOIN agent_task_authorizations a "
+                                 "ON a.task_id=r.task_id WHERE r.task_id=?", (task_id,)).fetchone()
+    if row is None:
+        return {}
+    result = dict(row)
+    details = result.pop("details")
+    if details is not None:
+        result["reauthorization"] = json.loads(details)
+    return result
 
 
 def require_no_successor(store: Any, task_id: str) -> None:
@@ -45,8 +61,9 @@ class AgentRecovery:
     def control(self, operation: str, request: Any = None) -> dict:
         """Preview without target access, or create an owner-scoped, deduplicated successor."""
         request = durable_payload(detached(request))
-        required = {"task_id"} if operation == "preview" else {"task_id", "snapshot", "spec", "note"}
-        if operation not in OPERATIONS or not isinstance(request, dict) or set(request) != required:
+        if not isinstance(operation, str) or operation not in OPERATIONS or not isinstance(request, dict):
+            raise AgentTaskError("invalid recovery operation fields")
+        if set(request) != _REQUEST_FIELDS[operation]:
             raise AgentTaskError("invalid recovery operation fields")
         task_id = request["task_id"]
         if not isinstance(task_id, str) or not task_id:
@@ -56,10 +73,10 @@ class AgentRecovery:
             _require_operator()
             # pylint: disable-next=protected-access  # reason: reuse the runtime's owner and closed-state check
             row = self.runtime._row(task_id)
-            if operation == "create":
+            if operation in {"create", "create_authorized"}:
                 return self._create(row, request)
             receipts, reviews = self._read(row)
-            return self._preview(row, receipts, reviews)
+            return self._preview(row, receipts, reviews, reauthorize=operation == "review_authorization")
 
     def _read(self, row: dict) -> tuple[list[dict], list[dict]]:
         # pylint: disable-next=protected-access  # reason: a successor cannot bypass an unretired input owner
@@ -72,36 +89,75 @@ class AgentRecovery:
                 "SELECT * FROM agent_reviews WHERE task_id=? ORDER BY action_id", (row["id"],))]
         return self.runtime.store.actions(row["id"]), reviews
 
-    def _template(self, row: dict) -> dict:
+    def _template(self, row: dict, authorization: dict | None = None) -> dict:
         spec = detached(row["spec"])
         spec["goal"] = "Reviewed remainder: " + spec["goal"][:15940]
         spec["options"].pop("skill_pin", None)
         if spec["mode"] != "skill":
             spec["actions"] = []
+        if authorization is not None:
+            spec = authorized_template(spec, authorization)
         # pylint: disable-next=protected-access  # reason: the shared host policy must normalize every review template
         return self.runtime._validated_spec(spec).to_dict()
 
-    def _preview(self, row: dict, receipts: list[dict], reviews: list[dict]) -> dict:
+    def _preview(self, row: dict, receipts: list[dict], reviews: list[dict], *, reauthorize: bool = False) -> dict:
         active = effective_actions(receipts)
-        template = self._template(row)
         source = AgentTaskSpec.from_dict(row["spec"])
-        return {"source_task": row["id"], "snapshot": _snapshot(row, receipts, reviews),
+        snapshot = _snapshot(row, receipts, reviews)
+        authorization = prepare_authorization(source, snapshot) if reauthorize else None
+        result = {"source_task": row["id"], "snapshot": snapshot,
                 "source_state": row["state"], "source_mode": source.mode, "attempted_steps": len(active),
-                **_review_plan(source, receipts, active, template),
                 "source_receipts": [{key: item[key] for key in ("id", "command", "status")}
                                     for item in receipts[:200]], "source_receipt_total": len(receipts),
                 "approval_required": True, "source_completion_inherited": False}
+        if authorization is not None:
+            result.update(authorization_review=authorization["review"], authorization=authorization["context"],
+                          existing_successor=_successor(self.runtime.store, row["id"]))
+        try:
+            template = self._template(row, authorization)
+        except AgentTaskError:
+            if authorization is None:
+                raise
+            return {**result, "draft": None, "review_template": None, "remaining_actions": [], "rows": [],
+                    "completed_steps": None, "issues": ["authorization_scope_unavailable"]}
+        result.update(_review_plan(source, receipts, active, template))
+        if authorization is not None:
+            self._review_authorized_actions(result, template)
+        return result
+
+    def _review_authorized_actions(self, result: dict, template: dict) -> None:
+        if result["source_mode"] != "skill":
+            return
+        candidate = result["draft"]
+        if candidate is None:
+            result["review_template"] = {**template, "actions": result["remaining_actions"]}
+            return
+        try:
+            # pylint: disable-next=protected-access  # reason: a narrowed preview cannot claim stale file actions are valid
+            self.runtime._validated_spec(candidate)
+        except AgentTaskError:
+            result.update(draft=None, review_template=candidate)
+            result["issues"].append("action_scope_requires_review")
+
+    def _creation_scope(self, row: dict, request: dict) -> tuple[dict, dict | None]:
+        if "authorization_review" not in request:
+            return self._template(row), None
+        authorization = prepare_authorization(AgentTaskSpec.from_dict(row["spec"]), request["snapshot"])
+        if authorization["review"] != request["authorization_review"]:
+            raise AgentTaskError("source authorization context changed; review authorization again")
+        return self._template(row, authorization), authorization
 
     def _create(self, row: dict, request: dict) -> dict:
-        note = request["note"]
-        if not isinstance(note, str) or not note.strip() or len(note) > 4000:
-            raise AgentTaskError("recovery requires a bounded operator review note")
+        note = _review_note(request["note"])
+        template, authorization = self._creation_scope(row, request)
         # pylint: disable-next=protected-access  # reason: reviewed successors use the same live host scope validation
         spec = self.runtime._validated_spec(request["spec"])
-        template = self._template(row)
+        if authorization is not None:
+            template = narrowed_template(template, spec.to_dict())
         _check_scope(template, spec.to_dict())
         _require_plan(spec)
-        existing = self._existing(row["id"], request["snapshot"], durable_payload(spec.to_dict()))
+        review = authorization["review"] if authorization is not None else None
+        existing = self._existing(row["id"], request["snapshot"], durable_payload(spec.to_dict()), review)
         if existing is not None:
             return existing
         receipts, reviews = self._read(row)
@@ -109,12 +165,14 @@ class AgentRecovery:
             raise AgentTaskError("source recovery snapshot changed; preview and review again")
         if any(item["status"] not in {"confirmed", "not_applied", "failed"} for item in receipts):
             raise AgentTaskError("reconcile unknown source effects before creating a successor")
-        # pylint: disable-next=protected-access  # reason: atomically bind lineage through the shared task creator
-        task = self.runtime._create_task(spec, None, recovery=(row["id"], request["snapshot"], note))
+        details = authorization_details(authorization, spec) if authorization is not None else None
+        # pylint: disable-next=protected-access  # reason: atomically bind lineage and authorization in the task creator
+        task = self.runtime._create_task(spec, None, recovery=(row["id"], request["snapshot"], note),
+                                         authorization=details)
         return {"task_id": task.task_id, "state": task.state,
                 "recovery": recovery_link(self.runtime.store, task.task_id)}
 
-    def _existing(self, source: str, snapshot: Any, spec: dict) -> dict | None:
+    def _existing(self, source: str, snapshot: Any, spec: dict, review: str | None = None) -> dict | None:
         with self.runtime.store.connection() as connection:
             record = connection.execute("SELECT task_id,snapshot FROM agent_task_recoveries WHERE source_task=?",
                                         (source,)).fetchone()
@@ -122,15 +180,29 @@ class AgentRecovery:
             return None
         # pylint: disable-next=protected-access  # reason: an idempotent retry still requires ownership of its successor
         child = self.runtime._row(record["task_id"])
-        if record["snapshot"] != snapshot or child["spec"] != spec:
+        link = recovery_link(self.runtime.store, child["id"])
+        if (record["snapshot"] != snapshot or child["spec"] != spec
+                or link.get("reauthorization", {}).get("review") != review):
             raise AgentTaskError("source already has a different reviewed successor")
         self.runtime.evidence.ensure(child["id"])
         return {"task_id": child["id"], "state": child["state"],
-                "recovery": recovery_link(self.runtime.store, child["id"])}
+                "recovery": link}
 
 
 def _snapshot(row: dict, receipts: list[dict], reviews: list[dict]) -> str:
     return request_spec_digest({"task": row, "actions": receipts, "reviews": reviews})
+
+
+def _review_note(note: Any) -> str:
+    if not isinstance(note, str) or not note.strip() or len(note) > 4000:
+        raise AgentTaskError("recovery requires a bounded operator review note")
+    return note
+
+
+def _successor(store: Any, source: str) -> dict | None:
+    with store.connection() as connection:
+        row = connection.execute("SELECT task_id FROM agent_task_recoveries WHERE source_task=?", (source,)).fetchone()
+    return {"task_id": row["task_id"], "recovery": recovery_link(store, row["task_id"])} if row is not None else None
 
 
 def _require_operator() -> None:

@@ -119,7 +119,7 @@ def _recovery(runtime: Any, body: dict) -> dict:
     if set(body) != {"operation", "request"}:
         raise AgentTaskError("recovery requires operation and request")
     result = runtime.recovery.control(body["operation"], body["request"])
-    if body["operation"] == "create" and getattr(runtime, "background", None) is not None:
+    if body["operation"] in {"create", "create_authorized"} and getattr(runtime, "background", None) is not None:
         runtime.background.start(result["task_id"])
     return result
 

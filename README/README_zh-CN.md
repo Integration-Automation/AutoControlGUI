@@ -1,5 +1,12 @@
 # AutoControl
 
+来源授权失效的停止任务，可明确使用 `review_authorization`，再以 `create_authorized` 提供
+`task_id`、`snapshot`、经审阅的 `spec`、`note` 与 `authorization_review`。新任务保留所有仍有效的
+来源限制，将当前权限与原根目录上限取交集；根目录只可维持或缩小，其余权限、模式／模型、预算及
+完成条件固定。批准证据与唯一新任务在同一事务保存；来源及已撤销的见证不变。现有共享接口均提供
+这两种操作，GUI Actions 另有授权审阅／创建命令，详见[恢复指南](../docs/source/Zh/doc/ai_agents/agent_recovery_doc.rst)。
+此流程不更新已发布 skill／trigger、不解除输入隔离，也不重建应用状态。
+
 停止的任务可用 `manage_agent_recovery("preview", {"task_id": "..."})` 审阅来源回执与快照，
 不接触应用程序。有限 skill 提供剩余动作及逐条结果；外部 agent／本机模型任务则提供空白目标的
 `review_template`，须由操作人明确填写剩余工作目标，不复制旧动作列表。明确 `create` 时提供

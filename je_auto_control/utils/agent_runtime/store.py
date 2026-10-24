@@ -70,6 +70,8 @@ CREATE TABLE IF NOT EXISTS agent_target_controls (name TEXT PRIMARY KEY, enabled
 CREATE TABLE IF NOT EXISTS agent_task_recoveries (
  task_id TEXT PRIMARY KEY, source_task TEXT NOT NULL UNIQUE REFERENCES agent_tasks(id) ON DELETE CASCADE,
  snapshot TEXT NOT NULL, note TEXT NOT NULL, created REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_task_authorizations (
+ task_id TEXT PRIMARY KEY REFERENCES agent_task_recoveries(task_id) ON DELETE CASCADE, details TEXT NOT NULL);
 """
 
 
@@ -156,7 +158,7 @@ class AgentTaskStore:
 
     def create(self, spec: dict, owner: dict, *, idempotency_key: str | None = None,
                trigger_event: tuple[str, str, str] | None = None,
-               recovery: tuple[str, str, str] | None = None) -> str:
+               recovery: tuple[str, str, str] | None = None, authorization: dict | None = None) -> str:
         """Persist an immutable authorized task snapshot before it can execute."""
         identifier = uuid.uuid4().hex
         now = time.time()
@@ -172,6 +174,11 @@ class AgentTaskStore:
             if recovery is not None:
                 connection.execute("INSERT INTO agent_task_recoveries VALUES (?,?,?,?,?)",
                                    (identifier, *recovery, now))
+            if authorization is not None:
+                if recovery is None:
+                    raise AgentTaskError("successor authorization requires a recovery link")
+                connection.execute("INSERT INTO agent_task_authorizations VALUES (?,?)",
+                                   (identifier, json.dumps(authorization)))
         return identifier
 
     def lookup_request(self, owner: dict, key: str) -> str | None:

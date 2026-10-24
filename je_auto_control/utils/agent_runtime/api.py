@@ -131,7 +131,7 @@ def manage_agent_skill(operation: str, request: Mapping[str, Any] | None = None)
 
 
 def manage_agent_recovery(operation: str, request: Mapping[str, Any]) -> dict[str, Any]:
-    """Review a stopped task or explicitly create its one scoped, receipt-linked successor."""
+    """Review, reauthorize or create a scoped, receipt-linked successor for a stopped task."""
     return AgentRuntimeClient().call("recovery", {"operation": operation, "request": dict(request)})
 
 

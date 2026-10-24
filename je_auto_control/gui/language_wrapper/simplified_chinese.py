@@ -1507,6 +1507,8 @@ simplified_chinese_word_dict.update({
     "agent_remainder_request": "经审阅的新任务请求（JSON）",
     "agent_remainder_preview": "审阅剩余工作／重新规划",
     "agent_remainder_create": "创建经审阅的新任务",
+    "agent_reauthorize_preview": "审阅新任务授权",
+    "agent_reauthorize_create": "创建重新授权的新任务",
     "agent_prune": "清理过期任务缓存"
 })
 

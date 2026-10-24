@@ -1508,6 +1508,8 @@ traditional_chinese_word_dict.update({
     "agent_remainder_request": "經審閱的新任務請求（JSON）",
     "agent_remainder_preview": "審閱剩餘工作／重新規劃",
     "agent_remainder_create": "建立經審閱的新任務",
+    "agent_reauthorize_preview": "審閱新任務授權",
+    "agent_reauthorize_create": "建立重新授權的新任務",
     "agent_prune": "清理過期任務快取"
 })
 

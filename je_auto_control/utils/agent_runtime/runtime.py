@@ -124,10 +124,12 @@ class AgentRuntime:
 
     def _create_task(self, spec: AgentTaskSpec, key: str | None,
                      event: tuple[str, str, str] | None = None,
-                     recovery: tuple[str, str, str] | None = None) -> AgentTaskHandle:
+                     recovery: tuple[str, str, str] | None = None,
+                     authorization: dict | None = None) -> AgentTaskHandle:
         with DeferredAuthorization.capture().scope():
             task_id = self.store.create(durable_payload(spec.to_dict()), _identity_dict(),
-                                        idempotency_key=key, trigger_event=event, recovery=recovery)
+                                        idempotency_key=key, trigger_event=event, recovery=recovery,
+                                        authorization=authorization)
         self.evidence.ensure(task_id)
         return AgentTaskHandle(task_id, self.store.get(task_id)["state"])
 
