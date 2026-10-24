@@ -14,7 +14,7 @@ def register_parser(subparsers: Any, handler: Callable[..., int]) -> None:
     """Register additive task commands without changing legacy CLI flags."""
     parser = subparsers.add_parser("agent-task", help="Manage explicitly authorized agent tasks")
     operations = parser.add_subparsers(dest="agent_operation", required=True)
-    for operation in ("start", "stop", "status", "submit", "list", "get", "observe", "act", "finish",
+    for operation in ("start", "stop", "status", "submit", "list", "get", "lookup", "observe", "act", "finish",
                       "pause", "resume", "cancel", "draft", "stop-all", "receipts", "reconcile", "prune", "trigger",
                       "recover-target", "skill", "target", "targets"):
         item = operations.add_parser(operation)
@@ -30,6 +30,8 @@ def _operation_arguments(item: Any, operation: str) -> None:
         item.add_argument("--idempotency-key")
     elif operation == "prune":
         item.add_argument("--keep-days", type=int, default=30)
+    elif operation == "lookup":
+        item.add_argument("idempotency_key", help="Original owner's request key; inspect only, never submit")
     elif operation == "draft":
         from je_auto_control.utils.agent_runtime.workflow_specs import WORKFLOWS
         item.add_argument("workflow", choices=WORKFLOWS)
@@ -39,10 +41,16 @@ def _operation_arguments(item: Any, operation: str) -> None:
     elif operation == "recover-target":
         item.add_argument("target")
         item.add_argument("note", help="Operator review after manually releasing held input")
-    elif operation not in {"list", "status", "stop", "stop-all", "targets"}:
-        item.add_argument("task_id")
-        if operation in {"act", "reconcile"}:
-            item.add_argument("action" if operation == "act" else "review", help="JSON action request or owner review")
+    else:
+        _task_arguments(item, operation)
+
+
+def _task_arguments(item: Any, operation: str) -> None:
+    if operation in {"list", "status", "stop", "stop-all", "targets"}:
+        return
+    item.add_argument("task_id")
+    if operation in {"act", "reconcile"}:
+        item.add_argument("action" if operation == "act" else "review", help="JSON action request or owner review")
 
 
 def _reviewed_arguments(item: Any, operation: str) -> None:
@@ -62,6 +70,7 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
                   "target": lambda: api.manage_agent_target(arguments.target_operation,
                                                              _read(arguments.request) if arguments.request else {}),
                   "status": api.agent_runtime_status, "stop": api.stop_agent_runtime,
+                  "lookup": lambda: api.lookup_agent_task(arguments.idempotency_key),
                   "stop-all": api.stop_all_agent_tasks, "list": api.list_agent_tasks,
                   "submit": lambda: api.submit_agent_task(_read(arguments.spec), arguments.idempotency_key),
                   "draft": lambda: _draft(arguments), "prune": lambda: api.prune_agent_tasks(arguments.keep_days),

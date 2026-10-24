@@ -1,6 +1,17 @@
 AI agents and computer use
 ===========================
 
+Inspect a lost submission reply
+--------------------------------
+
+``lookup_agent_task("original-key")`` reads the current principal/store namespace without submitting,
+resuming or acquiring input. The same operation is available as ``AC_agent_task_lookup``, MCP
+``ac_agent_task_lookup``, ``POST /agent/lookup`` with only ``idempotency_key``, CLI
+``agent-task lookup original-key`` and the task view's Actions menu. Results contain ``found`` and an
+optional ``task`` status snapshot. Missing records are not proof of rejection: an outstanding request
+can arrive later. Task access remains required for this read-only lookup. GUI results are discarded if
+the key or selected task changes. Registered-host DAG review still requires its separate integration.
+
 Managed tasks in a DAG
 ----------------------
 

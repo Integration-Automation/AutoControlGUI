@@ -77,7 +77,7 @@ REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
 REST_ROUTE_CAPABILITIES.update({("POST", f"/agent/{operation}"): _DRIVE
                                 for operation in ("submit", "observe", "act", "finish", "pause", "resume",
                                                   "cancel", "draft", "stop_all", "receipts", "reconcile",
-                                                  "prune", "trigger", "skill")})
+                                                  "prune", "trigger", "skill", "lookup")})
 
 #: Commands that need more than ``drive_input``. Every other command is
 #: covered by the capability of the surface that submitted the action list.
@@ -178,6 +178,7 @@ TOOL_CAPABILITIES: Dict[str, str] = {
     "ac_agent_runtime_status": _DRIVE,
     "ac_agent_skill_list": _DRIVE,
     "ac_agent_task_get": _DRIVE,
+    "ac_agent_task_lookup": _DRIVE,
     "ac_agent_task_list": _DRIVE,
     "ac_agent_task_draft": _DRIVE,
     "ac_agent_task_receipts": _DRIVE,

@@ -1505,6 +1505,7 @@ simplified_chinese_word_dict.update({
 
 simplified_chinese_word_dict.update({
     "agent_request_key": "提交标识（选填）",
+    "agent_lookup": "按提交标识查询任务",
     "agent_trigger_id": "绑定标识",
     "agent_trigger_operation": "绑定操作",
     "agent_trigger_kind": "触发来源",

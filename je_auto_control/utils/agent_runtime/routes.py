@@ -7,7 +7,7 @@ from concurrent.futures import CancelledError
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentObservationStale, AgentHumanReview
 
 OPERATIONS = ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown", "draft", "stop_all",
-              "receipts", "reconcile", "prune", "trigger", "recover_target", "skill", "target")
+              "receipts", "reconcile", "prune", "trigger", "recover_target", "skill", "target", "lookup")
 
 
 def route(operation: str) -> Callable[..., Any]:
@@ -47,10 +47,16 @@ def dispatch(runtime: Any, operation: str, body: Any = None, task_id: str | None
                   "submit": lambda: _submit(runtime, body), "draft": lambda: _draft(body),
                   "prune": lambda: _prune(runtime, body), "trigger": lambda: _trigger(runtime, body),
                   "skill": lambda: _skill(runtime, body), "target": lambda: _target(runtime, body),
-                  "recover_target": lambda: _recover_target(runtime, body)}
+                  "recover_target": lambda: _recover_target(runtime, body), "lookup": lambda: _lookup(runtime, body)}
     if operation in operations:
         return operations[operation]()
     return _task_operation(runtime, operation, body)
+
+
+def _lookup(runtime: Any, body: dict) -> dict:
+    if set(body) != {"idempotency_key"}:
+        raise AgentTaskError("lookup requires only idempotency_key")
+    return runtime.lookup(body["idempotency_key"])
 
 
 def _submit(runtime: Any, body: dict) -> dict:

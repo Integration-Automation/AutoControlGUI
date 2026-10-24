@@ -77,11 +77,19 @@ def _open_connection(driver: Any, path: str) -> Any:
         raise AgentTaskError("agent runtime database could not be opened") from error
 
 
-def _request_key(connection: Any, owner: dict, key: str, spec: dict, identifier: str) -> str | None:
+def _request_identity(owner: dict, key: str) -> tuple[str, str]:
     if not isinstance(key, str) or not key or len(key) > 256:
         raise AgentTaskError("idempotency_key requires between one and 256 characters")
     owner_key = json.dumps([owner.get("user_id"), owner.get("store_path")])
-    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+    try:
+        digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+    except UnicodeError:
+        raise AgentTaskError("idempotency_key requires valid Unicode") from None
+    return owner_key, digest
+
+
+def _request_key(connection: Any, owner: dict, key: str, spec: dict, identifier: str) -> str | None:
+    owner_key, digest = _request_identity(owner, key)
     spec_hash = hashlib.sha256(json.dumps(spec, sort_keys=True).encode("utf-8")).hexdigest()
     row = connection.execute("SELECT task_id,spec_hash FROM agent_request_keys WHERE owner_key=? AND key_hash=?",
                              (owner_key, digest)).fetchone()
@@ -153,6 +161,14 @@ class AgentTaskStore:
                                (identifier, json.dumps(spec), json.dumps(owner), "queued", now, now))
             _bind_trigger_event(connection, trigger_event, identifier, now)
         return identifier
+
+    def lookup_request(self, owner: dict, key: str) -> str | None:
+        """Read the exact owner's request key without creating or resubmitting a task."""
+        identity = _request_identity(owner, key)
+        with self.connection() as connection:
+            row = connection.execute("SELECT task_id FROM agent_request_keys WHERE owner_key=? AND key_hash=?",
+                                     identity).fetchone()
+        return str(row[0]) if row else None
 
     def get(self, task_id: str) -> dict[str, Any]:
         """Return one task or fail without revealing another identifier's data."""

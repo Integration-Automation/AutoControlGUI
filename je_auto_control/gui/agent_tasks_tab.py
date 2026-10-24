@@ -55,6 +55,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._controller = TaskController(self)
         self._handle: Any = None
         self._view_task = ""
+        self._lookup_view: tuple[str, str] | None = None
         self._labels: list[tuple[QLabel, str]] = []
         self._pages = QTabWidget()
         self._page_keys: list[str] = []
@@ -177,8 +178,12 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_browser_files_example", self._browser_files_example),
                 ("agent_target_list", partial(self._dispatch, "targets", {})),
                 ("agent_submit", self._submit), ("agent_refresh", partial(self._dispatch, "list")),
+                ("agent_lookup", self._lookup),
                 *[("agent_" + name, partial(self._dispatch, name)) for name in
                   ("get", "observe", "finish", "pause", "resume", "cancel", "receipts")]]
+
+    def _lookup(self) -> None:
+        self._dispatch("lookup", {"idempotency_key": self._request_key.text()})
 
     def _preview(self) -> None:
         try:
@@ -318,10 +323,12 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             if operation not in {"pause", "cancel", "stop", "stop_all"}:
                 return
             self._handle.cancel()
-        task_operation = operation not in {"start", "stop", "list", "stop_all", "prune", "targets", "target"}
+        task_operation = operation not in {
+            "start", "stop", "list", "stop_all", "prune", "targets", "target", "lookup"}
         default = {"task_id": self._task_id.text()} if task_operation else {}
         data = payload or default
         self._view_task = str(data.get("task_id", ""))
+        self._lookup_view = (self._request_key.text(), self._task_id.text()) if operation == "lookup" else None
         self._handle = self._controller.submit(partial(_request, operation, data), owner=self)
         self._handle.finished.connect(self._completed)
 
@@ -329,6 +336,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         if self._handle is not None and outcome.task_id != self._handle.task_id:
             return
         if self._view_task and self._view_task != self._task_id.text():
+            return
+        if self._lookup_view is not None and self._lookup_view != (self._request_key.text(), self._task_id.text()):
             return
         if outcome.status != "ok":
             self._status.setText(outcome.error or outcome.status)
@@ -340,6 +349,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._present_result(result)
 
     def _present_result(self, result: dict) -> None:
+        self._present_lookup(result)
         if "draft" in result:
             draft = result["draft"]
             self._goal.setText(draft["goal"])
@@ -361,6 +371,11 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             for index, row in enumerate(rows):
                 for column, name in enumerate(("task_id", "goal", "state", "reason")):
                     self._table.setItem(index, column, QTableWidgetItem(str(row.get(name, ""))))
+
+    def _present_lookup(self, result: dict) -> None:
+        found = result.get("task")
+        if result.get("found") is True and isinstance(found, dict) and isinstance(found.get("task_id"), str):
+            self._task_id.setText(found["task_id"])
 
     def _select(self, row: int, _column: int) -> None:
         item = self._table.item(row, 0)

@@ -1656,6 +1656,7 @@ english_word_dict.update({
 
 english_word_dict.update({
     "agent_request_key": "Submission key (optional)",
+    "agent_lookup": "Find task by submission key",
     "agent_trigger_id": "Trigger ID",
     "agent_trigger_operation": "Trigger operation",
     "agent_trigger_kind": "Trigger source",

@@ -1,5 +1,12 @@
 # AutoControl Architecture
 
+Request-key inspection shares the submission identity/hash calculation in AgentTaskStore. Runtime.lookup
+refreshes the current principal before resolving its exact user/store namespace and returns an owner-scoped
+status snapshot without dispatch, target activation or writes to request keys. The closed POST lookup route
+is shared by Python/AC/MCP/CLI/Builder/GUI; read-only MCP annotations retain drive_input authority.
+No match is a snapshot, never proof that a still-pending request cannot arrive. GUI lookup binds both key
+and selected task to discard late results. Registered-host DAG review remains distinct from submission.
+
 DAG task_contract.py validates and freezes a closed task envelope, preserving destination paths without
 local canonicalization. managed_tasks.py uses the local delegated client or a snapshot of a registered
 admin host's URL/token; remote requests never delegate local principal/origin metadata. It submits once

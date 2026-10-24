@@ -66,6 +66,7 @@ from je_auto_control.api.core import (
     cancel_agent_task as cancel_agent_task,
     finish_agent_task as finish_agent_task,
     get_agent_task as get_agent_task,
+    lookup_agent_task as lookup_agent_task,
     list_agent_tasks as list_agent_tasks,
     observe_agent_task as observe_agent_task,
     pause_agent_task as pause_agent_task,

@@ -1506,6 +1506,7 @@ traditional_chinese_word_dict.update({
 
 traditional_chinese_word_dict.update({
     "agent_request_key": "提交識別碼（選填）",
+    "agent_lookup": "依提交識別碼查詢任務",
     "agent_trigger_id": "綁定識別碼",
     "agent_trigger_operation": "綁定操作",
     "agent_trigger_kind": "觸發來源",

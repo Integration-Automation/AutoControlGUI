@@ -1543,6 +1543,7 @@ japanese_word_dict.update({
 
 japanese_word_dict.update({
     "agent_request_key": "送信キー（任意）",
+    "agent_lookup": "送信キーでタスクを検索",
     "agent_trigger_id": "トリガー ID",
     "agent_trigger_operation": "トリガー操作",
     "agent_trigger_kind": "トリガー種類",

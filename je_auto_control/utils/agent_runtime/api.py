@@ -70,6 +70,11 @@ def submit_agent_task(spec: AgentTaskSpec | Mapping[str, Any], idempotency_key: 
     return AgentRuntimeClient().call("submit", payload)
 
 
+def lookup_agent_task(idempotency_key: str) -> dict[str, Any]:
+    """Inspect an accepted request by its original owner's key, without submission or resume."""
+    return AgentRuntimeClient().call("lookup", {"idempotency_key": idempotency_key})
+
+
 def get_agent_task(task_id: str) -> dict[str, Any]:
     """Read one owner-scoped task snapshot."""
     return AgentRuntimeClient().call("get", {"task_id": task_id})

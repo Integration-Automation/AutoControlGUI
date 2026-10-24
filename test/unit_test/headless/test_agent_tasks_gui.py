@@ -30,6 +30,37 @@ def test_task_workspace_is_idle_and_uses_actions(monkeypatch):
     assert calls == []
 
 
+@pytest.mark.parametrize("change", ["none", "key", "task"])
+def test_lookup_action_is_inspection_only_and_discards_stale_view_results(monkeypatch, change):
+    from types import SimpleNamespace
+    from je_auto_control.gui.task_controller import TaskOutcome
+
+    app = QApplication.instance() or QApplication([])
+    tab = AgentTasksTab()
+    requests = []
+    signal = SimpleNamespace(connect=lambda _slot: None)
+    try:
+        tab._request_key.setText("original-key")
+        tab._task_id.setText("")
+        handle = SimpleNamespace(task_id=42, outcome=None, finished=signal)
+        monkeypatch.setattr(tab._controller, "submit", lambda request, **_kwargs: requests.append(request) or handle)
+        dict(tab.menu_actions())["agent_lookup"]()
+        assert requests[0].args == ("lookup", {"idempotency_key": "original-key"})
+        if change == "key":
+            tab._request_key.setText("another-key")
+        elif change == "task":
+            tab._task_id.setText("another-task")
+        tab._completed(TaskOutcome(42, "ok", {"found": True, "task": {"task_id": "accepted-task"}}))
+        expected = {"none": "accepted-task", "key": "", "task": "another-task"}[change]
+        assert tab._task_id.text() == expected
+        assert len(requests) == 1
+    finally:
+        import shiboken6
+        tab.close()
+        shiboken6.delete(tab)
+        app.processEvents()
+
+
 def test_emergency_action_remains_available_during_an_active_view_request(monkeypatch):
     from types import SimpleNamespace
     app = QApplication.instance() or QApplication([])

@@ -124,6 +124,13 @@ class AgentRuntime:
         self.evidence.ensure(task_id)
         return AgentTaskHandle(task_id, self.store.get(task_id)["state"])
 
+    def lookup(self, idempotency_key: str) -> dict[str, Any]:
+        """Inspect this principal's accepted request without acquiring input or dispatching work."""
+        with DeferredAuthorization.capture().scope():
+            identifier = self.store.lookup_request(_identity_dict(), idempotency_key)
+            task = self.get(identifier).to_dict() if identifier is not None else None
+            return {"found": task is not None, "task": task}
+
     def get(self, task_id: str) -> AgentTaskResult:
         """Read owner-scoped task status without observing the desktop."""
         row = self._row(task_id)
