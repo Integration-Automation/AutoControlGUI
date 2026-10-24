@@ -79,6 +79,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._goal, self._target, self._task_id = QLineEdit(), QLineEdit("local-desktop"), QLineEdit()
         self._recovery_note = QLineEdit()
         self._review = QPlainTextEdit('{"action_id": "", "decision": "not_applied", "note": ""}')
+        remainder = QPlainTextEdit("{}", self)
+        remainder.setObjectName("agent_remainder_request")
         self._skill_operation, self._skill_request = QComboBox(), QPlainTextEdit("{}")
         for name in SKILL_OPERATIONS:
             self._skill_operation.addItem(_translate("agent_skill_" + name), name)
@@ -121,7 +123,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._page("agent_page_targets", (("agent_target_operation", self._target_operation),
                    ("agent_target_request", self._target_request)))
         self._page("agent_page_recovery", (("agent_recovery_note", self._recovery_note),
-                   ("agent_review", self._review)))
+                   ("agent_review", self._review), ("agent_remainder_request", self._remainder_request)))
         self._page("agent_page_observation", (("agent_action", self._action),))
         self._pages.widget(self._pages.count() - 1).layout().addWidget(self._observation)
 
@@ -166,6 +168,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_preview", self._preview),
                 ("agent_act", self._act),
                 ("agent_reconcile", self._reconcile),
+                ("agent_remainder_preview", self._preview_remainder),
+                ("agent_remainder_create", self._create_remainder),
                 ("agent_recover_target", self._recover_target),
                 ("agent_prune", partial(self._dispatch, "prune", {})),
                 ("agent_trigger_apply", self._trigger_apply),
@@ -184,6 +188,27 @@ class AgentTasksTab(TranslatableMixin, QWidget):
 
     def _lookup(self) -> None:
         self._dispatch("lookup", {"idempotency_key": self._request_key.text()})
+
+    def _preview_remainder(self) -> None:
+        self._remainder_request.setPlainText("{}")
+        self._dispatch("recovery", {"operation": "preview", "request": {"task_id": self._task_id.text()}})
+
+    @property
+    def _remainder_request(self) -> QPlainTextEdit:
+        editor = self.findChild(QPlainTextEdit, "agent_remainder_request")
+        if editor is None:
+            raise AgentTaskError("recovery editor is unavailable")
+        return editor
+
+    def _create_remainder(self) -> None:
+        try:
+            request = json.loads(self._remainder_request.toPlainText())
+            if not isinstance(request, dict) or request.get("task_id") != self._task_id.text():
+                raise AgentTaskError("preview and review the selected task's remaining steps first")
+        except (ValueError, TypeError) as error:
+            self._status.setText(str(error))
+            return
+        self._dispatch("recovery", {"operation": "create", "request": request})
 
     def _preview(self) -> None:
         try:
@@ -229,6 +254,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
 
     def _clear_observation(self, _task_id: str = "") -> None:
         self._observation.clear()
+        self._remainder_request.setPlainText("{}")
 
     def _pick_reference(self, reference: dict) -> None:
         try:
@@ -328,6 +354,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         default = {"task_id": self._task_id.text()} if task_operation else {}
         data = payload or default
         self._view_task = str(data.get("task_id", ""))
+        if operation == "recovery":
+            self._view_task = str(data["request"]["task_id"])
         self._lookup_view = (self._request_key.text(), self._task_id.text()) if operation == "lookup" else None
         self._handle = self._controller.submit(partial(_request, operation, data), owner=self)
         self._handle.finished.connect(self._completed)
@@ -350,7 +378,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
 
     def _present_result(self, result: dict) -> None:
         self._present_lookup(result)
-        if "draft" in result:
+        if "source_task" in result:
+            self._present_remainder(result)
+        elif isinstance(result.get("draft"), dict):
             draft = result["draft"]
             self._goal.setText(draft["goal"])
             self._target.setText(draft["target"])
@@ -376,6 +406,13 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         found = result.get("task")
         if result.get("found") is True and isinstance(found, dict) and isinstance(found.get("task_id"), str):
             self._task_id.setText(found["task_id"])
+
+    def _present_remainder(self, result: dict) -> None:
+        draft = result.get("draft")
+        request = {"task_id": result["source_task"], "snapshot": result["snapshot"],
+                   "spec": draft, "note": ""} if isinstance(draft, dict) else {}
+        self._remainder_request.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))
+        self._pages.setCurrentIndex(self._page_keys.index("agent_page_recovery"))
 
     def _select(self, row: int, _column: int) -> None:
         item = self._table.item(row, 0)

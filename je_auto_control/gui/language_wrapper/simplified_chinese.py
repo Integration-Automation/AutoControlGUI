@@ -1504,6 +1504,9 @@ simplified_chinese_word_dict.update({
     "agent_skill_accept": "发布已审核版本",
     "agent_skill_run": "执行指定版本",
     "agent_recover_target": "恢复已审核的输入控制权",
+    "agent_remainder_request": "经审阅的新任务请求（JSON）",
+    "agent_remainder_preview": "审阅任务剩余步骤",
+    "agent_remainder_create": "创建经审阅的新任务",
     "agent_prune": "清理过期任务缓存"
 })
 

@@ -28,6 +28,7 @@ from je_auto_control.utils.agent_runtime.evidence import TaskEvidence
 from je_auto_control.utils.agent_runtime.receipts import reconcile, row_report
 from je_auto_control.utils.agent_runtime.task_triggers import AgentTriggers
 from je_auto_control.utils.agent_runtime.task_skills import AgentSkills
+from je_auto_control.utils.agent_runtime.task_recovery import AgentRecovery, recovery_link, require_no_successor
 from je_auto_control.utils.agent_runtime.origin_policy import bind_origin, validate_origins
 from je_auto_control.utils.agent_runtime.store import AgentTaskStore, request_spec_digest
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
@@ -88,6 +89,11 @@ class AgentRuntime:
         with self._mutex:
             return self._task_locks.setdefault(task_id, threading.RLock())
 
+    @property
+    def recovery(self) -> AgentRecovery:
+        """Use a stateless recovery collaborator over this runtime's durable task evidence."""
+        return AgentRecovery(self)
+
     def _row(self, task_id: str) -> dict[str, Any]:
         if self._closed:
             raise AgentTaskError("runtime is closed")
@@ -117,10 +123,11 @@ class AgentRuntime:
         return self._create_task(spec, idempotency_key)
 
     def _create_task(self, spec: AgentTaskSpec, key: str | None,
-                     event: tuple[str, str, str] | None = None) -> AgentTaskHandle:
+                     event: tuple[str, str, str] | None = None,
+                     recovery: tuple[str, str, str] | None = None) -> AgentTaskHandle:
         with DeferredAuthorization.capture().scope():
             task_id = self.store.create(durable_payload(spec.to_dict()), _identity_dict(),
-                                        idempotency_key=key, trigger_event=event)
+                                        idempotency_key=key, trigger_event=event, recovery=recovery)
         self.evidence.ensure(task_id)
         return AgentTaskHandle(task_id, self.store.get(task_id)["state"])
 
@@ -156,6 +163,9 @@ class AgentRuntime:
         with self._mutex:
             metadata["input_released"] = task_id not in self._leases
         metadata["target"] = row["spec"]["target"]
+        link = recovery_link(self.store, task_id)
+        if link:
+            metadata["recovery"] = link
         if "target_profile" in row["spec"]["options"]:
             metadata["target_profile"] = thaw(row["spec"]["options"]["target_profile"])
         pin = self.skills.task_pin(row) if "skill_pin" in row["spec"]["options"] else {}
@@ -524,6 +534,7 @@ class AgentRuntime:
         """Reauthorize a paused task; a fresh observation is required before any action."""
         with self._lock(task_id):
             row = self._row(task_id)
+            require_no_successor(self.store, task_id)
             if row["state"] not in {"paused", "waiting_user", "recovering"}:
                 raise AgentTaskError("task is not ready to resume")
             if any(action["status"] == "uncertain" for action in self.store.actions(task_id)):

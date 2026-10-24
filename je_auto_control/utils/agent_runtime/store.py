@@ -67,6 +67,9 @@ CREATE TABLE IF NOT EXISTS agent_action_grounding (
 CREATE TABLE IF NOT EXISTS agent_target_profiles (
  name TEXT PRIMARY KEY, config TEXT NOT NULL, digest TEXT NOT NULL, created REAL NOT NULL, actor TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_target_controls (name TEXT PRIMARY KEY, enabled INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_task_recoveries (
+ task_id TEXT PRIMARY KEY, source_task TEXT NOT NULL UNIQUE REFERENCES agent_tasks(id) ON DELETE CASCADE,
+ snapshot TEXT NOT NULL, note TEXT NOT NULL, created REAL NOT NULL);
 """
 
 
@@ -152,7 +155,8 @@ class AgentTaskStore:
             connection.close()
 
     def create(self, spec: dict, owner: dict, *, idempotency_key: str | None = None,
-               trigger_event: tuple[str, str, str] | None = None) -> str:
+               trigger_event: tuple[str, str, str] | None = None,
+               recovery: tuple[str, str, str] | None = None) -> str:
         """Persist an immutable authorized task snapshot before it can execute."""
         identifier = uuid.uuid4().hex
         now = time.time()
@@ -165,6 +169,9 @@ class AgentTaskStore:
             connection.execute("INSERT INTO agent_tasks(id,spec,owner,state,created,updated) VALUES (?,?,?,?,?,?)",
                                (identifier, json.dumps(spec), json.dumps(owner), "queued", now, now))
             _bind_trigger_event(connection, trigger_event, identifier, now)
+            if recovery is not None:
+                connection.execute("INSERT INTO agent_task_recoveries VALUES (?,?,?,?,?)",
+                                   (identifier, *recovery, now))
         return identifier
 
     def lookup_request(self, owner: dict, key: str) -> str | None:

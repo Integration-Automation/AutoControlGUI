@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from je_auto_control.utils.agent_runtime import api
+from je_auto_control.utils.agent_runtime.task_recovery import OPERATIONS as RECOVERY_OPERATIONS
 from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow, WORKFLOWS
 from je_auto_control.utils.agent_runtime.workflow_files import workflow_download, workflow_manifest
 from je_auto_control.utils.agent_runtime.workflow_desktop import workflow_control, workflow_open
@@ -80,6 +81,9 @@ CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
                                   ("task_id",), True, False),
     "AC_agent_task_reconcile": (api.reconcile_agent_task, {**_ID, "review": {"type": "object"}},
                                ("task_id", "review"), False, False),
+    "AC_agent_task_recovery": (api.manage_agent_recovery,
+                               {"operation": {"type": "string", "enum": list(RECOVERY_OPERATIONS)},
+                                "request": {"type": "object"}}, ("operation", "request"), False, False),
     "AC_agent_task_prune": (api.prune_agent_tasks, {"keep_days": {"type": "integer", "minimum": 1}}, (), False, False),
     "AC_agent_task_stop_all": (api.stop_all_agent_tasks, {}, (), False, False),
     "AC_agent_task_draft": (draft_agent_workflow, {"workflow": {"type": "string", "enum": list(WORKFLOWS)},

@@ -26,7 +26,7 @@ def prune_tasks(runtime: Any, keep_days: int = 30) -> dict[str, Any]:
             row = runtime.store.get(task_id)
             if not owns_task(row["owner"], identity):
                 continue
-            if task_id in runtime._leases:
+            if _preserve_task(runtime, task_id):
                 continue
             runtime.evidence.remove(task_id)
             _remove_metadata(runtime.store, task_id)
@@ -36,6 +36,14 @@ def prune_tasks(runtime: Any, keep_days: int = 30) -> dict[str, Any]:
             runtime._observation_times.pop(task_id, None)
             deleted.append(task_id)
     return {"deleted": deleted, "keep_days": keep_days}
+
+
+def _preserve_task(runtime: Any, task_id: str) -> bool:
+    if task_id in runtime._leases:
+        return True
+    with runtime.store.connection() as connection:
+        return connection.execute("SELECT 1 FROM agent_task_recoveries r JOIN agent_tasks t ON t.id=r.task_id "
+                                  "WHERE r.source_task=?", (task_id,)).fetchone() is not None
 
 
 def _remove_metadata(store: Any, task_id: str) -> None:

@@ -1,5 +1,12 @@
 # Changelog
 
+Add reviewed successors for stopped finite workflows through manage_agent_recovery and shared
+API/AC/MCP/REST/CLI/Builder/GUI Actions. Bind explicit approval to the source task/receipt/review snapshot,
+preserve original scope and evidence, reject unknown effects and stale captures/coordinates, and create
+one deduplicated successor with atomic provenance. Retain source evidence while its child exists.
+New completion belongs only to the child; its delegated source cannot resume. No old workflow prefix
+or application state is inherited.
+
 Fix managed screen completion for built-in desktop, WebRunner and file targets: bounded/masked previews
 declare partial coverage; file and window-bootstrap metadata cannot prove screen absence. Partial text
 checks ignore protected/hidden/untyped labels and combine known contradictions with unknown evidence.

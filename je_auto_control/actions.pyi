@@ -187,6 +187,9 @@ def AC_agent_task_receipts(task_id: str, offset: int = ..., limit: int = ...) ->
 def AC_agent_task_reconcile(task_id: str, review: Mapping[str, Any]) -> dict[str, Any]:
     """Record a human-reviewed uncertain outcome; this neither resumes a task nor forces success."""
 
+def AC_agent_task_recovery(operation: str, request: Mapping[str, Any]) -> dict[str, Any]:
+    """Review a stopped finite task or explicitly create its one scoped, receipt-linked successor."""
+
 def AC_agent_task_resume(task_id: str) -> dict[str, Any]:
     """Reauthorize and queue a task that can safely resume."""
 

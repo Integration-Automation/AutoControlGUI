@@ -663,3 +663,38 @@ The pinned formats come from AOSP Android 14
 `InputTransport <https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-14.0.0_r27/libs/input/InputTransport.cpp>`_,
 and the framework ``KeyguardServiceDelegate``/``KeyguardStateMonitor`` implementations. Native/device
 acceptance remains paused; simulated evidence does not advertise a managed Android target.
+
+Reviewed successor tasks
+------------------------
+
+A retired desktop/browser context cannot safely continue from historical field receipts.
+``manage_agent_recovery("preview", {"task_id": source_id})`` reads a stopped finite skill without
+observing or operating its target. It returns source receipt summaries, per-row outcomes, attempted
+and verified step counts, remaining actions and a ``snapshot`` binding the exact source task,
+receipts and review witnesses. Issues such as unknown effects, failed read-back, old coordinates or
+missing capture producers withhold the draft. Unknown counts are not reported as completed steps.
+
+Review the application state and reconstruct any necessary preparation with semantic actions and
+fresh captures, within the source scope. Explicitly call ``manage_agent_recovery("create", request)``
+with ``task_id``, ``snapshot``, ``spec`` and a nonempty operator ``note``. Only goal/actions may change;
+target, tools, roots, apps, inputs, budgets, options and independent completion conditions remain fixed.
+Private skill publication pins are removed. Missing captures, copied observation indexes and coordinate
+steps are rejected. Unreconciled source effects must first use the existing receipt review operation.
+A changed source requires another preview and approval; an active input lease prevents replacement.
+
+Creation and the unique source link commit in one SQLite transaction. Repeated identical approval
+returns the same successor, including after restart or a lost reply; different approval conflicts.
+The source retains its state, receipts, reviews and row outcomes. The child starts with no receipts and
+must satisfy fresh completion evidence; success does not complete its parent. The delegated source cannot resume. Task/list metadata exposes
+``recovery`` provenance. Retention keeps source evidence while a child exists; removal leaves a tombstone
+until the source is pruned, so replaying an old approval cannot resurrect a retired child.
+
+The shared surfaces are ``AC_agent_task_recovery``, MCP ``ac_agent_task_recovery``,
+``POST /agent/recovery`` with ``{operation, request}``, Builder, and
+``agent-task recovery preview|create request.json``. Both operations require operator ``drive_input``.
+Agent tasks Actions provides **Review remaining task steps** and **Create reviewed successor task**.
+A successful preview prepares a separate Recovery JSON editor with an empty review note. It never fills
+or submits the ordinary task form. Change the plan/note, then explicitly create. Changing the selected
+task clears the draft and late replies are ignored. Creation uses normal durable background dispatch;
+closing the view only detaches requests. Login/window restoration, arbitrary pointer regrounding and
+real application/native acceptance remain separate work; no browser engine or paid dependency is added.

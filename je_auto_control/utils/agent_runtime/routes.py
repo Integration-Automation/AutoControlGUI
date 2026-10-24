@@ -7,7 +7,7 @@ from concurrent.futures import CancelledError
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentObservationStale, AgentHumanReview
 
 OPERATIONS = ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown", "draft", "stop_all",
-              "receipts", "reconcile", "prune", "trigger", "recover_target", "skill", "target", "lookup")
+              "receipts", "reconcile", "prune", "trigger", "recover_target", "skill", "target", "lookup", "recovery")
 
 
 def route(operation: str) -> Callable[..., Any]:
@@ -47,7 +47,8 @@ def dispatch(runtime: Any, operation: str, body: Any = None, task_id: str | None
                   "submit": lambda: _submit(runtime, body), "draft": lambda: _draft(body),
                   "prune": lambda: _prune(runtime, body), "trigger": lambda: _trigger(runtime, body),
                   "skill": lambda: _skill(runtime, body), "target": lambda: _target(runtime, body),
-                  "recover_target": lambda: _recover_target(runtime, body), "lookup": lambda: _lookup(runtime, body)}
+                  "recover_target": lambda: _recover_target(runtime, body), "lookup": lambda: _lookup(runtime, body),
+                  "recovery": lambda: _recovery(runtime, body)}
     if operation in operations:
         return operations[operation]()
     return _task_operation(runtime, operation, body)
@@ -114,6 +115,15 @@ def _target(runtime: Any, body: dict) -> dict:
     return runtime.target_profiles.control(body["operation"], body.get("request"))
 
 
+def _recovery(runtime: Any, body: dict) -> dict:
+    if set(body) != {"operation", "request"}:
+        raise AgentTaskError("recovery requires operation and request")
+    result = runtime.recovery.control(body["operation"], body["request"])
+    if body["operation"] == "create" and getattr(runtime, "background", None) is not None:
+        runtime.background.start(result["task_id"])
+    return result
+
+
 def _task_operation(runtime: Any, operation: str, body: dict[str, Any]) -> dict[str, Any]:
     _check_task_fields(operation, body)
     task_id = body["task_id"]
@@ -125,7 +135,7 @@ def _task_operation(runtime: Any, operation: str, body: dict[str, Any]) -> dict[
         return runtime.receipts(task_id, body.get("offset", 0), body.get("limit", 100))
     handlers = {name: getattr(runtime, name) for name in OPERATIONS
                 if name not in {"submit", "act", "shutdown", "draft", "stop_all", "prune", "reconcile",
-                                "receipts", "trigger", "recover_target", "skill", "target"}}
+                                "receipts", "trigger", "recover_target", "skill", "target", "recovery"}}
     if operation not in handlers:
         raise AgentTaskError("unknown task operation")
     result = handlers[operation](task_id).to_dict()

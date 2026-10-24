@@ -795,3 +795,15 @@ labels for partial text checks and combines clauses with passed/failed/unknown s
 contradiction fails the conjunction; missing evidence cannot pass it. Other partial screen predicates
 remain unknown. Legacy custom sources without flags keep their prior contract; exact browser checks
 still use pinned fresh SDK reads rather than previews. No new command or GUI-specific branch is added.
+
+Reviewed successors: task_recovery.py is a trusted runtime collaborator with a closed preview/create
+protocol. It locks the source task, refreshes owner/operator authority, binds approval to the exact
+task/receipt/review snapshot and preserves the normalized scope while allowing reviewed goal/actions.
+Unknown effects require reconciliation; indexed/coordinate actions and unavailable historical captures
+need fresh semantic reconstruction. store.py atomically inserts a queued task and unique source link,
+independently of caller request-key namespaces. Retries reuse that child and never copy action receipts or skill publication
+authority. Runtime metadata exposes provenance; retention.py preserves source evidence until the child
+is removed, retaining a no-resurrection tombstone in the meantime. A delegated source cannot resume. routes/client/api, the shared command
+catalog, REST capability map and CLI expose the same protocol. The thin Recovery editor accepts explicit
+Actions approval, clears selection-bound drafts and ignores late source replies; it never submits a
+preview through the ordinary task form or cancels service work on close.

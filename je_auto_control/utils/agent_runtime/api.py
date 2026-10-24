@@ -130,6 +130,11 @@ def manage_agent_skill(operation: str, request: Mapping[str, Any] | None = None)
     return AgentRuntimeClient().call("skill", {"operation": operation, "request": dict(request or {})})
 
 
+def manage_agent_recovery(operation: str, request: Mapping[str, Any]) -> dict[str, Any]:
+    """Review a stopped finite task or explicitly create its one scoped, receipt-linked successor."""
+    return AgentRuntimeClient().call("recovery", {"operation": operation, "request": dict(request)})
+
+
 def list_agent_skills() -> dict[str, Any]:
     """List owner-visible immutable skill candidates and published versions."""
     return manage_agent_skill("list")

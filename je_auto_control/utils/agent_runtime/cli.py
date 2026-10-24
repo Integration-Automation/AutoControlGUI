@@ -7,6 +7,7 @@ from typing import Any, Callable
 
 from je_auto_control.utils.agent_runtime import api
 from je_auto_control.utils.agent_runtime.client import AgentRuntimeClient
+from je_auto_control.utils.agent_runtime.task_recovery import OPERATIONS as RECOVERY_OPERATIONS
 from je_auto_control.utils.path_guard.path_guard import validate_path
 
 
@@ -17,7 +18,7 @@ def register_parser(subparsers: Any, handler: Callable[..., int]) -> None:
     for operation in ("start", "stop", "status", "submit", "list", "get", "lookup", "inspect-dag",
                       "observe", "act", "finish",
                       "pause", "resume", "cancel", "draft", "stop-all", "receipts", "reconcile", "prune", "trigger",
-                      "recover-target", "skill", "target", "targets"):
+                      "recover-target", "skill", "target", "targets", "recovery"):
         item = operations.add_parser(operation)
         item.set_defaults(func=handler)
         _operation_arguments(item, operation)
@@ -41,7 +42,7 @@ def _operation_arguments(item: Any, operation: str) -> None:
         from je_auto_control.utils.agent_runtime.workflow_specs import WORKFLOWS
         item.add_argument("workflow", choices=WORKFLOWS)
         item.add_argument("config", help="JSON workflow configuration")
-    elif operation in {"trigger", "skill", "target"}:
+    elif operation in {"trigger", "skill", "target", "recovery"}:
         _reviewed_arguments(item, operation)
     elif operation == "recover-target":
         item.add_argument("target")
@@ -62,9 +63,12 @@ def _reviewed_arguments(item: Any, operation: str) -> None:
     from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGERS
     from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILLS
     from je_auto_control.utils.agent_runtime.target_profiles import OPERATIONS as TARGETS
-    choices = {"trigger": TRIGGERS, "skill": SKILLS, "target": TARGETS}[operation]
+    choices = {"trigger": TRIGGERS, "skill": SKILLS, "target": TARGETS, "recovery": RECOVERY_OPERATIONS}[operation]
     item.add_argument(operation + "_operation", choices=choices)
-    item.add_argument("request", nargs="?", help="JSON reviewed operation request")
+    if operation == "recovery":
+        item.add_argument("request", help="JSON reviewed operation request")
+    else:
+        item.add_argument("request", nargs="?", help="JSON reviewed operation request")
 
 
 def run(arguments: argparse.Namespace) -> dict[str, Any]:
@@ -84,6 +88,8 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
                   "recover-target": lambda: api.recover_agent_target(arguments.target, arguments.note),
                   "skill": lambda: api.manage_agent_skill(arguments.skill_operation,
                                                             _read(arguments.request) if arguments.request else {}),
+                  "recovery": lambda: api.manage_agent_recovery(arguments.recovery_operation,
+                                                               _read(arguments.request) if arguments.request else {}),
                   "trigger": lambda: api.manage_agent_trigger(arguments.trigger_operation,
                                                                 _read(arguments.request) if arguments.request else {})}
     if operation in operations:

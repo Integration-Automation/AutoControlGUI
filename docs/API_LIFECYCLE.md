@@ -1,5 +1,22 @@
 # Public API lifecycle
 
+`manage_agent_recovery(operation, request)` adds owner/operator-scoped `preview` and `create` for stopped
+finite skills. Preview reports remaining semantic actions, row outcomes and a digest of the exact source
+task, receipts and reviews. It never observes a target or starts work. Create requires explicit snapshot,
+spec and review note; a changed source, unsettled input lease or unreconciled effect prevents creation.
+Only goal/actions may change: target, tools, roots, apps, inputs, budget, options and completion conditions
+remain fixed; private skill publication pins are removed. Historical captures/indexes/coordinates cannot
+be reused. Operators may insert fresh semantic preparation/read-back within the existing scope.
+Task creation and its unique source link commit atomically. A repeat returns the same child; different
+approval conflicts. A retired child leaves a tombstone until source retention, preventing resurrection.
+The source keeps its receipts, reviews, rows and status. Child metadata/list results expose provenance;
+new completion never completes the parent, and the delegated source cannot resume. Retention preserves source evidence while a child remains.
+Explicit create uses normal durable background dispatch; closing the view does not cancel the child.
+Surfaces: `AC_agent_task_recovery`, MCP `ac_agent_task_recovery`, `POST /agent/recovery`, CLI
+`agent-task recovery preview|create request.json`, Builder and the Agent tasks Recovery page/Actions.
+Both operations require drive_input, including direct runtime use; this does not restore login/window
+state automatically or replace independently verified native acceptance.
+
 Browser host profiles can select a reviewed installed Python environment through optional
 `settings.helper_python` (an absolute local interpreter path). Explicit helpers run with `-I`, using
 installed packages rather than the caller's `PYTHONPATH` or working directory. Virtualenv executable
@@ -20,7 +37,7 @@ desktop scope or its owned helper requires review before an old prefix can conti
 state is not established by historical receipts. Live uninterrupted contexts continue normally. File
 adapters retain their persistent-artifact recovery. Target checks run before helper replacement, and
 existing resume/status/receipt interfaces expose the human-review result. Draft/authentication/window
-state restoration and reviewed remaining-step reconstruction remain open; native acceptance stays paused.
+state restoration remains open; reviewed successor creation is available above. Native acceptance stays paused.
 
 A finite browser skill's verified prefix now requires its original live browser/helper context.
 After pause, cleanup, helper loss or runtime restart, retained action history cannot prove that the
