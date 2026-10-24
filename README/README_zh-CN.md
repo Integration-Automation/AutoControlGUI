@@ -1,5 +1,17 @@
 # AutoControl
 
+浏览器主机目标可通过可选的 `settings.helper_python` 指定已审核且已安装包的 Python
+环境（本机绝对解释器路径）。明确指定的 helper 使用 `-I`，从该环境加载已安装包；虚拟环境
+解释器的符号链接保留环境身份。任务选项不能指定解释器。
+主机管理员可使用 `manage_agent_target("probe", {"name":"reviewed-browser"})`、`AC_agent_target`、
+MCP／REST、`agent-task target probe request.json` 或 GUI 主机目标的诊断操作。
+诊断以独立且有时限的自有 helper，通过 `je_web_runner` 检查浏览器依赖后结束，过程不获取输入
+所有权或启动浏览器。结果可显示 `python_dependencies_ready`；浏览器启动及原生证据仍明确保持
+`not_probed`／`not_recorded`。`last_probe` 仅为内存中的带时间诊断快照，不授予任务权限，
+也不启用已禁用的目标。桌面／设备的原生诊断仍待完成。
+已准备的隔离环境安装两个功能工作树构建的 wheel；共享环境与正式工作树保持原状。正式服务
+配置及实际浏览器验收仍单独跟踪；所有浏览器自动化仍统一由 WebRunner（`je_web_runner`）提供。
+
 桌面固定技能现在与浏览器技能共用会话连续性检查。桌面 scope 或自有 helper 结束后，
 沿用旧前缀前必须审核，不能用历史记录证明暂停后的表单／窗口状态。未中断的会话可正常
 运行；文件 adapter 仍以持久化产物处理恢复。检查在替代 helper 启动前执行，现有继续运行／状态／

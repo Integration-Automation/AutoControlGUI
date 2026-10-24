@@ -1703,6 +1703,7 @@ english_word_dict.update({
     'agent_target_register': 'Register immutable target',
     'agent_target_get': 'Inspect target',
     'agent_target_disable': 'Disable target',
+    'agent_target_probe': 'Inspect browser Python dependencies',
     'agent_target_enable': 'Enable target'
 })
 

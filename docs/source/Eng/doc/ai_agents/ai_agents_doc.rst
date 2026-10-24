@@ -353,3 +353,21 @@ state is not established by historical receipts. Live uninterrupted contexts con
 adapters retain their persistent-artifact recovery. Target checks run before helper replacement, and
 existing resume/status/receipt interfaces expose the human-review result. Draft/authentication/window
 state restoration and reviewed remaining-step reconstruction remain open; native acceptance stays paused.
+
+Isolated browser Python and dependency diagnostics
+----------------------------------------------------------------------
+
+Browser host profiles can select a reviewed installed Python environment through optional
+``settings.helper_python`` (an absolute local interpreter path). Explicit helpers run with ``-I``, using
+installed packages rather than the caller's ``PYTHONPATH`` or working directory. Virtualenv executable
+symlinks retain their environment identity. Task options cannot select the interpreter.
+Host managers can call ``manage_agent_target("probe", {"name":"reviewed-browser"})`` or use
+``AC_agent_target``, MCP/REST, ``agent-task target probe request.json`` and the GUI Host targets operation.
+The probe uses a separate bounded owned helper, imports browser dependencies through ``je_web_runner``,
+then retires it without acquiring input ownership or starting a browser. Its result can say
+``python_dependencies_ready``; ``browser_launch=not_probed`` and ``native_evidence=not_recorded`` stay explicit.
+``last_probe`` is an in-memory timestamped diagnostic snapshot; passive readiness and task permissions
+are unchanged by probing. Disabled targets stay disabled. Desktop/device native probes remain open.
+The prepared isolated environment installs wheels from both feature worktrees. Shared environments
+and production checkouts remain untouched; production service configuration and real-browser acceptance
+remain separate work. Browser automation still belongs entirely to WebRunner (``je_web_runner``).

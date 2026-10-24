@@ -84,6 +84,17 @@ class NativeDesktopTarget:
             connected = self._channel is not None and not self._channel.retired
             require_context_continuity(spec, receipts, connected, kind=kind)
 
+    def probe(self) -> dict[str, Any]:
+        """Inspect browser Python dependencies in a separate owned process; never reuse an input channel."""
+        if self._profile is None or self._profile.kind != "browser":
+            return {"status": "not_supported", "native_evidence": "not_recorded"}
+        # pylint: disable-next=import-outside-toplevel  # reason: dependency inspection stays browser-only
+        from je_auto_control.utils.agent_runtime.browser_commands import BROWSER_TRANSFER_TOOLS
+        # pylint: disable-next=import-outside-toplevel  # reason: no probe dependencies load on desktop-only paths
+        from je_auto_control.utils.agent_runtime.helper_environment import probe_browser_helper
+        transfers = bool(set(self._profile.allowed_tools) & BROWSER_TRANSFER_TOOLS)
+        return probe_browser_helper(self._argv, transfer=transfers)
+
     def _launch(self, check: Callable[[], None], control: Callable[[str], None] | None = None) -> OwnedChannel:
         self._channel = OwnedChannel(self._argv, on_control=control)
         reply = self._channel.request("bootstrap", {}, timeout=15, check=check)

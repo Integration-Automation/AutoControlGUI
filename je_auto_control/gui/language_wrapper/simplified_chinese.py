@@ -1552,6 +1552,7 @@ simplified_chinese_word_dict.update({
     'agent_target_register': '注册固定目标',
     'agent_target_get': '检查目标',
     'agent_target_disable': '禁用目标',
+    'agent_target_probe': '检查浏览器 Python 依赖包',
     'agent_target_enable': '启用目标'
 })
 

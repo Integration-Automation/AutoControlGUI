@@ -1,5 +1,7 @@
 # Changelog
 
+Experimental browser profiles accept an optional host-reviewed absolute helper_python path and run that environment with -I. Add the host-only probe target operation across existing API/AC/MCP/REST/CLI/GUI routes. Dependency inspection uses a separately bounded owned helper, records a timestamped metadata snapshot and never establishes browser/native readiness, acquires input or enables a target. Preserve virtualenv executable symlinks; task options cannot override the interpreter.
+
 Extend retired-context prefix protection to managed desktop skills, including host-profiled and built-in desktop helpers. The shared validator is now target_continuity.py. Browser protection, external reobservation and persistent file recovery retain their behavior; interrupted desktop fixed flows now require review before continuing old actions.
 
 Experimental browser recovery now refuses a finite skill prefix when its original context has retired. The shared activation gate runs before helper replacement/input ownership, enters human review and retains history; users review remaining steps into a new task. Uninterrupted sessions, fresh starts and external reobservation remain supported. This closes a reproduced empty-form submission after pause/restart; it does not implement browser state restoration.

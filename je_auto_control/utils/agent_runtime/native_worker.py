@@ -86,6 +86,8 @@ class NativeWorker:
             return {"protocol": 1}
         if operation == "cleanup":
             return self._release_owned(payload)
+        if operation == "probe_browser":
+            return self._probe_browser(payload)
         if operation == "configure":
             self._configure_scope(payload)
         if self._spec is None:
@@ -98,6 +100,13 @@ class NativeWorker:
             stack.enter_context(input_observer(self._input))
             stack.enter_context(operation_scope(TaskOperation(self._spec, self._check_activity, self._owner)))
             return self._operation(operation, payload)
+
+    def _probe_browser(self, payload: dict) -> dict:
+        if self._spec is not None or not isinstance(payload, dict) or set(payload) != {"transfer"}:
+            raise AgentTaskError("dependency probing requires an unconfigured owned helper")
+        # pylint: disable-next=import-outside-toplevel  # reason: only an explicit unconfigured probe loads this seam
+        from je_auto_control.utils.agent_runtime.browser_environment import inspect_browser_dependencies
+        return inspect_browser_dependencies(payload["transfer"])
 
     def _configure_scope(self, payload: dict) -> None:
         self._spec = AgentTaskSpec.from_dict(payload["spec"])

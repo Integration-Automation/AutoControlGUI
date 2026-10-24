@@ -1553,6 +1553,7 @@ traditional_chinese_word_dict.update({
     'agent_target_register': '註冊固定目標',
     'agent_target_get': '檢查目標',
     'agent_target_disable': '停用目標',
+    'agent_target_probe': '檢查瀏覽器 Python 相依套件',
     'agent_target_enable': '啟用目標'
 })
 

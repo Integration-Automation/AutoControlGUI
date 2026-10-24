@@ -84,6 +84,8 @@ class AgentTargetProfile:
     def check(self, spec: AgentTaskSpec) -> None:
         """Enforce the immutable host ceiling in addition to task and source-origin policies."""
         validate_root_snapshot(self.roots)
+        if "helper_python" in spec.options:
+            raise AgentTaskError("helper Python is host configuration, not a task option")
         if not set(spec.allowed_tools) <= set(self.allowed_tools):
             raise AgentTaskError("task tools exceed the host target profile")
         if not {name.casefold() for name in spec.apps} <= {name.casefold() for name in self.apps}:
@@ -111,6 +113,8 @@ def _settings(kind: str, value: Mapping) -> dict:
     if not isinstance(data, dict):
         raise AgentTaskError("target profile settings must be an object")
     allowed = {"allowed_origins"} | ({"platform"} if kind == "desktop" else set())
+    if kind == "browser":
+        allowed.add("helper_python")
     if set(data) - allowed:
         raise AgentTaskError("unreviewed target profile settings")
     if kind == "desktop" and data.get("platform") not in {"windows", "macos", "x11", "wayland"}:
@@ -118,6 +122,10 @@ def _settings(kind: str, value: Mapping) -> dict:
     _normalize_origins(data)
     if kind == "browser":
         data["allowed_origins"] = browser_origins(value.get("allowed_origins", ()))
+        if "helper_python" in data:
+            # pylint: disable-next=import-outside-toplevel  # reason: optional helper selection stays lazy
+            from je_auto_control.utils.agent_runtime.helper_environment import normalize_helper_python
+            data["helper_python"] = normalize_helper_python(data["helper_python"])
     return data
 
 

@@ -1,5 +1,7 @@
 # Capability matrix
 
+Browser Python diagnostics: explicit host-manager probe operation, separate owned helper, SDK-owned runtime import/ABI checks and exact readback/transfer markers. Isolated installed wheel/environment proof passes; browser_launch remains not_probed and native_evidence not_recorded. Public summaries show timestamped dependency metadata without helper paths; production deployment and native/browser acceptance remain open.
+
 UI skill continuity now covers desktop and browser targets. Fake applications reproduce an edited form being submitted after scope retirement; the shared pre-start fence refuses it. Live contexts and persistent file recovery retain separate lifecycle checks. Native platform evidence and state-restoring resume remain open.
 
 Browser continuity: a retained finite prefix requires the original live SDK/helper context. Reproduced pause/restart empty-form submission is refused before replacement startup; history and explicit review remain available. Source-to-source real SDK/owned-helper tests verify the fence. Authenticated/draft state restoration remains open; native evidence remains separate.

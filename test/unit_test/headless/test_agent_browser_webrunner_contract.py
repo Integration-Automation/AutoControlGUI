@@ -282,3 +282,30 @@ def test_owned_browser_helper_refuses_cold_skill_prefix_before_relaunch(tmp_path
         assert len(runtime.store.actions(handle.task_id)) == 2
     finally:
         runtime.close()
+
+
+def test_dependency_probe_uses_real_sdk_loader_without_starting_its_factory(monkeypatch):
+    from unittest.mock import Mock
+    from je_auto_control.utils.agent_runtime.browser_environment import inspect_browser_dependencies
+    from je_web_runner.webdriver import playwright_wrapper
+    factory = Mock()
+    loader = Mock(return_value=factory)
+    monkeypatch.setattr(playwright_wrapper, "_require_playwright", loader)
+    report = inspect_browser_dependencies(True)
+    assert report["status"] == "python_dependencies_ready"
+    assert report["readback_contract"] and report["transfer_contract"]
+    assert report["browser_launch"] == "not_probed" and report["native_evidence"] == "not_recorded"
+    loader.assert_called_once()
+    factory.assert_not_called()
+
+
+def test_dependency_probe_contains_the_real_sdk_missing_runtime_error(monkeypatch):
+    from unittest.mock import Mock
+    from je_auto_control.utils.agent_runtime.browser_environment import inspect_browser_dependencies
+    from je_web_runner.webdriver import playwright_wrapper
+    loader = Mock(side_effect=playwright_wrapper.PlaywrightBackendError("private fixture diagnostic"))
+    monkeypatch.setattr(playwright_wrapper, "_require_playwright", loader)
+    report = inspect_browser_dependencies(True)
+    assert report["status"] == "dependency_missing" and report["playwright"] is False
+    assert report["browser_launch"] == "not_probed" and report["native_evidence"] == "not_recorded"
+    assert "private fixture diagnostic" not in str(report)

@@ -95,6 +95,15 @@ def test_browser_file_examples_only_edit_reviewable_grants_and_workflow(tab, mon
     assert not (tmp_path / "agent-files").exists()
 
 
+def test_browser_dependency_probe_uses_the_shared_target_action(tab, monkeypatch):
+    calls = []
+    monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))
+    tab._target_operation.setCurrentIndex(tab._target_operation.findData("probe"))
+    tab._target_request.setPlainText('{"name":"isolated-browser"}')
+    dict(tab.menu_actions())["agent_target_apply"]()
+    assert calls == [("target", {"operation": "probe", "request": {"name": "isolated-browser"}})]
+
+
 def test_browser_dom_selection_replaces_locator_only(tab, monkeypatch):
     calls = []
     monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))

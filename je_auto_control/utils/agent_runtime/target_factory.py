@@ -19,6 +19,9 @@ def build_target(profile: AgentTargetProfile) -> Any:
     if profile.kind == "desktop":
         return NativeDesktopTarget(profile=profile.to_dict())
     if profile.kind == "browser":
+        # pylint: disable-next=import-outside-toplevel  # reason: load interpreter selection for browser profiles only
+        from je_auto_control.utils.agent_runtime.helper_environment import browser_helper_argv
         path = Path.home() / ".je_auto_control" / "input_ownership" / ("browser-" + profile.digest + ".lock")
-        return NativeDesktopTarget(resource_path=path, recovery_probe=lambda: None, profile=profile.to_dict())
+        return NativeDesktopTarget(argv=browser_helper_argv(profile.settings), resource_path=path,
+                                   recovery_probe=lambda: None, profile=profile.to_dict())
     raise AgentTaskError("target kind does not have a host adapter factory")
