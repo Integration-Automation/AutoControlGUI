@@ -2,9 +2,12 @@
 
 ## Agent 電腦接管與任務自動化
 
-`WIP` — **依使用者恢復要求繼續交付；個別原生／真機／24 小時驗收仍暫緩。**
+`WIP` — **依使用者要求，本批收尾後暫停；以下步驟待明確恢復後繼續。**
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
+功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
+WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
+正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
 
 1. **P4：瀏覽器與正式環境接合**
    - 選定正式服務專用 helper Python、AutoControl／WebRunner 套件版本與受管 Chromium 安裝；
@@ -38,8 +41,23 @@
      未知 worker／按住輸入／清理失敗時不得移交或竊取租約。
 
 4. **P7：Android／iOS 受管裝置**
+   - 恢復後先處理共用遠端副作用生命週期；目前尚未新增這一層實作，亦未接入受管裝置 adapter。
+     位置：`utils/agent_runtime/{native_target,native_channel,input_journal,runtime_lock}.py`，
+     再接 `target_config.py`／`target_factory.py` 與 `android/`、`ios/`。
+   - 建立以平台與實體裝置識別為鍵的跨任務／app／profile／資料庫互斥；不能依連線端點或 app
+     各自取得同一台裝置。裝置識別須由可信 adapter 證實。
+   - 設計封閉的遠端協定能力交握與動作前／後 ACK：將 controller、裝置、序號、世代及未知動作
+     先寫入耐久 journal 才確認放行；拒絕重複／過期／不符事件，避免記錄輸入文字或秘密。
+     不得讓既有桌面 helper／鍵鼠 ledger 冒充遠端裝置協定。
+   - 清理時先確認自有本機 helper 已退出；遠端動作未證實結束時仍保留 journal 與裝置隔離。
+     設計可信的裝置端清理／世代證據及人工恢復程序：本機 writer 退出後建立基準，只有能證明
+     舊指令失效且不再重播的新證據才能解除隔離；沒有可信證據來源時保持拒絕接管。
+   - 先以自有模擬 helper／遠端端點驗證 ACK 前耐久寫入、helper 結束後遠端仍可執行、逾時／取消、
+     跨 app 競爭、journal 損壞、事件亂序與恢復；不得因此啟動真機驗收。
    - 建立以裝置及 app 身分固定的主機 profile、有限工具集與 scope；接既有 ADB／WebDriverAgent
      路徑，不把任意 shell、主機或執行參數交給模型。
+     接合前核對 SDK 的實際裝置身分、重連／重試與清理契約；ADB 不得誤啟動或終止共用 daemon，
+     亦需遮蔽逾時／例外中的命令參數。WDA 未提供的世代／閒置保證不可自行假定。
    - 接合觀察版本、元素參照、app／裝置身分、敏感內容遮罩、動作後讀回與完成驗證。
    - 以實體裝置身分協調互斥，處理斷線、app 切換、連線／helper 世代及權限撤銷。
    - 遠端動作逾時或 ACK 遺失須保存未知副作用；本機 helper 結束不等於裝置停止。
