@@ -50,6 +50,13 @@ CREATE TABLE IF NOT EXISTS agent_triggers (
 CREATE TABLE IF NOT EXISTS agent_trigger_events (
  trigger_id TEXT NOT NULL REFERENCES agent_triggers(id), event_hash TEXT NOT NULL, payload_hash TEXT NOT NULL,
  task_id TEXT NOT NULL, created REAL NOT NULL, PRIMARY KEY(trigger_id,event_hash));
+CREATE TABLE IF NOT EXISTS agent_dag_batches (
+ id TEXT PRIMARY KEY, owner TEXT NOT NULL, definition TEXT NOT NULL, graph_hash TEXT NOT NULL, hosts TEXT NOT NULL,
+ max_parallel INTEGER NOT NULL, state TEXT NOT NULL, attempt TEXT NOT NULL,
+ created REAL NOT NULL, updated REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_dag_nodes (
+ batch_id TEXT NOT NULL REFERENCES agent_dag_batches(id) ON DELETE CASCADE, node_id TEXT NOT NULL,
+ phase TEXT NOT NULL, receipt TEXT NOT NULL, updated REAL NOT NULL, PRIMARY KEY(batch_id,node_id));
 CREATE TABLE IF NOT EXISTS agent_trigger_authorizations (
  source_trigger TEXT PRIMARY KEY, trigger_id TEXT NOT NULL UNIQUE, lineage TEXT NOT NULL,
  snapshot TEXT NOT NULL, spec_hash TEXT NOT NULL, details TEXT NOT NULL,
@@ -302,6 +309,7 @@ class AgentTaskStore:
     def recover(self) -> None:
         """Mark abandoned live work for review; never replay an uncertain effect."""
         with self.connection(write=True) as connection:
+            connection.execute("UPDATE agent_dag_batches SET state='waiting_review',attempt='' WHERE state='running'")
             connection.execute("UPDATE agent_actions SET status='uncertain' WHERE status='dispatched'")
             connection.execute("UPDATE agent_actions SET status='failed' WHERE status='prepared'")
             connection.execute("UPDATE agent_tasks SET steps=MAX(steps,(SELECT COUNT(*) FROM agent_actions "

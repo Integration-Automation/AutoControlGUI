@@ -998,6 +998,7 @@ def dag_tools() -> List[MCPTool]:
         MCPTool(
             name="ac_run_dag",
             description=("Execute a cross-host DAG (directed acyclic graph) "
+                         "with optional registered batch_id for immutable graph binding and durable dispatch claims. "
                          "of automation steps. Each node carries (host, "
                          "actions|action_file|task, depends_on). Managed task nodes "
                          "submit once with an explicit idempotency_key and wait for "
@@ -1009,6 +1010,7 @@ def dag_tools() -> List[MCPTool]:
             input_schema=schema({
                 "definition": {"type": "object"},
                 "max_parallel": {"type": "integer"},
+                "batch_id": {"type": "string"},
             }, required=["definition"]),
             handler=h_ops.run_dag,
             annotations=DESTRUCTIVE,

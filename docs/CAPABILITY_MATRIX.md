@@ -1,5 +1,12 @@
 # Capability matrix
 
+Durable managed DAG batch identity: experimental; canonical topology/contract binding, host
+configuration pins, pre-delivery claims, exact independently checked completion, one-shot begin,
+owner isolation, restart and rollback have deterministic and owned local/two-host HTTP evidence.
+CLI/AC/MCP/Builder and offscreen DAG Actions expose registration/read/initial execution. This is the
+initial execution foundation; reviewed continuation/background batch jobs/retention and actual multi-host
+deployment/native acceptance remain open. Legacy node inspection does not authorize continuation.
+
 Trigger authority renewal: reviewed future-event replacement with original/live/current scope,
 full-template/config preservation, atomic old-binding retirement, lineage deduplication/pending counts,
 retention/removal/restart and rollback evidence. Controlled HTTP/CLI/offscreen GUI confirms passive

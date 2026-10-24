@@ -124,6 +124,9 @@ def AC_admin_remove_host(label: str) -> Dict[str, Any]:
 def AC_agent_card(path: str | None = ...) -> Dict[str, Any]:
     """Adapter: build (or write) the A2A agent card."""
 
+def AC_agent_dag(operation: str, request: Mapping[str, Any] | None = ...) -> dict[str, Any]:
+    """Register, inspect and track an immutable managed DAG batch without automatic recovery."""
+
 def AC_agent_dag_inspect(definition: Mapping[str, Any], timeout_seconds: float = ...) -> dict[str, Any]:
     """Inspect local/registered-host task keys without submitting, resuming or granting continuation."""
 
@@ -2586,7 +2589,7 @@ def AC_run_agent(
 def AC_run_chaos(spec: Any) -> Dict[str, Any]:
     """Adapter: run a chaos experiment whose probes/method/rollbacks are actions."""
 
-def AC_run_dag(definition: Dict[str, Any], max_parallel: int = ...) -> Dict[str, Any]:
+def AC_run_dag(definition: Dict[str, Any], max_parallel: int = ..., batch_id: str | None = ...) -> Dict[str, Any]:
     """Executor adapter: run a cross-host DAG definition."""
 
 def AC_run_device_matrix(

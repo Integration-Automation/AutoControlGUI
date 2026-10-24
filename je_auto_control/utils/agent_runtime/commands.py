@@ -5,6 +5,7 @@ from typing import Any
 
 from je_auto_control.utils.agent_runtime import api
 from je_auto_control.utils.agent_runtime.task_recovery import OPERATIONS as RECOVERY_OPERATIONS
+from je_auto_control.utils.agent_runtime.dag_batches import OPERATIONS as DAG_OPERATIONS
 from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow, WORKFLOWS
 from je_auto_control.utils.agent_runtime.workflow_files import workflow_download, workflow_manifest
 from je_auto_control.utils.agent_runtime.workflow_desktop import workflow_control, workflow_open
@@ -21,6 +22,8 @@ _ID = {"task_id": {"type": "string", "minLength": 1}}
 
 # name: (function, JSON properties, required, read_only, host_management)
 CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
+    "AC_agent_dag": (api.manage_agent_dag, {"operation": {"type": "string", "enum": list(DAG_OPERATIONS)},
+                                           "request": {"type": "object"}}, ("operation",), False, False),
     "AC_agent_dag_inspect": (api.inspect_agent_dag,
                              {"definition": {"type": "object"},
                               "timeout_seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 300}},

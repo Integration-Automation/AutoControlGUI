@@ -562,3 +562,4 @@ hash。擷取前後核對原生範圍，準備與裝置防護內都重讀 hierar
    :maxdepth: 2
 
    agent_recovery_doc
+   agent_dag_batches_doc

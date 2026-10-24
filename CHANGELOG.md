@@ -1,5 +1,11 @@
 # Changelog
 
+Add durable managed-only DAG batch registration and bound initial execution. Persist the exact graph,
+owner and pre-delivery claims, bind destination keys/spec tags to the batch, pin registered host
+configuration and independently verify completion before releasing dependants. Reject repeated begin
+after interruption or lost replies. Add shared batch API/commands and optional run_dag batch_id;
+legacy unbound graphs remain compatible. Reviewed continuation and batch retention remain separate.
+
 Add explicit trigger authorization review/replacement while retaining accepted event identities and
 pending limits across generations. Retire the source atomically, activate future notifications, retain
 file checkpoints and refuse schedule backlog replay or inherited queued-task dispatch. Ordinary enable

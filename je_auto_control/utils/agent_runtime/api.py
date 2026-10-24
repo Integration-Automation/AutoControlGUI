@@ -125,6 +125,11 @@ def recover_agent_target(target: str, note: str) -> dict[str, Any]:
     return AgentRuntimeClient().call("recover_target", {"target": target, "note": note})
 
 
+def manage_agent_dag(operation: str, request: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Register, inspect and track an immutable managed DAG batch without automatic recovery."""
+    return AgentRuntimeClient().call("dag", {"operation": operation, "request": dict(request or {})}, timeout=305)
+
+
 def manage_agent_skill(operation: str, request: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Record, reauthorize, validate, explicitly publish or run an immutable managed skill version."""
     return AgentRuntimeClient().call("skill", {"operation": operation, "request": dict(request or {})})

@@ -673,3 +673,4 @@ Review stopped tasks, reconstruct remaining work and explicitly approve a scoped
    :maxdepth: 2
 
    agent_recovery_doc
+   agent_dag_batches_doc

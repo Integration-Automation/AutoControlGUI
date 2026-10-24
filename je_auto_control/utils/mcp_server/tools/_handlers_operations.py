@@ -533,9 +533,9 @@ def export_sarif(findings, path=None, tool_name="AutoControl"):
 
 
 def run_dag(definition: Dict[str, Any],
-            max_parallel: int = 4) -> Dict[str, Any]:
+            max_parallel: int = 4, batch_id: Optional[str] = None) -> Dict[str, Any]:
     from je_auto_control.utils.dag import run_dag as _run_dag
-    return _run_dag(definition, max_parallel=int(max_parallel)).to_dict()
+    return _run_dag(definition, max_parallel=int(max_parallel), batch_id=batch_id).to_dict()
 
 
 def failure_hook_fire(source: str, source_id: str,

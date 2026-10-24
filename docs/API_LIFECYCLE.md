@@ -1,5 +1,18 @@
 # Public API lifecycle
 
+manage_agent_dag adds register/get/list/begin/claim/record/finish/inspect on POST /agent/dag and
+AC_agent_dag / MCP ac_agent_dag / CLI agent-task dag / Builder. Register accepts an all-managed graph
+and optional max_parallel (1..64), pins its canonical digest and registered host configuration, and
+creates pending node records atomically. run_dag and AC_run_dag/MCP ac_run_dag accept optional batch_id;
+bound runs reject custom runners and changed graphs/parallelism/hosts. Begin issues one attempt; claim
+commits before destination contact. Destination specs carry batch/graph/node tags and derived unique
+keys. Record verifies the exact destination request match, task ID, completion clauses and input
+retirement independently before confirming a node. Unknown effects or missing replies never reset a
+claim. Restart invalidates the old attempt and marks live batches waiting_review. Finish derives batch outcome from durable node phases. get/list omit owner/host credentials;
+inspect stays read-only with resume_permitted=false. Original owner and current caller are refreshed.
+Legacy unbound DAGs are unchanged. Explicit reviewed continuation, durable background batch coordination
+and batch retention remain open; registration and recorded completion alone grant no continuation.
+
 Trigger review_authorization takes trigger_id. Explicit create_authorized additionally requires
 snapshot/authorization_review/spec/nonempty note. Preserve template goal/actions/settings/criteria and
 kind/config/max_pending, allowing only reviewed origin replacement and equal/narrower roots. Creation

@@ -31,6 +31,7 @@ from je_auto_control.utils.agent_runtime.task_skills import AgentSkills
 from je_auto_control.utils.agent_runtime.task_recovery import AgentRecovery, recovery_link, require_no_successor
 from je_auto_control.utils.agent_runtime.origin_policy import bind_origin, validate_origins
 from je_auto_control.utils.agent_runtime.store import AgentTaskStore, request_spec_digest
+from je_auto_control.utils.agent_runtime.dag_batches import DagBatches
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -88,6 +89,11 @@ class AgentRuntime:
     def _lock(self, task_id: str) -> Any:
         with self._mutex:
             return self._task_locks.setdefault(task_id, threading.RLock())
+
+    @property
+    def batches(self) -> DagBatches:
+        """Use a stateless collaborator over durable managed DAG identities and dispatch claims."""
+        return DagBatches(self)
 
     @property
     def recovery(self) -> AgentRecovery:

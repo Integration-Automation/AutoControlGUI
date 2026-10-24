@@ -611,6 +611,13 @@ A new body field must be optional and safe to ignore — an old host drops `rais
 table above are used by sibling repos; treat renaming or removing them as a breaking change and check the consumers
 first. `AC_*` command names and the legacy CLI flags are public too (action files live outside this repo).
 
+Managed runtime peers additionally support the additive `POST /agent/dag` protocol and
+`manage_agent_dag` / `AC_agent_dag`; optional `run_dag(..., batch_id=...)` pins whole-graph identity.
+Destination task options carry only batch/graph/node tags and derived request keys. Remote calls never
+forward coordinator principal/origin metadata. Existing sibling callers omitting batch_id keep their
+historical path. Versioned-name checks and actual two-host evidence live in
+`test_agent_dag_batch_surfaces.py` and `test_agent_dag_batch_loopback.py`; continuation remains unimplemented.
+
 ## 7. Design constraints
 
 - Every feature ships a headless API, a facade export, an `AC_*` command and a thin GUI tab whose commands live in the
@@ -844,3 +851,16 @@ IDs are query-only duplicates and cannot trigger background restart. Original ta
 unchanged. Ancestor deletion retains history; explicit removal of the whole family clears proofs and
 tombstones. GUI review prepares a blank-note request, checks trigger selection for late responses and
 uses the same explicit operation selector; no business logic moves into Qt.
+
+Managed batch foundation: dag/batch_contract.py normalizes closed all-managed graphs, hashes complete
+topology/contracts and derives batch-bound task tags/keys. agent_runtime/dag_batches.py persists owner,
+host fingerprints, graph and per-node claims in the runtime database. Registration never dispatches;
+begin is a one-shot registered-to-running transition. dag_batch_recording.py fences dependencies and
+independently checks destination lookup/spec-match/completion/retirement before confirming a receipt.
+dag/batch_execution.py wraps the existing pool/managed waiter: claim before possible delivery, record
+bounded identity and derive final state from durable phases. Lost replies remain unknown/claimed.
+Managed host connections capture matching endpoint/credentials once; fingerprints never enter destination
+specs, and remote transport still omits local principal/origin witnesses. New manage_agent_dag and
+AC_agent_dag share API/MCP/REST/CLI/Builder; run_dag gains optional batch_id. DAG GUI registers/reads
+explicitly and guards graph/batch selection before presenting replies. Continuation approval, independent
+background coordination and batch retention are remaining work; old graphs are not silently adopted.

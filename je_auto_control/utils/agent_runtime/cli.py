@@ -8,6 +8,7 @@ from typing import Any, Callable
 from je_auto_control.utils.agent_runtime import api
 from je_auto_control.utils.agent_runtime.client import AgentRuntimeClient
 from je_auto_control.utils.agent_runtime.task_recovery import OPERATIONS as RECOVERY_OPERATIONS
+from je_auto_control.utils.agent_runtime.dag_batches import OPERATIONS as DAG_OPERATIONS
 from je_auto_control.utils.path_guard.path_guard import validate_path
 
 
@@ -18,7 +19,7 @@ def register_parser(subparsers: Any, handler: Callable[..., int]) -> None:
     for operation in ("start", "stop", "status", "submit", "list", "get", "lookup", "inspect-dag",
                       "observe", "act", "finish",
                       "pause", "resume", "cancel", "draft", "stop-all", "receipts", "reconcile", "prune", "trigger",
-                      "recover-target", "skill", "target", "targets", "recovery"):
+                      "recover-target", "skill", "target", "targets", "recovery", "dag"):
         item = operations.add_parser(operation)
         item.set_defaults(func=handler)
         _operation_arguments(item, operation)
@@ -42,7 +43,7 @@ def _operation_arguments(item: Any, operation: str) -> None:
         from je_auto_control.utils.agent_runtime.workflow_specs import WORKFLOWS
         item.add_argument("workflow", choices=WORKFLOWS)
         item.add_argument("config", help="JSON workflow configuration")
-    elif operation in {"trigger", "skill", "target", "recovery"}:
+    elif operation in {"trigger", "skill", "target", "recovery", "dag"}:
         _reviewed_arguments(item, operation)
     elif operation == "recover-target":
         item.add_argument("target")
@@ -63,7 +64,8 @@ def _reviewed_arguments(item: Any, operation: str) -> None:
     from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGERS
     from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILLS
     from je_auto_control.utils.agent_runtime.target_profiles import OPERATIONS as TARGETS
-    choices = {"trigger": TRIGGERS, "skill": SKILLS, "target": TARGETS, "recovery": RECOVERY_OPERATIONS}[operation]
+    choices = {"trigger": TRIGGERS, "skill": SKILLS, "target": TARGETS,
+               "recovery": RECOVERY_OPERATIONS, "dag": DAG_OPERATIONS}[operation]
     item.add_argument(operation + "_operation", choices=choices)
     if operation == "recovery":
         item.add_argument("request", help="JSON reviewed operation request")
@@ -76,6 +78,8 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
     operation = arguments.agent_operation
     operations = {"start": lambda: api.start_agent_runtime(arguments.directory),
                   "targets": api.list_agent_targets,
+                  "dag": lambda: api.manage_agent_dag(arguments.dag_operation,
+                                                        _read(arguments.request) if arguments.request else {}),
                   "target": lambda: api.manage_agent_target(arguments.target_operation,
                                                              _read(arguments.request) if arguments.request else {}),
                   "status": api.agent_runtime_status, "stop": api.stop_agent_runtime,

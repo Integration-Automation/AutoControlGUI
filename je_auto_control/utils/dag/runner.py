@@ -87,6 +87,7 @@ def run_dag(definition: Any,
             local_runner: Optional[NodeRunner] = None,
             remote_runner: Optional[NodeRunner] = None,
             stop_event: Optional[threading.Event] = None,
+            batch_id: Optional[str] = None,
             ) -> DagRunResult:
     """Execute ``definition`` in topological order with bounded parallelism.
 
@@ -98,8 +99,16 @@ def run_dag(definition: Any,
     and every pending node is ``skipped`` with the error ``"stopped"``.
     Running managed task nodes request bounded pause and retain task identity
     for review. They require destination completion and input-retirement evidence.
+    Optional batch_id binds a registered all-managed graph and durable dispatch claims;
+    the same batch cannot be started again without a separate recovery decision.
     """
     dag = _coerce_definition(definition)
+    if batch_id is not None:
+        if local_runner is not None or remote_runner is not None:
+            raise DagDefinitionError("registered batches use only managed destination dispatch")
+        # pylint: disable-next=import-outside-toplevel  # reason: batch client imports the runtime service back through runner
+        from je_auto_control.utils.dag.batch_execution import run_batch
+        return run_batch(dag, batch_id, max_parallel, stop_event, run_dag)
     local = local_runner or _current_run_local_runner()
     remote = remote_runner or _default_remote_runner
     if stop_event is not None:

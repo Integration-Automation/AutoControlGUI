@@ -7,7 +7,8 @@ from concurrent.futures import CancelledError
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentObservationStale, AgentHumanReview
 
 OPERATIONS = ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown", "draft", "stop_all",
-              "receipts", "reconcile", "prune", "trigger", "recover_target", "skill", "target", "lookup", "recovery")
+              "receipts", "reconcile", "prune", "trigger", "recover_target", "skill", "target", "lookup",
+              "recovery", "dag")
 
 
 def route(operation: str) -> Callable[..., Any]:
@@ -48,10 +49,16 @@ def dispatch(runtime: Any, operation: str, body: Any = None, task_id: str | None
                   "prune": lambda: _prune(runtime, body), "trigger": lambda: _trigger(runtime, body),
                   "skill": lambda: _skill(runtime, body), "target": lambda: _target(runtime, body),
                   "recover_target": lambda: _recover_target(runtime, body), "lookup": lambda: _lookup(runtime, body),
-                  "recovery": lambda: _recovery(runtime, body)}
+                  "recovery": lambda: _recovery(runtime, body), "dag": lambda: _dag(runtime, body)}
     if operation in operations:
         return operations[operation]()
     return _task_operation(runtime, operation, body)
+
+
+def _dag(runtime: Any, body: dict) -> dict:
+    if "operation" not in body or set(body) - {"operation", "request"}:
+        raise AgentTaskError("dag accepts operation and an optional request object")
+    return runtime.batches.control(body["operation"], body.get("request"))
 
 
 def _lookup(runtime: Any, body: dict) -> dict:
@@ -133,9 +140,7 @@ def _task_operation(runtime: Any, operation: str, body: dict[str, Any]) -> dict[
         return runtime.reconcile(task_id, body["review"]).to_dict()
     if operation == "receipts":
         return runtime.receipts(task_id, body.get("offset", 0), body.get("limit", 100))
-    handlers = {name: getattr(runtime, name) for name in OPERATIONS
-                if name not in {"submit", "act", "shutdown", "draft", "stop_all", "prune", "reconcile",
-                                "receipts", "trigger", "recover_target", "skill", "target", "recovery"}}
+    handlers = {name: getattr(runtime, name) for name in ("observe", "finish", "pause", "resume", "cancel")}
     if operation not in handlers:
         raise AgentTaskError("unknown task operation")
     result = handlers[operation](task_id).to_dict()

@@ -1,5 +1,16 @@
 # AutoControl
 
+Managed-only DAGs can register a durable whole-graph batch with
+`manage_agent_dag("register", {"definition": graph, "max_parallel": 4})`, then explicitly call
+`run_dag(graph, batch_id=batch["batch_id"])`. Registration performs no target operation. The stored
+graph pins topology, node contracts, host configuration and parallelism; destination keys/spec tags
+bind each node to that batch. A claim commits before possible delivery, and exact destination spec /
+completion / input-retirement evidence gates dependants. Repeated begin is refused after success,
+interruption or a lost submit reply. `get/list/inspect` retain coordination identity across restart.
+Use API/AC/MCP/REST/CLI/Builder or the DAG Actions batch register/read controls and optional batch ID.
+Explicit continuation approval, background batch coordination and batch retention remain in Progress.md;
+legacy unbound DAGs and per-node inspection never become continuation approval automatically.
+
 Triggers can explicitly use `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`,
 then `create_authorized` with `trigger_id`, `snapshot`, `authorization_review`, reviewed `spec` and `note`.
 The new registration preserves its full template/config/pending limit within original/live/current
@@ -329,7 +340,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 854 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 855 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -544,7 +555,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 854 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 855 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -649,7 +660,7 @@ under a relative name are written below that directory.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 758 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 759 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |

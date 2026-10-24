@@ -12,6 +12,7 @@ from urllib.parse import urlencode, urlsplit
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import STATES, thaw
+from je_auto_control.utils.dag.batch_contract import host_fingerprint
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint, cancellation_scope
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.rbac.policy import authorize_command
@@ -40,7 +41,7 @@ def managed_stop_scope(event: threading.Event) -> Iterator[None]:
         _STOP.reset(binding)
 
 
-def run_managed_task(host: str, task: Mapping[str, Any]) -> dict[str, Any]:
+def run_managed_task(host: str, task: Mapping[str, Any], *, host_binding: str | None = None) -> dict[str, Any]:
     """Submit once and wait for destination verification; never replay or resume actions."""
     if current_operation() is not None:
         raise AgentTaskError("a managed task cannot recursively dispatch another managed task")
@@ -48,7 +49,7 @@ def run_managed_task(host: str, task: Mapping[str, Any]) -> dict[str, Any]:
         raise AgentTaskError("local origin witnesses cannot be sent to a remote task host")
     owner = DeferredAuthorization.capture()
     _authorize(owner, host)
-    call = _connection(host)
+    call = _connection(host) if host_binding is None else bound_task_connection(host, host_binding)
     return _TaskWaiter(host, task, call, owner).run()
 
 
@@ -82,6 +83,31 @@ def _connection(host: str) -> Call:
         client = AgentRuntimeClient()
         return lambda operation, body, timeout: client.call(operation, body, timeout=timeout)
     base, token = _host_identity(host)
+    return _remote_connection(base, token)
+
+
+def task_host_binding(host: str) -> str:
+    """Pin one reviewed registered host configuration; local tasks belong to the coordinator runtime."""
+    authorize_task_host(DeferredAuthorization.capture(), host)
+    if host == "local":
+        return "local"
+    return host_fingerprint(*_host_identity(host))
+
+
+def bound_task_connection(host: str, binding: str) -> Call:
+    """Capture matching endpoint/credential once, refusing a replaced host before any dispatch."""
+    authorize_task_host(DeferredAuthorization.capture(), host)
+    if host == "local":
+        if binding != "local":
+            raise AgentTaskError("managed batch host configuration changed")
+        return _connection(host)
+    base, token = _host_identity(host)
+    if host_fingerprint(base, token) != binding:
+        raise AgentTaskError("managed batch host configuration changed")
+    return _remote_connection(base, token)
+
+
+def _remote_connection(base: str, token: str) -> Call:
 
     def remote(operation: str, body: dict[str, Any], timeout: float) -> dict[str, Any]:
         from je_auto_control.utils.agent_runtime.transport import request_json
