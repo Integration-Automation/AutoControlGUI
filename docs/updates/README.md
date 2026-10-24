@@ -500,3 +500,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-17 | 2026-10-24 | Fence retired desktop skill contexts | #done #agent #recovery | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-18 | 2026-10-24 | Isolated browser helper dependency diagnostics | #done #agent #readiness | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-19 | 2026-10-24 | Preserve DAG caller authority before remote dispatch | #done #agent #security | [2026-10-c](2026-10-c.md) |

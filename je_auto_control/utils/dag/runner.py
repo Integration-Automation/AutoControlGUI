@@ -11,6 +11,7 @@ from __future__ import annotations
 import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+from contextvars import copy_context
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set
 
@@ -185,7 +186,7 @@ def _spawn_ready_nodes(pending: Set[str], inflight: Dict[Future, str],
         results[nid].status = STATUS_RUNNING
         results[nid].started_at = time.monotonic()
         runner = local if node.host == LOCAL_HOST else remote
-        future = pool.submit(_run_one, node, results[nid], runner, nodes_by_id,
+        future = pool.submit(copy_context().run, _run_one, node, results[nid], runner, nodes_by_id,
                              current_secret_scope(), current_origin())
         inflight[future] = nid
         pending.discard(nid)
@@ -243,9 +244,13 @@ def _run_one(node: DagNode, result: NodeResult, runner: NodeRunner, _nodes: Dict
     """Keep node execution, outcome handling and final diagnostics in one mask."""
     binding = current_secret_scope() if secret_scope is None else secret_scope
     from je_auto_control.utils.agent_runtime.origin_policy import origin_scope
+    from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
+    from je_auto_control.utils.rbac.deferred import DeferredAuthorization
     with bound_secret_scope(binding), origin_scope(origin):
         try:
-            outcome = runner(node, _build_proxy_definition(node, _nodes))
+            cancellation_checkpoint()
+            with DeferredAuthorization.capture().context_scope():
+                outcome = runner(node, _build_proxy_definition(node, _nodes))
         except _NodeStopped:
             result.status = STATUS_SKIPPED
             result.error = "stopped"
@@ -362,6 +367,10 @@ def _default_local_runner(node: DagNode, _definition: DagDefinition,
 
 def _default_remote_runner(node: DagNode,
                            _definition: DagDefinition) -> Any:
+    from je_auto_control.utils.rbac.policy import authorize_command
+    # The address book contains host credentials, independently of this
+    # caller's local action permissions. Check before opening it or files.
+    authorize_command("AC_admin_broadcast_execute")
     from je_auto_control.utils.admin.admin_client import default_admin_console
     console = default_admin_console()
     actions = _resolve_remote_actions(node)

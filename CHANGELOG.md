@@ -1,5 +1,7 @@
 # Changelog
 
+Fix DAG pool workers dropping caller authorization and custom-runner cancellation/command guards. Capture a separate context per node and refresh store-backed identities before dispatch. Default remote nodes now require manage_hosts before reading registered host credentials or action files; operator calls that previously borrowed those credentials are refused. Administrator and trusted direct Python dispatch remain supported. Public DAG signatures are unchanged.
+
 Experimental browser profiles accept an optional host-reviewed absolute helper_python path and run that environment with -I. Add the host-only probe target operation across existing API/AC/MCP/REST/CLI/GUI routes. Dependency inspection uses a separately bounded owned helper, records a timestamped metadata snapshot and never establishes browser/native readiness, acquires input or enables a target. Preserve virtualenv executable symlinks; task options cannot override the interpreter.
 
 Extend retired-context prefix protection to managed desktop skills, including host-profiled and built-in desktop helpers. The shared validator is now target_continuity.py. Browser protection, external reobservation and persistent file recovery retain their behavior; interrupted desktop fixed flows now require review before continuing old actions.

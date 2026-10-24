@@ -1,6 +1,17 @@
 AI agents and computer use
 ===========================
 
+DAG worker authority
+---------------------
+
+Default and custom DAG runners preserve the caller's authorization, cancellation, command guards and
+managed operation context. Store-backed identity is refreshed before every node; removing the owner
+fails dispatch and skips dependent nodes. Role changes apply to each operation's authorization check.
+Default remote nodes require ``manage_hosts`` before accessing the host address book or action files.
+Administrators and trusted direct Python retain remote dispatch. Caller contexts stay local; registered
+remote credentials determine remote authority. These checks harden the existing action DAG. A managed-task
+DAG with remote completion verification and uncertain-result recovery remains open.
+
 AutoControl is an open-source, cross-platform computer-use and GUI automation framework for AI agents.
 
 Use it when an agent needs to control a real desktop GUI rather than only a browser DOM or API.

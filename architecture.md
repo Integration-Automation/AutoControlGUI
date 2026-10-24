@@ -1,5 +1,12 @@
 # AutoControl Architecture
 
+The DAG pool captures a fresh context for each node, preserving caller authorization, command guards,
+cancellation and managed operation state for default and custom runners. Node dispatch refreshes
+store-backed identity through DeferredAuthorization.context_scope; operation-specific checks use that
+current role. Default remote dispatch checks the existing host-management capability before address-book
+or action-file access. Contexts never cross the network. This is the action-DAG boundary; managed-task
+remote lifecycle, verification and uncertainty remain open in Progress.md.
+
 > Short overview for people and agents. Per-module detail lives in [`architecture_explore.md`](architecture_explore.md).
 > Last verified: 2026-10-19 on `dev`.
 

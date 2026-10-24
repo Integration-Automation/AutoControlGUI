@@ -1,5 +1,13 @@
 # AutoControl
 
+DAG nodes retain the caller's authorization, cancellation and command ceilings on pool threads,
+including custom runners. Each node refreshes store-backed users before execution; removed users fail
+that node and dependent nodes are skipped. Individual operations check the refreshed role. Default
+remote nodes require `manage_hosts` before opening the host address book or action files, because
+registered host credentials may grant more access than local action permissions. Trusted local Python
+and administrators retain remote dispatch. This hardens the existing action DAG; a verified managed-task
+DAG spanning multiple hosts remains separate work.
+
 Browser host profiles can select a reviewed installed Python environment through optional
 `settings.helper_python` (an absolute local interpreter path). Explicit helpers run with `-I`, using
 installed packages rather than the caller's `PYTHONPATH` or working directory. Virtualenv executable

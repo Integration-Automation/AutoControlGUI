@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,307 |
-| 程式碼總行數 | 192,363 |
+| 程式碼總行數 | 192,372 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 851 |
 | 套件門面 `__all__` 公開名稱數 | 1440 |
@@ -278,7 +278,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 25 個套件、約 17,184 行。
+> 25 個套件、約 17,193 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -286,7 +286,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/action_signing/` | 716 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
 | `utils/checkpoint/` | 129 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 1,094 | 由 action list 或結構化日誌產生 pytest／Python／Robot 候選；來源清單、靜態／乾跑驗證與原子 ZIP 審閱匯出。 |
-| `utils/dag/` | 594 | 跨主機 DAG 編排器；node 的完整錯誤處理綁定擁有者秘密遮罩，含獨立呼叫與自訂 local runner |
+| `utils/dag/` | 603 | 跨主機 DAG 編排器；節點保留呼叫者 context、重新授權與秘密遮罩；遠端派送先檢查主機管理權限 |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
 | `utils/action_journal/` | 855 | 結構化動作日誌：schema v1、寫入前遮罩、跨行程排序／尾端復原、executor 明確 scope 擷取與本機 parallel／DAG parent 傳遞；門面、AC／MCP、Script Builder 與 CLI 擷取／有界查閱；observer／路徑政策隨巢狀根與 workers 保留，Run History 查閱與手動 history 關聯共用相同來源。 |
@@ -1364,8 +1364,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 869 | 79,538 |
-| **總計** | **1,299** | **192,194** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 869 | 79,547 |
+| **總計** | **1,299** | **192,203** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.
