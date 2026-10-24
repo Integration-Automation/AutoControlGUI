@@ -12,6 +12,7 @@ from typing import Any, Iterator, List
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import STATES, TERMINAL, detached
 from je_auto_control.utils.agent_runtime.trigger_history import bind_event
+from je_auto_control.utils.agent_runtime.submission import TaskAdmission
 from je_auto_control.utils.sqlite_support import require_sqlite3
 
 _SCHEMA = """
@@ -57,6 +58,23 @@ CREATE TABLE IF NOT EXISTS agent_dag_batches (
 CREATE TABLE IF NOT EXISTS agent_dag_nodes (
  batch_id TEXT NOT NULL REFERENCES agent_dag_batches(id) ON DELETE CASCADE, node_id TEXT NOT NULL,
  phase TEXT NOT NULL, receipt TEXT NOT NULL, updated REAL NOT NULL, PRIMARY KEY(batch_id,node_id));
+CREATE TABLE IF NOT EXISTS agent_task_submissions (
+ task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE, spec_digest TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_dag_inputs (
+ batch_id TEXT PRIMARY KEY REFERENCES agent_dag_batches(id) ON DELETE CASCADE, definition TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_dag_bindings (
+ batch_id TEXT NOT NULL, node_id TEXT NOT NULL, task TEXT NOT NULL,
+ PRIMARY KEY(batch_id,node_id),
+ FOREIGN KEY(batch_id,node_id) REFERENCES agent_dag_nodes(batch_id,node_id) ON DELETE CASCADE);
+CREATE TABLE IF NOT EXISTS agent_dag_approvals (
+ id TEXT PRIMARY KEY, batch_id TEXT NOT NULL REFERENCES agent_dag_batches(id) ON DELETE CASCADE,
+ source_snapshot TEXT NOT NULL, plan_hash TEXT NOT NULL, details TEXT NOT NULL,
+ state TEXT NOT NULL, created REAL NOT NULL,
+ UNIQUE(batch_id,source_snapshot,plan_hash));
+CREATE TABLE IF NOT EXISTS agent_dag_adoptions (
+ batch_id TEXT NOT NULL, node_id TEXT NOT NULL, task_id TEXT NOT NULL,
+ source_task TEXT NOT NULL, approval_id TEXT NOT NULL, PRIMARY KEY(batch_id,node_id),
+ FOREIGN KEY(batch_id,node_id) REFERENCES agent_dag_nodes(batch_id,node_id) ON DELETE CASCADE);
 CREATE TABLE IF NOT EXISTS agent_trigger_authorizations (
  source_trigger TEXT PRIMARY KEY, trigger_id TEXT NOT NULL UNIQUE, lineage TEXT NOT NULL,
  snapshot TEXT NOT NULL, spec_hash TEXT NOT NULL, details TEXT NOT NULL,
@@ -176,12 +194,16 @@ class AgentTaskStore:
         finally:
             connection.close()
 
-    def create(self, spec: dict, owner: dict, *, idempotency_key: str | None = None,
+    def create(self, spec: dict | TaskAdmission, owner: dict, *, idempotency_key: str | None = None,
                trigger_event: tuple[str, str, str] | None = None,
                recovery: tuple[str, str, str] | None = None, authorization: dict | None = None) -> str:
         """Persist an immutable authorized task snapshot before it can execute."""
         identifier = uuid.uuid4().hex
         now = time.time()
+        admission = spec if isinstance(spec, TaskAdmission) else None
+        spec = admission.spec if admission is not None else spec
+        if not isinstance(spec, dict):
+            raise AgentTaskError("task admission requires a closed specification")
         with self.connection(write=True) as connection:
             if idempotency_key is not None:
                 existing = _request_key(connection, owner, idempotency_key, spec, identifier)
@@ -190,6 +212,9 @@ class AgentTaskStore:
                     return existing
             connection.execute("INSERT INTO agent_tasks(id,spec,owner,state,created,updated) VALUES (?,?,?,?,?,?)",
                                (identifier, json.dumps(spec), json.dumps(owner), "queued", now, now))
+            if admission is not None:
+                connection.execute("INSERT INTO agent_task_submissions VALUES (?,?)",
+                                   (identifier, admission.submitted_digest))
             _bind_trigger_event(connection, trigger_event, identifier, now)
             if recovery is not None:
                 connection.execute("INSERT INTO agent_task_recoveries VALUES (?,?,?,?,?)",

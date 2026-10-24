@@ -88,6 +88,7 @@ def run_dag(definition: Any,
             remote_runner: Optional[NodeRunner] = None,
             stop_event: Optional[threading.Event] = None,
             batch_id: Optional[str] = None,
+            recovery: Optional[Mapping[str, Any]] = None,
             ) -> DagRunResult:
     """Execute ``definition`` in topological order with bounded parallelism.
 
@@ -108,7 +109,9 @@ def run_dag(definition: Any,
             raise DagDefinitionError("registered batches use only managed destination dispatch")
         # pylint: disable-next=import-outside-toplevel  # reason: batch client imports the runtime service back through runner
         from je_auto_control.utils.dag.batch_execution import run_batch
-        return run_batch(dag, batch_id, max_parallel, stop_event, run_dag)
+        return run_batch(dag, batch_id, max_parallel, stop_event, run_dag, recovery)
+    if recovery is not None:
+        raise DagDefinitionError("DAG continuation requires a registered batch identity")
     local = local_runner or _current_run_local_runner()
     remote = remote_runner or _default_remote_runner
     if stop_event is not None:
@@ -120,10 +123,9 @@ def run_dag(definition: Any,
                for nid in nodes_by_id}
     _execute_with_pool(dag, results, local, remote, max(1, int(max_parallel)),
                        stop_event)
-    elapsed = round(time.monotonic() - started_at, 3)
-    succeeded = all(r.status == STATUS_SUCCEEDED for r in results.values())
     return DagRunResult(
-        succeeded=succeeded, elapsed_s=elapsed, nodes=results,
+        succeeded=all(r.status == STATUS_SUCCEEDED for r in results.values()),
+        elapsed_s=round(time.monotonic() - started_at, 3), nodes=results,
     )
 
 

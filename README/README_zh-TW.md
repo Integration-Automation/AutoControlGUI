@@ -5,8 +5,13 @@
 註冊不操作目標；保存整張圖的拓樸、節點契約、主機設定與並行數，目的端 key／規格標記綁定批次。
 可能派送前先提交 claim，目的端精確規格、完成及輸入釋放證據通過後才放行相依節點。成功、中斷或
 提交回覆遺失後都不能再次 begin；`get/list/inspect` 讓協調紀錄跨重啟保留。API／AC／MCP／REST／
-CLI／Builder 及 DAG Actions 的批次註冊／讀取、選填批次 ID 共用流程。明確續接核准、背景批次
-協調與批次保留／清理仍列於 Progress.md；舊未綁定 DAG 或逐節點查詢不會自動成為續接批准。
+CLI／Builder 及 DAG Actions 的批次註冊／讀取、選填批次 ID 共用流程。
+停止後以 `review_continuation` 取得唯讀整圖快照及逐節點決策，再把審閱的 `snapshot`、`decisions`
+與非空 `note` 放入 `run_dag(graph, batch_id=id, recovery=request)`，核准並使用一次續接機會。
+只能採認獨立完成的原任務或真實 recovery 後繼任務；派送限從未 claim 且目的端未接收的 pending
+節點。本機授權可在相等或更窄根目錄內更新，未知 claim 永不重播。DAG Actions 提供停止新派送、
+審閱及明確續接；已接受任務仍依自身生命週期處理。背景批次協調及保留／清理仍列於 Progress.md。
+詳見[續接協定](../docs/source/Zh/doc/ai_agents/agent_dag_batches_doc.rst)。
 
 觸發器可明確使用 `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`，再以
 `create_authorized` 提供 `trigger_id`、`snapshot`、`authorization_review`、經審閱的 `spec` 與 `note`。

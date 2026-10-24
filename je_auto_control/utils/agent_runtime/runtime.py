@@ -32,6 +32,7 @@ from je_auto_control.utils.agent_runtime.task_recovery import AgentRecovery, rec
 from je_auto_control.utils.agent_runtime.origin_policy import bind_origin, validate_origins
 from je_auto_control.utils.agent_runtime.store import AgentTaskStore, request_spec_digest
 from je_auto_control.utils.agent_runtime.dag_batches import DagBatches
+from je_auto_control.utils.agent_runtime.submission import TaskAdmission, submitted_digest, submission_metadata
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -125,15 +126,19 @@ class AgentRuntime:
         """Persist a validated, detached specification without acquiring or operating a target."""
         if self._closed:
             raise AgentTaskError("runtime is closed")
-        spec = self._validated_spec(spec)
-        return self._create_task(spec, idempotency_key)
+        original = spec if isinstance(spec, AgentTaskSpec) else AgentTaskSpec.from_dict(spec)
+        admission = submitted_digest(original) if "dag_batch" in original.options else None
+        spec = self._validated_spec(original)
+        return self._create_task(spec, idempotency_key, submission=admission)
 
     def _create_task(self, spec: AgentTaskSpec, key: str | None,
                      event: tuple[str, str, str] | None = None,
                      recovery: tuple[str, str, str] | None = None,
-                     authorization: dict | None = None) -> AgentTaskHandle:
+                     authorization: dict | None = None, submission: str | None = None) -> AgentTaskHandle:
         with DeferredAuthorization.capture().scope():
-            task_id = self.store.create(durable_payload(spec.to_dict()), _identity_dict(),
+            payload = durable_payload(spec.to_dict())
+            payload = TaskAdmission(payload, submission) if submission is not None else payload
+            task_id = self.store.create(payload, _identity_dict(),
                                         idempotency_key=key, trigger_event=event, recovery=recovery,
                                         authorization=authorization)
         self.evidence.ensure(task_id)
@@ -168,6 +173,8 @@ class AgentRuntime:
         """Read owner-scoped task status without observing the desktop."""
         row = self._row(task_id)
         metadata = self.evidence.metadata(task_id)
+        if "dag_batch" in row["spec"]["options"]:
+            metadata.update(submission_metadata(self.store, task_id))
         with self._mutex:
             metadata["input_released"] = task_id not in self._leases
         metadata["target"] = row["spec"]["target"]

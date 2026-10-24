@@ -39,7 +39,7 @@ class _DagWorker(QObject):
 
     def __init__(self, definition: dict, max_parallel: int,
                  stop_event: threading.Event, *, inspect_only: bool = False,
-                 batch_id: str = "", batch_operation: str = "") -> None:
+                 batch_id: str = "", batch_operation: str | dict = "") -> None:
         super().__init__()
         self._definition = definition
         self._max_parallel = max_parallel
@@ -62,9 +62,7 @@ class _DagWorker(QObject):
     def _execute(self) -> DagRunResult | dict:
         inspect_only, batch_id, batch_operation = self._mode
         if batch_operation:
-            request = ({"definition": self._definition, "max_parallel": self._max_parallel}
-                       if batch_operation == "register" else {"batch_id": batch_id})
-            return manage_agent_dag(batch_operation, request)
+            return self._execute_batch(batch_id, batch_operation)
         if inspect_only:
             with managed_stop_scope(self._stop_event):
                 if batch_id:
@@ -74,6 +72,21 @@ class _DagWorker(QObject):
             return run_dag(self._definition, max_parallel=self._max_parallel,
                            stop_event=self._stop_event, batch_id=batch_id)
         return run_dag(self._definition, max_parallel=self._max_parallel, stop_event=self._stop_event)
+
+    def _execute_batch(self, batch_id: str, operation: str | dict) -> DagRunResult | dict:
+        action = operation["operation"] if isinstance(operation, dict) else operation
+        payload = operation.get("request", {}) if isinstance(operation, dict) else {}
+        if action == "run_continuation":
+            return run_dag(self._definition, max_parallel=self._max_parallel,
+                           stop_event=self._stop_event, batch_id=batch_id, recovery=payload)
+        if action == "register":
+            request = {"definition": self._definition, "max_parallel": self._max_parallel}
+        else:
+            request = {"batch_id": batch_id}
+            if action == "review_continuation":
+                request.update(definition=self._definition)
+                request.update({key: payload[key] for key in ("decisions", "timeout_seconds") if key in payload})
+        return manage_agent_dag(action, request)
 
 
 class DagTab(TranslatableMixin, QWidget):
@@ -107,6 +120,13 @@ class DagTab(TranslatableMixin, QWidget):
             raise DagDefinitionError("batch identity editor is unavailable")
         return control
 
+    @property
+    def _continuation_request(self) -> QPlainTextEdit:
+        control = self.findChild(QPlainTextEdit, "dag_continuation_request")
+        if control is None:
+            raise DagDefinitionError("continuation request editor is unavailable")
+        return control
+
     def _build_layout(self) -> None:
         # Load/validate/run commands run from the Actions menu; the tab
         # keeps only the editor, the parallel input, table, and status.
@@ -125,6 +145,9 @@ class DagTab(TranslatableMixin, QWidget):
         root.addWidget(self._status_label)
         root.addWidget(self._table, stretch=3)
         root.addWidget(self._inspection_output)
+        continuation = QPlainTextEdit("{}")
+        continuation.setObjectName("dag_continuation_request")
+        root.addWidget(continuation)
         self._apply_translations()
 
     def menu_actions(self) -> list:
@@ -135,6 +158,11 @@ class DagTab(TranslatableMixin, QWidget):
             ("dag_inspect_btn", self._on_inspect),
             ("dag_batch_register_btn", partial(self._request_run, inspect_only=True, batch_operation="register")),
             ("dag_batch_get_btn", partial(self._request_run, inspect_only=True, batch_operation="get")),
+            ("dag_batch_fence_btn", partial(self._request_run, inspect_only=True, batch_operation="pause_batch")),
+            ("dag_continuation_review_btn", partial(self._request_run, inspect_only=True,
+                                                   batch_operation="review_continuation")),
+            ("dag_continuation_run_btn", partial(self._request_run, inspect_only=False,
+                                                batch_operation="run_continuation")),
             ("dag_run_btn", self._on_run),
             ("dag_stop_btn", self._on_stop),
         ]
@@ -182,24 +210,39 @@ class DagTab(TranslatableMixin, QWidget):
         self._request_run(inspect_only=True)
 
     def _request_run(self, *, inspect_only: bool, batch_operation: str = "") -> None:
-        definition = {} if batch_operation == "get" else self._parse_editor()
+        definition = {} if batch_operation in {"get", "pause_batch"} else self._parse_editor()
         if definition is None:
             return
         if self._thread is not None and self._thread.isRunning():
             self._status_label.setText(_t("dag_already_running"))
+            return
+        if batch_operation == "run_continuation" and not self._continuation_current():
+            self._status_label.setText(_t("dag_inspection_stale"))
             return
         self._status_label.setText(_t("dag_inspecting" if inspect_only else "dag_running"))
         self._spawn_worker(definition, inspect_only=inspect_only, batch_operation=batch_operation)
 
     def _spawn_worker(self, definition: dict, *, inspect_only: bool = False, batch_operation: str = "") -> None:
         self._stop_event = threading.Event()
+        operation: str | dict = batch_operation
+        if batch_operation in {"review_continuation", "run_continuation"}:
+            try:
+                payload = json.loads(self._continuation_request.toPlainText())
+                if not isinstance(payload, dict):
+                    raise ValueError("DAG continuation request must be an object")
+            except (ValueError, TypeError) as error:
+                self._status_label.setText(str(error))
+                return
+            if batch_operation == "review_continuation" and not self._continuation_current():
+                payload = {}
+            operation = {"operation": batch_operation, "request": payload}
         worker = _DagWorker(definition, int(self._max_parallel.value()),
                             self._stop_event, inspect_only=inspect_only,
-                            batch_id=self._batch_id.text(), batch_operation=batch_operation)
+                            batch_id=self._batch_id.text(), batch_operation=operation)
         self._inspection_source = self._editor.toPlainText()
         self.setProperty("dag_batch_source", self._batch_id.text())
         self._inspection_output.clear()
-        on_done = (self._on_batch_finished if batch_operation
+        on_done = (self._on_batch_finished if batch_operation and batch_operation != "run_continuation"
                    else self._on_inspection_finished if inspect_only else self._on_worker_finished)
         self._thread = start_worker(
             self, worker, on_done=on_done,
@@ -242,6 +285,14 @@ class DagTab(TranslatableMixin, QWidget):
             return
         self._inspection_output.setPlainText(json.dumps(result, ensure_ascii=False, indent=2))
         self._batch_id.setText(result["batch_id"])
+        if "snapshot" in result and "decisions" in result:
+            request = {key: result[key] for key in ("batch_id", "definition", "snapshot", "decisions")}
+            request["note"] = ""
+            self._continuation_request.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))
+            self.setProperty("dag_continuation_source", self._editor.toPlainText())
+            self.setProperty("dag_continuation_batch", self._batch_id.text())
+            self._status_label.setText(_t("dag_continuation_reviewed"))
+            return
         self._status_label.setText(_t("dag_batch_recorded"))
         self._render_rows([(node["id"], "", node["phase"], node["receipt"].get("task_id") or "", "", "")
                            for node in result.get("nodes", [])])
@@ -249,6 +300,10 @@ class DagTab(TranslatableMixin, QWidget):
     def _inspection_current(self) -> bool:
         return (self._inspection_source == self._editor.toPlainText()
                 and str(self.property("dag_batch_source") or "") == self._batch_id.text())
+
+    def _continuation_current(self) -> bool:
+        return (self.property("dag_continuation_source") == self._editor.toPlainText()
+                and self.property("dag_continuation_batch") == self._batch_id.text())
 
     def _on_worker_finished(self, result: DagRunResult) -> None:
         if self.property("dag_batch_source") and not self._inspection_current():

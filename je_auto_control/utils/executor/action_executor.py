@@ -238,10 +238,11 @@ def _self_heal_log_clear() -> Dict[str, Any]:
 
 
 def _run_dag(definition: Dict[str, Any],
-             max_parallel: int = 4, batch_id: Optional[str] = None) -> Dict[str, Any]:
+             max_parallel: int = 4, batch_id: Optional[str] = None,
+             recovery: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Executor adapter: run a cross-host DAG definition."""
     from je_auto_control.utils.dag import run_dag
-    return run_dag(definition, max_parallel=int(max_parallel), batch_id=batch_id).to_dict()
+    return run_dag(definition, max_parallel=int(max_parallel), batch_id=batch_id, recovery=recovery).to_dict()
 
 
 _AX_RECORDER_SINGLETON = None

@@ -8,8 +8,15 @@ bind each node to that batch. A claim commits before possible delivery, and exac
 completion / input-retirement evidence gates dependants. Repeated begin is refused after success,
 interruption or a lost submit reply. `get/list/inspect` retain coordination identity across restart.
 Use API/AC/MCP/REST/CLI/Builder or the DAG Actions batch register/read controls and optional batch ID.
-Explicit continuation approval, background batch coordination and batch retention remain in Progress.md;
-legacy unbound DAGs and per-node inspection never become continuation approval automatically.
+For a stopped batch, `review_continuation` returns a read-only whole-graph snapshot and explicit node
+decisions. Pass its reviewed `snapshot`, `decisions` and a nonempty `note` through
+`run_dag(graph, batch_id=id, recovery=request)` to approve and consume one continuation attempt.
+Only independently completed originals or genuine completed recovery successors can be adopted;
+dispatch requires a never-claimed pending node with no accepted destination request. Local authority
+can be renewed within equal/narrower roots. Unknown claims are never replayed. DAG Actions exposes
+fencing, review and explicit continuation; fencing stops new dispatch and leaves accepted tasks under
+their own lifecycle. Background batch coordination and retention remain in Progress.md.
+See [the continuation protocol](docs/source/Eng/doc/ai_agents/agent_dag_batches_doc.rst).
 
 Triggers can explicitly use `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`,
 then `create_authorized` with `trigger_id`, `snapshot`, `authorization_review`, reviewed `spec` and `note`.

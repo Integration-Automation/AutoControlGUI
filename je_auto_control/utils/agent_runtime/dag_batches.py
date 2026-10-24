@@ -14,17 +14,19 @@ from je_auto_control.utils.agent_runtime.store import request_spec_digest
 from je_auto_control.utils.agent_runtime.dag_batch_recording import (
     bound_node, claim_node, record_node, verify_node, validate_receipt,
 )
+from je_auto_control.utils.agent_runtime.dag_continuation import DagContinuation, FIELDS as CONTINUATION_FIELDS
 from je_auto_control.utils.dag.batch_contract import batch_definition, bind_definition
 from je_auto_control.utils.dag.inspection import inspect_definition
 from je_auto_control.utils.dag.managed_tasks import task_host_binding
 from je_auto_control.utils.rbac.authorization import AuthorizationContext, current_authorization
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 
-OPERATIONS = ("register", "get", "list", "begin", "claim", "record", "finish", "inspect")
+OPERATIONS = ("register", "get", "list", "begin", "claim", "record", "finish", "inspect") + tuple(CONTINUATION_FIELDS)
 _FIELDS = {"register": {"definition"}, "get": {"batch_id"}, "list": set(),
            "begin": {"batch_id", "definition", "max_parallel"}, "claim": {"batch_id", "attempt", "node_id"},
            "record": {"batch_id", "attempt", "node_id", "receipt"}, "finish": {"batch_id", "attempt"},
            "inspect": {"batch_id"}}
+_FIELDS.update(CONTINUATION_FIELDS)
 
 
 def _request(operation: Any, value: Any) -> dict:
@@ -32,6 +34,10 @@ def _request(operation: Any, value: Any) -> dict:
     if operation not in OPERATIONS or not isinstance(request, dict):
         raise AgentTaskError("invalid batch operation or request")
     optional = {"max_parallel"} if operation == "register" else set()
+    if operation in {"review_continuation", "approve_continuation"}:
+        optional |= {"decisions", "timeout_seconds"}
+    if operation == "start_continuation":
+        optional |= {"timeout_seconds"}
     if not _FIELDS[operation] <= set(request) or set(request) - _FIELDS[operation] - optional:
         raise AgentTaskError("invalid batch operation fields")
     return request
@@ -69,11 +75,20 @@ class DagBatches:
         if operation == "get":
             return self._describe(batch)
         if operation == "inspect":
-            definition = bind_definition(batch["definition"], batch["id"], batch["graph_hash"])
+            definition = bind_definition(batch["definition"], batch["id"], batch["graph_hash"], batch["bindings"])
             result = inspect_definition(definition)
             return {**result, "batch_id": batch["id"], "graph_hash": batch["graph_hash"], "batch_state": batch["state"]}
         owner = AuthorizationContext(**batch["owner"]) if batch["owner"] else None
+        identity = current_authorization()
+        actor = ({"user_id": identity.user_id, "role": identity.role,
+                  "namespace": request_spec_digest({"store": identity.store_path})}
+                 if identity else {"user_id": "local"})
+        continuation = DagContinuation(self, actor)
+        if operation == "pause_batch":
+            return continuation.control(operation, batch, request)
         with DeferredAuthorization(owner).scope():
+            if operation in CONTINUATION_FIELDS:
+                return continuation.control(operation, batch, request)
             if operation == "begin":
                 return self._begin(batch, request)
             return self._execution(operation, batch, request)
@@ -93,6 +108,12 @@ class DagBatches:
             raise AgentTaskError("batch does not exist or belongs to another caller")
         if request_spec_digest(batch["definition"]) != batch["graph_hash"]:
             raise AgentTaskError("batch graph digest mismatch")
+        with self.runtime.store.connection() as connection:
+            rows = connection.execute("SELECT node_id,task FROM agent_dag_bindings WHERE batch_id=?", (identifier,))
+            batch["bindings"] = {item["node_id"]: json.loads(item["task"]) for item in rows}
+            original = connection.execute("SELECT definition FROM agent_dag_inputs WHERE batch_id=?",
+                                          (identifier,)).fetchone()
+        batch["input_definition"] = json.loads(original[0]) if original is not None else batch["definition"]
         return batch
 
     def _normalize(self, value: Any) -> tuple[dict, dict]:
@@ -111,6 +132,7 @@ class DagBatches:
         return definition, hosts
 
     def _register(self, request: dict) -> dict:
+        original = batch_definition(request["definition"])
         definition, hosts = self._normalize(request["definition"])
         parallel = request.get("max_parallel", 4)
         if isinstance(parallel, bool) or not isinstance(parallel, int) or not 1 <= parallel <= 64:
@@ -123,6 +145,7 @@ class DagBatches:
             connection.execute("INSERT INTO agent_dag_batches VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (identifier, json.dumps(owner), json.dumps(definition), request_spec_digest(definition),
                  json.dumps(hosts), parallel, "registered", "", now, now))
+            connection.execute("INSERT INTO agent_dag_inputs VALUES (?,?)", (identifier, json.dumps(original)))
             for node in definition["nodes"]:
                 connection.execute("INSERT INTO agent_dag_nodes VALUES (?,?,?,?,?)",
                                    (identifier, node["id"], "pending", "{}", now))
@@ -139,7 +162,17 @@ class DagBatches:
         with self.runtime.store.connection() as connection:
             rows = connection.execute("SELECT node_id,phase,receipt FROM agent_dag_nodes "
                                       "WHERE batch_id=? ORDER BY node_id", (batch["id"],)).fetchall()
+            approvals = [dict(row) for row in connection.execute(
+                "SELECT id,state,source_snapshot,details,created FROM agent_dag_approvals "
+                "WHERE batch_id=? ORDER BY created DESC LIMIT 50", (batch["id"],))]
+        continuations = []
+        for row in approvals:
+            details = json.loads(row.pop("details"))
+            continuations.append({**row, "actor": details["actor"]["user_id"], "note": details["note"],
+                                  "decisions": details["public"]["decisions"]})
         return {"batch_id": batch["id"], "graph_hash": batch["graph_hash"], "definition": batch["definition"],
+                "input_definition": batch["input_definition"],
+                "continuations": continuations,
                 "max_parallel": batch["max_parallel"], "state": batch["state"], "resume_permitted": False,
                 "nodes": [{"id": row["node_id"], "phase": row["phase"],
                            "receipt": json.loads(row["receipt"])} for row in rows]}
@@ -162,6 +195,8 @@ class DagBatches:
     def _execution(self, operation: str, batch: dict, request: dict) -> dict:
         if batch["state"] != "running" or request["attempt"] != batch["attempt"]:
             raise AgentTaskError("batch execution attempt is inactive")
+        if operation == "claim":
+            self._validate_adopted_dependencies(batch, request)
         if operation == "record":
             receipt = validate_receipt(request["receipt"])
             if receipt["outcome"] == "completed":
@@ -179,3 +214,13 @@ class DagBatches:
                 connection.execute("UPDATE agent_dag_batches SET state=?,updated=? WHERE id=?",
                                    (state, time.time(), batch["id"]))
         return self._describe(self._row(batch["id"]))
+
+    def _validate_adopted_dependencies(self, batch: dict, request: dict) -> None:
+        node = bound_node(batch, request["node_id"])
+        with self.runtime.store.connection() as connection:
+            adopted = {row[0] for row in connection.execute(
+                "SELECT node_id FROM agent_dag_adoptions WHERE batch_id=?", (batch["id"],))}
+        continuation = DagContinuation(self, {})
+        for dependency in node["depends_on"]:
+            if dependency in adopted:
+                continuation.validate_node(batch, dependency, request["attempt"])

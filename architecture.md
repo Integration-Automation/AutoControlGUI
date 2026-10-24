@@ -1,5 +1,15 @@
 # AutoControl Architecture
 
+Whole-DAG continuation uses dag_continuation.py with separate evidence and per-node decision modules.
+Review binds the original graph/claims, current owner and real approving actor, pinned host configuration,
+independent completion and local authority ceilings. Approval stores an immutable audit and transactional
+bindings/adoptions; start revalidates and consumes one attempt. Adopted dependencies are checked again
+before new claims. Pending dispatch requires no previous claim and no accepted request. Original input
+graphs and trusted admission digests preserve historical identity across origin expiration; authority is
+renewed separately within equal/narrower scope. Legacy tasks are never backfilled and require live matching.
+run_dag recovery and API/AC/MCP/REST/CLI/Builder share the protocol; GUI Actions remain thin adapters.
+pause_batch invalidates scheduling attempts without claiming destination-task cancellation or cleanup.
+
 Request-key spec matching reuses the original normalized-spec digest calculation. Runtime.lookup can
 validate a reviewed spec at the destination and compare it with the same owner/key record's immutable
 hash, without dispatch or input acquisition. The additive spec_match_contract=1 capability permits DAG
@@ -616,7 +626,9 @@ Managed runtime peers additionally support the additive `POST /agent/dag` protoc
 Destination task options carry only batch/graph/node tags and derived request keys. Remote calls never
 forward coordinator principal/origin metadata. Existing sibling callers omitting batch_id keep their
 historical path. Versioned-name checks and actual two-host evidence live in
-`test_agent_dag_batch_surfaces.py` and `test_agent_dag_batch_loopback.py`; continuation remains unimplemented.
+`test_agent_dag_batch_surfaces.py` and `test_agent_dag_batch_loopback.py`; continuation is covered by
+`test_agent_dag_continuation.py`, `test_agent_dag_continuation_guards.py` and
+`test_agent_dag_continuation_gui.py`. Background coordination and retention remain open.
 
 ## 7. Design constraints
 

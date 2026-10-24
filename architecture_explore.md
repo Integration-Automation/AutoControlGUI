@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,335 |
-| 程式碼總行數 | 196,963 |
+| Python 模組總數（含周邊子專案） | 1,339 |
+| 程式碼總行數 | 197,601 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 855 |
 | 套件門面 `__all__` 公開名稱數 | 1444 |
@@ -278,7 +278,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 25 個套件、約 17,796 行。
+> 25 個套件、約 17,813 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -286,11 +286,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/action_signing/` | 716 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
 | `utils/checkpoint/` | 129 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 1,094 | 由 action list 或結構化日誌產生 pytest／Python／Robot 候選；來源清單、靜態／乾跑驗證與原子 ZIP 審閱匯出。 |
-| `utils/dag/` | 1,206 | 跨主機動作／受管任務 DAG；權限及停止傳遞、目的地完成／釋放驗證、去重與未知結果審閱 |
+| `utils/dag/` | 1,222 | 跨主機動作／受管任務 DAG；權限及停止傳遞、目的地完成／釋放驗證、去重與未知結果審閱 |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
 | `utils/action_journal/` | 855 | 結構化動作日誌：schema v1、寫入前遮罩、跨行程排序／尾端復原、executor 明確 scope 擷取與本機 parallel／DAG parent 傳遞；門面、AC／MCP、Script Builder 與 CLI 擷取／有界查閱；observer／路徑政策隨巢狀根與 workers 保留，Run History 查閱與手動 history 關聯共用相同來源。 |
-| `utils/executor/` | 9,879 | **核心**。`Executor` 指令分派表（774 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
+| `utils/executor/` | 9,880 | **核心**。`Executor` 指令分派表（774 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 166 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 462 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 99 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 37,029 行。
+> 14 個套件、約 37,579 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 11,464 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 12,012 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -515,7 +515,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 204 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 372 | 自然語言 → action list 規劃器 + Anthropic／null 後端；規劃執行隔離頂層變數並沿用巢狀範圍 |
 | `utils/mcp_registry/` | 97 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 20,969 | **無頭 MCP 伺服器**（預設註冊 759 個工具＝740 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 20,971 | **無頭 MCP 伺服器**（預設註冊 759 個工具＝740 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 191 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 132 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 616 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -704,11 +704,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 上表以子套件為單位；以下把行數最大的幾個子系統展開到檔案層。
 
-#### `utils/executor/`（9,879 行）— 執行核心
+#### `utils/executor/`（9,880 行）— 執行核心
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `action_executor.py` | 8,517 | `Executor` 類別與 `event_dict` 分派表（774 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
+| `action_executor.py` | 8,518 | `Executor` 類別與 `event_dict` 分派表（774 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
 | `flow_control.py` | 690 | 真正的流程控制：`AC_loop`／`AC_for_each`／`AC_while_*`／`AC_if_*`／`AC_try`／`AC_retry`／`AC_parallel`／`AC_define_macro`／`AC_call_macro`／變數指令（`AC_set_var`／`AC_get_var`／`AC_inc_var`）。`LoopBreak`／`LoopContinue` 以例外實作。34 個區塊指令的分派表 `BLOCK_COMMANDS` 也在這裡，含下一列匯入的資料來源指令。 |
 | `flow_data_commands.py` | 272 | `AC_*_to_var` 資料來源與轉換指令：shell、時鐘、亂數、PDF、TOTP、SQL、檔案、HTTP、OCR，加上 `AC_assert_var`／`AC_assert_db`／`AC_assert_duration`／`AC_transform_var`。都不執行巢狀 action list，所以沒有迴圈／分支語意。 |
 | `action_schema.py` | 161 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
@@ -716,11 +716,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 | `flags.py` | 19 | 旗標讀取 `as_bool`：依拼法（`"true"`／`"yes"`／`"on"`／`"1"`）而非 Python 真值判斷，所以 JSON、CLI、MCP 傳來的 `"false"` 是關；所有 adapter 與流程指令共用。 |
 
-#### `utils/mcp_server/`（20,969 行，759 個工具）— 最大子系統
+#### `utils/mcp_server/`（20,971 行，759 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `tools/_factories.py` | 9,281 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
+| `tools/_factories.py` | 9,282 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
 | `tools/_handlers.py` | 547 | 把 MCP 工具呼叫橋接到 AutoControl 無頭 API 的 adapter；主題模組拆完之後這裡留的是資料／文字／HTTP 那一類與 WebRunner 橋接。 |
 | `tools/_handlers_qa.py` | 622 | 同一種 adapter，QA 主題：斷言 DSL、資料驅動、SQL／PDF／郵件／HTTP 步驟、codegen、視覺回歸、狀態機、flaky 偵測與隔離、suite runner、無障礙稽核、裝置矩陣、媒體斷言。從 `_handlers.py` 依主題拆出的第一塊（750 行上限）；兩者互不引用。 |
 | `tools/_handlers_input.py` | 221 | 同一種 adapter，輸入主題：滑鼠、鍵盤、虛擬手把（ViGEm）。 |
@@ -744,7 +744,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `tools/_handlers_remote.py` | 66 | 同一種 adapter，遠端桌面的 host 與 viewer。 |
 | `tools/_handlers_executor_bridge.py` | 1,429 | 252 個純委派（中位數 3 行，最長的 16 行全是參數簽章）：每個都是 `from action_executor import _x` 再 `return _x(...)`，沒有分支邏輯。超過 750 行,理由記在 `Progress.md` 的豁免表（再切只能照 MCP 工廠領域分,會把同一種委派散進十幾個沒有語意邊界的檔）。 |
 | `tools/_handlers_locators.py` | 436 | 同一種 adapter，定位主題：無障礙樹、智慧等待、自我修復、螢幕觀察、座標空間、視覺與 OCR、影像去重、元件倉庫、A/B 定位。 |
-| `tools/_handlers_operations.py` | 629 | 同一種 adapter，營運主題：agent 與其記憶／追蹤、治理與合規、成本與遙測、失敗掛鉤、看門狗、速率限制、檢查點、核可、產物與資產、測試選擇與分片、佇列與 saga。 |
+| `tools/_handlers_operations.py` | 630 | 同一種 adapter，營運主題：agent 與其記憶／追蹤、治理與合規、成本與遙測、失敗掛鉤、看門狗、速率限制、檢查點、核可、產物與資產、測試選擇與分片、佇列與 saga。 |
 | `server.py` | 741 | JSON-RPC 2.0 over stdio 的最小 MCP 伺服器：連線範圍狀態、行內／併發分派、工具與 resource／prompt 處理器；握手時代的方法表（`_run_method`），兩個協定時代的逐請求分派在 `_stateless.py`；工具清單／session profile 在 `_disclosure_server.py`。 |
 | `http_transport.py` | 739 | MCP 的 HTTP 傳輸；宣告 2026-07-28 的請求走 `_http_stateless.py` 的標頭規則，不發 session。 |
 | `_http_stateless.py` | 185 | MCP 2026-07-28 在 Streamable HTTP 上的規則：`MCP-Protocol-Version`／`Mcp-Method`／`Mcp-Name` 必須與 body 相符（`=?base64?…?=` 先解碼），不符是 400＋`HeaderMismatch`；版本與中繼資料錯誤 400、未知方法 404。純函式，由 `http_transport.py` 回覆。 |
@@ -989,7 +989,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（11,464 行／94 檔）
+#### `utils/agent_runtime/`（12,012 行／98 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1022,7 +1022,10 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `commands.py` | 130 | One command catalogue shared by executor, MCP and the visual script editor. |
 | `context.py` | 48 | Host-owned operation context shared with local workers, never serialized model authority. |
 | `dag_batch_recording.py` | 93 | Durable dispatch claims and independent destination verification for one managed DAG batch. |
-| `dag_batches.py` | 181 | Owner-scoped durable graph registration and one-shot managed batch execution records. |
+| `dag_batches.py` | 226 | Owner-scoped durable graph registration and one-shot managed batch execution records. |
+| `dag_continuation.py` | 227 | Whole-graph review and one-shot continuation approval never replay a possible delivery. |
+| `dag_continuation_evidence.py` | 136 | Bounded read-only destination evidence for explicit whole-batch continuation decisions. |
+| `dag_continuation_plan.py` | 77 | Explicit per-node decisions preserve graph scope and never reset a possible delivery claim. |
 | `delegation.py` | 43 | Short-lived, authenticated principal forwarding across the local service boundary. |
 | `dialog_scope.py` | 54 | Pause managed desktop work at unsaved-content or unrecognized modal windows. |
 | `document_launch.py` | 46 | Bounded document handoff runs outside the disposable native input helper's process tree. |
@@ -1059,13 +1062,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `retention.py` | 63 | Thirty-day cleanup of stopped tasks and exclusively owned runtime artifacts. |
 | `routes.py` | 156 | Authenticated REST adapters for the runtime explicitly owned by a server. |
 | `runner.py` | 111 | Autonomous skill/local-model driver over exactly the external task operations. |
-| `runtime.py` | 628 | Shared managed-task lifecycle with fenced dispatch and evidence-based completion. |
+| `runtime.py` | 635 | Shared managed-task lifecycle with fenced dispatch and evidence-based completion. |
 | `runtime_lock.py` | 40 | Cross-process ownership for one runtime database; imports never acquire locks. |
 | `service.py` | 107 | Explicit local runtime service lifecycle over the existing authenticated REST server. |
 | `skill_parameters.py` | 110 | Explicit typed parameter slots modify data values without widening a skill's authority. |
 | `skill_reauthorization.py` | 105 | Review origin renewal into a new immutable candidate without inheriting skill publication. |
 | `skill_recording.py` | 64 | Semantic skill drafts retain verified actions, original scope and independent completion evidence. |
-| `store.py` | 330 | Transactional task metadata, durable action receipts and input ownership. |
+| `store.py` | 355 | Transactional task metadata, durable action receipts and input ownership. |
+| `submission.py` | 31 | Admission witnesses bind tagged DAG requests before live scope normalization, without granting authority. |
 | `target_config.py` | 198 | Immutable host-reviewed target configuration, distinct from untrusted task options. |
 | `target_continuity.py` | 16 | Require a live UI target context before trusting a finite skill's verified prefix. |
 | `target_factory.py` | 27 | Create inert managed adapters from host profiles; SDKs and native resources stay lazy. |
@@ -1088,17 +1092,17 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `workflow_wait.py` | 31 | Bounded, cancellable semantic read-back polling never repeats an input operation. |
 | `workspace_scope.py` | 36 | Bounded workspace bootstrap only focuses explicitly approved application windows. |
 
-#### `utils/dag/`（1,206 行／8 檔）
+#### `utils/dag/`（1,222 行／8 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
 | `__init__.py` | 33 | Cross-host DAG orchestrator. |
-| `batch_contract.py` | 74 | Canonical whole-graph identities and destination-only tags for durable managed batches. |
-| `batch_execution.py` | 63 | Initial execution of a registered graph with durable pre-delivery claims and verified receipts. |
+| `batch_contract.py` | 77 | Canonical whole-graph identities and destination-only tags for durable managed batches. |
+| `batch_execution.py` | 74 | Initial execution of a registered graph with durable pre-delivery claims and verified receipts. |
 | `graph.py` | 168 | DAG types: nodes, definition, topological ordering, cycle detection. |
 | `inspection.py` | 166 | Inspect keyed DAG requests without submitting work or granting continuation. |
 | `managed_tasks.py` | 239 | Bounded task transport and coordination with verified remote completion. |
-| `runner.py` | 438 | DAG runner: schedule nodes with parallel execution + skip cascade. |
+| `runner.py` | 440 | DAG runner: schedule nodes with parallel execution + skip cascade. |
 | `task_contract.py` | 25 | Closed immutable managed-task payloads for existing DAG surfaces. |
 
 #### 其他多檔子套件
@@ -1179,7 +1183,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，只需要 PySide6
 | `journal_browser.py` | 250 | Run History 與 Self-Healing 共用的唯讀日誌檢視：來源連結／路徑／run／step 篩選、有界快照表與明細，舊結果以 request ID 隔離。 |
 | `journal_browser_worker.py` | 85 | 背景查閱與逐筆取消；帶入 context 並在開檔前重查 deferred 擁有者，以 queued counts 回報進度。 |
 | `manual_run_controls.py` | 53 | 手動執行的 history 勾選與獨立 journal 路徑；以共用無頭 scope 包住既有 GUI 執行，不改結果與變數。 |
-| `language_wrapper/` | 6,625 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
+| `language_wrapper/` | 6,641 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
 | `selector/` | 216 | 拖曳選取螢幕區域的半透明全螢幕覆蓋層與樣板裁切工具（互動式，但都有對應的程式化 API）。 |
 
 > **分頁指令一律走 Actions 選單**：分頁本身只放輸入、表格與結果檢視，指令由視窗層選單暴露。
@@ -1225,7 +1229,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，只需要 PySide6
 | window_manager | `window_tab.py` | 137 | 列出、聚焦、關閉視窗。 |
 | plugins | `plugins_tab.py` | 82 | 從使用者目錄載入額外 `AC_` 指令。 |
 | webrunner | `webrunner_tab.py` | 187 | 從 GUI 驅動 `je_web_runner`。 |
-| dag_runner | `dag_tab.py` | 287 | 編輯、驗證、執行跨主機 DAG。 |
+| dag_runner | `dag_tab.py` | 342 | 編輯、驗證、執行跨主機 DAG。 |
 | chatops | `chatops_tab.py` | 107 | 在接上 Slack 前先本機測試 slash 指令。 |
 | trace_replay | `trace_replay_tab.py` | 192 | 拖曳捲動時光回溯錄製內容。 |
 | remote_desktop | `remote_desktop/`（17 檔） | 6,909 | 見下。 |
@@ -1380,10 +1384,10 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 119 | 34,236 |
-| `utils/mcp_server/` | 53 | 20,969 |
+| `gui/` | 119 | 34,307 |
+| `utils/mcp_server/` | 53 | 20,971 |
 | `utils/remote_desktop/` | 63 | 14,634 |
-| `utils/executor/` | 9 | 9,879 |
+| `utils/executor/` | 9 | 9,880 |
 | `utils/usb/` | 17 | 4,816 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,682 |
 | `utils/accessibility/` | 14 | 3,143 |
@@ -1400,8 +1404,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 897 | 83,871 |
-| **總計** | **1,327** | **196,794** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 901 | 84,435 |
+| **總計** | **1,331** | **197,432** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

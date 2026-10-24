@@ -5,8 +5,13 @@
 注册不操作目标；保存整张图的拓扑、节点契约、主机设置与并行数，目标端 key／规范标记绑定批次。
 可能派送前先提交 claim，目标端精确规范、完成及输入释放证据通过后才放行依赖节点。成功、中断或
 提交回复遗失后都不能再次 begin；`get/list/inspect` 让协调记录跨重启保留。API／AC／MCP／REST／
-CLI／Builder 及 DAG Actions 的批次注册／读取、选填批次 ID 共享流程。明确续接批准、后台批次
-协调与批次保留／清理仍列于 Progress.md；旧未绑定 DAG 或逐节点查询不会自动成为续接批准。
+CLI／Builder 及 DAG Actions 的批次注册／读取、选填批次 ID 共享流程。
+停止后用 `review_continuation` 获取只读整图快照及逐节点决策，再把审阅的 `snapshot`、`decisions`
+与非空 `note` 放入 `run_dag(graph, batch_id=id, recovery=request)`，批准并使用一次续接机会。
+只能采纳独立完成的原任务或真实 recovery 后继任务；派送限从未 claim 且目标端未接收的 pending
+节点。本地授权可在相等或更窄根目录内更新，未知 claim 永不重放。DAG Actions 提供停止新派送、
+审阅及明确续接；已接受任务仍依自身生命周期处理。后台批次协调及保留／清理仍列于 Progress.md。
+详见[续接协议](../docs/source/Zh/doc/ai_agents/agent_dag_batches_doc.rst)。
 
 触发器可明确使用 `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`，再以
 `create_authorized` 提供 `trigger_id`、`snapshot`、`authorization_review`、经审阅的 `spec` 与 `note`。

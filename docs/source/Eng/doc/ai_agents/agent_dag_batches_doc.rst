@@ -1,5 +1,5 @@
-Managed DAG batch identity
-==========================
+Managed DAG batches and continuation
+====================================
 
 Register before initial execution
 ----------------------------------------------------------------------
@@ -56,8 +56,60 @@ the existing Run action executes the selected batch. Late results are discarded 
 selection changes. Closing or stopping an existing DAG worker preserves its durable coordinator record;
 destination tasks retain their own service lifecycle and pause/review contract.
 
-This stage supplies initial-execution evidence for later recovery. Explicit whole-batch continuation
-approval, adopting a reviewed replacement task, dependency revalidation, independent background batch
-coordination and retention/cleanup remain in Progress.md. Legacy graphs cannot be retroactively treated
-as bound batches. Owned fake-target/local/two-host HTTP and offscreen evidence do not establish real
-deployment, installed-model or native acceptance. Browser automation remains on je_web_runner.
+Explicit whole-graph continuation
+----------------------------------------------------------------------
+
+After interruption, use the original graph and batch ID to request a read-only review::
+
+    review = manage_agent_dag("review_continuation", {"batch_id": identifier, "definition": graph})
+    request = {"batch_id": identifier, "definition": graph, "snapshot": review["snapshot"],
+               "decisions": review["decisions"], "note": "Reviewed all node evidence and scope"}
+    result = run_dag(graph, max_parallel=4, batch_id=identifier, recovery=request)
+
+Review requires waiting_review. To fence a live or approved attempt first, explicitly call
+``pause_batch`` with batch_id. This stops future coordinator claims; it neither pauses accepted tasks
+nor proves input cleanup. Use each destination task's existing pause/cancel/review lifecycle separately.
+Do not use fencing as a native handoff signal.
+
+Every node requires exactly one closed decision. ``adopt`` has node_id/action/task_id and accepts only
+the bound original's independent completion. ``successor`` has the same fields and follows actual
+runtime TaskRecovery provenance to the original; create, review and independently complete that new
+task first. An unrelated successful task or caller-authored options cannot establish lineage.
+``dispatch`` has node_id/action/spec and requires a never-claimed pending node with no accepted
+destination request. ``wait`` has node_id/action and blocks approval. A destination task found before
+the coordinator's claim cannot be adopted as batch provenance. Missing lookup evidence never clears
+a previous claim or authorizes replay.
+
+After editing decisions, call review_continuation again with the full decisions list. Use its fresh
+snapshot and decisions only when can_approve is true. Local dispatch may replace expired origin
+references and preserve/narrow original roots; all actions, goals, settings and completion clauses stay
+fixed. Remote specs remain unchanged and use destination authority. Historical submission_contract=1
+digests bind admitted specifications without granting present authority. Legacy tasks lack that witness
+and require live spec-match contract 1; request-key retries never backfill admission evidence. Older
+batches without raw input witnesses must use get.input_definition explicitly.
+
+``approve_continuation`` takes batch_id, definition, snapshot, decisions and a nonempty bounded note;
+optional timeout_seconds defaults to 30 (maximum 300). It rechecks evidence and atomically stores the
+actor-bound plan, adoptions and narrowed dispatch bindings, without dispatching. Identical retries
+return the same approval, including its used/cancelled state. ``start_continuation`` takes batch_id,
+definition, approval_id and unchanged max_parallel, rechecks evidence and consumes the approval once.
+Changing graph, actor, permissions, host configuration or evidence requires a fresh review. run_dag,
+AC_run_dag and ac_run_dag accept optional recovery to drive approval/start; custom runners remain refused.
+``validate_node`` takes batch_id/attempt/node_id and revalidates adopted completion. Execution repeats
+this before adopting a node and before releasing its dependants; missing proof returns it to unknown.
+
+All operations share manage_agent_dag / AC_agent_dag / ac_agent_dag / POST /agent/dag / Builder and
+``agent-task dag OPERATION request.json``. ``get`` exposes bounded continuation audit records, including
+reviewing user, note, decisions and approval state, without private owner paths or credentials.
+DAG Actions adds fence, review and explicit continuation controls with editable request JSON. Fill the
+note after reviewing; changed graph/batch selection invalidates stale review results. Read-only inspect
+and review keep resume_permitted=false; only explicit approval/start authorizes a new attempt.
+
+Current limits
+----------------------------------------------------------------------
+
+Background batch coordination and retention/cleanup remain in Progress.md. Legacy graphs cannot be
+retroactively treated as bound batches. Adoption certifies a historical logical stage; it does not
+restore login/window state or assert current application state. Owned fake-target/local/two-host HTTP
+and offscreen evidence do not establish real deployment, installed-model or native acceptance.
+Browser automation remains on je_web_runner.

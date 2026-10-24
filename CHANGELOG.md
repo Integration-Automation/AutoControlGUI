@@ -1,10 +1,17 @@
 # Changelog
 
+Add explicit whole-DAG continuation review, actor-bound one-shot approval and fresh evidence checks.
+Adopt independently completed original tasks or real TaskRecovery successors; dispatch only never-claimed
+pending nodes within preserved/narrowed authority. Keep unknown claims blocked and fence stale attempts.
+Add optional recovery to run_dag/AC_run_dag/ac_run_dag and thin DAG Actions review controls. Historical
+submission witnesses establish request identity without renewing input authority or backfilling legacy
+tasks. Background batch coordination/retention and native acceptance remain separate.
+
 Add durable managed-only DAG batch registration and bound initial execution. Persist the exact graph,
 owner and pre-delivery claims, bind destination keys/spec tags to the batch, pin registered host
 configuration and independently verify completion before releasing dependants. Reject repeated begin
 after interruption or lost replies. Add shared batch API/commands and optional run_dag batch_id;
-legacy unbound graphs remain compatible. Reviewed continuation and batch retention remain separate.
+legacy unbound graphs remain compatible. Batch retention remains separate.
 
 Add explicit trigger authorization review/replacement while retaining accepted event identities and
 pending limits across generations. Retire the source atomically, activate future notifications, retain

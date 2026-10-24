@@ -9,7 +9,8 @@
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-接續優先核對第 4 組的真實裝置控制／擷取來源與受管介面，再完成其餘實作與第 8 組交付核對。
+接續優先完成第 6 組的服務背景批次協調與保留／清理，再核對第 4 組真實裝置控制／擷取來源、
+其餘實作及第 8 組交付核對。
 
 1. **P4：瀏覽器與正式環境接合**
    - 選定正式服務專用 helper Python、AutoControl／WebRunner 套件版本與受管 Chromium 安裝；
@@ -43,6 +44,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      未知 worker／按住輸入／清理失敗時不得移交或竊取租約。
 
 4. **P7：Android／iOS 受管裝置**
+   - 重現並定位 `test_agent_android_adapter.py::test_actual_worker_and_sdk_only_invoke_finite_input_after_durable_begin_ack`
+     在廣泛回歸中偶發的 `remote operation failed: AgentTaskError`；單獨重跑通過不足以證明已修復。
+     需保留敏感診斷遮罩、既有期限與未知副作用隔離，補可定位的受保護測試證據，不以放寬期限掩蓋。
    - 為 `utils/agent_runtime/android_adapter.py` 實作並審閱真實 `AndroidControlProvider`／
      `AndroidCommandLease` 來源；須有裝置端執行機制，在真人接回、取消／逾時後阻止舊寫入，
      並提供逐命令 ID／boot／epoch 相符的輸入釋放、遠端佇列清空與舊 writer 退出證據。
@@ -94,9 +98,6 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      目錄／目標設定、部署／回復方法。受管任務 DAG 不會自動部署遠端服務。
    - 設計跨主機成果移交：明列讀寫權限、來源身分、摘要與目的地發布，不能以本機路徑當遠端
      檔案證據，不能轉送本機 principal／使用者資料庫路徑／來源 witness。
-   - 在耐久批次／派送 claim 上實作整圖明確續接核准：採認完成節點、接續從未 claim 的節點，
-     或連結經審閱的新任務；重新核對相依、目的端契約與主機身分。逐節點比對／完成紀錄不能
-     當整圖續接批准，不得重播或自動續跑暫停任務，lookup 查無亦不能重設可能晚到的 claim。
    - 補 `utils/agent_runtime/dag_batches.py` 的服務獨立背景協調、停止／重啟與批次 30 天保留／清理；
      現有 batch_id 路徑由 caller 協調，原服務只保存註冊及執行見證，不能宣稱已背景續跑整圖。
      清理前須保留未知派送、原批次及節點收據的關聯，不能因工作視圖關閉或個別任務到期而遺失。

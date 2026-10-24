@@ -1,4 +1,4 @@
-受管 DAG 批次身分
+受管 DAG 批次與明確續接
 ================================
 
 初次執行前註冊
@@ -39,6 +39,50 @@ DAG Actions 新增「註冊受管批次（不執行）」與「讀取受管批�
 執行，仍須另用 Run。圖／批次選取變更時丟棄晚到回覆；停止／關閉現有 DAG worker 保留耐久紀錄，
 目的端任務仍依既有服務生命週期及暫停／審閱契約處理。
 
-這批提供初次執行證據；整圖明確續接核准、審閱後替代任務採認、相依重新驗證、服務背景批次協調及
-保留／清理仍列於 Progress.md。舊圖不能事後自動當作已綁定批次；假目標、自有本機／雙主機 HTTP
-與 offscreen 證據不代表正式部署、實際模型或原生驗收。瀏覽器維持 je_web_runner。
+整圖明確續接
+--------------------------------
+
+中斷後用原圖與批次 ID 取得唯讀審閱，再明確核准／啟動::
+
+    review = manage_agent_dag("review_continuation", {"batch_id": identifier, "definition": graph})
+    request = {"batch_id": identifier, "definition": graph, "snapshot": review["snapshot"],
+               "decisions": review["decisions"], "note": "已核對所有節點證據與權限"}
+    result = run_dag(graph, max_parallel=4, batch_id=identifier, recovery=request)
+
+review 只接受 waiting_review。要先使執行中／已批准的協調 attempt 失效，可明確呼叫
+``pause_batch``，提供 batch_id；這只停止新的協調派送，不會暫停已接受任務，也不證明輸入清理。
+目的端任務仍須依各自 pause／cancel／review 生命週期處理，不能以此作為原生輸入移交訊號。
+
+每個節點都須恰有一個封閉決策。``adopt`` 帶 node_id／action／task_id，只採認綁定原任務的獨立
+完成證據；``successor`` 欄位相同，須沿真實 TaskRecovery 來源鏈連回原任務，先另行建立、審閱並
+獨立完成該新任務。不相關的成功任務或自填 options 不能建立來源鏈。``dispatch`` 帶
+node_id／action／spec，只准從未 claim 且目的端未接受請求的 pending 節點；``wait`` 只帶
+node_id／action，阻止整圖批准。協調 claim 前出現在目的端的任務不構成批次來源證據；查無紀錄
+不能清除既有 claim 或授權重播。
+
+修改決策後，帶完整 decisions 再做 review_continuation，只有 can_approve=true 才用其新 snapshot
+與 decisions 批准。本機派送可替換過期 origin 並保持／縮小原根目錄；完整動作、目標、設定與完成
+條件保持固定。遠端規格不變，由目的端決定權限。submission_contract=1 的歷史摘要證明已接受
+規格身分，不授予現在的輸入權限。舊任務沒有見證時仍須通過目前 spec-match 契約 1；request-key
+重試不會補造見證。缺原始輸入見證的舊批次須明確使用 get.input_definition。
+
+``approve_continuation`` 帶 batch_id／definition／snapshot／decisions／非空有限 note，選填
+timeout_seconds 預設 30、最多 300；重新核對證據並在交易內保存真正審閱者、決策、採認與縮限綁定，
+不派送。相同重試回傳同一批准，包含 used／cancelled 狀態。``start_continuation`` 帶
+batch_id／definition／approval_id／不變的 max_parallel，重新驗證後只消耗一次批准。圖、審閱者、
+權限、主機設定或證據變更須重新審閱。run_dag／AC_run_dag／ac_run_dag 選填 recovery 驅動此流程，
+仍拒絕自訂 runner。``validate_node`` 帶 batch_id／attempt／node_id；執行時在採認節點及放行
+其相依節點前重驗完成證據，證據消失就轉回 unknown。
+
+所有操作共用 manage_agent_dag／AC_agent_dag／ac_agent_dag／POST /agent/dag／Builder 與
+``agent-task dag OPERATION request.json``。get 提供有限續接稽核，包含使用者、note、決策與批准
+狀態，不揭露私有 owner 路徑或憑證。DAG Actions 新增停止新派送、審閱與明確續接，以及可編輯請求
+JSON；核對後填 note，圖／批次選取變更會使舊審閱失效。唯讀 inspect／review 維持
+resume_permitted=false，只有明確 approve／start 授權新 attempt。
+
+尚缺步驟
+--------------------------------
+
+服務背景批次協調及保留／清理仍列於 Progress.md。舊圖不能事後自動當作已綁定批次；採認只證明
+歷史邏輯階段，不重建登入／視窗或宣稱目前應用狀態。假目標、自有本機／雙主機 HTTP 與 offscreen
+證據不代表正式部署、實際模型或原生驗收。瀏覽器維持 je_web_runner。

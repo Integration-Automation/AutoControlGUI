@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import threading
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from je_auto_control.utils.agent_runtime.client import AgentRuntimeClient
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
@@ -14,13 +14,22 @@ from je_auto_control.utils.exception.cancellation import cancellation_scope
 
 
 def run_batch(dag: DagDefinition, batch_id: str, max_parallel: int,
-              stop_event: threading.Event | None, execute: Callable[..., Any]) -> Any:
+              stop_event: threading.Event | None, execute: Callable[..., Any],
+              recovery: Mapping[str, Any] | None) -> Any:
     """Begin the registered batch once; a later run requires explicit recovery rather than another submit."""
     if current_operation() is not None:
         raise AgentTaskError("a managed task cannot coordinate another managed batch")
     client = AgentRuntimeClient()
-    started = client.call("dag", {"operation": "begin", "request": {
-        "batch_id": batch_id, "definition": definition_dict(dag), "max_parallel": max_parallel}})
+    definition = definition_dict(dag)
+    if recovery is None:
+        started = client.call("dag", {"operation": "begin", "request": {
+            "batch_id": batch_id, "definition": definition, "max_parallel": max_parallel}})
+    else:
+        approved = client.call("dag", {"operation": "approve_continuation", "request": {
+            **recovery, "batch_id": batch_id, "definition": definition}})
+        started = client.call("dag", {"operation": "start_continuation", "request": {
+            "batch_id": batch_id, "definition": definition, "approval_id": approved["approval_id"],
+            "max_parallel": max_parallel, "timeout_seconds": recovery.get("timeout_seconds", 30)}})
     runner = _BatchRun(client, started)
     try:
         return execute(parse_definition(started["definition"]), max_parallel=max_parallel,
@@ -47,6 +56,8 @@ class _BatchRun:
 
     def run_node(self, node: Any, _definition: Any) -> dict:
         """Claim before destination contact; report independently checked completion before releasing dependants."""
+        if node.id in self.started.get("adopted", {}):
+            return self.control("validate_node", {"node_id": node.id})
         self.control("claim", {"node_id": node.id})
         try:
             result = run_managed_task(node.host, node.task, host_binding=self.started["hosts"][node.host])

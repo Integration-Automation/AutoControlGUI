@@ -10,8 +10,17 @@ keys. Record verifies the exact destination request match, task ID, completion c
 retirement independently before confirming a node. Unknown effects or missing replies never reset a
 claim. Restart invalidates the old attempt and marks live batches waiting_review. Finish derives batch outcome from durable node phases. get/list omit owner/host credentials;
 inspect stays read-only with resume_permitted=false. Original owner and current caller are refreshed.
-Legacy unbound DAGs are unchanged. Explicit reviewed continuation, durable background batch coordination
-and batch retention remain open; registration and recorded completion alone grant no continuation.
+Legacy unbound DAGs are unchanged. Add pause_batch/review_continuation/approve_continuation/
+start_continuation/validate_node on the same surfaces. Review binds all explicit decisions, current
+authority, destination identity and the real approving actor to a fresh snapshot. Approval performs no
+dispatch; start consumes it once and refreshes evidence. run_dag/AC_run_dag/ac_run_dag add optional
+recovery alongside batch_id to drive approval/start. Adopt only independently completed originals or
+actual TaskRecovery successors; dispatch only never-claimed pending nodes without accepted requests.
+Revalidate adopted dependencies before claims. Local origin renewal may only preserve/narrow the
+original scope; remote authority remains destination-owned. Submission witnesses preserve historical
+identity, never authority; legacy tasks require live spec matching and are never backfilled on retry.
+pause_batch fences new coordinator dispatch, without pausing accepted destination tasks or claiming
+input cleanup. Background coordination and batch retention remain open. See the managed DAG guide.
 
 Trigger review_authorization takes trigger_id. Explicit create_authorized additionally requires
 snapshot/authorization_review/spec/nonempty note. Preserve template goal/actions/settings/criteria and

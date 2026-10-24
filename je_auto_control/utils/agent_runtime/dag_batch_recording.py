@@ -16,7 +16,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 
 def bound_node(batch: dict, identifier: Any) -> dict:
     """Resolve a node solely from the immutable batch instead of accepting a caller's destination spec."""
-    definition = bind_definition(batch["definition"], batch["id"], batch["graph_hash"])
+    definition = bind_definition(batch["definition"], batch["id"], batch["graph_hash"], batch.get("bindings"))
     for node in definition["nodes"]:
         if node["id"] == identifier:
             return node

@@ -2589,7 +2589,12 @@ def AC_run_agent(
 def AC_run_chaos(spec: Any) -> Dict[str, Any]:
     """Adapter: run a chaos experiment whose probes/method/rollbacks are actions."""
 
-def AC_run_dag(definition: Dict[str, Any], max_parallel: int = ..., batch_id: str | None = ...) -> Dict[str, Any]:
+def AC_run_dag(
+    definition: Dict[str, Any],
+    max_parallel: int = ...,
+    batch_id: str | None = ...,
+    recovery: Dict[str, Any] | None = ...,
+) -> Dict[str, Any]:
     """Executor adapter: run a cross-host DAG definition."""
 
 def AC_run_device_matrix(

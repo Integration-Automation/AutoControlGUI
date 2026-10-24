@@ -58,7 +58,8 @@ def _node_dependencies(node: dict) -> None:
         raise AgentTaskError("managed batch dependencies must be distinct node identities")
 
 
-def bind_definition(definition: Mapping[str, Any], batch_id: str, graph_hash: str) -> dict:
+def bind_definition(definition: Mapping[str, Any], batch_id: str, graph_hash: str,
+                    bindings: Mapping[str, Any] | None = None) -> dict:
     """Bind every destination spec/key to the same immutable batch, topology and node identity."""
     result = detached(definition)
     for node in result["nodes"]:
@@ -66,6 +67,8 @@ def bind_definition(definition: Mapping[str, Any], batch_id: str, graph_hash: st
         task["spec"]["options"]["dag_batch"] = {"batch_id": batch_id, "graph_hash": graph_hash, "node_id": node["id"]}
         identity = {"batch": batch_id, "node": node["id"], "host": node["host"], "key": task["idempotency_key"]}
         task["idempotency_key"] = "dag:" + request_spec_digest(identity)
+        if bindings is not None and node["id"] in bindings:
+            node["task"] = detached(bindings[node["id"]])
     return result
 
 

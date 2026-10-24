@@ -1011,6 +1011,7 @@ def dag_tools() -> List[MCPTool]:
                 "definition": {"type": "object"},
                 "max_parallel": {"type": "integer"},
                 "batch_id": {"type": "string"},
+                "recovery": {"type": "object"},
             }, required=["definition"]),
             handler=h_ops.run_dag,
             annotations=DESTRUCTIVE,
