@@ -962,6 +962,10 @@ simplified_chinese_word_dict = {
     # DAG Runner Tab
     "dag_load_btn": "加载 JSON...",
     "dag_validate_btn": "验证",
+    "dag_inspect_btn": "查看现有受管任务",
+    "dag_inspecting": "正在查看现有受管任务…",
+    "dag_inspection_stale": "DAG 已更改，请重新查看。",
+    "dag_inspection_note": "仅供查看：继续前须审阅任务身份与证据。",
     "dag_run_btn": "执行 DAG",
     "dag_stop_btn": "停止 DAG",
     "dag_stopping": "停止中：不再启动新的节点…",

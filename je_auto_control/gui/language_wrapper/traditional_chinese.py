@@ -963,6 +963,10 @@ traditional_chinese_word_dict = {
     # DAG Runner Tab
     "dag_load_btn": "載入 JSON...",
     "dag_validate_btn": "驗證",
+    "dag_inspect_btn": "檢視既有受管任務",
+    "dag_inspecting": "正在檢視既有受管任務…",
+    "dag_inspection_stale": "DAG 已變更，請重新檢視。",
+    "dag_inspection_note": "僅供檢視：續接前須審閱任務身分與證據。",
     "dag_run_btn": "執行 DAG",
     "dag_stop_btn": "停止 DAG",
     "dag_stopping": "停止中：不再啟動新的節點…",

@@ -1090,6 +1090,10 @@ english_word_dict = {
     # DAG Runner Tab
     "dag_load_btn": "Load JSON...",
     "dag_validate_btn": "Validate",
+    "dag_inspect_btn": "Inspect existing managed tasks",
+    "dag_inspecting": "Inspecting existing managed tasks…",
+    "dag_inspection_stale": "The graph changed; inspect it again.",
+    "dag_inspection_note": "Inspection only: review task identity and evidence before continuing.",
     "dag_run_btn": "Run DAG",
     "dag_stop_btn": "Stop DAG",
     "dag_stopping": "Stopping: no further node will start…",

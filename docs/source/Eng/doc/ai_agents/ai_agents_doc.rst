@@ -1,6 +1,21 @@
 AI agents and computer use
 ===========================
 
+Inspect an interrupted DAG
+---------------------------
+
+``inspect_agent_dag(definition, timeout_seconds=30)`` queries up to 100 existing local/registered-host
+task keys without submitting, pausing or resuming work. ``AC_agent_dag_inspect``, MCP
+``ac_agent_dag_inspect``, REST action execution, CLI ``agent-task inspect-dag reviewed.json``, Builder
+and DAG Actions share the operation. The maximum inspection budget is 300 seconds; remote lookup still
+requires host-management authority. Local principals/store paths/origin metadata are never forwarded.
+Snapshots omit remote artifact paths and raw errors. GUI results are discarded after graph edits.
+
+``recorded_completion`` concerns the found task alone. ``request_match=unverified`` and
+``resume_permitted=false`` explicitly leave current-graph matching and continuation unapproved. Missing
+records remain snapshots, not rejection evidence. Review and specification binding are separate recovery
+steps; inspecting never replays effects or treats a recorded task as proof for an edited DAG.
+
 Inspect a lost submission reply
 --------------------------------
 
@@ -10,7 +25,7 @@ resuming or acquiring input. The same operation is available as ``AC_agent_task_
 ``agent-task lookup original-key`` and the task view's Actions menu. Results contain ``found`` and an
 optional ``task`` status snapshot. Missing records are not proof of rejection: an outstanding request
 can arrive later. Task access remains required for this read-only lookup. GUI results are discarded if
-the key or selected task changes. Registered-host DAG review still requires its separate integration.
+the key or selected task changes. DAG inspection shares this lookup; specification-bound recovery approval remains open.
 
 Managed tasks in a DAG
 ----------------------

@@ -75,6 +75,12 @@ def lookup_agent_task(idempotency_key: str) -> dict[str, Any]:
     return AgentRuntimeClient().call("lookup", {"idempotency_key": idempotency_key})
 
 
+def inspect_agent_dag(definition: Mapping[str, Any], timeout_seconds: float = 30) -> dict[str, Any]:
+    """Inspect local/registered-host task keys without submitting, resuming or granting continuation."""
+    from je_auto_control.utils.dag.inspection import inspect_definition
+    return inspect_definition(definition, timeout_seconds)
+
+
 def get_agent_task(task_id: str) -> dict[str, Any]:
     """Read one owner-scoped task snapshot."""
     return AgentRuntimeClient().call("get", {"task_id": task_id})

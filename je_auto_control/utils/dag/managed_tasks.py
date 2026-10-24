@@ -1,4 +1,4 @@
-"""Bounded task submit/status/pause coordination with verified remote completion."""
+"""Bounded task transport and coordination with verified remote completion."""
 from __future__ import annotations
 
 import re
@@ -59,6 +59,23 @@ def _authorize(owner: DeferredAuthorization, host: str) -> None:
             authorize_command("AC_admin_broadcast_execute")
 
 
+def authorize_task_host(owner: DeferredAuthorization, host: str) -> None:
+    """Share live owner/host checks with read-only DAG inspection."""
+    _authorize(owner, host)
+
+
+def task_stop_requested() -> bool:
+    """Read the owned DAG stop event without exposing its context binding."""
+    stop = _STOP.get()
+    return stop is not None and stop.is_set()
+
+
+def task_connection(host: str) -> Call:
+    """Share the closed local/registered-host transport without exposing credentials."""
+    authorize_task_host(DeferredAuthorization.capture(), host)
+    return _connection(host)
+
+
 def _connection(host: str) -> Call:
     if host == "local":
         from je_auto_control.utils.agent_runtime.client import AgentRuntimeClient
@@ -70,7 +87,7 @@ def _connection(host: str) -> Call:
         from je_auto_control.utils.agent_runtime.transport import request_json
         if operation == "get":
             return request_json(base + "/agent/task?" + urlencode(body), token=token, timeout=timeout)
-        if operation not in {"submit", "pause"}:
+        if operation not in {"submit", "pause", "lookup"}:
             raise AgentTaskError("unsupported remote DAG task operation")
         return request_json(base + "/agent/" + operation, body=body, token=token, timeout=timeout,
                             control=operation == "pause")
@@ -130,8 +147,7 @@ class _TaskWaiter:
 
     def _checkpoint(self) -> None:
         _authorize(self.owner, self.host)
-        stop = _STOP.get()
-        if stop is not None and stop.is_set():
+        if task_stop_requested():
             raise AgentTaskError("DAG stopped; managed task requires explicit recovery")
         self._timeout()
 

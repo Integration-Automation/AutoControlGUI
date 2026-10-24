@@ -1,11 +1,20 @@
 # AutoControl
 
+`inspect_agent_dag(definition, timeout_seconds=30)` looks up existing local/registered-host requests
+without submitting, pausing or resuming tasks. Use `AC_agent_dag_inspect`, MCP `ac_agent_dag_inspect`,
+REST action execution, CLI `agent-task inspect-dag reviewed.json`, Script Builder or DAG Actions.
+At most 100 nodes and a 300-second maximum budget bound inspection. Remote lookup needs host-management
+authority; local principal/store/origin metadata stays local. Results omit remote paths and raw errors.
+`recorded_completion` describes the found task only: `request_match=unverified` and
+`resume_permitted=false` explicitly leave graph matching and continuation unapproved. A missing record
+does not prove rejection. GUI inspection is read-only and discards results after graph edits.
+
 Use `lookup_agent_task("original-key")` (`AC_agent_task_lookup`, MCP `ac_agent_task_lookup`,
 `POST /agent/lookup`, CLI `agent-task lookup original-key`, or the task view's Actions menu) to inspect
 a submission whose reply was lost. It reads only the original principal/store namespace and never
 submits, resumes or acquires input. `found=false` is a current snapshot; a late request may still arrive.
-GUI lookup results cannot replace a task/key selected while the request was pending. Registered-host
-DAG recovery review is still separate work. The query requires task access even though it is read-only.
+GUI lookup results cannot replace a task/key selected while the request was pending. DAG inspection
+shares this lookup; specification-bound recovery approval remains separate work. The query requires task access.
 
 Existing `run_dag` / `AC_run_dag` / MCP `ac_run_dag`, REST action execution, CLI action files,
 Script Builder and the DAG Actions menu accept nodes with a `task` payload instead of actions:
@@ -228,7 +237,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 852 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 853 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -443,7 +452,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 852 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 853 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -548,7 +557,7 @@ under a relative name are written below that directory.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 756 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 757 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |

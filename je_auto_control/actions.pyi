@@ -124,6 +124,9 @@ def AC_admin_remove_host(label: str) -> Dict[str, Any]:
 def AC_agent_card(path: str | None = ...) -> Dict[str, Any]:
     """Adapter: build (or write) the A2A agent card."""
 
+def AC_agent_dag_inspect(definition: Mapping[str, Any], timeout_seconds: float = ...) -> dict[str, Any]:
+    """Inspect local/registered-host task keys without submitting, resuming or granting continuation."""
+
 def AC_agent_runtime_start(directory: str | None = ...) -> dict[str, Any]:
     """Explicitly start a hidden, independent local service, or attach to the current one."""
 

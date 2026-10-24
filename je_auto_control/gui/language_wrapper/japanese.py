@@ -979,6 +979,10 @@ japanese_word_dict = {
     # DAG Runner Tab
     "dag_load_btn": "JSON を読み込み...",
     "dag_validate_btn": "検証",
+    "dag_inspect_btn": "既存の管理タスクを確認",
+    "dag_inspecting": "既存の管理タスクを確認中…",
+    "dag_inspection_stale": "グラフが変更されました。もう一度確認してください。",
+    "dag_inspection_note": "確認のみ：続行前にタスクの識別と証拠を確認してください。",
     "dag_run_btn": "DAG 実行",
     "dag_stop_btn": "DAG 停止",
     "dag_stopping": "停止中：新しいノードは開始しません…",

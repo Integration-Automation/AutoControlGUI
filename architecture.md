@@ -1,5 +1,12 @@
 # AutoControl Architecture
 
+DAG inspection.py validates the whole graph before querying up to 100 task keys under a finite budget.
+It reuses managed_tasks connection policy and owner refresh, requests lookup only, strips remote metadata
+and raw diagnostics, and never schedules actions or sends control operations. recorded_completion concerns
+the recorded task alone; request_match stays unverified and resume_permitted is always false. Public
+API/AC/MCP/CLI/Builder and REST action execution share this read-only path. DAG Actions display snapshots
+and discard results when the graph editor changes; worker authority and stop context survive offload.
+
 Request-key inspection shares the submission identity/hash calculation in AgentTaskStore. Runtime.lookup
 refreshes the current principal before resolving its exact user/store namespace and returns an owner-scoped
 status snapshot without dispatch, target activation or writes to request keys. The closed POST lookup route

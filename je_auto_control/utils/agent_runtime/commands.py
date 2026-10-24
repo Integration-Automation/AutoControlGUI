@@ -20,6 +20,10 @@ _ID = {"task_id": {"type": "string", "minLength": 1}}
 
 # name: (function, JSON properties, required, read_only, host_management)
 CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
+    "AC_agent_dag_inspect": (api.inspect_agent_dag,
+                             {"definition": {"type": "object"},
+                              "timeout_seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 300}},
+                             ("definition",), True, False),
     "AC_browser_link": (browser_link, {"selector": {"type": "string", "maxLength": 4096},
                                        "frame": {"type": "string", "maxLength": 4096}},
                         ("selector",), True, False),

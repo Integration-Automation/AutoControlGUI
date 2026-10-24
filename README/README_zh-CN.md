@@ -1,9 +1,16 @@
 # AutoControl
 
+`inspect_agent_dag(definition, timeout_seconds=30)` 可查看本地／已登记远程主机的现有提交，
+不提交、不暂停、不续跑。提供 `AC_agent_dag_inspect`、MCP、REST 动作、CLI
+`agent-task inspect-dag reviewed.json`、Builder 与 DAG Actions。最多 100 节点、最长 300 秒；
+远程仍须主机管理权限，不发送本地身份／数据库路径／来源 metadata，不返回远程路径或原始错误。
+`recorded_completion` 仅描述查回的任务；`request_match=unverified`、`resume_permitted=false`
+表示尚未核对当前 DAG 规格，也未授权继续。查无记录不代表拒绝；GUI 在图编辑后丢弃旧视图。
+
 提交回复丢失时，可用 `lookup_agent_task("原去重键")`、`AC_agent_task_lookup`、MCP、
 `POST /agent/lookup`、CLI `agent-task lookup 原去重键` 或任务视图 Actions 查询。仅读取原身份及
 用户数据库范围，不提交、不续跑、不取得输入控制权；`found=false` 只是当前快照，迟到请求仍
-可能被接收。GUI 不会让旧查询回复覆盖后来选择的任务／键。远程 DAG 整合恢复视图仍待接入；
+可能被接收。GUI 不会让旧查询回复覆盖后来选择的任务／键。DAG 视图也使用此查询；规格绑定及继续审阅仍待完成；
 只读查询仍须具任务访问权限。
 
 现有 `run_dag`／`AC_run_dag`／MCP `ac_run_dag`、REST／CLI 动作文件、Script Builder 与 DAG
@@ -190,7 +197,7 @@ Windows 共享桌面须解锁并空闲 60 秒，实体键鼠活动会触发暂�
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 852 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 853 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -392,7 +399,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 852 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 853 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -490,7 +497,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 756 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 757 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |

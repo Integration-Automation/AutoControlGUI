@@ -196,6 +196,17 @@ def test_remote_operator_is_refused_before_connection(monkeypatch):
         assert not run_dag(definition(host="remote")).succeeded
 
 
+def test_legacy_action_node_without_task_field_still_uses_local_executor():
+    from types import SimpleNamespace
+    from je_auto_control.utils.dag.runner import _default_local_runner
+
+    calls = []
+    node = SimpleNamespace(host="local", actions=[["AC_fixture", {}]], action_file=None, id="legacy")
+    executor = SimpleNamespace(execute_action=lambda actions, **kwargs: calls.append((actions, kwargs)) or "done")
+    assert _default_local_runner(node, None, executor) == "done"
+    assert calls == [([["AC_fixture", {}]], {"raise_on_error": True})]
+
+
 def test_nested_task_cannot_dispatch_another_managed_task(monkeypatch):
     from je_auto_control.utils.agent_runtime.context import TaskOperation, operation_scope
     from je_auto_control.utils.agent_runtime.models import AgentTaskSpec

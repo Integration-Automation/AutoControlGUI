@@ -360,9 +360,10 @@ def _current_run_local_runner() -> NodeRunner:
 def _default_local_runner(node: DagNode, _definition: DagDefinition,
                           runner: Any = None) -> Any:
     """Run a local node's actions on ``runner`` (default: the module executor)."""
-    if node.task is not None:
+    task = getattr(node, "task", None)
+    if task is not None:
         from je_auto_control.utils.dag.managed_tasks import run_managed_task
-        return run_managed_task(node.host, node.task)
+        return run_managed_task(node.host, task)
     from je_auto_control.utils.json.json_file import read_executable_action_json
     if runner is None:
         from je_auto_control.utils.executor.action_executor import executor
@@ -381,9 +382,10 @@ def _default_remote_runner(node: DagNode,
     # The address book contains host credentials, independently of this
     # caller's local action permissions. Check before opening it or files.
     authorize_command("AC_admin_broadcast_execute")
-    if node.task is not None:
+    task = getattr(node, "task", None)
+    if task is not None:
         from je_auto_control.utils.dag.managed_tasks import run_managed_task
-        return run_managed_task(node.host, node.task)
+        return run_managed_task(node.host, task)
     from je_auto_control.utils.admin.admin_client import default_admin_console
     console = default_admin_console()
     actions = _resolve_remote_actions(node)

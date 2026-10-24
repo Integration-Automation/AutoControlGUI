@@ -179,6 +179,7 @@ TOOL_CAPABILITIES: Dict[str, str] = {
     "ac_agent_skill_list": _DRIVE,
     "ac_agent_task_get": _DRIVE,
     "ac_agent_task_lookup": _DRIVE,
+    "ac_agent_dag_inspect": _DRIVE,
     "ac_agent_task_list": _DRIVE,
     "ac_agent_task_draft": _DRIVE,
     "ac_agent_task_receipts": _DRIVE,
