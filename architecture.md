@@ -1,5 +1,16 @@
 # AutoControl Architecture
 
+dag_local.DagLocalTasks implements closed per-node local submit/get/lookup/pause behind durable claims.
+The source service admits the frozen specification/key under the original owner; dag_admission carries
+a trusted synchronous envelope into TaskAdmission and AgentTaskStore.create. Task/key/submission and
+agent_dag_local_tasks actor/node/attempt records commit atomically. Key retries verify the previous
+binding without backfilling. Runtime scope, pre-dispatch checkpoints and maintenance revalidate actor,
+original owner, cross-owner management authority and live claim/attempt. managed_local_scope overrides
+one copied node transport while preserving source checks; caller/background modes share the bridge.
+Task metadata projects only bounded admission identity. Exact pause can retire an admitted task after
+fencing; it does not grant submission, replay or another task's control. Cross-owner recovery evidence
+visibility and retention of these relationships remain in Progress.md.
+
 Caller-bound DAG execution obtains AgentRuntimeClient.bound() before begin/approval, storing only an
 absolute owner-file path and endpoint/token/generation digest. Fresh metadata checks precede every
 request; managed_runtime_scope routes copied local-node contexts through that same client and checks
@@ -7,8 +18,8 @@ the binding during polling. local_evidence.runtime_evidence_scope binds server-s
 owning runtime without global client discovery, preserving current original-owner context while
 refreshing the actual caller. Admin inspection reads original-owner request keys. Remote host policy
 and credential forwarding stay destination-owned. Metadata replacement stops future calls, retaining
-durable uncertainty; it does not claim cleanup of already accepted input. Cross-owner caller local
-dispatch remains in Progress.md, alongside retention. Ordinary clients keep adaptive discovery.
+durable uncertainty; it does not claim cleanup of already accepted input. Ordinary clients keep
+adaptive discovery. Cross-owner recovery evidence remains in Progress.md, alongside retention.
 
 dag_jobs.BackgroundDags uses the existing WorkQueue in the agent_dag namespace with four service
 workers and a 64-delivery pending ceiling. run_background consumes a registered/approved attempt and

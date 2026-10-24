@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import threading
+from functools import partial
 from typing import Any, Callable, Mapping
 
 from je_auto_control.utils.agent_runtime.client import AgentRuntimeClient
@@ -9,7 +10,9 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.dag.batch_contract import definition_dict
 from je_auto_control.utils.dag.graph import DagDefinition, parse_definition
-from je_auto_control.utils.dag.managed_tasks import run_managed_task, ManagedTaskDispatchError, managed_runtime_scope
+from je_auto_control.utils.dag.managed_tasks import (
+    run_managed_task, ManagedTaskDispatchError, managed_runtime_scope, managed_local_scope,
+)
 from je_auto_control.utils.exception.cancellation import cancellation_scope
 
 
@@ -67,7 +70,7 @@ class _BatchRun:
             return self.control("validate_node", {"node_id": node.id})
         self.control("claim", {"node_id": node.id})
         try:
-            result = run_managed_task(node.host, node.task, host_binding=self.started["hosts"][node.host])
+            result = self._dispatch(node)
             self.control("record", {"node_id": node.id,
                                     "receipt": {"outcome": "completed", "task_id": result["task_id"]}})
             return result
@@ -79,3 +82,14 @@ class _BatchRun:
                 except (AgentTaskError, OSError, RuntimeError, ValueError, TypeError):
                     pass  # the durable pre-delivery claim remains an unsettled, non-replayable witness
             raise
+
+    def _dispatch(self, node: Any) -> dict:
+        if node.host == "local":
+            with managed_local_scope(partial(self._local_transport, node.id)):
+                return run_managed_task(node.host, node.task, host_binding=self.started["hosts"][node.host])
+        return run_managed_task(node.host, node.task, host_binding=self.started["hosts"][node.host])
+
+    def _local_transport(self, node_id: str, operation: str, body: dict, timeout: float) -> dict:
+        return self.client.call("dag", {"operation": "local_task", "request": {
+            "batch_id": self.started["batch_id"], "attempt": self.started["attempt"],
+            "node_id": node_id, "operation": operation, "body": body}}, timeout=timeout)

@@ -15,6 +15,7 @@ class TaskAdmission:
 
     spec: dict
     submitted_digest: str
+    dag: dict | None = None
 
 
 def submitted_digest(value: AgentTaskSpec | Mapping[str, Any]) -> str:
@@ -26,6 +27,14 @@ def submitted_digest(value: AgentTaskSpec | Mapping[str, Any]) -> str:
 def submission_metadata(store: Any, identifier: str) -> dict:
     """Expose historical request identity only; absence never invents a witness for a legacy task."""
     with store.connection() as connection:
-        row = connection.execute("SELECT spec_digest FROM agent_task_submissions WHERE task_id=?",
+        row = connection.execute("SELECT s.spec_digest,a.batch_id,a.node_id,a.actor FROM agent_task_submissions s "
+                                 "LEFT JOIN agent_dag_local_tasks a ON a.task_id=s.task_id WHERE s.task_id=?",
                                  (identifier,)).fetchone()
-    return {"submission_contract": 1, "submitted_spec_digest": row[0]} if row is not None else {}
+    if row is None:
+        return {}
+    result: dict[str, Any] = {"submission_contract": 1, "submitted_spec_digest": row[0]}
+    if row["batch_id"] is not None:
+        actor = json.loads(row["actor"])
+        result["local_dag_admission"] = {"contract": 1, "batch_id": row["batch_id"], "node_id": row["node_id"],
+                                         "actor": actor.get("user_id", "local")}
+    return result

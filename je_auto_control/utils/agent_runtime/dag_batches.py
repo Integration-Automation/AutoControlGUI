@@ -17,6 +17,7 @@ from je_auto_control.utils.agent_runtime.dag_batch_recording import (
 from je_auto_control.utils.agent_runtime.dag_continuation import DagContinuation, FIELDS as CONTINUATION_FIELDS
 from je_auto_control.utils.agent_runtime.dag_jobs import delivery_status
 from je_auto_control.utils.agent_runtime.local_evidence import runtime_evidence_scope
+from je_auto_control.utils.agent_runtime.dag_local import DagLocalTasks
 from je_auto_control.utils.dag.batch_contract import batch_definition, bind_definition
 from je_auto_control.utils.dag.inspection import inspect_definition
 from je_auto_control.utils.dag.managed_tasks import task_host_binding
@@ -24,11 +25,12 @@ from je_auto_control.utils.rbac.authorization import AuthorizationContext, curre
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 
 OPERATIONS = ("register", "get", "list", "begin", "claim", "record", "finish", "inspect",
-              "run_background") + tuple(CONTINUATION_FIELDS)
+              "run_background", "local_task") + tuple(CONTINUATION_FIELDS)
 _FIELDS = {"register": {"definition"}, "get": {"batch_id"}, "list": set(),
            "begin": {"batch_id", "definition", "max_parallel"}, "claim": {"batch_id", "attempt", "node_id"},
            "record": {"batch_id", "attempt", "node_id", "receipt"}, "finish": {"batch_id", "attempt"},
-           "inspect": {"batch_id"}, "run_background": {"batch_id", "definition", "max_parallel"}}
+           "inspect": {"batch_id"}, "run_background": {"batch_id", "definition", "max_parallel"},
+           "local_task": {"batch_id", "attempt", "node_id", "operation", "body"}}
 _FIELDS.update(CONTINUATION_FIELDS)
 
 
@@ -75,6 +77,8 @@ class DagBatches:
             with self.runtime._lock("dag:" + identifier):
                 batch = self._row(identifier)
                 with runtime_evidence_scope(self.runtime):
+                    if operation == "local_task":
+                        return DagLocalTasks(self.runtime, batch, request, DeferredAuthorization.capture()).control()
                     return self._existing(operation, batch, request)
 
     def _existing(self, operation: str, batch: dict, request: dict) -> dict:

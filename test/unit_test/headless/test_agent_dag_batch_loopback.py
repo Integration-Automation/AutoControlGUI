@@ -74,6 +74,7 @@ def test_lost_submit_reply_remains_claimed_or_unknown_and_cannot_replay(service,
         def lost_reply(operation, body, timeout):
             result = call(operation, body, timeout)
             if operation == "submit":
+                assert target.performed.wait(5)
                 raise AgentTaskError("fixture lost reply after durable acceptance")
             return result
 

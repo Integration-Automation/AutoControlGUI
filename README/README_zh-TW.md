@@ -18,6 +18,10 @@ CLI／Builder 及 DAG Actions 的批次註冊／讀取、選填批次 ID 共用�
 caller 協調的受管批次固定來源服務路徑、端點、憑證指紋及世代，本機節點共用同一 client；連線檔
 身分變更就停止後續呼叫並要求明確審閱。服務端批次證據直接讀取所屬 runtime，綁定不快取 bearer
 憑證。一般非批次 client 保留動態連線行為；受管批次須有含世代的連線資料。
+本機批次節點在耐久 claim 後使用來源服務的封閉 `local_task` transport，以原 owner 接收精確規格／
+key，並在交易內記錄真正 caller。輸入前更新雙方權限及 attempt；管理員失去跨 owner 管理權也會
+阻止執行。沒有可信接收紀錄的舊請求不補造見證。任務 metadata 提供有限 `local_dag_admission`
+稽核資料，已接受輸入仍依既有清理契約處理。
 詳見[續接協定](../docs/source/Zh/doc/ai_agents/agent_dag_batches_doc.rst)。
 
 觸發器可明確使用 `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`，再以

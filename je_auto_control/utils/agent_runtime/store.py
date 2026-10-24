@@ -13,6 +13,7 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import STATES, TERMINAL, detached
 from je_auto_control.utils.agent_runtime.trigger_history import bind_event
 from je_auto_control.utils.agent_runtime.submission import TaskAdmission
+from je_auto_control.utils.agent_runtime.dag_admission import bind_admission
 from je_auto_control.utils.sqlite_support import require_sqlite3
 
 _SCHEMA = """
@@ -74,6 +75,11 @@ CREATE TABLE IF NOT EXISTS agent_dag_approvals (
 CREATE TABLE IF NOT EXISTS agent_dag_adoptions (
  batch_id TEXT NOT NULL, node_id TEXT NOT NULL, task_id TEXT NOT NULL,
  source_task TEXT NOT NULL, approval_id TEXT NOT NULL, PRIMARY KEY(batch_id,node_id),
+ FOREIGN KEY(batch_id,node_id) REFERENCES agent_dag_nodes(batch_id,node_id) ON DELETE CASCADE);
+CREATE TABLE IF NOT EXISTS agent_dag_local_tasks (
+ task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE,
+ batch_id TEXT NOT NULL, node_id TEXT NOT NULL, attempt TEXT NOT NULL, actor TEXT NOT NULL,
+ spec_digest TEXT NOT NULL, created REAL NOT NULL,
  FOREIGN KEY(batch_id,node_id) REFERENCES agent_dag_nodes(batch_id,node_id) ON DELETE CASCADE);
 CREATE TABLE IF NOT EXISTS agent_trigger_authorizations (
  source_trigger TEXT PRIMARY KEY, trigger_id TEXT NOT NULL UNIQUE, lineage TEXT NOT NULL,
@@ -208,6 +214,7 @@ class AgentTaskStore:
             if idempotency_key is not None:
                 existing = _request_key(connection, owner, idempotency_key, spec, identifier)
                 if existing is not None:
+                    bind_admission(connection, existing, admission, create=False)
                     _bind_trigger_event(connection, trigger_event, existing, now)
                     return existing
             connection.execute("INSERT INTO agent_tasks(id,spec,owner,state,created,updated) VALUES (?,?,?,?,?,?)",
@@ -215,6 +222,7 @@ class AgentTaskStore:
             if admission is not None:
                 connection.execute("INSERT INTO agent_task_submissions VALUES (?,?)",
                                    (identifier, admission.submitted_digest))
+                bind_admission(connection, identifier, admission, create=True)
             _bind_trigger_event(connection, trigger_event, identifier, now)
             if recovery is not None:
                 connection.execute("INSERT INTO agent_task_recoveries VALUES (?,?,?,?,?)",

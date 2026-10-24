@@ -1,11 +1,18 @@
 # Changelog
 
+Route claimed local DAG nodes through the source runtime's closed local_task protocol. Preserve
+original task ownership while atomically recording the actual admitting caller, node, attempt and
+submission witness. Revalidate both principals, cross-owner authority and live claims before input
+and during maintenance. Refuse altered specs/keys, unrelated IDs and backfilling old requests. Expose
+bounded local_dag_admission audit metadata and allow exact owned retirement after a scheduling fence.
+Caller and background execution share admission. Cross-owner recovery-child evidence remains separate.
+
 Pin caller-coordinated registered DAGs to one local service owner-file path, endpoint, credential
 fingerprint and generation. Reuse that client for local node transport and reject replacement before
 future calls. Bind server-side inspection/completion evidence to its owning runtime and original-owner
 request-key namespace, independently refreshing the actual caller. Ordinary clients retain adaptive
 discovery; bound runs require generation-bearing metadata. Never cache bearer credentials or rebind an
-active attempt automatically. Caller cross-owner local-task dispatch remains a separate follow-up.
+active attempt automatically.
 
 Add service-owned run_background for initial and explicitly approved managed DAG attempts. Persist
 deliveries through WorkQueue, bind local destinations to the owning runtime and refresh both original

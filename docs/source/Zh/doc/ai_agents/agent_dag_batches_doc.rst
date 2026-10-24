@@ -133,13 +133,35 @@ get／pause 經執行 context 共用來源 client，全域預設探索變更不�
 
 偵測替換不代表先前已接受工作完成清理，原 claim 持續保留，亦不把 pause／控制請求轉送替代服務。
 須透過另行確認的原服務連線檢視，並使用明確批次／任務審閱；還原檔案不重設 begin、未知 claim
-或已消耗批准。caller 跨 owner 本機派送仍須補與服務背景模式相同的接收／清理保證，列於下方待辦。
+或已消耗批准。
+
+原 owner 本機接收
+--------------------------------
+
+caller 與服務協調都在耐久 node claim 後使用 ``local_task``，請求只含
+``{batch_id, attempt, node_id, operation, body}``，一般使用者仍由 run_dag 驅動生命週期。
+operation 限 submit／get／lookup／pause，節點須為 local；submit／get／lookup 要有有效 attempt
+與未決 claimed 節點。submit 只收 ``{spec, idempotency_key}``，須與已綁定完整契約相符，以原
+owner 建立任務／key，另記真正 caller。自填 actor、變更規格／key、其他節點或任意方法均在輸入前拒絕。
+
+任務、request key、submission witness 及可信本機接收在同一交易提交，固定 task／batch／node／
+attempt／actor／提交摘要。相同重試回傳同一任務；舊 key 沒有相同可信綁定就拒絕，不補造見證，
+options 或自填快照不構成證明。提交失敗不啟動 worker。get／pause 只接受已接收的 task ID；lookup
+限綁定 key 與選填精確規格。attempt 被封鎖或原 owner 失去輸入權限後，仍可精確清理已接收任務，
+不授權新派送或其他任務控制，caller 權限仍須通過。遠端沿用目的端身份，不接收本機 actor。
+
+runtime 在 scope 進入、checkpoint、實際派送前、巢狀命令 guard 與維護重新核對雙方權限；actor
+仍須能管理原 owner 的工作，管理員降為 operator 後不能繼續其他人的任務。attempt 失效或 claim
+未知時阻止後續輸入，排隊任務也在啟動前重驗。原生清理失敗沿用隔離，接收／pause 回覆不取代
+輸入釋放證明。任務 metadata 新增有限 local_dag_admission（contract／batch／node／actor UID），
+不揭露 attempt capability 或私有使用者資料庫路徑，既有任務 JSON 檢視可直接顯示。
 
 尚缺步驟
 --------------------------------
 
-caller 跨 owner 本機派送仍列於 Progress.md；一般 submit 使用實際 caller 的 request-key namespace，
-服務背景模式已分開真正 actor 與原 owner。
+跨 owner 復原子任務的證據可見性仍列於 Progress.md；一般 TaskRecovery 子任務屬於真正建立者，
+整圖查證仍使用原 owner。須使用原 owner 可讀的後繼任務或明確審閱的證據移交，不會為採認自動
+放寬其他任務的可見性。
 
 批次保留／清理仍列於 Progress.md。舊圖不能事後自動當作已綁定批次；採認只證明
 歷史邏輯階段，不重建登入／視窗或宣稱目前應用狀態。假目標、自有本機／雙主機 HTTP 與 offscreen

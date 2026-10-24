@@ -9,7 +9,7 @@
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-接續優先補齊第 6 組 caller 跨 owner 本機派送，再完成批次保留／清理，並核對第 4 組真實裝置控制／擷取來源、
+接續優先完成第 6 組批次保留／清理與跨 owner 復原證據接合，並核對第 4 組真實裝置控制／擷取來源、
 其餘實作及第 8 組交付核對。
 
 1. **P4：瀏覽器與正式環境接合**
@@ -88,6 +88,12 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      指標步驟提供可信新來源與語義轉換，不能把舊索引／座標或歷史欄位值直接移入新 session。
    - 補實際應用的語義錄製、參數化、候選修復、驗證 trial、人工接受／版本發布及執行中固定版本
      的完整驗收；確認失敗／未知 trial 與沒有獨立證據的舊紀錄不能成為發布依據。
+   - 接合管理員跨 owner 建立復原子任務後的 DAG 證據可見性：一般 TaskRecovery 子任務使用實際
+     建立者的 owner；整圖續接仍以原 owner 查證。須由原 owner 建立可讀後繼任務，或實作明確且
+     可撤銷的成果證據授權，不能為採認後繼任務而放寬其他使用者的任務讀取／輸入權限。
+   - 補所有動作已確認、但完成尚未發布就失去回覆／被 fence 的顯式唯讀完成驗證。現有
+     TaskRecovery 對空剩餘流程回報 no_remaining_actions，舊 attempt 又不能恢復輸入；須新鮮
+     核對獨立完成條件及輸入釋放，不可重做最後動作、繼承舊畫面結果或解除未知隔離來完成認證。
    - 針對新增平台／裝置及恢復路徑重驗服務重啟、WorkQueue 去重、事件／排程重新授權、
      journal／history／產物關聯及 30 天保留／清理，不擴大既有權限。
 
@@ -98,12 +104,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      目錄／目標設定、部署／回復方法。受管任務 DAG 不會自動部署遠端服務。
    - 設計跨主機成果移交：明列讀寫權限、來源身分、摘要與目的地發布，不能以本機路徑當遠端
      檔案證據，不能轉送本機 principal／使用者資料庫路徑／來源 witness。
-   - 補 caller 模式跨 owner 代派的本機任務橋接：由來源 runtime 以原 owner 接收已 claim 的節點，
-     保存精確目的端任務身分，持續更新原 owner 與實際 caller 權限。現有一般 submit 使用實際 caller
-     的 request-key namespace，須避免管理員代派後與原批次 owner 的完成查詢不一致；服務背景模式
-     已分開這兩個身分，caller 模式仍需同等派送／讀取／清理保證及撤權回歸。
    - 補 `utils/agent_runtime/dag_batches.py`／`dag_jobs.py` 的批次 30 天保留／清理，以及 WorkQueue
      派送紀錄回收。逐任務清理須保護仍被批次採認／等待審閱的任務證據，避免破壞整圖來源關聯。
+     回收須一併處理 agent_dag_local_tasks 的可信接收／actor 關聯，不得刪除仍有輸入或未決任務的 gate。
      清理前須保留未知派送、原批次及節點收據的關聯，不能因工作視圖關閉或個別任務到期而遺失。
    - 實際多機驗證斷線／晚到回覆、主機重啟、憑證撤銷／變更、協調端中斷及同資源序列／
      獨立資源並行；未知清理不得讓下游成功或搶走遠端控制權。

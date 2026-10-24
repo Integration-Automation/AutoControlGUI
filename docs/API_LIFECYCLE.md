@@ -7,7 +7,18 @@ inspection/completion evidence reads the owning runtime directly under current o
 while independently refreshing the actual caller. Ordinary clients remain adaptive and legacy metadata
 without a generation is still usable there; bound DAG runs require valid generation metadata. No
 credential cache or automatic rebind/replay is introduced. Existing Python/AC/MCP/Builder/GUI Run
-surfaces inherit this behavior. Caller cross-owner local-task dispatch parity remains in Progress.md.
+surfaces inherit this behavior.
+
+local_task extends the existing DAG protocol with batch_id/attempt/node_id/operation/body. It accepts
+only local submit/get/lookup/pause; submit/get/lookup require the exact active claimed node. Submit
+validates the full bound spec/key, admits under the original owner and atomically stores actual actor,
+source node/attempt and submission digest with the task/key/witness. Existing keys without matching
+trusted admission are never adopted or backfilled. Get/pause accept only the exact admitted task ID;
+pause permits precise retirement after the batch is fenced or original owner loses input permission.
+Caller and service modes use this same bridge. Per-scope, pre-dispatch and maintenance checks refresh
+original owner, actual actor, cross-owner management authority and live claim/attempt. Metadata adds
+local_dag_admission contract/batch/node/actor UID, withholding attempt capabilities and user-store paths.
+Ordinary submit stays caller-owned. Cross-owner recovery-child evidence visibility remains in Progress.md.
 
 manage_agent_dag adds register/get/list/begin/claim/record/finish/inspect on POST /agent/dag and
 AC_agent_dag / MCP ac_agent_dag / CLI agent-task dag / Builder. Register accepts an all-managed graph

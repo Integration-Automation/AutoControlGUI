@@ -43,6 +43,14 @@ def managed_runtime_scope(local_call: Call, check: Callable[[], None]) -> Iterat
 
 
 @contextmanager
+def managed_local_scope(local_call: Call) -> Iterator[None]:
+    """Override one node's local transport while retaining its enclosing live source checks."""
+    runtime = _RUNTIME.get()
+    with managed_runtime_scope(local_call, runtime[1] if runtime is not None else cancellation_checkpoint):
+        yield
+
+
+@contextmanager
 def managed_stop_scope(event: threading.Event) -> Iterator[None]:
     """Allow running managed nodes to request pause when the DAG is stopped."""
     binding = _STOP.set(event)

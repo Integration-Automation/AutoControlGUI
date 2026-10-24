@@ -2,7 +2,9 @@
 
 Caller DAG service binding: owned two-service evidence verifies path capture, endpoint/token/generation
 replacement refusal before transport and local verification on the owning runtime. Admin inspection
-uses original-owner request keys; caller cross-owner local-task dispatch parity remains open. Binding
+uses original-owner request keys. Local-task admission now preserves original ownership and atomically
+binds the actual actor; owned service tests cover revocation, management-role downgrade, exact contract
+refusal, rollback/no backfill and scoped retirement. Cross-owner recovery evidence remains open. Binding
 retains a fingerprint without caching bearer credentials, and legacy ordinary clients stay adaptive.
 
 Durable managed DAG batch identity: experimental; canonical topology/contract binding, host

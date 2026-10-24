@@ -26,6 +26,11 @@ Caller-coordinated bound runs pin the local service path, endpoint, credential f
 All local node calls reuse that client; replaced metadata stops future calls and requires explicit review.
 Server-side batch evidence reads its owning runtime directly. No bearer credential is cached by binding.
 Ordinary non-batch clients retain adaptive discovery; bound batches require generation-bearing metadata.
+Local batch nodes now use the source service's closed `local_task` transport after a durable claim.
+The exact spec/key is admitted as the original owner, with the real caller recorded atomically. Runtime
+checks refresh both identities and the live attempt before input; losing admin authority over another
+owner's work also blocks execution. Existing requests without this trusted admission are never backfilled.
+Task metadata exposes bounded `local_dag_admission` audit data; accepted input retains its cleanup contract.
 See [the continuation protocol](docs/source/Eng/doc/ai_agents/agent_dag_batches_doc.rst).
 
 Triggers can explicitly use `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`,

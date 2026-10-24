@@ -171,14 +171,43 @@ surfaces inherit the same binding; no additional GUI command or credential input
 Replacement detection does not prove retirement of previously accepted work. Its claims remain
 durable, and no pause/control request is redirected to a replacement service. Inspect the original
 service through a separately verified connection and use explicit batch/task review; restoring a file
-does not reset begin, unknown claims or consumed approvals. Caller cross-owner local-task dispatch
-still needs original-owner admission/retirement parity with service background mode, as tracked below.
+does not reset begin, unknown claims or consumed approvals.
+
+Original-owner local admission
+----------------------------------------------------------------------
+
+Both caller and service coordination use ``local_task`` after the node claim is durable. Its request is
+``{batch_id, attempt, node_id, operation, body}``; normal callers use run_dag rather than constructing
+these lifecycle requests. The operation is limited to submit/get/lookup/pause and the node must be
+local. Submit/get/lookup require the live attempt and an unsettled claimed node. Submit accepts only
+``{spec, idempotency_key}``, exactly matching the bound full node contract. It uses the original owner
+for task/key admission, while recording the real caller separately. A caller-authored actor field,
+changed contract/key, foreign node or arbitrary method is rejected before input.
+
+The task, request key, submission witness and trusted local admission commit in the same transaction.
+The admission binds task/batch/node/attempt/actor and the submitted digest. Matching retries return the
+same task. Existing keys without the same trusted binding are refused and never backfilled; options
+or caller-provided snapshots cannot create that evidence. Failure before commit starts no task worker.
+Get/pause accepts only the admitted task ID; lookup accepts its key and optional exact specification.
+Pause permits precise retirement after the attempt is fenced or the original owner loses input
+permission, without granting new submission or another task's control. Caller permission is still
+checked. Remote tasks retain their destination's ordinary authentication and receive no local actor.
+
+The runtime refreshes original-owner and actor authority at scope entry, checkpoints, immediately
+before dispatch, nested command guards and maintenance. The actor must still manage the original
+owner's work: an admin downgraded to operator cannot continue another user's admitted task. A fenced
+attempt or unknown claim blocks further input. Queued work revalidates before activation. Native
+cleanup failures retain existing quarantine; an admission or pause response alone does not prove
+input retirement. Task metadata adds bounded ``local_dag_admission`` with contract/batch/node/actor UID,
+withholding attempt capabilities and private user-store paths. Existing task JSON views display it.
 
 Current limits
 ----------------------------------------------------------------------
 
-Caller cross-owner local-task dispatch remains in Progress.md; ordinary submit uses the actual
-caller's request-key namespace. Service background mode already separates actor and original owner.
+Cross-owner recovery-child evidence remains in Progress.md. Ordinary TaskRecovery creates a child
+owned by its actual creator, while whole-batch evidence reads as the original owner. Use an original-
+owner-readable successor or an explicit reviewed evidence handoff; task visibility is never widened
+automatically to make a successor adoptable.
 
 Batch retention/cleanup remains in Progress.md. Legacy graphs cannot be retroactively treated as bound
 batches. Adoption certifies a historical logical stage; it does not
