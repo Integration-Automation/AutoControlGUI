@@ -9,7 +9,7 @@
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-接續優先完成第 6 組批次保留／清理與跨 owner 復原證據接合，並核對第 4 組真實裝置控制／擷取來源、
+接續優先完成第 5 組跨 owner 復原證據接合，並核對第 4 組真實裝置控制／擷取來源、
 其餘實作及第 8 組交付核對。
 
 1. **P4：瀏覽器與正式環境接合**
@@ -46,6 +46,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 4. **P7：Android／iOS 受管裝置**
    - 重現並定位 `test_agent_android_adapter.py::test_actual_worker_and_sdk_only_invoke_finite_input_after_durable_begin_ack`
      在廣泛回歸中偶發的 `remote operation failed: AgentTaskError`；單獨重跑通過不足以證明已修復。
+     本批 `test_new_input_requires_a_new_observation_instead_of_reusing_the_prepared_prefix` 也在首次
+     tap 前出現同類錯誤；自有 SDK／shell 假裝置的單獨重跑通過，仍須補定位證據與真正修復。
      需保留敏感診斷遮罩、既有期限與未知副作用隔離，補可定位的受保護測試證據，不以放寬期限掩蓋。
    - 為 `utils/agent_runtime/android_adapter.py` 實作並審閱真實 `AndroidControlProvider`／
      `AndroidCommandLease` 來源；須有裝置端執行機制，在真人接回、取消／逾時後阻止舊寫入，
@@ -104,10 +106,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      目錄／目標設定、部署／回復方法。受管任務 DAG 不會自動部署遠端服務。
    - 設計跨主機成果移交：明列讀寫權限、來源身分、摘要與目的地發布，不能以本機路徑當遠端
      檔案證據，不能轉送本機 principal／使用者資料庫路徑／來源 witness。
-   - 補 `utils/agent_runtime/dag_batches.py`／`dag_jobs.py` 的批次 30 天保留／清理，以及 WorkQueue
-     派送紀錄回收。逐任務清理須保護仍被批次採認／等待審閱的任務證據，避免破壞整圖來源關聯。
-     回收須一併處理 agent_dag_local_tasks 的可信接收／actor 關聯，不得刪除仍有輸入或未決任務的 gate。
-     清理前須保留未知派送、原批次及節點收據的關聯，不能因工作視圖關閉或個別任務到期而遺失。
+     須包含遠端任務證據的保留／移交契約；來源端保留未決批次不能自動延長目的端的 30 天保留期，
+     目的端證據到期或失聯須維持不可採認，不能以來源端協調收據取代獨立完成證據。
    - 實際多機驗證斷線／晚到回覆、主機重啟、憑證撤銷／變更、協調端中斷及同資源序列／
      獨立資源並行；未知清理不得讓下游成功或搶走遠端控制權。
 
@@ -138,6 +138,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 的原生雙向 bridge 驗收，以及 #21 的完整 24 小時驗收。只有使用者明確恢復後才可啟動，24 小時
 驗收須用新的 attempt 目錄與固定來源，短測／中斷紀錄不能代替完整結果。
 **範圍限制**：不新增付費依賴及收費功能；保持瀏覽器統一走 `je_web_runner`。
+本輪執行全程背景，不切換前景、不移動使用者滑鼠或注入桌面輸入。Tripo 使用專用持久登入設定檔、
+螢幕外瀏覽器及 DOM 操作；AutoControlGUI 僅作必要唯讀觀測。登入狀態與 DOM 結果須分別驗證。
 
 ## 跨平台與 GUI 全面改版
 

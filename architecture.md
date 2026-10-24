@@ -1,5 +1,13 @@
 # AutoControl Architecture
 
+dag_retention.py shares existing prune_agent_tasks/hourly maintenance: owner-scoped expiry of unused
+registrations and settled successful batches, plus host-only terminal orphan agent_dag delivery cleanup.
+The batch lock and write transaction recheck age/state, phases, related tasks/recovery descendants,
+uncertain actions, live/durable input ownership and coordinator deliveries before cascading metadata.
+retention.py protects every retained batch reference and recovery successor before deleting task
+artifacts. Running/review/approved batches retain their evidence and local actor/admission gates.
+Results add deleted_batches/deleted_dag_deliveries; no remote retention lease is implicitly granted.
+
 dag_local.DagLocalTasks implements closed per-node local submit/get/lookup/pause behind durable claims.
 The source service admits the frozen specification/key under the original owner; dag_admission carries
 a trusted synchronous envelope into TaskAdmission and AgentTaskStore.create. Task/key/submission and
@@ -9,7 +17,7 @@ original owner, cross-owner management authority and live claim/attempt. managed
 one copied node transport while preserving source checks; caller/background modes share the bridge.
 Task metadata projects only bounded admission identity. Exact pause can retire an admitted task after
 fencing; it does not grant submission, replay or another task's control. Cross-owner recovery evidence
-visibility and retention of these relationships remain in Progress.md.
+visibility remains in Progress.md; dag_retention.py protects these relationships until settled expiry.
 
 Caller-bound DAG execution obtains AgentRuntimeClient.bound() before begin/approval, storing only an
 absolute owner-file path and endpoint/token/generation digest. Fresh metadata checks precede every
@@ -19,7 +27,7 @@ owning runtime without global client discovery, preserving current original-owne
 refreshing the actual caller. Admin inspection reads original-owner request keys. Remote host policy
 and credential forwarding stay destination-owned. Metadata replacement stops future calls, retaining
 durable uncertainty; it does not claim cleanup of already accepted input. Ordinary clients keep
-adaptive discovery. Cross-owner recovery evidence remains in Progress.md, alongside retention.
+adaptive discovery. Cross-owner recovery evidence remains in Progress.md.
 
 dag_jobs.BackgroundDags uses the existing WorkQueue in the agent_dag namespace with four service
 workers and a 64-delivery pending ceiling. run_background consumes a registered/approved attempt and
@@ -660,7 +668,8 @@ forward coordinator principal/origin metadata. Existing sibling callers omitting
 historical path. Versioned-name checks and actual two-host evidence live in
 `test_agent_dag_batch_surfaces.py` and `test_agent_dag_batch_loopback.py`; continuation is covered by
 `test_agent_dag_continuation.py`, `test_agent_dag_continuation_guards.py` and
-`test_agent_dag_continuation_gui.py`. Background coordination and retention remain open.
+`test_agent_dag_continuation_gui.py`. Background coordination and retention share the owning service;
+cross-owner recovery evidence and cross-host evidence handoff remain in Progress.md.
 
 ## 7. Design constraints
 
@@ -906,5 +915,5 @@ bounded identity and derive final state from durable phases. Lost replies remain
 Managed host connections capture matching endpoint/credentials once; fingerprints never enter destination
 specs, and remote transport still omits local principal/origin witnesses. New manage_agent_dag and
 AC_agent_dag share API/MCP/REST/CLI/Builder; run_dag gains optional batch_id. DAG GUI registers/reads
-explicitly and guards graph/batch selection before presenting replies. Continuation approval, independent
-background coordination and batch retention are remaining work; old graphs are not silently adopted.
+explicitly and guards graph/batch selection before presenting replies. Explicit whole-graph continuation,
+service coordination and settled-batch retention share these records; old graphs are not silently adopted.

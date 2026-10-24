@@ -48,7 +48,20 @@ state without authority, attempt capabilities or credentials. Local destination 
 runtime and retain original task ownership; the actual submitting actor is also refreshed on dispatch
 and polling. Remote hosts retain their own authority. Shutdown and stop_all fence visible coordinators;
 accepted destination work keeps its separate retirement contract. Restart fails old queued/running
-deliveries without reclaim/replay. Batch retention remains open. See the managed DAG guide.
+deliveries without reclaim/replay. See the managed DAG guide.
+
+Existing prune_agent_tasks(keep_days=30), AC/MCP/REST/CLI/Builder/GUI prune and hourly maintenance now
+also collect expired unused registered batches and settled succeeded batches. Replies retain deleted /
+keep_days and add deleted_batches / deleted_dag_deliveries. Each sweep bounds batch and orphan-delivery
+collection at 1,000; task collection keeps its existing 1,000 bound. Scope remains owner/admin-visible.
+Batch deletion rechecks state/age under the same lock as begin/claim/continuation/admission and one
+database transaction. Nonterminal related tasks, in-flight dispatch, durable input ownership, uncertain
+actions, nonfinal phases and pending/in-progress/fresh deliveries prevent collection. Retained batches
+protect tagged tasks, precise admissions, receipt/adoption sources and their recovery descendants;
+waiting_review/running/approved batches do not expire automatically. Cascades remove only settled
+local batch metadata; task artifacts retain their separate recognition/ownership checks. Only host
+management removes expired terminal orphan agent_dag deliveries; other queue namespaces stay untouched.
+Remote destinations do not receive a retention lease: cross-host evidence handoff remains in Progress.md.
 Task pause/cancel uses an atomic nonterminal stop request and conditional settlement, preserving
 concurrently committed terminal results instead of failing service shutdown or overwriting completion.
 

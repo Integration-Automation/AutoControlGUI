@@ -156,6 +156,24 @@ runtime 在 scope 進入、checkpoint、實際派送前、巢狀命令 guard 與
 輸入釋放證明。任務 metadata 新增有限 local_dag_admission（contract／batch／node／actor UID），
 不揭露 attempt capability 或私有使用者資料庫路徑，既有任務 JSON 檢視可直接顯示。
 
+保留與清理
+--------------------------------
+
+沿用 ``prune_agent_tasks(keep_days=30)`` 與服務每小時維護，API／AC／MCP／REST／CLI／Builder／GUI
+共用政策。回覆保留 deleted／keep_days，新增 deleted_batches／deleted_dag_deliveries；每次最多
+考慮 1,000 個過期 registered／succeeded 批次、回收 1,000 筆過期且已結束的孤立 DAG 派送，
+逐任務維持原本 1,000 筆上限。只回收 owner／admin 可管理的批次；沒有原批次的派送限主機管理者清理。
+
+未使用註冊須所有節點 pending 且沒有關聯接收任務；成功批次須所有節點 confirmed、關聯任務及復原
+後繼任務已終止，沒有執行中的派送、記憶體／耐久輸入 owner 或 prepared／dispatched／uncertain 動作。
+尚未結束的協調派送及未到保留期限的派送均阻止回收。與 begin／claim／續接／接收共用批次鎖，
+並在同一寫入交易內重驗年齡與狀態。只串聯刪除已安全結束的本機批次資料及派送；任務產物仍依
+既有所有權／已知檔名規則清理，不影響其他 WorkQueue 或使用者成果。
+
+running／waiting_review／approved 批次不自動到期；所有仍保留的本機批次持續保護標記任務、
+可信接收、收據／採認來源及復原後繼，個別任務超過保留天數也不移除 actor gate 或待審閱證據。
+這不會延長遠端目的端保留期；遠端證據到期／缺失仍不可採認，須另有明確跨主機保留／移交契約。
+
 尚缺步驟
 --------------------------------
 
@@ -163,6 +181,6 @@ runtime 在 scope 進入、checkpoint、實際派送前、巢狀命令 guard 與
 整圖查證仍使用原 owner。須使用原 owner 可讀的後繼任務或明確審閱的證據移交，不會為採認自動
 放寬其他任務的可見性。
 
-批次保留／清理仍列於 Progress.md。舊圖不能事後自動當作已綁定批次；採認只證明
+舊圖不能事後自動當作已綁定批次；採認只證明
 歷史邏輯階段，不重建登入／視窗或宣稱目前應用狀態。假目標、自有本機／雙主機 HTTP 與 offscreen
 證據不代表正式部署、實際模型或原生驗收。瀏覽器維持 je_web_runner。

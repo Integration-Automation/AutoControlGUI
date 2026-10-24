@@ -6,6 +6,7 @@ from typing import Any
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.policy import owns_task
+from je_auto_control.utils.agent_runtime.dag_retention import prune_batches, protects_task
 from je_auto_control.utils.rbac.authorization import current_authorization
 
 
@@ -14,12 +15,14 @@ def prune_tasks(runtime: Any, keep_days: int = 30) -> dict[str, Any]:
     if isinstance(keep_days, bool) or not isinstance(keep_days, int) or not 1 <= keep_days <= 3650:
         raise AgentTaskError("retention must be between one and 3650 days")
     identity = current_authorization()
+    cutoff = time.time() - keep_days * 86400
+    batches = prune_batches(runtime, cutoff, identity)
     if identity is None or identity.role == "admin":
         _orphan_deliveries(runtime.store)
     with runtime.store.connection() as connection:
         identifiers = [row[0] for row in connection.execute(
             "SELECT id FROM agent_tasks WHERE state IN ('succeeded','failed','cancelled','timed_out') "
-            "AND updated<? ORDER BY updated LIMIT 1000", (time.time() - keep_days * 86400,))]
+            "AND updated<? ORDER BY updated LIMIT 1000", (cutoff,))]
     deleted = []
     for task_id in identifiers:
         with runtime._lock(task_id):
@@ -35,11 +38,12 @@ def prune_tasks(runtime: Any, keep_days: int = 30) -> dict[str, Any]:
             runtime._observations.pop(task_id, None)
             runtime._observation_times.pop(task_id, None)
             deleted.append(task_id)
-    return {"deleted": deleted, "keep_days": keep_days}
+    return {"deleted": deleted, "keep_days": keep_days, **batches}
 
 
 def _preserve_task(runtime: Any, task_id: str) -> bool:
-    if task_id in runtime._leases:
+    # pylint: disable-next=protected-access  # reason: never prune live input ownership or a still-unwinding dispatch
+    if task_id in runtime._leases or task_id in runtime._executing or protects_task(runtime.store, task_id):
         return True
     with runtime.store.connection() as connection:
         return connection.execute("SELECT 1 FROM agent_task_recoveries r JOIN agent_tasks t ON t.id=r.task_id "

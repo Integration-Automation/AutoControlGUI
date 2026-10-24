@@ -14,7 +14,10 @@ CLI／Builder 及 DAG Actions 的批次注册／读取、选填批次 ID 共享�
 `manage_agent_dag("run_background", {"batch_id": id, "definition": graph, "max_parallel": 4})`；
 明确批准的续接另带 `approval_id`。DAG Actions 提供两个后台动作；关闭视图不停止已接受的服务工作，
 `get.background` 提供有限队列状态。重启使旧 attempt 失效并要求审阅，不重放排队或未知派送。
-原 owner 与提交者的权限持续重新验证，本地任务绑定所属 runtime。批次保留／清理仍列于 Progress.md。
+原 owner 与提交者的权限持续重新验证，本地任务绑定所属 runtime。
+既有 `prune_agent_tasks()` 与每小时维护会回收过期且未使用的注册及已安全结束的成功批次，默认 30 天。
+未决批次持续保护任务／恢复证据与接收 gate；结果新增 `deleted_batches`、`deleted_dag_deliveries`。
+其他队列与用户成果不受影响，远程证据保留仍须明确移交契约。
 caller 协调的受管批次固定来源服务路径、端点、凭证指纹及世代，本地节点共用同一 client；连接文件
 身份变更就停止后续调用并要求明确审阅。服务端批次证据直接读取所属 runtime，绑定不缓存 bearer
 凭证。普通非批次 client 保留动态连接行为；受管批次须有含世代的连接数据。

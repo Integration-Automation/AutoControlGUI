@@ -15,8 +15,10 @@ initial execution and explicit continuation foundation. Whole-graph review, one-
 approval, completed original/recovery-successor adoption, scope-narrowed pending dispatch, dependency
 revalidation and fencing have loopback/offscreen tests. Unknown claims remain blocked. Service-owned
 background batches have owned HTTP/two-host, actor/owner revocation, closed-view and actual process-exit
-restart evidence. Queued/running old deliveries require explicit review after restart. Batch retention
-and actual multi-host deployment/native acceptance remain open. Legacy node inspection
+restart evidence. Queued/running old deliveries require explicit review after restart. Owner-scoped
+settled-batch retention, active/review evidence and recovery-descendant protection, input/uncertainty
+gates and queue-specific expiry have fake-target/owned HTTP and deterministic begin-vs-prune evidence.
+Actual multi-host deployment/native acceptance and remote evidence handoff remain open. Legacy node inspection
 does not authorize continuation. Fencing affects new coordinator dispatch, not accepted task cleanup.
 
 Trigger authority renewal: reviewed future-event replacement with original/live/current scope,

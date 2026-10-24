@@ -1,5 +1,11 @@
 # Changelog
 
+Extend existing task pruning and hourly maintenance with owner-scoped DAG retention. Expire unused
+registrations and independently settled successful batches after the selected retention period;
+preserve active/review/approved batches, referenced tasks/recovery descendants, uncertain actions,
+held input and unretired/fresh deliveries. Cascade only settled local batch metadata and terminal
+agent_dag deliveries. Results add deleted_batches and deleted_dag_deliveries; existing fields remain.
+
 Route claimed local DAG nodes through the source runtime's closed local_task protocol. Preserve
 original task ownership while atomically recording the actual admitting caller, node, attempt and
 submission witness. Revalidate both principals, cross-owner authority and live claims before input

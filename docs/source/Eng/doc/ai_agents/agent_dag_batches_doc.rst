@@ -201,6 +201,30 @@ cleanup failures retain existing quarantine; an admission or pause response alon
 input retirement. Task metadata adds bounded ``local_dag_admission`` with contract/batch/node/actor UID,
 withholding attempt capabilities and private user-store paths. Existing task JSON views display it.
 
+Retention and cleanup
+----------------------------------------------------------------------
+
+Use the existing ``prune_agent_tasks(keep_days=30)`` or service hourly maintenance. Its existing
+API/AC/MCP/REST/CLI/Builder/GUI surfaces share the policy; no separate batch-delete control is needed.
+Replies keep ``deleted``/``keep_days`` and add ``deleted_batches``/``deleted_dag_deliveries``.
+Each sweep considers at most 1,000 expired registered/succeeded batches and collects at most 1,000
+expired terminal orphan DAG deliveries, alongside the existing 1,000-task bound. Visibility stays
+owner/admin-scoped; only host management removes orphan deliveries without an owning batch.
+
+An unused registration must have pending nodes and no related accepted task. A succeeded batch must
+have confirmed nodes, only terminal related tasks and recovery descendants, no in-flight dispatch or
+live/durable input owner, and no prepared/dispatched/uncertain action. Pending/in-progress coordinator
+deliveries and fresh delivery records prevent collection. Age and state are checked again under the
+same batch lock as begin/claim/continuation/admission and within one write transaction. Cascades remove
+only settled local batch records and their retired DAG deliveries; ordinary task/artifact cleanup
+retains its ownership and recognized-file rules. Other WorkQueue namespaces and user outputs remain.
+
+Running, waiting-review and approved batches do not expire automatically. Every retained local batch
+protects tagged tasks, admission bindings, receipt/adoption sources and recovery successors, keeping
+actor/input gates and review evidence intact even when an individual task exceeds its retention age.
+This does not extend retention at a remote destination. A missing/expired remote task stays unverified;
+cross-host evidence retention and transfer require an explicit handoff contract.
+
 Current limits
 ----------------------------------------------------------------------
 
@@ -209,8 +233,7 @@ owned by its actual creator, while whole-batch evidence reads as the original ow
 owner-readable successor or an explicit reviewed evidence handoff; task visibility is never widened
 automatically to make a successor adoptable.
 
-Batch retention/cleanup remains in Progress.md. Legacy graphs cannot be retroactively treated as bound
-batches. Adoption certifies a historical logical stage; it does not
+Legacy graphs cannot be retroactively treated as bound batches. Adoption certifies a historical logical stage; it does not
 restore login/window state or assert current application state. Owned fake-target/local/two-host HTTP
 and offscreen evidence do not establish real deployment, installed-model or native acceptance.
 Browser automation remains on je_web_runner.
