@@ -12,6 +12,10 @@ Internal Android sessions now inspect an exact endpoint, validate physical seria
 focus and pin one boot atomically. Finite input proposals recheck identity and focus on the selected
 command connection, with literal bounded text and fixed results. Proposals grant no input authority;
 input-window, occlusion, lock/presence and owned-worker integration remain required.
+Android checked proposals now bind current native input-window/queue and keyguard evidence. Pointer
+checks cover entire half-open touch-region paths and foreign interception/overlays; hashes are rechecked
+on the command connection. Old ANR/history cannot certify current state. Human presence, global-monitor
+review and owned-worker authorization remain separate, and managed device execution is still unavailable.
 
 `lookup_agent_task("key", reviewed_spec)` optionally compares the destination-normalized specification
 with the immutable digest stored for the original owner's request. The response advertises

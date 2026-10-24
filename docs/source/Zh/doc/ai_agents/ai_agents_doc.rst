@@ -463,3 +463,24 @@ window／activity 焦點。尾端標記保留 shell 命令替換原本會吃掉�
 證據。自有 worker／副作用防護、受限 hierarchy 觀察、獨立完成條件、主機 profile 與共用
 使用介面仍列於 ``Progress.md``，原生／真機驗收維持暫緩。已識別的焦點欄位來源為英文頁
 列出的固定 AOSP Android 14 原始碼。
+
+Android 原生輸入與安全證據
+----------------------------------------------------------------------
+
+內部 ``inspect_input``／``propose_checked`` 在固定裝置／app 的命令連線內讀取目前 dispatcher
+及 keyguard，共用原始時限。只接受預設顯示器、已識別的 identity 顯示變換、唯一 app 視窗／
+原生通道，以及清空的 pending／inbound／outbound／wait 佇列。Keyguard delegate 與 monitor
+皆須顯示正確使用者、未鎖定、互動中且已完成開機。目前狀態與舊 ANR 分開；歷史 recent event
+與動態 Looper 時鐘不納入穩定安全摘要。
+
+``android_geometry`` 以精確有理數區間與原生左上封閉／右下開放邊界核對完整 tap／swipe 路徑，
+包含中間缺口及單一缺漏點。依前後順序檢查視窗的可見遮擋、觸控攔截、outside-touch listener
+及背景 spy，不保留外部視窗名稱。透明視窗仍可能攔截；不相關的包圍盒重疊不會誤擋斜向路徑。
+未知顯示變換、縮放、格式或不明確目標拒絕，不以區域視窗座標冒充全域觸控座標。
+
+檢查後命令提案會在輸入前、同一連線內重新讀取已驗證的 routing／通道／佇列與 keyguard
+區塊，比對摘要；鎖定、通道、幾何或佇列改變即拒絕。既有裝置／boot／焦點檢查及固定結果
+協定保留。全域監看器須另有可信審閱，不能視為默許。證據與提案仍是
+``input_authorized=false``，真人活動／已按下輸入、自有 worker／journal、觀察定位與獨立完成
+驗證仍待接合。固定 AOSP 原始碼來源見英文頁；模擬證據不代表受管 Android 已可用，真機驗收
+維持暫緩。

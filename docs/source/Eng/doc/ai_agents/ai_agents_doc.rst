@@ -533,3 +533,36 @@ The recognized focus fields are based on the fixed AOSP Android 14 implementatio
 <https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-14.0.0_r27/services/core/java/com/android/server/wm/DisplayContent.java>`_
 and `WindowManagerService.dumpWindowsNoHeaderLocked
 <https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-14.0.0_r27/services/core/java/com/android/server/wm/WindowManagerService.java>`_.
+
+Android native input/security evidence
+----------------------------------------------------------------------
+
+Internal ``inspect_input`` and ``propose_checked`` read current dispatcher and keyguard state in a
+pinned device/app command connection, sharing the original deadline. The parser requires one default
+display with a known identity display transform, a unique native app window/channel and quiescent
+pending/inbound/outbound/wait queues. Both keyguard delegate and monitor must show the correct user,
+unlocked, interactive and boot-complete state. Current state is separated from old ANR data. Historical
+recent events and dynamic Looper clocks are excluded from stable security fingerprints.
+
+``android_geometry`` uses exact rational intervals and native half-open rectangle edges to verify a
+whole tap/swipe path, including internal gaps and isolated uncovered points. Input-window records are
+front-to-back; visible occlusion, touch interception, outside-touch listeners and background spies are
+checked without retaining foreign display names. Transparent windows can still intercept; an irrelevant
+bounding-box overlap does not falsely block a diagonal path. Unsupported display transforms, scales,
+formats or ambiguous targets fail closed. Window transforms are decoded without confusing local-window
+coordinates with native global touch regions.
+
+Checked command proposals hash the validated current routing/channel/queue block and keyguard block.
+They reread both on the same command connection before input; a changed lock, channel, geometry or queue
+refuses execution. The original device/boot/focus guards and fixed-result protocol remain. Global
+monitors are explicit metadata requiring separate trusted review, not implicit approval. Evidence and
+proposals retain ``input_authorized=false``. Human activity/held-input gates, owned remote-worker/journal
+integration, observation grounding and independent completion remain open in ``Progress.md``.
+
+The pinned formats come from AOSP Android 14
+`InputDispatcher <https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-14.0.0_r27/services/inputflinger/dispatcher/InputDispatcher.cpp>`_,
+`WindowInfo <https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-14.0.0_r27/libs/gui/include/gui/WindowInfo.h>`_,
+`Connection <https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-14.0.0_r27/services/inputflinger/dispatcher/Connection.cpp>`_,
+`InputTransport <https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-14.0.0_r27/libs/input/InputTransport.cpp>`_,
+and the framework ``KeyguardServiceDelegate``/``KeyguardStateMonitor`` implementations. Native/device
+acceptance remains paused; simulated evidence does not advertise a managed Android target.

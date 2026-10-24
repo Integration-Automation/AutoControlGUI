@@ -6,11 +6,15 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from je_auto_control.utils.agent_runtime.android_scope import AndroidSnapshot
+from je_auto_control.utils.agent_runtime.android_input_evidence import AndroidInputEvidence
 from je_auto_control.utils.agent_runtime.android_transport import _shell_service
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 
 ANDROID_INPUT_TOOLS = frozenset({"AC_android_tap", "AC_android_swipe", "AC_android_text", "AC_android_key"})
 ACTION_MARKER = b"__JE_ANDROID_ACTION_V1__\n"
+INPUT_MARKER = b"__JE_ANDROID_INPUT_V1__\n"
+POLICY_MARKER = b"__JE_ANDROID_POLICY_V1__\n"
+SAFETY_END = b"__JE_ANDROID_SAFETY_END_V1__\n"
 _KEYS = frozenset({"BACK", "ENTER", "TAB", "DEL", "DPAD_UP", "DPAD_DOWN", "DPAD_LEFT", "DPAD_RIGHT",
                    "MOVE_HOME", "MOVE_END"})
 
@@ -22,6 +26,7 @@ class AndroidActionProposal:
     transport_id: int
     snapshot: AndroidSnapshot
     command: str = field(repr=False)
+    input_evidence: AndroidInputEvidence | None = field(default=None, repr=False)
     input_authorized: bool = field(default=False, init=False)
 
 
@@ -90,7 +95,54 @@ def _guard(snapshot: AndroidSnapshot) -> str:
     return "; ".join(checks)
 
 
-def compile_android_action(snapshot: AndroidSnapshot, name: str, arguments: dict[str, Any]) -> str:
+def _input_digest_command() -> str:
+    emit = '/system/bin/printf \'%s\\n\' "$je_android_current"'
+    before_recent = emit + " | /system/bin/sed -n '/^Input Dispatcher State:$/,/^  RecentQueue:/p'"
+    queues = emit + " | /system/bin/sed -n '/^  PendingEvent:/,/^  AppSwitch:/p'"
+    return ("{ " + before_recent + " | /system/bin/sed '$d'; " + queues
+            + "; } | /system/bin/sha256sum | /system/bin/cut -d' ' -f1")
+
+
+def _safety_guard(evidence: AndroidInputEvidence) -> str:
+    policy = ('/system/bin/printf \'%s\\n\' "$je_android_policy" | /system/bin/sed -n '
+              "'/^    KeyguardServiceDelegate$/,/^    Looper state:$/p' | /system/bin/sed '$d'"
+              " | /system/bin/sha256sum | /system/bin/cut -d' ' -f1")
+    return "; ".join([
+        'je_android_input="$(/system/bin/dumpsys input 2>/dev/null)" || exit 95',
+        'je_android_current="$(/system/bin/printf \'%s\\n\' "$je_android_input" | /system/bin/sed -n '
+        "'/^Input Dispatcher State:$/,$p' | /system/bin/sed '/^Input Dispatcher State at time of last ANR:/,$d')\""
+        " || exit 95",
+        'je_android_policy="$(/system/bin/dumpsys window policy 2>/dev/null)" || exit 95',
+        _read_matches(_input_digest_command(), evidence.input_sha256, 95),
+        _read_matches(policy, evidence.policy_sha256, 95),
+    ])
+
+
+def compile_android_input_probe(snapshot: AndroidSnapshot) -> str:
+    """Read routing/security in one pinned command connection; never create input or install anything."""
+    if not isinstance(snapshot, AndroidSnapshot):
+        raise AgentTaskError("Android input probe requires a validated scope snapshot")
+    guard = _guard(snapshot)
+    script = (guard + "; /system/bin/printf '__JE_ANDROID_INPUT_V1__\\n'; "
+              "/system/bin/dumpsys input || exit 95; /system/bin/printf '__JE_ANDROID_POLICY_V1__\\n'; "
+              "/system/bin/dumpsys window policy || exit 95; " + guard
+              + "; /system/bin/printf '__JE_ANDROID_SAFETY_END_V1__\\n'")
+    _shell_service(script)
+    return script
+
+
+def _check_evidence(evidence: AndroidInputEvidence, snapshot: AndroidSnapshot, name: str, arguments: dict) -> None:
+    if not isinstance(evidence, AndroidInputEvidence) or evidence.snapshot != snapshot:
+        raise AgentTaskError("Android input evidence belongs to a different device/boot/window snapshot")
+    if name == "AC_android_tap":
+        point = (arguments["x"], arguments["y"])
+        evidence.require_path(point, point)
+    if name == "AC_android_swipe":
+        evidence.require_path((arguments["x1"], arguments["y1"]), (arguments["x2"], arguments["y2"]))
+
+
+def compile_android_action(snapshot: AndroidSnapshot, name: str, arguments: dict[str, Any], *,
+                           input_evidence: AndroidInputEvidence | None = None) -> str:
     """Build a host-only proposal; input-window/occlusion/lock authorization is still required.
 
     The guard runs in the SAME selected ADB command connection as the finite input, preventing
@@ -101,7 +153,11 @@ def compile_android_action(snapshot: AndroidSnapshot, name: str, arguments: dict
         raise AgentTaskError("Android action requires a validated scope snapshot")
     command = android_input_command(name, arguments)
     guard = _guard(snapshot)
-    script = (guard + "; /system/bin/input -d 0 " + command + " >/dev/null 2>&1 || exit 94; "
+    safety = ""
+    if input_evidence is not None:
+        _check_evidence(input_evidence, snapshot, name, arguments)
+        safety = _safety_guard(input_evidence) + "; "
+    script = (guard + "; " + safety + "/system/bin/input -d 0 " + command + " >/dev/null 2>&1 || exit 94; "
               + guard + "; /system/bin/printf '__JE_ANDROID_ACTION_V1__\\n'")
     _shell_service(script)
     return script

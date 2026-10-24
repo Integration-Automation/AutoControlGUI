@@ -1,5 +1,12 @@
 # Changelog
 
+Add internal Android native input/security evidence and checked proposals. Parse current dispatcher
+windows, native server-channel/queue state and both keyguard views; reject busy, inconsistent or unknown
+critical formats. Check entire pointer paths against half-open region unions and front-to-back overlays,
+including spies and transparent interceptors. Bind stable routing/security digests to pre-input checks on
+the same command connection, excluding dynamic history and old ANR data. Proposals retain no input
+authority; human-presence/monitor authorization, worker integration and managed device profiles remain pending.
+
 Add internal Android identity sessions and finite host-only command proposals. Validate an exact endpoint,
 physical serial, kernel boot UUID and one focused app/user on display zero; pin boot atomically and refuse
 adoption after restart. Commands check identity/focus before and after input on the same connection,

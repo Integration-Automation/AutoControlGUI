@@ -739,3 +739,12 @@ same-connection pre/post identity guards, sentinel-preserved field evidence, lit
 and the transport byte limit. Proposals carry input_authorized=false. Input-window/occlusion/unlock/
 presence gates, observation grounding and owned-worker/remote-effect integration are still required;
 no managed device profile, SDK execution authority or new catalog command is advertised.
+
+Android native input evidence: android_input_windows.py decodes pinned front-to-back window records
+and drops foreign names; android_geometry.py proves complete half-open pointer-path coverage using
+exact rational intervals. android_input_evidence.py checks current focus, owner/channel bindings,
+quiescent input queues and both keyguard views. Stable current routing/queue and keyguard digests omit
+history/old ANR data and are rechecked by android_commands.py before input on the selected connection.
+AndroidDeviceSession.inspect_input/propose_checked share the deadline and preserve authority revocation.
+Evidence remains input_authorized=false; global monitors, physical activity/held inputs and owned-worker
+integration require separate trusted authorization before any managed Android target is advertised.

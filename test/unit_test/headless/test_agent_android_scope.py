@@ -11,6 +11,10 @@ from pathlib import Path
 import pytest
 
 from je_auto_control.utils.agent_runtime.android_commands import ACTION_MARKER, compile_android_action
+from je_auto_control.utils.agent_runtime.android_commands import (
+    INPUT_MARKER, POLICY_MARKER, SAFETY_END, compile_android_input_probe)
+from je_auto_control.utils.agent_runtime.android_geometry import AndroidRect, covers_android_path
+from je_auto_control.utils.agent_runtime.android_input_evidence import parse_android_input_evidence
 from je_auto_control.utils.agent_runtime.android_scope import (
     AndroidSnapshot, IDENTITY_MARKER, parse_android_snapshot)
 from je_auto_control.android.adb_client import AndroidDevice
@@ -80,7 +84,11 @@ def run_guard(tmp_path, snapshot):
     harness = '''
 fixture_getprop() { command cat "$FIXTURE_DIR/device"; }
 fixture_cat() { command cat "$FIXTURE_DIR/boot"; }
-fixture_dumpsys() { command cat "$FIXTURE_DIR/wm"; }
+fixture_dumpsys() {
+    if [ "$1" = input ]; then command cat "$FIXTURE_DIR/input";
+    elif [ "$2" = policy ]; then command cat "$FIXTURE_DIR/policy";
+    else command cat "$FIXTURE_DIR/wm"; fi
+}
 fixture_input() {
     printf '%s\\n' "$@" >> "$FIXTURE_DIR/actions"
     if [ -f "$FIXTURE_DIR/after" ]; then command cat "$FIXTURE_DIR/after" > "$FIXTURE_DIR/wm"; fi
@@ -88,12 +96,18 @@ fixture_input() {
 }
 '''
 
-    def execute(name="AC_android_tap", arguments=None, *, probe=False):
-        script = IDENTITY_PROBE if probe else compile_android_action(
-            snapshot, name, {"x": 10, "y": 20} if arguments is None else arguments)
+    def execute(name="AC_android_tap", arguments=None, *, probe=False, input_evidence=None):
+        if probe == "input":
+            script = compile_android_input_probe(snapshot)
+        elif probe:
+            script = IDENTITY_PROBE
+        else:
+            script = compile_android_action(snapshot, name,
+                {"x": 10, "y": 20} if arguments is None else arguments, input_evidence=input_evidence)
         for tool in ("getprop", "cat", "dumpsys", "input"):
             script = script.replace("/system/bin/" + tool, "fixture_" + tool)
         script = script.replace("/system/bin/printf", "printf").replace("/system/bin/sed", "sed")
+        script = script.replace("/system/bin/sha256sum", "sha256sum").replace("/system/bin/cut", "cut")
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
         return subprocess.run([shell, "-c", harness + script], capture_output=True, timeout=5,
                               env={**os.environ, "FIXTURE_DIR": tmp_path.as_posix()}, cwd=tmp_path,
@@ -401,3 +415,234 @@ def test_host_proposal_cannot_accidentally_publish_command_text_as_a_json_task_p
         detached(proposal)
     with pytest.raises(AttributeError):
         proposal.input_authorized = True
+
+
+def input_record(index=0, **changes):
+    data = {"name": "abc123 org.example.app/.MainActivity", "id": 100 + index, "flags": "0x0",
+        "alpha": "1.00", "frame": "[0,0][100,200]", "app": ACTIVITY, "app_token": "0x1110",
+        "regions": "[0,0][100,200]", "pid": 1234, "uid": 10001, "token": "0x2220", **changes}
+    return (f"      {index}: name='{data['name']}', id={data['id']}, displayId=0, "
+        f"inputConfig={data['flags']}, alpha={data['alpha']}, frame={data['frame']}, globalScale=1.000000, "
+        f"applicationInfo.name={data['app']}, applicationInfo.token={data['app_token']}, "
+        f"touchableRegion={data['regions']}, ownerPid={data['pid']}, ownerUid={data['uid']}, "
+        f"dispatchingTimeout=5000ms, hasToken={data['token']}, touchOcclusionMode=BLOCK_UNTRUSTED\n"
+        "        transform (ROT_0) (IDENTITY)\n")
+
+
+def input_dump(*records):
+    name = "abc123 org.example.app/.MainActivity"
+    return ("INPUT MANAGER (dumpsys input)\nInput Dispatcher State:\n  DispatchEnabled: true\n"
+        "  DispatchFrozen: false\n  InputFilterEnabled: false\n  FocusedDisplayId: 0\n"
+        f"  FocusedApplications:\n    displayId=0, name='{ACTIVITY}', dispatchingTimeout=5000ms\n"
+        f"  FocusedWindows:\n    displayId=0, name='{name}'\n"
+        f"  FocusRequests:\n    displayId=0, name='{name}' result='OK'\n"
+        "  Pointer Capture Requested: false\n  Current Window with Pointer Capture: None\n"
+        "  TouchStates: <no displays touched>\n  Display: 0\n    logicalSize=100x200\n"
+        "        transform (ROT_0) (IDENTITY)\n    Windows:\n"
+        + "".join(records or (input_record(),))
+        + "  Global Monitors: <none>\n  RecentQueue: <empty>\n  PendingEvent: <none>\n"
+        "  InboundQueue: <empty>\n  ReplacedKeys: <empty>\n  CommandQueue: <empty>\n  Connections:\n"
+        f"    42: channelName='{name} (server)', windowName='{name} (server)', "
+        "status=NORMAL, monitor=false, responsive=true\n"
+        "      OutboundQueue: <empty>\n      WaitQueue: <empty>\n  AppSwitch: not pending\n"
+        "  Configuration:\n    KeyRepeatDelay: 50ms\n").encode()
+
+
+def policy_dump():
+    return ("WINDOW MANAGER POLICY STATE (dumpsys window policy)\n    KeyguardServiceDelegate\n"
+        "      showing=false\n      inputRestricted=false\n      occluded=false\n      secure=true\n"
+        "      dreaming=false\n      systemIsReady=true\n      deviceHasKeyguard=true\n      enabled=true\n"
+        "      offReason=OFF_BECAUSE_OF_USER\n      currentUser=0\n      bootCompleted=true\n"
+        "      screenState=SCREEN_STATE_ON\n      interactiveState=INTERACTIVE_STATE_AWAKE\n"
+        "      KeyguardStateMonitor\n        mIsShowing=false\n        mSimSecure=false\n"
+        "        mInputRestricted=false\n        mTrusted=false\n        mCurrentUserId=0\n"
+        "    Looper state:\n      private-clock=123\n").encode()
+
+
+def test_current_native_input_evidence_binds_owner_but_still_grants_no_input(snapshot):
+    proof = parse_android_input_evidence(input_dump(), policy_dump(), snapshot)
+    proof.require_path((1, 1), (99, 199))
+    assert proof.input_authorized is False
+    assert proof.has_global_monitors is False
+    assert proof.windows[0].owner == (1234, 10001)
+
+
+@pytest.mark.parametrize("old,new", [
+    ("DispatchEnabled: true", "DispatchEnabled: false"), ("DispatchFrozen: false", "DispatchFrozen: true"),
+    ("InputFilterEnabled: false", "InputFilterEnabled: true"), ("FocusedDisplayId: 0", "FocusedDisplayId: 1"),
+    ("Pointer Capture Requested: false", "Pointer Capture Requested: true"),
+    ("TouchStates: <no displays touched>", "TouchStatesByDisplay:\n    0: down=true"),
+    ("PendingEvent: <none>", "PendingEvent:\n    event-waiting"),
+    ("InboundQueue: <empty>", "InboundQueue: length=1"), ("CommandQueue: <empty>", "CommandQueue: size=1"),
+    ("WaitQueue: <empty>", "WaitQueue: length=1"), ("OutboundQueue: <empty>", "OutboundQueue: length=1"),
+    ("responsive=true", "responsive=false"), ("status=NORMAL", "status=BROKEN"),
+    ("AppSwitch: not pending", "AppSwitch: pending, due in 10ms"), ("result='OK'", "result='NOT_FOCUSABLE'"),
+    ("    logicalSize=100x200", "    logicalSize=0x200"),
+    ("        transform (ROT_0) (IDENTITY)\n    Windows:", "        transform (ROT_90) (ROTATE )\n    Windows:"),
+    ("  Global Monitors: <none>", "    unparsed-foreign-window"),
+])
+def test_unsettled_or_unknown_dispatcher_state_is_refused(snapshot, old, new):
+    with pytest.raises(AgentTaskError):
+        parse_android_input_evidence(input_dump().replace(old.encode(), new.encode()), policy_dump(), snapshot)
+
+
+@pytest.mark.parametrize("old,new", [
+    ("showing=false", "showing=true"), ("inputRestricted=false", "inputRestricted=true"),
+    ("occluded=false", "occluded=true"), ("dreaming=false", "dreaming=true"),
+    ("bootCompleted=true", "bootCompleted=false"), ("currentUser=0", "currentUser=10"),
+    ("mIsShowing=false", "mIsShowing=true"), ("mInputRestricted=false", "mInputRestricted=true"),
+    ("mCurrentUserId=0", "mCurrentUserId=10"), ("SCREEN_STATE_ON", "SCREEN_STATE_OFF"),
+    ("INTERACTIVE_STATE_AWAKE", "INTERACTIVE_STATE_SLEEP"),
+    ("      showing=false", "      showing=false\n      showing=true"),
+])
+def test_either_locked_or_inconsistent_keyguard_view_refuses_input_evidence(snapshot, old, new):
+    with pytest.raises(AgentTaskError):
+        parse_android_input_evidence(input_dump(), policy_dump().replace(old.encode(), new.encode()), snapshot)
+
+
+@pytest.mark.parametrize("changes", [
+    {"flags": "NOT_FOCUSABLE"}, {"flags": "FUTURE_UNKNOWN_FLAG"}, {"alpha": "0.50"},
+    {"regions": "<empty>"}, {"regions": "[0,0][0,200]"}, {"pid": 0}, {"uid": 110001},
+    {"app": "another-app"}, {"token": "<null>"}, {"app_token": "<null>"},
+])
+def test_native_target_must_have_one_matching_live_app_channel(snapshot, changes):
+    with pytest.raises(AgentTaskError):
+        parse_android_input_evidence(input_dump(input_record(**changes)), policy_dump(), snapshot)
+
+
+def test_whole_swipe_must_stay_in_region_union_not_just_its_endpoints(snapshot):
+    proof = parse_android_input_evidence(input_dump(input_record(regions="[0,0][40,200]|[60,0][100,200]")),
+                                         policy_dump(), snapshot)
+    with pytest.raises(AgentTaskError, match="path leaves"):
+        proof.require_path((10, 100), (90, 100))
+    adjacent = parse_android_input_evidence(input_dump(input_record(regions="[0,0][50,200]|[50,0][100,200]")),
+                                            policy_dump(), snapshot)
+    adjacent.require_path((10, 100), (90, 100))
+
+
+def test_overlay_in_swipe_interior_is_detected_and_irrelevant_bounding_box_overlap_is_allowed(snapshot):
+    overlay = input_record(0, name="foreign-private-title", frame="[45,95][55,105]", regions="[45,95][55,105]")
+    proof = parse_android_input_evidence(input_dump(overlay, input_record(1)), policy_dump(), snapshot)
+    with pytest.raises(AgentTaskError, match="overlay"):
+        proof.require_path((10, 100), (90, 100))
+    assert "foreign-private-title" not in repr(proof)
+    unrelated = overlay.replace("[45,95][55,105]", "[40,0][60,10]")
+    proof = parse_android_input_evidence(input_dump(unrelated, input_record(1)), policy_dump(), snapshot)
+    proof.require_path((0, 0), (99, 199))
+
+
+def test_background_window_does_not_occlude_but_background_spy_still_receives_input(snapshot):
+    behind = input_record(1, name="background", id=101)
+    parse_android_input_evidence(input_dump(input_record(), behind), policy_dump(), snapshot).require_path((5, 5), (6, 6))
+    spy = behind.replace("inputConfig=0x0", "inputConfig=SPY | TRUSTED_OVERLAY")
+    with pytest.raises(AgentTaskError, match="foreign"):
+        parse_android_input_evidence(input_dump(input_record(), spy), policy_dump(), snapshot).require_path((5, 5), (6, 6))
+
+
+def test_history_and_old_anr_cannot_replace_current_input_or_renew_its_fingerprint(snapshot):
+    live = input_dump()
+    proof = parse_android_input_evidence(live, policy_dump(), snapshot)
+    changed = live.replace(b"RecentQueue: <empty>", b"RecentQueue: length=1\n    historical-only")
+    changed += b"\nInput Dispatcher State at time of last ANR:\n  DispatchEnabled: false\n"
+    assert parse_android_input_evidence(changed, policy_dump(), snapshot).input_sha256 == proof.input_sha256
+    with pytest.raises(AgentTaskError):
+        parse_android_input_evidence(live.replace(b"DispatchEnabled: true", b"DispatchEnabled: false")
+            + b"\nInput Dispatcher State at time of last ANR:\n" + live, policy_dump(), snapshot)
+
+
+def test_half_open_geometry_detects_even_an_isolated_missing_swipe_point():
+    rects = (AndroidRect(0, 5, 5, 10), AndroidRect(5, 0, 10, 5))
+    assert not covers_android_path(rects, (1, 9), (9, 1))
+    assert covers_android_path((AndroidRect(0, 0, 10, 10),), (0, 0), (9, 9))
+    assert not covers_android_path((AndroidRect(0, 0, 10, 10),), (0, 0), (10, 9))
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda raw: raw.replace(b"PendingEvent: <none>", b"PendingEvent:\n    busy"),
+    lambda raw: raw.replace(b"DispatchEnabled: true", b"DispatchEnabled: false"),
+    lambda raw: raw.replace(b"frame=[0,0][100,200]", b"frame=[0,0][99,200]"),
+])
+def test_same_command_connection_refuses_changed_native_input_before_any_write(run_guard, tmp_path, snapshot, mutate):
+    raw, policy = input_dump(), policy_dump()
+    proof = parse_android_input_evidence(raw, policy, snapshot)
+    (tmp_path / "input").write_bytes(mutate(raw))
+    (tmp_path / "policy").write_bytes(policy)
+    result = run_guard(input_evidence=proof)
+    assert result.returncode == 95
+    assert not (tmp_path / "actions").exists()
+
+
+def test_checked_command_preserves_dynamic_history_but_refuses_a_new_lock(run_guard, tmp_path, snapshot):
+    raw, policy = input_dump(), policy_dump()
+    proof = parse_android_input_evidence(raw, policy, snapshot)
+    (tmp_path / "input").write_bytes(raw.replace(b"RecentQueue: <empty>", b"RecentQueue: length=1\n    old-event"))
+    (tmp_path / "policy").write_bytes(policy)
+    assert run_guard(input_evidence=proof).stdout == ACTION_MARKER
+    (tmp_path / "actions").unlink()
+    (tmp_path / "policy").write_bytes(policy.replace(b"mIsShowing=false", b"mIsShowing=true"))
+    assert run_guard(input_evidence=proof).returncode == 95
+    assert not (tmp_path / "actions").exists()
+
+
+def test_sdk_checked_proposal_reads_security_without_dispatch_or_input_authority():
+    class SafeServer(Server):
+        def shell(self, transport, command, **kwargs):
+            if command == IDENTITY_PROBE:
+                return super().shell(transport, command, **kwargs)
+            assert "/system/bin/dumpsys input" in command
+            assert "/system/bin/input -d" not in command
+            self.calls.append("input-proof")
+            return AdbShellResult(INPUT_MARKER + input_dump() + POLICY_MARKER + policy_dump() + SAFETY_END, b"", 0)
+
+    server = SafeServer()
+    proposal = session(server).propose_checked("AC_android_tap", {"x": 10, "y": 20})
+    assert proposal.input_authorized is False
+    assert proposal.input_evidence.input_authorized is False
+    assert server.calls == ["devices", (42, IDENTITY_PROBE), "input-proof"]
+
+
+def test_native_security_probe_round_trips_through_actual_shell_without_any_input(run_guard, tmp_path):
+    (tmp_path / "input").write_bytes(input_dump())
+    (tmp_path / "policy").write_bytes(policy_dump())
+    result = run_guard(probe="input")
+    assert result.returncode == 0
+    assert result.stdout == INPUT_MARKER + input_dump() + POLICY_MARKER + policy_dump() + SAFETY_END
+    assert not (tmp_path / "actions").exists()
+
+
+def test_invisible_and_nonintercepting_transparent_windows_are_not_false_occlusions(snapshot):
+    for flags in ("NOT_VISIBLE", "NOT_TOUCHABLE"):
+        before = input_record(0, name="foreign", flags=flags, alpha="0.00")
+        proof = parse_android_input_evidence(input_dump(before, input_record(1)), policy_dump(), snapshot)
+        proof.require_path((5, 5), (6, 6))
+    intercepting = input_record(0, name="foreign", alpha="0.00")
+    proof = parse_android_input_evidence(input_dump(intercepting, input_record(1)), policy_dump(), snapshot)
+    with pytest.raises(AgentTaskError, match="foreign"):
+        proof.require_path((5, 5), (6, 6))
+
+
+def test_global_monitors_remain_explicit_unapproved_metadata(snapshot):
+    raw = input_dump().replace(b"  Global Monitors: <none>", b"  Global monitors on display 0:\n    0: 'system-monitor', ")
+    proof = parse_android_input_evidence(raw, policy_dump(), snapshot)
+    assert proof.has_global_monitors is True
+    assert proof.input_authorized is False
+    assert "system-monitor" not in repr(proof)
+
+
+def test_native_connection_cannot_claim_a_window_with_a_different_channel_name(snapshot):
+    with pytest.raises(AgentTaskError):
+        parse_android_input_evidence(input_dump().replace(b"channelName='abc123 org.example.app/.MainActivity (server)'",
+            b"channelName='forged-other-channel'"),
+                                     policy_dump(), snapshot)
+
+
+@pytest.mark.parametrize("bad", [
+    lambda raw: raw + b"Input Dispatcher State:\n", lambda raw: raw.replace(b"    42:", b"    bad-descriptor:"),
+    lambda raw: raw.replace(b"  Connections:", b"  Connections: <none>"),
+    lambda raw: raw.replace(b"    displayId=0, name='abc123", b"    displayId=1, name='abc123"),
+    lambda raw: raw.replace(b"    Windows:", b"    Windows: <none>"),
+    lambda raw: raw.replace(b"        transform (ROT_0) (IDENTITY)\n  Global", b"  Global"),
+])
+def test_unparsed_duplicate_or_wrong_display_evidence_never_certifies_input(snapshot, bad):
+    with pytest.raises(AgentTaskError):
+        parse_android_input_evidence(bad(input_dump()), policy_dump(), snapshot)
