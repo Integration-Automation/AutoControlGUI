@@ -807,3 +807,12 @@ is removed, retaining a no-resurrection tombstone in the meantime. A delegated s
 catalog, REST capability map and CLI expose the same protocol. The thin Recovery editor accepts explicit
 Actions approval, clears selection-bound drafts and ignores late source replies; it never submits a
 preview through the ordinary task form or cancels service work on close.
+
+Dynamic recovery: task_recovery.py separates finite-prefix reconstruction from external/local-model
+replanning. Dynamic preview ignores dormant action arrays and exposes no guessed completed count or
+remaining steps. Its review_template has a blank goal and actions; explicit approval must supply a new
+nonempty goal within the original mode/options/authority/completion contract. GUI Recovery presents
+this template without submitting the ordinary task form. BackgroundTasks leaves external children for
+caller-driven observe/act, while Ollama children construct a new backend and child-only recent history.
+No model API is called by preview. Existing source snapshots, owner/operator checks, unknown-effect
+reconciliation, atomic unique links, parent retirement and retention remain shared across all modes.

@@ -1656,7 +1656,7 @@ english_word_dict.update({
     "agent_skill_run": "Run pinned version",
     "agent_recover_target": "Recover reviewed input ownership",
     "agent_remainder_request": "Reviewed successor request (JSON)",
-    "agent_remainder_preview": "Review remaining task steps",
+    "agent_remainder_preview": "Review remaining work / replan",
     "agent_remainder_create": "Create reviewed successor task",
     "agent_prune": "Prune expired task cache"
 })

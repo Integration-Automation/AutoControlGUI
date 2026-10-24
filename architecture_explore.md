@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,326 |
-| 程式碼總行數 | 195,736 |
+| 程式碼總行數 | 195,758 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 854 |
 | 套件門面 `__all__` 公開名稱數 | 1443 |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 36,104 行。
+> 14 個套件、約 36,124 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 10,541 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 10,561 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -989,7 +989,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（10,541 行／87 檔）
+#### `utils/agent_runtime/`（10,561 行／87 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1067,7 +1067,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `target_factory.py` | 27 | Create inert managed adapters from host profiles; SDKs and native resources stay lazy. |
 | `target_profiles.py` | 165 | Durable target profiles, live controls and explicit dependency diagnostics separate from native evidence. |
 | `targets.py` | 193 | Explicit target adapters; native imports occur only during requested operations. |
-| `task_recovery.py` | 224 | Review stopped finite workflows and create one explicitly approved successor without replay. |
+| `task_recovery.py` | 244 | Review stopped tasks and create one explicitly approved successor without replay. |
 | `task_skills.py` | 197 | Immutable managed skill candidates require a verified trial and explicit version publication. |
 | `task_triggers.py` | 263 | Durable preauthorized task bindings with owner refresh, bounded backlog and event deduplication. |
 | `transport.py` | 110 | Bounded HTTP requests; cancellation discards late inference replies before any input. |
@@ -1198,7 +1198,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，只需要 PySide6
 | live_hud | `live_hud_tab.py` | 128 | 即時 HUD：滑鼠位置、游標下像素色、log tail。 |
 | llm_planner | `llm_planner_tab.py` | 169 | 自然語言描述 → 預覽 → 執行。 |
 | computer_use | `computer_use_tab.py` | 170 | 從 GUI 啟動 Anthropic 閉環 agent。 |
-| agent_tasks | `agent_tasks_tab.py` | 420 | 受管任務輸入、狀態與 Actions menu；服務獨立於視圖生命週期。 |
+| agent_tasks | `agent_tasks_tab.py` | 422 | 受管任務輸入、狀態與 Actions menu；服務獨立於視圖生命週期。 |
 | scheduler | `scheduler_tab.py` | 152 | 註冊間隔式 action JSON 執行。 |
 | hotkeys | `hotkeys_tab.py` | 144 | 將全域熱鍵綁到 action 檔。 |
 | triggers | `triggers_tab.py` | 354 | 影像／視窗／像素／檔案事件監看。 |
@@ -1371,7 +1371,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 119 | 34,107 |
+| `gui/` | 119 | 34,109 |
 | `utils/mcp_server/` | 53 | 20,967 |
 | `utils/remote_desktop/` | 63 | 14,634 |
 | `utils/executor/` | 9 | 9,879 |
@@ -1391,8 +1391,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 888 | 82,775 |
-| **總計** | **1,318** | **195,567** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 888 | 82,795 |
+| **總計** | **1,318** | **195,589** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

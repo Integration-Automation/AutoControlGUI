@@ -1543,7 +1543,7 @@ japanese_word_dict.update({
     "agent_skill_run": "指定した版を実行",
     "agent_recover_target": "確認済み入力制御権を復旧",
     "agent_remainder_request": "確認済み後続タスク要求（JSON）",
-    "agent_remainder_preview": "残りのタスク手順を確認",
+    "agent_remainder_preview": "残りの作業を確認／再計画",
     "agent_remainder_create": "確認済み後続タスクを作成",
     "agent_prune": "期限切れキャッシュを削除"
 })

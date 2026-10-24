@@ -155,3 +155,30 @@ def test_remainder_preview_is_passive_bound_to_selected_task_and_requires_explic
         tab.close()
         shiboken6.delete(tab)
         app.processEvents()
+
+
+def test_dynamic_review_template_requires_manual_goal_and_note_without_submitting(monkeypatch):
+    import json
+    import shiboken6
+    app = QApplication.instance() or QApplication([])
+    tab = AgentTasksTab()
+    submitted = []
+    try:
+        monkeypatch.setattr(tab, "_dispatch", lambda *args: submitted.append(args))
+        tab._task_id.setText("source-task")
+        original_scope = tab._scope.toPlainText()
+        template = {"goal": "", "mode": "ollama", "options": {"model": "fixture-tools"}, "actions": []}
+        tab._present_result({"source_task": "source-task", "source_mode": "ollama", "snapshot": "a" * 64,
+            "draft": None, "review_template": template, "issues": ["new_plan_required"]})
+        assert submitted == [] and tab._scope.toPlainText() == original_scope
+        request = json.loads(tab._remainder_request.toPlainText())
+        assert request["spec"]["goal"] == "" and request["note"] == ""
+        request["spec"]["goal"] = "Read only the remaining field"
+        request["note"] = "Reviewed the new plan"
+        tab._remainder_request.setPlainText(json.dumps(request))
+        dict(tab.menu_actions())["agent_remainder_create"]()
+        assert submitted == [("recovery", {"operation": "create", "request": request})]
+    finally:
+        tab.close()
+        shiboken6.delete(tab)
+        app.processEvents()

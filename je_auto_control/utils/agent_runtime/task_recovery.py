@@ -1,4 +1,4 @@
-"""Review stopped finite workflows and create one explicitly approved successor without replay."""
+"""Review stopped tasks and create one explicitly approved successor without replay."""
 from __future__ import annotations
 
 from typing import Any
@@ -65,7 +65,7 @@ class AgentRecovery:
         # pylint: disable-next=protected-access  # reason: a successor cannot bypass an unretired input owner
         if row["state"] not in _STOPPED or row["id"] in self.runtime._leases:
             raise AgentTaskError("recovery requires a stopped task with no active input owner")
-        if row["spec"]["mode"] != "skill" or not row["spec"]["actions"]:
+        if row["spec"]["mode"] == "skill" and not row["spec"]["actions"]:
             raise AgentTaskError("recovery requires a finite skill workflow")
         with self.runtime.store.connection() as connection:
             reviews = [dict(item) for item in connection.execute(
@@ -76,6 +76,8 @@ class AgentRecovery:
         spec = detached(row["spec"])
         spec["goal"] = "Reviewed remainder: " + spec["goal"][:15940]
         spec["options"].pop("skill_pin", None)
+        if spec["mode"] != "skill":
+            spec["actions"] = []
         # pylint: disable-next=protected-access  # reason: the shared host policy must normalize every review template
         return self.runtime._validated_spec(spec).to_dict()
 
@@ -83,21 +85,12 @@ class AgentRecovery:
         active = effective_actions(receipts)
         template = self._template(row)
         source = AgentTaskSpec.from_dict(row["spec"])
-        issues = _source_issues(source, active)
-        completed = len(active) if not issues else None
-        remaining = detached(source.actions[len(active):])
-        issues.extend(_action_issues(remaining))
-        if not remaining:
-            issues.append("no_remaining_actions")
-        template["actions"] = remaining
         return {"source_task": row["id"], "snapshot": _snapshot(row, receipts, reviews),
-                "source_state": row["state"], "completed_steps": completed, "attempted_steps": len(active),
-                "remaining_actions": remaining,
-                "rows": row_report(source, receipts), "issues": sorted(set(issues)),
+                "source_state": row["state"], "source_mode": source.mode, "attempted_steps": len(active),
+                **_review_plan(source, receipts, active, template),
                 "source_receipts": [{key: item[key] for key in ("id", "command", "status")}
                                     for item in receipts[:200]], "source_receipt_total": len(receipts),
-                "draft": template if not issues else None, "approval_required": True,
-                "source_completion_inherited": False}
+                "approval_required": True, "source_completion_inherited": False}
 
     def _create(self, row: dict, request: dict) -> dict:
         note = request["note"]
@@ -105,8 +98,9 @@ class AgentRecovery:
             raise AgentTaskError("recovery requires a bounded operator review note")
         # pylint: disable-next=protected-access  # reason: reviewed successors use the same live host scope validation
         spec = self.runtime._validated_spec(request["spec"])
-        _check_scope(self._template(row), spec.to_dict())
-        _require_actions(spec)
+        template = self._template(row)
+        _check_scope(template, spec.to_dict())
+        _require_plan(spec)
         existing = self._existing(row["id"], request["snapshot"], durable_payload(spec.to_dict()))
         if existing is not None:
             return existing
@@ -148,10 +142,36 @@ def _require_operator() -> None:
 def _source_issues(spec: AgentTaskSpec, receipts: list[dict]) -> list[str]:
     if any(item["status"] != "confirmed" for item in receipts):
         return ["unknown_source_effects"]
+    if spec.mode != "skill":
+        return []
     try:
         return [] if verified_prefix(spec, receipts) else ["source_readback_mismatch"]
     except (KeyError, TypeError, ValueError, AgentTaskError):
         return ["source_readback_mismatch"]
+
+
+def _review_plan(source: AgentTaskSpec, receipts: list[dict], active: list[dict], template: dict) -> dict:
+    issues = _source_issues(source, active)
+    if source.mode != "skill":
+        template.update(goal="", actions=[])
+        return {"completed_steps": None, "remaining_actions": [], "rows": [], "draft": None,
+                "review_template": template, "issues": sorted(set(issues + ["new_plan_required"]))}
+    completed = len(active) if not issues else None
+    remaining = detached(source.actions[len(active):])
+    issues.extend(_action_issues(remaining))
+    if not remaining:
+        issues.append("no_remaining_actions")
+    template["actions"] = remaining
+    return {"completed_steps": completed, "remaining_actions": remaining, "rows": row_report(source, receipts),
+            "draft": template if not issues else None, "review_template": None, "issues": sorted(set(issues))}
+
+
+def _require_plan(spec: AgentTaskSpec) -> None:
+    if spec.mode == "skill":
+        _require_actions(spec)
+        return
+    if spec.actions:
+        raise AgentTaskError("dynamic recovery requires a reviewed goal without dormant finite actions")
 
 
 def _capture_names(value: Any) -> set[str]:

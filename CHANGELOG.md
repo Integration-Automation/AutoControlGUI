@@ -1,5 +1,10 @@
 # Changelog
 
+Extend reviewed task recovery to external agents and local models. Return an explicit blank-goal
+review template without guessing remaining steps or reusing history. Require a new reviewed goal,
+retain execution mode/model/endpoint and source scope, and start with fresh observations and results.
+Preview never contacts a model; explicit goal review, creation and independent completion remain required.
+
 Add reviewed successors for stopped finite workflows through manage_agent_recovery and shared
 API/AC/MCP/REST/CLI/Builder/GUI Actions. Bind explicit approval to the source task/receipt/review snapshot,
 preserve original scope and evidence, reject unknown effects and stale captures/coordinates, and create

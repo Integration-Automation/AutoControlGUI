@@ -55,3 +55,32 @@ def test_real_service_authenticates_preview_and_deduplicates_explicit_creation(s
         with pytest.raises(AgentTaskError):
             client.call("recovery", {"operation": "create", "request": request})
     assert instance.runtime.get(source.task_id).state == "paused"
+
+
+@pytest.mark.parametrize("mode", ["external", "ollama"])
+def test_http_dynamic_replan_preserves_scope_and_waits_for_new_results(service, monkeypatch, mode):
+    client, instance = service
+    monkeypatch.setattr(instance.runtime.background, "start", Mock())
+    with authorization_scope(AuthorizationContext("alice", "operator")):
+        options = {"model": "fixture-tools"} if mode == "ollama" else {}
+        source = instance.runtime.submit({"goal": "process both fields", "target": "counter", "mode": mode,
+            "allowed_tools": ["AC_increment"], "options": options,
+            "success_criteria": [{"kind": "result_equals", "key": "value", "value": 2}]})
+        frame = client.call("observe", {"task_id": source.task_id})
+        client.call("act", {"task_id": source.task_id, "action": {"tool": "AC_increment",
+                                                                "observation_id": frame["observation_id"]}})
+        client.call("pause", {"task_id": source.task_id})
+        view = client.call("recovery", {"operation": "preview", "request": {"task_id": source.task_id}})
+        instance.runtime.background.start.assert_not_called()
+        assert view["draft"] is None and view["review_template"]["goal"] == ""
+        reviewed = view["review_template"]
+        reviewed["goal"] = "Process only the remaining field and read its final value"
+        child = client.call("recovery", {"operation": "create", "request": {"task_id": source.task_id,
+            "snapshot": view["snapshot"], "spec": reviewed, "note": "Reviewed current field state"}})["task_id"]
+        assert instance.runtime.store.actions(child) == []
+        assert instance.runtime.store.get(child)["spec"]["options"] == options
+        frame = client.call("observe", {"task_id": child})
+        client.call("act", {"task_id": child, "action": {"tool": "AC_increment",
+                                                        "observation_id": frame["observation_id"]}})
+        assert client.call("finish", {"task_id": child})["state"] == "succeeded"
+        assert client.call("get", {"task_id": source.task_id})["state"] == "paused"

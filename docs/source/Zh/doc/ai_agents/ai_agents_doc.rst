@@ -576,7 +576,25 @@ hash。擷取前後核對原生範圍，準備與裝置防護內都重讀 hierar
 共用介面為 ``AC_agent_task_recovery``、MCP ``ac_agent_task_recovery``、
 ``POST /agent/recovery``（``{operation, request}``）、Builder 與
 ``agent-task recovery preview|create request.json``；兩種操作均需 ``drive_input``。
-Agent 任務的 Actions 提供「審閱任務剩餘步驟」及「建立經審閱的新任務」。有效預覽只填入獨立的
+Agent 任務的 Actions 提供「審閱剩餘工作／重新規劃」及「建立經審閱的新任務」。有效預覽只填入獨立的
 Recovery JSON 編輯器及空白註記，不填入或提交一般任務表單；審閱計畫／註記後再明確建立。
 切換任務會清除草稿，遲到回覆會忽略。建立後走既有耐久背景派送，關閉視圖只解除請求訂閱。
 登入／視窗恢復、任意指標的新定位及實際應用／原生驗收仍待接合；不新增瀏覽器引擎或付費依賴。
+
+外部 agent 與本機模型重新規劃
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+恢復流程也支援停止的 ``external`` 與 ``ollama`` 任務。這兩種模式沒有可執行的有限前綴，
+預覽因此回傳 ``completed_steps=null``、空剩餘動作／逐筆結果、``draft=null`` 及
+``new_plan_required``。獨立 ``review_template`` 保留來源範圍、模式、模型／端點、預算與完成
+條件，但目標／動作留空；即使舊規格有未使用的動作陣列，也不推測它曾執行或代表剩餘工作。
+
+操作人須明確填寫非空目標及審閱註記；審閱後可沿用原目標文字，但不因此繼承完成進度。
+新任務不可夾帶未使用的動作或切換模式／模型設定。未知副作用仍須先核對
+並重新取得來源快照；不複製已完成收據、舊觀察或模型歷史，模型停止但缺新完成證據時仍為未知。
+
+既有 API／AC／MCP／REST／CLI／Builder 共用此流程。GUI Actions「審閱剩餘工作／重新規劃」
+只準備獨立 Recovery 編輯器，目標／註記留空，不自動提交。外部任務由 caller 重新 observe／act；
+明確核准的 Ollama 新任務走既有背景派送，以原模型／loopback 端點建立新 backend、取得新觀察，
+首輪歷史為空。預覽不呼叫模型 HTTP。自有假 Ollama loopback 服務核對 show／chat 順序、模型、
+新目標與空歷史；這不代表已安裝模型驗收，實際模型／原生證據及來源撤銷後重新授權仍列於 Progress.md。

@@ -1506,7 +1506,7 @@ traditional_chinese_word_dict.update({
     "agent_skill_run": "執行指定版本",
     "agent_recover_target": "恢復已審閱的輸入控制權",
     "agent_remainder_request": "經審閱的新任務請求（JSON）",
-    "agent_remainder_preview": "審閱任務剩餘步驟",
+    "agent_remainder_preview": "審閱剩餘工作／重新規劃",
     "agent_remainder_create": "建立經審閱的新任務",
     "agent_prune": "清理過期任務快取"
 })

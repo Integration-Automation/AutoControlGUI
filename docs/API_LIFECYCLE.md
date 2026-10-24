@@ -1,7 +1,7 @@
 # Public API lifecycle
 
 `manage_agent_recovery(operation, request)` adds owner/operator-scoped `preview` and `create` for stopped
-finite skills. Preview reports remaining semantic actions, row outcomes and a digest of the exact source
+skill, external-agent and local-model tasks. Finite preview reports remaining semantic actions, row outcomes and a digest of the exact source
 task, receipts and reviews. It never observes a target or starts work. Create requires explicit snapshot,
 spec and review note; a changed source, unsettled input lease or unreconciled effect prevents creation.
 Only goal/actions may change: target, tools, roots, apps, inputs, budget, options and completion conditions
@@ -12,6 +12,15 @@ approval conflicts. A retired child leaves a tombstone until source retention, p
 The source keeps its receipts, reviews, rows and status. Child metadata/list results expose provenance;
 new completion never completes the parent, and the delegated source cannot resume. Retention preserves source evidence while a child remains.
 Explicit create uses normal durable background dispatch; closing the view does not cancel the child.
+External/local-model preview never infers a remaining action array or completed-step count. It returns
+`source_mode`, `new_plan_required` and a `review_template` with empty goal/actions; `draft` stays null.
+Operators must explicitly supply a nonempty goal and note. They may retain the original goal wording
+after review; this never inherits source progress. Dormant action arrays and changes to execution
+mode or model/endpoint are rejected. Source scope and
+completion checks stay fixed. External successors wait for explicit observe/act; local-model successors
+use normal background dispatch, a new backend and fresh child-only model history. Preview makes no
+model request. A test-owned loopback model confirms the pinned show/chat requests without downloading
+or starting a real model. Actual installed-model/native acceptance remains separate.
 Surfaces: `AC_agent_task_recovery`, MCP `ac_agent_task_recovery`, `POST /agent/recovery`, CLI
 `agent-task recovery preview|create request.json`, Builder and the Agent tasks Recovery page/Actions.
 Both operations require drive_input, including direct runtime use; this does not restore login/window

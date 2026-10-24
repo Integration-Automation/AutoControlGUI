@@ -1,13 +1,15 @@
 # AutoControl
 
-Stopped finite workflows can use `manage_agent_recovery("preview", {"task_id": "..."})` to review
-remaining actions, row outcomes and a source snapshot without touching an application. Explicit
-`create` approval supplies that snapshot, a reviewed spec and an operator note. It creates one linked
-successor with fresh receipts; repeated approval returns the same task. Source scope, budgets and
-completion conditions stay fixed, and unknown source effects must be reconciled first. Old captures,
-observation indexes and pointer coordinates are not transplanted. Use `AC_agent_task_recovery`,
-MCP/REST, `agent-task recovery preview|create request.json` or Agent tasks → Actions → Review remaining
-task steps / Create reviewed successor task. Delegated sources cannot resume; continue from the successor.
+Stopped tasks can use `manage_agent_recovery("preview", {"task_id": "..."})` to review source
+receipts and a source snapshot without touching an application. Finite skills expose remaining actions
+and row outcomes. External-agent and local-model tasks provide `review_template` with a blank goal;
+operators must explicitly supply a remaining-work goal, with no copied action list. Explicit `create` approval
+supplies the snapshot, reviewed spec and note, creating one linked successor with fresh observations
+and receipts. Repeated approval returns that task. Execution mode, model/endpoint, scope, budgets and
+completion conditions stay fixed, and unknown effects require reconciliation. Old captures, indexes,
+coordinates and completed history are not transplanted. Use `AC_agent_task_recovery`, MCP/REST,
+`agent-task recovery preview|create request.json` or Agent tasks → Actions → Review remaining work /
+replan / Create reviewed successor task. Delegated sources cannot resume; continue from the successor.
 Login and window-state restoration still require review.
 
 Built-in Android/iOS managed profiles remain unavailable. Their internal remote-effect guard records

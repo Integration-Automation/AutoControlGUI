@@ -409,6 +409,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
 
     def _present_remainder(self, result: dict) -> None:
         draft = result.get("draft")
+        if not isinstance(draft, dict):
+            draft = result.get("review_template")
         request = {"task_id": result["source_task"], "snapshot": result["snapshot"],
                    "spec": draft, "note": ""} if isinstance(draft, dict) else {}
         self._remainder_request.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))

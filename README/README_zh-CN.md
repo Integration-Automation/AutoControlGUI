@@ -1,11 +1,13 @@
 # AutoControl
 
-停止的有限流程可用 `manage_agent_recovery("preview", {"task_id": "..."})` 审阅剩余动作、逐条结果及
-来源快照，不接触应用程序。明确 `create` 时提供该快照、经审阅的规范与操作人注记，创建有来源
-关联的新任务及全新回执；重复批准返回同一任务。来源范围、预算及完成条件固定，未知副作用须先
-人工核对；不移植旧 capture、观察索引或指针坐标。可用 `AC_agent_task_recovery`、MCP／REST、
-`agent-task recovery preview|create request.json`，或「Agent 任务 → Actions → 审阅任务剩余步骤／
-创建经审阅的新任务」。已移交的来源不能再恢复执行，须由新任务继续；登录与窗口状态恢复仍须审阅。
+停止的任务可用 `manage_agent_recovery("preview", {"task_id": "..."})` 审阅来源回执与快照，
+不接触应用程序。有限 skill 提供剩余动作及逐条结果；外部 agent／本机模型任务则提供空白目标的
+`review_template`，须由操作人明确填写剩余工作目标，不复制旧动作列表。明确 `create` 时提供
+快照、经审阅的规范与注记，创建有来源关联的新任务，重新观察并从零回执开始；重复批准返回同一
+任务。执行模式、模型／端点、范围、预算及完成条件固定，未知副作用须先人工核对；不移植旧
+capture、索引、坐标或已完成历史。可用 `AC_agent_task_recovery`、MCP／REST、
+`agent-task recovery preview|create request.json`，或「Agent 任务 → Actions → 审阅剩余工作／
+重新规划／创建经审阅的新任务」。已移交的来源不能再恢复，须由新任务继续；登录与窗口恢复仍须审阅。
 
 Android／iOS 内置受管 profile 仍未提供。内部远程副作用防护按实体设备标识保存动作前／后确认；
 本地 helper 结束但动作未确认时，仍保留隔离。恢复须在 writer 退出后取得可信设备证据，再以
