@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,324 |
-| 程式碼總行數 | 195,007 |
+| Python 模組總數（含周邊子專案） | 1,325 |
+| 程式碼總行數 | 195,387 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 853 |
 | 套件門面 `__all__` 公開名稱數 | 1442 |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 35,427 行。
+> 14 個套件、約 35,807 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 9,864 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 10,244 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -989,7 +989,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（9,864 行／85 檔）
+#### `utils/agent_runtime/`（10,244 行／86 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -998,10 +998,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `activity.py` | 66 | Physical activity gates with explicit idle acquisition and manual takeover semantics. |
 | `activity_windows.py` | 102 | Owned Win32 presence-only hooks; no key values, coordinates or input contents are retained. |
 | `android_action_result.py` | 59 | Decode complete Android command phases without claiming input retirement or task completion. |
-| `android_adapter.py` | 147 | Bridge checked Android sessions into the owned worker only with explicit trusted device-control leases. |
+| `android_adapter.py` | 201 | Bridge checked Android sessions into the owned worker only with explicit trusted device-control leases. |
 | `android_commands.py` | 176 | Compile finite Android inputs behind same-connection identity checks; never dispatch raw model shell. |
 | `android_control.py` | 56 | Trusted Android control leases require real device fencing and independent per-command settlement. |
 | `android_geometry.py` | 99 | Exact half-open Android touch-region coverage for whole pointer paths, including swipe interiors. |
+| `android_hierarchy.py` | 287 | Parse bounded Android app hierarchies with explicit host text grants and private freshness signatures. |
 | `android_input_evidence.py` | 222 | Bind current Android dispatcher geometry and keyguard evidence without granting input authority. |
 | `android_input_windows.py` | 127 | Decode pinned AOSP input-window records without retaining foreign names or raw window dumps. |
 | `android_scope.py` | 87 | Validate bounded Android device, boot and focused-app evidence without publishing raw dumps. |
@@ -1041,7 +1042,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `native_scope.py` | 111 | Scope native window and control targets before their existing backend performs an action. |
 | `native_target.py` | 217 | Native desktop proxy with private IPC, host input ledger and cross-database ownership. |
 | `native_worker.py` | 211 | Private native helper entry point; stdout is a bounded owner-only JSON protocol. |
-| `observation_refs.py` | 133 | Resolve observation-local elements and thumbnail points into host-checked native coordinates. |
+| `observation_refs.py` | 151 | Resolve observation-local elements and thumbnail points into host-checked native coordinates. |
 | `ollama.py` | 82 | Local-only Ollama decisions over bounded HTTP, without an SDK or remote fallback. |
 | `origin_policy.py` | 159 | Live origin path ceilings remain restrictive across accepted tasks, workers and service processes. |
 | `ownership.py` | 86 | Fenced input ownership; running dispatch must retire before ownership transfers. |
@@ -1070,7 +1071,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `task_triggers.py` | 263 | Durable preauthorized task bindings with owner refresh, bounded backlog and event deduplication. |
 | `transport.py` | 110 | Bounded HTTP requests; cancellation discards late inference replies before any input. |
 | `trigger_config.py` | 69 | Validate durable trigger schedules and rooted file-version notifications without side effects. |
-| `verification.py` | 104 | Deterministic completion evidence with explicit passed, failed and unknown states. |
+| `verification.py` | 125 | Deterministic completion evidence with explicit passed, failed and unknown states. |
 | `window_pixels.py` | 118 | Capture only an identified Windows window, with no desktop-pixel fallback. |
 | `workflow_desktop.py` | 70 | Reviewed semantic control and document operations within the current task's application scope. |
 | `workflow_files.py` | 128 | Rooted, bounded and idempotent download/archive operations for managed workflows. |
@@ -1389,8 +1390,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 886 | 82,096 |
-| **總計** | **1,316** | **194,838** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 887 | 82,476 |
+| **總計** | **1,317** | **195,218** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

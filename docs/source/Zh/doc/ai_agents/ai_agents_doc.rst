@@ -519,5 +519,31 @@ context manager 或本機 helper 結束不能提供這項保證；不提供預�
 begin 並 ACK 後，``dispatch_checked`` 重新編譯有限命令；參數／body 被改動、未檢查提案或不同
 session／boot 都在傳輸前拒絕。只在可信裝置防護內呼叫一次，不重播。完整 v2 階段／退出結果
 不能代表應用完成，片段結果仍未知。End ACK 前另須核對命令 ID、boot、裝置及 epoch，以及輸入
-已釋放、遠端待送佇列清空的獨立證據；舊證據不能清除新命令。觀察只有身分／安全 metadata，
-hierarchy、語義定位、Unicode／IME、讀回、獨立應用完成及 profile／共用 API／GUI 仍待交付。
+已釋放、遠端待送佇列清空的獨立證據；舊證據不能清除新命令。未配置 hierarchy reader 時只有
+身分／安全 metadata；真實擷取／控制來源、受保護欄位值驗證、Unicode／IME 及 profile／共用 API／GUI 仍待交付。
+
+Android 經審閱的語義觀察
+----------------------------------------------------------------------
+
+可明確配置主機 ``hierarchy_reader`` callable，回傳相符命令 nonce、原生裝置／視窗與顯示尺寸的
+``AndroidHierarchySample``。Reader 須核對實際來源且不干擾其他無障礙服務；把要求的身分貼到
+未核對的 SDK 結果不算來源證明。不自選裝置、安裝／啟動 SDK、CLI、重連或備援。固定 AOSP 的
+``DumpCommand`` 會建立 ``UiAutomation``，預設連線抑制既有無障礙服務，因此不當作唯讀替代。
+
+``android_hierarchy`` 限定有界 UTF-8、單一視窗與 rotation zero，欄位／布林封閉；defused XML
+拒絕 DTD、entity 與外部來源。深度、節點／輸出數、文字及原生顯示邊界都有限制；重複索引或
+不明文字授權拒絕。外部套件子樹不輸出；只有主機明確授權的非敏感唯讀標籤會揭露，XML 不可
+自行授權。編輯／密碼值與受保護子節點持續遮罩；原生路由／遮擋判定元素是否可操作。
+
+私有 keyed witness 偵測包含遮罩值的變動，但不公開。公開版本為隨機 token，同一未變動觀察保持
+穩定；來源變更／還原或動作準備後都換版，包括輸入沒有改變畫面的情況，不提供隱藏值的可重用
+hash。擷取前後核對原生範圍，準備與裝置防護內都重讀 hierarchy；``AC_android_tap`` 元素索引
+只接受目前可操作的 Android 語義元素，不回退到截圖座標。
+
+既有 observe／act／finish 可帶動作後的新讀回。已審閱的已知匹配可通過 ``screen.text_present``；
+未擷取／遮罩觀察中的空白仍為未知，不能證明文字不存在；已知匹配可推翻 ``text_absent``。
+其他部分觀察的畫面條件維持未知，能力旗標須為精確布林，錯誤資料不可變成通過。受保護輸入值
+比較、Unicode／IME、預設受管 profile 與真機驗收仍未提供。格式／生命週期的固定 AOSP 原始碼
+連結見英文頁。
+未宣告新能力旗標的舊 target 仍沿用既有驗證行為；各來源的覆蓋／旗標盤點列於 ``Progress.md``，
+不因此宣稱所有 target 都已具完整觀察。

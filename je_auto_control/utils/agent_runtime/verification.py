@@ -71,11 +71,32 @@ def _evaluate(clause: Mapping[str, Any], policy: TaskPolicy, receipts: Sequence[
     if kind == "result_equals":
         return _last_result(clause, receipts)
     if kind == "screen":
-        elements = observation.get("elements")
-        if elements is None:
-            return None
-        return check_postcondition(list(elements), dict(clause["spec"])).ok
+        return _screen_evidence(observation, dict(clause["spec"]))
     return _file_evidence(clause, policy)
+
+
+def _screen_evidence(observation: Mapping, spec: dict) -> bool | None:
+    elements = observation.get("elements")
+    if not isinstance(elements, (list, tuple)) or observation.get("semantic_observation", True) is not True:
+        return None
+    if any(not isinstance(item, Mapping) for item in elements):
+        return None
+    passed = check_postcondition(list(elements), spec).ok
+    if observation.get("text_redacted", False) is False:
+        return passed
+    if observation.get("text_redacted") is not True:
+        return None
+    if len(spec) != 1:
+        return None
+    return _partial_text_evidence(spec, passed)
+
+
+def _partial_text_evidence(spec: dict, passed: bool) -> bool | None:
+    if set(spec) == {"text_present"} and isinstance(spec["text_present"], str) and spec["text_present"]:
+        return True if passed else None
+    if set(spec) == {"text_absent"} and isinstance(spec["text_absent"], str) and spec["text_absent"]:
+        return None if passed else False
+    return None
 
 
 def _last_result(clause: Mapping, receipts: Sequence[Mapping[str, Any]]) -> bool | None:

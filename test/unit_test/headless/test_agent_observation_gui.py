@@ -52,6 +52,28 @@ def test_element_selection_only_edits_action_and_actions_submit_it(tab, monkeypa
     assert calls == [("act", {"task_id": "task-a", "action": action})]
 
 
+def test_android_semantic_selection_uses_the_shared_action_without_native_input(tab, monkeypatch):
+    from je_auto_control.utils.agent_runtime.observation_refs import resolve_action
+    calls = []
+    monkeypatch.setattr(tab, "_dispatch", lambda *args: calls.append(args))
+    frame = observation()
+    frame['data'] = {'identity': {'platform': 'android', 'coordinate_space': 'android_display', 'hierarchy': 'f' * 64},
+                     'elements': [{'index': 0, 'native_id': '0/0', 'name': 'Save', 'role': 'button',
+                                   'bounds': [10, 20, 30, 40], 'enabled': True, 'visible': True, 'actionable': True}],
+                     'semantic_observation': True, 'text_redacted': False, 'text': 'Save'}
+    tab._action.setPlainText(json.dumps({'tool': 'AC_android_tap', 'arguments': {'x': 1, 'y': 2},
+                                        'observation_id': ''}))
+    tab._present_result(frame)
+    tab._observation._elements.cellClicked.emit(0, 0)
+    action = json.loads(tab._action.toPlainText())
+    assert action['tool'] == 'AC_android_tap' and action['arguments'] == {}
+    assert calls == []
+    resolved, _ground = resolve_action(action['tool'], action['arguments'], action['reference'], frame['data'])
+    assert resolved == {'x': 25, 'y': 40}
+    dict(tab.menu_actions())['agent_act']()
+    assert calls == [('act', {'task_id': 'task-a', 'action': action})]
+
+
 def test_browser_target_example_is_inert(tab, monkeypatch):
     from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile
     calls = []

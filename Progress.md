@@ -9,7 +9,7 @@
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-恢復後優先處理第 4 組的遠端 worker／ACK／取消接合，再依序完成其餘實作、共用介面與第 8 組交付核對。
+接續優先核對第 4 組的真實裝置控制／擷取來源與受管介面，再完成其餘實作與第 8 組交付核對。
 
 1. **P4：瀏覽器與正式環境接合**
    - 選定正式服務專用 helper Python、AutoControl／WebRunner 套件版本與受管 Chromium 安裝；
@@ -55,9 +55,12 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      在實際 SDK 重驗 ACK 前拒絕、begin 後取消／逾時、錯誤裝置／世代、撤權、真人接回、
      唯讀路徑禁止輸入與清理失敗隔離；不得重播、更換 helper 繞過或代送桌面釋放事件。
      數字 transport ID、shell-v2 的退出碼或本機 socket 結束都不足以證明裝置／輸入安全。
-     Android 觀察目前只有身分／安全 metadata；補受限 hierarchy／語義元素、Unicode／IME、
-     動作讀回與獨立應用完成驗證，以及旋轉／縮放／多顯示器、版本／OEM 格式核對；
-     不可把有限 ASCII 提案、空元素觀察或未知 dump 格式當作完整裝置輸入支援。
+     為 `android_hierarchy.AndroidHierarchyReader` 接入真實、限 app／window 的來源與安全文字授權，
+     核對 SDK／服務的身分、完整度、生命週期與不干擾其他無障礙擁有者的契約；不可直接貼上
+     要求的 snapshot 當作來源證明，也不能默用會建立 UiAutomation 的 dump CLI 或重啟服務。
+     無 reader 的 metadata、遮罩值、部分文字及 SDK import 成功均不能宣稱完整畫面／原生可用。
+     補受保護輸入欄位值的有限比較／獨立驗證、豐富欄位狀態條件、Unicode／IME，以及旋轉／縮放／
+     多顯示器、版本／OEM 格式核對；不能把有限 ASCII／現有單視窗解析當作完整裝置輸入支援。
    - 為 ADB／WDA 各自建立可信的實體裝置識別、舊 writer 退出與清理／世代證據來源；核對真實
      SDK 契約，證明新世代能使所有舊指令失效且不重播。沒有可信來源時維持拒絕恢復。
    - 部署時明定每台裝置唯一的權威服務與受保護資源位置。預設使用者目錄內的 OS lock 只協調
@@ -100,6 +103,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 7. **P3／P6／P7：能力、模型及共用介面驗證**
    - 補桌面權限、平台／裝置連線、來源／目標就緒與原生證據的診斷；區分未支援、缺依賴、
      未授權、未探測、未記錄與實測成功，不把 Python 套件匯入成功當原生可用。
+   - 盤點各桌面／瀏覽器／檔案 target 的語義觀察與遮罩覆蓋，接合精確的
+     `semantic_observation`／`text_redacted` 來源宣告；沒有新旗標的舊 target 仍沿用既有判定，
+     不能因此宣稱已證明完整畫面或遮罩內容的不存在。
    - 在明確配置且已安裝的本機 Ollama 工具／視覺模型上補端到端證據：模型不符、拒絕連線、
      逾時、取消、預算與完成驗證；不可自動下載或切換外部服務。
    - 新增／深化功能須同步公開 API、命令目錄、MCP／REST／CLI／Builder、薄 GUI Actions 及語系，
@@ -110,6 +116,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      區分已實作、尚缺實作與只缺實測，不能用模擬目標取代原生驗收。
    - 於最後固定提交重跑完整 headless 與 `coverage run -m pytest`、跨功能／故障恢復回歸；
      目前較早固定版本的全套證據不能冒充最新工作樹結果。
+     另須核對 stage 48 固定快照 `.worktrees/agent-validation-48` 的完整執行／coverage 結果；
+     日誌與結果 metadata 位於功能工作樹的 `.worktrees/agent-tools/*stage48*`，不能把啟動當作通過。
    - 重跑三平台型別、Ruff／Bandit、檔案／函式／複雜度及文件計數，檢查新增 lint 問題；
      AutoControl 全套 Pylint 仍有既有問題，不能把局部模組通過當全套零問題。
      WebRunner 既有全套 mypy／flake8／嚴格 Sphinx 債務見其 `Progress.md` #23，不能標示全綠。

@@ -737,7 +737,7 @@ shares a deadline and atomically pins boot after live checks; it never launches 
 boot. android_commands.py compiles only four finite existing input names with closed arguments and
 same-connection pre/post identity guards, sentinel-preserved field evidence, literal text, fixed results
 and the transport byte limit. Proposals carry input_authorized=false. Checked input evidence additionally
-needs trusted presence/device-fencing providers, semantic observation grounding and managed target wiring;
+needs trusted presence/device-fencing/capture providers and managed target wiring;
 no managed device profile, SDK execution authority or new catalog command is advertised.
 
 Android native input evidence: android_input_windows.py decodes pinned front-to-back window records
@@ -771,5 +771,19 @@ android_session.dispatch_checked recompiles the exact finite body and rejects un
 session or boot proposals before a single shell-v2 call inside the trusted fence. Settlement separately
 binds the random request ID, boot, device and epoch; shell phases cannot prove remote input retirement.
 The provider must actually suppress old device writes on human takeover, expiry or cancellation; a
-host-only lock/context manager or local helper exit is insufficient. No production provider is assumed,
-and no default managed profile or UI/semantic-observation/app-completion claim is advertised.
+host-only lock/context manager or local helper exit is insufficient. No production provider is assumed
+and no default managed profile or native readiness is advertised.
+
+Android semantic readback: android_hierarchy.py streams defused, bounded single-window XML against the
+proven native snapshot/display and a fresh host reader request. Only explicit host path grants reveal
+non-sensitive/read-only text; XML never grants authority. Password/editable values and protected
+descendants are masked, foreign subtrees excluded, bounds/indexes/booleans closed and hit tests gate
+element actionability. android_adapter.py brackets capture with native checks and rereads semantics at
+preparation and inside the device fence. Raw XML and keyed witnesses stay private; public random
+revisions remain stable for unchanged observations but refresh on changes/reversions and actions/no-ops.
+observation_refs.py resolves actionable Android element indexes in android_display coordinates only.
+Existing observe/act/finish and screen criteria provide fresh reviewed-label readback; verification.py
+keeps missing/masked absence and malformed capability/elements unknown rather than accepting empty
+metadata as a complete screen. Protected field-value verification and richer partial predicates remain
+open. Readers are explicit trusted host callables with no CLI/SDK startup or capture fallback; standard
+UiAutomation default connection can suppress other accessibility owners and is not silently invoked.

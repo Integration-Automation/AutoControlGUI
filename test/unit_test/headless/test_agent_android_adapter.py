@@ -27,6 +27,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from je_auto_control.utils.agent_runtime.android_adapter import AndroidRemoteAdapter
 from je_auto_control.utils.agent_runtime.android_control import AndroidCommandLease
+from je_auto_control.utils.agent_runtime.android_hierarchy import AndroidHierarchySample
 from je_auto_control.utils.agent_runtime.android_session import AndroidDeviceSession
 from je_auto_control.utils.agent_runtime.android_transport import ManagedAdbServer
 from je_auto_control.utils.agent_runtime.remote_worker import serve_remote_worker
@@ -57,11 +58,20 @@ class Control:
         nonce = '0' * 32 if (directory / 'wrong_lease').exists() else request_id
         return AndroidCommandLease(proposal, nonce, 'fixture-epoch', fence, lambda: None, settle)
 
+class Reader:
+    def __call__(self, evidence, request_id, *, timeout, check):
+        check()
+        nonce = '0' * 32 if (directory / 'wrong_capture').exists() else request_id
+        grants = tuple(json.loads((directory / 'grants.json').read_text()))
+        return AndroidHierarchySample(nonce, evidence.snapshot, evidence.size,
+                                      (directory / 'hierarchy.xml').read_bytes(), grants)
+
 def factory():
     server = ManagedAdbServer('127.0.0.1', int(sys.argv[1]))
     session = AndroidDeviceSession(server, serial='reviewed-endpoint', physical_id='reviewed-device',
                                    package='org.example.app')
-    return AndroidRemoteAdapter(session, control=Control())
+    reader = Reader() if (directory / 'hierarchy.xml').exists() else None
+    return AndroidRemoteAdapter(session, control=Control(), hierarchy_reader=reader)
 serve_remote_worker(factory)
 '''
 

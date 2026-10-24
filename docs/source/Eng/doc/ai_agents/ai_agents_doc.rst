@@ -603,8 +603,50 @@ evidence or a different session/boot before transport. Calls execute only inside
 fence and are never replayed. Complete v2 phase/exit evidence is returned without claiming application
 completion; partial results remain unknown. Settlement must separately match request ID, boot, device
 and epoch and certify released input/no queued writes before end ACK. Old proof cannot settle a later
-command. Observations contain identity/security metadata only; hierarchy, semantic grounding, Unicode/
-IME, readback, independent app completion and shared profile/API/GUI delivery remain open.
+command. Without an explicit hierarchy reader, observations contain identity/security metadata only.
+Real capture/control providers, protected field-value verification, Unicode/IME and shared profile/API/GUI
+delivery remain open.
+
+Reviewed Android semantic observations
+----------------------------------------------------------------------
+
+An optional host-only ``hierarchy_reader`` callable returns ``AndroidHierarchySample`` for the exact
+capture request, native device/window and display size. The reader must attest its actual source and
+preserve other accessibility owners; echoing requested metadata around an unverified SDK result is
+insufficient. No default device, SDK connection, installation, CLI, reconnect or fallback is selected.
+The pinned AOSP ``DumpCommand`` creates a ``UiAutomation`` connection; its default connection suppresses
+other accessibility services. It is therefore not silently used as a read-only capture substitute.
+
+``android_hierarchy`` accepts bounded UTF-8, single-window, rotation-zero XML with closed attributes and
+exact booleans. Defused XML rejects DTD/entities/external sources. Depth, node/element counts, text and
+native display bounds are limited; duplicate sibling indexes and ambiguous text grants fail closed.
+Foreign-package subtrees are excluded. Only fresh explicit host path grants reveal non-sensitive,
+read-only labels; XML attributes cannot grant permission. Password/editable values and protected
+descendants stay masked. Native routing/occlusion checks mark whether a visible element is actionable.
+
+Private keyed source witnesses detect even masked changes but are never published. Public observation
+revisions are random, remain stable only for unchanged observations, and are replaced after source
+changes/reversions and prepared actions, including input no-ops. They cannot serve as reusable hashes
+of hidden values. Capture is bracketed by native scope checks; preparation and the device fence reread
+the hierarchy before finite input. Indexed ``AC_android_tap`` references require a current actionable
+Android semantic element, with no screenshot-coordinate fallback.
+
+Existing observe/act/finish APIs carry reviewed post-action readback. A fresh ``screen.text_present``
+condition can pass from a known reviewed match; absent content in an unavailable/redacted observation
+is unknown, never proof of absence. A known visible match can contradict ``text_absent``. Other partial
+screen predicates stay unknown until sufficient evidence exists. Source capability flags are exact
+booleans; malformed elements/flags cannot turn verification green. This does not add protected input
+value comparison, Unicode/IME, default managed profiles or native acceptance evidence.
+Targets that omit the new capability flags retain legacy verification behavior; auditing their source
+coverage and declarations remains in ``Progress.md`` rather than claiming universal completeness.
+
+Primary format/lifecycle references:
+`AOSP API 34 DumpCommand
+<https://android.googlesource.com/platform/prebuilts/fullsdk/sources/+/88c7ff1cd72d6305ec59f97aadc2198cc2dc3592/android-34/com/android/commands/uiautomator/DumpCommand.java>`_,
+`AccessibilityNodeInfoDumper
+<https://android.googlesource.com/platform/prebuilts/fullsdk/sources/+/88c7ff1cd72d6305ec59f97aadc2198cc2dc3592/android-34/com/android/uiautomator/core/AccessibilityNodeInfoDumper.java>`_
+and `UiAutomation default connection flags
+<https://android.googlesource.com/platform/prebuilts/fullsdk/sources/+/88c7ff1cd72d6305ec59f97aadc2198cc2dc3592/android-34/android/app/UiAutomation.java>`_.
 
 The pinned formats come from AOSP Android 14
 `InputDispatcher <https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-14.0.0_r27/services/inputflinger/dispatcher/InputDispatcher.cpp>`_,

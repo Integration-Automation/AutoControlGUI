@@ -22,6 +22,9 @@ fixture_input() {
         fi
     done
     if [ -f "$FIXTURE_DIR/after" ]; then command cat "$FIXTURE_DIR/after" > "$FIXTURE_DIR/wm"; fi
+    if [ -f "$FIXTURE_DIR/after_hierarchy.xml" ]; then
+        command cat "$FIXTURE_DIR/after_hierarchy.xml" > "$FIXTURE_DIR/hierarchy.xml"
+    fi
     if [ -f "$FIXTURE_DIR/fail" ]; then return 1; fi
 }
 '''

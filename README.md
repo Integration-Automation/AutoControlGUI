@@ -28,8 +28,14 @@ AndroidCommandLease grants. A fresh identity/routing/security observation is con
 recompiles the finite command before sending it once over ADB. Device fencing must suppress old writes
 after physical takeover, cancellation or expiry. No default provider exists: standard ADB and killing
 the local helper cannot supply that guarantee. Settlement additionally binds one random request ID and
-boot to independent input/queue proof. Metadata-only observations contain no hierarchy, text or image;
-semantic grounding, Unicode/IME, readback and independent application completion remain open.
+boot to independent input/queue proof. An optional explicit host hierarchy_reader supplies bounded
+app-only semantic elements and reviewed non-sensitive text; without it observations remain metadata-only.
+XML cannot grant text access; editable/password values and protected descendants stay masked. Raw XML
+and private freshness hashes are never published; random observation revisions change after actions and
+source changes. Android element references require a current actionable semantic element. Fresh screen
+readback can confirm a reviewed positive label; missing/partial/masked content cannot prove text absent.
+No CLI/SDK startup or capture fallback is added. Real capture/control providers, protected field-value
+verification, Unicode/IME and managed profile delivery remain open.
 
 `lookup_agent_task("key", reviewed_spec)` optionally compares the destination-normalized specification
 with the immutable digest stored for the original owner's request. The response advertises

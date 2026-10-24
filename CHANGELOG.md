@@ -1,5 +1,12 @@
 # Changelog
 
+Add optional host-reviewed Android semantic hierarchy capture with scoped element references and fresh
+application readback. Bound defused XML parsing; exclude foreign packages and mask protected/editable
+values. Keep raw XML/private witnesses out of observations and use random revisions across changes and
+actions. Require native and semantic rechecks before input. Screen verification treats unavailable or
+redacted absence and malformed source flags/elements as unknown; known reviewed matches remain usable.
+No default capture, CLI/SDK startup, managed profile or native acceptance claim is added.
+
 Connect checked Android sessions to the owned remote worker through explicit host device-control leases.
 Require a fresh metadata observation per action, exact finite recompilation and request/boot-bound
 independent settlement; reject altered proposals before transport and never replay a prepared call.

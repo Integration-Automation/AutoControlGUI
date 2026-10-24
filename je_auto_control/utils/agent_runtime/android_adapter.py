@@ -3,12 +3,17 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Callable
+import secrets
+from functools import partial
+from dataclasses import replace
+from typing import Any, Callable
 
 from je_auto_control.utils.agent_runtime.android_action_result import AndroidActionResult
 from je_auto_control.utils.agent_runtime.android_commands import ANDROID_INPUT_TOOLS
 from je_auto_control.utils.agent_runtime.android_control import AndroidCommandLease, AndroidControlProvider
 from je_auto_control.utils.agent_runtime.android_input_evidence import AndroidInputEvidence
+from je_auto_control.utils.agent_runtime.android_hierarchy import (
+    AndroidHierarchyReader, AndroidHierarchyView, parse_android_hierarchy)
 from je_auto_control.utils.agent_runtime.android_session import AndroidDeviceSession, _remaining
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.agent_runtime.errors import AgentObservationStale, AgentTaskError
@@ -20,10 +25,14 @@ from je_auto_control.utils.agent_runtime.remote_journal import device_identity
 class AndroidRemoteAdapter:
     """Internal finite ADB adapter; missing real device-control providers always withhold readiness."""
 
-    def __init__(self, session: AndroidDeviceSession, *, control: AndroidControlProvider | None = None) -> None:
+    def __init__(self, session: AndroidDeviceSession, *, control: AndroidControlProvider | None = None,
+                 hierarchy_reader: AndroidHierarchyReader | None = None) -> None:
         self._session, self._control = session, control
         self._spec: AgentTaskSpec | None = None
         self._observed: AndroidInputEvidence | None = None
+        self._reader = hierarchy_reader
+        self._hierarchy: AndroidHierarchyView | None = None
+        self._hierarchy_key = secrets.token_bytes(32)
 
     @property
     def device(self) -> dict[str, str]:
@@ -70,17 +79,54 @@ class AndroidRemoteAdapter:
         return ready, reason
 
     def observe(self) -> dict:
-        """Publish only current app identity/routing metadata; no screenshot, text or foreign window data."""
+        """Publish proven app metadata and optionally host-reviewed semantic readback; never raw XML or values."""
         spec, check = self._context()
         if self._spec is None:
             raise AgentTaskError("Android adapter is not ready")
         self.checkpoint()
-        _, evidence = self._session.inspect_input(timeout=spec.budget.action_seconds, check=check)
+        previous = self._hierarchy
+        self._observed, self._hierarchy = None, None
+        deadline = time.monotonic() + spec.budget.action_seconds
+        _, evidence = self._session.inspect_input(timeout=_remaining(deadline), check=check)
+        result: dict[str, Any] = {"identity": {**evidence.snapshot.identity(), "input_routing": evidence.input_sha256,
+                               "input_policy": evidence.policy_sha256, "display_size": list(evidence.size)},
+                  "elements": [], "text": "", "semantic_observation": False, "text_redacted": True}
+        if self._reader is not None:
+            self._hierarchy = self._capture_hierarchy(evidence, deadline, check)
+            if previous is not None and self._hierarchy.same_source(previous):
+                self._hierarchy = replace(self._hierarchy, revision=previous.revision)
+            result.update(self._hierarchy.to_dict())
+            result["identity"].update(hierarchy=self._hierarchy.revision, coordinate_space="android_display")
         check()
         self._observed = evidence
-        return {"identity": {**evidence.snapshot.identity(), "input_routing": evidence.input_sha256,
-                             "input_policy": evidence.policy_sha256, "display_size": list(evidence.size)},
-                "elements": [], "text": ""}
+        return result
+
+    def _capture_hierarchy(self, evidence: AndroidInputEvidence, deadline: float,
+                           check: Callable[[], None]) -> AndroidHierarchyView:
+        if self._reader is None:
+            raise AgentTaskError("Android hierarchy reader is not configured")
+        request_id = uuid.uuid4().hex
+        sample = self._reader(evidence, request_id, timeout=_remaining(deadline), check=check)
+        view = parse_android_hierarchy(sample, evidence, request_id, self._hierarchy_key, check)
+        _, current = self._session.inspect_input(timeout=_remaining(deadline), check=check)
+        if current != evidence:
+            raise AgentObservationStale("Android native scope changed during hierarchy capture")
+        return view
+
+    def _semantic_check(self, evidence: AndroidInputEvidence, deadline: float,
+                        check: Callable[[], None]) -> Callable[[], None] | None:
+        if self._reader is None:
+            return None
+        if self._hierarchy is None:
+            raise AgentObservationStale("Android semantic observation is missing")
+        verify = partial(self._require_hierarchy, self._hierarchy.signature, evidence, deadline, check)
+        verify()
+        return verify
+
+    def _require_hierarchy(self, signature: str, evidence: AndroidInputEvidence, deadline: float,
+                           check: Callable[[], None]) -> None:
+        if self._capture_hierarchy(evidence, deadline, check).signature != signature:
+            raise AgentObservationStale("Android semantic hierarchy changed since observation")
 
     def prepare(self, name: str, arguments: dict) -> PreparedRemoteAction:
         """Refuse stale evidence and return one finite call bound to a fresh trusted device lease."""
@@ -92,15 +138,17 @@ class AndroidRemoteAdapter:
         deadline = time.monotonic() + spec.budget.action_seconds
         arguments = detached(arguments)
         proposal = self._session.propose_checked(name, arguments, timeout=_remaining(deadline), check=check)
-        if not _same_evidence(self._observed, proposal.input_evidence):
+        proof = proposal.input_evidence
+        if proof is None or not _same_evidence(self._observed, proof):
             raise AgentObservationStale("Android input identity, geometry or security changed since observation")
+        verify = self._semantic_check(proof, deadline, check)
         request_id = uuid.uuid4().hex
         lease = self._control.lease(proposal, request_id)
         if (not isinstance(lease, AndroidCommandLease) or lease.proposal != proposal or lease.request_id != request_id):
             raise AgentTaskError("Android control lease does not match its exact prepared command")
         check()
-        self._observed = None
-        return _prepared_call(self._session, lease, name, arguments, deadline, check)
+        self._observed, self._hierarchy = None, None
+        return _prepared_call(self._session, lease, name, arguments, deadline, check, verify)
 
 
 def _same_evidence(expected: AndroidInputEvidence, actual: AndroidInputEvidence | None) -> bool:
@@ -108,7 +156,8 @@ def _same_evidence(expected: AndroidInputEvidence, actual: AndroidInputEvidence 
 
 
 def _prepared_call(session: AndroidDeviceSession, lease: AndroidCommandLease, name: str,
-                   arguments: dict, deadline: float, check: Callable[[], None]) -> PreparedRemoteAction:
+                   arguments: dict, deadline: float, check: Callable[[], None],
+                   verify: Callable[[], None] | None) -> PreparedRemoteAction:
     results: list[AndroidActionResult] = []
     invoked = False
 
@@ -126,6 +175,8 @@ def _prepared_call(session: AndroidDeviceSession, lease: AndroidCommandLease, na
         checkpoint()
         with lease.device_fence():
             checkpoint()
+            if verify is not None:
+                verify()
             result = session.dispatch_checked(lease.proposal, name, arguments,
                                               timeout=_remaining(deadline), check=checkpoint)
         if result is None:
@@ -136,12 +187,15 @@ def _prepared_call(session: AndroidDeviceSession, lease: AndroidCommandLease, na
     def settle() -> dict:
         if len(results) != 1:
             raise AgentTaskError("Android settlement has no complete command result")
-        proof = lease.settle(results[0])
-        if (not isinstance(proof, dict)
-                or set(proof) != {"device", "epoch", "inputs_released", "queue_empty", "request_id", "boot_id"}
-                or proof["request_id"] != lease.request_id or proof["boot_id"] != lease.proposal.snapshot.boot_id):
-            raise AgentTaskError("Android settlement does not match this command request and boot")
-        return {key: value for key, value in proof.items() if key not in {"request_id", "boot_id"}}
+        return _settlement(lease.settle(results[0]), lease)
 
     return PreparedRemoteAction(device_identity("android", lease.proposal.snapshot.physical_id),
                                 lease.epoch, invoke, settle)
+
+
+def _settlement(proof: dict, lease: AndroidCommandLease) -> dict:
+    if (not isinstance(proof, dict)
+            or set(proof) != {"device", "epoch", "inputs_released", "queue_empty", "request_id", "boot_id"}
+            or proof["request_id"] != lease.request_id or proof["boot_id"] != lease.proposal.snapshot.boot_id):
+        raise AgentTaskError("Android settlement does not match this command request and boot")
+    return {key: value for key, value in proof.items() if key not in {"request_id", "boot_id"}}
