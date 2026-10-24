@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,307 |
-| 程式碼總行數 | 192,372 |
+| 程式碼總行數 | 192,408 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 851 |
 | 套件門面 `__all__` 公開名稱數 | 1440 |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 33,320 行。
+> 14 個套件、約 33,356 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 7,760 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 7,796 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -989,7 +989,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（7,760 行／71 檔）
+#### `utils/agent_runtime/`（7,796 行／71 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1014,7 +1014,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `dialog_scope.py` | 54 | Pause managed desktop work at unsaved-content or unrecognized modal windows. |
 | `document_launch.py` | 46 | Bounded document handoff runs outside the disposable native input helper's process tree. |
 | `errors.py` | 18 | Typed failures for managed tasks, observations and control ownership. |
-| `evidence.py` | 183 | Service-owned task provenance, redacted artifacts and thirty-day metadata retention. |
+| `evidence.py` | 185 | Service-owned task provenance, redacted artifacts and thirty-day metadata retention. |
 | `file_dialog_scope.py` | 62 | Bind the existing file-dialog executor to one task-owned window and rooted absolute path. |
 | `file_target.py` | 35 | A noninteractive target for rooted archive workflows, separate from desktop input. |
 | `helper_environment.py` | 55 | Host-reviewed browser Python environments and bounded owned dependency-probe helpers. |
@@ -1041,12 +1041,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `retention.py` | 55 | Thirty-day cleanup of stopped tasks and exclusively owned runtime artifacts. |
 | `routes.py` | 133 | Authenticated REST adapters for the runtime explicitly owned by a server. |
 | `runner.py` | 111 | Autonomous skill/local-model driver over exactly the external task operations. |
-| `runtime.py` | 567 | Shared managed-task lifecycle with fenced dispatch and evidence-based completion. |
+| `runtime.py` | 584 | Shared managed-task lifecycle with fenced dispatch and evidence-based completion. |
 | `runtime_lock.py` | 40 | Cross-process ownership for one runtime database; imports never acquire locks. |
 | `service.py` | 107 | Explicit local runtime service lifecycle over the existing authenticated REST server. |
 | `skill_parameters.py` | 110 | Explicit typed parameter slots modify data values without widening a skill's authority. |
 | `skill_recording.py` | 64 | Semantic skill drafts retain verified actions, original scope and independent completion evidence. |
-| `store.py` | 251 | Transactional task metadata, durable action receipts and input ownership. |
+| `store.py` | 268 | Transactional task metadata, durable action receipts and input ownership. |
 | `target_config.py` | 198 | Immutable host-reviewed target configuration, distinct from untrusted task options. |
 | `target_continuity.py` | 16 | Require a live UI target context before trusting a finite skill's verified prefix. |
 | `target_factory.py` | 27 | Create inert managed adapters from host profiles; SDKs and native resources stay lazy. |
@@ -1364,8 +1364,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 869 | 79,547 |
-| **總計** | **1,299** | **192,203** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 869 | 79,583 |
+| **總計** | **1,299** | **192,239** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

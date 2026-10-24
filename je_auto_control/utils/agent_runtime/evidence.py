@@ -65,6 +65,8 @@ class TaskEvidence:
         with self.store.connection() as connection:
             row = connection.execute("SELECT * FROM agent_evidence WHERE task_id=?", (task_id,)).fetchone()
             pending = connection.execute("SELECT 1 FROM agent_evidence_pending WHERE task_id=?", (task_id,)).fetchone()
+            completion = connection.execute(
+                "SELECT contract FROM agent_completion WHERE task_id=?", (task_id,)).fetchone()
         if row is None:
             return {}
         directory = self.directory(task_id)
@@ -72,7 +74,7 @@ class TaskEvidence:
         artifacts = [str(path) for path in paths if path.is_file() and not path.is_symlink()]
         return {"history_path": self.history.path, "history_id": row["history_id"],
                 "journal_path": row["journal_path"], "artifacts": sorted(artifacts),
-                "report_pending": pending is not None}
+                "report_pending": pending is not None, "completion_contract": completion[0] if completion else 0}
 
     def defer(self, task_ids: list[str]) -> None:
         """Persist publication work so large emergency stops can acknowledge input retirement promptly."""

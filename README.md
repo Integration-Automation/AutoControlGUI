@@ -1,5 +1,12 @@
 # AutoControl
 
+Managed task success is published after input cleanup is confirmed. If cleanup fails or remains busy,
+the task requires review and keeps its input lease; a crash before confirmation remains recoverable.
+Completion uses conditional state transitions so concurrent cancellation retains priority. Status and
+the existing GUI/API task results expose `metadata.input_released` and durable `completion_contract=1`
+for newly confirmed success (legacy records retain zero); final artifacts reflect the settled
+state. This supplies local retirement evidence for subsequent DAG coordination.
+
 DAG nodes retain the caller's authorization, cancellation and command ceilings on pool threads,
 including custom runners. Each node refreshes store-backed users before execution; removed users fail
 that node and dependent nodes are skipped. Individual operations check the refreshed role. Default

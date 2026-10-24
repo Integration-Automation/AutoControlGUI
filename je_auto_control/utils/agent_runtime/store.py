@@ -29,6 +29,9 @@ CREATE TABLE IF NOT EXISTS agent_control (
 CREATE TABLE IF NOT EXISTS agent_clocks (
  task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE,
  started REAL NOT NULL, last_seen REAL NOT NULL, spent REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_completion (
+ task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE,
+ contract INTEGER NOT NULL, confirmed REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_reviews (
  action_id TEXT PRIMARY KEY REFERENCES agent_actions(id), task_id TEXT NOT NULL REFERENCES agent_tasks(id),
  decision TEXT NOT NULL, note TEXT NOT NULL, original_result TEXT, reviewed REAL NOT NULL, actor TEXT NOT NULL);
@@ -181,6 +184,20 @@ class AgentTaskStore:
                 raise AgentTaskError("terminal or missing task cannot change state")
             connection.execute("UPDATE agent_tasks SET state=?,reason=?,updated=?,verification=? WHERE id=?",
                                (state, reason, time.time(), json.dumps(detached(verification or [])), task_id))
+
+    def transition(self, task_id: str, expected: str, state: str, *,
+                   reason: str = "", verification: Any = None) -> bool:
+        """Compare and publish nonterminal state without overwriting concurrent control requests."""
+        if expected not in STATES - TERMINAL or state not in STATES:
+            raise AgentTaskError("invalid conditional task transition")
+        reports = json.dumps(detached(verification or []))
+        with self.connection(write=True) as connection:
+            cursor = connection.execute(
+                "UPDATE agent_tasks SET state=?,reason=?,updated=?,verification=? WHERE id=? AND state=?",
+                (state, reason, time.time(), reports, task_id, expected))
+            if cursor.rowcount == 1 and expected == "verifying" and state == "succeeded":
+                connection.execute("INSERT OR REPLACE INTO agent_completion VALUES (?,1,?)", (task_id, time.time()))
+            return cursor.rowcount == 1
 
     def start(self, task_id: str) -> None:
         """Set the durable start time once, so restarts do not reset the wall budget."""

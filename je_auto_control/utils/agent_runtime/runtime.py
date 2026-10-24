@@ -128,6 +128,8 @@ class AgentRuntime:
         """Read owner-scoped task status without observing the desktop."""
         row = self._row(task_id)
         metadata = self.evidence.metadata(task_id)
+        with self._mutex:
+            metadata["input_released"] = task_id not in self._leases
         metadata["target"] = row["spec"]["target"]
         if "target_profile" in row["spec"]["options"]:
             metadata["target_profile"] = thaw(row["spec"]["options"]["target_profile"])
@@ -356,7 +358,8 @@ class AgentRuntime:
             with self._scope(row) as policy:
                 row = self._activate(row)
                 try:
-                    self.store.update(task_id, "verifying")
+                    if not self.store.transition(task_id, "running", "verifying"):
+                        return self.get(task_id)
                     with self.broker.dispatch(self._leases[task_id]):
                         observations = detached(self._target(row).observe())
                         receipts = self.store.actions(task_id)
@@ -366,12 +369,26 @@ class AgentRuntime:
                     complete = all(item["status"] == "passed" for item in reports)
                     uncertain = any(item["status"] == "uncertain" for item in receipts)
                     state = "succeeded" if complete and not uncertain else "waiting_user"
-                    self.store.update(task_id, state, reason="" if state == "succeeded" else "completion not proven",
-                                      verification=reports)
-                    self._retire(task_id)
+                    self._publish_completion(task_id, state, reports)
                     return self.get(task_id)
                 finally:
                     self._settle_control(task_id)
+
+    def _publish_completion(self, task_id: str, state: str, reports: List[dict[str, Any]]) -> None:
+        """Retire input before publishing success; concurrent control requests retain priority."""
+        pending = "input cleanup unconfirmed; review before continuing"
+        if not self.store.transition(task_id, "verifying", "verifying", reason=pending, verification=reports):
+            return
+        try:
+            retired = self._retire(task_id)
+        except _ERRORS:
+            self.store.transition(task_id, "verifying", "waiting_user", reason=pending, verification=reports)
+            raise
+        reason = "" if state == "succeeded" else "completion not proven"
+        if not retired:
+            state, reason = "waiting_user", pending
+        if self.store.transition(task_id, "verifying", state, reason=reason, verification=reports):
+            self.evidence.publish(task_id)
 
     def pause(self, task_id: str) -> AgentTaskResult:
         """Request pause immediately; transfer control only after active input retires."""

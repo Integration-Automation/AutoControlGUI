@@ -1,6 +1,16 @@
 AI agents and computer use
 ===========================
 
+Completion and input retirement
+--------------------------------
+
+Task success is committed only after owned input cleanup is confirmed. Failed or busy cleanup requires
+review and retains the lease; a crash before confirmation leaves the task recoverable. Conditional
+transitions preserve concurrent cancellation. Existing task status/results include
+``metadata.input_released`` and ``completion_contract``. Version 1 is stored atomically with new success
+and survives restart; legacy success stays version zero. Final artifacts and history reflect the committed outcome. This evidence
+covers the owning runtime's input retirement. Remote-device acknowledgement remains a separate contract.
+
 DAG worker authority
 ---------------------
 

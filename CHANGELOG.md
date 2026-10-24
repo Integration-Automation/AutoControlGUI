@@ -1,5 +1,7 @@
 # Changelog
 
+Fix task success being committed before owned input cleanup. Verification remains nonterminal until retirement is confirmed; failed/busy cleanup requires review and retains control. Conditional transitions preserve concurrent cancellation and crash recovery. Existing status/results add metadata.input_released and durable completion_contract (new confirmed success=1, legacy=0); final artifact/history publication reflects the committed outcome. Public operation signatures stay compatible.
+
 Fix DAG pool workers dropping caller authorization and custom-runner cancellation/command guards. Capture a separate context per node and refresh store-backed identities before dispatch. Default remote nodes now require manage_hosts before reading registered host credentials or action files; operator calls that previously borrowed those credentials are refused. Administrator and trusted direct Python dispatch remain supported. Public DAG signatures are unchanged.
 
 Experimental browser profiles accept an optional host-reviewed absolute helper_python path and run that environment with -I. Add the host-only probe target operation across existing API/AC/MCP/REST/CLI/GUI routes. Dependency inspection uses a separately bounded owned helper, records a timestamped metadata snapshot and never establishes browser/native readiness, acquires input or enables a target. Preserve virtualenv executable symlinks; task options cannot override the interpreter.

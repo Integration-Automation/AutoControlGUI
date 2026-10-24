@@ -1,5 +1,14 @@
 # AutoControl Architecture
 
+Completion stores verification while still verifying, retires input, then conditionally publishes the
+outcome only if control has not changed the state. Failed or busy retirement cannot publish success;
+unconfirmed cleanup retains the lease and requires review. A crash before retirement confirmation leaves
+verifying for recovery. AgentTaskStore.transition performs the state comparison and update in one write
+transaction. Status metadata.input_released exposes local lease retirement; final reports publish after
+the committed outcome. agent_completion stores contract version 1 atomically with new success, retains
+it across restart and cascades on task deletion; legacy success has version zero. This evidence is local
+to the owning runtime, not a remote-device acknowledgement.
+
 The DAG pool captures a fresh context for each node, preserving caller authorization, command guards,
 cancellation and managed operation state for default and custom runners. Node dispatch refreshes
 store-backed identity through DeferredAuthorization.context_scope; operation-specific checks use that
