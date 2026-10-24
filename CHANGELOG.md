@@ -1,5 +1,11 @@
 # Changelog
 
+Connect checked Android sessions to the owned remote worker through explicit host device-control leases.
+Require a fresh metadata observation per action, exact finite recompilation and request/boot-bound
+independent settlement; reject altered proposals before transport and never replay a prepared call.
+No default provider is supplied: real device-side suppression of old writes on takeover/cancel/expiry,
+semantic observations, independent app completion, managed profiles and public surfaces remain pending.
+
 Add an internal owned remote SDK worker with exact scope/owner binding, refreshed authority, parent
 retirement monitoring and physical takeover. Invoke finite SDK calls once after durable begin ACK;
 require trusted matching device/epoch input/queue settlement before end ACK. Unknown effects retain

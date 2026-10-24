@@ -721,23 +721,23 @@ outside perform and retires the local writer before release. An unmatched remote
 resource and durable quarantine; desktop InputJournal recovery refuses remote witnesses. Host-trusted
 recovery first records an epoch after all old writers retire, then requires a later epoch invalidating
 old commands without replay. No ADB/WDA proof is assumed. These are internal adapter prerequisites;
-Android/iOS factory profiles, SDK wiring, public surfaces and native readiness remain unavailable.
+Android/iOS factory profiles, real device-control providers, public surfaces and native readiness remain unavailable.
 
 android_transport.py is an internal ADB smart-socket prerequisite using an explicit existing loopback
 server. It shares android.adb_client._parse_devices, selects a numeric transport per connection and
 requires bounded shell-v2 stdout/stderr, an exact exit packet and EOF. One deadline and live checkpoints
 cover framing; failures preserve control exceptions and redact remote diagnostics. No CLI invocation,
 server management, reconnect, command retry or legacy shell fallback occurs. Server restart can reuse
-transport IDs: physical-device/boot/app checks in the same command connection, finite tool construction,
-remote-effect fencing and public managed target wiring remain required before Android is advertised.
+transport IDs. The session/compiler recheck physical device/boot/app on the command connection and
+construct finite tools; real device fencing and public managed wiring remain required before Android is advertised.
 
 Android identity/proposal boundary: android_scope.py validates bounded serial/boot/default-display
 window/activity evidence and discards raw dumps. android_session.py selects one exact ready endpoint,
 shares a deadline and atomically pins boot after live checks; it never launches an app or adopts a new
 boot. android_commands.py compiles only four finite existing input names with closed arguments and
 same-connection pre/post identity guards, sentinel-preserved field evidence, literal text, fixed results
-and the transport byte limit. Proposals carry input_authorized=false. Input-window/occlusion/unlock/
-presence gates, observation grounding and owned-worker/remote-effect integration are still required;
+and the transport byte limit. Proposals carry input_authorized=false. Checked input evidence additionally
+needs trusted presence/device-fencing providers, semantic observation grounding and managed target wiring;
 no managed device profile, SDK execution authority or new catalog command is advertised.
 
 Android native input evidence: android_input_windows.py decodes pinned front-to-back window records
@@ -746,8 +746,8 @@ exact rational intervals. android_input_evidence.py checks current focus, owner/
 quiescent input queues and both keyguard views. Stable current routing/queue and keyguard digests omit
 history/old ANR data and are rechecked by android_commands.py before input on the selected connection.
 AndroidDeviceSession.inspect_input/propose_checked share the deadline and preserve authority revocation.
-Evidence remains input_authorized=false; global monitors, physical activity/held inputs and owned-worker
-integration require separate trusted authorization before any managed Android target is advertised.
+Evidence remains input_authorized=false; global monitors, physical activity/held inputs and device
+fencing require separate trusted authorization before any managed Android target is advertised.
 
 Android action-result boundary: android_action_result.py accepts only complete v2 phase/exit pairs
 from ManagedAdbServer.shell. android_commands.py contains pre/post guard exits in separate subshells;
@@ -762,4 +762,14 @@ remote_effect.py invokes one PreparedRemoteAction only after durable begin ACK. 
 device/epoch settlement proof of released input and no queued remote writes; return values never imply
 settlement. NativeRemoteTarget forwards owner provenance and physical takeover without reader self-join.
 Errors retire the helper and preserve unknown remote effects, with no replay or desktop input cleanup.
-This is an internal SDK seam: no built-in Android/WDA adapter, proof provider or managed profile is added.
+This is an internal SDK seam; the WDA adapter, real proof providers and managed profiles remain open.
+
+Checked Android SDK bridge: android_adapter.py requires one fresh metadata-only observation per action,
+rereads the full native proof and consumes it after preparation. android_control.py defines explicit
+host-only AndroidCommandLease/device-fence contracts with no default provider. After durable begin ACK,
+android_session.dispatch_checked recompiles the exact finite body and rejects unchecked/altered/foreign
+session or boot proposals before a single shell-v2 call inside the trusted fence. Settlement separately
+binds the random request ID, boot, device and epoch; shell phases cannot prove remote input retirement.
+The provider must actually suppress old device writes on human takeover, expiry or cancellation; a
+host-only lock/context manager or local helper exit is insufficient. No production provider is assumed,
+and no default managed profile or UI/semantic-observation/app-completion claim is advertised.

@@ -456,11 +456,11 @@ Android 身分 session 與有限提案
 提案，原始 shell 不提供給模型。同一命令連線會在有限輸入前後核對實體、boot、顯示器及
 window／activity 焦點。尾端標記保留 shell 命令替換原本會吃掉的空白重複欄位。文字限制為
 有界可列印 ASCII、拒絕會失真的 literal ``%s``，並套用 shell 引用；按鍵是有限 app 輸入集。
-座標、時長及編碼後整段命令都有限制。成功只輸出固定標記；動作失敗或後續 scope 改變都
+座標、時長及編碼後整段命令都有限制。只輸出封閉階段標記；動作失敗或後續 scope 改變都
 拒絕，不重試，也不視為獨立完成證據。
 
 提案維持 ``input_authorized=false``。焦點身分不能替代輸入視窗命中、遮擋、解鎖及真人活動
-證據。自有 worker／副作用防護、受限 hierarchy 觀察、獨立完成條件、主機 profile 與共用
+證據。真實裝置控制來源、受限 hierarchy 觀察、獨立完成條件、主機 profile 與共用
 使用介面仍列於 ``Progress.md``，原生／真機驗收維持暫緩。已識別的焦點欄位來源為英文頁
 列出的固定 AOSP Android 14 原始碼。
 
@@ -481,7 +481,7 @@ Android 原生輸入與安全證據
 檢查後命令提案會在輸入前、同一連線內重新讀取已驗證的 routing／通道／佇列與 keyguard
 區塊，比對摘要；鎖定、通道、幾何或佇列改變即拒絕。既有裝置／boot／焦點檢查及固定結果
 協定保留。全域監看器須另有可信審閱，不能視為默許。證據與提案仍是
-``input_authorized=false``，真人活動／已按下輸入、自有 worker／journal、觀察定位與獨立完成
+``input_authorized=false``，可信真人活動／已按下輸入／裝置端防護來源、觀察定位與獨立完成
 驗證仍待接合。固定 AOSP 原始碼來源見英文頁；模擬證據不代表受管 Android 已可用，真機驗收
 維持暫緩。
 
@@ -503,5 +503,21 @@ Android 原生輸入與安全證據
 重新核對帳號權限、期限與真人接回。只有相符裝置／世代、輸入已釋放且遠端待送佇列清空的
 可信證據，才可送出並確認 end；shell 返回或 Android 階段不能提供這項證明。缺少／錯誤 ACK、
 撤權、逾時、晚到回覆及清理失敗都不重播、更換 helper 或代送桌面釋放。結束自有 helper 後，
-未知遠端副作用仍保留隔離。具體 Android／WDA adapter、可信證據來源、profile 與共用使用者介面
+未知遠端副作用仍保留隔離。可信裝置控制來源、WDA adapter、profile 與共用使用者介面
 仍待接合；模擬 SDK 測試不代表真機就緒。
+
+Android checked SDK 派送
+----------------------------------------------------------------------
+
+內部 ``AndroidRemoteAdapter`` 接合 session 與自有 worker，要求固定套件及有限工具集；沒有
+明確的 ``AndroidControlProvider`` 時，在連 ADB 前就拒絕就緒。Provider 須獨立證明真人活動／
+閒置、按住輸入及全域監看器審閱，並在裝置端阻止接回、取消或到期後的舊寫入。主機 lock、
+context manager 或本機 helper 結束不能提供這項保證；不提供預設來源、受管 profile 或真機就緒宣告。
+
+動作須有新的原生 metadata 觀察；準備時重讀身分／路由／安全，拒絕變動證據並消耗這次觀察。
+主機端 ``AndroidCommandLease`` 綁定 checked proposal、新隨機命令 ID 與 epoch。Worker 持久化
+begin 並 ACK 後，``dispatch_checked`` 重新編譯有限命令；參數／body 被改動、未檢查提案或不同
+session／boot 都在傳輸前拒絕。只在可信裝置防護內呼叫一次，不重播。完整 v2 階段／退出結果
+不能代表應用完成，片段結果仍未知。End ACK 前另須核對命令 ID、boot、裝置及 epoch，以及輸入
+已釋放、遠端待送佇列清空的獨立證據；舊證據不能清除新命令。觀察只有身分／安全 metadata，
+hierarchy、語義定位、Unicode／IME、讀回、獨立應用完成及 profile／共用 API／GUI 仍待交付。

@@ -520,11 +520,11 @@ physical identity, boot, focused display/window/activity both before and after i
 A trailing sentinel preserves empty duplicate fields that shell command substitution otherwise strips.
 Text is bounded printable ASCII, rejects lossy literal ``%s`` and is shell-quoted; keys are a finite
 app-input set. Coordinate/duration and combined encoded command limits are checked before dispatch.
-Only a fixed success marker may be emitted; post-action scope changes or command failure are errors,
+Only closed phase markers may be emitted; post-action scope changes or command failure are explicit failures,
 never automatic retries or independent completion evidence.
 
 Proposals retain ``input_authorized=false``. Focus identity alone is not an input-window hit test,
-occlusion proof, unlock check or human-activity gate. Owned-worker/remote-effect integration, scoped
+occlusion proof, unlock check or human-activity gate. Real device-control providers, scoped
 hierarchy observations, independent completion checks, target profiles and shared user surfaces remain
 open in ``Progress.md``. The existing native/device acceptance pause remains unchanged.
 
@@ -556,8 +556,8 @@ Checked command proposals hash the validated current routing/channel/queue block
 They reread both on the same command connection before input; a changed lock, channel, geometry or queue
 refuses execution. The original device/boot/focus guards and fixed-result protocol remain. Global
 monitors are explicit metadata requiring separate trusted review, not implicit approval. Evidence and
-proposals retain ``input_authorized=false``. Human activity/held-input gates, owned remote-worker/journal
-integration, observation grounding and independent completion remain open in ``Progress.md``.
+proposals retain ``input_authorized=false``. Trusted activity/held-input and device-fencing providers,
+observation grounding and independent completion remain open in ``Progress.md``.
 
 The internal action protocol v2 emits a closed ordered phase trace. A complete pre-input refusal has
 one fixed refusal phase and matching shell-v2 exit. Once input may have been invoked, failure and
@@ -582,8 +582,29 @@ takeover. An exact device/epoch proof must certify released input and an empty r
 end is emitted and acknowledged. A shell return or parsed Android phase cannot supply that proof.
 Malformed/missing ACK, lost replies, revocation, timeout or failed settlement never trigger replay,
 replacement or desktop release input. Cleanup retires the owned helper; unknown remote effects remain
-quarantined. Concrete Android/WDA adapters, real trusted evidence providers, target profiles and shared
+quarantined. Real device-control providers, the WDA adapter, target profiles and shared
 user surfaces remain open; simulated SDK contracts do not establish native device readiness.
+
+Checked Android SDK dispatch
+----------------------------------------------------------------------
+
+Internal ``AndroidRemoteAdapter`` connects the session to the owned worker. It requires the exact
+host-bound package and finite input tools, and withholds readiness before any ADB connection when no
+``AndroidControlProvider`` is configured. The provider must independently enforce human activity/idle,
+held-input state, global-monitor review and real device-side suppression of old writes on physical
+takeover, cancellation or expiry. A host lock/context manager or local helper exit cannot implement that
+contract. No default provider, managed profile or native readiness claim is supplied.
+
+An action requires a fresh metadata-only native observation. Preparation rereads identity/routing/
+security, refuses changed evidence and consumes that observation. A host-only ``AndroidCommandLease``
+binds the checked proposal to a random request ID and epoch. After the worker's durable begin ACK,
+``dispatch_checked`` recompiles the exact finite command and rejects altered arguments/body, unchecked
+evidence or a different session/boot before transport. Calls execute only inside the trusted device
+fence and are never replayed. Complete v2 phase/exit evidence is returned without claiming application
+completion; partial results remain unknown. Settlement must separately match request ID, boot, device
+and epoch and certify released input/no queued writes before end ACK. Old proof cannot settle a later
+command. Observations contain identity/security metadata only; hierarchy, semantic grounding, Unicode/
+IME, readback, independent app completion and shared profile/API/GUI delivery remain open.
 
 The pinned formats come from AOSP Android 14
 `InputDispatcher <https://android.googlesource.com/platform/frameworks/native/+/refs/tags/android-14.0.0_r27/services/inputflinger/dispatcher/InputDispatcher.cpp>`_,

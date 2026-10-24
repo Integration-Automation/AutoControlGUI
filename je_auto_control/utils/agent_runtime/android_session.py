@@ -1,4 +1,4 @@
-"""Read an exact Android endpoint and pin its boot before proposing finite guarded commands."""
+"""Pin Android identity, propose finite commands and dispatch only exact checked proposals."""
 from __future__ import annotations
 
 import re
@@ -9,6 +9,7 @@ from typing import Any, Callable
 from je_auto_control.utils.agent_runtime.android_commands import (
     AndroidActionProposal, INPUT_MARKER, POLICY_MARKER, SAFETY_END,
     android_input_command, compile_android_action, compile_android_input_probe)
+from je_auto_control.utils.agent_runtime.android_action_result import AndroidActionResult, parse_android_action_result
 from je_auto_control.utils.agent_runtime.android_input_evidence import (
     AndroidInputEvidence, parse_android_input_evidence)
 from je_auto_control.utils.agent_runtime.android_scope import (
@@ -26,7 +27,7 @@ def _remaining(deadline: float) -> float:
 
 
 class AndroidDeviceSession:
-    """Internal read-only session; no automatic app launch, boot adoption or input dispatch."""
+    """Pinned internal session with finite checked dispatch; no app launch, boot adoption or raw model shell."""
 
     def __init__(self, server: ManagedAdbServer, *, serial: str, physical_id: str, package: str, user: int = 0) -> None:
         validate_android_binding(physical_id, package, user)
@@ -38,6 +39,11 @@ class AndroidDeviceSession:
         self._binding = (physical_id, package, user)
         self._boot: str | None = None
         self._mutex = threading.Lock()
+
+    @property
+    def binding(self) -> tuple[str, str, int]:
+        """Return the immutable host-selected physical serial, app package and device user."""
+        return self._binding
 
     def _select(self, timeout: float, check: Callable[[], None]) -> int:
         rows = [row for row in self._server.list_devices(timeout=timeout, check=check) if row.serial == self._serial]
@@ -104,6 +110,29 @@ class AndroidDeviceSession:
         check()
         _remaining(deadline)
         return AndroidActionProposal(transport, evidence.snapshot, command, evidence)
+
+    def dispatch_checked(self, proposal: AndroidActionProposal, name: str, arguments: dict[str, Any], *,
+                         timeout: float, check: Callable[[], None]) -> AndroidActionResult:
+        """Dispatch exactly one recompiled checked proposal inside the caller's trusted device fence.
+
+        This internal SDK method supplies no authority, ACK, cancellation fence or settlement proof.
+        AndroidRemoteAdapter calls it only through its explicitly configured host control provider.
+        Unchecked, foreign-session or altered command bodies cannot reach the transport.
+        """
+        if not isinstance(proposal, AndroidActionProposal) or proposal.input_evidence is None:
+            raise AgentTaskError("Android dispatch requires a checked host proposal")
+        snapshot = proposal.snapshot
+        if (snapshot.physical_id, snapshot.package, snapshot.user) != self._binding:
+            raise AgentTaskError("Android proposal belongs to a different session binding")
+        with self._mutex:
+            if self._boot is None or self._boot != snapshot.boot_id:
+                raise AgentHumanReview("Android proposal does not match this session's pinned boot")
+        expected = compile_android_action(snapshot, name, arguments, input_evidence=proposal.input_evidence)
+        if expected != proposal.command:
+            raise AgentTaskError("Android proposal command does not match its finite reviewed arguments")
+        check()
+        result = self._server.shell(proposal.transport_id, expected, timeout=timeout, limit=1024, check=check)
+        return parse_android_action_result(result)
 
 
 def _input_reply(value: bytes) -> tuple[bytes, bytes]:

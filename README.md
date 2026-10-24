@@ -1,6 +1,6 @@
 # AutoControl
 
-Android/iOS managed adapters remain unavailable. Their internal remote-effect guard now records
+Built-in Android/iOS managed profiles remain unavailable. Their internal remote-effect guard records
 before/after acknowledgements against a physical-device identity and retains quarantine when a local
 helper exits with an unconfirmed effect. Recovery requires a trusted device proof after writer retirement
 and a later epoch invalidating old commands. No built-in SDK proof, device profile or native acceptance
@@ -14,15 +14,22 @@ command connection, with literal bounded text and fixed results. Proposals grant
 input-window, occlusion, lock/presence and owned-worker integration remain required.
 Android checked proposals now bind current native input-window/queue and keyguard evidence. Pointer
 checks cover entire half-open touch-region paths and foreign interception/overlays; hashes are rechecked
-on the command connection. Old ANR/history cannot certify current state. Human presence, global-monitor
-review and owned-worker authorization remain separate, and managed device execution is still unavailable.
+on the command connection. Old ANR/history cannot certify current state. Human presence and global-monitor
+review still require trusted providers; built-in managed device execution remains unavailable.
 Internal Android action protocol v2 distinguishes complete pre-input refusal from input failure,
 post-input refusal and returned input. Missing/malformed phases or mismatched shell exits remain unknown;
 even returned input does not certify remote input retirement or task completion. No retry is authorized.
 The internal owned remote SDK worker now checks exact task/owner scope, refreshed authority and physical
 takeover; parent monitoring starts before the trusted host factory. Calls require a durable begin ACK,
 then matching device/epoch settlement before an end ACK. Missing proof keeps effects quarantined.
-Concrete Android/WDA adapters and trusted presence, held-input and remote-queue providers remain required.
+Trusted device-control providers, the WDA adapter and managed profile wiring remain required.
+Internal AndroidRemoteAdapter now connects checked sessions to this worker through explicit per-command
+AndroidCommandLease grants. A fresh identity/routing/security observation is consumed per action; the SDK
+recompiles the finite command before sending it once over ADB. Device fencing must suppress old writes
+after physical takeover, cancellation or expiry. No default provider exists: standard ADB and killing
+the local helper cannot supply that guarantee. Settlement additionally binds one random request ID and
+boot to independent input/queue proof. Metadata-only observations contain no hierarchy, text or image;
+semantic grounding, Unicode/IME, readback and independent application completion remain open.
 
 `lookup_agent_task("key", reviewed_spec)` optionally compares the destination-normalized specification
 with the immutable digest stored for the original owner's request. The response advertises

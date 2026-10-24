@@ -43,22 +43,21 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      未知 worker／按住輸入／清理失敗時不得移交或竊取租約。
 
 4. **P7：Android／iOS 受管裝置**
-   - 將 `utils/agent_runtime/{remote_worker,remote_effect,remote_journal,remote_target}.py` 接入具體可信 SDK adapter，
-     再接 `target_config.py`／`target_factory.py`。內部 guard 尚不代表 Android／iOS 可受管執行。
-     Android 須將 `android_session.AndroidDeviceSession.propose_checked` 接入自有 worker，每次寫入
-     必須重驗對應的身分／輸入視窗／keyguard 證據；補可信真人活動、已按下輸入狀態與接回 gate，
-     以及全域監看器的可信審閱。提案／證據的 `input_authorized=false` 不得當成執行批准。
-     worker 須區分前置拒絕、已送出與未知結果，保存相符 ACK／journal；證據摘要不是完成或恢復證明。
-     將 `android_action_result.parse_android_action_result` 的封閉 v2 階段／退出碼核對接入 worker；
-     只有完整前置拒絕才證明此命令未呼叫輸入；返回／後置拒絕仍不能清除 journal 或授權重試。
-     具體 SDK 須實作 `RemoteDeviceAdapter` 的唯讀準備、即時接回檢查及有限呼叫，並提供
-     `PreparedRemoteAction.settle` 所需的實體裝置／世代、輸入釋放及遠端佇列清空證據；
-     不可用 shell 退出、Android 階段或模擬 SDK 的證明取代真實契約。
+   - 為 `utils/agent_runtime/android_adapter.py` 實作並審閱真實 `AndroidControlProvider`／
+     `AndroidCommandLease` 來源；須有裝置端執行機制，在真人接回、取消／逾時後阻止舊寫入，
+     並提供逐命令 ID／boot／epoch 相符的輸入釋放、遠端佇列清空與舊 writer 退出證據。
+     主機 lock／context manager、結束本機 ADB helper、shell 返回或 Android 階段都不能替代。
+     補可信真人活動、已按下輸入、閒置條件與全域監看器的即時審閱；沒有來源時保持拒絕就緒。
+     提案／證據的 `input_authorized=false` 不得當作批准，只有完整前置拒絕證明此命令未呼叫輸入；
+     返回／後置拒絕仍不授權重試或清除未知 journal。
+     WDA 還須實作 `RemoteDeviceAdapter` 與同等來源；真實 provider／SDK 契約確認後才接
+     `target_config.py`／`target_factory.py`。內部橋接與模擬裝置都不代表已可正式受管執行。
      在實際 SDK 重驗 ACK 前拒絕、begin 後取消／逾時、錯誤裝置／世代、撤權、真人接回、
      唯讀路徑禁止輸入與清理失敗隔離；不得重播、更換 helper 繞過或代送桌面釋放事件。
      數字 transport ID、shell-v2 的退出碼或本機 socket 結束都不足以證明裝置／輸入安全。
-     補受限 hierarchy／元素輸入的 Unicode／IME 與讀回，以及旋轉／縮放／多顯示器、版本／OEM 格式核對；
-     不可把有限 ASCII 提案或未知 dump 格式當作完整裝置輸入支援。
+     Android 觀察目前只有身分／安全 metadata；補受限 hierarchy／語義元素、Unicode／IME、
+     動作讀回與獨立應用完成驗證，以及旋轉／縮放／多顯示器、版本／OEM 格式核對；
+     不可把有限 ASCII 提案、空元素觀察或未知 dump 格式當作完整裝置輸入支援。
    - 為 ADB／WDA 各自建立可信的實體裝置識別、舊 writer 退出與清理／世代證據來源；核對真實
      SDK 契約，證明新世代能使所有舊指令失效且不重播。沒有可信來源時維持拒絕恢復。
    - 部署時明定每台裝置唯一的權威服務與受保護資源位置。預設使用者目錄內的 OS lock 只協調

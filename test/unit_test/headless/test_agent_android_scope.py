@@ -1,14 +1,11 @@
 """Device/app identity parsing and actual POSIX shell guards use only test-owned files and functions."""
-import os
-import shutil
 import socket
 import struct
-import subprocess
 import threading
 from dataclasses import replace
-from pathlib import Path
 
 import pytest
+from .android_shell_fixture import AndroidShellFixture
 
 from je_auto_control.utils.agent_runtime.android_commands import compile_android_action
 from je_auto_control.utils.agent_runtime.android_action_result import ACTION_MARKER, parse_android_action_result
@@ -74,33 +71,7 @@ def test_direct_snapshot_construction_has_the_same_boundary_validation(snapshot,
 
 @pytest.fixture
 def run_guard(tmp_path, snapshot):
-    shell = shutil.which("sh")
-    if shell is None and os.name == "nt" and (git := shutil.which("git")):
-        candidate = Path(git).parent.parent / "bin/sh.exe"
-        shell = str(candidate) if candidate.is_file() else None
-    if shell is None:
-        pytest.skip("actual shell contract needs an installed POSIX sh")
-    for name, content in (("device", DEVICE + "\n"), ("boot", BOOT + "\n"), ("wm", WM)):
-        (tmp_path / name).write_text(content, encoding="utf-8", newline="")
-    harness = '''
-fixture_getprop() { command cat "$FIXTURE_DIR/device"; }
-fixture_cat() { command cat "$FIXTURE_DIR/boot"; }
-fixture_dumpsys() {
-    if [ "$1" = input ]; then command cat "$FIXTURE_DIR/input";
-    elif [ "$2" = policy ]; then command cat "$FIXTURE_DIR/policy";
-    else command cat "$FIXTURE_DIR/wm"; fi
-}
-fixture_input() {
-    printf '%s\\n' "$@" >> "$FIXTURE_DIR/actions"
-    for field in device boot; do
-        if [ -f "$FIXTURE_DIR/after-$field" ]; then
-            command cat "$FIXTURE_DIR/after-$field" > "$FIXTURE_DIR/$field"
-        fi
-    done
-    if [ -f "$FIXTURE_DIR/after" ]; then command cat "$FIXTURE_DIR/after" > "$FIXTURE_DIR/wm"; fi
-    if [ -f "$FIXTURE_DIR/fail" ]; then return 1; fi
-}
-'''
+    fixture = AndroidShellFixture(tmp_path, snapshot)
 
     def execute(name="AC_android_tap", arguments=None, *, probe=False, input_evidence=None):
         if probe == "input":
@@ -110,14 +81,7 @@ fixture_input() {
         else:
             script = compile_android_action(snapshot, name,
                 {"x": 10, "y": 20} if arguments is None else arguments, input_evidence=input_evidence)
-        for tool in ("getprop", "cat", "dumpsys", "input"):
-            script = script.replace("/system/bin/" + tool, "fixture_" + tool)
-        script = script.replace("/system/bin/printf", "printf").replace("/system/bin/sed", "sed")
-        script = script.replace("/system/bin/sha256sum", "sha256sum").replace("/system/bin/cut", "cut")
-        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
-        return subprocess.run([shell, "-c", harness + script], capture_output=True, timeout=5,
-                              env={**os.environ, "FIXTURE_DIR": tmp_path.as_posix()}, cwd=tmp_path,
-                              creationflags=flags, check=False)
+        return fixture.run(script)
 
     return execute
 
