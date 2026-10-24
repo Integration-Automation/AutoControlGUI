@@ -103,9 +103,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 7. **P3／P6／P7：能力、模型及共用介面驗證**
    - 補桌面權限、平台／裝置連線、來源／目標就緒與原生證據的診斷；區分未支援、缺依賴、
      未授權、未探測、未記錄與實測成功，不把 Python 套件匯入成功當原生可用。
-   - 盤點各桌面／瀏覽器／檔案 target 的語義觀察與遮罩覆蓋，接合精確的
-     `semantic_observation`／`text_redacted` 來源宣告；沒有新旗標的舊 target 仍沿用既有判定，
-     不能因此宣稱已證明完整畫面或遮罩內容的不存在。
+   - 為自訂／外部 target 補經審閱的語義觀察與遮罩覆蓋契約；沒有能力旗標的舊 target 仍沿用
+     既有判定，不能因此宣稱已證明完整畫面或遮罩內容的不存在。深化部分證據的計數／狀態／
+     變動判定與受保護欄位比較，目前缺少充分證據時仍為未知。
    - 在明確配置且已安裝的本機 Ollama 工具／視覺模型上補端到端證據：模型不符、拒絕連線、
      逾時、取消、預算與完成驗證；不可自動下載或切換外部服務。
    - 新增／深化功能須同步公開 API、命令目錄、MCP／REST／CLI／Builder、薄 GUI Actions 及語系，
@@ -116,8 +116,6 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      區分已實作、尚缺實作與只缺實測，不能用模擬目標取代原生驗收。
    - 於最後固定提交重跑完整 headless 與 `coverage run -m pytest`、跨功能／故障恢復回歸；
      目前較早固定版本的全套證據不能冒充最新工作樹結果。
-     另須核對 stage 48 固定快照 `.worktrees/agent-validation-48` 的完整執行／coverage 結果；
-     日誌與結果 metadata 位於功能工作樹的 `.worktrees/agent-tools/*stage48*`，不能把啟動當作通過。
    - 重跑三平台型別、Ruff／Bandit、檔案／函式／複雜度及文件計數，檢查新增 lint 問題；
      AutoControl 全套 Pylint 仍有既有問題，不能把局部模組通過當全套零問題。
      WebRunner 既有全套 mypy／flake8／嚴格 Sphinx 債務見其 `Progress.md` #23，不能標示全綠。

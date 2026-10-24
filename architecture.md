@@ -787,3 +787,11 @@ keeps missing/masked absence and malformed capability/elements unknown rather th
 metadata as a complete screen. Protected field-value verification and richer partial predicates remain
 open. Readers are explicit trusted host callables with no CLI/SDK startup or capture fallback; standard
 UiAutomation default connection can suppress other accessibility owners and is not silently invoked.
+
+Built-in screen coverage: targets.py marks bounded/masked desktop controls as partial semantic text and
+bootstrap as unavailable; browser_target.py marks bounded WebRunner controls/frames as partial, and
+file_target.py declares no semantic screen evidence. verification.py ignores protected/hidden/untyped
+labels for partial text checks and combines clauses with passed/failed/unknown semantics. A known
+contradiction fails the conjunction; missing evidence cannot pass it. Other partial screen predicates
+remain unknown. Legacy custom sources without flags keep their prior contract; exact browser checks
+still use pinned fresh SDK reads rather than previews. No new command or GUI-specific branch is added.

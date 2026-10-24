@@ -637,8 +637,16 @@ is unknown, never proof of absence. A known visible match can contradict ``text_
 screen predicates stay unknown until sufficient evidence exists. Source capability flags are exact
 booleans; malformed elements/flags cannot turn verification green. This does not add protected input
 value comparison, Unicode/IME, default managed profiles or native acceptance evidence.
-Targets that omit the new capability flags retain legacy verification behavior; auditing their source
-coverage and declarations remains in ``Progress.md`` rather than claiming universal completeness.
+Built-in ``DesktopTarget`` and ``BrowserTarget`` declare ``semantic_observation=True`` and
+``text_redacted=True``: bounded controls, omitted values, masked edits and incomplete frames do not
+establish complete text coverage. ``FileTarget`` and desktop window bootstrap declare
+``semantic_observation=False``. An empty list from these sources cannot prove screen absence.
+Partial-text checks ignore password/sensitive/redacted rows, explicitly hidden or invalid visibility,
+and non-string labels. A mask placeholder is not a completion label. Combined clauses fail on a known
+contradiction; otherwise any unknown requirement keeps the result unknown. Count/state/change clauses
+remain unknown with partial evidence. Exact browser DOM/value conditions use the existing fresh
+``kind=browser`` completion reads, with task read/origin grants. Targets that omit capability flags
+retain legacy verification behavior and must supply their own reviewed coverage contract.
 
 Primary format/lifecycle references:
 `AOSP API 34 DumpCommand

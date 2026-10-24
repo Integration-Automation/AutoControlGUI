@@ -37,6 +37,12 @@ readback can confirm a reviewed positive label; missing/partial/masked content c
 No CLI/SDK startup or capture fallback is added. Real capture/control providers, protected field-value
 verification, Unicode/IME and managed profile delivery remain open.
 
+Managed screen completion now treats built-in desktop and WebRunner previews as partial text evidence.
+File targets and desktop window bootstrap supply no semantic screen evidence. Known safe labels can
+confirm presence or contradict absence; masked and explicitly hidden labels cannot. Combined conditions
+remain unknown if any required evidence is missing, or fail on a known contradiction. Use explicit
+browser completion reads for exact DOM/value checks. Custom targets without coverage flags keep legacy behavior.
+
 `lookup_agent_task("key", reviewed_spec)` optionally compares the destination-normalized specification
 with the immutable digest stored for the original owner's request. The response advertises
 `spec_match_contract=1` and reports `spec_match=matches|differs|unverifiable|not_found` when a spec is supplied.

@@ -18,7 +18,7 @@ class FileTarget:
 
     def observe(self) -> dict[str, Any]:
         """Return a stable noninteractive identity; data access occurs only in rooted actions."""
-        return {"identity": "local-files", "elements": []}
+        return {"identity": "local-files", "elements": [], "semantic_observation": False, "text_redacted": True}
 
     def perform(self, name: str, arguments: dict[str, Any]) -> Any:
         """Use the same guarded raw-result executor as every other target."""

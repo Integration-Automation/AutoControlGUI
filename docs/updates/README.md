@@ -532,3 +532,5 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261024-33 | 2026-10-24 | Connect checked Android SDK dispatch to leased owned workers | #done #agent #android | [2026-10-c](2026-10-c.md) |
 
 | U-20261024-34 | 2026-10-24 | Bind Android semantic observations to reviewed text and fresh app readback | #done #agent #observations | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-35 | 2026-10-24 | Declare built-in screen coverage and reject synthetic completion labels | #done #agent #verification | [2026-10-c](2026-10-c.md) |

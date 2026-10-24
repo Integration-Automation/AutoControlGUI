@@ -94,7 +94,8 @@ class BrowserTarget:
         for frame in raw.get("frames", []):
             self._elements(elements, frame.get("elements", []), frame["selector"])
         return {"identity": {"browser_session": self._identity, "url": raw.get("url", "")},
-                "title": raw.get("title", ""), "text": raw.get("text", ""), "elements": elements}
+                "title": raw.get("title", ""), "text": raw.get("text", ""), "elements": elements,
+                "semantic_observation": True, "text_redacted": True}
 
     @staticmethod
     def _elements(result: list[dict], values: list[dict], frame: str) -> None:

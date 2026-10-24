@@ -68,7 +68,8 @@ class DesktopTarget:
         from je_auto_control.utils.accessibility.accessibility_api import list_accessibility_elements
         window = self._observation_window()
         if window is None:
-            return {"identity": "approved-window-bootstrap", "elements": [], "state": "waiting_for_window"}
+            return {"identity": "approved-window-bootstrap", "elements": [], "state": "waiting_for_window",
+                    "semantic_observation": False, "text_redacted": True}
         hwnd, title, pid = window
         controls = list_accessibility_elements(max_results=200, window_title=title)
         elements: list[dict[str, Any]] = []
@@ -82,7 +83,9 @@ class DesktopTarget:
             data["is_password"] = sensitive
             data["index"] = len(elements)
             elements.append(data)
-        result = {"identity": {"window": hwnd, "process": pid, "title": title}, "elements": elements}
+        # The bounded accessibility query and masked edits cannot prove global text absence.
+        result = {"identity": {"window": hwnd, "process": pid, "title": title}, "elements": elements,
+                  "semantic_observation": True, "text_redacted": True}
         if self._spec is not None and self._spec.options.get("vision"):
             result["image"] = self._image(hwnd, elements)
         current_hwnd, _current_title, current_pid = self._check_foreground()

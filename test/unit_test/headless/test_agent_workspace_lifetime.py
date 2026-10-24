@@ -60,7 +60,8 @@ def test_bootstrap_observation_does_not_disclose_foreign_foreground(tmp_path, mo
 
     monkeypatch.setattr(target, "_check_foreground", outside)
     assert target.ready(specification(tmp_path)) == (True, "")
-    assert target.observe() == {"identity": "approved-window-bootstrap", "elements": [], "state": "waiting_for_window"}
+    assert target.observe() == {"identity": "approved-window-bootstrap", "elements": [], "state": "waiting_for_window",
+                                "semantic_observation": False, "text_redacted": True}
     with pytest.raises(AgentTaskError, match="outside scope"):
         target.perform("AC_write", {"text": "must not type"})
     with pytest.raises(AgentTaskError, match="host outside"):

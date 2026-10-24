@@ -1,5 +1,10 @@
 # Changelog
 
+Fix managed screen completion for built-in desktop, WebRunner and file targets: bounded/masked previews
+declare partial coverage; file and window-bootstrap metadata cannot prove screen absence. Partial text
+checks ignore protected/hidden/untyped labels and combine known contradictions with unknown evidence.
+Custom targets without capability flags retain legacy behavior; exact browser readback is unchanged.
+
 Add optional host-reviewed Android semantic hierarchy capture with scoped element references and fresh
 application readback. Bound defused XML parsing; exclude foreign packages and mask protected/editable
 values. Keep raw XML/private witnesses out of observations and use random revisions across changes and

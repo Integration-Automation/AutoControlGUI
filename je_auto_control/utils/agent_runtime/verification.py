@@ -81,22 +81,40 @@ def _screen_evidence(observation: Mapping, spec: dict) -> bool | None:
         return None
     if any(not isinstance(item, Mapping) for item in elements):
         return None
-    passed = check_postcondition(list(elements), spec).ok
     if observation.get("text_redacted", False) is False:
-        return passed
+        return check_postcondition(list(elements), spec).ok
     if observation.get("text_redacted") is not True:
         return None
-    if len(spec) != 1:
+    return _partial_screen_evidence(elements, spec)
+
+
+def _partial_screen_evidence(elements: Sequence[Mapping], spec: dict) -> bool | None:
+    reviewed = [{"name": _reviewed_label(item)} for item in elements]
+    results = [_partial_text_evidence(reviewed, key, value) for key, value in spec.items()]
+    if False in results:
+        return False
+    return True if results and all(value is True for value in results) else None
+
+
+def _reviewed_label(element: Mapping) -> str:
+    if element.get("visible", True) is not True:
+        return ""
+    if any(element.get(key, False) is not False for key in ("is_password", "sensitive", "text_redacted")):
+        return ""
+    for key in ("name", "text", "value"):
+        label = element.get(key)
+        if isinstance(label, str) and label:
+            return label
+    return ""
+
+
+def _partial_text_evidence(elements: list[dict], key: str, value: Any) -> bool | None:
+    if key not in {"text_present", "text_absent"} or not isinstance(value, str) or not value:
         return None
-    return _partial_text_evidence(spec, passed)
-
-
-def _partial_text_evidence(spec: dict, passed: bool) -> bool | None:
-    if set(spec) == {"text_present"} and isinstance(spec["text_present"], str) and spec["text_present"]:
+    passed = check_postcondition(elements, {key: value}).ok
+    if key == "text_present":
         return True if passed else None
-    if set(spec) == {"text_absent"} and isinstance(spec["text_absent"], str) and spec["text_absent"]:
-        return None if passed else False
-    return None
+    return None if passed else False
 
 
 def _last_result(clause: Mapping, receipts: Sequence[Mapping[str, Any]]) -> bool | None:
