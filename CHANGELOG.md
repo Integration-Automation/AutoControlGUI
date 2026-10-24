@@ -1,5 +1,10 @@
 # Changelog
 
+Reduce Android focus-guard subprocess overhead with one labeled extraction and exact comparison across
+all field orders. Keep missing/duplicate/empty-value rejection, pre/post checks, byte limits and deadlines.
+Owned POSIX fixtures use byte-exact Bash builtin reads with a portable external fallback and bounded
+phase/timing diagnostics, withholding timeout commands/output. No device-control authority is added.
+
 Add explicit source_owner recovery ownership to preview/review_authorization and create/create_authorized.
 Bind ownership_review to the source snapshot and current owner/reviewer identities; atomically store the
 original-owner child, lineage and separate ownership/authorization audits. Refresh both principals and

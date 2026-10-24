@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import shlex
 from dataclasses import dataclass, field
+from itertools import permutations
 from typing import Any
 
 from je_auto_control.utils.agent_runtime.android_scope import AndroidSnapshot
@@ -86,11 +87,22 @@ def _guard(snapshot: AndroidSnapshot) -> str:
         _read_matches("/system/bin/cat /proc/sys/kernel/random/boot_id 2>/dev/null", snapshot.boot_id, 92),
         'je_android_wm="$(/system/bin/dumpsys window 2>/dev/null)" || exit 93',
     ]
-    for name, expected in (("mTopFocusedDisplayId", "0"), ("mCurrentFocus", snapshot.window),
-                           ("mFocusedApp", snapshot.activity)):
-        extract = ('/system/bin/printf \'%s\\n\' "$je_android_wm" | /system/bin/sed -n '
-                   + shlex.quote("s/^ *" + name + "=//p"))
-        checks.append(_read_matches(extract, expected, 93))
+    checks.append(_focus_guard(snapshot))
+    return "; ".join(checks)
+
+
+def _focus_guard(snapshot: AndroidSnapshot) -> str:
+    fields = (("mTopFocusedDisplayId", "display", "0"), ("mCurrentFocus", "window", snapshot.window),
+              ("mFocusedApp", "activity", snapshot.activity))
+    # Nonempty labels preserve empty duplicate values when command substitution removes trailing newlines.
+    extract = "; ".join("s/^ *" + native + "=/" + label + "=/p" for native, label, _expected in fields)
+    checks = ["je_android_expect_" + label + "=" + shlex.quote(label + "=" + expected)
+              for _native, label, expected in fields]
+    checks.append('je_android_focus_fields="$(/system/bin/printf \'%s\\n\' "$je_android_wm" | '
+                  '/system/bin/sed -n ' + shlex.quote(extract) + ')" || exit 93')
+    patterns = ['"' + "\n".join("${je_android_expect_" + label + "}" for label in order) + '"'
+                for order in permutations(label for _native, label, _expected in fields)]
+    checks.append('case "$je_android_focus_fields" in ' + "|".join(patterns) + ') :;; *) exit 93;; esac')
     return "; ".join(checks)
 
 

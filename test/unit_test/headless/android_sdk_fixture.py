@@ -46,6 +46,9 @@ class AndroidSdkFixture:
         self.server.daemon_threads = True
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
 
+    def __repr__(self):
+        return f'AndroidSdkFixture(errors={self.errors[-3:]!r}, latest={self.shell.diagnostics()[-2:]!r})'
+
     def __enter__(self):
         self.thread.start()
         return self

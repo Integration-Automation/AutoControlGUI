@@ -548,3 +548,4 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261025-03 | 2026-10-25 | Admit local DAG nodes as their original owner with live caller authority | #done #agent #dag #authorization | [2026-10-c](2026-10-c.md) |
 | U-20261025-04 | 2026-10-25 | Retain unresolved DAG evidence and collect only settled expired batches | #done #agent #dag #retention | [2026-10-c](2026-10-c.md) |
 | U-20261025-05 | 2026-10-25 | Keep reviewed recovery successors under their source owner with live reviewer checks | #done #agent #recovery #authorization | [2026-10-c](2026-10-c.md) |
+| U-20261025-06 | 2026-10-25 | Reduce Android guard subprocess overhead without extending input deadlines | #done #agent #android #latency | [2026-10-c](2026-10-c.md) |

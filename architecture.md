@@ -1,5 +1,12 @@
 # AutoControl Architecture
 
+Android focus guards use one labeled sed extraction of display/window/activity and an exact quoted
+comparison against six field-order permutations. Nonempty labels retain duplicate empty values through
+command substitution; missing/extra/wrong values still refuse. Serial/boot sentinels, pre/post scope,
+input-security digests and deadlines remain. Test-owned POSIX fixtures use Bash read/printf for byte-exact
+files (including NUL) with external cat fallback; safe bounded phase/timing diagnostics replace raw
+timeout command/output tracebacks. This reduces owned-worker deadline pressure without granting input.
+
 task_authority.py adds explicit source-owner recovery admission. ownership_scope preserves the fresh
 source owner separately from the actual reviewer; a snapshot/namespace/role-bound ownership review
 precedes creation. RecoveryBinding carries ownership beside optional origin authorization into the
@@ -805,7 +812,8 @@ Android identity/proposal boundary: android_scope.py validates bounded serial/bo
 window/activity evidence and discards raw dumps. android_session.py selects one exact ready endpoint,
 shares a deadline and atomically pins boot after live checks; it never launches an app or adopts a new
 boot. android_commands.py compiles only four finite existing input names with closed arguments and
-same-connection pre/post identity guards, sentinel-preserved field evidence, literal text, fixed results
+same-connection pre/post identity guards, sentinel-preserved serial/boot and labeled focus evidence,
+literal text, fixed results
 and the transport byte limit. Proposals carry input_authorized=false. Checked input evidence additionally
 needs trusted presence/device-fencing/capture providers and managed target wiring;
 no managed device profile, SDK execution authority or new catalog command is advertised.

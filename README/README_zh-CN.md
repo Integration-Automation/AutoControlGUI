@@ -79,6 +79,9 @@ Android 检查后提案会绑定当前的原生输入窗口／队列及 keyguard
 内部自有远程 SDK worker 会核对精确任务／所有者范围、重新授权与真人接回；可信主机 factory
 创建前先启动 parent 监视。持久化 begin 并收到 ACK 后才调用 SDK，相符设备／世代的清理证据
 通过后才发送 end；缺证据维持隔离。可信设备控制来源、WDA adapter 与受管 profile 仍待接合。
+命令编译器以一次带标签的提取核对三个原生焦点字段，接受六种顺序，缺少／重复／空值仍拒绝。
+前后身份与输入安全检查、原本动作期限均保留。自有 POSIX 假设备减少 Git Bash 读取进程且维持
+原始文件 bytes；有限阶段／耗时诊断不含命令、参数或输出。
 内部 AndroidRemoteAdapter 已通过逐命令 AndroidCommandLease 接合 checked session 与 worker；
 每个动作消耗一次新的身份／输入路由／安全观察，SDK 重新编译有限命令后才通过 ADB 发送一次。
 设备端防护须在真人接回、取消或到期后阻止旧写入；没有默认 provider，标准 ADB 或停止本地

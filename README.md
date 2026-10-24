@@ -104,6 +104,10 @@ The internal owned remote SDK worker now checks exact task/owner scope, refreshe
 takeover; parent monitoring starts before the trusted host factory. Calls require a durable begin ACK,
 then matching device/epoch settlement before an end ACK. Missing proof keeps effects quarantined.
 Trusted device-control providers, the WDA adapter and managed profile wiring remain required.
+The command compiler reads the three native focus fields in one labeled extraction, accepting their
+six possible orders while refusing missing/duplicate/empty fields. Pre/post identity and input-security
+checks remain, and action deadlines are unchanged. Owned POSIX fixtures avoid extra Git Bash reader
+processes without changing file bytes; bounded phase/timing diagnostics exclude commands and output.
 Internal AndroidRemoteAdapter now connects checked sessions to this worker through explicit per-command
 AndroidCommandLease grants. A fresh identity/routing/security observation is consumed per action; the SDK
 recompiles the finite command before sending it once over ADB. Device fencing must suppress old writes

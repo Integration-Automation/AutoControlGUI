@@ -454,7 +454,11 @@ Android 身分 session 與有限提案
 
 ``compile_android_action`` 只接受既有 tap／swipe／text／key 名稱與封閉參數，產生主機內部
 提案，原始 shell 不提供給模型。同一命令連線會在有限輸入前後核對實體、boot、顯示器及
-window／activity 焦點。尾端標記保留 shell 命令替換原本會吃掉的空白重複欄位。文字限制為
+window／activity 焦點。serial／boot 使用尾端標記；焦點欄位以一次帶標籤擷取，精確核對六種
+順序，非空標籤避免尾端換行被 shell 移除時吃掉空的重複值。缺少／重複／空值／錯誤欄位仍在
+輸入前拒絕，輸入後則保留可能副作用；前後 scope 與安全摘要檢查不變，也不延長動作預算。
+自有 POSIX 假裝置以 Bash builtin 逐 byte 讀檔，保留 NUL／尾端換行，其他 shell 回退 cat；有限
+階段／耗時／錯誤診斷不含命令、參數或輸出。文字限制為
 有界可列印 ASCII、拒絕會失真的 literal ``%s``，並套用 shell 引用；按鍵是有限 app 輸入集。
 座標、時長及編碼後整段命令都有限制。只輸出封閉階段標記；動作失敗或後續 scope 改變都
 拒絕，不重試，也不視為獨立完成證據。

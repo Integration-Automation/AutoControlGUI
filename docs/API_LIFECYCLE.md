@@ -1,5 +1,14 @@
 # Public API lifecycle
 
+Android command compilation now extracts display/window/activity focus once per guard and exactly
+matches all six field orders. Nonempty labels preserve duplicate empty values through shell command
+substitution. Serial/boot sentinels, same-connection pre/post checks, input-security digests, encoded
+byte limits and action deadlines remain unchanged. Compiled proposals stay host-only and exact
+recompilation still rejects differing bodies; no old input is rebound or replayed. Owned POSIX fixture
+reads preserve raw bytes with a Bash builtin path and portable cat fallback. Their bounded diagnostic
+records expose phase/elapsed/status only, withholding timeout commands, arguments and output. This
+improves checked-path latency without adding device-control authority, a provider or managed readiness.
+
 Caller-driven bound DAG runs use AgentRuntimeClient.bound() to capture an absolute owner-file path
 and a hash of endpoint/token/generation. Every operation re-reads valid loopback metadata and refuses
 identity changes before transport. Local node submit/get/pause uses the same bound client; server-side

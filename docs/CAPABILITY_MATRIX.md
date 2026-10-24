@@ -1,5 +1,10 @@
 # Capability matrix
 
+Android guard latency: owned POSIX/smart-socket/worker evidence verifies one-pass focus extraction,
+all field orders, empty/nonempty duplicates before/after input, byte-exact fixture reads and redacted
+timeout diagnostics without extending the action budget. Real device-control providers/native acceptance
+remain separate; deadline exhaustion still preserves unknown effects and quarantine.
+
 Caller DAG service binding: owned two-service evidence verifies path capture, endpoint/token/generation
 replacement refusal before transport and local verification on the owning runtime. Admin inspection
 uses original-owner request keys. Local-task admission now preserves original ownership and atomically

@@ -44,13 +44,6 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      未知 worker／按住輸入／清理失敗時不得移交或竊取租約。
 
 4. **P7：Android／iOS 受管裝置**
-   - 重現並定位 `test_agent_android_adapter.py::test_actual_worker_and_sdk_only_invoke_finite_input_after_durable_begin_ack`
-     在廣泛回歸中偶發的 `remote operation failed: AgentTaskError`；單獨重跑通過不足以證明已修復。
-     本批 `test_new_input_requires_a_new_observation_instead_of_reusing_the_prepared_prefix` 也在首次
-     tap 前出現同類錯誤；自有 SDK／shell 假裝置的單獨重跑通過，仍須補定位證據與真正修復。
-     本批另已觀察到假裝置 POSIX shell 的 5 秒期限觸發 TimeoutExpired，隨後 worker 回覆同類
-     AgentTaskError；這只能定位其中一次失敗，不能推定所有間歇錯誤同因，也不放寬期限。
-     需保留敏感診斷遮罩、既有期限與未知副作用隔離，補可定位的受保護測試證據，不以放寬期限掩蓋。
    - 為 `utils/agent_runtime/android_adapter.py` 實作並審閱真實 `AndroidControlProvider`／
      `AndroidCommandLease` 來源；須有裝置端執行機制，在真人接回、取消／逾時後阻止舊寫入，
      並提供逐命令 ID／boot／epoch 相符的輸入釋放、遠端佇列清空與舊 writer 退出證據。
@@ -60,8 +53,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      返回／後置拒絕仍不授權重試或清除未知 journal。
      WDA 還須實作 `RemoteDeviceAdapter` 與同等來源；真實 provider／SDK 契約確認後才接
      `target_config.py`／`target_factory.py`。內部橋接與模擬裝置都不代表已可正式受管執行。
-     在實際 SDK 重驗 ACK 前拒絕、begin 後取消／逾時、錯誤裝置／世代、撤權、真人接回、
-     唯讀路徑禁止輸入與清理失敗隔離；不得重播、更換 helper 繞過或代送桌面釋放事件。
+     在實際 SDK 重驗合併焦點擷取的六種順序／重複拒絕、原期限、ACK 前拒絕、begin 後取消／逾時、
+     錯誤裝置／世代、撤權、真人接回，並確認原生診斷仍不含敏感參數；
+     亦須驗證唯讀路徑禁止輸入與清理失敗隔離；不得重播、更換 helper 繞過或代送桌面釋放事件。
      數字 transport ID、shell-v2 的退出碼或本機 socket 結束都不足以證明裝置／輸入安全。
      為 `android_hierarchy.AndroidHierarchyReader` 接入真實、限 app／window 的來源與安全文字授權，
      核對 SDK／服務的身分、完整度、生命週期與不干擾其他無障礙擁有者的契約；不可直接貼上

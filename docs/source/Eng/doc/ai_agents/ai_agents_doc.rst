@@ -517,7 +517,12 @@ identity reads share one deadline. No app is started and no device reset is requ
 ``compile_android_action`` accepts only the existing tap/swipe/text/key names with closed arguments.
 It builds a host-only proposal, never a model shell tool. The same selected command connection checks
 physical identity, boot, focused display/window/activity both before and after its finite input.
-A trailing sentinel preserves empty duplicate fields that shell command substitution otherwise strips.
+Serial/boot sentinels preserve trailing evidence. Focus uses one labeled extraction and an exact quoted
+comparison across all six field orders; labels preserve empty duplicate values despite trailing-newline
+stripping. Missing/duplicate/empty/wrong values refuse before input or retain possible effects after it.
+Pre/post scope and input-security checks stay in place, and no action budget is extended. Owned POSIX
+fixtures use byte-exact Bash builtin file reads (including NUL/trailing newlines), falling back to cat
+on other shells. Bounded fixture phase/timing/error diagnostics withhold commands, arguments and output.
 Text is bounded printable ASCII, rejects lossy literal ``%s`` and is shell-quoted; keys are a finite
 app-input set. Coordinate/duration and combined encoded command limits are checked before dispatch.
 Only closed phase markers may be emitted; post-action scope changes or command failure are explicit failures,
