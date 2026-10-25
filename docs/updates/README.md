@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261026-02 | 2026-10-26 | Define cross-host artifact and evidence handoff contracts | #decision #agent #handoff #P8 | [2026-10-c](2026-10-c.md) |
 | U-20261026-01 | 2026-10-26 | Preserve original browser context for bounded completion | #snapshot #agent #browser #recovery #verification | [2026-10-c](2026-10-c.md) |
 | U-20261023-07 | 2026-10-23 | Persist scoped task triggers and atomically deduplicate submissions | #done #agent #scheduling | [2026-10-c](2026-10-c.md) |
 | U-20261023-06 | 2026-10-23 | Add reviewed receipts and owned task evidence retention | #done #agent #persistence | [2026-10-c](2026-10-c.md) |
