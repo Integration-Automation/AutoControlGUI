@@ -15,6 +15,7 @@ from je_auto_control.utils.agent_runtime.skill_recording import (
 )
 from je_auto_control.utils.agent_runtime.skill_completion import check_skill_completion, publication_details
 from je_auto_control.utils.agent_runtime.skill_execution import check_skill_execution
+from je_auto_control.utils.agent_runtime.handoff_records import HandoffAccess
 from je_auto_control.utils.agent_runtime.skill_reauthorization import (
     SkillReauthorization, OPERATIONS as AUTHORIZATION_OPERATIONS, existing_authorization,
 )
@@ -93,7 +94,10 @@ class AgentSkills:
         return {"candidates": [self._get(identifier) for identifier in identifiers[:200]], "total": len(identifiers)}
 
     def _record(self, request: dict) -> dict:
-        self._fields(request, {"task_id", "name"}, {"parameters", "validation_criteria", "completion_task_id"})
+        self._fields(request, {"task_id", "name"},
+                     {"parameters", "validation_criteria", "completion_task_id", "handoff_id"})
+        if 'handoff_id' in request and 'completion_task_id' not in request:
+            raise AgentTaskError('recording handoff requires an explicit completion_task_id')
         if 'completion_task_id' in request:
             try:
                 with DeferredAuthorization.capture().scope():
@@ -110,22 +114,29 @@ class AgentSkills:
         with self.runtime.store.connection(write=True) as connection:
             # pylint: disable-next=protected-access  # reason: retain the runtime's live source ownership boundary
             row = self.runtime._row(request['task_id'])
-            proof = self._completion_proof(connection, row, request['completion_task_id'])
-            scope = self._recording_scope(connection, request['completion_task_id'], proof)
+            selection = self._completion_selection(connection, row, request)
+            proof = self._completion_proof(connection, row, selection)
+            scope = self._recording_scope(connection, request['completion_task_id'], proof, selection)
             spec = recording_template(self.runtime, row, request.get('validation_criteria'), scope=scope)
             parameters = parameter_schema(spec, request.get('parameters', {}))
             provenance = {'source_task': row['id'], 'kind': 'semantic_recording', 'parent_version': 0,
                           'completion_review': proof}
             candidate = self._candidate(request['name'], uuid.uuid4().hex, row['owner'], spec, parameters, provenance)
             candidate_id = self._insert_candidate(connection, candidate)
-            if self._completion_proof(connection, row, request['completion_task_id']) != proof:
+            if self._completion_proof(connection, row, self._completion_selection(connection, row, request)) != proof:
                 raise AgentTaskError('skill recording proof changed during creation')
             with DeferredAuthorization.capture().scope():
                 if not owns_task(row['owner'], current_authorization()):
                     raise AgentTaskError('skill recording ownership changed')
         return self._get(candidate_id)
 
-    def _recording_scope(self, connection: Any, task_id: str, proof: dict) -> dict | None:
+    def _recording_scope(self, connection: Any, task_id: str, proof: dict,
+                         selection: Any = None) -> dict | None:
+        if isinstance(selection, HandoffAccess):
+            template = detached(selection.read(proof['effect_task'])['spec'])
+            template['roots'] = list(selection.policy.spec.roots)
+            template['options']['origin_policies'] = list(selection.policy.spec.options.get('origin_policies', []))
+            return template
         if 'authorization_review' not in proof:
             return None
         if self._completion_authority is None:
@@ -213,7 +224,7 @@ class AgentSkills:
         required = {"candidate_id", "task_id", "expected_version", "note"}
         if 'execution_task_id' in request:
             required |= {'execution_task_id', 'execution_review'}
-        self._fields(request, required, {'completion_task_id'})
+        self._fields(request, required, {'completion_task_id', 'handoff_id'})
         try:
             with DeferredAuthorization.capture().scope():
                 return self._publish(request)
@@ -221,7 +232,7 @@ class AgentSkills:
             raise AgentTaskError('skill publication authority changed; review again') from error
 
     def _review_execution(self, request: dict) -> dict:
-        self._fields(request, {'candidate_id', 'task_id', 'execution_task_id'}, {'completion_task_id'})
+        self._fields(request, {'candidate_id', 'task_id', 'execution_task_id'}, {'completion_task_id', 'handoff_id'})
         try:
             with DeferredAuthorization.capture().scope(), self.runtime.store.connection(write=True) as connection:
                 candidate = self._get(request['candidate_id'])
@@ -268,16 +279,32 @@ class AgentSkills:
                 raise AgentTaskError('skill execution review changed; review the full chain again')
             return None, execution
         if 'completion_task_id' in request:
-            return self._completion_proof(connection, row, request['completion_task_id']), None
+            return self._completion_proof(connection, row, self._completion_selection(connection, row, request)), None
+        if 'handoff_id' in request:
+            raise AgentTaskError('handoff requires selected completion or execution evidence')
         assert_verified(row)
         return None, None
 
     def _execution_proof(self, connection: Any, row: dict, request: dict) -> dict:
         if self._recovery_review is None:
             raise AgentTaskError('runtime has no reviewed skill recovery provider')
-        proof = check_skill_execution(self.runtime, connection, row, request, self._recovery_review,
-                                       verified_skill_actions, self._completion_proof)
+        selection = self._completion_selection(connection, row, request)
+        review = selection if isinstance(selection, HandoffAccess) else self._recovery_review
+        def completed(active: Any, effect: dict, identifier: Any) -> dict:
+            selected = selection if isinstance(selection, HandoffAccess) else identifier
+            return self._completion_proof(active, effect, selected)
+        proof = check_skill_execution(self.runtime, connection, row, request, review,
+                                       verified_skill_actions, completed)
         return {**proof, 'review': digest(proof)}
+
+    def _completion_selection(self, connection: Any, row: dict, request: dict) -> Any:
+        if 'handoff_id' not in request:
+            return request.get('completion_task_id')
+        selected = request.get('completion_task_id', request.get('execution_task_id'))
+        if not isinstance(selected, str):
+            raise AgentTaskError('handoff requires an explicit completion or execution task')
+        return self.runtime.recovery.task_handoff_evidence(row['id'], selected, request['handoff_id'],
+                                                           connection=connection)
 
     def _completion_proof(self, connection: Any, row: dict, task_id: Any) -> dict:
         if self._completion_authority is None or self._completion_template is None:

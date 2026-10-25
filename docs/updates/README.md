@@ -558,3 +558,4 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261025-13 | 2026-10-25 | Grant revocable local DAG completion evidence across existing callers | #done #agent #handoff #recovery #authorization | [2026-10-c](2026-10-c.md) |
 | U-20261025-14 | 2026-10-25 | Renew completion consent without restoring input authority | #done #agent #recovery #authorization | [2026-10-c](2026-10-c.md) |
 | U-20261025-15 | 2026-10-25 | Hand renewed read-only completion to its original local DAG | #done #agent #handoff #recovery #authorization | [2026-10-c](2026-10-c.md) |
+| U-20261025-16 | 2026-10-25 | Adopt explicit non-DAG completion evidence without widening task access | #done #agent #handoff #recovery #authorization | [2026-10-c](2026-10-c.md) |

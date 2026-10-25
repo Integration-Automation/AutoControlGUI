@@ -5,6 +5,7 @@ import json
 from typing import Any, Callable
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.handoff_records import HandoffAccess
 from je_auto_control.utils.agent_runtime.completion_contract import (
     validate_recorded_completion, decode_completion_binding,
 )
@@ -65,27 +66,48 @@ def _verification_scope(runtime: Any, connection: Any, trial: dict, task_id: str
     return verification_spec(runtime, trial).to_dict(), None
 
 
+def _completion_identifier(task_id: Any, trial: dict) -> None:
+    if not isinstance(task_id, str) or not 1 <= len(task_id) <= 256 or task_id == trial['id']:
+        raise AgentTaskError('completion_task_id must identify a separate reviewed completion task')
+
+
+def _selected_completion(runtime: Any, connection: Any, trial: dict, selected: Any,
+                         authority_check: Callable, verification_spec: Callable) -> tuple[dict, Any, Any, dict]:
+    access = selected if isinstance(selected, HandoffAccess) else None
+    task_id = access.projection['task_id'] if access is not None else selected
+    _completion_identifier(task_id, trial)
+    # pylint: disable-next=protected-access  # reason: retain the caller's ordinary task ownership boundary
+    row = access.read(task_id) if access is not None else runtime._row(task_id)
+    details = _lineage(connection, task_id, trial['id'])
+    if access is not None:
+        current = authority_check(runtime, task_id, connection=connection)
+        access.policy.validate_snapshot()
+        expected = row['spec']
+        authorization_review = current['authorization_review'] if isinstance(current, dict) else None
+    else:
+        expected, authorization_review = _verification_scope(runtime, connection, trial, task_id,
+                                                            authority_check, verification_spec)
+    if row['spec'] != expected:
+        raise AgentTaskError('skill completion verification scope changed')
+    return row, access, authorization_review, details
+
+
 def check_skill_completion(runtime: Any, connection: Any, trial: dict, task_id: Any,
                            authority_check: Callable, verification_spec: Callable, snapshot_digest: Callable) -> dict:
     """Revalidate a separately succeeded reader under the skill library's SQLite write transaction."""
-    if not isinstance(task_id, str) or not 1 <= len(task_id) <= 256 or task_id == trial['id']:
-        raise AgentTaskError('completion_task_id must identify a separate reviewed completion task')
-    # pylint: disable-next=protected-access  # reason: retain the caller's ordinary task ownership boundary
-    row = runtime._row(task_id)
-    details = _lineage(connection, task_id, trial['id'])
-    expected, authorization_review = _verification_scope(runtime, connection, trial, task_id,
-                                                        authority_check, verification_spec)
-    if row['spec'] != expected:
-        raise AgentTaskError('skill completion verification scope changed')
+    row, access, authorization_review, details = _selected_completion(runtime, connection, trial, task_id,
+                                                                     authority_check, verification_spec)
+    task_id = row['id']
     # pylint: disable-next=protected-access  # reason: publication cannot adopt live or unwinding input ownership
     with runtime._mutex:
         identifiers = (task_id, trial['id'])
         # pylint: disable-next=protected-access  # reason: inspect only this runtime's private task lifecycle witnesses
         if any(identifier in runtime._leases or identifier in runtime._executing for identifier in identifiers):
             raise AgentTaskError('skill completion input has not retired')
-    if runtime.store.actions(task_id):
+    if runtime.store.read_actions(connection, task_id):
         raise AgentTaskError('read-only skill completion cannot contain executable action receipts')
-    validate_recorded_completion(runtime.get(task_id).to_dict(), trial['spec'])
+    reply = access.reply(task_id) if access is not None else runtime.get(task_id).to_dict()
+    validate_recorded_completion(reply, trial['spec'])
     completion = connection.execute('SELECT confirmed FROM agent_completion WHERE task_id=?', (task_id,)).fetchone()
     result = {'contract': 1, 'task_id': task_id, 'source_task': details['source_task'], 'effect_task': trial['id'],
               'source_snapshot': details['source_snapshot'], 'effect_snapshot': details['effect_snapshot'],
@@ -93,4 +115,6 @@ def check_skill_completion(runtime: Any, connection: Any, trial: dict, task_id: 
                                                         'confirmed': completion[0]})}
     if authorization_review is not None:
         result['authorization_review'] = authorization_review
+    if access is not None:
+        result['evidence_handoff'] = access.grant
     return result

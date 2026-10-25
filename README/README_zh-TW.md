@@ -982,7 +982,7 @@ Python、AC、CLI、具名 MCP、REST、Builder 共用這些 recovery 操作。�
 
 Python、AC、CLI、具名 MCP、REST、Builder 共用兩個操作；Recovery 頁的兩個明確 Actions
 沿用所選任務、owner policy 與請求編輯器。可編輯範例為 `agent_completion_authorization_review.json`
-與 `agent_completion_authorization_create.json`。browser／remote 唯讀來源、非 DAG／跨主機移交、
+與 `agent_completion_authorization_create.json`。browser／remote 唯讀來源、跨主機移交、
 實際應用狀態重建，以及暫緩的原生／裝置／瀏覽器／二十四小時驗收仍列於 `Progress.md`。
 
 ## 明確移交已續授權讀者的完成證據
@@ -1011,5 +1011,43 @@ policy、擁有者覆寫或授權 bundle。一般成果移交沿用既有規則�
 相同有效重試沿用原 note 與 ID，已撤銷 ID 不會重新啟用；重啟與採認保留最早終止見證的三十日期限。
 origin 失效後仍可查 get／list 歷史與 revoke，但歷史不代表可用完成證據或輸入授權。Python、AC、
 CLI、具名 MCP、REST、Builder 共用五個既有操作，Handoffs Actions 與 JSON 編輯器／結果區可顯示
-明確續授權審閱，不自動派送同意。非 DAG／跨主機移交、browser／remote 讀者、實際應用／裝置
+明確續授權審閱，不自動派送同意。跨主機移交、browser／remote 讀者、實際應用／裝置
 來源及暫緩的原生／瀏覽器／真機／二十四小時驗收仍列於 `Progress.md`。
+
+## 明確移交任務來源的完成證據
+
+既有五個移交操作也接受真實非 DAG 來源任務：
+
+- `review_handoff` 提供 `source_task` 與實際最後證據的 `task_id`。
+- `create_handoff` 再以最上層返回的 `handoff_review` 作為 `review`，並填寫非空 `note`。
+- `list_handoffs` 提供 `source_task`；`get_handoff`／`revoke_handoff` 仍使用 `handoff_id`。
+
+任務來源與 DAG batch／node 欄位互斥，服務依實際保存的 grant 判定儲存類別。真實 DAG 祖先仍須走
+原 batch／node 路徑，不能藉由已移除 `dag_batch` 的唯讀讀者繞過，也不補造 DAG 節點或 admission。
+一般任務不必虛構提交見證或 idempotency key；實際存在的原請求須固定並在同一 SQLite writer 重驗。
+
+既有技能操作明確選擇 `handoff_id`。`record` 以 `completion_task_id` 採認獨立讀者，建立的 draft
+仍須自己的新驗證 trial；`accept` 使用完成讀者時，仍保留原 candidate 的真正驗證任務。
+`review_execution` 與對應 `accept` 可選實際 `execution_task_id`；最後證據是獨立讀者時，再提供
+`completion_task_id`。服務核對原本完整語義動作計畫、真實執行 ID 及獨立完成條件，不能把讀者
+當執行任務或替代驗證 trial。
+
+grant 只提供私人有限證據視圖，原擁有者、來源狀態與收據維持原樣，一般 get／list／observe／act／
+resume 權限不擴大。發出或採認時不啟動 helper、不重播輸入。真實快照、可選原請求、實際 owner／
+reviewer、退役輸入與有效歷史 origin 均持續核對；新錄製的 draft 保留發出與接收 session 上限。
+失效限制須經真實私人完成續授權，不能靠相同 hash 或自填 scope flag 替代；唯讀採認也不會續授權
+已發布技能原本的輸入權限。
+
+來源祖先與後續移交鏈合計最多十六條真實復原連結。期限沿用最早終止證據的三十日，改錨定較新的
+讀者不會延長舊祖先。DAG 與任務 grant 的 INSERT 後及相同重試都重驗撤銷墓碑；來源／請求／角色／
+origin／撤銷變動會回滾 grant、draft 或發布。已撤銷 ID 不重啟，origin 失效後的 get／list／revoke
+歷史只顯示有限 ID／hash，不代表持續有效的完成證據或輸入授權。
+
+Handoffs 頁可明確選原本機 DAG 或原任務來準備 JSON；三個技能 Actions 準備帶 grant 佔位符的錄製、
+發布與執行審閱，不自動同意或發布。Python、AC、CLI、具名 REST／MCP 與 Builder 共用相同操作及
+真實 caller。`examples/` 提供 `agent_task_handoff_review.json`、`agent_task_handoff_create.json`、
+`agent_skill_recording_handoff.json`、`agent_skill_completion_handoff.json`、
+`agent_skill_execution_handoff_review.json` 與 `agent_skill_execution_handoff_accept.json`。
+
+跨主機移交、browser／remote 讀者、實際應用／裝置來源、暫緩的原生與二十四小時驗收，以及未解的
+HTTP409／bootstrap 問題仍列於 `Progress.md`。

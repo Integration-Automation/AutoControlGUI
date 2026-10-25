@@ -1166,7 +1166,7 @@ candidate or renew a published skill grant. Existing skill reauthorization remai
 Python, AC, CLI, authenticated MCP, REST and Builder share both operations. The Recovery page exposes
 two explicit Actions using its selected task, owner policy and request editor. Editable examples are
 `agent_completion_authorization_review.json` and `agent_completion_authorization_create.json`.
-Browser/remote read-only providers, non-DAG/cross-host handoffs, actual application
+Browser/remote read-only providers, cross-host handoffs, actual application
 state restoration and deferred native/device/browser/24-hour acceptance remain in `Progress.md`.
 
 ## Explicit renewed-reader completion handoffs
@@ -1204,5 +1204,53 @@ preserve the earliest retained terminal witness's thirty-day deadline. Historica
 available after an origin expires, while that history supplies no usable completion or input grant.
 Python, AC, CLI, authenticated MCP, REST and Builder share the five existing operations. Existing
 Handoffs Actions and its JSON editor/result view show the explicit renewed review without dispatching
-consent automatically. Non-DAG/cross-host handoff, browser/remote readers, actual application/device
+consent automatically. Cross-host handoff, browser/remote readers, actual application/device
 providers and deferred native/browser/device/24-hour acceptance remain in `Progress.md`.
+
+## Explicit task-source completion evidence handoffs
+
+The five existing handoff operations also accept a real non-DAG source task:
+
+- `review_handoff`: supply `source_task` and the actual final evidence `task_id`.
+- `create_handoff`: add the returned top-level `handoff_review` as `review`, plus a nonempty `note`.
+- `list_handoffs`: supply `source_task`; `get_handoff` and `revoke_handoff` still use `handoff_id`.
+
+Task-source fields and DAG batch/node fields are mutually exclusive. The service resolves persisted
+grant IDs to their actual storage family. Original DAG ancestry must use its real batch/node route,
+even if a later read-only reader dropped its `dag_batch` option. No synthetic DAG node or admission
+is created. Ordinary standalone tasks need no invented submission witness or idempotency key;
+any actual accepted request is bound and rechecked on the same SQLite writer.
+
+Select `handoff_id` explicitly in existing skill operations. `record` uses a separate verified reader
+through `completion_task_id` and creates a draft which still needs its own new validation trial.
+`accept` with `completion_task_id` keeps the actual original candidate's validation task.
+`review_execution` and its matching `accept` may select an actual `execution_task_id`; add
+`completion_task_id` when the final granted evidence is a separate reader. The service verifies
+the exact complete original semantic action plan, real execution IDs and independent final criteria.
+A reader never becomes an execution task or a substitute validation trial.
+
+The grant yields only a private bounded evidence view. Original task owners, source state and
+receipts remain; ordinary get/list/observe/act/resume access never expands. Granting or adopting
+launches no helper and replays no input. Real source/child snapshots, original optional requests,
+actual owners/reviewers, retired input and every live historical origin remain checked. New recorded
+drafts retain both issuing and consuming session ceilings. Unavailable restrictions require actual
+private completion renewal; matching hashes or caller-authored scope flags cannot replace it.
+Read-only evidence adoption does not renew a published skill's original input authorization.
+
+At most sixteen real recovery links include source ancestry and the forward granted chain. Earliest
+retained terminal evidence expires after thirty days; anchoring at a later reader cannot extend an
+older ancestor. Same-writer post-insert and exact-retry checks honor revocation tombstones for both
+DAG and task grants. Source/request/role/origin/revocation changes roll back grant creation, draft
+recording or publication. Revoked IDs never reactivate. Historical get/list/revoke after an origin
+expires expose bounded IDs and hashes, not continued completion or input authority.
+
+The Handoffs page explicitly selects original local DAG or original task when preparing JSON.
+Three skill Actions prepare recording, publication or execution review with a handoff placeholder;
+they do not issue consent or publish automatically. Python, AC, CLI, authenticated REST/MCP and
+Builder share the same operations and actual caller identities. Editable requests are
+`agent_task_handoff_review.json`, `agent_task_handoff_create.json`, `agent_skill_recording_handoff.json`,
+`agent_skill_completion_handoff.json`, `agent_skill_execution_handoff_review.json` and
+`agent_skill_execution_handoff_accept.json` under `examples/`.
+
+Cross-host handoffs, browser/remote readers, actual application/device providers, deferred native
+and twenty-four-hour acceptance, and unresolved HTTP409/bootstrap issues remain in `Progress.md`.

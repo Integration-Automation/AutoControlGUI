@@ -1,5 +1,15 @@
 # Changelog
 
+Add explicit source_task variants of the five completion handoff operations without synthetic DAG
+admission or broader task access. Recording, original-trial publication and exact execution-chain
+review adopt selected grants through host-only bounded evidence views. Retain current historical,
+issuing and consuming ceilings; private renewal never renews published input. Additive task grant
+storage stays compatible with schema1 and real DAG ancestry remains bound. Same-writer post-insert
+and retry checks now reject revoked grants in both families, and complete real ancestry preserves
+the earliest thirty-day terminal deadline. Thin Actions, four-language source choices and editable
+request examples keep consent explicit. Private recovery provenance is checked before verification
+scope comparison, preserving existing typed refusal reasons for forged recording/publication evidence.
+
 Compose explicit local DAG handoffs with privately renewed permanent read-only completion.
 Bind real full recovery lineage, exact approved reader roots, every historical policy review and actual
 original request/admission/roles. Preserve current issuing/consuming ceilings and earliest retention;

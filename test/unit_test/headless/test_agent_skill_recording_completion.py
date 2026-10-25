@@ -16,7 +16,7 @@ def recording(tmp_path, monkeypatch, request):
     scopes = ExitStack()
     kind = getattr(request, 'param', 'skill')
     users = owner = reviewer = None
-    if kind in {'named', 'named_caller'}:
+    if kind in {'named', 'named_caller', 'named_caller_request'}:
         users = UserStore(tmp_path / 'users.json')
         users.add_user(user_id='owner', display_name='Owner', role='operator')
         users.add_user(user_id='reviewer', display_name='Reviewer', role='admin')
@@ -46,7 +46,8 @@ def recording(tmp_path, monkeypatch, request):
     target = NativeDesktopTarget(resource_path=tmp_path / 'owned-input.lock')
     runtime = AgentRuntime(tmp_path / 'tasks.sqlite', targets={'local-files': target})
     try:
-        source = runtime.submit(definition)
+        source = runtime.submit(definition,
+                                idempotency_key='owned-recording-source' if kind == 'named_caller_request' else None)
         frame = runtime.observe(source.task_id)
         runtime.act(source.task_id, {**action, 'observation_id': frame.observation_id})
         runtime.pause(source.task_id)

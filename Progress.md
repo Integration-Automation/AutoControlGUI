@@ -9,8 +9,8 @@
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-接續完成第 5 組非 DAG／跨主機成果移交及 browser／remote
-reader，並核對第 4 組真實裝置控制／擷取來源、其餘實作及第 8 組交付核對。
+接續完成第 5 組 browser／remote reader 與第 6 組跨主機成果移交，
+並核對第 4 組真實裝置控制／擷取來源、其餘實作及第 8 組交付核對。
 
 1. **P4：瀏覽器與正式環境接合**
    - 選定正式服務專用 helper Python、AutoControl／WebRunner 套件版本與受管 Chromium 安裝；
@@ -86,11 +86,6 @@ reader，並核對第 4 組真實裝置控制／擷取來源、其餘實作及�
      指標步驟提供可信新來源與語義轉換，不能把舊索引／座標或歷史欄位值直接移入新 session。
    - 補實際應用的語義錄製、參數化、候選修復、驗證 trial、人工接受／版本發布及執行中固定版本
      的完整驗收；持續拒絕沒有完整動作確認或獨立完成證據的試跑，不能僅憑舊收據發布。
-   - 將 local DAG 的唯讀成果移交契約延伸至尚未涵蓋的非 DAG 復原流程；須明確可撤銷，
-     僅採認既有其他 caller 所有的完成證據。新 source_owner
-     模式不移轉或補造舊子任務的歸屬。移交須固定實際來源身分與真實復原鏈，持續驗證權限；
-     具有批次／節點的路徑亦須綁定其原身分，非 DAG 路徑不能補造假的批次見證。
-     只能供獨立完成證據採認，不能擴大一般讀取／輸入權或重新派送舊任務。
    - 將唯讀完成審閱／驗證／發布延伸至 browser／remote target：補可信唯讀 reader，來源副作用與
      當前獨立條件須分別核對；缺少原瀏覽器 context 時不可新開頁面當作舊狀態，亦不可回退普通
      可操作 helper、重做最後動作或解除未知隔離來完成認證。原生／真機能力與驗收仍須分開確認。
@@ -134,11 +129,19 @@ reader，並核對第 4 組真實裝置控制／擷取來源、其餘實作及�
      該次為 15,235 passed／77 skipped／1 setup error，案例本體未執行。
      須收集自有 helper 啟動時間與逾時前堆疊以釐清原因；不放寬 15 秒期限、不重試或略過錯誤，
      單獨重跑通過與後續全套通過都不能代表此啟動問題已修復。
+     `WIP`：pytest 的 atexit `cleanup_dead_symlinks` 對共用暫存連結
+     `C:\Users\USER\AppData\Local\Temp\pytest-of-USER\pytest-current` 發生
+     `PermissionError: [WinError 5]`；已核對為目錄符號連結，讀取連結目標亦遭相同錯誤。
+     仍須查明權限／生命週期及清理契約，避免影響其他 pytest 執行者。不直接刪除共用連結或
+     修改共用 `.venv`；測試本體退出碼 0 不代表暫存清理已修復。
    - 重跑三平台型別、Ruff／Bandit、檔案／函式／複雜度及文件計數，檢查新增 lint 問題；
      AutoControl 全套 Pylint 仍有既有問題，不能把局部模組通過當全套零問題。
      WebRunner 既有全套 mypy／flake8／嚴格 Sphinx 債務見其 `Progress.md` #23，不能標示全綠。
    - 完成最終 wheel／隔離安裝／依賴一致性、嚴格文件建置，以及三語 README、Sphinx、架構、
      範例與公開契約一致性核對；避免舊說明把已支援的 browser profile 說成不支援。
+     初次隔離安裝驗證留下的自有暫存目錄
+     `C:\Users\USER\AppData\Local\Temp\autocontrol-wheel-stage72-mbpvem9h` 尚未清理；
+     刪除操作遭自動審核拒絕（僅回覆 `blocked by policy`），保持原樣，不改用其他工具繞過。
    - 功能分支到正式環境的整合／部署仍未執行；正式工作樹與既有批次須保持可回復。
 
 **仍暫緩的驗收**：原生桌面、實際瀏覽器與 Android／iOS 真機驗收；WebRunner `Progress.md` #20

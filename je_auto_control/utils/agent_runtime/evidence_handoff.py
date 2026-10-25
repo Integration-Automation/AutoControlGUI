@@ -12,6 +12,7 @@ from typing import Any, Callable
 
 from je_auto_control.utils.agent_runtime.completion_contract import validate_recorded_completion
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.handoff_records import HandoffRecords, HandoffAccess, HandoffPolicy
 from je_auto_control.utils.rbac.authorization import AuthorizationContext, AuthorizationError, current_authorization
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 
@@ -64,8 +65,14 @@ def _expiry(rows: list[dict]) -> float:
     return deadline
 
 
+def _retained_tasks(context: dict, tasks: list[dict]) -> list[dict]:
+    rows = context.get('retained_rows', []) + tasks
+    return list({row['id']: row for row in rows}.values())
+
+
 def _public(row: dict) -> dict:
-    fields = ('id', 'batch_id', 'node_id', 'source_task', 'task_id', 'review', 'state', 'expires')
+    fields = ('id', *(key for key in ('batch_id', 'node_id') if key in row),
+              'source_task', 'task_id', 'review', 'state', 'expires')
     result = {key: row[key] for key in fields}
     if result['state'] == 'active' and result['expires'] <= time.time():
         result['state'] = 'expired'
@@ -73,16 +80,21 @@ def _public(row: dict) -> dict:
 
 
 class EvidenceHandoffs:
-    """Grant only immutable DAG completion projections; no ambient task-read capability is installed."""
+    """Grant immutable task/DAG completion projections without ambient task-read capability."""
 
-    def __init__(self, runtime: Any, context: Callable, witness: Callable, scope: Callable | None = None) -> None:
+    def __init__(self, runtime: Any, context: Callable, witness: Callable, scope: Callable | None = None,
+                 records: HandoffRecords | None = None) -> None:
         self.runtime, self.context, self.witness = runtime, context, witness
         self.scope = scope
+        self.records = records if records is not None else HandoffRecords()
 
     def control(self, operation: str, request: dict) -> dict:
         """Review, issue, inspect or revoke a closed caller-scoped evidence handoff."""
         self._open()
-        if set(request) != _FIELDS[operation]:
+        expected = _FIELDS[operation]
+        if self.records.standalone and operation in {'review_handoff', 'create_handoff', 'list_handoffs'}:
+            expected = expected - {'batch_id', 'node_id'} | {'source_task'}
+        if set(request) != expected:
             raise AgentTaskError('invalid handoff operation fields')
         for key in set(request) - {'note', 'review'}:
             _identifier(request[key])
@@ -108,7 +120,7 @@ class EvidenceHandoffs:
     def _issue(self, operation: str, request: dict) -> dict:
         actor = _principal()
         with self.runtime.store.connection(write=True) as connection:
-            proof, _tasks = self._proof(connection, request, actor, issuing=True)
+            proof, _tasks, _context = self._proof(connection, request, actor, issuing=True)
             review = _digest(proof)
             if operation == 'review_handoff':
                 return {'handoff_review': review, 'approval_required': True,
@@ -116,36 +128,46 @@ class EvidenceHandoffs:
             note = request['note']
             if not isinstance(note, str) or not note.strip() or len(note) > 4000 or request['review'] != review:
                 raise AgentTaskError('handoff review or bounded nonempty note changed')
-            previous = connection.execute("SELECT * FROM agent_evidence_handoffs WHERE review=? AND state='active'",
-                                           (review,)).fetchone()
+            previous = self.records.previous(connection, review)
             if previous is not None:
                 if previous['note'] != note:
                     raise AgentTaskError('existing handoff review note differs')
+                self._active(connection, dict(previous))
                 return {'handoff': _public(dict(previous))}
-            row = {'id': uuid.uuid4().hex, **{key: request[key] for key in ('batch_id', 'node_id', 'task_id')},
+            row = {'id': uuid.uuid4().hex,
+                   **{key: request[key] for key in (*self.records.binding_fields, 'task_id')},
                    'source_task': proof['binding']['source_task'], 'review': review, 'details': json.dumps(proof),
                    'note': note, 'state': 'active', 'created': time.time(), 'expires': proof['expires']}
             self._insert(connection, row)
             if self._proof(connection, request, actor, issuing=True)[0] != proof:
                 raise AgentTaskError('handoff evidence changed during creation')
+            self._active(connection, row)
         return {'handoff': _public(row)}
 
     @staticmethod
     def _insert(connection: Any, row: dict) -> None:
-        fields = ('id', 'batch_id', 'node_id', 'source_task', 'task_id', 'review', 'details',
-                  'note', 'state', 'created', 'expires')
-        connection.execute('INSERT INTO agent_evidence_handoffs VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-                           tuple(row[key] for key in fields))
+        HandoffRecords('batch_id' not in row).insert(connection, row)
+
+    def _context(self, request: dict, *, connection: Any = None, issuer_policies: list[str] | None = None) -> dict:
+        options = {'identity_only': True} if self.scope is not None else {}
+        identifiers = ((request['source_task'],) if self.records.standalone
+                       else (request['batch_id'], request['node_id']))
+        return self.context(*identifiers, origin_policies=issuer_policies, connection=connection, **options)
 
     def _proof(self, connection: Any, request: dict, actor: dict, *, issuing: bool = False,
-               issuer_policies: list[str] | None = None, authorization: dict | None = None) -> tuple[dict, list[dict]]:
-        options = {'identity_only': True} if self.scope is not None else {}
-        context = self.context(request['batch_id'], request['node_id'],
-                               origin_policies=issuer_policies, connection=connection, **options)
-        if context['state'] not in ({'waiting_review'} if issuing else {'waiting_review', 'approved', 'running'}):
+               issuer_policies: list[str] | None = None,
+               authorization: dict | None = None) -> tuple[dict, list[dict], dict]:
+        context = self._context(request, connection=connection, issuer_policies=issuer_policies)
+        allowed = ({'paused', 'waiting_user', 'recovering', 'cancelled', 'timed_out', 'failed', 'succeeded'}
+                   if self.records.standalone else
+                   {'waiting_review'} if issuing else {'waiting_review', 'approved', 'running'})
+        if context['state'] not in allowed:
             raise AgentTaskError('handoff batch is not in a reviewed evidence state')
         _manager(actor, context['binding']['owner'])
         links = self._chain(connection, context['source']['id'], request['task_id'], issuing=issuing)
+        if context.get('ancestor_links', 0) + len(links) > 16:
+            raise AgentTaskError('handoff exceeds sixteen real recovery links')
+        context['links'] = links
         if self.scope is not None:
             context['issuer'] = actor
             context.update(self.scope(connection, context, links, issuer_policies, authorization, issuing=issuing))
@@ -154,19 +176,20 @@ class EvidenceHandoffs:
         reply = self._task(connection, leaf, links[-1][2])
         validate_recorded_completion(reply, context['source']['spec'])
         proof = {'contract': 1, 'binding': context['binding'], 'issuer': actor, 'task_id': leaf['id'],
-                 'leaf_owner': leaf['owner'], 'segments': segments, 'expires': _expiry(tasks),
+                 'leaf_owner': leaf['owner'], 'segments': segments, 'expires': _expiry(_retained_tasks(context, tasks)),
                  'issuer_policies': (sorted(context['policy'].spec.options.get('origin_policies', []))
                                      if issuer_policies is None else issuer_policies)}
         if context.get('completion_authorization') is not None:
             proof['completion_authorization'] = context['completion_authorization']
-        return proof, [self._task(connection, child, link) for _source, child, link in reversed(links)]
+        return proof, [self._task(connection, child, link) for _source, child, link in reversed(links)], context
 
     def _segments(self, connection: Any, context: dict, links: list, actor: dict) -> tuple[list, list]:
         segments, tasks = [], [context['source']]
         for source, child, link in links:
             _manager(actor, source['owner'])
             _manager(actor, child['owner'])
-            options = ({'scope': context['policy']} if context.get('completion_authorization') is not None else {})
+            scoped = context.get('completion_authorization') is not None or context.get('evidence_scope', False)
+            options = {'scope': context['policy']} if scoped else {}
             evidence = self.witness(connection, source, child, link, **options)
             for action in evidence['actions']:
                 if action['status'] == 'confirmed':
@@ -216,7 +239,8 @@ class EvidenceHandoffs:
     @staticmethod
     def _projection(proof: dict) -> dict:
         binding = proof['binding']
-        result = {'contract': 1, **{key: binding[key] for key in ('batch_id', 'node_id', 'source_task')},
+        result = {'contract': 1,
+                **{key: binding[key] for key in ('batch_id', 'node_id', 'source_task') if key in binding},
                 'task_id': proof['task_id'], 'segments': proof['segments'], 'expires': proof['expires'],
                 'evidence_only': True, 'input_authorized': False}
         if 'completion_authorization' in proof:
@@ -232,7 +256,7 @@ class EvidenceHandoffs:
 
     def _load(self, connection: Any, identifier: str) -> tuple[dict, dict]:
         _identifier(identifier)
-        found = connection.execute('SELECT * FROM agent_evidence_handoffs WHERE id=?', (identifier,)).fetchone()
+        found = self.records.find(connection, identifier)
         if found is None:
             raise AgentTaskError('handoff does not exist or belongs to another caller')
         row = dict(found)
@@ -264,29 +288,22 @@ class EvidenceHandoffs:
                 row, proof = self._load(connection, request['handoff_id'])
                 self._audit_authority(proof)
                 return {'handoff': _public(row)}
-            options = {'identity_only': True} if self.scope is not None else {}
-            context = self.context(request['batch_id'], request['node_id'], **options)
-            found = connection.execute('SELECT * FROM agent_evidence_handoffs WHERE batch_id=? AND node_id=? '
-                'ORDER BY created DESC LIMIT 200', (context['binding']['batch_id'], request['node_id'])).fetchall()
+            context = self._context(request, connection=connection)
+            found = self.records.list(connection, context['binding'])
             return {'handoffs': [_public(dict(row)) for row in found]}
 
     def _revoke(self, identifier: str) -> dict:
         with self.runtime.store.connection(write=True) as connection:
             row, proof = self._load(connection, identifier)
             self._audit_authority(proof)
-            connection.execute("UPDATE agent_evidence_handoffs SET state='revoked' WHERE id=?", (identifier,))
-            connection.execute('INSERT OR IGNORE INTO agent_evidence_handoff_revocations VALUES (?,?,?)',
-                               (identifier, json.dumps(_principal()), time.time()))
+            self.records.revoke(connection, identifier, json.dumps(_principal()), time.time())
             with DeferredAuthorization.capture().scope():
                 self._audit_authority(proof)
             row['state'] = 'revoked'
         return {'handoff': _public(row)}
 
     def _active(self, connection: Any, row: dict) -> None:
-        current = connection.execute('SELECT state,review FROM agent_evidence_handoffs WHERE id=?',
-                                     (row['id'],)).fetchone()
-        revoked = connection.execute('SELECT 1 FROM agent_evidence_handoff_revocations WHERE handoff_id=?',
-                                     (row['id'],)).fetchone()
+        current, revoked = self.records.current(connection, row['id'])
         if current is None or current['state'] != 'active' or revoked or row['expires'] <= time.time():
             raise AgentTaskError('handoff is revoked or expired')
         if current['review'] != row['review']:
@@ -295,17 +312,34 @@ class EvidenceHandoffs:
     def consume(self, batch_id: str, node_id: str, source_task: str, task_id: str, handoff_id: str,
                 *, connection: Any = None) -> tuple[dict, list]:
         """Read only completion projections for the exact private grant under the current batch owner."""
+        request = {'batch_id': batch_id, 'node_id': node_id, 'source_task': source_task,
+                   'task_id': task_id, 'handoff_id': handoff_id}
+        projection, tasks, _context = self._consume(request, connection=connection)
+        return projection, tasks
+
+    def consume_task(self, source_task: str, task_id: str, handoff_id: str,
+                     *, connection: Any = None) -> HandoffAccess:
+        """Return a host-only view of precisely the explicitly granted non-DAG completion chain."""
+        request = {'source_task': source_task, 'task_id': task_id, 'handoff_id': handoff_id}
+        projection, _tasks, context = self._consume(request, connection=connection)
+        links = context['links']
+        rows = {row['id']: row for pair in links for row in pair[:2]}
+        grant = {**projection['metadata']['evidence_handoff'], 'source_task': source_task, 'task_id': task_id}
+        authority = HandoffPolicy(context['policy'], context.get('completion_authorization') is not None)
+        return HandoffAccess(projection, rows, links, authority, self.witness, grant)
+
+    def _consume(self, request: dict, *, connection: Any = None) -> tuple[dict, list, dict]:
         self._open()
         try:
             transaction = self.runtime.store.connection(write=True) if connection is None else nullcontext(connection)
             with DeferredAuthorization.capture().scope(), transaction as active_connection:
-                row, previous = self._load(active_connection, handoff_id)
+                row, previous = self._load(active_connection, request['handoff_id'])
                 self._audit_authority(previous)
                 self._active(active_connection, row)
-                if (row['batch_id'], row['node_id'], row['source_task'], row['task_id']) != (
-                        batch_id, node_id, source_task, task_id):
+                fields = (*self.records.binding_fields, 'source_task', 'task_id')
+                if any(row[key] != request[key] for key in fields):
                     raise AgentTaskError('handoff batch, node, source or evidence identity differs')
-                proof, tasks = self._proof(active_connection, row, previous['issuer'],
+                proof, tasks, context = self._proof(active_connection, row, previous['issuer'],
                                            issuer_policies=previous['issuer_policies'],
                                            authorization=previous.get('completion_authorization'))
                 if proof != previous or self._proof(active_connection, row, previous['issuer'],
@@ -313,8 +347,9 @@ class EvidenceHandoffs:
                         authorization=previous.get('completion_authorization'))[0] != previous:
                     raise AgentTaskError('handoff evidence or binding changed')
                 self._active(active_connection, row)
-                tasks[0]['metadata']['evidence_handoff'] = {'contract': 1, 'id': handoff_id, 'review': row['review']}
-                return tasks[0], tasks
+                tasks[0]['metadata']['evidence_handoff'] = {
+                    'contract': 1, 'id': request['handoff_id'], 'review': row['review']}
+                return tasks[0], tasks, context
         except AuthorizationError as error:
             raise AgentTaskError('handoff authority changed; review again') from error
         except AgentTaskError:

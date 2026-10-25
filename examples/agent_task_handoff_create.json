@@ -1,0 +1,6 @@
+{
+  "source_task": "<original-source-task-id>",
+  "task_id": "<final-evidence-task-id>",
+  "review": "<top-level-handoff-review-token>",
+  "note": ""
+}

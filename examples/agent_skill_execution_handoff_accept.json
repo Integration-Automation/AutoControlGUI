@@ -1,0 +1,9 @@
+{
+  "candidate_id": "<candidate-id>",
+  "task_id": "<original-validation-task-id>",
+  "execution_task_id": "<actual-executable-successor-id>",
+  "execution_review": "<reviewed-execution-chain-token>",
+  "handoff_id": "<explicit-evidence-handoff-id>",
+  "expected_version": 0,
+  "note": ""
+}

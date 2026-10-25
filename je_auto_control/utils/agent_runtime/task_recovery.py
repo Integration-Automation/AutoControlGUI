@@ -6,18 +6,20 @@ import json
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentHumanReview
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
-from je_auto_control.utils.agent_runtime.policy import durable_payload
+from je_auto_control.utils.agent_runtime.policy import durable_payload, owns_task, TaskPolicy, validate_root_snapshot
 from je_auto_control.utils.agent_runtime.receipts import effective_actions, row_report
 from je_auto_control.utils.agent_runtime.store import request_spec_digest
 from je_auto_control.utils.agent_runtime.task_authority import (
     validate_ownership_request, ownership_scope, ownership_review, public_ownership,
     recovery_binding, require_matching_ownership,
     check_recovery_authority,
-    check_handoff_history, HandoffScope,
+    check_handoff_history, HandoffScope, check_historical_recovery_identity,
 )
 from je_auto_control.utils.agent_runtime.evidence_handoff import EvidenceHandoffs, OPERATIONS as HANDOFF_OPERATIONS
+from je_auto_control.utils.agent_runtime.handoff_records import HandoffRecords, HandoffAccess, standalone_handoff
+from je_auto_control.utils.agent_runtime.task_handoff import TaskHandoffContext
 from je_auto_control.utils.agent_runtime.recovery_authorization import (
-    prepare_authorization, authorized_template, narrowed_template, authorization_details,
+    prepare_authorization, authorized_template, narrowed_template, authorization_details, _intersect,
 )
 from je_auto_control.utils.agent_runtime.workflow_values import verified_prefix, transformed
 from je_auto_control.utils.rbac.authorization import current_authorization, AuthorizationError
@@ -72,9 +74,27 @@ class AgentRecovery:
     def __init__(self, runtime: Any) -> None:
         self.runtime = runtime
 
-    def _handoffs(self) -> EvidenceHandoffs:
-        return EvidenceHandoffs(self.runtime, self.runtime.batches.handoff_context, self.handoff_witness,
-                                self.handoff_scope)
+    def _handoffs(self, *, standalone: bool = False) -> EvidenceHandoffs:
+        context = (TaskHandoffContext(self.runtime, self._handoff_snapshot, check_historical_recovery_identity,
+                                     request_spec_digest, owns_task).context if standalone
+                   else self.runtime.batches.handoff_context)
+        return EvidenceHandoffs(self.runtime, context, self.handoff_witness, self.handoff_scope,
+                                HandoffRecords(standalone))
+
+    def _handoffs_for(self, operation: str, request: dict) -> EvidenceHandoffs:
+        # pylint: disable-next=protected-access  # reason: resolve no private storage family after service shutdown
+        if self.runtime._closed:
+            raise AgentTaskError('runtime is closed')
+        standalone = 'source_task' in request
+        if operation in {'get_handoff', 'revoke_handoff'} and isinstance(request.get('handoff_id'), str):
+            with self.runtime.store.connection() as connection:
+                standalone = standalone_handoff(connection, request['handoff_id'])
+        return self._handoffs(standalone=standalone)
+
+    def task_handoff_evidence(self, source_task: str, task_id: str, handoff_id: str,
+                              *, connection: Any = None) -> HandoffAccess:
+        """Adopt only a validated explicit non-DAG projection without ordinary task access."""
+        return self._handoffs(standalone=True).consume_task(source_task, task_id, handoff_id, connection=connection)
 
     def handoff_scope(self, connection: Any, context: dict, links: list, issuer_policies: list[str] | None,
                       authorization: dict | None, *, issuing: bool = False) -> dict:
@@ -87,7 +107,23 @@ class AgentRecovery:
             return approved
         if authorization is not None:
             raise AgentTaskError('renewed handoff completion authorization is unavailable')
+        if context['binding'].get('kind') == 'task_completion':
+            return {'policy': self._task_handoff_policy(context, links, issuer_policies), 'evidence_scope': True}
         return {'policy': self.runtime.batches.handoff_policy(context['source'], issuer_policies)}
+
+    def _task_handoff_policy(self, context: dict, links: list, issuer_policies: list[str] | None) -> TaskPolicy:
+        template = detached(context['source']['spec'])
+        origins = set(issuer_policies or [])
+        for row in (links[0][0], *(child for _source, child, _link in links)):
+            validate_root_snapshot(row['spec']['roots'])
+            if template['roots'] and row['spec']['roots']:
+                template['roots'] = _intersect(template['roots'], row['spec']['roots'])
+                if not template['roots']:
+                    raise AgentTaskError('handoff has no shared historical root scope')
+            origins.update(row['spec']['options'].get('origin_policies', []))
+        template['options']['origin_policies'] = sorted(origins)
+        # pylint: disable-next=protected-access  # reason: current host/session and all live historical origins still apply
+        return TaskPolicy(self.runtime._validated_spec(template))
 
     def handoff_evidence(self, batch_id: str, node_id: str, source_task: str,
                          task_id: str, handoff_id: str, *, connection: Any = None) -> tuple[dict, list]:
@@ -170,7 +206,7 @@ class AgentRecovery:
         if not isinstance(operation, str) or operation not in OPERATIONS or not isinstance(request, dict):
             raise AgentTaskError("invalid recovery operation fields")
         if operation in HANDOFF_OPERATIONS:
-            return self._handoffs().control(operation, request)
+            return self._handoffs_for(operation, request).control(operation, request)
         validate_ownership_request(operation, request, _REQUEST_FIELDS[operation])
         task_id = request["task_id"]
         if not isinstance(task_id, str) or not task_id:

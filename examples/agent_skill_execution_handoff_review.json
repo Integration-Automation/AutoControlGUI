@@ -1,0 +1,6 @@
+{
+  "candidate_id": "<candidate-id>",
+  "task_id": "<original-validation-task-id>",
+  "execution_task_id": "<actual-executable-successor-id>",
+  "handoff_id": "<explicit-evidence-handoff-id>"
+}

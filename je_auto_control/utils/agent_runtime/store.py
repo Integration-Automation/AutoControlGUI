@@ -121,6 +121,15 @@ CREATE INDEX IF NOT EXISTS agent_evidence_handoff_binding ON agent_evidence_hand
 CREATE TABLE IF NOT EXISTS agent_evidence_handoff_revocations (
  handoff_id TEXT PRIMARY KEY REFERENCES agent_evidence_handoffs(id) ON DELETE CASCADE,
  actor TEXT NOT NULL, created REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_task_handoffs (
+ id TEXT PRIMARY KEY, source_task TEXT NOT NULL REFERENCES agent_tasks(id) ON DELETE CASCADE,
+ task_id TEXT NOT NULL REFERENCES agent_tasks(id) ON DELETE CASCADE,
+ review TEXT NOT NULL, details TEXT NOT NULL, note TEXT NOT NULL,
+ state TEXT NOT NULL, created REAL NOT NULL, expires REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS agent_task_handoff_source ON agent_task_handoffs(source_task);
+CREATE TABLE IF NOT EXISTS agent_task_handoff_revocations (
+ handoff_id TEXT PRIMARY KEY REFERENCES agent_task_handoffs(id) ON DELETE CASCADE,
+ actor TEXT NOT NULL, created REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_action_grounding (
  action_id TEXT PRIMARY KEY REFERENCES agent_actions(id) ON DELETE CASCADE, details TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_target_profiles (

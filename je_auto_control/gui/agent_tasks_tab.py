@@ -93,6 +93,10 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._handoff_operation, self._handoff_request = QComboBox(), QPlainTextEdit('{}')
         for name in HANDOFF_OPERATIONS:
             self._handoff_operation.addItem(_translate('agent_handoff_op_' + name), name)
+        self._handoff_scope = QComboBox(self)
+        self._handoff_scope.setObjectName('agent_handoff_scope')
+        for name in ('dag', 'task'):
+            self._handoff_scope.addItem(_translate('agent_handoff_scope_' + name), name)
         self._mode = QComboBox()
         self._mode.addItems(["external", "skill", "ollama"])
         self._workflow = QComboBox()
@@ -134,7 +138,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._page("agent_page_recovery", (("agent_recovery_note", self._recovery_note),
                    ("agent_owner_policy", self._owner_policy),
                    ("agent_review", self._review), ("agent_remainder_request", self._remainder_request)))
-        self._page('agent_page_handoffs', (('agent_handoff_operation', self._handoff_operation),
+        self._page('agent_page_handoffs', (('agent_handoff_scope', self._handoff_scope),
+                                          ('agent_handoff_operation', self._handoff_operation),
                                           ('agent_handoff_request', self._handoff_request)))
         self._page("agent_page_observation", (("agent_action", self._action),))
         self._pages.widget(self._pages.count() - 1).layout().addWidget(self._observation)
@@ -164,7 +169,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             self._pages.setTabText(index, _translate(key))
         self._observation.retranslate()
         for combo, prefix in ((self._trigger_operation, "agent_trigger_"), (self._trigger_kind, "agent_trigger_kind_"),
-                              (self._owner_policy, "agent_owner_")):
+                              (self._owner_policy, "agent_owner_"),
+                              (self._handoff_scope, 'agent_handoff_scope_')):
             for index in range(combo.count()):
                 combo.setItemText(index, _translate(prefix + combo.itemData(index)))
         for index in range(self._skill_operation.count()):
@@ -203,6 +209,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ('agent_skill_recording_completion_example', self._skill_recording_completion_example),
                 ('agent_skill_execution_review_example', partial(self._skill_execution_example, 'review_execution')),
                 ('agent_skill_execution_accept_example', partial(self._skill_execution_example, 'accept')),
+                ('agent_skill_recording_handoff_example', partial(self._skill_handoff_example, 'record')),
+                ('agent_skill_publication_handoff_example', partial(self._skill_handoff_example, 'accept')),
+                ('agent_skill_execution_handoff_example', partial(self._skill_handoff_example, 'review_execution')),
                 ('agent_handoff_apply', self._handoff_apply),
                 *[('agent_handoff_example_' + name, partial(self._handoff_example, name)) for name in
                   ('review_handoff', 'create_handoff', 'revoke_handoff')],
@@ -368,6 +377,17 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._skill_request.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))
         self._pages.setCurrentIndex(self._page_keys.index('agent_page_skills'))
 
+    def _skill_handoff_example(self, operation: str) -> None:
+        if operation == 'record':
+            self._skill_recording_completion_example()
+        elif operation == 'accept':
+            self._skill_completion_example()
+        else:
+            self._skill_execution_example(operation)
+        request = json.loads(self._skill_request.toPlainText())
+        request['handoff_id'] = '<handoff-id>'
+        self._skill_request.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))
+
     def _handoff_apply(self) -> None:
         try:
             request = json.loads(self._handoff_request.toPlainText())
@@ -381,6 +401,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
     def _handoff_example(self, operation: str) -> None:
         request: dict[str, Any] = {'task_id': '<final-evidence-task-id>', 'batch_id': '<original-batch-id>',
                                    'node_id': '<node-id>'}
+        if self._handoff_scope.currentData() == 'task':
+            request = {'task_id': self._task_id.text() or '<final-evidence-task-id>',
+                       'source_task': '<original-source-task-id>'}
         if operation == 'revoke_handoff':
             request = {'handoff_id': '<handoff-id>'}
         elif operation == 'create_handoff':
