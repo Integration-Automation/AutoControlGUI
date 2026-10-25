@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261026-05 | 2026-10-26 | Bind reviewed local artifact snapshots to current source authority | #snapshot #agent #handoff #source #verification | [2026-10-c](2026-10-c.md) |
 | U-20261026-04 | 2026-10-26 | Bind private transfer reservations and owned cleanup | #snapshot #agent #handoff #storage #verification | [2026-10-c](2026-10-c.md) |
 | U-20261026-03 | 2026-10-26 | Validate immutable cross-host transfer data models | #snapshot #agent #handoff #verification | [2026-10-c](2026-10-c.md) |
 | U-20261026-02 | 2026-10-26 | Define cross-host artifact and evidence handoff contracts | #decision #agent #handoff #P8 | [2026-10-c](2026-10-c.md) |

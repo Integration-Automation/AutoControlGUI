@@ -106,8 +106,10 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      `WIP`：依功能工作樹中的 `docs/superpowers/plans/2026-10-26-cross-host-handoff.md`
      與同日 design 執行；尚待來源快照／私有 grant、具名來源驗證的 peer 讀取、目的端分塊
      匯入／發布／清理、遠端完成證據採認，以及 API／AC／MCP／REST／CLI／Builder／GUI 接合。
-     Tasks2–5 的來源授權／服務、
-     實際傳輸／發布、採認與共用介面仍待實作，不可把摘要或傳輸收據當成獨立完成證據。
+     原始 recovery／DAG 私有授權鏈、禁止私有
+     產物輸出、取消／重啟／審閱到期與保留清理失敗、晚到／最終提交競態仍須逐案核實。
+     Peer／REST 的前置 1MiB 上限與私有 header 拒絕、實際具名主機傳輸及 Tasks3–5 的目的端
+     發布／證據採認／共用介面仍待實作；不可把本機核心、摘要或收據當成跨主機完成證據。
      須包含遠端任務證據的保留／移交契約；來源端保留未決批次不能自動延長目的端的 30 天保留期，
      目的端證據到期或失聯須維持不可採認，不能以來源端協調收據取代獨立完成證據。
    - 實際多機驗證斷線／晚到回覆、主機重啟、憑證撤銷／變更、協調端中斷及同資源序列／
@@ -127,6 +129,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 8. **P0–P9 最終交付核對與檢查**
    - 每條交付契約整理實作、無頭回歸與原生／真機證據對照；補新平台／多機／恢復情境的漏洞，
      區分已實作、尚缺實作與只缺實測，不能用模擬目標取代原生驗收。
+     核對同名但不同副檔名 runtime 資料庫的既有 evidence／artifact 根目錄隔離與清理契約，
+     避免根目錄別名造成跨 runtime 產物存取或清理；新 transfer cache 的命名隔離不代表舊根目錄已修復。
    - 於最後固定提交重跑完整 headless 與 `coverage run -m pytest`、跨功能／故障恢復回歸；
      目前較早固定版本的全套證據不能冒充最新工作樹結果。
      `WIP`：第 74 階段最新固定程式的全套為 15,361 passed／78 skipped／3 failed，

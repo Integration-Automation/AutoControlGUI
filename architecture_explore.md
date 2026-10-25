@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,363 |
-| 程式碼總行數 | 202,324 |
+| Python 模組總數（含周邊子專案） | 1,369 |
+| 程式碼總行數 | 203,035 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 855 |
 | 套件門面 `__all__` 公開名稱數 | 1444 |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 41,965 行。
+> 14 個套件、約 42,676 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 16,398 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 17,109 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -989,7 +989,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（16,398 行／122 檔）
+#### `utils/agent_runtime/`（17,109 行／128 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1080,7 +1080,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `retained_browser.py` | 147 | Bounded effect-task ownership of actual permanently read-only browser helper processes. |
 | `retained_browser_runtime.py` | 91 | Connect actual browser retirement to existing runtime leases and private completion bindings. |
 | `retained_browser_target.py` | 98 | Closed transient read borrowers; the runtime collection owns the original helper lifetime. |
-| `runtime.py` | 717 | Shared managed-task lifecycle with fenced dispatch and evidence-based completion. |
+| `runtime.py` | 738 | Shared managed-task lifecycle with fenced dispatch and evidence-based completion. |
 | `runtime_lock.py` | 40 | Cross-process ownership for one runtime database; imports never acquire locks. |
 | `service.py` | 113 | Explicit local runtime service lifecycle over the existing authenticated REST server. |
 | `skill_completion.py` | 120 | Private read-only evidence for skill recording and publication preserves original workflow identity. |
@@ -1097,11 +1097,17 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `targets.py` | 193 | Explicit target adapters; native imports occur only during requested operations. |
 | `task_authority.py` | 311 | Trusted source-owner recovery admission and live owner/reviewer authority checks. |
 | `task_handoff.py` | 81 | Real non-DAG source identity for explicit completion evidence, without fabricated admission. |
-| `task_recovery.py` | 478 | Review stopped tasks and create one explicitly approved successor without replay. |
+| `task_recovery.py` | 482 | Review stopped tasks and create one explicitly approved successor without replay. |
 | `task_skills.py` | 367 | Immutable managed skill candidates require a verified trial and explicit version publication. |
 | `task_triggers.py` | 272 | Durable preauthorized task bindings with owner refresh, bounded backlog and event deduplication. |
+| `transfer_cache.py` | 28 | One runtime-derived private blob cache never accepts a public path or configuration account selector. |
+| `transfer_files.py` | 110 | Bounded source-file descriptors and verified chunks remain private until export consent commits. |
+| `transfer_host.py` | 104 | Host-injected source authority keeps policy and private completion validators out of transfer leaves. |
 | `transfer_models.py` | 182 | Portable criterion selections and immutable descriptors for reviewed outcome transfers. |
-| `transfer_records.py` | 252 | Private transfer reservations bind consent and retain capacity until owned cleanup is confirmed. |
+| `transfer_protocol.py` | 74 | Runtime-owned transfer serialization keeps finite source operations separate from future import/evidence paths. |
+| `transfer_records.py` | 269 | Private transfer reservations bind consent and retain capacity until owned cleanup is confirmed. |
+| `transfer_selection.py` | 108 | Resolve only source-owned passed file criteria and their explicitly selected manifest names. |
+| `transfer_source.py` | 245 | Explicitly reviewed source artifacts publish immutable blobs under live host-derived authority. |
 | `transport.py` | 113 | Bounded HTTP requests; cancellation discards late inference replies before any input. |
 | `trigger_config.py` | 69 | Validate durable trigger schedules and rooted file-version notifications without side effects. |
 | `trigger_history.py` | 89 | Renewed trigger lineages share accepted event tombstones and outstanding-task limits. |
@@ -1428,8 +1434,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 925 | 88,869 |
-| **總計** | **1,355** | **202,155** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 931 | 89,580 |
+| **總計** | **1,361** | **202,866** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

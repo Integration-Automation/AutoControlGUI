@@ -1,5 +1,10 @@
 # Changelog
 
+Add runtime-owned local file-export review, exact consent and immutable private blob snapshots.
+Current local issuer/recipient checks, streamed file/text/manifest verification, descriptor rechecks,
+fixed deadlines and guarded runtime retirement precede future authenticated cross-host transport.
+Network routes, complete lineage/lifecycle acceptance and public transfer surfaces remain pending.
+
 Add internal transfer reservations with exact consent/key binding, irreversible revocation,
 fixed expiry and atomic aggregate quotas; retain capacity until confirmed private-account cleanup.
 Cross-host source authorization, transport, lifecycle and public surfaces remain pending.

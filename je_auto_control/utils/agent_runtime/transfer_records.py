@@ -34,6 +34,7 @@ _QUERIES = {
     'release': 'UPDATE @records SET held=0 WHERE id=?',
     'held': 'SELECT count(*) FROM @records WHERE held=1 AND expires<=?',
     'prune': "DELETE FROM @records WHERE held=0 AND state!='active' AND expires<=?",
+    'entries': 'SELECT * FROM @records WHERE kind=? ORDER BY id LIMIT 200',
 }
 
 
@@ -222,6 +223,22 @@ class TransferRecords:
         if _revoked(connection, identifier) or row['state'] != 'active' or row['expires'] <= time.time():
             raise AgentTaskError('transfer record is not active')
         return _view(row)
+
+    def find(self, connection: Any, identifier: str) -> dict[str, Any]:
+        """Inspect private metadata without treating an expired or revoked record as authority."""
+        return _view(_find(connection, identifier)[1])
+
+    def review(self, connection: Any, review: str) -> dict[str, Any] | None:
+        """Resolve only an actually persisted local intent; peer tokens cannot select a different family."""
+        _hex(review, 32)
+        row = connection.execute('SELECT id FROM agent_transfer_intents WHERE review=?', (review,)).fetchone()
+        return self.find(connection, row[0]) if row else None
+
+    def entries(self, connection: Any, kind: str) -> list[dict[str, Any]]:
+        """Return a bounded private family view for host-authorized management filtering."""
+        if kind not in _FAMILIES:
+            raise AgentTaskError('unsupported private transfer family')
+        return [_view(row) for row in connection.execute(_sql(_FAMILIES[kind], 'entries'), (kind,))]
 
     def revoke(self, connection: Any, identifier: str) -> None:
         """Retire authority irreversibly while holding capacity for any surviving owned bytes."""

@@ -34,6 +34,8 @@ from je_auto_control.utils.agent_runtime.task_recovery import AgentRecovery, rec
 from je_auto_control.utils.agent_runtime.origin_policy import bind_origin, validate_origins
 from je_auto_control.utils.agent_runtime.store import AgentTaskStore, request_spec_digest
 from je_auto_control.utils.agent_runtime.dag_batches import DagBatches
+from je_auto_control.utils.agent_runtime.transfer_host import TransferHost
+from je_auto_control.utils.agent_runtime.transfer_protocol import AgentTransfers
 from je_auto_control.utils.agent_runtime.submission import TaskAdmission, submitted_digest, submission_metadata
 from je_auto_control.utils.agent_runtime.dag_admission import current_admission
 from je_auto_control.utils.agent_runtime.task_authority import RecoveryBinding, CompletionBinding, check_task_authority
@@ -88,6 +90,7 @@ class AgentRuntime:
         self._mutex = threading.RLock()
         self._task_locks: dict[str, Any] = {}
         self._closed = False
+        self._transfers: AgentTransfers | None = None
         self.background: Any = None
         self.background_dags: Any = None
         self.shutdown_requested = threading.Event()
@@ -103,6 +106,22 @@ class AgentRuntime:
     def _lock(self, task_id: str) -> Any:
         with self._mutex:
             return self._task_locks.setdefault(task_id, threading.RLock())
+
+    @property
+    def transfers(self) -> AgentTransfers:
+        """Use one lazily constructed transfer controller owned by this exact runtime generation."""
+        with self._mutex:
+            if self._closed:
+                raise AgentTaskError('runtime is closed')
+            if self._transfers is None:
+                def retired(task_id: str) -> bool:
+                    with self._mutex:
+                        return task_id not in self._leases and task_id not in self._executing
+                policy = (lambda value: TaskPolicy(bind_origin(AgentTaskSpec.from_dict(value))), submitted_digest)
+                host = TransferHost(self, policy, check_completion_authority,
+                                    lambda: not self._closed, retired)
+                self._transfers = AgentTransfers(self, host=host, task_active=lambda: current_operation() is not None)
+            return self._transfers
 
     @property
     def batches(self) -> DagBatches:
@@ -621,6 +640,8 @@ class AgentRuntime:
         """Retire owned input before releasing the service lock; live tasks remain recoverable."""
         if self._closed:
             return
+        if self._transfers is not None:
+            self._transfers.close()
         for task_id in list(self._leases):
             self._token(task_id).cancel()
             if not self._retire(task_id):

@@ -1,11 +1,12 @@
 AI agents and computer use
 ===========================
 
-Cross-host outcome handoff remains unavailable. Internal selection/manifest validation and
-private durable reservations now bind exact consent, fixed expiry, quotas and revocation. Private
-blob-account cleanup is transactional and account-isolated. Actual source authorization, peer
-transport/publication and remote completion-evidence adoption remain pending in ``Progress.md``;
-these storage primitives grant no input or file access.
+Cross-host outcome handoff remains unavailable. A runtime-owned local source core now reviews
+selected completed file outcomes and commits consent-bound immutable blobs with actual local issuer
+and recipient checks, fixed expiry and owned cleanup. Transfer records retain snapshot digests and
+origin references instead of copying task inputs/actions. Authenticated peer routes/host transport,
+complete private-lineage and lifecycle acceptance, destination publication/evidence adoption and
+shared public surfaces remain pending in ``Progress.md``. No transfer receipt grants task-input authority.
 
 Reviewed completion after confirmed effects
 -------------------------------------------

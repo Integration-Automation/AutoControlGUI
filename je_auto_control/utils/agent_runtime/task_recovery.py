@@ -130,6 +130,10 @@ class AgentRecovery:
         """Read one explicitly granted completion projection without changing ordinary runtime access."""
         return self._handoffs().consume(batch_id, node_id, source_task, task_id, handoff_id, connection=connection)
 
+    def handoff_snapshot(self, connection: Any, row: dict) -> dict:
+        """Supply the existing private task/completion snapshot to host-owned evidence collaborators."""
+        return self._handoff_snapshot(connection, row)
+
     def _handoff_snapshot(self, connection: Any, row: dict) -> dict:
         actions = self.runtime.store.read_actions(connection, row['id'])
         reviews = [dict(item) for item in connection.execute(

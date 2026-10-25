@@ -90,9 +90,11 @@ REST tests are independently executable. Import delivery/evidence are explicitly
 Tasks3/4; passive support describes those operations separately rather than advertising all as ready.
 
 **Interfaces:**
-- TransferSource(runtime: Any, records: TransferRecords).control(operation: str, request: Mapping) -> dict.
+- TransferSource(runtime: Any, records: TransferRecords, host: Any, checkpoint: Callable)
+  .control(operation: str, request: Mapping) -> dict.
   Source management operations/fields are the exact spec table; optional host is stripped by routing.
-- AgentTransfers(runtime: Any, peer: TransferPeer).control(operation: str, request: Mapping|None=None)
+- AgentTransfers(runtime: Any, peer: TransferPeer|None=None, *, host: Any, task_active: Callable)
+  .control(operation: str, request: Mapping|None=None)
   -> dict; .peer(operation: str, request: Mapping) -> dict. Source operations work in this task;
   unsupported import/evidence operations fail explicitly. Host objects supply policy/proof callbacks.
 - TransferPeer(invoke: Callable).call(host: str, binding: str, operation: str, request: Mapping,
@@ -127,7 +129,8 @@ Tasks3/4; passive support describes those operations separately rather than adve
 delivery wiring and retention.py; tests test_agent_transfer_import.py / test_agent_transfer_lifecycle.py.
 
 **Interfaces:**
-- AgentTransfers(runtime: Any, peer: TransferPeer).control(operation: str, request: Mapping|None=None) -> dict;
+- AgentTransfers(runtime: Any, peer: TransferPeer|None=None, *, host: Any, task_active: Callable)
+  .control(operation: str, request: Mapping|None=None) -> dict;
   .maintain() -> None; .close() -> None; .peer(operation: str, request: Mapping) -> dict.
 - TransferImporter(runtime: Any, records: TransferRecords).control(operation: str, request: Mapping) -> dict;
   .deliver(import_id: str, generation: int, check: Callable[[],None]) -> dict.

@@ -1211,4 +1211,18 @@ Pruning never removes unexpired metadata even with a future cutoff. Source autho
 transport, producer lifecycle and current-host checks are not supplied by these primitives.
 SyncAssetStore.delete_account removes only one host-selected account in one transaction;
 it exposes no generic delete route and cannot prove caller ownership or producer retirement.
-Actual runtime/surfaces, import/publication and remote evidence adoption remain in Progress.
+The lazily owned AgentRuntime.transfers controller now composes transfer_host/source/protocol,
+transfer_files/selection and transfer_cache for local reviewed artifact export. Runtime injects actual
+policy/spec-digest/completion/active-task callbacks; neutral leaves import no runtime, task-policy or
+operation-context module. Source management derives caller/source_owner identities from actual local
+authorization and rereads source/task/retirement witnesses. Hash selected bytes outside the runtime
+writer; recheck current source proof and descriptor versions around its consent write. Monotonic
+thirty-second operations and a separate short lifecycle lock prevent runtime ownership release while
+a source operation is still active. Original task inputs/actions remain in the original store; private
+grants retain snapshot hashes and issuer origin references, then reconstruct current source policy.
+File/manifest/text selection is source-derived, UTF-8 matching is streamed, and a local manifest receipt
+is not incorrectly restricted to portable output names. Cache names preserve the entire runtime DB
+filename, isolating same-stem/different-extension services. Historical consented blobs survive later
+edits of user output; peer reads recheck recipient/current issuer/source rights and selected chunk hash.
+HTTP/header/preparse/registered-host transport, complete private-lineage and restart/retention/cleanup
+acceptance, destination publication/evidence adoption and shared surfaces remain in Progress.
