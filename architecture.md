@@ -1196,3 +1196,11 @@ Lease maintenance binds expiry/revocation stops to the actual input owner and ge
 same stop transaction. A delayed watcher cannot rewrite retired recovery evidence or cancel a newer
 lease. The accepted final state and cancellation token are set before the stop becomes visible;
 current revocation and the original deadlines remain enforced.
+
+## Portable transfer proposal models
+
+agent_runtime/transfer_models.py contains only immutable selection/file/manifest data with strict
+version, identity, deadline, name, chunk and aggregate-size bounds. It reuses neutral config_sync
+AssetFile/AssetManifest/SyncAssetBlob validators; canonical digest binding grants no authority and
+does not verify payload bytes. No runtime, policy, peer route or GUI imports this module yet.
+Source consent, private records, import/publication and remote evidence adoption remain in Progress.

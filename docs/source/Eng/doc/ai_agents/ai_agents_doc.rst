@@ -1,6 +1,11 @@
 AI agents and computer use
 ===========================
 
+Cross-host outcome handoff remains unavailable. The current implementation only validates
+immutable selection and manifest data and computes its canonical digest. Source consent, verified
+byte transport/publication and remote completion-evidence adoption are still pending in ``Progress.md``;
+a parsed manifest grants no input or file access.
+
 Reviewed completion after confirmed effects
 -------------------------------------------
 

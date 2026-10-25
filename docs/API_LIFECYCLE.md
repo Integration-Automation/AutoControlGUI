@@ -1093,3 +1093,10 @@ Lease maintenance binds expiry/revocation stops to the actual input owner and ge
 same stop transaction. A delayed watcher cannot rewrite retired recovery evidence or cancel a newer
 lease. The accepted final state and cancellation token are set before the stop becomes visible;
 current revocation and the original deadlines remain enforced.
+
+## Cross-host handoff data proposals
+
+Cross-host outcome handoff remains unavailable. The current implementation only validates
+immutable selection and manifest data and computes its canonical digest. Source consent, verified
+byte transport/publication and remote completion-evidence adoption are still pending in Progress.md;
+a parsed manifest grants no input or file access.

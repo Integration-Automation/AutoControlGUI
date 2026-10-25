@@ -1,5 +1,10 @@
 # AutoControl
 
+Cross-host outcome handoff remains unavailable. The current implementation only validates
+immutable selection and manifest data and computes its canonical digest. Source consent, verified
+byte transport/publication and remote completion-evidence adoption are still pending in Progress.md;
+a parsed manifest grants no input or file access.
+
 Idle background workers check empty work queues without reserving a database writer, reducing
 contention with task status and completion transactions. A nonempty hint still requires the original
 transaction to recheck and claim the work. Claim generations, stale-work recovery and retry limits

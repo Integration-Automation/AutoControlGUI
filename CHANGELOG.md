@@ -1,5 +1,8 @@
 # Changelog
 
+Add internal immutable transfer selection and manifest validation with canonical digest binding.
+These data proposals grant no access; cross-host consent, transport and evidence adoption remain pending.
+
 Retain confirmed browser effects in their actual original WebRunner context for private read-only
 completion and skill validation. Freeze input/network before releasing the input journal and
 lease; keep bounded context lifetime, exact private reader scope and confirmed process cleanup.

@@ -64,8 +64,11 @@ bounded private-account deletion; tests test_agent_transfer_models.py / test_age
 - SyncAssetStore.delete_account(user_id: str) -> dict[str,int] removes only that private account
   transactionally. Runtime controller owns account IDs; expose no new generic account-delete route.
 
-- [ ] Write tests rejecting True-as-version/size, NaN deadlines, unknown keys, swapped chunks,
-  zero-file/501-file/64MiB+1 manifests, 1MiB+1 metadata and portable-name collisions/traversal.
+- [ ] Write tests rejecting True-as-version/size, NaN deadlines, unknown keys,
+  zero-file/501-file/64MiB+1 manifests and portable-name collisions/traversal.
+  Chunk ordering changes the review digest; real stored bytes must reject a swapped ordering
+  under the original full digest. A descriptor alone cannot derive a file hash from chunk hashes.
+  Model canonical metadata stays bounded; test the raw1MiB+1 preparse body guard in Task2's real HTTP path.
   Assert an exact empty-file descriptor round-trips, and unrelated same-digest account survives deletion.
 - [ ] Run the two new test files in a fresh owned basetemp. Expected: missing-model/record behavior
   fails, not a typo/dependency failure; retain RED output before implementation.
