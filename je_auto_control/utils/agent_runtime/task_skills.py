@@ -10,25 +10,30 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import detached
 from je_auto_control.utils.agent_runtime.policy import owns_task, durable_payload
 from je_auto_control.utils.agent_runtime.skill_parameters import digest, instantiate, parameter_schema, repair_data
-from je_auto_control.utils.agent_runtime.skill_recording import recorded_spec, recording_template, assert_verified
+from je_auto_control.utils.agent_runtime.skill_recording import (
+    recorded_spec, recording_template, assert_verified, verified_skill_actions,
+)
 from je_auto_control.utils.agent_runtime.skill_completion import check_skill_completion, publication_details
+from je_auto_control.utils.agent_runtime.skill_execution import check_skill_execution
 from je_auto_control.utils.agent_runtime.skill_reauthorization import (
     SkillReauthorization, OPERATIONS as AUTHORIZATION_OPERATIONS, existing_authorization,
 )
 from je_auto_control.utils.rbac.authorization import current_authorization, AuthorizationError
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 
-OPERATIONS = ("record", "repair", "list", "get", "preview", "validate", "accept", "run") + AUTHORIZATION_OPERATIONS
+OPERATIONS = ("record", "repair", "list", "get", "preview", "validate", "accept", "run",
+              "review_execution") + AUTHORIZATION_OPERATIONS
 
 
 class AgentSkills:
     """Keep reviewed skills in the task database, separate from mutable legacy action macros."""
 
     def __init__(self, runtime: Any, *, completion_authority: Callable | None = None,
-                 completion_template: Callable | None = None) -> None:
+                 completion_template: Callable | None = None, recovery_review: Callable | None = None) -> None:
         self.runtime = runtime
         self._completion_authority = completion_authority
         self._completion_template = completion_template
+        self._recovery_review = recovery_review
 
     def control(self, operation: str, request: Any = None) -> dict:
         """Perform a fixed owner-scoped skill operation; accepted snapshots never mutate."""
@@ -39,7 +44,7 @@ class AgentSkills:
             return SkillReauthorization(self).control(operation, request)
         handlers = {"record": self._record, "repair": self._repair, "list": self._list,
                     "get": self._get_request, "preview": self._preview, "validate": self._validate,
-                    "accept": self._accept, "run": self._run}
+                    "accept": self._accept, "run": self._run, "review_execution": self._review_execution}
         return handlers[operation](request)
 
     @staticmethod
@@ -194,12 +199,34 @@ class AgentSkills:
                 "purpose": purpose, "digest": candidate["digest"]}
 
     def _accept(self, request: dict) -> dict:
-        self._fields(request, {"candidate_id", "task_id", "expected_version", "note"}, {'completion_task_id'})
+        required = {"candidate_id", "task_id", "expected_version", "note"}
+        if 'execution_task_id' in request:
+            required |= {'execution_task_id', 'execution_review'}
+        self._fields(request, required, {'completion_task_id'})
         try:
             with DeferredAuthorization.capture().scope():
                 return self._publish(request)
         except AuthorizationError as error:
             raise AgentTaskError('skill publication authority changed; review again') from error
+
+    def _review_execution(self, request: dict) -> dict:
+        self._fields(request, {'candidate_id', 'task_id', 'execution_task_id'}, {'completion_task_id'})
+        try:
+            with DeferredAuthorization.capture().scope(), self.runtime.store.connection(write=True) as connection:
+                candidate = self._get(request['candidate_id'])
+                if candidate['state'] != 'draft':
+                    raise AgentTaskError('execution review requires an unpublished draft candidate')
+                # pylint: disable-next=protected-access  # reason: preserve the ordinary original-trial owner boundary
+                row = self.runtime._row(request['task_id'])
+                self._check_trial(connection, candidate, row)
+                proof = self._execution_proof(connection, row, request)
+                self._check_candidate_owner(candidate)
+                return {'candidate_id': candidate['id'], 'task_id': row['id'],
+                        'execution_review': proof['review'], 'evidence': proof,
+                        'expected_version': candidate['provenance']['parent_version'],
+                        'approval_required': True, 'publication_inherited': False}
+        except AuthorizationError as error:
+            raise AgentTaskError('skill execution authority changed; review again') from error
 
     def _publish(self, request: dict) -> dict:
         note = _note(request["note"])
@@ -209,19 +236,37 @@ class AgentSkills:
         with self.runtime.store.connection(write=True) as connection:
             candidate = self._get(request['candidate_id'])
             row = self.runtime._row(request['task_id'])
-            proof = (self._completion_proof(connection, row, request['completion_task_id'])
-                     if 'completion_task_id' in request else None)
-            if proof is None:
-                assert_verified(row)
             self._check_trial(connection, candidate, row)
-            self._record_publication(connection, candidate, row, note, expected, proof)
-            if proof is not None:
-                if self._completion_proof(connection, row, request['completion_task_id']) != proof:
-                    raise AgentTaskError('skill completion proof changed during publication')
-            with DeferredAuthorization.capture().scope():
-                if not owns_task(candidate['owner'], current_authorization()):
-                    raise AgentTaskError('skill publication ownership changed')
+            proof, execution = self._publication_evidence(connection, row, request)
+            self._record_publication(connection, candidate, row, note, expected, proof, execution)
+            if self._publication_evidence(connection, row, request) != (proof, execution):
+                raise AgentTaskError('skill publication evidence changed during publication')
+            self._check_candidate_owner(candidate)
         return self._get(candidate["id"])
+
+    @staticmethod
+    def _check_candidate_owner(candidate: dict) -> None:
+        with DeferredAuthorization.capture().scope():
+            if not owns_task(candidate['owner'], current_authorization()):
+                raise AgentTaskError('skill candidate ownership changed')
+
+    def _publication_evidence(self, connection: Any, row: dict, request: dict) -> tuple[dict | None, dict | None]:
+        if 'execution_task_id' in request:
+            execution = self._execution_proof(connection, row, request)
+            if request['execution_review'] != execution['review']:
+                raise AgentTaskError('skill execution review changed; review the full chain again')
+            return None, execution
+        if 'completion_task_id' in request:
+            return self._completion_proof(connection, row, request['completion_task_id']), None
+        assert_verified(row)
+        return None, None
+
+    def _execution_proof(self, connection: Any, row: dict, request: dict) -> dict:
+        if self._recovery_review is None:
+            raise AgentTaskError('runtime has no reviewed skill recovery provider')
+        proof = check_skill_execution(self.runtime, connection, row, request, self._recovery_review,
+                                       verified_skill_actions, self._completion_proof)
+        return {**proof, 'review': digest(proof)}
 
     def _completion_proof(self, connection: Any, row: dict, task_id: Any) -> dict:
         if self._completion_authority is None or self._completion_template is None:
@@ -231,7 +276,7 @@ class AgentSkills:
 
     @staticmethod
     def _record_publication(connection: Any, candidate: dict, row: dict, note: str, expected: int,
-                            proof: dict | None) -> None:
+                            proof: dict | None, execution: dict | None = None) -> None:
         latest = connection.execute('SELECT COALESCE(MAX(version),0) FROM agent_skill_candidates WHERE skill_id=?',
                                     (candidate['skill_id'],)).fetchone()[0]
         if latest != expected or candidate['provenance']['parent_version'] != expected:
@@ -246,6 +291,9 @@ class AgentSkills:
                             note, time.time()))
         if proof is not None:
             connection.execute('INSERT INTO agent_skill_completions VALUES (?,?)', (candidate['id'], json.dumps(proof)))
+        if execution is not None:
+            connection.execute('INSERT INTO agent_skill_executions VALUES (?,?)',
+                               (candidate['id'], json.dumps(execution)))
 
     @staticmethod
     def _check_trial(connection: Any, candidate: dict, row: dict) -> None:

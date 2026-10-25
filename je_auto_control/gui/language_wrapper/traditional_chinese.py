@@ -1508,6 +1508,8 @@ traditional_chinese_word_dict.update({
     "agent_skill_apply": "套用技能操作",
     'agent_skill_completion_example': '準備採認唯讀驗證的技能發布',
     'agent_skill_recording_completion_example': '準備採認唯讀驗證的技能錄製',
+    'agent_skill_execution_review_example': '準備技能完整動作鏈審閱',
+    'agent_skill_execution_accept_example': '準備採認已審閱動作鏈的技能發布',
     "agent_skill_record": "錄製已驗證任務",
     "agent_skill_repair": "提出語義修復候選",
     "agent_skill_list": "列出技能版本",

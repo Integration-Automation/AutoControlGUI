@@ -326,9 +326,32 @@ live through the publication transaction. Version/publication/adoption writes ar
 trial remains stopped. `publication.task_id` keeps its original meaning and optional
 `publication.completion_review` records historical reader IDs/hashes. Reader evidence may expire after
 publication; an unpublished adoption cannot use expired/missing evidence. The GUI Actions example
-prepares the explicit request without publishing. Partial executable-recovery trial adoption remains outstanding.
+prepares the explicit request without publishing.
 
-The six `examples/agent_skill_*.json` files are editable request examples, not executable tasks. `agent_skill_completion_accept.json` shows explicit read-only publication evidence; `agent_skill_completion_record.json` prepares stopped-source recording. Skill definitions and publication records remain in the library when transient task caches expire; accepting an unpublished candidate still needs its retained verified task evidence. Native application acceptance remains separate from the deterministic fake-target regression evidence.
+For a partially executed validation trial, first call `manage_agent_skill("review_execution", request)`
+with `candidate_id`, the original `task_id` and a separate final `execution_task_id`. Then explicitly
+`accept` those same IDs with the returned `execution_review`, `expected_version` and a nonempty `note`.
+At most sixteen actual executable recovery links must confirm the complete original semantic plan;
+a successful different remainder is insufficient. Comparison includes JSON types, captured values,
+expectations and grounding, without restoring captures or rebuilding historical UI state. Each task
+retains its existing limits and separate approval. Current callers, all owners and actual admission
+reviewers must remain authorized. Version, publication and historical `publication.execution_review`
+commit atomically, with post-write evidence/authority checks. The original stays stopped and retains
+`publication.task_id`; no recovery child becomes a fabricated validation trial. An optional
+`completion_task_id` must verify the final executable effect and is nested in this execution audit.
+Expired evidence cannot approve an unpublished candidate. Two Actions examples prepare review and
+accept requests without executing them; `agent_skill_execution_review.json` and
+`agent_skill_execution_accept.json` are editable request examples.
+
+Use `je_auto_control agent-task skill review_execution examples/agent_skill_execution_review.json`
+to inspect the passive proof. Copy its token into `agent_skill_execution_accept.json`, review the IDs,
+version and note, then explicitly run `agent-task skill accept` with that request file. An optional
+`completion_task_id` goes in both requests and must belong to the final executable successor.
+Review never probes a target or changes task state. It does not authorize input or transfer an old
+caller-owned child: ordinary ownership checks still apply to every chain participant.
+
+
+The eight `examples/agent_skill_*.json` files are editable request examples, not executable tasks. `agent_skill_completion_accept.json` shows explicit read-only publication evidence; `agent_skill_completion_record.json` prepares stopped-source recording. Skill definitions and publication records remain in the library when transient task caches expire; accepting an unpublished candidate still needs its retained verified task evidence. Native application acceptance remains separate from the deterministic fake-target regression evidence.
 
 ## Origin path policy lifetime
 

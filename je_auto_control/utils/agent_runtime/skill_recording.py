@@ -1,6 +1,7 @@
 """Semantic skill drafts retain verified actions, original scope and independent completion evidence."""
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
@@ -16,6 +17,41 @@ def recorded_spec(runtime: Any, task_id: str, criteria: Any = None) -> dict:
     row = runtime._row(task_id)
     assert_verified(row)
     return recording_template(runtime, row, criteria)
+
+
+def verified_skill_actions(spec: dict, receipts: list[dict], *, complete: bool = False) -> list[dict]:
+    """Verify actual finite semantic effects without restoring captures or constructing executable plans."""
+    # pylint: disable-next=import-outside-toplevel  # reason: receipt semantics are needed only for explicit evidence review
+    from je_auto_control.utils.agent_runtime.workflow_values import complete as whole, verified_prefix
+    active = effective_actions(receipts)
+    try:
+        parsed = AgentTaskSpec.from_dict(spec)
+        verified = whole(parsed, active) if complete else verified_prefix(parsed, active)
+        verified = verified and _strict_effects(parsed, active)
+    except (KeyError, TypeError, ValueError) as error:
+        raise AgentTaskError('skill execution semantic evidence is invalid') from error
+    if parsed.mode != 'skill' or not parsed.actions or not verified:
+        raise AgentTaskError('skill execution effects do not match the original finite semantic plan')
+    return active
+
+
+def _strict_effects(spec: AgentTaskSpec, receipts: list[dict]) -> bool:
+    # pylint: disable-next=import-outside-toplevel  # reason: strict review shares existing capture/expectation semantics
+    from je_auto_control.utils.agent_runtime.workflow_values import captures, expected, resolve
+    values = captures(spec, receipts)
+    for action, receipt in zip(spec.actions, receipts):
+        wanted = {'arguments': resolve(action.get('arguments', {}), values)}
+        actual = {'arguments': receipt['arguments']}
+        if action.get('reference') is not None:
+            wanted['reference'] = action['reference']
+            actual = {key: receipt.get('grounding', {}).get(field) for key, field in (
+                ('reference', 'reference'), ('arguments', 'requested_arguments'))}
+        required, value = expected(action, values)
+        if required:
+            wanted['result'], actual['result'] = value, receipt['result']
+        if json.dumps(detached(wanted), sort_keys=True) != json.dumps(detached(actual), sort_keys=True):
+            return False
+    return True
 
 
 def recording_template(runtime: Any, row: dict, criteria: Any = None) -> dict:

@@ -347,7 +347,24 @@ Example recording request::
     {"task_id":"original-workflow", "completion_task_id":"verified-read-only-child",
      "name":"Reviewed workflow"}
 
-Adoption of partial executable-recovery trials remains in ``Progress.md``.
+Reviewed complete execution chains
+----------------------------------------------------------------
+
+For a partially executed validation trial, first call ``manage_agent_skill("review_execution", request)``
+with ``candidate_id``, the original ``task_id`` and a separate final ``execution_task_id``. Then explicitly
+``accept`` those same IDs with the returned ``execution_review``, ``expected_version`` and a nonempty ``note``.
+At most sixteen actual executable recovery links must confirm the complete original semantic plan;
+a successful different remainder is insufficient. Comparison includes JSON types, captured values,
+expectations and grounding, without restoring captures or rebuilding historical UI state. Each task
+retains its existing limits and separate approval. Current callers, all owners and actual admission
+reviewers must remain authorized. Version, publication and historical ``publication.execution_review``
+commit atomically, with post-write evidence/authority checks. The original stays stopped and retains
+``publication.task_id``; no recovery child becomes a fabricated validation trial. An optional
+``completion_task_id`` must verify the final executable effect and is nested in this execution audit.
+Expired evidence cannot approve an unpublished candidate. Two Actions examples prepare review and
+accept requests without executing them; ``agent_skill_execution_review.json`` and
+``agent_skill_execution_accept.json`` are editable request examples.
+
 
 Accepted tasks, trigger templates and skill trials retain live origin policy references. A private witness contains only current root ceilings; missing/revoked/corrupt witnesses fail closed. Authenticated local HTTP forwards the current caller's additional restrictive ceiling without granting identity or capability. Every operation checkpoint and lease maintenance rechecks roots. MCP client roots and asynchronous roots refresh are session-local; stale replies cannot renew retired authorities. Static host policies persist until replacement, while retiring client-supplied root authority revokes its references. HTTP client roots do not overwrite the shared resource provider's configured workspace. Workers/maintenance run in fresh contexts, shutdown tracks actual in-flight deliveries before lease acquisition, and unstarted queued work remains durable.
 

@@ -109,6 +109,9 @@ CREATE TABLE IF NOT EXISTS agent_skill_publications (
 CREATE TABLE IF NOT EXISTS agent_skill_completions (
  candidate_id TEXT PRIMARY KEY REFERENCES agent_skill_publications(candidate_id) ON DELETE CASCADE,
  details TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_skill_executions (
+ candidate_id TEXT PRIMARY KEY REFERENCES agent_skill_publications(candidate_id) ON DELETE CASCADE,
+ details TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_action_grounding (
  action_id TEXT PRIMARY KEY REFERENCES agent_actions(id) ON DELETE CASCADE, details TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_target_profiles (

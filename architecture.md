@@ -1,5 +1,20 @@
 # AutoControl Architecture
 
+manage_agent_skill adds review_execution(candidate_id, task_id, execution_task_id,
+optional completion_task_id), returning an execution_review token, bounded evidence, expected_version
+and approval_required. accept with execution_task_id requires that token plus the existing explicit
+version/note. The real original validation trial/spec hash/skill pin stays unchanged. A new injected
+recovery-review seam validates at most sixteen private executable links, exact complete original
+semantic effects (including JSON types), fixed scope, current principals and final independent
+completion/retirement. A separately reviewed read-only proof may verify only the final effect and is
+nested under execution_review. No target probe, capture restoration, source success rewrite, fabricated
+trial or input grant occurs. One BEGIN IMMEDIATE writer checks proof, candidate and authority before
+and after version/publication SQL. New agent_skill_executions stores historical proof alongside the
+unchanged five-column publication; get/list expose execution_review only when actually adopted.
+Transient task retention cannot authorize new adoption; published audit survives without live rights.
+Existing ordinary accept/completion/recording remains compatible. Shared API/AC/CLI/authenticated
+MCP/REST/Builder inherit the operation; two inert GUI Actions and four locales prepare requests.
+
 skill_completion validates private read-only admission, a bounded real recovery chain, exact derived
 scope and live original/reviewer authority. The neutral completion_contract module checks independent
 completion/retirement for both skill and DAG consumers. Runtime injects its existing authority/scope

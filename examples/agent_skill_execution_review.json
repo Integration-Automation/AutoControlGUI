@@ -1,0 +1,5 @@
+{
+  "candidate_id": "<candidate-id>",
+  "task_id": "<original-validation-task-id>",
+  "execution_task_id": "<final-executable-recovery-task-id>"
+}

@@ -1,5 +1,15 @@
 # Capability matrix
 
+Full execution-chain skill adoption: real owned-file standard helpers execute the original partial
+trial and final reviewed remainder; independent file criteria use either the final helper or its
+separately admitted permanent read-only child. Fake-target regression covers exact complete semantics,
+captures as evidence without restoring state, different/extra effect refusal, zero prefix, sixteen-link
+bound, malformed/missing/stale proof, unresolved effects, live legacy/explicit reviewer and owner
+revocation, post-SQL rollback, concurrent publication, restart/retention and shared surfaces/offscreen
+GUI. JSON boolean/number/result comparison has separate failing-then-passing tests. Published audit is
+historical; original trial identity/state remains. This proves owned-file execution and deterministic
+contract behavior, not actual desktop/application/device/browser input or deferred native acceptance.
+
 Stopped-source recording: actual owned-file helper effects and a separately reviewed permanent
 read-only child supply a draft containing the original semantic actions. Ordinary external sources
 need no prior trial. Tests exercise independent fresh validation, added criteria, malformed/forged/
@@ -14,7 +24,6 @@ Regression covers exact candidate/pin/trial identity, private proof/real lineage
 malformed/stale/forged evidence, retirement, caller/owner/reviewer revocation, transactional rollback,
 restart/retention, version competition and shared API/CLI/executor/MCP/HTTP/GUI requests. Publication
 audit is historical after evidence retention; original trial actions must already be confirmed.
-Partial executable-recovery trial adoption remains outstanding.
 No desktop/device/browser input or native acceptance is exercised.
 
 HTTP control admission: owned loopback regression covers ordinary-poll exhaustion, separate bounded

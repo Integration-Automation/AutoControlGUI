@@ -187,6 +187,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_skill_apply", self._skill_apply),
                 ('agent_skill_completion_example', self._skill_completion_example),
                 ('agent_skill_recording_completion_example', self._skill_recording_completion_example),
+                ('agent_skill_execution_review_example', partial(self._skill_execution_example, 'review_execution')),
+                ('agent_skill_execution_accept_example', partial(self._skill_execution_example, 'accept')),
                 ("agent_skill_list", partial(self._dispatch, "skill", {"operation": "list"})),
                 ("agent_target_apply", self._target_apply),
                 ("agent_browser_example", self._browser_example),
@@ -337,6 +339,15 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._skill_operation.setCurrentIndex(self._skill_operation.findData('record'))
         request = {'task_id': '<original-workflow-task-id>',
                    'completion_task_id': self._task_id.text() or '<completion-task-id>', 'name': ''}
+        self._skill_request.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))
+        self._pages.setCurrentIndex(self._page_keys.index('agent_page_skills'))
+
+    def _skill_execution_example(self, operation: str) -> None:
+        self._skill_operation.setCurrentIndex(self._skill_operation.findData(operation))
+        request = {'candidate_id': '<candidate-id>', 'task_id': '<original-validation-task-id>',
+                   'execution_task_id': self._task_id.text() or '<final-execution-task-id>'}
+        if operation == 'accept':
+            request.update(execution_review='<review-token>', expected_version=0, note='')
         self._skill_request.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))
         self._pages.setCurrentIndex(self._page_keys.index('agent_page_skills'))
 

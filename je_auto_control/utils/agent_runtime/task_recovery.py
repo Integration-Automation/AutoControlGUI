@@ -12,6 +12,7 @@ from je_auto_control.utils.agent_runtime.store import request_spec_digest
 from je_auto_control.utils.agent_runtime.task_authority import (
     validate_ownership_request, ownership_scope, ownership_review, public_ownership,
     recovery_binding, require_matching_ownership,
+    check_recovery_authority,
 )
 from je_auto_control.utils.agent_runtime.recovery_authorization import (
     prepare_authorization, authorized_template, narrowed_template, authorization_details,
@@ -66,6 +67,32 @@ class AgentRecovery:
 
     def __init__(self, runtime: Any) -> None:
         self.runtime = runtime
+
+    def review_evidence(self, connection: Any, source: dict, child: dict, link: dict) -> dict:
+        """Read exact source/child snapshots for skill publication without input or clock renewal."""
+        # pylint: disable-next=protected-access  # reason: do not adopt live or unwinding source/child input
+        with self.runtime._mutex:
+            # pylint: disable-next=protected-access  # reason: inspect only this runtime's private retirement witnesses
+            if any(row['id'] in self.runtime._leases or row['id'] in self.runtime._executing
+                   for row in (source, child)):
+                raise AgentTaskError('execution evidence input has not retired')
+        if child['state'] not in _STOPPED | {'succeeded'}:
+            raise AgentTaskError('execution evidence requires a retired successor')
+        actions, reviews = self._read(source)
+        source_snapshot = _snapshot(source, actions, reviews)
+        if source_snapshot != link['snapshot']:
+            raise AgentHumanReview('execution source snapshot changed; review the full chain again')
+        check_recovery_authority(self.runtime, connection, source, child, link)
+        child_actions = self.runtime.store.actions(child['id'])
+        child_reviews = [dict(row) for row in connection.execute(
+            'SELECT * FROM agent_reviews WHERE task_id=? ORDER BY action_id', (child['id'],))]
+        snapshot = _snapshot(child, child_actions, child_reviews)
+        retired = connection.execute('SELECT contract,confirmed FROM agent_completion WHERE task_id=?',
+                                     (child['id'],)).fetchone()
+        return {'source_snapshot': source_snapshot, 'snapshot': snapshot,
+                'completion_snapshot': request_spec_digest({'snapshot': snapshot,
+                    'retirement': dict(retired) if retired is not None else None}),
+                'source_actions': actions, 'actions': child_actions}
 
     def control(self, operation: str, request: Any = None) -> dict:
         """Preview without target access, or create an owner-scoped, deduplicated successor."""

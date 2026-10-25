@@ -364,8 +364,7 @@ original `task_id` and optional `completion_task_id`. Publication retains the ex
 hash/pin, up to sixteen real read-only recovery links, fresh authority and independently verified
 retirement. The original stays stopped; its actions are not replayed. The Actions menu can prepare
 the request for review. Publication keeps historical completion IDs/hashes after transient reader
-evidence expires; unpublished adoption still needs retained evidence. Partial executable-recovery
-trial adoption remains in `Progress.md`.
+evidence expires; unpublished adoption still needs retained evidence.
 
 `manage_agent_skill("record", request)` also accepts `completion_task_id` for a stopped original
 workflow. Keep `task_id` equal to that workflow: its confirmed semantic actions become a draft,
@@ -375,6 +374,21 @@ one transaction with live authority rechecks. Historical `provenance.completion_
 reader retention without granting current authority. The draft, including added validation criteria,
 still needs its own new exact validation trial before publication. The Actions menu prepares the
 record request without executing it.
+
+For a partially executed validation trial, first call `manage_agent_skill("review_execution", request)`
+with `candidate_id`, the original `task_id` and a separate final `execution_task_id`. Then explicitly
+`accept` those same IDs with the returned `execution_review`, `expected_version` and a nonempty `note`.
+At most sixteen actual executable recovery links must confirm the complete original semantic plan;
+a successful different remainder is insufficient. Comparison includes JSON types, captured values,
+expectations and grounding, without restoring captures or rebuilding historical UI state. Each task
+retains its existing limits and separate approval. Current callers, all owners and actual admission
+reviewers must remain authorized. Version, publication and historical `publication.execution_review`
+commit atomically, with post-write evidence/authority checks. The original stays stopped and retains
+`publication.task_id`; no recovery child becomes a fabricated validation trial. An optional
+`completion_task_id` must verify the final executable effect and is nested in this execution audit.
+Expired evidence cannot approve an unpublished candidate. Two Actions examples prepare review and
+accept requests without executing them; `agent_skill_execution_review.json` and
+`agent_skill_execution_accept.json` are editable request examples.
 
 Managed tasks retain live origin path ceilings: removing a source root blocks later actions, trigger fires and skill trials. MCP client roots are isolated per session; retiring that client authority revokes its ceilings. Static host policy remains valid until explicitly replaced. Worker shutdown cancels actual running work, including model initialization before input acquisition, while unstarted deliveries remain durable.
 

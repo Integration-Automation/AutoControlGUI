@@ -1,5 +1,20 @@
 # Public API lifecycle
 
+manage_agent_skill adds review_execution(candidate_id, task_id, execution_task_id,
+optional completion_task_id), returning an execution_review token, bounded evidence, expected_version
+and approval_required. accept with execution_task_id requires that token plus the existing explicit
+version/note. The real original validation trial/spec hash/skill pin stays unchanged. A new injected
+recovery-review seam validates at most sixteen private executable links, exact complete original
+semantic effects (including JSON types), fixed scope, current principals and final independent
+completion/retirement. A separately reviewed read-only proof may verify only the final effect and is
+nested under execution_review. No target probe, capture restoration, source success rewrite, fabricated
+trial or input grant occurs. One BEGIN IMMEDIATE writer checks proof, candidate and authority before
+and after version/publication SQL. New agent_skill_executions stores historical proof alongside the
+unchanged five-column publication; get/list expose execution_review only when actually adopted.
+Transient task retention cannot authorize new adoption; published audit survives without live rights.
+Existing ordinary accept/completion/recording remains compatible. Shared API/AC/CLI/authenticated
+MCP/REST/Builder inherit the operation; two inert GUI Actions and four locales prepare requests.
+
 manage_agent_skill record adds optional completion_task_id while task_id remains the original
 workflow. Confirmed semantic source actions become a draft only after private independently completed
 read-only evidence is checked. recording_template derives data after trusted proof validation;
@@ -16,7 +31,7 @@ validation trial. Shared completion_contract validation has no service/DAG trans
 managed_tasks.validate_recorded_completion keeps its existing signature and completion rules. Runtime
 injects its existing authority/scope checks; AgentSkills supplies its existing snapshot digest. The
 evidence module has no reverse service/model dependency, and ordinary AgentSkills construction remains valid.
-Unrelated candidates, spec/pin mismatch, executable-recovery trials, missing private
+Unrelated candidates, spec/pin mismatch, direct replacement of validation trials by executable children, missing private
 admission/real ancestry, changed scope, unresolved effects, unretired readers and authority loss refuse.
 The fixed derived completion_spec is shared by admission and consumers. Add agent_skill_completions,
 an optional proof row atomically linked to the original five-column publication. Existing publication

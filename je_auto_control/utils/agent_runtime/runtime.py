@@ -72,7 +72,7 @@ class AgentRuntime:
         self.evidence = TaskEvidence(self.store)
         self.triggers = AgentTriggers(self)
         self.skills = AgentSkills(self, completion_authority=check_completion_authority,
-                                  completion_template=completion_spec)
+                                  completion_template=completion_spec, recovery_review=self.recovery.review_evidence)
         self._targets = dict(targets) if targets is not None else _default_targets()
         self._completion_targets: dict[str, Any] = {}
         self._tokens: dict[str, CancellationToken] = {}

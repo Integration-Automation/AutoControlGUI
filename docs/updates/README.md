@@ -554,3 +554,4 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261025-09 | 2026-10-25 | Reserve bounded authenticated stop admission independently of status polling | #done #agent #control #http | [2026-10-c](2026-10-c.md) |
 | U-20261025-10 | 2026-10-25 | Publish exact skill validation trials with explicit read-only completion evidence | #done #agent #skills #recovery #verification | [2026-10-c](2026-10-c.md) |
 | U-20261025-11 | 2026-10-25 | Record stopped semantic workflows with explicit independent completion evidence | #done #agent #skills #recording #verification | [2026-10-c](2026-10-c.md) |
+| U-20261025-12 | 2026-10-25 | Review complete original skill effects across executable recovery | #done #agent #skills #recovery #verification | [2026-10-c](2026-10-c.md) |

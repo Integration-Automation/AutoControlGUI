@@ -35,6 +35,10 @@ def publication_details(connection: Any, publication: Any) -> dict | None:
                                (result['candidate_id'],)).fetchone()
     if proof is not None:
         result['completion_review'] = json.loads(proof[0])
+    execution = connection.execute('SELECT details FROM agent_skill_executions WHERE candidate_id=?',
+                                   (result['candidate_id'],)).fetchone()
+    if execution is not None:
+        result['execution_review'] = json.loads(execution[0])
     return result
 
 

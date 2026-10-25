@@ -1507,6 +1507,8 @@ simplified_chinese_word_dict.update({
     "agent_skill_apply": "应用技能操作",
     'agent_skill_completion_example': '准备采纳只读验证的技能发布',
     'agent_skill_recording_completion_example': '准备采纳只读验证的技能录制',
+    'agent_skill_execution_review_example': '准备技能完整动作链审阅',
+    'agent_skill_execution_accept_example': '准备采纳已审阅动作链的技能发布',
     "agent_skill_record": "录制已验证任务",
     "agent_skill_repair": "提出语义修复候选",
     "agent_skill_list": "列出技能版本",

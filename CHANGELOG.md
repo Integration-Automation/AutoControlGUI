@@ -1,5 +1,13 @@
 # Changelog
 
+Add explicit review_execution and token-bound skill acceptance for complete original effects across
+at most sixteen real executable recovery links. Preserve the original candidate/trial identity and
+stopped source; validate exact semantic data/types, live actual principals and final independent
+completion/retirement without replay or restoring old captures. Optional read-only evidence verifies
+the final executable effect. Version/publication/historical execution audit commit atomically with
+post-write authority/proof checks. Retain ordinary publication/recording compatibility, add two passive
+GUI request examples and four locale labels, and expose the operation through existing shared surfaces.
+
 Allow explicit completion_task_id on managed skill record for stopped original workflows. Preserve
 their confirmed semantic actions and source identity in a new draft, with private read-only evidence
 and historical completion_review provenance. Verify current proof/authority before and after insertion

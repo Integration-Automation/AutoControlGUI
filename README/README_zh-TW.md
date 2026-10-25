@@ -284,13 +284,24 @@ Agent 工具呼叫經 `executor.execute_one(name, arguments)` 回傳原始結果
 `manage_agent_skill("accept", {...})` 提供原 `task_id` 與可選的 `completion_task_id`。
 發布保留精確候選／試跑摘要與 pin，核對最多十六層真實唯讀復原鏈、即時權限及獨立完成／清理證據。
 原試跑維持停止，動作不重播；Actions 選單可準備待審閱請求。發布紀錄在暫存 reader 證據到期後
-仍保留歷史 ID／摘要；尚未發布的採認仍須有留存證據。分段復原試跑採認列於 `Progress.md`。
+仍保留歷史 ID／摘要；尚未發布的採認仍須有留存證據。
 
 停止的原流程也可透過 `manage_agent_skill("record", request)` 明確提供 `completion_task_id`。
 `task_id` 仍指原流程，草稿保留其已確認語義動作，另採認唯讀 reader 的私有獨立完成證據。
 錄製不重播動作、不改來源狀態；來源／證據檢查與草稿寫入共用交易，並重驗即時權限。
 `provenance.completion_review` 在 reader 保留期後只是歷史紀錄，不授予當前權限。
 草稿與新增驗證條件仍須自己的新驗證試跑，不能直接發布；Actions 選單只準備錄製請求。
+
+原驗證試跑只執行部分動作時，先呼叫 `manage_agent_skill("review_execution", request)`，
+提供 `candidate_id`、原 `task_id` 與另一個最終 `execution_task_id`；再以相同 ID、返回的
+`execution_review`、`expected_version` 及非空 `note` 明確 `accept`。最多十六層真實可執行復原鏈
+必須確認完整原語義計畫；不同的剩餘流程即使成功也不足。比對包含 JSON 型別、capture 值、預期結果
+與 grounding，但不恢復舊 capture 或重建歷史 UI 狀態。各任務保留原限制與獨立批准；當前 caller、
+全部 owner 及實際建立審閱者都須持續有權限。版本、發布及歷史 `publication.execution_review`
+共同提交或回滾，寫入後再查證據與權限。原試跑維持停止並保留 `publication.task_id`，不補造子任務
+為 validation trial。可選 `completion_task_id` 必須驗證最終可執行任務的效果，其證據巢狀存於
+execution 審閱紀錄；過期證據不能批准未發布候選。兩個 Actions 範例只準備審閱／接受請求，
+`agent_skill_execution_review.json` 與 `agent_skill_execution_accept.json` 可編輯後使用。
 
 受管任務保留來源路徑政策：移除根目錄後，後續動作、事件觸發及技能驗證會受阻。MCP 客戶端根目錄依連線階段隔離，來源授權結束後撤銷；主機設定的固定政策則在明確更換前保留。服務停止會取消實際執行中的工作，包含取得輸入前的模型初始化，尚未啟動的派送則持續保存。
 

@@ -213,7 +213,7 @@ manage_agent_skill 的 record／preview／validate／accept／run／repair 操�
 caller／owner／reviewer 的即時權限，版本、發布與採認證據共同提交或回滾；原試跑停止且不重播。
 撤權回傳可處理的審閱拒絕。Actions 可準備待審閱請求，並不發布。
 ``publication.completion_review`` 在 reader 保留期後仍是歷史 ID／摘要，不能當成當前證據；
-尚未採認時若證據已遺失仍拒絕。分段復原試跑採認仍列於 ``Progress.md``。
+尚未採認時若證據已遺失仍拒絕。
 
 明確審閱復原且唯讀驗證成功後的範例::
 
@@ -648,3 +648,18 @@ hash。擷取前後核對原生範圍，準備與裝置防護內都重讀 hierar
 
    agent_recovery_doc
    agent_dag_batches_doc
+
+
+完整動作鏈的明確採認
+----------------------------------------------------------------
+
+原驗證試跑只執行部分動作時，先呼叫 ``manage_agent_skill("review_execution", request)``，
+提供 ``candidate_id``、原 ``task_id`` 與另一個最終 ``execution_task_id``；再以相同 ID、返回的
+``execution_review``、``expected_version`` 及非空 ``note`` 明確 ``accept``。最多十六層真實可執行復原鏈
+必須確認完整原語義計畫；不同的剩餘流程即使成功也不足。比對包含 JSON 型別、capture 值、預期結果
+與 grounding，但不恢復舊 capture 或重建歷史 UI 狀態。各任務保留原限制與獨立批准；當前 caller、
+全部 owner 及實際建立審閱者都須持續有權限。版本、發布及歷史 ``publication.execution_review``
+共同提交或回滾，寫入後再查證據與權限。原試跑維持停止並保留 ``publication.task_id``，不補造子任務
+為 validation trial。可選 ``completion_task_id`` 必須驗證最終可執行任務的效果，其證據巢狀存於
+execution 審閱紀錄；過期證據不能批准未發布候選。兩個 Actions 範例只準備審閱／接受請求，
+``agent_skill_execution_review.json`` 與 ``agent_skill_execution_accept.json`` 可編輯後使用。
