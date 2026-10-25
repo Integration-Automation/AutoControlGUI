@@ -1,9 +1,10 @@
 # AutoControl
 
-Cross-host outcome handoff remains unavailable. The current implementation only validates
-immutable selection and manifest data and computes its canonical digest. Source consent, verified
-byte transport/publication and remote completion-evidence adoption are still pending in Progress.md;
-a parsed manifest grants no input or file access.
+Cross-host outcome handoff remains unavailable. Internal selection/manifest validation and
+private durable reservations now bind exact consent, fixed expiry, quotas and revocation. Private
+blob-account cleanup is transactional and account-isolated. Actual source authorization, peer
+transport/publication and remote completion-evidence adoption remain pending in Progress.md;
+these storage primitives grant no input or file access.
 
 Idle background workers check empty work queues without reserving a database writer, reducing
 contention with task status and completion transactions. A nonempty hint still requires the original

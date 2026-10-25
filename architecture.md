@@ -1202,5 +1202,13 @@ current revocation and the original deadlines remain enforced.
 agent_runtime/transfer_models.py contains only immutable selection/file/manifest data with strict
 version, identity, deadline, name, chunk and aggregate-size bounds. It reuses neutral config_sync
 AssetFile/AssetManifest/SyncAssetBlob validators; canonical digest binding grants no authority and
-does not verify payload bytes. No runtime, policy, peer route or GUI imports this module yet.
-Source consent, private records, import/publication and remote evidence adoption remain in Progress.
+does not verify payload bytes. transfer_records.py composes these neutral validators without
+importing runtime/policy/service layers. Its fixed source-grant/import/routed-review tables
+share exact-intent tombstones and atomic writer quotas. Revocation/expiry retain byte/chunk
+reservations until the trusted host fences producers, cleans the generated account and calls
+release; cleaned grant metadata still counts toward128 retained grants until actual expiry.
+Pruning never removes unexpired metadata even with a future cutoff. Source authorization,
+transport, producer lifecycle and current-host checks are not supplied by these primitives.
+SyncAssetStore.delete_account removes only one host-selected account in one transaction;
+it exposes no generic delete route and cannot prove caller ownership or producer retirement.
+Actual runtime/surfaces, import/publication and remote evidence adoption remain in Progress.

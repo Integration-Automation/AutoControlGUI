@@ -119,6 +119,22 @@ class SyncAssetStore:
                                         (user_id,)).fetchone()[0]
         return {'bytes': row[0] if row else 0, 'chunks': chunks, 'blobs': blobs}
 
+    def delete_account(self, user_id: str) -> dict[str, int]:
+        """Atomically remove one host-selected account, including incomplete chunks and its quota slot."""
+        _identifier(user_id, 'asset user_id')
+        with self._database.connection() as connection:
+            connection.execute('BEGIN IMMEDIATE')
+            size, chunks = connection.execute(
+                'SELECT COALESCE(SUM(length(body)),0),count(*) FROM sync_asset_chunks WHERE user_id=?',
+                (user_id,)).fetchone()
+            blobs = connection.execute('SELECT count(*) FROM sync_asset_blobs WHERE user_id=?',
+                                       (user_id,)).fetchone()[0]
+            connection.execute('DELETE FROM sync_asset_blobs WHERE user_id=?', (user_id,))
+            connection.execute('DELETE FROM sync_asset_chunks WHERE user_id=?', (user_id,))
+            connection.execute('DELETE FROM sync_asset_users WHERE user_id=?', (user_id,))
+            connection.execute('COMMIT')
+        return {'bytes': size, 'chunks': chunks, 'blobs': blobs}
+
 
 def _limit(value: int) -> None:
     if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value < 2**63:

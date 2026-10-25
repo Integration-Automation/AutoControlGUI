@@ -64,19 +64,19 @@ bounded private-account deletion; tests test_agent_transfer_models.py / test_age
 - SyncAssetStore.delete_account(user_id: str) -> dict[str,int] removes only that private account
   transactionally. Runtime controller owns account IDs; expose no new generic account-delete route.
 
-- [ ] Write tests rejecting True-as-version/size, NaN deadlines, unknown keys,
+- [x] Write tests rejecting True-as-version/size, NaN deadlines, unknown keys,
   zero-file/501-file/64MiB+1 manifests and portable-name collisions/traversal.
   Chunk ordering changes the review digest; real stored bytes must reject a swapped ordering
   under the original full digest. A descriptor alone cannot derive a file hash from chunk hashes.
   Model canonical metadata stays bounded; test the raw1MiB+1 preparse body guard in Task2's real HTTP path.
   Assert an exact empty-file descriptor round-trips, and unrelated same-digest account survives deletion.
-- [ ] Run the two new test files in a fresh owned basetemp. Expected: missing-model/record behavior
+- [x] Run the two new test files in a fresh owned basetemp. Expected: missing-model/record behavior
   fails, not a typo/dependency failure; retain RED output before implementation.
-- [ ] Implement DTO/record interfaces; use existing AssetFile/SyncAssetBlob validation without
+- [x] Implement DTO/record interfaces; use existing AssetFile/SyncAssetBlob validation without
   importing optional config routes. Writer reservations atomically enforce all aggregate limits.
-- [ ] Add barrier tests: two capacity claims cannot overbook, one review binds one key, exact retry
+- [x] Add barrier tests: two capacity claims cannot overbook, one review binds one key, exact retry
   returns one ID, revoked ID/consumed review cannot recreate authority and crash rollback leaves no grant.
-- [ ] Run the new files plus existing blob-store tests. Expected: all pass and unrelated accounts intact.
+- [x] Run the new files plus existing blob-store tests. Expected: all pass and unrelated accounts intact.
   Update measured map/Progress/records and commit the consistent source step with remaining tasks open.
 
 ## Task 2: Source artifact review/export and authenticated peer reads

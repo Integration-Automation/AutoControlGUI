@@ -1,5 +1,9 @@
 # Changelog
 
+Add internal transfer reservations with exact consent/key binding, irreversible revocation,
+fixed expiry and atomic aggregate quotas; retain capacity until confirmed private-account cleanup.
+Cross-host source authorization, transport, lifecycle and public surfaces remain pending.
+
 Add internal immutable transfer selection and manifest validation with canonical digest binding.
 These data proposals grant no access; cross-host consent, transport and evidence adoption remain pending.
 
