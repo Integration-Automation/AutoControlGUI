@@ -936,3 +936,24 @@ AgentHumanReview 表示未儲存內容或未知對話框需人工審閱；包含
 主機目標以 AgentTargetProfile 與 manage_agent_target（AC_agent_target，register/get/disable/enable/probe）設定。名稱及設定固定不可替換，目前提供 desktop／files／browser adapter，未實作類型會被拒絕；瀏覽器可使用主機審閱的 helper_python。任務固定主機設定摘要，不能擴大工具、應用、根目錄或網路來源。啟停狀態會跨重啟保存並於分派時檢查；停用會要求暫停及清理，重新啟用仍須明確恢復任務。list_agent_targets／AC_agent_target_list／CLI agent-task targets 只提供被動資訊，readiness=not_probed、native_evidence=not_recorded；完整設定需要 manage_hosts。CLI agent-task target 及 GUI「主機目標」頁使用同一服務。匿名有效 MCP 工具 session 的直接及舊式包裝呼叫都以 operator 權限執行；MCP 主機管理需要已驗證的管理員，可信任的直接 Python 呼叫維持原行為。瀏覽器自動化統一由 WebRunner（je_web_runner）提供，本機開發來源為 D:/Codes/WebRunner；browser profile 使用受管 je_web_runner SDK 契約，依賴診斷不代表原生可用。
 
 既有瀏覽器自動化（包含 open_path(URL) 與 AC_open_path）統一交由 WebRunner，Python 套件名稱為 je_web_runner。URL 計畫的 backend 現為 je_web_runner，原本比較 webbrowser 描述值的呼叫端需改用新值；函式介面與本機檔案開啟維持相容。實際 URL 執行需要設定的 WebRunner 專案，缺少時傳出 WebRunnerBridgeError，不改用 OS 瀏覽器。本機開發來源為 D:/Codes/WebRunner；純計畫及注入 opener 測試不需要該套件。協定支援由 WebRunner 與其選用的瀏覽器決定。既有瀏覽器 GUI／MCP／AC 及錄製的 WR_* 動作都使用同一橋接。
+
+## Local DAG 完成證據的明確移交
+
+其他 caller 持有的既有復原子任務，可透過明確且可撤銷的移交，向原 local DAG 提供完成證據。
+以 `manage_agent_recovery` 的 `review_handoff` 提供最終 `task_id`、`batch_id`、`node_id`，
+有權管理者再用相同 ID、將返回的 `handoff_review` 填入 `review`，並附非空 `note` 執行
+`create_handoff`。接收者由服務依真實原始 admission 決定。在 `review_continuation` 的 successor
+決策中，除 `node_id`、`action`、`task_id` 外明列 `handoff_id`，再審閱並批准整份 continuation。
+最多支援十六層真實復原鏈，包含經私有 admission 的永久唯讀最終驗證者；一般任務歸屬維持原樣。
+
+`get_handoff`／`revoke_handoff` 使用 `handoff_id`；`list_handoffs` 使用 `batch_id`、`node_id`。
+建立與採認時重查實際 owner、建立審閱者、簽發 session 的來源根限制、當前接收端限制、固定 scope、
+效果快照、獨立完成及資源退役。批准、開始及後續相依驗證都重查同意；撤銷或證據遺失會阻止採認。
+期限不超過最早終止見證既有的三十天保留期限。公開回應只含有限 ID、摘要與狀態，不含私有參數、
+capture 或 principal 資料庫路徑；不授予一般任務讀取／輸入權、不移轉歸屬或重播。
+跨主機及非 DAG 的移交契約仍列於 `Progress.md`。
+
+Agent Tasks 的成果移交頁提供操作選單與 JSON 編輯器；Actions 只準備審閱、建立、撤銷請求，
+不自動派送。五個可編輯的 `agent_handoff_*.json` 範例涵蓋 review/create/get/list/revoke。
+Python、AC、CLI、具名 MCP、REST、Builder 共用這些 recovery 操作。本次證據涵蓋契約及自有檔案
+流程；暫緩的原生桌面、瀏覽器、裝置及二十四小時驗收仍須各自提供證據。

@@ -936,3 +936,24 @@ AgentHumanReview 表示未保存内容或未知对话框需人工审核；包括
 主机目标通过 AgentTargetProfile 与 manage_agent_target（AC_agent_target，register/get/disable/enable/probe）设置。名称及设置固定不可替换，目前提供 desktop／files／browser adapter，未实现类型会被拒绝；浏览器可使用主机审阅的 helper_python。任务固定主机设置摘要，不能扩大工具、应用、根目录或网络来源。启停状态会跨重启保存并在分派时检查；禁用会请求暂停及清理，重新启用仍须明确恢复任务。list_agent_targets／AC_agent_target_list／CLI agent-task targets 仅提供被动信息，readiness=not_probed、native_evidence=not_recorded；完整设置需要 manage_hosts。CLI agent-task target 及 GUI「主机目标」页使用同一服务。匿名有效 MCP 工具 session 的直接及旧式包装调用都以 operator 权限执行；MCP 主机管理需要已验证的管理员，可信任的直接 Python 调用维持原行为。浏览器自动化统一由 WebRunner（je_web_runner）提供，本机开发来源为 D:/Codes/WebRunner；browser profile 使用受管 je_web_runner SDK 契约，依赖诊断不代表原生可用。
 
 既有浏览器自动化（包括 open_path(URL) 与 AC_open_path）统一交由 WebRunner，Python 包名为 je_web_runner。URL 计划的 backend 现为 je_web_runner，原本比较 webbrowser 描述值的调用端需改用新值；函数接口与本机文件打开维持兼容。实际 URL 执行需要配置的 WebRunner 项目，缺少时传出 WebRunnerBridgeError，不改用 OS 浏览器。本机开发来源为 D:/Codes/WebRunner；纯计划及注入 opener 测试不需要该包。协议支持由 WebRunner 与所选浏览器决定。既有浏览器 GUI／MCP／AC 及录制的 WR_* 动作都使用同一桥接。
+
+## Local DAG 完成证据的明确移交
+
+其他 caller 持有的既有恢复子任务，可通过明确且可撤销的移交，向原 local DAG 提供完成证据。
+以 `manage_agent_recovery` 的 `review_handoff` 提供最终 `task_id`、`batch_id`、`node_id`，
+有权管理者再用相同 ID、将返回的 `handoff_review` 填入 `review`，并附非空 `note` 执行
+`create_handoff`。接收者由服务依真实原始 admission 决定。在 `review_continuation` 的 successor
+决策中，除 `node_id`、`action`、`task_id` 外明列 `handoff_id`，再审核并批准整份 continuation。
+最多支持十六层真实恢复链，包含经私有 admission 的永久只读最终验证者；一般任务归属保持原样。
+
+`get_handoff`／`revoke_handoff` 使用 `handoff_id`；`list_handoffs` 使用 `batch_id`、`node_id`。
+创建与采纳时重查实际 owner、创建审核者、签发 session 的来源根限制、当前接收端限制、固定 scope、
+效果快照、独立完成及资源退役。批准、开始及后续依赖验证都重查同意；撤销或证据丢失会阻止采纳。
+期限不超过最早终止见证既有的三十天保留期限。公开响应只含有限 ID、摘要与状态，不含私有参数、
+capture 或 principal 数据库路径；不授予一般任务读取／输入权、不转移归属或重放。
+跨主机及非 DAG 的移交契约仍列于 `Progress.md`。
+
+Agent Tasks 的成果移交页提供操作菜单与 JSON 编辑器；Actions 只准备审核、创建、撤销请求，
+不自动派发。五个可编辑的 `agent_handoff_*.json` 示例涵盖 review/create/get/list/revoke。
+Python、AC、CLI、具名 MCP、REST、Builder 共用这些 recovery 操作。本次证据涵盖契约及自有文件
+流程；暂缓的原生桌面、浏览器、设备及二十四小时验收仍须各自提供证据。

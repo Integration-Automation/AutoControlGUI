@@ -82,8 +82,23 @@ class ContinuationEvidence:
             task = matched["task"]
         return task
 
-    def successor(self, node: dict, original: dict, identifier: str) -> tuple[dict, list[dict]]:
+    def successor(self, node: dict, original: dict, identifier: str,
+                  handoff_id: str | None = None) -> tuple[dict, list[dict]]:
         """Follow only real runtime recovery provenance; every candidate must independently complete."""
+        if handoff_id is not None:
+            return self._handoff(node, original, identifier, handoff_id)
+        return self._ordinary_successor(node, original, identifier)
+
+    def _handoff(self, node: dict, original: dict, identifier: str, handoff_id: str) -> tuple[dict, list[dict]]:
+        if node['host'] != 'local' or self.runtime is None:
+            raise AgentTaskError('local evidence handoff cannot be forwarded to a remote destination')
+        with self.owner.scope():
+            candidate, chain = self.runtime.recovery.handoff_evidence(
+                self.batch['id'], node['id'], original['task_id'], identifier, handoff_id)
+        completion(candidate, node)
+        return candidate, chain
+
+    def _ordinary_successor(self, node: dict, original: dict, identifier: str) -> tuple[dict, list[dict]]:
         candidate = self.query(node, "get", {"task_id": identifier})
         if candidate.get("task_id") != identifier:
             raise AgentTaskError("DAG continuation successor identity changed")
@@ -131,6 +146,7 @@ def semantic_task(task: dict | None) -> dict | None:
     metadata = task.get("metadata", {})
     if not isinstance(metadata, dict):
         metadata = {}
-    fields = ("input_released", "completion_contract", "submission_contract", "submitted_spec_digest", "recovery")
+    fields = ("input_released", "completion_contract", "submission_contract", "submitted_spec_digest", "recovery",
+              'evidence_handoff')
     return {"task_id": task.get("task_id"), "state": task.get("state"), "verification": task.get("verification"),
             "metadata": {key: metadata[key] for key in fields if key in metadata}}

@@ -13,7 +13,9 @@ from je_auto_control.utils.agent_runtime.task_authority import (
     validate_ownership_request, ownership_scope, ownership_review, public_ownership,
     recovery_binding, require_matching_ownership,
     check_recovery_authority,
+    check_handoff_history,
 )
+from je_auto_control.utils.agent_runtime.evidence_handoff import EvidenceHandoffs, OPERATIONS as HANDOFF_OPERATIONS
 from je_auto_control.utils.agent_runtime.recovery_authorization import (
     prepare_authorization, authorized_template, narrowed_template, authorization_details,
 )
@@ -28,7 +30,7 @@ _REQUEST_FIELDS = {
     "create_authorized": {"task_id", "snapshot", "spec", "note", "authorization_review"},
     "preview_completion": {"task_id"}, "create_completion": {"task_id", "snapshot", "note"},
 }
-OPERATIONS = tuple(_REQUEST_FIELDS)
+OPERATIONS = tuple(_REQUEST_FIELDS) + HANDOFF_OPERATIONS
 _STOPPED = frozenset({"paused", "waiting_user", "recovering", "cancelled", "timed_out", "failed"})
 _POINTER_TOOLS = ("AC_click_mouse", "AC_set_mouse_position", "AC_mouse_scroll", "AC_press_mouse", "AC_release_mouse",
                   "AC_android_tap", "AC_android_swipe")
@@ -68,6 +70,51 @@ class AgentRecovery:
     def __init__(self, runtime: Any) -> None:
         self.runtime = runtime
 
+    def _handoffs(self) -> EvidenceHandoffs:
+        return EvidenceHandoffs(self.runtime, self.runtime.batches.handoff_context, self.handoff_witness)
+
+    def handoff_evidence(self, batch_id: str, node_id: str, source_task: str,
+                         task_id: str, handoff_id: str, *, connection: Any = None) -> tuple[dict, list]:
+        """Read one explicitly granted completion projection without changing ordinary runtime access."""
+        return self._handoffs().consume(batch_id, node_id, source_task, task_id, handoff_id, connection=connection)
+
+    def _handoff_snapshot(self, connection: Any, row: dict) -> dict:
+        actions = self.runtime.store.read_actions(connection, row['id'])
+        reviews = [dict(item) for item in connection.execute(
+            'SELECT * FROM agent_reviews WHERE task_id=? ORDER BY action_id', (row['id'],))]
+        retired = connection.execute('SELECT contract,confirmed FROM agent_completion WHERE task_id=?',
+                                     (row['id'],)).fetchone()
+        snapshot = _snapshot(row, actions, reviews)
+        return {'actions': actions, 'snapshot': snapshot, 'completion_snapshot': request_spec_digest({
+            'snapshot': snapshot, 'retirement': dict(retired) if retired is not None else None})}
+
+    def handoff_witness(self, connection: Any, source: dict, child: dict, link: dict) -> dict:
+        """Bind real historical recovery snapshots and current authority without target probes."""
+        before, after = self._handoff_snapshot(connection, source), self._handoff_snapshot(connection, child)
+        evidence = {'source_snapshot': before['snapshot'], 'source_actions': before['actions'],
+                    'snapshot': after['snapshot'], 'actions': after['actions'],
+                    'completion_snapshot': after['completion_snapshot']}
+        check_handoff_history(self.runtime, connection, source, child, link, evidence, self._handoff_reader)
+        return evidence
+
+    def _handoff_reader(self, connection: Any, source: dict, child: dict) -> bool:
+        # pylint: disable-next=import-outside-toplevel  # reason: reuse privately admitted read-only scope without a reverse import
+        from je_auto_control.utils.agent_runtime.completion_recovery import check_completion_authority, completion_spec
+        # pylint: disable-next=import-outside-toplevel  # reason: share strict neutral binding decoding, not public caller options
+        from je_auto_control.utils.agent_runtime.skill_completion import _decode_binding
+        found = connection.execute('SELECT details FROM agent_readonly_completions WHERE task_id=?',
+                                   (child['id'],)).fetchone()
+        if found is None:
+            return False
+        details = _decode_binding(found[0])
+        if details['source_task'] != source['id']:
+            raise AgentTaskError('handoff read-only source binding changed')
+        check_completion_authority(self.runtime, child['id'])
+        effect = self.runtime.store.get(details['effect_task'])
+        if child['spec'] != completion_spec(self.runtime, effect).to_dict():
+            raise AgentTaskError('handoff read-only verification scope changed')
+        return True
+
     def review_evidence(self, connection: Any, source: dict, child: dict, link: dict) -> dict:
         """Read exact source/child snapshots for skill publication without input or clock renewal."""
         # pylint: disable-next=protected-access  # reason: do not adopt live or unwinding source/child input
@@ -99,6 +146,8 @@ class AgentRecovery:
         request = durable_payload(detached(request))
         if not isinstance(operation, str) or operation not in OPERATIONS or not isinstance(request, dict):
             raise AgentTaskError("invalid recovery operation fields")
+        if operation in HANDOFF_OPERATIONS:
+            return self._handoffs().control(operation, request)
         validate_ownership_request(operation, request, _REQUEST_FIELDS[operation])
         task_id = request["task_id"]
         if not isinstance(task_id, str) or not task_id:

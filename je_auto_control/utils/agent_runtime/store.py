@@ -112,6 +112,15 @@ CREATE TABLE IF NOT EXISTS agent_skill_completions (
 CREATE TABLE IF NOT EXISTS agent_skill_executions (
  candidate_id TEXT PRIMARY KEY REFERENCES agent_skill_publications(candidate_id) ON DELETE CASCADE,
  details TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_evidence_handoffs (
+ id TEXT PRIMARY KEY, batch_id TEXT NOT NULL, node_id TEXT NOT NULL, source_task TEXT NOT NULL,
+ task_id TEXT NOT NULL, review TEXT NOT NULL, details TEXT NOT NULL, note TEXT NOT NULL,
+ state TEXT NOT NULL, created REAL NOT NULL, expires REAL NOT NULL,
+ FOREIGN KEY(batch_id,node_id) REFERENCES agent_dag_nodes(batch_id,node_id) ON DELETE CASCADE);
+CREATE INDEX IF NOT EXISTS agent_evidence_handoff_binding ON agent_evidence_handoffs(batch_id,node_id);
+CREATE TABLE IF NOT EXISTS agent_evidence_handoff_revocations (
+ handoff_id TEXT PRIMARY KEY REFERENCES agent_evidence_handoffs(id) ON DELETE CASCADE,
+ actor TEXT NOT NULL, created REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_action_grounding (
  action_id TEXT PRIMARY KEY REFERENCES agent_actions(id) ON DELETE CASCADE, details TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_target_profiles (
@@ -262,7 +271,12 @@ class AgentTaskStore:
     def get(self, task_id: str) -> dict[str, Any]:
         """Return one task or fail without revealing another identifier's data."""
         with self.connection() as connection:
-            row = connection.execute("SELECT * FROM agent_tasks WHERE id=?", (task_id,)).fetchone()
+            return self.read_task(connection, task_id)
+
+    @staticmethod
+    def read_task(connection: Any, task_id: str) -> dict[str, Any]:
+        """Read decoded storage metadata under an already owned transaction, without granting runtime access."""
+        row = connection.execute('SELECT * FROM agent_tasks WHERE id=?', (task_id,)).fetchone()
         if row is None:
             raise AgentTaskError("task does not exist or is not owned by this caller")
         result = dict(row)
@@ -352,12 +366,16 @@ class AgentTaskStore:
     def actions(self, task_id: str) -> List[dict[str, Any]]:
         """Return independent action receipts in their original execution order."""
         with self.connection() as connection:
-            rows = connection.execute("SELECT a.*,r.actor AS reviewed_by,r.decision AS review_decision,"
-                                      "g.details AS grounding "
-                                      "FROM agent_actions a LEFT JOIN agent_reviews r ON a.id=r.action_id "
-                                      "LEFT JOIN agent_action_grounding g ON a.id=g.action_id "
-                                      "WHERE a.task_id=? ORDER BY a.created,a.rowid",
-                                      (task_id,)).fetchall()
+            return self.read_actions(connection, task_id)
+
+    @staticmethod
+    def read_actions(connection: Any, task_id: str) -> List[dict[str, Any]]:
+        """Decode receipts using the caller's existing transaction and original execution order."""
+        rows = connection.execute("SELECT a.*,r.actor AS reviewed_by,r.decision AS review_decision,"
+                                  "g.details AS grounding "
+                                  "FROM agent_actions a LEFT JOIN agent_reviews r ON a.id=r.action_id "
+                                  "LEFT JOIN agent_action_grounding g ON a.id=g.action_id "
+                                  "WHERE a.task_id=? ORDER BY a.created,a.rowid", (task_id,)).fetchall()
         return [_receipt(row) for row in rows]
 
     def recover(self) -> None:

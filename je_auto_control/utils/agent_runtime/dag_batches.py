@@ -1,6 +1,7 @@
 """Owner-scoped durable graph registration and one-shot managed batch execution records."""
 from __future__ import annotations
 
+from contextlib import nullcontext
 import json
 import time
 import uuid
@@ -9,7 +10,8 @@ from typing import Any
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import detached
-from je_auto_control.utils.agent_runtime.policy import durable_payload, owns_task
+from je_auto_control.utils.agent_runtime.policy import durable_payload, owns_task, TaskPolicy
+from je_auto_control.utils.agent_runtime.submission import submitted_digest
 from je_auto_control.utils.agent_runtime.store import request_spec_digest
 from je_auto_control.utils.agent_runtime.dag_batch_recording import (
     bound_node, claim_node, record_node, verify_node, validate_receipt,
@@ -56,6 +58,46 @@ class DagBatches:
 
     def __init__(self, runtime: Any) -> None:
         self.runtime = runtime
+
+    def handoff_context(self, batch_id: str, node_id: str, *, origin_policies: list[str] | None = None,
+                        connection: Any = None) -> dict:
+        """Derive a local evidence recipient from a real original request and private DAG admission."""
+        batch = self._row(batch_id, connection=connection)
+        node = bound_node(batch, node_id)
+        if node['host'] != 'local':
+            raise AgentTaskError('local handoffs cannot authorize a remote destination')
+        source, admission, expected = self._handoff_source(batch, node, connection=connection)
+        policy_spec = detached(source['spec'])
+        if origin_policies is not None:
+            options = policy_spec['options']
+            options['origin_policies'] = sorted(set(options.get('origin_policies', [])) | set(origin_policies))
+        # pylint: disable-next=protected-access  # reason: original and issuing-session ceilings cover every actual effect
+        policy = TaskPolicy(self.runtime._validated_spec(policy_spec))
+        binding = {'batch_id': batch_id, 'node_id': node_id, 'graph_hash': batch['graph_hash'],
+                   'source_task': source['id'], 'source_spec_digest': expected, 'owner': batch['owner'],
+                   'request': request_spec_digest(node['task']), 'admission': admission}
+        return {'binding': binding, 'source': source, 'state': batch['state'], 'policy': policy}
+
+    def _handoff_source(self, batch: dict, node: dict, *, connection: Any = None) -> tuple[dict, dict, str]:
+        owner = batch['owner']
+        with DeferredAuthorization(AuthorizationContext(**owner) if owner else None).scope():
+            original = self.runtime.lookup(node['task']['idempotency_key'])
+        if original.get('found') is not True:
+            raise AgentTaskError('handoff original DAG request evidence is unavailable')
+        identifier = original['task']['task_id']
+        transaction = self.runtime.store.connection() if connection is None else nullcontext(connection)
+        with transaction as active_connection:
+            source = self.runtime.store.read_task(active_connection, identifier)
+            found = active_connection.execute('SELECT * FROM agent_dag_local_tasks WHERE task_id=?',
+                                               (identifier,)).fetchone()
+        expected = submitted_digest(node['task']['spec'])
+        if (found is None or (found['batch_id'], found['node_id'], found['spec_digest'])
+                != (batch['id'], node['id'], expected)
+                or original['task']['metadata'].get('submitted_spec_digest') != expected):
+            raise AgentTaskError('handoff requires the real bound local DAG admission and submission witness')
+        if any(owner.get(key) != source['owner'].get(key) for key in ('user_id', 'store_path')):
+            raise AgentTaskError('handoff original source owner differs from its batch')
+        return source, dict(found), expected
 
     def control(self, operation: str, request: Any = None) -> dict:
         """Operate on a closed batch protocol; inspection/registration never acquire an input target."""
@@ -127,26 +169,27 @@ class DagBatches:
             if owns_task(json.loads(row["owner"]), current_authorization()):
                 self.control("pause_batch", {"batch_id": row["id"]})
 
-    def _row(self, identifier: str) -> dict:
+    def _row(self, identifier: str, *, connection: Any = None) -> dict:
         # pylint: disable-next=protected-access  # reason: closed runtimes cannot accept new coordinator work
         if self.runtime._closed:
             raise AgentTaskError("runtime is closed")
-        with self.runtime.store.connection() as connection:
-            row = connection.execute("SELECT * FROM agent_dag_batches WHERE id=?", (identifier,)).fetchone()
-        if row is None:
-            raise AgentTaskError("batch does not exist or belongs to another caller")
-        batch = dict(row)
-        for key in ("owner", "definition", "hosts"):
-            batch[key] = json.loads(batch[key])
-        if not owns_task(batch["owner"], current_authorization()):
-            raise AgentTaskError("batch does not exist or belongs to another caller")
-        if request_spec_digest(batch["definition"]) != batch["graph_hash"]:
-            raise AgentTaskError("batch graph digest mismatch")
-        with self.runtime.store.connection() as connection:
-            rows = connection.execute("SELECT node_id,task FROM agent_dag_bindings WHERE batch_id=?", (identifier,))
+        transaction = self.runtime.store.connection() if connection is None else nullcontext(connection)
+        with transaction as active_connection:
+            row = active_connection.execute("SELECT * FROM agent_dag_batches WHERE id=?", (identifier,)).fetchone()
+            if row is None:
+                raise AgentTaskError("batch does not exist or belongs to another caller")
+            batch = dict(row)
+            for key in ("owner", "definition", "hosts"):
+                batch[key] = json.loads(batch[key])
+            if not owns_task(batch["owner"], current_authorization()):
+                raise AgentTaskError("batch does not exist or belongs to another caller")
+            if request_spec_digest(batch["definition"]) != batch["graph_hash"]:
+                raise AgentTaskError("batch graph digest mismatch")
+            rows = active_connection.execute("SELECT node_id,task FROM agent_dag_bindings WHERE batch_id=?",
+                                             (identifier,))
             batch["bindings"] = {item["node_id"]: json.loads(item["task"]) for item in rows}
-            original = connection.execute("SELECT definition FROM agent_dag_inputs WHERE batch_id=?",
-                                          (identifier,)).fetchone()
+            original = active_connection.execute("SELECT definition FROM agent_dag_inputs WHERE batch_id=?",
+                                                 (identifier,)).fetchone()
         batch["input_definition"] = json.loads(original[0]) if original is not None else batch["definition"]
         return batch
 

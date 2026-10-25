@@ -663,3 +663,25 @@ hash。擷取前後核對原生範圍，準備與裝置防護內都重讀 hierar
 為 validation trial。可選 ``completion_task_id`` 必須驗證最終可執行任務的效果，其證據巢狀存於
 execution 審閱紀錄；過期證據不能批准未發布候選。兩個 Actions 範例只準備審閱／接受請求，
 ``agent_skill_execution_review.json`` 與 ``agent_skill_execution_accept.json`` 可編輯後使用。
+
+Local DAG 完成證據的明確移交
+----------------------------------------------------------------------
+
+其他 caller 持有的既有復原子任務，可透過明確且可撤銷的移交，向原 local DAG 提供完成證據。
+以 ``manage_agent_recovery`` 的 ``review_handoff`` 提供最終 ``task_id``、``batch_id``、``node_id``，
+有權管理者再用相同 ID、將返回的 ``handoff_review`` 填入 ``review``，並附非空 ``note`` 執行
+``create_handoff``。接收者由服務依真實原始 admission 決定。在 ``review_continuation`` 的 successor
+決策中，除 ``node_id``、``action``、``task_id`` 外明列 ``handoff_id``，再審閱並批准整份 continuation。
+最多支援十六層真實復原鏈，包含經私有 admission 的永久唯讀最終驗證者；一般任務歸屬維持原樣。
+
+``get_handoff``／``revoke_handoff`` 使用 ``handoff_id``；``list_handoffs`` 使用 ``batch_id``、``node_id``。
+建立與採認時重查實際 owner、建立審閱者、簽發 session 的來源根限制、當前接收端限制、固定 scope、
+效果快照、獨立完成及資源退役。批准、開始及後續相依驗證都重查同意；撤銷或證據遺失會阻止採認。
+期限不超過最早終止見證既有的三十天保留期限。公開回應只含有限 ID、摘要與狀態，不含私有參數、
+capture 或 principal 資料庫路徑；不授予一般任務讀取／輸入權、不移轉歸屬或重播。
+跨主機及非 DAG 的移交契約仍列於 ``Progress.md``。
+
+Agent Tasks 的成果移交頁提供操作選單與 JSON 編輯器；Actions 只準備審閱、建立、撤銷請求，
+不自動派送。五個可編輯的 ``agent_handoff_*.json`` 範例涵蓋 review/create/get/list/revoke。
+Python、AC、CLI、具名 MCP、REST、Builder 共用這些 recovery 操作。本次證據涵蓋契約及自有檔案
+流程；暫緩的原生桌面、瀏覽器、裝置及二十四小時驗收仍須各自提供證據。

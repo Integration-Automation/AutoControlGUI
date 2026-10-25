@@ -1,0 +1,7 @@
+{
+  "task_id": "<final-verification-task-id>",
+  "batch_id": "<original-batch-id>",
+  "node_id": "<node-id>",
+  "review": "<handoff_review-from-review_handoff>",
+  "note": "<describe the reviewed original effects and final independent evidence>"
+}

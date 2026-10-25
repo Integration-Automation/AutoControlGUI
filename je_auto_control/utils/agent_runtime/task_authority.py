@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
-from typing import Any, Iterator
+from typing import Any, Iterator, Callable
 
 from je_auto_control.utils.agent_runtime.dag_admission import actor_identity, check_admission
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
@@ -176,11 +177,14 @@ def check_recovery_authority(runtime: Any, connection: Any, source: dict, child:
         _task_effect_authority(runtime, connection, row)
 
 
-def _task_effect_authority(runtime: Any, connection: Any, row: dict) -> None:
+def _task_effect_authority(runtime: Any, connection: Any, row: dict, *, historical: bool = False) -> TaskPolicy:
     recorded = _recorded_owner(connection, row['id'])
     if recorded is not None and actor_identity(recorded['owner']) != actor_identity(row['owner']):
         raise AgentTaskError('recovery execution task ownership changed')
-    check_task_authority(runtime, row['id'])
+    if historical:
+        _historical_admission(connection, row)
+    else:
+        check_task_authority(runtime, row['id'])
     with DeferredAuthorization(AuthorizationContext(**row['owner']) if row['owner'] else None).scope():
         pass
     # pylint: disable-next=protected-access  # reason: retain current host profiles and caller origin ceilings
@@ -189,6 +193,76 @@ def _task_effect_authority(runtime: Any, connection: Any, row: dict) -> None:
     for action in runtime.store.actions(row['id']):
         if action['status'] == 'confirmed':
             policy.check(action['command'], action['arguments'])
+    return policy
+
+
+def _historical_admission(connection: Any, row: dict) -> None:
+    found = connection.execute('SELECT a.actor,b.owner FROM agent_dag_local_tasks a '
+        'JOIN agent_dag_batches b ON b.id=a.batch_id WHERE a.task_id=?', (row['id'],)).fetchone()
+    if found is None:
+        return
+    actor, owner = json.loads(found['actor']), json.loads(found['owner'])
+    _principal(actor)
+    _principal(owner)
+    if actor_identity(owner) != actor_identity(row['owner']):
+        raise AgentTaskError('historical DAG evidence owner changed')
+    _check_pair({'actor': actor, 'owner': owner})
+
+
+def _handoff_scope(parent: dict, child: dict) -> None:
+    fixed = set(parent) - {'goal', 'actions', 'roots', 'options'}
+    if (set(parent) != set(child) or
+            json.dumps({key: parent[key] for key in fixed}, sort_keys=True) !=
+            json.dumps({key: child[key] for key in fixed}, sort_keys=True)):
+        raise AgentTaskError('handoff recovery fixed scope or completion criteria changed')
+    if any(not any(Path(root).is_relative_to(Path(ceiling)) for ceiling in parent['roots'])
+           for root in child['roots']):
+        raise AgentTaskError('handoff recovery roots exceed the original ceiling')
+    before, after = dict(parent['options']), dict(child['options'])
+    before.pop('skill_pin', None)
+    for value in (before, after):
+        value.pop('origin_policies', None)
+    if before != after:
+        raise AgentTaskError('handoff recovery changed fixed options')
+
+
+def _handoff_retired(runtime: Any, source: dict, child: dict, link: dict, evidence: dict) -> None:
+    # pylint: disable-next=protected-access  # reason: only inspect short owned runtime retirement witnesses
+    with runtime._mutex:
+        # pylint: disable-next=protected-access  # reason: unwinding input cannot provide completion evidence
+        if any(row['id'] in runtime._leases or row['id'] in runtime._executing for row in (source, child)):
+            raise AgentTaskError('handoff evidence input has not retired')
+    stopped = {'paused', 'waiting_user', 'recovering', 'cancelled', 'timed_out', 'failed'}
+    if source['state'] not in stopped or child['state'] not in stopped | {'succeeded'}:
+        raise AgentTaskError('handoff requires stopped source and retired successor evidence')
+    if evidence['source_snapshot'] != link['snapshot']:
+        raise AgentTaskError('handoff source recovery snapshot changed')
+
+
+def _handoff_owners(runtime: Any, connection: Any, source: dict, child: dict, link: dict) -> TaskPolicy:
+    ownership = _recorded_owner(connection, child['id'])
+    _check_pair(ownership or {'owner': source['owner'], 'actor': child['owner']})
+    if ownership is not None and (ownership['source_snapshot'] != link['snapshot']
+                                 or actor_identity(ownership['owner']) != actor_identity(source['owner'])):
+        raise AgentTaskError('handoff recovery ownership review changed')
+    source_policy = _task_effect_authority(runtime, connection, source, historical=True)
+    _task_effect_authority(runtime, connection, child, historical=True)
+    return source_policy
+
+
+def check_handoff_history(runtime: Any, connection: Any, source: dict, child: dict,
+                          link: dict, evidence: dict, reader: Callable) -> None:
+    """Validate historical authority and effects without reopening a stopped DAG input attempt."""
+    _handoff_retired(runtime, source, child, link, evidence)
+    source_policy = _handoff_owners(runtime, connection, source, child, link)
+    if not reader(connection, source, child):
+        _handoff_scope(source['spec'], child['spec'])
+    for actions in (evidence['source_actions'], evidence['actions']):
+        for action in actions:
+            if action['status'] not in {'confirmed', 'not_applied', 'failed'}:
+                raise AgentTaskError('handoff cannot adopt unresolved effects')
+            if action['status'] == 'confirmed':
+                source_policy.check(action['command'], action['arguments'])
 
 
 def _check_pair(value: dict) -> None:

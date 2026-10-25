@@ -1110,3 +1110,29 @@ AgentHumanReview identifies an unsaved-content or unknown-dialog gate. It persis
 Host-reviewed targets use AgentTargetProfile and manage_agent_target (AC_agent_target; register/get/disable/enable/probe). Names and configuration are immutable; desktop/file/browser adapters are currently supported; unimplemented kinds are rejected and optional browser helper_python is host-reviewed. Tasks pin the host profile digest and cannot expand its tools, applications, roots or network origins. Availability persists across restart and is checked at dispatch; disabling requests pause/cleanup, while enabling requires explicit task resume. list_agent_targets / AC_agent_target_list / CLI agent-task targets expose passive metadata with readiness=not_probed and native_evidence=not_recorded. Full configuration requires manage_hosts; CLI agent-task target and the GUI Host targets page use the same service. Live anonymous MCP tool sessions have operator authority across direct and legacy wrapper calls; MCP host management requires an authenticated administrator. Trusted direct Python callers remain unchanged. Browser automation belongs to WebRunner (je_web_runner), with D:/Codes/WebRunner as the development source; browser profiles use the managed je_web_runner SDK contract, and dependency probes do not establish native readiness.
 
 Existing browser automation, including open_path(URL) and AC_open_path, delegates to WebRunner (Python package je_web_runner). URL plans now report backend=je_web_runner; callers inspecting the previous webbrowser descriptor should use the new value. Signatures and local-file opening stay compatible. URL execution requires the configured WebRunner project and propagates WebRunnerBridgeError when unavailable, without opening an OS browser as a fallback. The development source is D:/Codes/WebRunner. Planning and injected-opener tests remain usable without that package; browser protocol support is determined by WebRunner and its selected browser. Existing dedicated browser GUI/MCP/AC paths and recorded WR_* actions share the same bridge.
+
+## Explicit local DAG evidence handoffs
+
+Existing recovery children held by another caller can provide completion evidence to their
+original local DAG through an explicit revocable handoff. In `manage_agent_recovery`, use
+`review_handoff` with the final `task_id`, `batch_id` and `node_id`; an authorized manager then calls
+`create_handoff` with the same IDs, returned `handoff_review` as `review`, and a nonempty `note`.
+The service derives the recipient from the real original admission. In a `review_continuation`
+successor decision, explicitly include `handoff_id` alongside `node_id`, `action` and `task_id`, then
+review and approve the whole continuation. At most sixteen real recovery links are supported,
+including a privately admitted permanent read-only final verifier. Ordinary task ownership remains.
+
+`get_handoff` and `revoke_handoff` take `handoff_id`; `list_handoffs` takes `batch_id` and `node_id`.
+Issuance and consumption refresh actual owners, admitting reviewers, issuing-session root witnesses,
+current consumer ceilings, fixed scope, effect snapshots, independent completion and retirement.
+Approval, start and late dependency validation recheck consent; revocation or evidence loss blocks
+adoption. Grants expire no later than the earliest retained terminal witness's existing thirty-day
+deadline. Returned data contains bounded IDs, hashes and status, without private task arguments,
+captures or principal-store paths. No ordinary task-read/input access, ownership transfer or replay is
+granted. Cross-host and non-DAG handoff contracts remain outstanding in `Progress.md`.
+
+The Agent Tasks Handoffs page has an operation selector and JSON editor; Actions prepare review,
+create and revoke requests without dispatching them. Five editable `agent_handoff_*.json` examples
+cover review/create/get/list/revoke. Python, AC, CLI, authenticated MCP, REST and Builder use the
+same recovery operations. These checks establish contract and owned-file behavior; deferred native
+desktop, browser, device and 24-hour acceptance still require their own evidence.

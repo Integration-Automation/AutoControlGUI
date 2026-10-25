@@ -146,6 +146,7 @@ class DagContinuation:
             self._apply(connection, batch, identifier, review["reports"])
             connection.execute("UPDATE agent_dag_batches SET state='approved',attempt='',updated=? WHERE id=?",
                                (time.time(), batch["id"]))
+            self._handoff_checks(connection, batch, review['reports'])
         return {"batch_id": batch["id"], "approval_id": identifier, "approval_state": "ready"}
 
     @staticmethod
@@ -183,6 +184,7 @@ class DagContinuation:
             connection.execute("UPDATE agent_dag_approvals SET state='used' WHERE id=?", (row["id"],))
             connection.execute("UPDATE agent_dag_batches SET state='running',attempt=?,updated=? WHERE id=?",
                                (attempt, time.time(), batch["id"]))
+            self._handoff_checks(connection, batch, review['reports'])
         adopted = {item["decision"]["node_id"]: item["decision"]["task_id"] for item in review["reports"]
                    if item["decision"]["action"] != "dispatch"}
         return {"batch_id": batch["id"], "attempt": attempt, "hosts": batch["hosts"], "adopted": adopted,
@@ -225,4 +227,21 @@ class DagContinuation:
         if adoption["task_id"] == adoption["source_task"]:
             completion(original, node)
         else:
-            evidence.successor(node, original, adoption["task_id"])
+            with self.batches.runtime.store.connection() as connection:
+                approval = connection.execute('SELECT details FROM agent_dag_approvals WHERE id=? AND batch_id=?',
+                    (adoption['approval_id'], batch['id'])).fetchone()
+            if approval is None:
+                raise AgentTaskError('DAG adoption approval evidence is missing')
+            decisions = json.loads(approval[0])['public']['decisions']
+            decision: dict = next((item for item in decisions if item['node_id'] == node_id), {})
+            if 'handoff_id' in decision:
+                evidence.successor(node, original, adoption['task_id'], decision['handoff_id'])
+            else:
+                evidence.successor(node, original, adoption['task_id'])
+
+    def _handoff_checks(self, connection: Any, batch: dict, reports: list[dict]) -> None:
+        for report in reports:
+            decision = report['decision']
+            if 'handoff_id' in decision:
+                self.batches.runtime.recovery.handoff_evidence(batch['id'], decision['node_id'],
+                    report['original']['task_id'], decision['task_id'], decision['handoff_id'], connection=connection)

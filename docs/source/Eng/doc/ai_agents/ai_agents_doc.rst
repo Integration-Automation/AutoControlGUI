@@ -793,3 +793,30 @@ Review stopped tasks, reconstruct remaining work and explicitly approve a scoped
 
    agent_recovery_doc
    agent_dag_batches_doc
+
+Explicit local DAG evidence handoffs
+----------------------------------------------------------------------
+
+Existing recovery children held by another caller can provide completion evidence to their
+original local DAG through an explicit revocable handoff. In ``manage_agent_recovery``, use
+``review_handoff`` with the final ``task_id``, ``batch_id`` and ``node_id``; an authorized manager then calls
+``create_handoff`` with the same IDs, returned ``handoff_review`` as ``review``, and a nonempty ``note``.
+The service derives the recipient from the real original admission. In a ``review_continuation``
+successor decision, explicitly include ``handoff_id`` alongside ``node_id``, ``action`` and ``task_id``, then
+review and approve the whole continuation. At most sixteen real recovery links are supported,
+including a privately admitted permanent read-only final verifier. Ordinary task ownership remains.
+
+``get_handoff`` and ``revoke_handoff`` take ``handoff_id``; ``list_handoffs`` takes ``batch_id`` and ``node_id``.
+Issuance and consumption refresh actual owners, admitting reviewers, issuing-session root witnesses,
+current consumer ceilings, fixed scope, effect snapshots, independent completion and retirement.
+Approval, start and late dependency validation recheck consent; revocation or evidence loss blocks
+adoption. Grants expire no later than the earliest retained terminal witness's existing thirty-day
+deadline. Returned data contains bounded IDs, hashes and status, without private task arguments,
+captures or principal-store paths. No ordinary task-read/input access, ownership transfer or replay is
+granted. Cross-host and non-DAG handoff contracts remain outstanding in ``Progress.md``.
+
+The Agent Tasks Handoffs page has an operation selector and JSON editor; Actions prepare review,
+create and revoke requests without dispatching them. Five editable ``agent_handoff_*.json`` examples
+cover review/create/get/list/revoke. Python, AC, CLI, authenticated MCP, REST and Builder use the
+same recovery operations. These checks establish contract and owned-file behavior; deferred native
+desktop, browser, device and 24-hour acceptance still require their own evidence.

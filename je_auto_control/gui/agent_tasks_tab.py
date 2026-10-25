@@ -22,6 +22,7 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow, WORKFLOWS
 from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGER_OPERATIONS
 from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILL_OPERATIONS
+from je_auto_control.utils.agent_runtime.evidence_handoff import OPERATIONS as HANDOFF_OPERATIONS
 from je_auto_control.utils.agent_runtime.trigger_config import KINDS as TRIGGER_KINDS
 from je_auto_control.utils.agent_runtime.target_profiles import OPERATIONS as TARGET_OPERATIONS
 from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile
@@ -56,6 +57,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._handle: Any = None
         self._view_task = ""
         self._lookup_view: tuple[str, str] | None = None
+        self._handoff_view: tuple[str, str] | None = None
         self._labels: list[tuple[QLabel, str]] = []
         self._pages = QTabWidget()
         self._page_keys: list[str] = []
@@ -88,6 +90,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._skill_operation, self._skill_request = QComboBox(), QPlainTextEdit("{}")
         for name in SKILL_OPERATIONS:
             self._skill_operation.addItem(_translate("agent_skill_" + name), name)
+        self._handoff_operation, self._handoff_request = QComboBox(), QPlainTextEdit('{}')
+        for name in HANDOFF_OPERATIONS:
+            self._handoff_operation.addItem(_translate('agent_handoff_op_' + name), name)
         self._mode = QComboBox()
         self._mode.addItems(["external", "skill", "ollama"])
         self._workflow = QComboBox()
@@ -129,6 +134,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._page("agent_page_recovery", (("agent_recovery_note", self._recovery_note),
                    ("agent_owner_policy", self._owner_policy),
                    ("agent_review", self._review), ("agent_remainder_request", self._remainder_request)))
+        self._page('agent_page_handoffs', (('agent_handoff_operation', self._handoff_operation),
+                                          ('agent_handoff_request', self._handoff_request)))
         self._page("agent_page_observation", (("agent_action", self._action),))
         self._pages.widget(self._pages.count() - 1).layout().addWidget(self._observation)
 
@@ -162,6 +169,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 combo.setItemText(index, _translate(prefix + combo.itemData(index)))
         for index in range(self._skill_operation.count()):
             self._skill_operation.setItemText(index, _translate("agent_skill_" + self._skill_operation.itemData(index)))
+        for index in range(self._handoff_operation.count()):
+            label = _translate('agent_handoff_op_' + self._handoff_operation.itemData(index))
+            self._handoff_operation.setItemText(index, label)
         for index in range(self._target_operation.count()):
             label = _translate("agent_target_" + self._target_operation.itemData(index))
             self._target_operation.setItemText(index, label)
@@ -189,6 +199,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ('agent_skill_recording_completion_example', self._skill_recording_completion_example),
                 ('agent_skill_execution_review_example', partial(self._skill_execution_example, 'review_execution')),
                 ('agent_skill_execution_accept_example', partial(self._skill_execution_example, 'accept')),
+                ('agent_handoff_apply', self._handoff_apply),
+                *[('agent_handoff_example_' + name, partial(self._handoff_example, name)) for name in
+                  ('review_handoff', 'create_handoff', 'revoke_handoff')],
                 ("agent_skill_list", partial(self._dispatch, "skill", {"operation": "list"})),
                 ("agent_target_apply", self._target_apply),
                 ("agent_browser_example", self._browser_example),
@@ -351,6 +364,27 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._skill_request.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))
         self._pages.setCurrentIndex(self._page_keys.index('agent_page_skills'))
 
+    def _handoff_apply(self) -> None:
+        try:
+            request = json.loads(self._handoff_request.toPlainText())
+            if not isinstance(request, dict):
+                raise ValueError('handoff request must be an object')
+        except (ValueError, TypeError) as error:
+            self._status.setText(str(error))
+            return
+        self._dispatch('recovery', {'operation': self._handoff_operation.currentData(), 'request': request})
+
+    def _handoff_example(self, operation: str) -> None:
+        request: dict[str, Any] = {'task_id': '<final-evidence-task-id>', 'batch_id': '<original-batch-id>',
+                                   'node_id': '<node-id>'}
+        if operation == 'revoke_handoff':
+            request = {'handoff_id': '<handoff-id>'}
+        elif operation == 'create_handoff':
+            request.update(review='<handoff-review-token>', note='')
+        self._handoff_operation.setCurrentIndex(self._handoff_operation.findData(operation))
+        self._handoff_request.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))
+        self._pages.setCurrentIndex(self._page_keys.index('agent_page_handoffs'))
+
     def _target_apply(self) -> None:
         try:
             request = json.loads(self._target_request.toPlainText())
@@ -410,14 +444,21 @@ class AgentTasksTab(TranslatableMixin, QWidget):
             "start", "stop", "list", "stop_all", "prune", "targets", "target", "lookup"}
         default = {"task_id": self._task_id.text()} if task_operation else {}
         data = payload or default
-        self._view_task = str(data.get("task_id", ""))
-        if operation == "recovery":
-            self._view_task = str(data["request"]["task_id"])
-        if operation == "trigger" and "trigger_id" in data.get("request", {}):
-            self._view_task = "trigger:" + str(data["request"]["trigger_id"])
+        self._select_request_view(operation, data)
         self._lookup_view = (self._request_key.text(), self._task_id.text()) if operation == "lookup" else None
         self._handle = self._controller.submit(partial(_request, operation, data), owner=self)
         self._handle.finished.connect(self._completed)
+
+    def _select_request_view(self, operation: str, data: dict) -> None:
+        self._view_task = str(data.get("task_id", ""))
+        self._handoff_view = None
+        if operation == "recovery":
+            self._view_task = str(data['request'].get('task_id', ''))
+            if data.get('operation') in HANDOFF_OPERATIONS:
+                self._view_task = ''
+                self._handoff_view = (self._handoff_operation.currentData(), self._handoff_request.toPlainText())
+        if operation == "trigger" and "trigger_id" in data.get("request", {}):
+            self._view_task = "trigger:" + str(data["request"]["trigger_id"])
 
     def _completed(self, outcome: TaskOutcome) -> None:
         if self._handle is not None and outcome.task_id != self._handle.task_id:
@@ -436,6 +477,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._present_result(result)
 
     def _view_current(self) -> bool:
+        if self._handoff_view is not None:
+            return self._handoff_view == (self._handoff_operation.currentData(), self._handoff_request.toPlainText())
         if self._view_task.startswith("trigger:"):
             return self._view_task == "trigger:" + self._trigger_id.text()
         return not self._view_task or self._view_task == self._task_id.text()

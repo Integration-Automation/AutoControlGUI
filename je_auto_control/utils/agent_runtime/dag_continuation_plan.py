@@ -57,9 +57,20 @@ def _dispatch(runtime: Any, decision: dict, node: dict, phase: str,
     return {"decision": {**decision, "spec": spec}, "ready": True, "original": None, "authority": authority}
 
 
-def _adopt(decision: dict, node: dict, phase: str, original: dict | None, evidence: ContinuationEvidence) -> dict:
-    if set(decision) != {"node_id", "action", "task_id"} or original is None:
+def _adoption_fields(decision: dict) -> None:
+    fields = {'node_id', 'action', 'task_id'}
+    if decision.get('action') == 'successor' and 'handoff_id' in decision:
+        fields.add('handoff_id')
+        if not isinstance(decision['handoff_id'], str) or not 1 <= len(decision['handoff_id']) <= 256:
+            raise AgentTaskError('DAG evidence handoff identity must be a bounded string')
+    if set(decision) != fields:
         raise AgentTaskError("DAG adoption requires a verified accepted original request")
+
+
+def _adopt(decision: dict, node: dict, phase: str, original: dict | None, evidence: ContinuationEvidence) -> dict:
+    _adoption_fields(decision)
+    if original is None:
+        raise AgentTaskError('DAG adoption requires a verified accepted original request')
     if phase == "pending":
         raise AgentTaskError("DAG adoption requires the original coordinator's pre-delivery claim")
     identifier = decision["task_id"]
@@ -72,6 +83,7 @@ def _adopt(decision: dict, node: dict, phase: str, original: dict | None, eviden
         completion(original, node)
         candidate = original
     else:
-        candidate, chain = evidence.successor(node, original, identifier)
+        candidate, chain = (evidence.successor(node, original, identifier, decision['handoff_id'])
+                            if 'handoff_id' in decision else evidence.successor(node, original, identifier))
     return {"decision": decision, "ready": True, "original": semantic_task(original),
             "adopted": semantic_task(candidate), "chain": chain}

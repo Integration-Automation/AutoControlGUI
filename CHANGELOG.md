@@ -1,5 +1,13 @@
 # Changelog
 
+Add explicit review/create/get/list/revoke recovery handoffs for existing caller-owned local DAG
+completion evidence. Optional successor handoff_id binds the real original batch/node/source and at
+most sixteen actual recovery links, including permanent read-only verification. Transactional grant,
+approval/start and late dependency checks preserve live authority, issuing-session roots, original
+scope, effect snapshots and evidence retention. Revocation blocks adoption without ordinary read/input
+rights or ownership transfer. Add five request examples, a thin Handoffs editor and Actions in four
+locales; preserve existing recovery decisions and keep cross-host/non-DAG contracts outstanding.
+
 Add explicit review_execution and token-bound skill acceptance for complete original effects across
 at most sixteen real executable recovery links. Preserve the original candidate/trial identity and
 stopped source; validate exact semantic data/types, live actual principals and final independent
