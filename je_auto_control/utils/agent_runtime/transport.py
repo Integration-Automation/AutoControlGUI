@@ -37,6 +37,10 @@ def request_json(url: str, *, body: Any = None, token: str | None = None,
             call = build_call(url, method="POST" if body is not None else "GET",
                               headers=headers, json_body=body, timeout=timeout)
             call["follow_redirects"] = False
+            if urlsplit(url).path in {'/agent/transfer', '/agent/transfer/peer'}:
+                call['max_response_bytes'] = 1024 * 1024
+                if len(call.get('body') or b'') > 1024 * 1024:
+                    raise AgentTaskError('transfer request exceeds 1MiB')
             replies.put(urllib_transport(call))
         except BaseException as error:  # reason: hand controls back to the owning caller; no failure is swallowed
             replies.put(error)

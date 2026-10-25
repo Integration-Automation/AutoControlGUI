@@ -1226,3 +1226,12 @@ filename, isolating same-stem/different-extension services. Historical consented
 edits of user output; peer reads recheck recipient/current issuer/source rights and selected chunk hash.
 HTTP/header/preparse/registered-host transport, complete private-lineage and restart/retention/cleanup
 acceptance, destination publication/evidence adoption and shared surfaces remain in Progress.
+
+Source transfer HTTP now has separate management /agent/transfer and read-only /agent/transfer/peer
+routes. Ordinary receiving bearer/RBAC/rate admission precedes a peer-only private-header rejection;
+forwarded-principal resolution cannot run for that peer request. Existing local client management
+still signs and refreshes its actual local owner. Transfer request lengths are checked before socket
+body reads. The existing bounded HTTP worker selects an immutable per-call1MiB response cap for both
+fixed transfer paths, applying it before success/error decoding without mutating the64MiB default.
+An oversized outgoing transfer request fails before network dispatch. Registered-host transport and
+the remaining private-lineage/lifecycle/import/evidence/surface contract are still open in Progress.

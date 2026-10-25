@@ -105,6 +105,7 @@ _POST_ROUTES: Dict[str, HandlerFn] = {
 _GET_ROUTES.update({"/agent/tasks": agent_route("list"), "/agent/task": agent_route("get"),
                     "/agent/targets": agent_route("targets")})
 _POST_ROUTES.update({f"/agent/{operation}": agent_route(operation) for operation in AGENT_OPERATIONS})
+_POST_ROUTES['/agent/transfer/peer'] = agent_route('transfer_peer')
 
 # /health is intentionally unauthenticated so probes / load balancers
 # can liveness-check without holding the bearer token.
@@ -317,6 +318,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
             result = authenticate(client_ip=client_ip, header_value=header)
         else:
             result = AuthResult(gate.check(client_ip=client_ip, header_value=header))
+        result = self._peer_authentication(result)
         if result.verdict == "ok" and getattr(self.server, "agent_runtime", None) is not None:
             result = self._forwarded_principal(result)
         # This flag belongs to the server configuration, independently of a
@@ -324,6 +326,14 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         if (getattr(self.server, "rbac_enabled", False)
                 and result.verdict == "ok" and result.context is None):
             return AuthResult("unauthorized")
+        return result
+
+    def _peer_authentication(self, result: AuthResult) -> AuthResult:
+        if urlparse(self.path).path != '/agent/transfer/peer':
+            return result
+        if result.verdict == 'ok' and any(self.headers.get(name) is not None
+                for name in ('X-AutoControl-Principal', 'X-AutoControl-Agent-Origin')):
+            return AuthResult('unauthorized')
         return result
 
     def _forwarded_principal(self, result: AuthResult) -> AuthResult:
@@ -401,7 +411,12 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
 
     def _read_json_body(self) -> Any:
         length = parse_content_length(self.headers)
-        if length <= 0 or length > _MAX_BODY_BYTES:
+        transfer = urlparse(self.path).path in {'/agent/transfer', '/agent/transfer/peer'}
+        limit = 1024 * 1024 if transfer else _MAX_BODY_BYTES
+        if transfer and length > limit:
+            self._send_json({'error': 'transfer body exceeds 1MiB'}, status=413, headers={'Connection': 'close'})
+            return _BODY_ERROR_SENT
+        if length <= 0 or length > limit:
             self._send_json({"error": "invalid Content-Length"}, status=400)
             return _BODY_ERROR_SENT
         raw = self.rfile.read(length)

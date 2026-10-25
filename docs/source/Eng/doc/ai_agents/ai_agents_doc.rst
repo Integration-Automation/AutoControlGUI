@@ -1,12 +1,16 @@
 AI agents and computer use
 ===========================
 
-Cross-host outcome handoff remains unavailable. A runtime-owned local source core now reviews
-selected completed file outcomes and commits consent-bound immutable blobs with actual local issuer
-and recipient checks, fixed expiry and owned cleanup. Transfer records retain snapshot digests and
-origin references instead of copying task inputs/actions. Authenticated peer routes/host transport,
-complete private-lineage and lifecycle acceptance, destination publication/evidence adoption and
-shared public surfaces remain pending in ``Progress.md``. No transfer receipt grants task-input authority.
+Cross-host outcome handoff remains unavailable. The runtime-owned local source core reviews
+selected completed file outcomes and commits consent-bound immutable blobs with actual issuer and
+recipient checks. Authenticated source management and peer-read HTTP routes now expose those reviewed
+manifests/chunks. Peer reads use the receiving server's ordinary bearer/RBAC gate and rate limits;
+local principal/origin headers are refused before foreign principal/store lookup. The local service
+client preserves real owner delegation for management only. Transfer requests are capped at1MiB before
+server reads; the bounded client refuses oversized request dispatch and success/error reply decoding
+without changing ordinary HTTP limits. Registered-host routing, complete private-lineage/lifecycle
+acceptance, destination publication/evidence adoption and shared public surfaces remain pending in
+``Progress.md``. A transfer receipt grants no task-input authority.
 
 Reviewed completion after confirmed effects
 -------------------------------------------

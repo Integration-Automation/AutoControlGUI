@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,369 |
-| 程式碼總行數 | 203,035 |
+| 程式碼總行數 | 203,116 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 855 |
 | 套件門面 `__all__` 公開名稱數 | 1444 |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 42,676 行。
+> 14 個套件、約 42,689 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 17,109 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 17,122 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -535,7 +535,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 7,195 行。
+> 24 個套件、約 7,262 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -545,7 +545,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/email_send/` | 118 | SMTP 寄信（email 觸發器的發送端搭檔） |
 | `utils/events/` | 106 | 對外 CloudEvents 發送（執行生命週期事件） |
 | `utils/http_cassette/` | 200 | 錄製／重播 HTTP 互動，做離線決定性 API 測試 |
-| `utils/http_client/` | 245 | 零依賴 HTTP(S) 用戶端，供 action 步驟呼叫 API |
+| `utils/http_client/` | 254 | 零依賴 HTTP(S) 用戶端，供 action 步驟呼叫 API |
 | `utils/http_conditional/` | 148 | 條件式 HTTP 請求與快取驗證器 |
 | `utils/http_content/` | 158 | HTTP 內容協商與回應解壓縮 |
 | `utils/http_problem/` | 122 | RFC 9457 problem+json 解析 |
@@ -557,7 +557,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/otp/` | 37 | TOTP 一次性密碼產生（自動化 2FA 登入） |
 | `utils/outbox/` | 107 | 交易式 outbox，保證至少一次的事件投遞 |
 | `utils/pytest_plugin/` | 283 | pytest 外掛 + BDD step library（`pytest11` entry point） |
-| `utils/rest_api/` | 2,133 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
+| `utils/rest_api/` | 2,191 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
 | `utils/socket_server/` | 163 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
 | `utils/sse_client/` | 142 | Server-Sent Events 用戶端解析 |
 | `utils/tls_acme/` | 473 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
@@ -638,7 +638,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 3,625 行。
+> 13 個套件、約 3,626 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -647,7 +647,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/governance/` | 242 | 治理：maker-checker 核准閘門與即時憑證租約 |
 | `utils/license_policy/` | 240 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 126 | SLSA 建置來源證明（in-toto v1） |
-| `utils/rbac/` | 892 | 角色型存取控制：使用者與權杖驗證、REST／MCP／executor 的能力政策，`deferred.py` 將背景工作綁定註冊者並在觸發時重新驗證來源 store；不保存 bearer token。；MCP 敏感讀取獨立於唯讀提示要求 operator |
+| `utils/rbac/` | 893 | 角色型存取控制：使用者與權杖驗證、REST／MCP／executor 的能力政策，`deferred.py` 將背景工作綁定註冊者並在觸發時重新驗證來源 store；不保存 bearer token。；MCP 敏感讀取獨立於唯讀提示要求 operator |
 | `utils/redaction/` | 508 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
 | `utils/sbom/` | 170 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 238 | URI scheme 形式的值參照解析 |
@@ -850,13 +850,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `usbip/libusb_backend.py` | 224 | 以 PyUSB／libusb 執行 URB 的正式後端。 |
 | `usbip/backend.py` | 87 | 可插拔 URB 執行後端。 |
 
-#### `utils/rest_api/`（2,133 行）
+#### `utils/rest_api/`（2,191 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `rest_server.py` | 695 | HTTP 前端主體；相容 check-only gate，RBAC 必須帶使用者身分。 |
+| `rest_server.py` | 710 | HTTP 前端主體；相容 check-only gate，RBAC 必須帶使用者身分。 |
 | `rest_handlers.py` | 533 | 端點實作。 |
-| `rest_openapi.py` | 460 | 走訪路由表產生 OpenAPI 3.1 規格。 |
+| `rest_openapi.py` | 503 | 走訪路由表產生 OpenAPI 3.1 規格。 |
 | `rest_auth.py` | 209 | Bearer token 驗證 + 逐 client 限流閘門。 |
 | `rest_metrics.py` | 75 | Prometheus 曝露端點。 |
 | `rest_registry.py` | 81 | 保存執行中 REST 伺服器的行程級單例，狀態包含 RBAC 模式並隱去停用的共用 token。 |
@@ -989,7 +989,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（17,109 行／128 檔）
+#### `utils/agent_runtime/`（17,122 行／128 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1075,7 +1075,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `remote_target.py` | 178 | Internal owned remote-helper lifecycle, without assuming ADB or WDA retirement guarantees. |
 | `remote_worker.py` | 213 | Owned remote SDK worker with closed RPC, refreshed authority and ACK-gated finite effects. |
 | `retention.py` | 71 | Thirty-day cleanup of stopped tasks and exclusively owned runtime artifacts. |
-| `routes.py` | 156 | Authenticated REST adapters for the runtime explicitly owned by a server. |
+| `routes.py` | 165 | Authenticated REST adapters for the runtime explicitly owned by a server. |
 | `runner.py` | 111 | Autonomous skill/local-model driver over exactly the external task operations. |
 | `retained_browser.py` | 147 | Bounded effect-task ownership of actual permanently read-only browser helper processes. |
 | `retained_browser_runtime.py` | 91 | Connect actual browser retirement to existing runtime leases and private completion bindings. |
@@ -1108,7 +1108,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `transfer_records.py` | 269 | Private transfer reservations bind consent and retain capacity until owned cleanup is confirmed. |
 | `transfer_selection.py` | 108 | Resolve only source-owned passed file criteria and their explicitly selected manifest names. |
 | `transfer_source.py` | 245 | Explicitly reviewed source artifacts publish immutable blobs under live host-derived authority. |
-| `transport.py` | 113 | Bounded HTTP requests; cancellation discards late inference replies before any input. |
+| `transport.py` | 117 | Bounded HTTP requests; cancellation discards late inference replies before any input. |
 | `trigger_config.py` | 69 | Validate durable trigger schedules and rooted file-version notifications without side effects. |
 | `trigger_history.py` | 89 | Renewed trigger lineages share accepted event tombstones and outstanding-task limits. |
 | `trigger_reauthorization.py` | 149 | Explicitly replace a trigger's unavailable origins while retaining its event history and template. |
@@ -1423,7 +1423,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/accessibility/` | 14 | 3,143 |
 | `wrapper/` | 21 | 4,466 |
 | `windows/` | 23 | 2,154 |
-| `utils/rest_api/` | 8 | 2,133 |
+| `utils/rest_api/` | 8 | 2,191 |
 | `utils/agent/` | 9 | 2,142 |
 | `linux_with_x11/` | 19 | 1,281 |
 | `linux_wayland/` | 18 | 3,155 |
@@ -1434,8 +1434,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 931 | 89,580 |
-| **總計** | **1,361** | **202,866** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 931 | 89,603 |
+| **總計** | **1,361** | **202,947** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

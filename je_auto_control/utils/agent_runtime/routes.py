@@ -8,7 +8,7 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentObse
 
 OPERATIONS = ("submit", "observe", "act", "finish", "pause", "resume", "cancel", "shutdown", "draft", "stop_all",
               "receipts", "reconcile", "prune", "trigger", "recover_target", "skill", "target", "lookup",
-              "recovery", "dag")
+              "recovery", "dag", "transfer")
 
 
 def route(operation: str) -> Callable[..., Any]:
@@ -49,10 +49,19 @@ def dispatch(runtime: Any, operation: str, body: Any = None, task_id: str | None
                   "prune": lambda: _prune(runtime, body), "trigger": lambda: _trigger(runtime, body),
                   "skill": lambda: _skill(runtime, body), "target": lambda: _target(runtime, body),
                   "recover_target": lambda: _recover_target(runtime, body), "lookup": lambda: _lookup(runtime, body),
-                  "recovery": lambda: _recovery(runtime, body), "dag": lambda: _dag(runtime, body)}
+                  "recovery": lambda: _recovery(runtime, body), "dag": lambda: _dag(runtime, body),
+                  "transfer": lambda: _transfer(runtime, body),
+                  "transfer_peer": lambda: _transfer(runtime, body, peer=True)}
     if operation in operations:
         return operations[operation]()
     return _task_operation(runtime, operation, body)
+
+
+def _transfer(runtime: Any, body: dict, *, peer: bool = False) -> dict:
+    if set(body) != {'operation', 'request'}:
+        raise AgentTaskError('transfer requires operation and request')
+    handler = runtime.transfers.peer if peer else runtime.transfers.control
+    return handler(body['operation'], body['request'])
 
 
 def _dag(runtime: Any, body: dict) -> dict:

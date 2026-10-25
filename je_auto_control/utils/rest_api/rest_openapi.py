@@ -300,6 +300,47 @@ _ENDPOINT_METADATA: Dict[Tuple[str, str], Dict[str, Any]] = {
 }
 
 
+def _transfer_envelope(operation: str, fields: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        'type': 'object', 'additionalProperties': False, 'required': ['operation', 'request'],
+        'properties': {'operation': {'type': 'string', 'const': operation}, 'request': {
+            'type': 'object', 'additionalProperties': False, 'required': list(fields), 'properties': fields}},
+    }
+
+
+def _transfer_metadata(*, peer: bool) -> Dict[str, Any]:
+    identifier = {'type': 'string', 'pattern': '^[0-9a-f]{32}$'}
+    key = {'type': 'string', 'minLength': 1, 'maxLength': 256}
+    operations: Dict[str, Dict[str, Any]]
+    if peer:
+        operations = {'export': {'export_id': identifier}, 'chunk': {
+            'export_id': identifier, 'sha256': {'type': 'string', 'pattern': '^[0-9a-f]{64}$'}}}
+        summary = ('Read reviewed source manifests/chunks as the receiving bearer account; '
+                   'local principal/origin delegation headers are refused.')
+    else:
+        operations = {
+            'review_export': {'source_task': identifier, 'selection': {
+                'type': 'array', 'minItems': 1, 'maxItems': 500, 'items': {
+                    'type': 'object', 'additionalProperties': False, 'required': ['criterion', 'names'],
+                    'properties': {'criterion': {'type': 'integer', 'minimum': 0}, 'names': {
+                        'type': 'array', 'maxItems': 500, 'uniqueItems': True,
+                        'items': {'type': 'string', 'minLength': 1, 'maxLength': 128}}}}},
+                'recipient_policy': {'type': 'string', 'enum': ['caller', 'source_owner']}, 'idempotency_key': key},
+            'create_export': {'review': identifier, 'note': {'type': 'string', 'minLength': 1, 'maxLength': 4000},
+                              'idempotency_key': key},
+            'get_export': {'export_id': identifier}, 'revoke_export': {'export_id': identifier},
+            'list_exports': {'source_task': identifier},
+        }
+        summary = 'Manage explicitly reviewed local source artifacts using current caller/source authority.'
+    return {
+        'summary': summary, 'tag': 'agent',
+        'request_body': {'oneOf': [_transfer_envelope(name, fields) for name, fields in operations.items()]},
+        'errors': {'409': 'Transfer consent, source authority or operation is unavailable.',
+                   '413': 'Transfer request exceeds the 1MiB limit; refused before body reads.',
+                   '503': 'The server has no explicitly enabled agent runtime.'},
+    }
+
+
 for _operation in _AGENT_OPERATIONS:
     _ENDPOINT_METADATA[("POST", f"/agent/{_operation}")] = {
         "summary": f"Managed task {_operation}; preserves caller authority and host ownership.",
@@ -308,6 +349,8 @@ for _operation in _AGENT_OPERATIONS:
 _ENDPOINT_METADATA[("GET", "/agent/tasks")] = {"summary": "List owned managed tasks.", "tag": "agent"}
 _ENDPOINT_METADATA[("GET", "/agent/targets")] = {"summary": "List passive managed target metadata.", "tag": "agent"}
 _ENDPOINT_METADATA[("GET", "/agent/task")] = {"summary": "Read one owned task.", "tag": "agent"}
+_ENDPOINT_METADATA[('POST', '/agent/transfer')] = _transfer_metadata(peer=False)
+_ENDPOINT_METADATA[('POST', '/agent/transfer/peer')] = _transfer_metadata(peer=True)
 _ENDPOINT_METADATA[("POST", "/agent/dag")]['params'] = [{
     'name': CONTROL_HEADER, 'in': 'header', 'required': False,
     'schema': {'type': 'string', 'enum': ['1']},

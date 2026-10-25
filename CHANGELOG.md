@@ -1,5 +1,10 @@
 # Changelog
 
+Add authenticated source transfer management and peer-read HTTP routes with separate authority.
+Reject peer delegation headers before foreign identity lookup while preserving receiving-gate limits.
+Bound transfer ingress and per-call HTTP replies to1MiB; retain ordinary HTTP limits and local owner
+delegation for management. Registered-host routing, destination publication and evidence remain pending.
+
 Add runtime-owned local file-export review, exact consent and immutable private blob snapshots.
 Current local issuer/recipient checks, streamed file/text/manifest verification, descriptor rechecks,
 fixed deadlines and guarded runtime retirement precede future authenticated cross-host transport.
