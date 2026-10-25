@@ -23,6 +23,8 @@ from je_auto_control.utils.agent_runtime.policy import (
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock
+from je_auto_control.utils.agent_runtime.retained_browser import RetainedBrowsers
+from je_auto_control.utils.agent_runtime.retained_browser_runtime import retire_target, maintain_retained
 from je_auto_control.utils.agent_runtime.budget_clock import BudgetClock
 from je_auto_control.utils.agent_runtime.evidence import TaskEvidence
 from je_auto_control.utils.agent_runtime.receipts import reconcile, row_report
@@ -38,6 +40,7 @@ from je_auto_control.utils.agent_runtime.task_authority import RecoveryBinding, 
 from je_auto_control.utils.agent_runtime.completion_recovery import (
     completion_target, completion_evidence, completion_metadata, require_executable_task,
     check_completion_authority, completion_spec, completion_details,
+    retainable_browser,
 )
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
@@ -75,6 +78,7 @@ class AgentRuntime:
                                   completion_template=completion_spec, recovery_review=self.recovery.review_evidence)
         self._targets = dict(targets) if targets is not None else _default_targets()
         self._completion_targets: dict[str, Any] = {}
+        self._retained_browsers = RetainedBrowsers()
         self._tokens: dict[str, CancellationToken] = {}
         self._executing: set[str] = set()
         self._stop_final: dict[str, str] = {}
@@ -240,7 +244,7 @@ class AgentRuntime:
         target = self._targets.get(row["spec"]["target"])
         if target is None:
             raise AgentTaskError("task target is no longer configured")
-        return completion_target(self, row, target)
+        return completion_target(self, row, target, current_operation)
 
     def _token(self, task_id: str) -> CancellationToken:
         with self._mutex:
@@ -566,19 +570,30 @@ class AgentRuntime:
         state = self._row(task_id)["state"]
         stops = {"pausing": "paused", "cancelling": "cancelled"}
         if state in stops and self._retire(task_id):
-            if self.store.transition(task_id, state, self._stop_final.get(task_id, stops[state])):
+            if self.store.transition(task_id, state, self._stop_final.get(task_id, stops[state]), reason=None):
                 self.evidence.publish(task_id)
         elif state in TERMINAL or state == "waiting_user":
             self._retire(task_id)
 
     def _retire(self, task_id: str) -> bool:
+        lock = self._lock(task_id)
+        if not lock.acquire(blocking=False):
+            return False
+        try:
+            return self._retire_owned(task_id)
+        finally:
+            lock.release()
+
+    def _retire_owned(self, task_id: str) -> bool:
         self._observations.pop(task_id, None)
         self._observation_times.pop(task_id, None)
         lease = self._leases.get(task_id)
         if lease is None:
             return True
         row = self.store.get(task_id)
-        if not self.broker.release(lease, self._target(row).cleanup):
+        target = self._target(row)
+        eligible = retainable_browser(target, row, lambda: self.store.actions(row["id"]))
+        if not self.broker.release(lease, lambda: retire_target(self, row, target, eligible)):
             return False
         with self._mutex:
             self._leases.pop(task_id, None)
@@ -610,16 +625,20 @@ class AgentRuntime:
             self._token(task_id).cancel()
             if not self._retire(task_id):
                 raise AgentTaskError("runtime still has active input or cleanup")
+        self._retained_browsers.close()
         self._closed = True
         self.evidence.history.close()
         self._owner_lock.close()
 
     def maintain(self) -> None:
         """Expire abandoned leases and retire revoked owners even between client requests."""
-        for task_id in list(self._leases):
+        for task_id, lease in list(self._leases.items()):
             row = self.store.get(task_id)
+            if row["state"] in TERMINAL:
+                self._retire(task_id)
+                continue
             if self.clock.remaining(row) <= 0:
-                self._request_stop(task_id, "cancelling", "timed_out")
+                self._stop_owned(task_id, lease, "timed_out")
                 continue
             owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
             try:
@@ -630,15 +649,26 @@ class AgentRuntime:
                 with DeferredAuthorization(owner).scope():
                     pass
             except (AutoControlException, OSError, ValueError):
-                stopped = self.cancel(task_id)
-                if stopped.state == "cancelled":
-                    self.store.update(task_id, "cancelled",
-                                      reason="owner authorization or origin scope requires review")
+                self._stop_owned(task_id, lease, "cancelled",
+                                 reason="owner authorization or origin scope requires review")
+        maintain_retained(self)
         self._settle_stopped()
         self.evidence.flush()
         if time.monotonic() >= self._next_retention:
             self.prune()
             self._next_retention = time.monotonic() + 3600
+
+    def _stop_owned(self, task_id: str, lease: ControlLease, settled: str, *,
+                    reason: str = "") -> AgentTaskResult | None:
+        control = (lease.target, lease.owner, lease.generation)
+        def accepted() -> None:
+            self._stop_final[task_id] = settled
+            self._token(task_id).cancel()
+        if not self.store.request_stop(task_id, "cancelling", control=control, accepted=accepted, reason=reason):
+            return None
+        if task_id not in self._executing:
+            self._settle_control(task_id)
+        return self.get(task_id)
 
     def _settle_stopped(self) -> None:
         with self.store.connection() as connection:
@@ -655,6 +685,17 @@ class AgentRuntime:
         """Remove expired visible metadata and owned artifacts, preserving user output and external journals."""
         from je_auto_control.utils.agent_runtime.retention import prune_tasks
         return prune_tasks(self, keep_days)
+
+    def _retained_source(self, task_id: str) -> dict:
+        """Validate private custody; exact admitted reader scopes authorize every live read separately."""
+        row = self.store.get(task_id)
+        spec = AgentTaskSpec.from_dict(row["spec"])
+        validate_root_snapshot(spec.roots)
+        self.target_profiles.check(spec)
+        owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
+        with DeferredAuthorization(owner).scope():
+            pass
+        return row
 
     def request_shutdown(self) -> dict[str, Any]:
         """Stop only after every active input owner has completed cancellation and cleanup."""

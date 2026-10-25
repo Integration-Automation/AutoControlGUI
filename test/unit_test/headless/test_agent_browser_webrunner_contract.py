@@ -13,7 +13,7 @@ from je_auto_control.utils.agent_runtime.native_target import NativeDesktopTarge
 from je_auto_control.utils.agent_runtime.runner import run_task  # noqa: E402
 
 
-def fake_runtime(*, hang=False, transfers=False):
+def fake_runtime(*, hang=False, transfers=False, readonly_state=None):
     """The real SDK lifecycle sees an event-capable fake page; no engine API is imported."""
     state = {"value": "", "url": "about:blank"}
     events = {}
@@ -58,6 +58,8 @@ def fake_runtime(*, hang=False, transfers=False):
             return state.get("files", [])
         if transfers and "element.href" in script:
             return state["url"].rsplit("/", 1)[0] + "/file"
+        if readonly_state is not None and Path(readonly_state).is_file():
+            return Path(readonly_state).read_text(encoding="utf-8")
         return state["value"]
 
     def upload(payload):

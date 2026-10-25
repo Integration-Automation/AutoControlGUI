@@ -40,7 +40,7 @@ atomic approval/provenance, original effect/reviewer authority, dynamic/finite s
 criteria, cancel/restart, cleanup-time races, retention, GUI/shared surfaces and actual DAG adoption.
 Observe-then-finish rechecks current readiness on identical configuration; scope/owner/profile changes refuse.
 Source receipts in these tests are owned fixtures; this is not native application/device acceptance.
-Browser/remote readers and expired-scope completion renewal remain unfinished.
+Remote readers and production deployment remain unfinished.
 
 Android guard latency: owned POSIX/smart-socket/worker evidence verifies one-pass focus extraction,
 all field orders, empty/nonempty duplicates before/after input, byte-exact fixture reads and redacted
@@ -100,9 +100,9 @@ Browser file transfers: experimental; explicit roots and exact origins, byte-onl
 
 Browser completion: experimental; fake state/model-stop/receipt-change/blank-page/over-limit/control-error and offscreen GUI evidence, plus real WebRunner SDK with fake Chromium inside the owned helper. Four scoped criteria are independently read only at finish; native/application acceptance remains unrecorded.
 
-Browser workflow drafts: experimental. Fake SDK/application evidence covers rooted two-row forms, captured/transformed transfers, stale confirmations, mismatched readback, absent elements and late replies. Browser/native acceptance, reviewed file transfers remain unverified/pending. Exact readback contract version 1 is required before SDK startup.
+Browser workflow drafts: experimental. Fake SDK/application evidence covers rooted two-row forms, captured/transformed transfers, stale confirmations, mismatched readback, absent elements and late replies. Browser/native acceptance and production file-transfer configuration remain unverified/pending. Exact readback contract version 1 is required before SDK startup.
 
-Managed browser target: experimental and SDK-dependent; exact profile/task origins, fake Chromium, real SDK source-to-source, owned helper/loopback and timeout/uncertainty tests. Passive readiness remains not_probed and native_evidence not_recorded until separately accepted. Reviewed upload/download grants and real-browser acceptance remain open.
+Managed browser target: experimental and SDK-dependent; exact profile/task origins, fake Chromium, real SDK source-to-source, owned helper/loopback and timeout/uncertainty tests. Passive readiness remains not_probed and native_evidence not_recorded until separately accepted. Production upload/download configuration and real-browser acceptance remain open.
 
 MCP metadata discovery: experimental, platform-neutral; fake-registry and offscreen GUI checks. Search/single-schema lookup are implemented; session disclosure, pagination and static profiles use controlled HTTP/offscreen checks; role/root/env/rate/confirmation guards, asynchronous handoff, plugin notifications and stream-header ordering have controlled regression evidence. Dated metadata byte/latency measurements are in docs/benchmarks/mcp-discovery-2026-10-24.json; native/platform acceptance remains separate.
 
@@ -857,7 +857,7 @@ candidate or renew a published skill grant. Existing skill reauthorization remai
 Python, AC, CLI, authenticated MCP, REST and Builder share both operations. The Recovery page exposes
 two explicit Actions using its selected task, owner policy and request editor. Editable examples are
 `agent_completion_authorization_review.json` and `agent_completion_authorization_create.json`.
-Browser/remote read-only providers, cross-host handoffs, actual application
+Remote read-only providers, cross-host handoffs, actual application
 state restoration and deferred native/device/browser/24-hour acceptance remain in `Progress.md`.
 
 ## Explicit renewed-reader completion handoffs
@@ -895,7 +895,7 @@ preserve the earliest retained terminal witness's thirty-day deadline. Historica
 available after an origin expires, while that history supplies no usable completion or input grant.
 Python, AC, CLI, authenticated MCP, REST and Builder share the five existing operations. Existing
 Handoffs Actions and its JSON editor/result view show the explicit renewed review without dispatching
-consent automatically. Cross-host handoff, browser/remote readers, actual application/device
+consent automatically. Cross-host handoff, remote readers, actual application/device
 providers and deferred native/browser/device/24-hour acceptance remain in `Progress.md`.
 
 ## Explicit task-source completion evidence handoffs
@@ -943,5 +943,36 @@ Builder share the same operations and actual caller identities. Editable request
 `agent_skill_completion_handoff.json`, `agent_skill_execution_handoff_review.json` and
 `agent_skill_execution_handoff_accept.json` under `examples/`.
 
-Cross-host handoffs, browser/remote readers, actual application/device providers, deferred native
+Cross-host handoffs, remote readers, actual application/device providers, deferred native
 and twenty-four-hour acceptance, and unresolved HTTP409/bootstrap issues remain in `Progress.md`.
+
+## Retained original browser completion
+
+Stopped browser tasks with confirmed effects can now use the existing completion review and
+skill workflow with their actual original WebRunner context. The owned worker permanently freezes
+SDK input/network before its input journal and lease release; the runtime retains at most 16
+contexts for at most 300 absolute seconds, starting before detachment. Preview/new admission probe that exact effect task's live SDK view.
+The verifier borrows it for fresh bounded DOM/value reads, without configure, input ACKs, transfers
+or another browser/helper. Retirement, capability probes and cleanup deny nested tools and native input.
+Same-profile tasks keep separate contexts. A saved context ID grants nothing.
+Private completion authorization can explicitly renew the verification scope within the original
+ceiling while the original input specification stays immutable. Expired input origins grant no reads;
+bounded private custody alone is not authority. Removed owners, disabled targets, changed sources,
+expiry and failed reads invalidate contexts. Confirmed process reaping is required to free ownership;
+failed cleanup stays tracked. Restart cannot restore a page. Network-retired DOM is not new server data.
+Existing Python/AC/MCP/REST/CLI/Builder and GUI Actions share the same review requests. Skill recording
+keeps original actions; publication requires its own actual validation trial and selected completion.
+See `examples/agent_browser_retained_completion.py`. Cold browser-prefix reconstruction, remote
+readers, production deployment and deferred native/browser/device/24-hour acceptance remain open.
+
+## Idle work queue polling
+
+Idle background workers check empty work queues without reserving a database writer, reducing
+contention with task status and completion transactions. A nonempty hint still requires the original
+transaction to recheck and claim the work. Claim generations, stale-work recovery and retry limits
+remain enforced; task and transport deadlines are unchanged.
+
+Lease maintenance binds expiry/revocation stops to the actual input owner and generation in the
+same stop transaction. A delayed watcher cannot rewrite retired recovery evidence or cancel a newer
+lease. The accepted final state and cancellation token are set before the stop becomes visible;
+current revocation and the original deadlines remain enforced.

@@ -1,12 +1,34 @@
 # AutoControl
 
+空闲后台 worker 以只读预检识别空队列，减少轮询与任务状态、完成事务的写入锁竞争。
+发现工作后仍须在原有事务内重新核对与领取；保留 claim 代次、过期工作回收与重试上限，
+不延长任务或传输期限。
+
+租约维护会在停止事务内核对实际输入所有者与世代。延迟的监视程序不能改写已退役任务的
+恢复证据，也不能取消新租约；接受的最终停止状态与取消 token 会先于停止事务发布。
+仍有效的权限撤销与原有期限持续生效。
+
+副作用已确认的浏览器任务，可通过已有完成审核与技能流程读取原来的 WebRunner context。
+原 helper 先永久结束 SDK 输入／网络，再释放输入 journal／租约；runtime 最多保留 16 个 context，
+自分离前预留起最多保留 300 秒，不因分离耗时延长。预览／创建核对实际 effect task 的实时 SDK view；验证只借用原 context
+读取最新有界 DOM／字段值，不重新配置输入、不 ACK 原生输入、不传输，也不另开浏览器或 helper。
+退出切换、能力探测与清理也拒绝嵌套工具与原生输入。
+同 profile 的不同任务分开保管，context ID 本身不授权。私有完成授权审核可在原上限内明确续授权
+验证 scope，原输入规范不变；已失效输入 origin 与有限私有保管本身均不授予读取权限。
+拥有者删除、目标停用、来源变动、期限或读取失败会使 context 失效；只有确认进程结束才释放
+进程拥有权，清理失败持续跟踪。重启不恢复页面，网络结束后的 DOM 不能当作新服务器数据。
+Python／AC／MCP／REST／CLI／Builder 与 GUI Actions 共用原审核 request；技能录制保留原动作，
+发布须使用自己的实际新验证试跑与明确选择的完成证据。示例见
+`examples/agent_browser_retained_completion.py`。冷启动浏览器前缀重建、remote reader、正式部署，
+以及暂缓的原生／浏览器／真机／24 小时验收仍待完成。
+
 已停止且副作用已确认的任务，可用 `manage_agent_recovery("preview_completion", {"task_id": id})`
 审核独立验证任务，再将精确 task_id／snapshot 与审核说明交给 `create_completion`，最后完成新任务。
 私有原子绑定只选择永久只读 helper，不重播来源动作；须有新鲜独立完成条件与输入退出证据。
 skill 计划须全部确认；动态任务不得含未处理的有限计划或未知效果。
 可先 observe 再 finish；相同 helper 配置只重新检查就绪，不替换权限，也不缓存就绪结果。
 来源／审核者权限持续有效，覆盖清理后、明确重试与重启。API／AC／MCP／REST／CLI／Builder 及 GUI Actions 共用此流程。
-browser／remote reader、过期 scope 重新授权仍列于 Progress.md；桌面能力仍须另行原生验证。
+remote reader、正式部署仍列于 Progress.md；桌面能力仍须另行原生验证。
 
 只有受管任务节点的 DAG，可用 `manage_agent_dag("register", {"definition": graph,
 "max_parallel": 4})` 注册持久批次，再明确 `run_dag(graph, batch_id=batch["batch_id"])`。
@@ -227,7 +249,7 @@ SPA URL fragment 会保留，origin 比较仅略去 fragment。实际浏览器�
 `AC_browser_wait`／`browser_wait` 仅轮询 text／value，也支持稍后才出现的元素；`wait_seconds`
 默认 5 秒，受 action budget 限制，超时才返回的匹配结果仍拒绝，不重放填入或点击。
 Python/core、共享 catalog／模型 schema、MCP、CLI／REST 任务操作、Builder 及 GUI 流程预览
-使用同一编译器。浏览器读回可作为独立技能证据。实际应用验收、已审核上／下载许可仍待完成；
+使用同一编译器。浏览器读回可作为独立技能证据。实际应用验收与正式上／下载设置仍待完成；
 SDK 启动前须通过完整有界读回契约版本 1 的检查。
 
 受管浏览器 profile（`kind: browser`）统一委派给 WebRunner 的 `je_web_runner` SDK；
@@ -241,8 +263,9 @@ Profile 必须提供精确的 `settings.allowed_origins`、浏览器专用工具
 WebRunner 拒绝秘密表单字段。DOM 索引在当前 observation 内解析 selector／frame，再核对新鲜度。
 失败副作用保持不确定且需对账；暂停／取消会结束拥有的资源。GUI Actions 可生成浏览器目标示例
 供审核；DOM 选择仅编辑动作请求。专用 helper 跨就绪检查保留同一个全新 session，正常清理先
-取得浏览器 ACK，再结束自己的进程树，不获取共享桌面输入控制权。跨源受控测试使用真正 SDK、
-替身 Chromium、自有 IPC／loopback；实际浏览器／原生验收、已审核传输及浏览器流程编译仍列于 `Progress.md`。
+取得浏览器 ACK，再结束自己的进程树；符合完成审核条件的来源则将原本已冻结的 context
+移交 runtime 有界保管。浏览器任务不获取共享桌面输入控制权。跨源受控测试使用真正 SDK、
+替身 Chromium、自有 IPC／loopback；实际浏览器／原生验收、正式传输设置及其余浏览器流程类型仍列于 `Progress.md`。
 
 MCP 异步调用会保留接受请求时的角色、session、原路径策略与工具列表；session 或路径策略
 结束后，延迟分派会被拒绝。异步无状态调用仍使用固定 profile。插件工具列表变更会送达所有
@@ -858,7 +881,7 @@ Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协�
 
 | 资源 | 内容 |
 |---|---|
-| [`examples/`](../examples/) | 43 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位、动作日志。 |
+| [`examples/`](../examples/) | 44 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位、动作日志。 |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 参考，含英文与中文。 |
 | [architecture_explore.md](../architecture_explore.md) | 逐层记录每个模块的职责。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台对照矩阵。 |
@@ -982,7 +1005,7 @@ Python、AC、CLI、具名 MCP、REST、Builder 共用这些 recovery 操作。�
 
 Python、AC、CLI、具名 MCP、REST、Builder 共用两个操作；Recovery 页的两个明确 Actions
 沿用所选任务、owner policy 与请求编辑器。可编辑示例为 `agent_completion_authorization_review.json`
-与 `agent_completion_authorization_create.json`。browser／remote 只读来源、跨主机移交、
+与 `agent_completion_authorization_create.json`。remote 只读来源、跨主机移交、
 实际应用状态重建，以及暂缓的原生／设备／浏览器／二十四小时验收仍列于 `Progress.md`。
 
 ## 明确移交已续授权读取者的完成证据
@@ -1011,7 +1034,7 @@ policy、所有者覆盖或授权 bundle。一般成果移交沿用现有规则�
 相同有效重试沿用原 note 与 ID，已撤销 ID 不会重新启用；重启与采纳保留最早终止见证的三十日期限。
 origin 失效后仍可查 get／list 历史与 revoke，但历史不代表可用完成证据或输入授权。Python、AC、
 CLI、具名 MCP、REST、Builder 共用五个现有操作，Handoffs Actions 与 JSON 编辑器／结果区可显示
-明确续授权审核，不自动派发同意。跨主机移交、browser／remote 读取者、实际应用／设备
+明确续授权审核，不自动派发同意。跨主机移交、remote 读取者、实际应用／设备
 来源及暂缓的原生／浏览器／真机／二十四小时验收仍列于 `Progress.md`。
 
 ## 明确移交任务来源的完成证据
@@ -1049,5 +1072,5 @@ Handoffs 页可明确选原本机 DAG 或原任务来准备 JSON；三个技能 
 `agent_skill_recording_handoff.json`、`agent_skill_completion_handoff.json`、
 `agent_skill_execution_handoff_review.json` 与 `agent_skill_execution_handoff_accept.json`。
 
-跨主机移交、browser／remote 读取者、实际应用／设备来源、暂缓的原生与二十四小时验收，以及未解的
+跨主机移交、remote 读取者、实际应用／设备来源、暂缓的原生与二十四小时验收，以及未解的
 HTTP409／bootstrap 问题仍列于 `Progress.md`。

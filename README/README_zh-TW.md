@@ -1,12 +1,34 @@
 # AutoControl
 
+閒置背景 worker 以唯讀預檢辨識空佇列，減少輪詢與任務狀態、完成交易的寫入鎖競爭。
+發現工作後仍須在原有交易內重新核對與認領；保留 claim 世代、過期工作回收與重試上限，
+不延長任務或傳輸期限。
+
+租約維護會在停止交易內核對實際輸入擁有者與世代。延遲的監看程序不能改寫已退休任務的
+恢復證據，也不能取消新租約；接受的最終停止狀態與取消 token 會先於停止交易發布。
+仍有效的撤權與原有期限持續生效。
+
+副作用已確認的瀏覽器任務，可透過既有完成審閱與技能流程讀取原本的 WebRunner context。
+原 helper 先永久結束 SDK 輸入／網路，再釋放輸入 journal／租約；runtime 最多保留 16 個 context，
+自分離前預留起最多保留 300 秒，不因分離耗時延長。預覽／建立核對實際 effect task 的即時 SDK view；驗證只借用原 context
+讀取最新有界 DOM／欄位值，不重新配置輸入、不 ACK 原生輸入、不傳輸，也不另開瀏覽器或 helper。
+退休切換、能力探測與清理也拒絕巢狀工具與原生輸入。
+同 profile 的不同任務分開保管，context ID 本身不授權。私有完成授權審閱可在原上限內明確續授權
+驗證 scope，原輸入規格不變；已失效輸入 origin 與有限私有保管本身均不授予讀取權限。
+擁有者刪除、目標停用、來源變動、期限或讀取失敗會使 context 失效；只有確認程序結束才釋放
+程序擁有權，清理失敗持續追蹤。重啟不還原頁面，網路結束後的 DOM 不能當作新伺服器資料。
+Python／AC／MCP／REST／CLI／Builder 與 GUI Actions 共用原審閱 request；技能錄製保留原動作，
+發布須使用自己的實際新驗證試跑與明確選取的完成證據。範例見
+`examples/agent_browser_retained_completion.py`。冷啟動瀏覽器前綴重建、remote reader、正式部署，
+以及暫緩的原生／瀏覽器／真機／24 小時驗收仍待完成。
+
 已停止且副作用已確認的任務，可用 `manage_agent_recovery("preview_completion", {"task_id": id})`
 審閱獨立驗證任務，再將精確 task_id／snapshot 與審閱說明交給 `create_completion`，最後完成新任務。
 私有原子綁定只選擇永久唯讀 helper，不重播來源動作；須有新鮮獨立完成條件與輸入退休證據。
 skill 計畫須全部確認；動態任務不得含未處理的有限計畫或未知效果。
 可先 observe 再 finish；相同 helper 設定只重新檢查就緒，不替換權限，也不快取就緒結果。
 來源／審閱者權限持續有效，涵蓋清理後、明確重試與重啟。API／AC／MCP／REST／CLI／Builder 及 GUI Actions 共用此流程。
-browser／remote reader、過期 scope 重新授權仍列於 Progress.md；桌面能力仍須另行原生驗證。
+remote reader、正式部署仍列於 Progress.md；桌面能力仍須另行原生驗證。
 
 只有受管任務節點的 DAG，可用 `manage_agent_dag("register", {"definition": graph,
 "max_parallel": 4})` 註冊耐久批次，再明確 `run_dag(graph, batch_id=batch["batch_id"])`。
@@ -227,7 +249,7 @@ SPA URL fragment 會保留，origin 比對僅略去 fragment。實際瀏覽器�
 `AC_browser_wait`／`browser_wait` 只輪詢 text／value，也支援稍後才出現的元素；`wait_seconds`
 預設 5 秒，受 action budget 限制，逾時才回來的相符結果仍拒絕，不重播填入或點擊。
 Python/core、共用 catalog／模型 schema、MCP、CLI／REST 任務操作、Builder 及 GUI 流程預覽
-使用同一編譯器。瀏覽器讀回可作為獨立技能證據。實際應用驗收、已審閱上／下載許可仍待完成；
+使用同一編譯器。瀏覽器讀回可作為獨立技能證據。實際應用驗收與正式上／下載設定仍待完成；
 SDK 啟動前須通過完整有界讀回契約版本 1 的檢查。
 
 受管瀏覽器 profile（`kind: browser`）統一委派給 WebRunner 的 `je_web_runner` SDK；
@@ -241,8 +263,9 @@ Profile 必須提供精確的 `settings.allowed_origins`、瀏覽器專用工具
 WebRunner 拒絕秘密表單欄位。DOM 索引在目前 observation 內解析 selector／frame，再核對新鮮度。
 失敗副作用保持不確定且需對帳；暫停／取消會結束擁有的資源。GUI Actions 可產生瀏覽器目標範例
 供審閱；DOM 選取只編輯動作請求。專用 helper 跨就緒檢查保留同一個全新 session，正常清理先
-取得瀏覽器 ACK，再結束自己的程序樹，不取得共用桌面輸入控制權。跨來源受控測試使用真正 SDK、
-替身 Chromium、自有 IPC／loopback；實際瀏覽器／原生驗收、已審閱傳輸及瀏覽器流程編譯仍列於 `Progress.md`。
+取得瀏覽器 ACK，再結束自己的程序樹；符合完成審閱條件的來源則將原本已凍結的 context
+移交 runtime 有界保管。瀏覽器任務不取得共用桌面輸入控制權。跨來源受控測試使用真正 SDK、
+替身 Chromium、自有 IPC／loopback；實際瀏覽器／原生驗收、正式傳輸設定及其餘瀏覽器流程種類仍列於 `Progress.md`。
 
 MCP 非同步呼叫會保留接受請求時的角色、session、原路徑政策與工具清單；session 或路徑政策
 結束後，延遲分派會被拒絕。非同步無狀態呼叫仍使用固定 profile。外掛工具清單變更會送達所有
@@ -858,7 +881,7 @@ Windows、macOS（pyobjc）與 X11（含 XWayland）；純 Wayland session 的�
 
 | 資源 | 內容 |
 |---|---|
-| [`examples/`](../examples/) | 43 個自足腳本：截圖點擊、OCR、排程器、遠端桌面、agent loop、可觀測性、錄製、變數、熱鍵、觸發器、報表、MCP、REST、機密、外掛、computer use、Wayland、跨主機 DAG、chat-ops、pytest/BDD、錨點定位、動作日誌、因果 peer 控制。 |
+| [`examples/`](../examples/) | 44 個自足腳本：截圖點擊、OCR、排程器、遠端桌面、agent loop、可觀測性、錄製、變數、熱鍵、觸發器、報表、MCP、REST、機密、外掛、computer use、Wayland、跨主機 DAG、chat-ops、pytest/BDD、錨點定位、動作日誌、因果 peer 控制。 |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 參考，含英文與中文。 |
 | [architecture_explore.md](../architecture_explore.md) | 逐層記錄每個模組的職責。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台對照矩陣。 |
@@ -982,7 +1005,7 @@ Python、AC、CLI、具名 MCP、REST、Builder 共用這些 recovery 操作。�
 
 Python、AC、CLI、具名 MCP、REST、Builder 共用兩個操作；Recovery 頁的兩個明確 Actions
 沿用所選任務、owner policy 與請求編輯器。可編輯範例為 `agent_completion_authorization_review.json`
-與 `agent_completion_authorization_create.json`。browser／remote 唯讀來源、跨主機移交、
+與 `agent_completion_authorization_create.json`。remote 唯讀來源、跨主機移交、
 實際應用狀態重建，以及暫緩的原生／裝置／瀏覽器／二十四小時驗收仍列於 `Progress.md`。
 
 ## 明確移交已續授權讀者的完成證據
@@ -1011,7 +1034,7 @@ policy、擁有者覆寫或授權 bundle。一般成果移交沿用既有規則�
 相同有效重試沿用原 note 與 ID，已撤銷 ID 不會重新啟用；重啟與採認保留最早終止見證的三十日期限。
 origin 失效後仍可查 get／list 歷史與 revoke，但歷史不代表可用完成證據或輸入授權。Python、AC、
 CLI、具名 MCP、REST、Builder 共用五個既有操作，Handoffs Actions 與 JSON 編輯器／結果區可顯示
-明確續授權審閱，不自動派送同意。跨主機移交、browser／remote 讀者、實際應用／裝置
+明確續授權審閱，不自動派送同意。跨主機移交、remote 讀者、實際應用／裝置
 來源及暫緩的原生／瀏覽器／真機／二十四小時驗收仍列於 `Progress.md`。
 
 ## 明確移交任務來源的完成證據
@@ -1049,5 +1072,5 @@ Handoffs 頁可明確選原本機 DAG 或原任務來準備 JSON；三個技能 
 `agent_skill_recording_handoff.json`、`agent_skill_completion_handoff.json`、
 `agent_skill_execution_handoff_review.json` 與 `agent_skill_execution_handoff_accept.json`。
 
-跨主機移交、browser／remote 讀者、實際應用／裝置來源、暫緩的原生與二十四小時驗收，以及未解的
+跨主機移交、remote 讀者、實際應用／裝置來源、暫緩的原生與二十四小時驗收，以及未解的
 HTTP409／bootstrap 問題仍列於 `Progress.md`。

@@ -142,6 +142,8 @@ def new_completion_target(source: NativeDesktopTarget) -> ReadOnlyNativeTarget:
         raise AgentTaskError("source input must retire before a fresh completion reader")
     if not source.supports_readonly_completion:
         raise AgentTaskError("this target has no declared read-only completion helper")
+    if source.is_managed_browser:
+        raise AgentTaskError("browser completion requires the runtime's actual retained effect context")
     # pylint: disable-next=protected-access  # reason: copy host-owned interpreter selection, never task/model argv
     argv = source._argv[:-1] + ("je_auto_control.utils.agent_runtime.readonly_worker",)
     # pylint: disable-next=protected-access  # reason: retain the same physical resource and immutable host profile

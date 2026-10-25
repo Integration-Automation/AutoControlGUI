@@ -150,6 +150,10 @@ class WorkQueue:
         reclaimed meanwhile cannot settle it.
         """
         with self._connect() as conn:
+            if stale_after_s is None and conn.execute(
+                    "SELECT 1 FROM work_items WHERE queue=? AND status=? LIMIT 1",
+                    (self._name, STATUS_NEW)).fetchone() is None:
+                return None
             conn.execute("BEGIN IMMEDIATE")
             row = self._claimable(conn, stale_after_s, max_retries)
             if row is None:

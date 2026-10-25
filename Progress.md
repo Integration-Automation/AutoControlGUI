@@ -86,16 +86,13 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      指標步驟提供可信新來源與語義轉換，不能把舊索引／座標或歷史欄位值直接移入新 session。
    - 補實際應用的語義錄製、參數化、候選修復、驗證 trial、人工接受／版本發布及執行中固定版本
      的完整驗收；持續拒絕沒有完整動作確認或獨立完成證據的試跑，不能僅憑舊收據發布。
-   - 將唯讀完成審閱／驗證／發布延伸至 browser／remote target；browser 接入 WebRunner
-     `readonly_contract_version=1`／`freeze_readonly()`，在原 helper／page 完成永久唯讀切換後
-     才釋放輸入租約。現有普通清理會關閉原 helper，不能僅開啟 capability 旗標或另開 reader。
-     依實際來源／effect task 綁定保留的 channel、SDK context 與原 scope，不以共用 profile 當
-     任務身分；接入容量／期限、撤權、來源變動、服務停止／重啟及讀取失敗的清理與拒絕。
-     helper 與主機兩邊都須拒絕輸入 ACK、工具、傳輸及重新配置；未知副作用／清理失敗仍隔離。
-     接既有完成預覽／建立／執行、skill 錄製／接受／發布及 API／GUI，分別驗證原動作證據與
-     當前獨立條件。remote 仍須真實 SDK／裝置世代、唯讀來源及清理／舊 writer 結束證據。
-     網路結束後的即時 DOM 不能當作新伺服器回應；缺原 context 不可另開頁面、回退普通可操作
-     helper、重做最後動作或解除未知隔離來完成認證。原生／真機能力與驗收仍須分開確認。
+   - browser 唯讀完成驗證的原 helper／SDK context 保留、永久輸入／網路退休、私有完成與技能
+     接合已實作於 `browser_target.py`／`retained_browser*.py`；`WIP`：最新固定程式的全套仍有
+     第 8 組所列三個 DAG 前置協調失敗，須逐案釐清並取得完整成功；不能以分項通過代替。
+     真實瀏覽器能力、正式部署、冷啟動登入／欄位狀態重建與暫緩的原生驗收仍須各自完成。
+     remote 完成審閱／驗證／技能發布仍缺真實 SDK／裝置世代、永久唯讀來源、清理確證與
+     舊 writer 結束證據；接入既有私有完成預覽／建立／執行與 API／GUI，不以旗標、另開 reader、
+     舊動作收據或重播輸入替代。網路結束後的即時 DOM 不能當作新伺服器回應；未知隔離不可解除。
    - 針對新增平台／裝置及恢復路徑重驗服務重啟、WorkQueue 去重、事件／排程重新授權、
      journal／history／產物關聯及 30 天保留／清理，不擴大既有權限。
 
@@ -127,6 +124,22 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      區分已實作、尚缺實作與只缺實測，不能用模擬目標取代原生驗收。
    - 於最後固定提交重跑完整 headless 與 `coverage run -m pytest`、跨功能／故障恢復回歸；
      目前較早固定版本的全套證據不能冒充最新工作樹結果。
+     `WIP`：第 74 階段最新固定程式的全套為 15,361 passed／78 skipped／3 failed，
+     coverage 87.64%；測試期間 3,118 個輸入與 1,348 個套件／設定檔雜湊保持不變。
+     尚須釐清並修正下列失敗，取得全套成功：
+     `test_agent_dag_connection_binding.py::test_admin_inspection_uses_original_owners_keys_on_the_owning_runtime`、
+     `test_agent_dag_retention.py::test_completed_batch_keeps_its_gate_when_related_work_is_unsettled[uncertain]`、
+     `test_agent_dag_retention.py::test_completed_batch_keeps_its_gate_when_related_work_is_unsettled[phase]`。
+     管理員案在等待背景批次成功時失敗，節點 a 已轉 unknown／waiting_review；兩個保留變體
+     在兩秒 DAG 協調前置失敗，尚未進入保留斷言，節點 b 保持 unknown，工作停止／待審閱。
+     兩案回覆寫入另有 WinError 10053；須區分客戶端逾時與伺服器處理／持久化延遲。
+     先前自有 VFS 診斷曾量得成功 FlushFileBuffers 累計約 1.79 秒，但不能據此宣稱本輪
+     三案已逐案定位或修復；Windows flush 延遲的來源與重現條件仍待釐清。
+     後續須涵蓋全部 14 個 DAG 檔、原五案、背景／跨主機所有權與 fencing fixture，
+     以及 retention 的所有變體與 recovery_ownership 的撤權／接受策略重試案例；
+     持續核對並行認領、舊租約世代、停止發布與恢復快照，不放寬兩秒／15 秒期限、
+     降低持久化、重播已完成副作用，亦不以局部／診斷通過代替完整成功。
+     原始失敗、coverage、固定輸入及唯讀資料庫診斷均保留於自有 stage74。
      `WIP`：完整套件曾在 `test_dag_managed_loopback.py::test_distinct_targets_run_concurrently_with_destination_verification`
      偶發提交 HTTP 409，另一節點等待後限流；該次為 5,391 passed／17 skipped／1 failed。
      單獨 20 次與整檔 60 次回歸均未重現；仍須取得最初拒絕原因，不能以後續通過宣稱已修復。

@@ -89,8 +89,17 @@ class NativeDesktopTarget:
     @property
     def supports_readonly_completion(self) -> bool:
         """Declare a helper contract only; this is not a readiness or native-evidence probe."""
-        return (self._argv[-2:] == ("-m", "je_auto_control.utils.agent_runtime.native_worker")
-                and (self._profile is None or self._profile.kind != "browser"))
+        return self._argv[-2:] == ("-m", "je_auto_control.utils.agent_runtime.native_worker")
+
+    @property
+    def is_managed_browser(self) -> bool:
+        """Identify the built-in host-owned browser worker without probing its current context."""
+        return self.supports_readonly_completion and self._profile is not None and self._profile.kind == "browser"
+
+    @property
+    def has_browser_context(self) -> bool:
+        """Report ownership of an unretired browser channel without implying SDK retirement proof."""
+        return self.is_managed_browser and self._channel is not None and not self._channel.retired
 
     def completion_reader(self, spec: AgentTaskSpec) -> Any:
         """Open fresh observation-only ownership; never continue an old input attempt."""
@@ -201,6 +210,47 @@ class NativeDesktopTarget:
     def verify_browser(self, clause: Mapping[str, Any]) -> Any:
         """Delegate a pinned read-only completion check to the same owned browser helper."""
         return self._request("verify_browser", {"clause": clause})
+
+    def _readonly_source_channel(self) -> OwnedChannel | None:
+        if self._profile is None or self._profile.kind != "browser":
+            raise AgentTaskError("only an owned browser can retain its read-only context")
+        if self._pending is not None or not self._ledger.empty:
+            raise AgentTaskError("browser input must settle before retirement")
+        channel = self._channel
+        if channel is None or channel.retired:
+            return None
+        if self._journal is None or self._resource is None:
+            raise AgentTaskError("browser retirement requires its original input ownership")
+        return channel
+
+    def detach_readonly(self) -> tuple[OwnedChannel, dict] | None:
+        """Transfer only the actual frozen browser channel after confirmed empty input ownership."""
+        channel = self._readonly_source_channel()
+        if channel is None:
+            return None
+        # pylint: disable-next=import-outside-toplevel  # reason: only browser detachment loads the SDK proof seam
+        from je_auto_control.utils.agent_runtime.browser_retirement import (
+            retirement_proof, refuse_browser_input, supports_browser_retirement,
+        )
+        bootstrap = channel.request("bootstrap", {}, timeout=3, check=lambda: None, on_event=refuse_browser_input)
+        if not supports_browser_retirement(bootstrap):
+            return None
+        self._pending = "retire_browser"
+        self._persist()
+        reply = channel.request("retire_browser", {}, timeout=3, check=lambda: None,
+                                on_event=refuse_browser_input)
+        if isinstance(reply, dict) and set(reply) == {"supported"} and reply["supported"] is False:
+            self._pending = None
+            self._persist()
+            return None
+        proof = retirement_proof(reply)
+        if self._journal is None or self._resource is None:
+            raise AgentTaskError("browser retirement lost its original input ownership")
+        self._journal.release()
+        self._resource.close()
+        self._journal = self._resource = self._channel = None
+        self._pending = None
+        return channel, proof
 
     def cleanup(self) -> None:
         """Reap native calls and release only host-recorded keys/buttons before input transfer."""

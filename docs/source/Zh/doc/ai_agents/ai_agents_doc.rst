@@ -27,7 +27,7 @@ AI Agent 與 Computer Use
 ownership.review token；預設 caller 歸屬不變。
 
 Python／API／AC／MCP／REST／CLI／Builder 共用 recovery operation；GUI 新增預覽／建立
-兩個 Actions，沿用審閱 request 編輯器。browser／remote reader 與過期 scope 完成重新授權仍
+兩個 Actions，沿用審閱 request 編輯器。remote reader 與正式部署仍
 待接合，不回退普通 helper，也不新開瀏覽器 context 冒充原狀態。
 
 全新唯讀完成觀察前置介面
@@ -46,7 +46,7 @@ operation／owner，browser 條件也須固定於原規格。
 
 API／AC／MCP／REST／CLI／Builder 與 GUI 目標檢視只提供被動 readonly_completion 狀態，
 不執行自訂 adapter descriptor 或原生就緒探測。browser 新啟動、普通／自訂 helper 回退及未支援
-remote reader 仍拒絕；browser／remote 唯讀契約與過期 scope 完成重新授權仍待完成。
+remote reader 仍拒絕；remote 唯讀契約與正式部署仍待完成。
 主機 adapter 是可信程式碼；協定、dispatcher 與輸入 observer 防護不是作業系統沙箱。
 
 AutoControl 是開源、跨平台的 **computer-use 與 GUI 自動化框架**，可以讓 AI agent 操作真實桌面，而不只依賴瀏覽器 DOM 或 API。
@@ -307,8 +307,9 @@ Profile 必須提供精確的 ``settings.allowed_origins``、瀏覽器專用工�
 WebRunner 拒絕秘密表單欄位。DOM 索引在目前 observation 內解析 selector／frame，再核對新鮮度。
 失敗副作用保持不確定且需對帳；暫停／取消會結束擁有的資源。GUI Actions 可產生瀏覽器目標範例
 供審閱；DOM 選取只編輯動作請求。專用 helper 跨就緒檢查保留同一個全新 session，正常清理先
-取得瀏覽器 ACK，再結束自己的程序樹，不取得共用桌面輸入控制權。跨來源受控測試使用真正 SDK、
-替身 Chromium、自有 IPC／loopback；實際瀏覽器／原生驗收、已審閱傳輸及瀏覽器流程編譯仍列於 ``Progress.md``。
+取得瀏覽器 ACK，再結束自己的程序樹；符合完成審閱條件的來源則將原本已凍結的 context
+移交 runtime 有界保管。瀏覽器任務不取得共用桌面輸入控制權。跨來源受控測試使用真正 SDK、
+替身 Chromium、自有 IPC／loopback；實際瀏覽器／原生驗收、正式傳輸設定及其餘瀏覽器流程種類仍列於 ``Progress.md``。
 
 Profile 範例（先審閱，再用 ``manage_agent_target("register", profile)`` 註冊）::
 
@@ -335,7 +336,7 @@ Skill 可導頁、填入 CSS selector，再獨立讀回 value，以 ``expect_res
 ``AC_browser_wait``／``browser_wait`` 只輪詢 text／value，也支援稍後才出現的元素；``wait_seconds``
 預設 5 秒，受 action budget 限制，逾時才回來的相符結果仍拒絕，不重播填入或點擊。
 Python/core、共用 catalog／模型 schema、MCP、CLI／REST 任務操作、Builder 及 GUI 流程預覽
-使用同一編譯器。瀏覽器讀回可作為獨立技能證據。實際應用驗收、已審閱上／下載許可仍待完成；
+使用同一編譯器。瀏覽器讀回可作為獨立技能證據。實際應用驗收與正式上／下載設定仍待完成；
 SDK 啟動前須通過完整有界讀回契約版本 1 的檢查。
 
 WebRunner 完整讀回相容契約
@@ -711,7 +712,7 @@ Python、AC、CLI、具名 MCP、REST、Builder 共用這些 recovery 操作。�
 
 Python、AC、CLI、具名 MCP、REST、Builder 共用兩個操作；Recovery 頁的兩個明確 Actions
 沿用所選任務、owner policy 與請求編輯器。可編輯範例為 ``agent_completion_authorization_review.json``
-與 ``agent_completion_authorization_create.json``。browser／remote 唯讀來源、跨主機移交、
+與 ``agent_completion_authorization_create.json``。remote 唯讀來源、跨主機移交、
 實際應用狀態重建，以及暫緩的原生／裝置／瀏覽器／二十四小時驗收仍列於 ``Progress.md``。
 
 明確移交已續授權讀者的完成證據
@@ -741,7 +742,7 @@ policy、擁有者覆寫或授權 bundle。一般成果移交沿用既有規則�
 相同有效重試沿用原 note 與 ID，已撤銷 ID 不會重新啟用；重啟與採認保留最早終止見證的三十日期限。
 origin 失效後仍可查 get／list 歷史與 revoke，但歷史不代表可用完成證據或輸入授權。Python、AC、
 CLI、具名 MCP、REST、Builder 共用五個既有操作，Handoffs Actions 與 JSON 編輯器／結果區可顯示
-明確續授權審閱，不自動派送同意。跨主機移交、browser／remote 讀者、實際應用／裝置
+明確續授權審閱，不自動派送同意。跨主機移交、remote 讀者、實際應用／裝置
 來源及暫緩的原生／瀏覽器／真機／二十四小時驗收仍列於 ``Progress.md``。
 
 明確移交任務來源的完成證據
@@ -780,5 +781,33 @@ Handoffs 頁可明確選原本機 DAG 或原任務來準備 JSON；三個技能 
 ``agent_skill_recording_handoff.json``、``agent_skill_completion_handoff.json``、
 ``agent_skill_execution_handoff_review.json`` 與 ``agent_skill_execution_handoff_accept.json``。
 
-跨主機移交、browser／remote 讀者、實際應用／裝置來源、暫緩的原生與二十四小時驗收，以及未解的
+跨主機移交、remote 讀者、實際應用／裝置來源、暫緩的原生與二十四小時驗收，以及未解的
 HTTP409／bootstrap 問題仍列於 ``Progress.md``。
+
+原 context 的永久唯讀瀏覽器完成驗證
+----------------------------------------------------------------
+
+副作用已確認的瀏覽器任務，可透過既有完成審閱與技能流程讀取原本的 WebRunner context。
+原 helper 先永久結束 SDK 輸入／網路，再釋放輸入 journal／租約；runtime 最多保留 16 個 context，
+自分離前預留起最多保留 300 秒，不因分離耗時延長。預覽／建立核對實際 effect task 的即時 SDK view；驗證只借用原 context
+讀取最新有界 DOM／欄位值，不重新配置輸入、不 ACK 原生輸入、不傳輸，也不另開瀏覽器或 helper。
+退休切換、能力探測與清理也拒絕巢狀工具與原生輸入。
+同 profile 的不同任務分開保管，context ID 本身不授權。私有完成授權審閱可在原上限內明確續授權
+驗證 scope，原輸入規格不變；已失效輸入 origin 與有限私有保管本身均不授予讀取權限。
+擁有者刪除、目標停用、來源變動、期限或讀取失敗會使 context 失效；只有確認程序結束才釋放
+程序擁有權，清理失敗持續追蹤。重啟不還原頁面，網路結束後的 DOM 不能當作新伺服器資料。
+Python／AC／MCP／REST／CLI／Builder 與 GUI Actions 共用原審閱 request；技能錄製保留原動作，
+發布須使用自己的實際新驗證試跑與明確選取的完成證據。範例見
+``examples/agent_browser_retained_completion.py``。冷啟動瀏覽器前綴重建、remote reader、正式部署，
+以及暫緩的原生／瀏覽器／真機／24 小時驗收仍待完成。
+
+空佇列的背景輪詢
+----------------------------------------------------------------
+
+閒置背景 worker 以唯讀預檢辨識空佇列，減少輪詢與任務狀態、完成交易的寫入鎖競爭。
+發現工作後仍須在原有交易內重新核對與認領；保留 claim 世代、過期工作回收與重試上限，
+不延長任務或傳輸期限。
+
+租約維護會在停止交易內核對實際輸入擁有者與世代。延遲的監看程序不能改寫已退休任務的
+恢復證據，也不能取消新租約；接受的最終停止狀態與取消 token 會先於停止交易發布。
+仍有效的撤權與原有期限持續生效。

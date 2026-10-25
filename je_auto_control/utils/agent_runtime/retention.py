@@ -31,6 +31,8 @@ def prune_tasks(runtime: Any, keep_days: int = 30) -> dict[str, Any]:
                 continue
             if _preserve_task(runtime, task_id):
                 continue
+            # pylint: disable-next=protected-access  # reason: reap retained context before removing its source identity
+            runtime._retained_browsers.discard(task_id)
             runtime.evidence.remove(task_id)
             _remove_metadata(runtime.store, task_id)
             runtime._tokens.pop(task_id, None)

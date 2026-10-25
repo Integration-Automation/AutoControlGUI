@@ -31,8 +31,8 @@ Use the existing explicit ``owner_policy="source_owner"`` and returned ``ownersh
 creating a successor that must remain visible to the source owner; default caller ownership is unchanged.
 
 Python/API/AC/MCP/REST/CLI/Builder use the same recovery operation enum. The GUI exposes two Actions
-for preview/create and reuses the reviewed-request editor. Browser/remote readers and expired-scope
-completion renewal remain open; they never fall back to an ordinary helper or a new browser context.
+for preview/create and reuses the reviewed-request editor. Remote readers and production
+deployment remain open; they never fall back to an ordinary helper or a new browser context.
 
 Fresh read-only completion observation seam
 -------------------------------------------
@@ -53,7 +53,7 @@ different operations/owners cannot borrow a view, and browser clauses must be pi
 Target API/AC/MCP/REST/CLI/Builder and GUI views expose passive ``readonly_completion`` status only.
 Custom adapter descriptors are not evaluated, and no native readiness probe runs. Standard browser
 fresh-start, ordinary/custom helper fallback and unsupported remote readers remain refused. Future
-browser/remote observation contracts and expired-scope completion renewal remain open.
+remote observation contracts and production deployment remain open.
 Host adapters are trusted code; these protocol/dispatcher/input-observer guards are not an OS sandbox.
 
 Compare the accepted task specification
@@ -446,10 +446,11 @@ The read operation is ``text``, ``value`` or ``visible``; secret form controls a
 Observation-local DOM indexes resolve selectors and frames after the runtime's freshness check.
 Failed effects remain uncertain and require reconciliation; pause/cancel retire owned resources.
 GUI Actions can draft a browser target example for review, and DOM selection only edits the action request.
-The dedicated helper preserves one fresh session across readiness checks, acknowledges browser cleanup
-and then reaps its owned process tree. Existing desktop input ownership is not acquired for browser tasks.
+The dedicated helper preserves one fresh session across readiness checks. Ordinary cleanup acknowledges
+browser cleanup and reaps its owned process tree; eligible completion sources instead transfer their
+actual frozen context to the bounded runtime collection. Browser tasks acquire no desktop input ownership.
 Controlled cross-source tests use the real SDK with fake Chromium and owned IPC/loopback. Browser/native
-acceptance, reviewed transfers and browser workflow compilation remain tracked in ``Progress.md``.
+acceptance, production transfer configuration and additional browser workflow kinds remain tracked in ``Progress.md``.
 
 Profile example (review and register with ``manage_agent_target("register", profile)``)::
 
@@ -479,7 +480,7 @@ fill and read back destination fields, then verify saving. A stale confirmation 
 ``wait_seconds`` defaults to 5, is capped by the action budget, and late matching replies are refused.
 It never repeats a fill or click. Python/core, catalog/model schemas, MCP, CLI/REST task operations,
 Builder and GUI workflow preview use the shared compiler. Browser readback can serve as independent
-skill evidence. Actual application acceptance and reviewed upload/download grants remain open.
+skill evidence. Actual application acceptance and production upload/download configuration remain open.
 Managed browser startup requires WebRunner contract version 1 with complete bounded readback.
 
 Exact WebRunner readback compatibility
@@ -851,7 +852,7 @@ candidate or renew a published skill grant. Existing skill reauthorization remai
 Python, AC, CLI, authenticated MCP, REST and Builder share both operations. The Recovery page exposes
 two explicit Actions using its selected task, owner policy and request editor. Editable examples are
 ``agent_completion_authorization_review.json`` and ``agent_completion_authorization_create.json``.
-Browser/remote read-only providers, cross-host handoffs, actual application
+Remote read-only providers, cross-host handoffs, actual application
 state restoration and deferred native/device/browser/24-hour acceptance remain in ``Progress.md``.
 
 Explicit renewed-reader completion handoffs
@@ -890,7 +891,7 @@ preserve the earliest retained terminal witness's thirty-day deadline. Historica
 available after an origin expires, while that history supplies no usable completion or input grant.
 Python, AC, CLI, authenticated MCP, REST and Builder share the five existing operations. Existing
 Handoffs Actions and its JSON editor/result view show the explicit renewed review without dispatching
-consent automatically. Cross-host handoff, browser/remote readers, actual application/device
+consent automatically. Cross-host handoff, remote readers, actual application/device
 providers and deferred native/browser/device/24-hour acceptance remain in ``Progress.md``.
 
 Explicit task-source completion evidence handoffs
@@ -939,5 +940,38 @@ Builder share the same operations and actual caller identities. Editable request
 ``agent_skill_completion_handoff.json``, ``agent_skill_execution_handoff_review.json`` and
 ``agent_skill_execution_handoff_accept.json`` under ``examples/``.
 
-Cross-host handoffs, browser/remote readers, actual application/device providers, deferred native
+Cross-host handoffs, remote readers, actual application/device providers, deferred native
 and twenty-four-hour acceptance, and unresolved HTTP409/bootstrap issues remain in ``Progress.md``.
+
+Retained original browser completion
+----------------------------------------------------------------
+
+Stopped browser tasks with confirmed effects can now use the existing completion review and
+skill workflow with their actual original WebRunner context. The owned worker permanently freezes
+SDK input/network before its input journal and lease release; the runtime retains at most 16
+contexts for at most 300 absolute seconds, starting before detachment. Preview/new admission probe that exact effect task's live SDK view.
+The verifier borrows it for fresh bounded DOM/value reads, without configure, input ACKs, transfers
+or another browser/helper. Retirement, capability probes and cleanup deny nested tools and native input.
+Same-profile tasks keep separate contexts. A saved context ID grants nothing.
+Private completion authorization can explicitly renew the verification scope within the original
+ceiling while the original input specification stays immutable. Expired input origins grant no reads;
+bounded private custody alone is not authority. Removed owners, disabled targets, changed sources,
+expiry and failed reads invalidate contexts. Confirmed process reaping is required to free ownership;
+failed cleanup stays tracked. Restart cannot restore a page. Network-retired DOM is not new server data.
+Existing Python/AC/MCP/REST/CLI/Builder and GUI Actions share the same review requests. Skill recording
+keeps original actions; publication requires its own actual validation trial and selected completion.
+See ``examples/agent_browser_retained_completion.py``. Cold browser-prefix reconstruction, remote
+readers, production deployment and deferred native/browser/device/24-hour acceptance remain open.
+
+Idle work queue polling
+----------------------------------------------------------------
+
+Idle background workers check empty work queues without reserving a database writer, reducing
+contention with task status and completion transactions. A nonempty hint still requires the original
+transaction to recheck and claim the work. Claim generations, stale-work recovery and retry limits
+remain enforced; task and transport deadlines are unchanged.
+
+Lease maintenance binds expiry/revocation stops to the actual input owner and generation in the
+same stop transaction. A delayed watcher cannot rewrite retired recovery evidence or cancel a newer
+lease. The accepted final state and cancellation token are set before the stop becomes visible;
+current revocation and the original deadlines remain enforced.

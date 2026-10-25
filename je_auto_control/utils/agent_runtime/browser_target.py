@@ -2,7 +2,7 @@
 # pylint: disable=import-outside-toplevel  # reason: optional SDK and executor imports must remain lazy
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 import uuid
 from concurrent.futures import CancelledError
 
@@ -13,6 +13,8 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentHuma
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.agent_runtime.target_continuity import require_context_continuity
+from je_auto_control.utils.agent_runtime.browser_retirement import retirement_proof
+from je_auto_control.utils.agent_runtime.browser_readonly_scope import readonly_verification_scope
 
 
 def _open_session(origins: tuple[str, ...], *, transfer: bool = False) -> Any:
@@ -53,9 +55,13 @@ class BrowserTarget:
         self._session: Any = None
         self._identity = uuid.uuid4().hex
         self._spec: AgentTaskSpec | None = None
+        self._readonly: str | None = None
+        self._reader_spec: AgentTaskSpec | None = None
 
     def ready(self, spec: AgentTaskSpec) -> tuple[bool, str]:
         """Open only after the host has pinned and checked its browser profile and task tools."""
+        if self._readonly is not None:
+            raise AgentTaskError("read-only browser cannot be reconfigured")
         if self._session is not None:
             if self._spec != spec:
                 raise AgentTaskError("managed browser session cannot be rebound to another task scope")
@@ -74,6 +80,65 @@ class BrowserTarget:
             self.cleanup()
             raise AgentTaskError("managed WebRunner startup failed; check installed SDK/browser readiness") from None
         return True, ""
+
+    @property
+    def can_freeze_readonly(self) -> bool:
+        """Inspect actual SDK API availability only, without claiming retirement or native readiness."""
+        marker = getattr(self._session, "readonly_contract_version", None)
+        # pylint: disable-next=unidiomatic-typecheck  # reason: SDK contract versions exclude booleans
+        return (self._session is not None and type(marker) is int and marker == 1
+                and callable(getattr(self._session, "freeze_readonly", None)))
+
+    @property
+    def input_retired(self) -> bool:
+        """Report the monotonic input gate, independently of whether SDK cleanup was confirmed."""
+        return self._readonly is not None
+
+    def freeze_readonly(self) -> dict:
+        """Permanently retire the actual SDK owner before issuing any same-context proof."""
+        if self._readonly is not None:
+            return self.readonly_capabilities()
+        if not self.can_freeze_readonly:
+            return {"supported": False}
+        self._readonly = ""
+        try:
+            identity = self._session.context_id
+            if not isinstance(identity, str):
+                raise AgentTaskError("browser retirement context is unconfirmed")
+            self._session = self._session.freeze_readonly()
+            result = retirement_proof(self._session.capabilities(), identity)
+        except Exception:  # noqa: BLE001  # reason: contain optional SDK failures without input revival or data leaks
+            raise AgentTaskError("browser retirement is unconfirmed") from None
+        self._readonly = result["context_id"]
+        return result
+
+    def readonly_capabilities(self) -> dict:
+        """Check the current actual SDK view rather than trusting a saved description."""
+        if not self._readonly or self._session is None:
+            raise AgentTaskError("browser retirement is unconfirmed")
+        try:
+            return retirement_proof(self._session.capabilities(), self._readonly)
+        except Exception:  # noqa: BLE001  # reason: SDK faults stay bounded and leave this target permanently read-only
+            self._readonly = ""
+            raise AgentTaskError("browser retirement is unconfirmed") from None
+
+    @property
+    def readonly_spec(self) -> AgentTaskSpec:
+        """Separate current verification scope from the immutable original input specification."""
+        if self._spec is None:
+            raise AgentTaskError("read-only browser has no original scope")
+        return self._reader_spec if self._reader_spec is not None else self._spec
+
+    def bind_readonly(self, value: Any, *, validate: Callable[[AgentTaskSpec], Any]) -> dict:
+        """Bind only a host-admitted no-action verification scope; never configure or launch input."""
+        proof = self.readonly_capabilities()
+        if self._spec is None:
+            raise AgentTaskError("read-only browser has no original scope")
+        proposed = AgentTaskSpec.from_dict(value)
+        readonly_verification_scope(self._spec, proposed)
+        validate(proposed)
+        self._reader_spec = proposed
+        return proof
 
     def check_resume(self, spec: AgentTaskSpec, receipts: list[dict]) -> None:
         """Refuse a finite prefix after context retirement; an unchanged live context remains usable."""
@@ -106,6 +171,8 @@ class BrowserTarget:
 
     def perform(self, name: str, arguments: dict) -> Any:
         """Use the shared command authority gates, with the session bound only for this dispatch."""
+        if self._readonly is not None:
+            raise AgentTaskError("read-only browser cannot perform tools")
         if name not in BROWSER_ADAPTER_TOOLS or self._session is None:
             raise AgentTaskError("command is outside the reviewed browser adapter")
         from je_auto_control.utils.tool_use_schema import run_tool_call
@@ -128,7 +195,7 @@ class BrowserTarget:
             raise AgentTaskError("browser verification criterion is outside the owned task")
         from je_auto_control.utils.agent_runtime.browser_verification import evaluate_browser_clause
         try:
-            return evaluate_browser_clause(self._spec, self._session, clause)
+            return evaluate_browser_clause(self.readonly_spec, self._session, clause)
         except (AutoControlException, CancelledError):
             raise
         except Exception:  # noqa: BLE001 - SDK URL/read failures must not expose raw browser data

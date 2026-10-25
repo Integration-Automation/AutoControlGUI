@@ -8,12 +8,15 @@ from contextlib import ExitStack
 from typing import Any
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.browser_target import BrowserTarget
+from je_auto_control.utils.agent_runtime.browser_retirement import refuse_browser_tool
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
 from je_auto_control.utils.agent_runtime.policy import TaskPolicy, durable_payload
 from je_auto_control.utils.agent_runtime.targets import DesktopTarget
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.dispatch import command_guard
 from je_auto_control.utils.rbac.authorization import AuthorizationContext, authorization_scope
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.script_vars.execution import execution_scope
 from je_auto_control.wrapper._input_observer import input_observer
 from je_auto_control.utils.agent_runtime.context import TaskOperation, operation_scope
@@ -37,6 +40,10 @@ class NativeWorker:
         self._control_event = threading.Event()
         self._sink_lock = threading.Lock()
 
+    @property
+    def _browser_readonly(self) -> bool:
+        return isinstance(self._target, BrowserTarget) and self._target.input_retired
+
     def _reply(self, payload: dict) -> None:
         packet = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8") + b"\n"
         if len(packet) > _LIMIT:
@@ -50,6 +57,8 @@ class NativeWorker:
         self._reply({"control": "physical_input"})
 
     def _input(self, event: dict) -> None:
+        if self._browser_readonly:
+            raise AgentTaskError("read-only browser cannot acknowledge native input")
         if not self._cleanup:
             if self._activity is not None:
                 self._activity.check()
@@ -82,24 +91,70 @@ class NativeWorker:
                                              "error_type": type(error).__name__}))
 
     def _dispatch(self, operation: str, payload: dict) -> Any:
+        if self._browser_readonly:
+            with input_observer(self._input):
+                return self._dispatch_browser_readonly(operation, payload)
+        if operation == "retire_browser":
+            return self._retire_browser(payload)
         if operation == "bootstrap":
-            return {"protocol": 1}
+            return self._bootstrap()
         if operation == "cleanup":
             return self._release_owned(payload)
         if operation == "probe_browser":
             return self._probe_browser(payload)
         if operation == "configure":
             self._configure_scope(payload)
+        return self._scoped_operation(operation, payload)
+
+    def _bootstrap(self) -> dict:
+        """Advertise optional retirement only on the built-in original configured browser worker."""
+        result = {"protocol": 1}
+        # pylint: disable-next=unidiomatic-typecheck  # reason: read-only/custom worker subclasses cannot claim this API
+        if type(self) is NativeWorker and self._profile_kind == "browser" and isinstance(self._target, BrowserTarget):
+            result["browser_readonly"] = 1
+        return result
+
+    def _scoped_operation(self, operation: str, payload: dict) -> Any:
         if self._spec is None:
             raise AgentTaskError("native worker must be configured by its owner")
+        definition = self._target.readonly_spec if self._browser_readonly else self._spec
         with ExitStack() as stack:
-            stack.enter_context(authorization_scope(self._owner))
-            policy = TaskPolicy(self._spec)
+            authority = DeferredAuthorization(self._owner).scope() if self._browser_readonly else (
+                authorization_scope(self._owner))
+            stack.enter_context(authority)
+            policy = TaskPolicy(definition)
             stack.enter_context(command_guard(lambda name, arguments: self._guard(policy, name, arguments)))
-            stack.enter_context(execution_scope(dict(self._spec.inputs)))
+            stack.enter_context(execution_scope(dict(definition.inputs)))
             stack.enter_context(input_observer(self._input))
-            stack.enter_context(operation_scope(TaskOperation(self._spec, self._check_activity, self._owner)))
+            stack.enter_context(operation_scope(TaskOperation(definition, self._check_activity, self._owner)))
             return self._operation(operation, payload)
+
+    def _retire_browser(self, payload: dict) -> dict:
+        if payload != {} or self._profile_kind != "browser" or self._spec is None:
+            raise AgentTaskError("browser retirement requires the configured original scope")
+        with command_guard(refuse_browser_tool), input_observer(self._input):
+            if not self._target.can_freeze_readonly:
+                return {"supported": False}
+            return self._target.freeze_readonly()
+
+    def _dispatch_browser_readonly(self, operation: str, payload: dict) -> Any:
+        if operation == "cleanup":
+            return self._cleanup_browser_readonly(payload)
+        _readonly_browser_payload(operation, payload)
+        with command_guard(refuse_browser_tool):
+            proof = self._target.readonly_capabilities()
+            if operation in {"readonly_capabilities", "retire_browser"}:
+                return proof
+            if operation == "bind_browser_reader":
+                return self._target.bind_readonly(payload["spec"], validate=TaskPolicy)
+        return self._scoped_operation(operation, payload)
+
+    def _cleanup_browser_readonly(self, payload: dict) -> dict:
+        if payload != {"keys": [], "buttons": []}:
+            raise AgentTaskError("read-only browser cleanup cannot inject input")
+        with command_guard(refuse_browser_tool), input_observer(self._input):
+            self._target.cleanup()
+        return {"cleaned": True}
 
     def _probe_browser(self, payload: dict) -> dict:
         if self._spec is not None or not isinstance(payload, dict) or set(payload) != {"transfer"}:
@@ -116,7 +171,6 @@ class NativeWorker:
             from je_auto_control.utils.agent_runtime.file_target import FileTarget
             self._target = FileTarget()
         if not self._custom_target and self._profile_kind == "browser":
-            from je_auto_control.utils.agent_runtime.browser_target import BrowserTarget
             if not isinstance(self._target, BrowserTarget):
                 self._target = BrowserTarget()
 
@@ -139,6 +193,8 @@ class NativeWorker:
             self._activity.check()
 
     def _guard(self, policy: TaskPolicy, name: str, arguments: Any) -> None:
+        if self._browser_readonly and name != "AC_browser_read":
+            raise AgentTaskError("read-only browser cannot dispatch tools")
         self._check_activity()
         policy.check(name, arguments)
 
@@ -198,6 +254,13 @@ class NativeWorker:
             raise AgentTaskError("owned native input cleanup is incomplete")
         self._target.cleanup()
         return {"cleaned": True}
+
+
+def _readonly_browser_payload(operation: str, payload: Any) -> None:
+    fields = {"observe": set(), "verify_browser": {"clause"}, "bind_browser_reader": {"spec"},
+              "readonly_capabilities": set(), "retire_browser": set()}
+    if operation not in fields or not isinstance(payload, dict) or set(payload) != fields[operation]:
+        raise AgentTaskError("read-only browser refuses executable or reconfiguration operations")
 
 
 def main() -> None:

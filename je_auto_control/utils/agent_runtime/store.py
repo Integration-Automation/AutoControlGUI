@@ -314,18 +314,26 @@ class AgentTaskStore:
             connection.execute("UPDATE agent_tasks SET state=?,reason=?,updated=?,verification=? WHERE id=?",
                                (state, reason, time.time(), json.dumps(detached(verification or [])), task_id))
 
-    def request_stop(self, task_id: str, state: str) -> bool:
-        """Request control retirement atomically without overwriting concurrently committed completion."""
+    def request_stop(self, task_id: str, state: str, *, control: tuple[str, str, int] | None = None,
+                     accepted: Callable[[], None] | None = None, reason: str = "") -> bool:
+        """Request retirement under an optional exact lease and publish accepted host state before commit."""
         if state not in {"pausing", "cancelling"}:
             raise AgentTaskError("invalid task stop request")
         with self.connection(write=True) as connection:
-            cursor = connection.execute("UPDATE agent_tasks SET state=?,reason='',updated=?,verification='[]' "
+            if control is not None:
+                owned = connection.execute(
+                    "SELECT 1 FROM agent_control WHERE target=? AND owner=? AND generation=?", control).fetchone()
+                if owned is None:
+                    return False
+            cursor = connection.execute("UPDATE agent_tasks SET state=?,reason=?,updated=?,verification='[]' "
                 "WHERE id=? AND state NOT IN ('succeeded','failed','cancelled','timed_out')",
-                (state, time.time(), task_id))
+                (state, reason, time.time(), task_id))
+            if cursor.rowcount == 1 and accepted is not None:
+                accepted()
             return cursor.rowcount == 1
 
     def transition(self, task_id: str, expected: str, state: str, *,
-                   reason: str = "", verification: Any = None,
+                   reason: str | None = "", verification: Any = None,
                    validate: Callable[[Any], None] | None = None) -> bool:
         """Compare and publish nonterminal state without overwriting concurrent control requests."""
         if expected not in STATES - TERMINAL or state not in STATES:
@@ -333,7 +341,8 @@ class AgentTaskStore:
         reports = json.dumps(detached(verification or []))
         with self.connection(write=True) as connection:
             cursor = connection.execute(
-                "UPDATE agent_tasks SET state=?,reason=?,updated=?,verification=? WHERE id=? AND state=?",
+                "UPDATE agent_tasks SET state=?,reason=COALESCE(?,reason),updated=?,verification=? "
+                "WHERE id=? AND state=?",
                 (state, reason, time.time(), reports, task_id, expected))
             if cursor.rowcount == 1 and expected == "verifying" and state == "succeeded":
                 connection.execute("INSERT OR REPLACE INTO agent_completion VALUES (?,1,?)", (task_id, time.time()))

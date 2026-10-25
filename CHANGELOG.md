@@ -1,5 +1,15 @@
 # Changelog
 
+Retain confirmed browser effects in their actual original WebRunner context for private read-only
+completion and skill validation. Freeze input/network before releasing the input journal and
+lease; keep bounded context lifetime, exact private reader scope and confirmed process cleanup.
+Unsupported SDKs still clean up normally, and lost contexts cannot start replacement browsers.
+Keep non-browser input cleanup independent of action-evidence reads. Idle queue polls avoid
+reserving an empty writer. Expiry/revocation stops recheck the actual input owner and generation
+under the stop writer, publishing accepted final state before settling workers observe it.
+Concurrent retirement remains pending for its actual task owner; stale watchers cannot rewrite
+retired recovery snapshots or cancel a newer lease. No public request schema or deadline changes.
+
 Add explicit source_task variants of the five completion handoff operations without synthetic DAG
 admission or broader task access. Recording, original-trial publication and exact execution-chain
 review adopt selected grants through host-only bounded evidence views. Retain current historical,

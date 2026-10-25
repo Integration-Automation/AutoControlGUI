@@ -4,7 +4,7 @@ from __future__ import annotations
 from contextlib import nullcontext
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from je_auto_control.utils.agent_runtime.completion_contract import decode_completion_binding, decode_private_object
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentHumanReview
@@ -26,6 +26,20 @@ from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 
 _STOPPED = frozenset({"paused", "waiting_user", "recovering", "cancelled", "timed_out", "failed"})
 _INDEPENDENT = frozenset({"file_exists", "file_text", "file_sha256", "file_manifest", "screen", "browser"})
+
+
+def retainable_browser(target: Any, row: dict, receipts: Callable[[], list[dict]]) -> bool:
+    """Admit only the real built-in browser with confirmed effects and independent browser criteria."""
+    # pylint: disable-next=unidiomatic-typecheck  # reason: custom flags cannot opt into private helper ownership
+    if type(target) is not NativeDesktopTarget or not target.has_browser_context:
+        return False
+    spec = AgentTaskSpec.from_dict(row["spec"])
+    if not any(clause.get("kind") == "browser" for clause in spec.success_criteria):
+        return False
+    actions = receipts()
+    if any(item["status"] not in {"confirmed", "not_applied", "failed"} for item in actions):
+        return False
+    return complete(spec, effective_actions(actions)) if spec.mode == "skill" else not spec.actions
 
 
 def _connection(store: Any, connection: Any) -> Any:
@@ -130,9 +144,10 @@ def completion_metadata(store: Any, task_id: str, *, runtime: Any = None) -> dic
     return result
 
 
-def completion_target(runtime: Any, row: Mapping, original: Any) -> Any:
+def completion_target(runtime: Any, row: Mapping, original: Any, operation: Callable[[], Any]) -> Any:
     """Select a separately owned read-only proxy from private admission, never from model-authored options."""
-    if completion_details(runtime.store, row["id"]) is None:
+    details = completion_details(runtime.store, row["id"])
+    if details is None:
         return original
     # pylint: disable-next=protected-access  # reason: cache is private runtime-owned adapter lifecycle state
     cache = runtime._completion_targets
@@ -143,7 +158,13 @@ def completion_target(runtime: Any, row: Mapping, original: Any) -> Any:
             # pylint: disable-next=import-outside-toplevel  # reason: only privately admitted tasks need this adapter
             from je_auto_control.utils.agent_runtime.readonly_target import new_completion_target
             _require_target(original)
-            cached = new_completion_target(original)
+            if original.is_managed_browser:
+                # pylint: disable-next=import-outside-toplevel  # reason: only browser completion needs retained contexts
+                from je_auto_control.utils.agent_runtime.retained_browser_runtime import completion_adapter
+                effect = runtime.store.get(details["effect_task"])
+                cached = completion_adapter(runtime, effect, AgentTaskSpec.from_dict(row["spec"]), operation)
+            else:
+                cached = new_completion_target(original)
             cache[row["id"]] = cached
         return cached
 
@@ -235,6 +256,7 @@ def control_completion(recovery: Any, operation: str, row: dict, request: dict, 
         spec, details, authorization = completion_spec(runtime, effect), _details(runtime, row, effect, ownership), None
     owned = ownership_review(ownership, details["source_snapshot"])
     if operation in {"preview_completion", 'review_completion_authorization'}:
+        _require_browser_context(runtime, effect)
         result = {"source_task": row["id"], "effect_task": effect["id"], "snapshot": details["source_snapshot"],
                   "approval_required": True, "source_completion_inherited": False, "verification_spec": spec.to_dict()}
         if owned is not None:
@@ -264,19 +286,33 @@ def _create(recovery: Any, row: dict, request: dict, spec: AgentTaskSpec, detail
         if completion_details(runtime.store, existing['task_id']) != details:
             raise AgentTaskError("source already has a different completion review")
         return existing
+    _require_browser_context(runtime, runtime.store.get(details["effect_task"]))
     proof = ({**authorization_details(authorization, spec), 'kind': 'readonly_completion',
               'binding': authorization['context']['source_snapshot']} if authorization is not None else None)
     def validate(connection: Any) -> None:
         current = runtime.store.read_task(connection, row['id'])
         with DeferredAuthorization.capture().scope():
-            actual = _renewal(runtime, current, owned, connection=connection)
+            if authorization is not None:
+                actual = _renewal(runtime, current, owned, connection=connection)
+            else:
+                effect = _effect(runtime, current, connection=connection)
+                actual = (completion_spec(runtime, effect),
+                          _details(runtime, current, effect, owned, connection=connection), None)
         if (actual[0].to_dict(), actual[1], actual[2]) != (spec.to_dict(), details, authorization):
             raise AgentTaskError('completion source or authorization changed during creation')
     # pylint: disable-next=protected-access  # reason: atomic private proof and real lineage share the task transaction
     task = runtime._create_task(spec, None, recovery=(row["id"], request["snapshot"], note),
-                                authorization=CompletionBinding(recovery_binding(proof, owned), details,
-                                                                validate if authorization is not None else None))
+                                authorization=CompletionBinding(recovery_binding(proof, owned), details, validate))
     return {"task_id": task.task_id, "state": task.state, "recovery": recovery_link(runtime.store, task.task_id)}
+
+
+def _require_browser_context(runtime: Any, effect: dict) -> None:
+    # pylint: disable-next=protected-access  # reason: the built-in target was checked before private completion admission
+    if not runtime._targets[effect["spec"]["target"]].is_managed_browser:
+        return
+    # pylint: disable-next=import-outside-toplevel  # reason: desktop/file completion keeps its existing helper path
+    from je_auto_control.utils.agent_runtime.retained_browser_runtime import require_source
+    require_source(runtime, effect)
 
 
 def _renewal_base(runtime: Any, source: dict, effect: dict, *, connection: Any = None, depth: int = 0) -> dict:
