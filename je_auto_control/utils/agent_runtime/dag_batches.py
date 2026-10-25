@@ -52,6 +52,11 @@ def _request(operation: Any, value: Any) -> dict:
     return request
 
 
+def _matching_handoff_submission(value: Any, accepted: dict, source: dict, expected: str) -> bool:
+    return (value is not None and value['spec_digest'] == expected
+            and accepted['spec_hash'] == request_spec_digest(source['spec']))
+
+
 # pylint: disable-next=too-few-public-methods  # reason: one closed protocol entry point owns durable batch operations
 class DagBatches:
     """Persist original graph/owner and pre-delivery claims; never infer continuation from lookup absence."""
@@ -60,40 +65,46 @@ class DagBatches:
         self.runtime = runtime
 
     def handoff_context(self, batch_id: str, node_id: str, *, origin_policies: list[str] | None = None,
-                        connection: Any = None) -> dict:
+                        connection: Any = None, identity_only: bool = False) -> dict:
         """Derive a local evidence recipient from a real original request and private DAG admission."""
         batch = self._row(batch_id, connection=connection)
         node = bound_node(batch, node_id)
         if node['host'] != 'local':
             raise AgentTaskError('local handoffs cannot authorize a remote destination')
         source, admission, expected = self._handoff_source(batch, node, connection=connection)
-        policy_spec = detached(source['spec'])
-        if origin_policies is not None:
-            options = policy_spec['options']
-            options['origin_policies'] = sorted(set(options.get('origin_policies', [])) | set(origin_policies))
-        # pylint: disable-next=protected-access  # reason: original and issuing-session ceilings cover every actual effect
-        policy = TaskPolicy(self.runtime._validated_spec(policy_spec))
+        policy = None if identity_only else self.handoff_policy(source, origin_policies)
         binding = {'batch_id': batch_id, 'node_id': node_id, 'graph_hash': batch['graph_hash'],
                    'source_task': source['id'], 'source_spec_digest': expected, 'owner': batch['owner'],
                    'request': request_spec_digest(node['task']), 'admission': admission}
         return {'binding': binding, 'source': source, 'state': batch['state'], 'policy': policy}
 
+    def handoff_policy(self, source: dict, origin_policies: list[str] | None = None) -> TaskPolicy:
+        """Preserve original effect policy for grants without a privately reviewed completion renewal."""
+        policy_spec = detached(source['spec'])
+        if origin_policies is not None:
+            options = policy_spec['options']
+            options['origin_policies'] = sorted(set(options.get('origin_policies', [])) | set(origin_policies))
+        # pylint: disable-next=protected-access  # reason: original and issuing-session ceilings cover every actual effect
+        return TaskPolicy(self.runtime._validated_spec(policy_spec))
+
     def _handoff_source(self, batch: dict, node: dict, *, connection: Any = None) -> tuple[dict, dict, str]:
         owner = batch['owner']
-        with DeferredAuthorization(AuthorizationContext(**owner) if owner else None).scope():
-            original = self.runtime.lookup(node['task']['idempotency_key'])
-        if original.get('found') is not True:
-            raise AgentTaskError('handoff original DAG request evidence is unavailable')
-        identifier = original['task']['task_id']
         transaction = self.runtime.store.connection() if connection is None else nullcontext(connection)
         with transaction as active_connection:
-            source = self.runtime.store.read_task(active_connection, identifier)
+            with DeferredAuthorization(AuthorizationContext(**owner) if owner else None).scope():
+                original = self.runtime.store.request_record(owner, node['task']['idempotency_key'],
+                                                              connection=active_connection)
+            if original is None:
+                raise AgentTaskError('handoff original DAG request evidence is unavailable')
+            source = self.runtime.store.read_task(active_connection, original['task_id'])
             found = active_connection.execute('SELECT * FROM agent_dag_local_tasks WHERE task_id=?',
-                                               (identifier,)).fetchone()
+                                               (source['id'],)).fetchone()
+            submitted = active_connection.execute('SELECT spec_digest FROM agent_task_submissions WHERE task_id=?',
+                                                   (source['id'],)).fetchone()
         expected = submitted_digest(node['task']['spec'])
         if (found is None or (found['batch_id'], found['node_id'], found['spec_digest'])
                 != (batch['id'], node['id'], expected)
-                or original['task']['metadata'].get('submitted_spec_digest') != expected):
+                or not _matching_handoff_submission(submitted, original, source, expected)):
             raise AgentTaskError('handoff requires the real bound local DAG admission and submission witness')
         if any(owner.get(key) != source['owner'].get(key) for key in ('user_id', 'store_path')):
             raise AgentTaskError('handoff original source owner differs from its batch')

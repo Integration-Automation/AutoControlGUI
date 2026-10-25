@@ -9,7 +9,7 @@
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-接續完成第 5 組非 DAG／跨 caller 成果移交組合及 browser／remote
+接續完成第 5 組非 DAG／跨主機成果移交及 browser／remote
 reader，並核對第 4 組真實裝置控制／擷取來源、其餘實作及第 8 組交付核對。
 
 1. **P4：瀏覽器與正式環境接合**
@@ -94,9 +94,6 @@ reader，並核對第 4 組真實裝置控制／擷取來源、其餘實作及�
    - 將唯讀完成審閱／驗證／發布延伸至 browser／remote target：補可信唯讀 reader，來源副作用與
      當前獨立條件須分別核對；缺少原瀏覽器 context 時不可新開頁面當作舊狀態，亦不可回退普通
      可操作 helper、重做最後動作或解除未知隔離來完成認證。原生／真機能力與驗收仍須分開確認。
-   - 接合已續授權的唯讀完成讀者與既有 local DAG 跨 caller 成果移交；不可直接沿用過期原
-     policy。組合契約須明確固定新限制、實際來源／批次身分與原效果證據，持續核對發出者及接收者
-     權限；不可藉由刪除原限制、普通可操作復原子任務或更換 helper 繞過。目前保留明確拒絕。
    - 針對新增平台／裝置及恢復路徑重驗服務重啟、WorkQueue 去重、事件／排程重新授權、
      journal／history／產物關聯及 30 天保留／清理，不擴大既有權限。
 
@@ -131,6 +128,12 @@ reader，並核對第 4 組真實裝置控制／擷取來源、其餘實作及�
      `WIP`：完整套件曾在 `test_dag_managed_loopback.py::test_distinct_targets_run_concurrently_with_destination_verification`
      偶發提交 HTTP 409，另一節點等待後限流；該次為 5,391 passed／17 skipped／1 failed。
      單獨 20 次與整檔 60 次回歸均未重現；仍須取得最初拒絕原因，不能以後續通過宣稱已修復。
+     `WIP`：第 71 階段全套在
+     `test_agent_completion_handoff_security.py::test_matching_grant_digest_cannot_make_invalid_private_renewal_authoritative[completion_task-named_dag]`
+     的 fixture 首次 `observe` 發生 `native helper bootstrap deadline exhausted`；
+     該次為 15,235 passed／77 skipped／1 setup error，案例本體未執行。
+     須收集自有 helper 啟動時間與逾時前堆疊以釐清原因；不放寬 15 秒期限、不重試或略過錯誤，
+     單獨重跑通過與後續全套通過都不能代表此啟動問題已修復。
    - 重跑三平台型別、Ruff／Bandit、檔案／函式／複雜度及文件計數，檢查新增 lint 問題；
      AutoControl 全套 Pylint 仍有既有問題，不能把局部模組通過當全套零問題。
      WebRunner 既有全套 mypy／flake8／嚴格 Sphinx 債務見其 `Progress.md` #23，不能標示全綠。

@@ -75,8 +75,9 @@ def _public(row: dict) -> dict:
 class EvidenceHandoffs:
     """Grant only immutable DAG completion projections; no ambient task-read capability is installed."""
 
-    def __init__(self, runtime: Any, context: Callable, witness: Callable) -> None:
+    def __init__(self, runtime: Any, context: Callable, witness: Callable, scope: Callable | None = None) -> None:
         self.runtime, self.context, self.witness = runtime, context, witness
+        self.scope = scope
 
     def control(self, operation: str, request: dict) -> dict:
         """Review, issue, inspect or revoke a closed caller-scoped evidence handoff."""
@@ -137,13 +138,17 @@ class EvidenceHandoffs:
                            tuple(row[key] for key in fields))
 
     def _proof(self, connection: Any, request: dict, actor: dict, *, issuing: bool = False,
-               issuer_policies: list[str] | None = None) -> tuple[dict, list[dict]]:
+               issuer_policies: list[str] | None = None, authorization: dict | None = None) -> tuple[dict, list[dict]]:
+        options = {'identity_only': True} if self.scope is not None else {}
         context = self.context(request['batch_id'], request['node_id'],
-                               origin_policies=issuer_policies, connection=connection)
+                               origin_policies=issuer_policies, connection=connection, **options)
         if context['state'] not in ({'waiting_review'} if issuing else {'waiting_review', 'approved', 'running'}):
             raise AgentTaskError('handoff batch is not in a reviewed evidence state')
         _manager(actor, context['binding']['owner'])
         links = self._chain(connection, context['source']['id'], request['task_id'], issuing=issuing)
+        if self.scope is not None:
+            context['issuer'] = actor
+            context.update(self.scope(connection, context, links, issuer_policies, authorization, issuing=issuing))
         segments, tasks = self._segments(connection, context, links, actor)
         leaf = tasks[-1]
         reply = self._task(connection, leaf, links[-1][2])
@@ -152,6 +157,8 @@ class EvidenceHandoffs:
                  'leaf_owner': leaf['owner'], 'segments': segments, 'expires': _expiry(tasks),
                  'issuer_policies': (sorted(context['policy'].spec.options.get('origin_policies', []))
                                      if issuer_policies is None else issuer_policies)}
+        if context.get('completion_authorization') is not None:
+            proof['completion_authorization'] = context['completion_authorization']
         return proof, [self._task(connection, child, link) for _source, child, link in reversed(links)]
 
     def _segments(self, connection: Any, context: dict, links: list, actor: dict) -> tuple[list, list]:
@@ -159,7 +166,8 @@ class EvidenceHandoffs:
         for source, child, link in links:
             _manager(actor, source['owner'])
             _manager(actor, child['owner'])
-            evidence = self.witness(connection, source, child, link)
+            options = ({'scope': context['policy']} if context.get('completion_authorization') is not None else {})
+            evidence = self.witness(connection, source, child, link, **options)
             for action in evidence['actions']:
                 if action['status'] == 'confirmed':
                     context['policy'].check(action['command'], action['arguments'])
@@ -208,9 +216,19 @@ class EvidenceHandoffs:
     @staticmethod
     def _projection(proof: dict) -> dict:
         binding = proof['binding']
-        return {'contract': 1, **{key: binding[key] for key in ('batch_id', 'node_id', 'source_task')},
+        result = {'contract': 1, **{key: binding[key] for key in ('batch_id', 'node_id', 'source_task')},
                 'task_id': proof['task_id'], 'segments': proof['segments'], 'expires': proof['expires'],
                 'evidence_only': True, 'input_authorized': False}
+        if 'completion_authorization' in proof:
+            bundle = proof['completion_authorization']
+            result['completion_authorization'] = {
+                'contract': 1, 'completion_task': bundle['completion_task'],
+                'completion_review': bundle['completion_review'], 'review': _digest(bundle),
+                'approved_root_count': len(bundle['segments'][0]['authorization']['approved_roots']),
+                **{name: sorted({origin for segment in bundle['segments']
+                                for origin in segment['authorization']['context'][name]})
+                   for name in ('replaced_origins', 'retained_origins', 'current_origins')}}
+        return result
 
     def _load(self, connection: Any, identifier: str) -> tuple[dict, dict]:
         _identifier(identifier)
@@ -246,7 +264,8 @@ class EvidenceHandoffs:
                 row, proof = self._load(connection, request['handoff_id'])
                 self._audit_authority(proof)
                 return {'handoff': _public(row)}
-            context = self.context(request['batch_id'], request['node_id'])
+            options = {'identity_only': True} if self.scope is not None else {}
+            context = self.context(request['batch_id'], request['node_id'], **options)
             found = connection.execute('SELECT * FROM agent_evidence_handoffs WHERE batch_id=? AND node_id=? '
                 'ORDER BY created DESC LIMIT 200', (context['binding']['batch_id'], request['node_id'])).fetchall()
             return {'handoffs': [_public(dict(row)) for row in found]}
@@ -287,9 +306,11 @@ class EvidenceHandoffs:
                         batch_id, node_id, source_task, task_id):
                     raise AgentTaskError('handoff batch, node, source or evidence identity differs')
                 proof, tasks = self._proof(active_connection, row, previous['issuer'],
-                                           issuer_policies=previous['issuer_policies'])
+                                           issuer_policies=previous['issuer_policies'],
+                                           authorization=previous.get('completion_authorization'))
                 if proof != previous or self._proof(active_connection, row, previous['issuer'],
-                                                     issuer_policies=previous['issuer_policies'])[0] != previous:
+                        issuer_policies=previous['issuer_policies'],
+                        authorization=previous.get('completion_authorization'))[0] != previous:
                     raise AgentTaskError('handoff evidence or binding changed')
                 self._active(active_connection, row)
                 tasks[0]['metadata']['evidence_handoff'] = {'contract': 1, 'id': handoff_id, 'review': row['review']}

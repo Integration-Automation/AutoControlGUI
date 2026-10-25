@@ -448,5 +448,43 @@ candidate or renew a published skill grant. Existing skill reauthorization remai
 Python, AC, CLI, authenticated MCP, REST and Builder share both operations. The Recovery page exposes
 two explicit Actions using its selected task, owner policy and request editor. Editable examples are
 `agent_completion_authorization_review.json` and `agent_completion_authorization_create.json`.
-Browser/remote read-only providers, composition with legacy cross-caller handoffs, actual application
+Browser/remote read-only providers, non-DAG/cross-host handoffs, actual application
 state restoration and deferred native/device/browser/24-hour acceptance remain in `Progress.md`.
+
+## Explicit renewed-reader completion handoffs
+
+Existing `review_handoff` / `create_handoff` can explicitly transfer completion evidence from
+a privately renewed, permanently read-only reader to its real original local DAG. Select that reader's
+task ID and the actual original batch/node. The service derives the proof; callers cannot supply a
+policy, ownership override or authorization bundle. Ordinary handoffs keep their existing rules.
+
+The preview's `evidence.completion_authorization` contains the completion task/review, a bound review
+digest, approved-root count and replaced/retained/current origin IDs. It omits private principal paths,
+action arguments and captures. Set creation's `review` to the returned top-level `handoff_review`, then
+provide a nonempty `note`. Every actual task keeps its reviewed ceiling; all live historical restrictions stay, unavailable
+references are explicitly reviewed, and the issuing session's additional constraints remain live.
+The grant uses the exact already-verified reader roots. A different intersection requires another
+real completion review and verification. The consuming session/profile still applies its own limits.
+
+At most sixteen actual recovery links may mix previously reviewed executable successors and private
+readers. A succeeded intermediate reader needs actual private historical scope and retirement proof;
+an ordinary succeeded source does not gain that exemption. No helper is launched or input replayed
+while granting or adopting evidence. Old source state, witnesses, receipts and all task owners stay.
+The original owner receives only the bounded completion projection, without ordinary access to the
+other caller's task. Revocation or lost authority blocks adoption and late dependency validation.
+
+Original accepted-request hashes, raw submission witnesses, private admission, graph, owners/reviewers,
+all real source/child snapshots and the leaf renewal remain bound. Reads and post-write checks use
+the same SQLite writer, including uncommitted changes; mutation rolls back admission/grant creation.
+An inherited `dag_batch` option is not admission: a bounded real recovery chain must resolve the actual
+original request and admitting identity without creating a replacement admission row. Earlier ordinary
+completion binding hashes remain compatible. Each historical task retains its own policy review;
+combining history cannot bypass the normal sixteen-live-origin limit or any original root ceiling.
+
+Exact active retries retain their note and ID; revoked IDs never reactivate. Restart and adoption
+preserve the earliest retained terminal witness's thirty-day deadline. Historical get/list/revoke stay
+available after an origin expires, while that history supplies no usable completion or input grant.
+Python, AC, CLI, authenticated MCP, REST and Builder share the five existing operations. Existing
+Handoffs Actions and its JSON editor/result view show the explicit renewed review without dispatching
+consent automatically. Non-DAG/cross-host handoff, browser/remote readers, actual application/device
+providers and deferred native/browser/device/24-hour acceptance remain in `Progress.md`.

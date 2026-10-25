@@ -5,7 +5,7 @@ import json
 import hashlib
 import time
 import uuid
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from typing import Any, Callable, Iterator, List
 
@@ -259,11 +259,12 @@ class AgentTaskStore:
         record = self.request_record(owner, key)
         return record["task_id"] if record else None
 
-    def request_record(self, owner: dict, key: str) -> dict[str, Any] | None:
+    def request_record(self, owner: dict, key: str, *, connection: Any = None) -> dict[str, Any] | None:
         """Read accepted identity and immutable spec digest from the same request snapshot."""
         identity = _request_identity(owner, key)
-        with self.connection() as connection:
-            row = connection.execute(
+        transaction = self.connection() if connection is None else nullcontext(connection)
+        with transaction as reading:
+            row = reading.execute(
                 "SELECT task_id,spec_hash FROM agent_request_keys "
                 "WHERE owner_key=? AND key_hash=?", identity).fetchone()
         return dict(row) if row else None

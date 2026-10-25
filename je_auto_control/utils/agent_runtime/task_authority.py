@@ -32,6 +32,15 @@ class CompletionBinding:
     validate: Callable[[Any], None] | None = None
 
 
+@dataclass(frozen=True)
+class HandoffScope:
+    """Host-only reviewed effect policy; JSON flags cannot create historical reader authority."""
+
+    policy: TaskPolicy
+    source_readonly: bool
+    child_readonly: bool
+
+
 def validate_ownership_request(operation: str, request: dict, fields: set[str]) -> None:
     """Accept an explicit source-owner policy and its reviewed token, never an arbitrary owner identity."""
     expected = set(fields)
@@ -181,7 +190,7 @@ def check_recovery_authority(runtime: Any, connection: Any, source: dict, child:
         _task_effect_authority(runtime, connection, row)
 
 
-def _task_effect_authority(runtime: Any, connection: Any, row: dict, *, historical: bool = False) -> TaskPolicy:
+def _task_effect_identity(runtime: Any, connection: Any, row: dict, historical: bool) -> None:
     recorded = _recorded_owner(connection, row['id'])
     if recorded is not None and actor_identity(recorded['owner']) != actor_identity(row['owner']):
         raise AgentTaskError('recovery execution task ownership changed')
@@ -191,10 +200,18 @@ def _task_effect_authority(runtime: Any, connection: Any, row: dict, *, historic
         check_task_authority(runtime, row['id'])
     with DeferredAuthorization(AuthorizationContext(**row['owner']) if row['owner'] else None).scope():
         pass
+
+
+def _task_effect_authority(runtime: Any, connection: Any, row: dict, *, historical: bool = False) -> TaskPolicy:
+    _task_effect_identity(runtime, connection, row, historical)
+    return _task_effect_policy(runtime, connection, row)
+
+
+def _task_effect_policy(runtime: Any, connection: Any, row: dict) -> TaskPolicy:
     # pylint: disable-next=protected-access  # reason: retain current host profiles and caller origin ceilings
     policy = TaskPolicy(runtime._validated_spec(row['spec']))
     policy.validate_snapshot()
-    for action in runtime.store.actions(row['id']):
+    for action in runtime.store.read_actions(connection, row['id']):
         if action['status'] == 'confirmed':
             policy.check(action['command'], action['arguments'])
     return policy
@@ -231,36 +248,51 @@ def _handoff_scope(parent: dict, child: dict) -> None:
         raise AgentTaskError('handoff recovery changed fixed options')
 
 
-def _handoff_retired(runtime: Any, source: dict, child: dict, link: dict, evidence: dict) -> None:
+def _handoff_retired(runtime: Any, source: dict, child: dict, link: dict, evidence: dict,
+                     scope: HandoffScope | None = None) -> None:
     # pylint: disable-next=protected-access  # reason: only inspect short owned runtime retirement witnesses
     with runtime._mutex:
         # pylint: disable-next=protected-access  # reason: unwinding input cannot provide completion evidence
         if any(row['id'] in runtime._leases or row['id'] in runtime._executing for row in (source, child)):
             raise AgentTaskError('handoff evidence input has not retired')
     stopped = {'paused', 'waiting_user', 'recovering', 'cancelled', 'timed_out', 'failed'}
-    if source['state'] not in stopped or child['state'] not in stopped | {'succeeded'}:
+    reader_success = scope is not None and scope.source_readonly and source['state'] == 'succeeded'
+    if (source['state'] not in stopped and not reader_success) or child['state'] not in stopped | {'succeeded'}:
         raise AgentTaskError('handoff requires stopped source and retired successor evidence')
     if evidence['source_snapshot'] != link['snapshot']:
         raise AgentTaskError('handoff source recovery snapshot changed')
 
 
-def _handoff_owners(runtime: Any, connection: Any, source: dict, child: dict, link: dict) -> TaskPolicy:
+def check_historical_recovery_identity(runtime: Any, connection: Any, source: dict, child: dict, link: dict) -> None:
+    """Refresh actual historical ownership/admission without reviving unavailable input policies."""
     ownership = _recorded_owner(connection, child['id'])
     _check_pair(ownership or {'owner': source['owner'], 'actor': child['owner']})
     if ownership is not None and (ownership['source_snapshot'] != link['snapshot']
                                  or actor_identity(ownership['owner']) != actor_identity(source['owner'])):
         raise AgentTaskError('handoff recovery ownership review changed')
-    source_policy = _task_effect_authority(runtime, connection, source, historical=True)
-    _task_effect_authority(runtime, connection, child, historical=True)
+    for row in (source, child):
+        _task_effect_identity(runtime, connection, row, True)
+
+
+def _handoff_owners(runtime: Any, connection: Any, source: dict, child: dict, link: dict,
+                    scope: HandoffScope | None = None) -> TaskPolicy:
+    check_historical_recovery_identity(runtime, connection, source, child, link)
+    if scope is not None:
+        scope.policy.validate_snapshot()
+        return scope.policy
+    source_policy = _task_effect_policy(runtime, connection, source)
+    _task_effect_policy(runtime, connection, child)
     return source_policy
 
 
 def check_handoff_history(runtime: Any, connection: Any, source: dict, child: dict,
                           link: dict, evidence: dict, reader: Callable) -> None:
     """Validate historical authority and effects without reopening a stopped DAG input attempt."""
-    _handoff_retired(runtime, source, child, link, evidence)
-    source_policy = _handoff_owners(runtime, connection, source, child, link)
-    if not reader(connection, source, child):
+    reviewed = reader(connection, source, child)
+    scope = reviewed if isinstance(reviewed, HandoffScope) else None
+    _handoff_retired(runtime, source, child, link, evidence, scope)
+    source_policy = _handoff_owners(runtime, connection, source, child, link, scope)
+    if not (scope.child_readonly if scope is not None else reviewed):
         _handoff_scope(source['spec'], child['spec'])
     for actions in (evidence['source_actions'], evidence['actions']):
         for action in actions:

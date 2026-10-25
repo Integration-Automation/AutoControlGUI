@@ -15,7 +15,7 @@ def renewal(tmp_path, monkeypatch, request):
     scopes = ExitStack()
     users = owner = reviewer = None
     kind = getattr(request, 'param', None)
-    if kind in {'named', 'named_dag'}:
+    if kind in {'named', 'named_dag', 'named_dag_partial'}:
         users = UserStore(tmp_path / 'users.json')
         users.add_user(user_id='owner', display_name='Owner', role='operator')
         users.add_user(user_id='reviewer', display_name='Reviewer', role='admin')
@@ -38,6 +38,11 @@ def renewal(tmp_path, monkeypatch, request):
             'allowed_tools': ['AC_workflow_manifest'], 'actions': [action],
             'success_criteria': [{'kind': 'actions_complete'}, {'kind': 'file_exists', 'path': str(manifest)},
                                  {'kind': 'file_text', 'path': str(output), 'value': 'complete'}]}
+    if kind == 'named_dag_partial':
+        final_manifest = reports / 'final-manifest.json'
+        spec['actions'].append({'tool': 'AC_workflow_manifest', 'arguments': {
+            'directory': str(reports), 'path': str(final_manifest), 'names': ['result.txt']}})
+        spec['success_criteria'].append({'kind': 'file_exists', 'path': str(final_manifest)})
     target = NativeDesktopTarget(resource_path=tmp_path / 'owned-input.lock')
     runtime = AgentRuntime(tmp_path / 'tasks.sqlite', targets={'local-files': target})
     try:
@@ -59,7 +64,8 @@ def renewal(tmp_path, monkeypatch, request):
         yield SimpleNamespace(runtime=runtime, source=source, old=old, current=current,
                               allowed=allowed, reports=reports, target=target, action=action,
                               manifest=manifest, output=output, original_methods=original_methods,
-                              users=users, owner=owner, reviewer=reviewer, batch_id=batch, definition=definition)
+                              users=users, owner=owner, reviewer=reviewer, batch_id=batch, definition=definition,
+                              remaining_action=spec['actions'][-1])
     finally:
         with authorization_scope(None):
             runtime.close()
@@ -67,7 +73,7 @@ def renewal(tmp_path, monkeypatch, request):
 
 
 def admitted(runtime, spec, kind, reviewer):
-    if kind not in {'dag', 'named_dag'}:
+    if kind not in {'dag', 'named_dag', 'named_dag_partial'}:
         return runtime.submit(spec).task_id, None, None
     runtime.background = SimpleNamespace(start=lambda _task_id: None)
     definition = {'nodes': [{'id': 'a', 'host': 'local', 'task': {

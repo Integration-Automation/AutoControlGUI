@@ -13,7 +13,7 @@ from je_auto_control.utils.agent_runtime.task_authority import (
     validate_ownership_request, ownership_scope, ownership_review, public_ownership,
     recovery_binding, require_matching_ownership,
     check_recovery_authority,
-    check_handoff_history,
+    check_handoff_history, HandoffScope,
 )
 from je_auto_control.utils.agent_runtime.evidence_handoff import EvidenceHandoffs, OPERATIONS as HANDOFF_OPERATIONS
 from je_auto_control.utils.agent_runtime.recovery_authorization import (
@@ -73,7 +73,21 @@ class AgentRecovery:
         self.runtime = runtime
 
     def _handoffs(self) -> EvidenceHandoffs:
-        return EvidenceHandoffs(self.runtime, self.runtime.batches.handoff_context, self.handoff_witness)
+        return EvidenceHandoffs(self.runtime, self.runtime.batches.handoff_context, self.handoff_witness,
+                                self.handoff_scope)
+
+    def handoff_scope(self, connection: Any, context: dict, links: list, issuer_policies: list[str] | None,
+                      authorization: dict | None, *, issuing: bool = False) -> dict:
+        """Derive historical input policy or explicitly reviewed read-only evidence policy on the host."""
+        # pylint: disable-next=import-outside-toplevel  # reason: only explicit handoff proof needs completion renewal validation
+        from je_auto_control.utils.agent_runtime.completion_recovery import handoff_completion_scope
+        approved = handoff_completion_scope(self.runtime, connection, context, links,
+                                             authorization=authorization, issuing=issuing)
+        if approved is not None:
+            return approved
+        if authorization is not None:
+            raise AgentTaskError('renewed handoff completion authorization is unavailable')
+        return {'policy': self.runtime.batches.handoff_policy(context['source'], issuer_policies)}
 
     def handoff_evidence(self, batch_id: str, node_id: str, source_task: str,
                          task_id: str, handoff_id: str, *, connection: Any = None) -> tuple[dict, list]:
@@ -90,18 +104,25 @@ class AgentRecovery:
         return {'actions': actions, 'snapshot': snapshot, 'completion_snapshot': request_spec_digest({
             'snapshot': snapshot, 'retirement': dict(retired) if retired is not None else None})}
 
-    def handoff_witness(self, connection: Any, source: dict, child: dict, link: dict) -> dict:
+    def handoff_witness(self, connection: Any, source: dict, child: dict, link: dict, *, scope: Any = None) -> dict:
         """Bind real historical recovery snapshots and current authority without target probes."""
         before, after = self._handoff_snapshot(connection, source), self._handoff_snapshot(connection, child)
         evidence = {'source_snapshot': before['snapshot'], 'source_actions': before['actions'],
                     'snapshot': after['snapshot'], 'actions': after['actions'],
                     'completion_snapshot': after['completion_snapshot']}
-        check_handoff_history(self.runtime, connection, source, child, link, evidence, self._handoff_reader)
+        def reader(active: Any, parent: dict, task: dict) -> Any:
+            return self._handoff_reader(active, parent, task, scope=scope)
+        check_handoff_history(self.runtime, connection, source, child, link, evidence, reader)
         return evidence
 
-    def _handoff_reader(self, connection: Any, source: dict, child: dict) -> bool:
+    def _handoff_reader(self, connection: Any, source: dict, child: dict, *, scope: Any = None) -> bool | HandoffScope:
         # pylint: disable-next=import-outside-toplevel  # reason: reuse privately admitted read-only scope without a reverse import
         from je_auto_control.utils.agent_runtime.completion_recovery import check_completion_authority, completion_spec
+        if scope is not None:
+            # pylint: disable-next=import-outside-toplevel  # reason: historical private readers are checked without reviving old grants
+            from je_auto_control.utils.agent_runtime.completion_recovery import historical_handoff_reader
+            return HandoffScope(scope, historical_handoff_reader(self.runtime, connection, source),
+                                historical_handoff_reader(self.runtime, connection, child))
         # pylint: disable-next=import-outside-toplevel  # reason: share strict neutral binding decoding, not public caller options
         from je_auto_control.utils.agent_runtime.skill_completion import _decode_binding
         found = connection.execute('SELECT details FROM agent_readonly_completions WHERE task_id=?',
@@ -111,8 +132,8 @@ class AgentRecovery:
         details = _decode_binding(found[0])
         if details['source_task'] != source['id']:
             raise AgentTaskError('handoff read-only source binding changed')
-        check_completion_authority(self.runtime, child['id'])
-        effect = self.runtime.store.get(details['effect_task'])
+        check_completion_authority(self.runtime, child['id'], connection=connection)
+        effect = self.runtime.store.read_task(connection, details['effect_task'])
         if child['spec'] != completion_spec(self.runtime, effect).to_dict():
             raise AgentTaskError('handoff read-only verification scope changed')
         return True

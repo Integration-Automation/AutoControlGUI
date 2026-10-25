@@ -1,5 +1,13 @@
 # Changelog
 
+Compose explicit local DAG handoffs with privately renewed permanent read-only completion.
+Bind real full recovery lineage, exact approved reader roots, every historical policy review and actual
+original request/admission/roles. Preserve current issuing/consuming ceilings and earliest retention;
+keep legacy grants and ordinary task access unchanged. Same-writer accepted-request/submission reads
+and post-write validation roll back stale consent. Resolve inherited DAG tags through actual bounded
+recovery ancestry without creating admission rows; preserve earlier ordinary binding hashes. Existing
+five shared operations, Handoffs Actions and result editor expose the bounded explicit review summary.
+
 Add explicit review_completion_authorization/create_authorized_completion recovery operations
 for expired original origin constraints. Preserve exact source/effect snapshots, actual principals,
 original DAG admission, valid inherited restrictions and prior narrowed reader ceilings. Tasks stay

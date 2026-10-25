@@ -982,5 +982,34 @@ Python、AC、CLI、具名 MCP、REST、Builder 共用这些 recovery 操作。�
 
 Python、AC、CLI、具名 MCP、REST、Builder 共用两个操作；Recovery 页的两个明确 Actions
 沿用所选任务、owner policy 与请求编辑器。可编辑示例为 `agent_completion_authorization_review.json`
-与 `agent_completion_authorization_create.json`。browser／remote 只读来源、既有跨 caller 移交的
-组合契约、实际应用状态重建，以及暂缓的原生／设备／浏览器／二十四小时验收仍列于 `Progress.md`。
+与 `agent_completion_authorization_create.json`。browser／remote 只读来源、非 DAG／跨主机移交、
+实际应用状态重建，以及暂缓的原生／设备／浏览器／二十四小时验收仍列于 `Progress.md`。
+
+## 明确移交已续授权读取者的完成证据
+
+现有 `review_handoff`／`create_handoff` 现在可明确将已重新授权、永久只读读取者的完成
+证据交给实际原 local DAG。指定该读取者的 task ID 与原 batch／node，由服务推导证明；不能自行提供
+policy、所有者覆盖或授权 bundle。一般成果移交沿用现有规则。
+
+预览的 `evidence.completion_authorization` 显示完成任务／审核、固定的审核摘要、根目录数量及
+替换／保留／当前 origin ID，不含私人 principal 路径、动作参数或 capture。创建时以最上层返回的 `handoff_review`
+作为请求的 `review`，并提供非空 `note`。每个真实任务都保留已审核的上限与所有仍有效的历史限制；不可用的
+引用须明确审核替换，发出移交时额外的 session 限制也持续有效。移交沿用读取者已实际验证的相同
+根目录；交集改变时须重新审核及执行只读完成验证，接收者的 session／profile 限制也会持续应用。
+
+最多十六层真实恢复链可混合先前已审核的可执行子任务及私人读取者。成功的中间读取者必须具备实际
+私人历史 scope 与退役证明，一般已成功来源没有这个例外。发出或采纳移交时不启动 helper、不重放
+输入；旧来源状态、见证、收据及所有任务所有者维持原样。原所有者只取得有限完成投影，不能因此
+一般读取其他 caller 的任务。撤销或授权失效会阻止采纳及后续依赖验证。
+
+原 accepted-request hash、原始提交见证、私人 admission、graph、owner／reviewer、整条来源／子任务
+快照与最后读取者的续授权都固定在证明内。读取与写入后重验使用同一个 SQLite writer，包含尚未提交
+的变更；发现变动即回滚任务／移交创建。继承的 `dag_batch` 选项不等于 admission，必须沿有界真实
+恢复链找到原请求及实际授权身份，不补造 admission。旧的一般完成 binding hash 保持兼容；各历史
+任务各自审核限制，不能通过合并历史绕过正常十六个有效 origin 上限或原根目录边界。
+
+相同有效重试沿用原 note 与 ID，已撤销 ID 不会重新启用；重启与采纳保留最早终止见证的三十日期限。
+origin 失效后仍可查 get／list 历史与 revoke，但历史不代表可用完成证据或输入授权。Python、AC、
+CLI、具名 MCP、REST、Builder 共用五个现有操作，Handoffs Actions 与 JSON 编辑器／结果区可显示
+明确续授权审核，不自动派发同意。非 DAG／跨主机移交、browser／remote 读取者、实际应用／设备
+来源及暂缓的原生／浏览器／真机／二十四小时验收仍列于 `Progress.md`。
