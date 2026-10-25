@@ -1,5 +1,14 @@
 # Changelog
 
+Add explicit review_completion_authorization/create_authorized_completion recovery operations
+for expired original origin constraints. Preserve exact source/effect snapshots, actual principals,
+original DAG admission, valid inherited restrictions and prior narrowed reader ceilings. Tasks stay
+permanently read-only; admission and completion publication revalidate under their own SQLite writer.
+Revoked evidence cannot satisfy DAG adoption. Skill drafts use approved scope and still need a fresh
+trial. Reject malformed/missing renewed markers before helper startup; share the strict private binding
+decoder without adding reverse service dependencies. Existing ordinary recovery remains compatible;
+add two Recovery Actions, four locales, two editable requests and aligned documentation.
+
 Add explicit review/create/get/list/revoke recovery handoffs for existing caller-owned local DAG
 completion evidence. Optional successor handoff_id binds the real original batch/node/source and at
 most sixteen actual recovery links, including permanent read-only verification. Transactional grant,

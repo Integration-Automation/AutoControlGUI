@@ -54,9 +54,9 @@ def _strict_effects(spec: AgentTaskSpec, receipts: list[dict]) -> bool:
     return True
 
 
-def recording_template(runtime: Any, row: dict, criteria: Any = None) -> dict:
+def recording_template(runtime: Any, row: dict, criteria: Any = None, *, scope: dict | None = None) -> dict:
     """Derive semantic actions after the trusted caller has separately verified source completion."""
-    spec = detached(row["spec"])
+    spec = detached(scope if scope is not None else row['spec'])
     spec["actions"] = _actions(runtime, row)
     spec["mode"] = "skill"
     spec["options"].pop("skill_pin", None)

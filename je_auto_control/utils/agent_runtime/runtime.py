@@ -37,7 +37,7 @@ from je_auto_control.utils.agent_runtime.dag_admission import current_admission
 from je_auto_control.utils.agent_runtime.task_authority import RecoveryBinding, CompletionBinding, check_task_authority
 from je_auto_control.utils.agent_runtime.completion_recovery import (
     completion_target, completion_evidence, completion_metadata, require_executable_task,
-    check_completion_authority, completion_spec,
+    check_completion_authority, completion_spec, completion_details,
 )
 from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
@@ -183,7 +183,7 @@ class AgentRuntime:
         """Read owner-scoped task status without observing the desktop."""
         row = self._row(task_id)
         metadata = self.evidence.metadata(task_id)
-        metadata.update(completion_metadata(self.store, task_id))
+        metadata.update(completion_metadata(self.store, task_id, runtime=self))
         if "dag_batch" in row["spec"]["options"]:
             metadata.update(submission_metadata(self.store, task_id))
         with self._mutex:
@@ -461,8 +461,21 @@ class AgentRuntime:
         reason = "" if state == "succeeded" else "completion not proven"
         if not retired:
             state, reason = "waiting_user", pending
-        if self.store.transition(task_id, "verifying", state, reason=reason, verification=reports):
+        try:
+            committed = self._completion_transition(task_id, state, reason, reports)
+        except _ERRORS:
+            self.store.transition(task_id, 'verifying', 'waiting_user', reason=pending, verification=reports)
+            raise
+        if committed:
             self.evidence.publish(task_id)
+
+    def _completion_transition(self, task_id: str, state: str, reason: str, reports: List[dict[str, Any]]) -> bool:
+        if completion_details(self.store, task_id) is None:
+            return self.store.transition(task_id, 'verifying', state, reason=reason, verification=reports)
+        def validate(connection: Any) -> None:
+            check_completion_authority(self, task_id, connection=connection)
+        return self.store.transition(task_id, 'verifying', state, reason=reason,
+                                     verification=reports, validate=validate)
 
     def pause(self, task_id: str) -> AgentTaskResult:
         """Request pause immediately; transfer control only after active input retires."""

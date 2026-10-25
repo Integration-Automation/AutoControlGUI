@@ -111,7 +111,8 @@ class AgentSkills:
             # pylint: disable-next=protected-access  # reason: retain the runtime's live source ownership boundary
             row = self.runtime._row(request['task_id'])
             proof = self._completion_proof(connection, row, request['completion_task_id'])
-            spec = recording_template(self.runtime, row, request.get('validation_criteria'))
+            scope = self._recording_scope(connection, request['completion_task_id'], proof)
+            spec = recording_template(self.runtime, row, request.get('validation_criteria'), scope=scope)
             parameters = parameter_schema(spec, request.get('parameters', {}))
             provenance = {'source_task': row['id'], 'kind': 'semantic_recording', 'parent_version': 0,
                           'completion_review': proof}
@@ -123,6 +124,16 @@ class AgentSkills:
                 if not owns_task(row['owner'], current_authorization()):
                     raise AgentTaskError('skill recording ownership changed')
         return self._get(candidate_id)
+
+    def _recording_scope(self, connection: Any, task_id: str, proof: dict) -> dict | None:
+        if 'authorization_review' not in proof:
+            return None
+        if self._completion_authority is None:
+            raise AgentTaskError('runtime has no reviewed skill completion provider')
+        scope = self._completion_authority(self.runtime, task_id, connection=connection)
+        if not isinstance(scope, dict):
+            raise AgentTaskError('renewed skill completion has no approved effect scope')
+        return scope['effect_spec']
 
     def _save(self, name: str, skill_id: str, owner: dict, spec: dict, parameters: dict, provenance: dict) -> dict:
         candidate = self._candidate(name, skill_id, owner, spec, parameters, provenance)

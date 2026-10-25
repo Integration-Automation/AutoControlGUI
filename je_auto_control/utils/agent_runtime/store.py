@@ -7,7 +7,7 @@ import time
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator, List
+from typing import Any, Callable, Iterator, List
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import STATES, TERMINAL, detached
@@ -315,7 +315,8 @@ class AgentTaskStore:
             return cursor.rowcount == 1
 
     def transition(self, task_id: str, expected: str, state: str, *,
-                   reason: str = "", verification: Any = None) -> bool:
+                   reason: str = "", verification: Any = None,
+                   validate: Callable[[Any], None] | None = None) -> bool:
         """Compare and publish nonterminal state without overwriting concurrent control requests."""
         if expected not in STATES - TERMINAL or state not in STATES:
             raise AgentTaskError("invalid conditional task transition")
@@ -326,6 +327,8 @@ class AgentTaskStore:
                 (state, reason, time.time(), reports, task_id, expected))
             if cursor.rowcount == 1 and expected == "verifying" and state == "succeeded":
                 connection.execute("INSERT OR REPLACE INTO agent_completion VALUES (?,1,?)", (task_id, time.time()))
+            if cursor.rowcount == 1 and validate is not None:
+                validate(connection)
             return cursor.rowcount == 1
 
     def start(self, task_id: str) -> None:

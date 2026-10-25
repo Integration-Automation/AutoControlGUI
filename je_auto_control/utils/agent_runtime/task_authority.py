@@ -29,6 +29,7 @@ class CompletionBinding:
 
     recovery: dict | RecoveryBinding | None
     details: dict
+    validate: Callable[[Any], None] | None = None
 
 
 def validate_ownership_request(operation: str, request: dict, fields: set[str]) -> None:
@@ -38,7 +39,7 @@ def validate_ownership_request(operation: str, request: dict, fields: set[str]) 
         if request["owner_policy"] != "source_owner":
             raise AgentTaskError("recovery owner_policy must be source_owner when supplied")
         expected.add("owner_policy")
-        if operation in {"create", "create_authorized", "create_completion"}:
+        if operation in {"create", "create_authorized", "create_completion", "create_authorized_completion"}:
             expected.add("ownership_review")
     if set(request) != expected:
         raise AgentTaskError("invalid recovery operation fields")
@@ -87,6 +88,7 @@ def recovery_binding(authorization: dict | None, ownership: dict | None) -> dict
 def bind_recovery(connection: Any, task_id: str,
                   binding: dict | RecoveryBinding | CompletionBinding | None, owner: dict) -> None:
     """Atomically record ownership beside lineage and any separately reviewed origin renewal."""
+    validate = binding.validate if isinstance(binding, CompletionBinding) else None
     if isinstance(binding, CompletionBinding):
         connection.execute("INSERT INTO agent_readonly_completions VALUES (?,?)",
                            (task_id, json.dumps(binding.details)))
@@ -99,6 +101,8 @@ def bind_recovery(connection: Any, task_id: str,
             raise AgentTaskError("recovery ownership does not match the admitted task owner")
         _check_pair(binding.ownership)
         connection.execute("INSERT INTO agent_recovery_owners VALUES (?,?)", (task_id, json.dumps(binding.ownership)))
+    if validate is not None:
+        validate(connection)
 
 
 def require_matching_ownership(store: Any, task_id: str, expected: dict | None) -> None:
@@ -182,7 +186,7 @@ def _task_effect_authority(runtime: Any, connection: Any, row: dict, *, historic
     if recorded is not None and actor_identity(recorded['owner']) != actor_identity(row['owner']):
         raise AgentTaskError('recovery execution task ownership changed')
     if historical:
-        _historical_admission(connection, row)
+        check_historical_admission(connection, row)
     else:
         check_task_authority(runtime, row['id'])
     with DeferredAuthorization(AuthorizationContext(**row['owner']) if row['owner'] else None).scope():
@@ -196,7 +200,8 @@ def _task_effect_authority(runtime: Any, connection: Any, row: dict, *, historic
     return policy
 
 
-def _historical_admission(connection: Any, row: dict) -> None:
+def check_historical_admission(connection: Any, row: dict) -> None:
+    """Refresh actual original DAG principals without reopening their stopped input attempt."""
     found = connection.execute('SELECT a.actor,b.owner FROM agent_dag_local_tasks a '
         'JOIN agent_dag_batches b ON b.id=a.batch_id WHERE a.task_id=?', (row['id'],)).fetchone()
     if found is None:

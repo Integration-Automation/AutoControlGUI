@@ -5,25 +5,13 @@ import json
 from typing import Any, Callable
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
-from je_auto_control.utils.agent_runtime.completion_contract import validate_recorded_completion
-
-_BINDING_FIELDS = {'contract', 'source_task', 'source_snapshot', 'effect_task', 'effect_snapshot',
-                   'reviewer', 'source_owner', 'effect_owner'}
+from je_auto_control.utils.agent_runtime.completion_contract import (
+    validate_recorded_completion, decode_completion_binding,
+)
 
 
 def _decode_binding(value: str) -> dict:
-    try:
-        details = json.loads(value)
-    except (ValueError, TypeError) as error:
-        raise AgentTaskError('invalid skill completion binding') from error
-    if not isinstance(details, dict) or set(details) != _BINDING_FIELDS:
-        raise AgentTaskError('invalid skill completion binding')
-    version = details['contract']
-    if not isinstance(version, int) or isinstance(version, bool) or version != 1:
-        raise AgentTaskError('invalid skill completion binding version')
-    if not all(isinstance(details[key], dict) for key in ('reviewer', 'source_owner', 'effect_owner')):
-        raise AgentTaskError('invalid skill completion principals')
-    return details
+    return decode_completion_binding(value)
 
 
 def publication_details(connection: Any, publication: Any) -> dict | None:
@@ -67,6 +55,16 @@ def _lineage(connection: Any, task_id: str, trial_id: str) -> dict:
     raise AgentTaskError('skill completion has no bounded verified recovery chain')
 
 
+def _verification_scope(runtime: Any, connection: Any, trial: dict, task_id: str,
+                        authority_check: Callable, verification_spec: Callable) -> tuple[dict, str | None]:
+    renewed = connection.execute('SELECT 1 FROM agent_task_authorizations WHERE task_id=?', (task_id,)).fetchone()
+    scope = (authority_check(runtime, task_id, connection=connection) if renewed is not None
+             else authority_check(runtime, task_id))
+    if isinstance(scope, dict):
+        return scope['verification_spec'], scope['authorization_review']
+    return verification_spec(runtime, trial).to_dict(), None
+
+
 def check_skill_completion(runtime: Any, connection: Any, trial: dict, task_id: Any,
                            authority_check: Callable, verification_spec: Callable, snapshot_digest: Callable) -> dict:
     """Revalidate a separately succeeded reader under the skill library's SQLite write transaction."""
@@ -75,8 +73,9 @@ def check_skill_completion(runtime: Any, connection: Any, trial: dict, task_id: 
     # pylint: disable-next=protected-access  # reason: retain the caller's ordinary task ownership boundary
     row = runtime._row(task_id)
     details = _lineage(connection, task_id, trial['id'])
-    authority_check(runtime, task_id)
-    if row['spec'] != verification_spec(runtime, trial).to_dict():
+    expected, authorization_review = _verification_scope(runtime, connection, trial, task_id,
+                                                        authority_check, verification_spec)
+    if row['spec'] != expected:
         raise AgentTaskError('skill completion verification scope changed')
     # pylint: disable-next=protected-access  # reason: publication cannot adopt live or unwinding input ownership
     with runtime._mutex:
@@ -88,7 +87,10 @@ def check_skill_completion(runtime: Any, connection: Any, trial: dict, task_id: 
         raise AgentTaskError('read-only skill completion cannot contain executable action receipts')
     validate_recorded_completion(runtime.get(task_id).to_dict(), trial['spec'])
     completion = connection.execute('SELECT confirmed FROM agent_completion WHERE task_id=?', (task_id,)).fetchone()
-    return {'contract': 1, 'task_id': task_id, 'source_task': details['source_task'], 'effect_task': trial['id'],
-            'source_snapshot': details['source_snapshot'], 'effect_snapshot': details['effect_snapshot'],
-            'verification_snapshot': snapshot_digest({'spec': row['spec'], 'verification': row['verification'],
-                                                      'confirmed': completion[0]})}
+    result = {'contract': 1, 'task_id': task_id, 'source_task': details['source_task'], 'effect_task': trial['id'],
+              'source_snapshot': details['source_snapshot'], 'effect_snapshot': details['effect_snapshot'],
+              'verification_snapshot': snapshot_digest({'spec': row['spec'], 'verification': row['verification'],
+                                                        'confirmed': completion[0]})}
+    if authorization_review is not None:
+        result['authorization_review'] = authorization_review
+    return result

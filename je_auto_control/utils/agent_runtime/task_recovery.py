@@ -29,6 +29,8 @@ _REQUEST_FIELDS = {
     "review_authorization": {"task_id"},
     "create_authorized": {"task_id", "snapshot", "spec", "note", "authorization_review"},
     "preview_completion": {"task_id"}, "create_completion": {"task_id", "snapshot", "note"},
+    "review_completion_authorization": {"task_id"},
+    "create_authorized_completion": {"task_id", "snapshot", "authorization_review", "note"},
 }
 OPERATIONS = tuple(_REQUEST_FIELDS) + HANDOFF_OPERATIONS
 _STOPPED = frozenset({"paused", "waiting_user", "recovering", "cancelled", "timed_out", "failed"})
@@ -158,7 +160,8 @@ class AgentRecovery:
             # pylint: disable-next=protected-access  # reason: reuse the runtime's owner and closed-state check
             row = self.runtime._row(task_id)
             with ownership_scope(row, request) as ownership:
-                if operation in {"preview_completion", "create_completion"}:
+                if operation in {"preview_completion", "create_completion", "review_completion_authorization",
+                                 "create_authorized_completion"}:
                     # pylint: disable-next=import-outside-toplevel  # reason: independent completion uses a closed collaborator
                     from je_auto_control.utils.agent_runtime.completion_recovery import control_completion
                     return control_completion(self, operation, row, request, ownership)

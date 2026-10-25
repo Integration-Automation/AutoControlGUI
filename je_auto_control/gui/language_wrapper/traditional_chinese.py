@@ -1542,6 +1542,8 @@ traditional_chinese_word_dict.update({
     "agent_reauthorize_preview": "審閱新任務授權",
     "agent_completion_preview": "審閱唯讀完成驗證",
     "agent_completion_create": "建立已審閱的完成驗證",
+    "agent_completion_authorization_review": "審閱唯讀完成重新授權",
+    "agent_completion_authorization_create": "建立重新授權的唯讀完成任務",
     "agent_reauthorize_create": "建立重新授權的新任務",
     "agent_prune": "清理過期任務快取"
 })

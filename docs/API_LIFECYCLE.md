@@ -943,3 +943,35 @@ create and revoke requests without dispatching them. Five editable `agent_handof
 cover review/create/get/list/revoke. Python, AC, CLI, authenticated MCP, REST and Builder use the
 same recovery operations. These checks establish contract and owned-file behavior; deferred native
 desktop, browser, device and 24-hour acceptance still require their own evidence.
+
+## Read-only completion renewal and current evidence validity
+
+When original origin references are expired or unavailable, explicitly call
+`manage_agent_recovery("review_completion_authorization", {"task_id": "<source-id>"})`.
+Review the server-derived `verification_spec` and retained/replaced/current origin context, then call
+`create_authorized_completion` with the same `task_id`, returned `snapshot`, `authorization_review`
+and a nonempty `note`. Optional `owner_policy="source_owner"` requires the returned `ownership_review`
+at creation. Callers cannot supply a replacement verification spec. Existing live constraints stay;
+new roots intersect the original ceiling, prior reader ceiling and current session. Ordinary
+completion review does not replace this explicit consent for an already renewed reader.
+
+The child is permanently read-only. It independently checks current conditions against the actual
+confirmed original effects, without input, replay, restoring captures or modifying old witnesses.
+Source/effect snapshots, real owners/reviewers and original DAG admission are rechecked. Task admission
+and final completion each revalidate inside their own SQLite writer after SQL; changes roll back.
+At most sixteen actual recovery links are supported. A retired successful reader may be explicitly
+renewed again, retaining its previous narrower ceiling and all still-valid inherited restrictions.
+Changed source/effect evidence remains refused and must not be silently repaired by scope renewal.
+
+Historical `get` preserves succeeded state; loss of renewed authority makes its current
+`completion_contract` zero and `completion_authorization` unavailable. DAG adoption and late dependency
+validation then refuse that evidence. Malformed/missing renewed read-only markers fail before helper
+startup. Recording with `completion_task_id` uses the approved restricted scope and original semantic
+actions, but the draft still needs its own fresh validation trial. Renewal does not publish an expired
+candidate or renew a published skill grant. Existing skill reauthorization remains separate.
+
+Python, AC, CLI, authenticated MCP, REST and Builder share both operations. The Recovery page exposes
+two explicit Actions using its selected task, owner policy and request editor. Editable examples are
+`agent_completion_authorization_review.json` and `agent_completion_authorization_create.json`.
+Browser/remote read-only providers, composition with legacy cross-caller handoffs, actual application
+state restoration and deferred native/device/browser/24-hour acceptance remain in `Progress.md`.

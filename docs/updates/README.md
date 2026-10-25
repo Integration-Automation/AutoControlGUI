@@ -556,3 +556,4 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261025-11 | 2026-10-25 | Record stopped semantic workflows with explicit independent completion evidence | #done #agent #skills #recording #verification | [2026-10-c](2026-10-c.md) |
 | U-20261025-12 | 2026-10-25 | Review complete original skill effects across executable recovery | #done #agent #skills #recovery #verification | [2026-10-c](2026-10-c.md) |
 | U-20261025-13 | 2026-10-25 | Grant revocable local DAG completion evidence across existing callers | #done #agent #handoff #recovery #authorization | [2026-10-c](2026-10-c.md) |
+| U-20261025-14 | 2026-10-25 | Renew completion consent without restoring input authority | #done #agent #recovery #authorization | [2026-10-c](2026-10-c.md) |

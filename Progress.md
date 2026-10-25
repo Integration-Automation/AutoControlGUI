@@ -9,7 +9,7 @@
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-接續完成第 5 組既有 caller 成果移交、唯讀完成重新授權及 browser／remote
+接續完成第 5 組非 DAG／跨 caller 成果移交組合及 browser／remote
 reader，並核對第 4 組真實裝置控制／擷取來源、其餘實作及第 8 組交付核對。
 
 1. **P4：瀏覽器與正式環境接合**
@@ -94,8 +94,9 @@ reader，並核對第 4 組真實裝置控制／擷取來源、其餘實作及�
    - 將唯讀完成審閱／驗證／發布延伸至 browser／remote target：補可信唯讀 reader，來源副作用與
      當前獨立條件須分別核對；缺少原瀏覽器 context 時不可新開頁面當作舊狀態，亦不可回退普通
      可操作 helper、重做最後動作或解除未知隔離來完成認證。原生／真機能力與驗收仍須分開確認。
-   - 補過期來源 scope 的唯讀完成重新授權審閱；須明確固定新限制與原效果證據，不可藉由
-     刪除原限制、普通可操作復原子任務或更換 helper 繞過。目前保留明確拒絕。
+   - 接合已續授權的唯讀完成讀者與既有 local DAG 跨 caller 成果移交；不可直接沿用過期原
+     policy。組合契約須明確固定新限制、實際來源／批次身分與原效果證據，持續核對發出者及接收者
+     權限；不可藉由刪除原限制、普通可操作復原子任務或更換 helper 繞過。目前保留明確拒絕。
    - 針對新增平台／裝置及恢復路徑重驗服務重啟、WorkQueue 去重、事件／排程重新授權、
      journal／history／產物關聯及 30 天保留／清理，不擴大既有權限。
 

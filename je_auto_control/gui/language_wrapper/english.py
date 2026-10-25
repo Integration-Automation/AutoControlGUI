@@ -1692,6 +1692,8 @@ english_word_dict.update({
     "agent_reauthorize_preview": "Review successor authorization",
     "agent_completion_preview": "Review read-only completion",
     "agent_completion_create": "Create reviewed completion verification",
+    "agent_completion_authorization_review": "Review read-only completion authorization",
+    "agent_completion_authorization_create": "Create reauthorized read-only completion",
     "agent_reauthorize_create": "Create reauthorized successor",
     "agent_prune": "Prune expired task cache"
 })

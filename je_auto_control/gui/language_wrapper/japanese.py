@@ -1579,6 +1579,8 @@ japanese_word_dict.update({
     "agent_reauthorize_preview": "後続タスクの権限を確認",
     "agent_completion_preview": "読み取り専用の完了検証を確認",
     "agent_completion_create": "確認済みの完了検証を作成",
+    "agent_completion_authorization_review": "読み取り専用の完了権限を再確認",
+    "agent_completion_authorization_create": "再承認した読み取り専用の完了検証を作成",
     "agent_reauthorize_create": "再承認した後続タスクを作成",
     "agent_prune": "期限切れキャッシュを削除"
 })

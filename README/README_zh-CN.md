@@ -957,3 +957,30 @@ Agent Tasks 的成果移交页提供操作菜单与 JSON 编辑器；Actions 只
 不自动派发。五个可编辑的 `agent_handoff_*.json` 示例涵盖 review/create/get/list/revoke。
 Python、AC、CLI、具名 MCP、REST、Builder 共用这些 recovery 操作。本次证据涵盖契约及自有文件
 流程；暂缓的原生桌面、浏览器、设备及二十四小时验收仍须各自提供证据。
+
+## 明确续授权只读完成验证
+
+原来源的 origin 引用过期或不可用时，明确调用
+`manage_agent_recovery("review_completion_authorization", {"task_id": "<source-id>"})`。
+审核服务产生的 `verification_spec`、保留／替换／当前 origin 限制，再以相同 `task_id`、返回的
+`snapshot`、`authorization_review` 及非空 `note` 调用 `create_authorized_completion`。
+可选 `owner_policy="source_owner"` 在创建时另须返回的 `ownership_review`；不能自行提供新验证
+规范。仍有效的旧限制保留，新根目录与原上限、前一读取者上限及当前 session 取交集。
+已重新授权的读取者不能改用一般完成审核来移除这些限制。
+
+子任务永久只读，依真实已确认的原效果独立检查当前条件，不输入、不重放、不恢复 capture，
+也不修改旧见证。来源／效果快照、实际 owner／reviewer 及原 DAG admission 都会重查。
+创建任务与最终完成各自在自己的 SQLite writer 内写入后重验，变化时共同回滚。
+最多支持十六层真实恢复链；已退役且成功的读取者可再次明确续授权，但保留前次较窄上限及所有仍有效
+的继承限制。来源／效果证据已改变时仍拒绝，不能借 scope 续授权默默修复旧证据。
+
+历史 `get` 保留 succeeded 状态；新授权失效时，当前 `completion_contract` 为零、
+`completion_authorization` 为 unavailable，DAG 采纳与后续依赖验证会拒绝这份证据。
+新的只读标记损坏／丢失时，在 helper 启动前拒绝。以 `completion_task_id` 录制时沿用原语义动作及
+已审核的限缩 scope，但草稿仍须自己的新验证试跑。此流程不发布过期候选，也不续授权已发布技能；
+既有技能重新授权流程保持分开。
+
+Python、AC、CLI、具名 MCP、REST、Builder 共用两个操作；Recovery 页的两个明确 Actions
+沿用所选任务、owner policy 与请求编辑器。可编辑示例为 `agent_completion_authorization_review.json`
+与 `agent_completion_authorization_create.json`。browser／remote 只读来源、既有跨 caller 移交的
+组合契约、实际应用状态重建，以及暂缓的原生／设备／浏览器／二十四小时验收仍列于 `Progress.md`。
