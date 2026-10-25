@@ -86,9 +86,16 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      指標步驟提供可信新來源與語義轉換，不能把舊索引／座標或歷史欄位值直接移入新 session。
    - 補實際應用的語義錄製、參數化、候選修復、驗證 trial、人工接受／版本發布及執行中固定版本
      的完整驗收；持續拒絕沒有完整動作確認或獨立完成證據的試跑，不能僅憑舊收據發布。
-   - 將唯讀完成審閱／驗證／發布延伸至 browser／remote target：補可信唯讀 reader，來源副作用與
-     當前獨立條件須分別核對；缺少原瀏覽器 context 時不可新開頁面當作舊狀態，亦不可回退普通
-     可操作 helper、重做最後動作或解除未知隔離來完成認證。原生／真機能力與驗收仍須分開確認。
+   - 將唯讀完成審閱／驗證／發布延伸至 browser／remote target；browser 接入 WebRunner
+     `readonly_contract_version=1`／`freeze_readonly()`，在原 helper／page 完成永久唯讀切換後
+     才釋放輸入租約。現有普通清理會關閉原 helper，不能僅開啟 capability 旗標或另開 reader。
+     依實際來源／effect task 綁定保留的 channel、SDK context 與原 scope，不以共用 profile 當
+     任務身分；接入容量／期限、撤權、來源變動、服務停止／重啟及讀取失敗的清理與拒絕。
+     helper 與主機兩邊都須拒絕輸入 ACK、工具、傳輸及重新配置；未知副作用／清理失敗仍隔離。
+     接既有完成預覽／建立／執行、skill 錄製／接受／發布及 API／GUI，分別驗證原動作證據與
+     當前獨立條件。remote 仍須真實 SDK／裝置世代、唯讀來源及清理／舊 writer 結束證據。
+     網路結束後的即時 DOM 不能當作新伺服器回應；缺原 context 不可另開頁面、回退普通可操作
+     helper、重做最後動作或解除未知隔離來完成認證。原生／真機能力與驗收仍須分開確認。
    - 針對新增平台／裝置及恢復路徑重驗服務重啟、WorkQueue 去重、事件／排程重新授權、
      journal／history／產物關聯及 30 天保留／清理，不擴大既有權限。
 
