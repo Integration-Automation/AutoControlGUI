@@ -1,4 +1,4 @@
-"""Coordinator-owned routed consent persists exact approval before forwarding source creation."""
+"""Coordinator-owned routed consent persists exact approval before forwarding source or destination creation."""
 from __future__ import annotations
 
 from copy import deepcopy
@@ -8,9 +8,18 @@ import uuid
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.transfer_host import actor_key, principal
+from je_auto_control.utils.agent_runtime.transfer_evidence_management import evidence_digest
 from je_auto_control.utils.agent_runtime.transfer_management import management_request
 from je_auto_control.utils.agent_runtime.transfer_models import TransferManifest
 from je_auto_control.utils.agent_runtime.transfer_records import TransferRecords, _text
+
+
+def _created_digest(operation: str, reply: dict) -> str:
+    if operation == 'create_evidence':
+        return evidence_digest(reply['evidence']['summary'])
+    if operation == 'create_import':
+        return reply['import']['manifest_digest']
+    return TransferManifest.from_dict(reply['export']['manifest']).digest
 
 
 class RoutedTransfers:
@@ -29,10 +38,10 @@ class RoutedTransfers:
         if self.peer is None:
             raise AgentTaskError('registered transfer management is unavailable')
         actor, binding = principal(), self.binding(host)
-        if operation == 'review_export':
-            return self._review(host, binding, value, actor)
-        if operation == 'create_export':
-            return self._create(host, binding, value, actor)
+        if operation in {'review_export', 'review_import', 'review_evidence'}:
+            return self._review(host, binding, value, actor, operation)
+        if operation in {'create_export', 'create_import', 'create_evidence'}:
+            return self._create(host, binding, value, actor, operation)
         return self.peer.manage(host, binding, operation, value, self.checkpoint())
 
     def close(self) -> None:
@@ -54,39 +63,41 @@ class RoutedTransfers:
             self._check(host, binding)
         self._initialized = True
 
-    def _review(self, host: str, binding: str, request: dict, actor: dict) -> dict:
+    def _review(self, host: str, binding: str, request: dict, actor: dict, operation: str) -> dict:
         self._prepare(host, binding)
         now = time.time()
         self._reviews = {key: record for key, record in self._reviews.items() if record['review_expires'] > now}
         if len(self._reviews) >= 128:
             raise AgentTaskError('pending routed transfer review quota exceeded')
-        reply = self.peer.manage(host, binding, 'review_export', request, self.checkpoint())
+        reply = self.peer.manage(host, binding, operation, request, self.checkpoint())
         self._check(host, binding)
         now = time.time()
-        expiry = min(reply['manifest']['expires'], now + 30 * 86400)
+        descriptor = 'evidence' if operation == 'review_evidence' else 'manifest'
+        expiry = min(reply[descriptor]['expires'], now + 30 * 86400)
         review_expiry = min(reply['review_expires'], now + 300, expiry)
         review = uuid.uuid4().hex
         self._reviews[review] = {'id': uuid.uuid4().hex, 'kind': 'route', 'actor': actor_key(actor),
             'review': review, 'key': request['idempotency_key'], 'created': now, 'expires': expiry,
             'review_expires': review_expiry, 'size': 0, 'chunks': 0, 'account': None,
             'scope': {'host': host, 'binding': binding, 'peer_review': reply['review'],
-                      'digest': reply['digest'], 'manifest': deepcopy(reply['manifest']),
-                      'operation': 'create_export'}}
+                      'digest': reply['digest'], descriptor: deepcopy(reply[descriptor]),
+                      'operation': operation.replace('review_', 'create_', 1),
+                      'request': deepcopy(request)}}
         return {**reply, 'review': review, 'review_expires': review_expiry}
 
-    def _create(self, host: str, binding: str, request: dict, actor: dict) -> dict:
+    def _create(self, host: str, binding: str, request: dict, actor: dict, operation: str) -> dict:
         self._prepare(host, binding)
-        record = self._approved(host, binding, request, actor)
+        record = self._approved(host, binding, request, actor, operation)
         self._check(host, binding)
         forwarded = {**request, 'review': record['scope']['peer_review']}
-        reply = self.peer.manage(host, binding, 'create_export', forwarded, self.checkpoint())
+        reply = self.peer.manage(host, binding, operation, forwarded, self.checkpoint())
         self._check(host, binding)
-        manifest = TransferManifest.from_dict(reply['export']['manifest'])
-        if manifest.digest != record['scope']['digest']:
+        digest = _created_digest(operation, reply)
+        if digest != record['scope']['digest']:
             raise AgentTaskError('routed creation reply differs from its approved immutable manifest')
         return reply
 
-    def _approved(self, host: str, binding: str, request: dict, actor: dict) -> dict:
+    def _approved(self, host: str, binding: str, request: dict, actor: dict, operation: str) -> dict:
         key_hash = _text(request['idempotency_key'], 256, 'idempotency key')
         note_hash = _text(request['note'], 4000, 'approval note')
         with self.runtime.store.connection() as connection:
@@ -98,7 +109,7 @@ class RoutedTransfers:
             record = deepcopy(pending)
         else:
             raise AgentTaskError('routed transfer review is missing or expired')
-        self._bound(record, host, binding, actor)
+        self._bound(record, host, binding, actor, operation)
         if previous is not None:
             if record['key_hash'] != key_hash or record['note_hash'] != note_hash:
                 raise AgentTaskError('routed retry changed its original key or approval note')
@@ -114,9 +125,9 @@ class RoutedTransfers:
         return created
 
     @staticmethod
-    def _bound(record: dict, host: str, binding: str, actor: dict) -> None:
+    def _bound(record: dict, host: str, binding: str, actor: dict, operation: str) -> None:
         scope = record['scope']
         if (record['kind'] != 'route' or record['actor'] != actor_key(actor)
                 or scope.get('host') != host or scope.get('binding') != binding
-                or scope.get('operation') != 'create_export'):
+                or scope.get('operation') != operation):
             raise AgentTaskError('routed review belongs to a different caller, host or operation')

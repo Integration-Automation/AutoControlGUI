@@ -59,6 +59,7 @@ class AgentRuntimeService:
             self.runtime.close()
             raise
         self._server = server
+        self.runtime.transfers.enable()
         self._dag_jobs.enable()
         self._jobs.start_pending()
         self._maintenance = threading.Thread(target=lambda: Context().run(self._maintain),

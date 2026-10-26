@@ -202,6 +202,9 @@ def AC_agent_task_stop_all() -> dict[str, Any]:
 def AC_agent_task_submit(spec: Any, idempotency_key: str | None = ...) -> dict[str, Any]:
     """Validate and submit a task to the explicitly running local service."""
 
+def AC_agent_transfer(operation: str, request: Mapping[str, Any] | None = ...) -> dict[str, Any]:
+    """Manage explicitly reviewed artifact transfers and evidence grants through the owning local service."""
+
 def AC_agent_trigger(operation: str, request: Mapping[str, Any] | None = ...) -> dict[str, Any]:
     """Register, inspect, reauthorize, pause or fire a durable task trigger with event deduplication."""
 

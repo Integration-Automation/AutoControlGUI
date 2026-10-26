@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import sys
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Iterator
 
 from je_auto_control.utils.agent_runtime.errors import AgentControlBusy
 
@@ -29,6 +30,26 @@ class RuntimeLock:
         """Release only this runtime's OS lock; repeated close is harmless."""
         if not self._stream.closed:
             self._stream.close()
+
+
+@contextmanager
+def close_runtime_ownership(mutex: Any, owner: Any, history: Any,
+                            snapshot: Callable[[], tuple[bool, Any]]) -> Iterator[bool]:
+    """Serialize final owner release with lazy construction after inputs have already retired."""
+    if not mutex.acquire(blocking=False):
+        raise AgentControlBusy('runtime construction or mutation is still active')
+    try:
+        closed, controller = snapshot()
+        if closed:
+            yield False
+            return
+        if controller is not None:
+            controller.close()
+        yield True
+        history.close()
+        owner.close()
+    finally:
+        mutex.release()
 
 
 def _lock(stream: Any) -> None:

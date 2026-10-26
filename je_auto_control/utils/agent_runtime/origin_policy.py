@@ -64,6 +64,20 @@ def current_origin() -> str | None:
     return ",".join(origins) if origins else None
 
 
+def origin_ceilings(retained: tuple[str, ...] | list[str] = ()) -> list[dict]:
+    """Read retained and current live ceilings for non-task operations without granting task authority."""
+    if not isinstance(retained, (tuple, list)) or len(retained) > 16:
+        raise AgentTaskError('retained origin ceilings require at most sixteen policies')
+    identifiers = list(_current_identifiers())
+    for identifier in retained:
+        _path(identifier)
+        if identifier not in identifiers:
+            identifiers.append(identifier)
+    if len(identifiers) > 16:
+        raise AgentTaskError('too many nested managed origin ceilings')
+    return [_origin_record(identifier) for identifier in identifiers]
+
+
 def _current_identifiers() -> tuple[str, ...]:
     origins = list(_CURRENT.get())
     for policy in _PROVIDERS.get():

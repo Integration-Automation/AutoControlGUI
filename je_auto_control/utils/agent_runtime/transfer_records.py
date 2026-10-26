@@ -34,6 +34,7 @@ _QUERIES = {
     'release': 'UPDATE @records SET held=0 WHERE id=?',
     'held': 'SELECT count(*) FROM @records WHERE held=1 AND expires<=?',
     'prune': "DELETE FROM @records WHERE held=0 AND state!='active' AND expires<=?",
+    'prune_kind': "DELETE FROM @records WHERE kind=? AND held=0 AND state='revoked' AND expires<=?",
     'entries': 'SELECT * FROM @records WHERE kind=? ORDER BY id LIMIT 200',
 }
 
@@ -270,6 +271,15 @@ class TransferRecords:
                 cursor = connection.execute(_sql(table, 'prune'), (cutoff,))
                 removed += cursor.rowcount
         return {'removed': removed, 'held': held}
+
+    def prune_kind(self, connection: Any, kind: str, cutoff: float) -> int:
+        """Prune one cleaned expired family under its owner's writer, preserving all consent tombstones."""
+        _writer(connection)
+        if kind not in _FAMILIES:
+            raise AgentTaskError('unsupported private transfer family')
+        _deadline(cutoff)
+        cursor = connection.execute(_sql(_FAMILIES[kind], 'prune_kind'), (kind, min(cutoff, time.time())))
+        return cursor.rowcount
 
     def prune_routes(self, connection: Any) -> int:
         """Retire expired coordinator-only metadata under its writer, preserving key/revocation tombstones."""

@@ -12,6 +12,9 @@ from je_auto_control.utils.agent_runtime.transfer_models import (
     TransferManifest, MAX_MANIFEST_BYTES, _canonical, _hex, _object,
 )
 from je_auto_control.utils.agent_runtime.transfer_management import management_request, management_reply
+from je_auto_control.utils.agent_runtime.transfer_evidence_contract import (
+    evidence_binding, portable_evidence, request_digest,
+)
 from je_auto_control.utils.config_sync.blob_models import CHUNK_BYTES
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
 from je_auto_control.utils.rbac.authorization import AuthorizationError
@@ -27,10 +30,33 @@ class TransferPeer:
         """Read an exact source export or content hash with bounded bytes and a fixed local deadline."""
         value = self._request(host, binding, operation, request, timeout)
         deadline = time.monotonic() + timeout
-        validate = (lambda reply: self._manifest(reply, value['export_id'])) if operation == 'export' else (
-            lambda reply: self._chunk(reply, value['sha256']))
+        validate = self._validator(operation, value)
         return self._exchange(host, binding, '/agent/transfer/peer', {'operation': operation, 'request': value},
                               deadline, validate)
+
+    def _validator(self, operation: str, value: dict) -> Callable:
+        if operation == 'evidence':
+            return lambda reply: self._evidence(reply, value)
+        if operation == 'export':
+            return lambda reply: self._manifest(reply, value['export_id'])
+        return lambda reply: self._chunk(reply, value['sha256'])
+
+    @staticmethod
+    def _evidence(reply: dict, request: dict) -> dict:
+        result = portable_evidence(reply)
+        if result['expires'] <= time.time():
+            raise AgentTaskError('portable evidence source retention has expired')
+        binding = request['binding']
+        if result['grant_id'] != request['grant_id'] or any(
+                result[name] != binding[name] for name in ('source_task', 'submitted_spec_digest')):
+            raise AgentTaskError('portable evidence reply changed its requested original identity')
+        if ('node' in result) != ('batch_id' in binding):
+            raise AgentTaskError('portable evidence reply changed its actual DAG binding')
+        if 'node' in result and (any(result['node'][name] != binding[name]
+                for name in ('batch_id', 'graph_hash', 'node_id')) or
+                result['node']['request_digest'] != request_digest(binding)):
+            raise AgentTaskError('portable evidence reply changed its actual accepted request')
+        return result
 
     def manage(self, host: str, binding: str, operation: str, request: Mapping, timeout: float) -> dict:
         """Use only closed source management fields and validate the foreign public projection."""
@@ -57,10 +83,14 @@ class TransferPeer:
     @staticmethod
     def _request(host: str, binding: str, operation: str, request: Mapping, timeout: float) -> dict:
         TransferPeer._identity(host, binding, timeout)
-        fields = {'export': {'export_id'}, 'chunk': {'export_id', 'sha256'}}
+        fields = {'export': {'export_id'}, 'chunk': {'export_id', 'sha256'}, 'evidence': {'grant_id', 'binding'}}
         if not isinstance(operation, str) or operation not in fields:
             raise AgentTaskError('peer transfer operation is unavailable')
         value = dict(_object(request, fields[operation]))
+        if operation == 'evidence':
+            _hex(value['grant_id'], 32)
+            value['binding'] = evidence_binding(value['binding'])
+            return value
         _hex(value['export_id'], 32)
         if operation == 'chunk':
             _hex(value['sha256'], 64)

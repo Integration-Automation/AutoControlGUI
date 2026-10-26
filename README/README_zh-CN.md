@@ -1,24 +1,86 @@
 # AutoControl
 
+成果移交管理已共用 `manage_agent_transfer(operation, request)`、`AC_agent_transfer`、
+`ac_agent_transfer`、已授权的 `POST /agent/transfer` 与 Script Builder metadata。CLI 使用
+`agent-task transfer --operation review_export --request request.json`。审阅返回批准 token；
+创建须提供该 token、原请求 key 与明确 note。导出／导入管理可指定已登记主机；
+可携证据管理也可指定已登记主机，由来源核实私有权限。传输页提供四语 Actions、可编辑 JSON 与服务回复；
+审阅不自动批准，批准模板保留原主机、token 与 key 并留空备注。选项变更或关闭页面后，
+旧回复不覆盖画面，已接受的导入仍由服务持有。远端批准先保存明确同意，失联或协调端重启后以原键重发，保持同一授权。
+被动诊断仅列出本机契约，不代表即时授权或远程／原生能力已验证。只读完成证据在创建与使用时重新核实原私有同意，不恢复原输入权限。
+完整质量、封装及交付检查仍在进行。
+examples/agent_transfer_export_review.json、agent_transfer_import_review.json 与
+agent_transfer_evidence_review.json 提供可编辑请求，并各有独立的 create 模板。
+
+实验性的来源主机技能操作，可通过现有 `handoff_id` 明确选择可携授权与完成／执行任务。
+来源在技能事务内重新核对实际同意、接收者与私有证据，候选／发布写入后再次核对。
+保留原始动作、候选自己的验证试跑与明确版本批准；新的技能试跑建立服务生成的全新请求 key，
+不为旧有未带 key 的试跑补造记录。此流程不将外部动作或策略移交协调端；
+技能证据保留来源主机的原动作／试跑／版本；其余跨主机验收与交付见 Progress.md。
+选择移交证据的技能操作，全程保留 runtime 所有权，操作结束后才释放。
+
+目的端导入目前仍为实验功能。明确启动的服务可通过 runtime 移交控制器与经验证的
+`/agent/transfer` 接受 `review_import`／`create_import`／`get_import`／`run_import`／
+`cancel_import`／`list_imports`。协调端可通过自己的不透明同意 token 路由这些有限操作；
+目的端使用自己的来源登记与账号，不转发协调端 principal／origin 或来源凭据。
+批准意图在派送前提交；回复丢失后的精确重试仍对应同一笔导入。
+启动时接回已批准且尚未领取的工作；未结算 claim 会转为待审阅。明确的 `run_import`
+以新队列代次重新核对原收件者、profile、实时 origin 与来源 grant，可重用已验证私有分块，
+或只读核对既有完整目录与哈希，不重新下载／发布。续行时新增的 origin 限制仍持续生效。
+已明确排入队列且未领取的只读核对可跨再次重启；采认前重验当前字节、profile 与保留的 origin。
+目录身份、字节或权限变更不能确认发布。取消会使生产者失效；尚未完成收据确认的
+发布保留 requires_review，已确认发布的文件保留为用户成果。
+取消或过期的私有分块账号须确认生产者退出才清理；失败时保留配额，成功重试后才释放。
+收据维持原本固定期限。
+暂存目录与预先创建的文件会在复制字节前记录文件系统身份。生产者退出后，
+过期清理可于重启后重试；遇到替换或无关对象时保留配额待审阅，不递归删除。
+来源维护会清理过期或已撤销的私有导出账号，包含重启或授权者移除后；失败时保留配额。
+来源或目的端清理完成前持续保有 runtime 所有权；无待清理数据时不获取 runtime 写入锁。
+创建／续行回复会在唤醒新投递前读取已提交的收据；后续以 get_import 查询当前进度，避免回复被新 writer 阻塞。
+后续维护会修剪已清理、撤销且过期的来源元数据以回收记录配额，保留同意／撤销凭据与其他记录类别。
+冷启动维护以只读探测发现待处理来源记录；没有待处理记录时不创建移交控制器。
+runtime 最后释放所有权时会与控制器构建互斥，并重验后建立的控制器是否退出；忙碌时保留所有权供稍后重试关闭。
+私有缓存路径重定向会在打开存储前拒绝；清理失败时保留配额。
+后续维护会在私有数据确认清理后，回收到期的目的端导入／派送元数据及其已结束队列记录。
+仍在执行、身份被替换或未知状态的队列会阻止回收；原同意／撤销凭证与已发布用户文件保留。
+冷启动维护不启动监听端或生产者；待清理账户的扫描不受大量未到期历史记录遮蔽。
+可移植证据保留与共用接口已接入；其余故障交错与正式交付见 Progress.md。
+来源证据实验功能已接入 owning runtime 与具名／共用账户的本机 transfer HTTP 管理路径，
+提供 review_evidence／create_evidence／get_evidence／revoke_evidence／list_evidence。
+独立持久授权沿用真实恢复／完成验证、当前账户与原本机 DAG 审核；已登记 peer 的 evidence
+读取核对实际接收的 key／规范与 DAG 节点，只返回 ID、哈希及有限验证，不授予一般任务读取或输入。
+审阅摘要不含 node.request_digest；即时读取才按精确已审阅原请求补入。
+来源主机技能证据、远端管理路由与共用接口已接入；其余故障验收与交付见 Progress.md。
+协调端 DAG 的实验采纳已接入独立审阅的远端恢复授权，固定原来源／key／规范／graph／node 与主机。
+批准与启动先持久保存暂定状态，离开本机 writer 后即时验证来源，再核对原同意与认领，才启用。
+停止会取消暂定状态；中断后只可用同一明确批准请求续接。确认期间保留 runtime 所有权，
+不把独立 peer 读取串行化；认领／记录及最终采纳前后重新验证。
+授权失效会阻止后续调度，只对精确已接收的下游任务请求有限暂停；回复未知或丢失时保留认领并待审阅。
+已完成副作用与无关任务保留；不宣称已证明原生输入退休或完成整份故障矩阵。
+旧投递格式升级会保留原批准 origin 与固定期限；多次续行的额外 origin 仍累积生效。
+停止附加的 REST 观察端不会重派或取消服务持有的导入，也不释放 runtime 所有权；重新连接可读取同一笔成果。两主机与独立进程三主机测试已核对实际字节及账号范围。
+更多重启／取消交错、更多暂存故障交错、完整保留、可移植证据、client／GUI 接口与完整阶段检查
+仍列于 Progress.md；移交收据不授予任务输入权限，也不能证明任务完成。
+
 来源导出的远端审阅／创建／查询／撤销已接合。协调端发出自己的不透明审阅 token，
 绑定实际本机调用者、当前主机／凭据摘要、来源审阅、清单摘要与原 key。批准意图在转发前
 持久提交；回复丢失或协调端重启后，相同批准仍取回同一来源成果。更换调用者、主机、凭据、
 note／key 或来源回复摘要即拒绝。待审阅与持久路由各限128条；到期只清理本机路由 metadata，
 保留同意边界。关闭 runtime 会清除尚未批准的本机审阅缓存，已批准的持久意图仍可恢复。
-来源使用自身账号，本机 principal／origin 不转发。目的端导入、可移植完成证据
-与公开接口仍待完成。
+来源使用自身账号，本机 principal／origin 不转发。目的端导入、可移植完成证据与公开接口均已接入；
+其余验收与正式交付见 Progress.md。
 
 既有远端 DAG 在固定主机配置及每次保留连接调用前后，均读取实际持久化通讯录。
 其他进程替换／移除端点或凭据、配置损坏或原本本机调用者被撤权时，操作会失效。
 读取不建立 console，也不隔离通讯录；既有本机服务委派与封闭远端路由保持兼容。
 
-跨主机成果移交仍未开放。本机来源核心可审阅已完成文件成果，经明确同意后建立不可变 blob，
+跨主机成果移交依明确审阅与各主机本机授权运行。来源核心可审阅已完成文件成果，建立不可变 blob，
 并核对实际发行者／接收者。来源管理与 peer 只读 HTTP 路由已可提供经审阅的清单／分块。
 Peer 使用接收端本身的 bearer／RBAC 与速率限制，在外部 principal／用户数据库查询前拒绝
 本机 principal／origin header；本机服务 client 仅在管理流程保留实际所有者委派。
 移交请求在服务器读取前限制为1MiB；受限 client 在派送请求与解码成功／错误回复前核对上限，
 不变更一般 HTTP 的既有上限。完整私有授权链／生命周期验收、目的端发布／
-证据采纳及共用公开接口仍待接合，详见 Progress.md；移交收据不授予任务输入权限。
+证据采纳及共用公开接口已接入；其余验收与交付见 Progress.md。移交收据不授予任务输入权限。
 
 来源导出在打开选定文件前，排除实际 runtime／移交数据库与 sidecar、当前来源所有者及
 发行者的用户数据库、服务连接文件与专属证据目录。服务登记实际私有文件，不保留一般成果的
@@ -29,8 +91,8 @@ Peer 使用接收端本身的 bearer／RBAC 与速率限制，在外部 principa
 相同请求重试与 peer 读取时重验；实际私有恢复所有者／审阅者绑定也纳入摘要，其数据库保持私有。
 来源操作在字节存取与 grant 写入边界配合取消；提交后回复被取消仍可依固定意图精确取回。
 成果期限依完成来源 updated+30 天计算，不因重试／重启刷新，也不改用较早祖先的期限。
-本机只读 reader 依当前私有完成授权导出，旧输入仍撤销；跨主机提交竞态、
-自动清理及目的端发布／证据采纳仍待完成。
+本机只读 reader 依当前私有完成授权导出，旧输入仍撤销；自动清理、目的端发布与证据采纳已接入。
+其余提交／撤权交错验收与正式交付见 Progress.md。
 
 Runtime 透过实际 batch 主机 adapter 保管 TransferPeer；具名传输固定端点／凭据，于 HTTP 前后
 重读持久化通讯录并核对当前本机调用者。来源端使用自身凭据验证，不接收本机 principal／origin
@@ -400,7 +462,7 @@ Windows 共享桌面须解锁并空闲 60 秒，实体键鼠活动会触发暂�
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 855 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 856 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -602,7 +664,7 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 855 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 856 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -700,7 +762,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 759 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 760 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |

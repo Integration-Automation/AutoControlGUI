@@ -1,0 +1,7 @@
+{
+  "host": "<registered-source-host>",
+  "source_task": "<original-source-task-id>",
+  "task_id": "<final-evidence-task-id>",
+  "recipient_policy": "source_owner",
+  "idempotency_key": "<idempotency-key>"
+}

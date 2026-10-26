@@ -43,6 +43,67 @@ def activate(records, item, note='approved'):
         return records.consume_review(connection, item['review'], item['key'], note)
 
 
+def test_kind_pruning_reclaims_source_metadata_quota_without_erasing_consent_tombstones(tmp_path, monkeypatch):
+    records = make_records(tmp_path, monkeypatch)
+    with records.store.connection(write=True) as connection:
+        for number in range(1, 129):
+            item = record(number)
+            records.reserve(connection, item)
+            records.revoke(connection, item['id'])
+            records.release(connection, item['id'])
+    monkeypatch.setattr(transfer_records_time(records), 'time', lambda: 2100.0)
+    fresh = record(129, created=2100.0, expires=2200.0, review_expires=2150.0)
+    with pytest.raises(AgentTaskError, match='quota'):
+        reserve(records, fresh)
+    with records.store.connection(write=True) as connection:
+        assert hasattr(records, 'prune_kind'), 'the owner needs a family-scoped metadata prune operation'
+        assert records.prune_kind(connection, 'export', 2100.0) == 128
+        assert connection.execute('SELECT count(*) FROM agent_transfer_intents').fetchone()[0] == 128
+        assert connection.execute('SELECT count(*) FROM agent_transfer_revocations').fetchone()[0] == 128
+    assert reserve(records, fresh)['id'] == fresh['id']
+    with pytest.raises(AgentTaskError):
+        reserve(records, record(1))
+
+
+def transfer_records_time(records):
+    return importlib.import_module(type(records).__module__).time
+
+
+def test_kind_pruning_preserves_other_families_and_uncleaned_source_accounts(tmp_path, monkeypatch):
+    records = make_records(tmp_path, monkeypatch)
+    items = [record(1), record(2, kind='evidence', account=None), record(3, kind='import'),
+             record(4, kind='route', account=None), record(5)]
+    with records.store.connection(write=True) as connection:
+        for item in items:
+            records.reserve(connection, item)
+            records.revoke(connection, item['id'])
+            if item is not items[-1]:
+                records.release(connection, item['id'])
+    monkeypatch.setattr(transfer_records_time(records), 'time', lambda: 2100.0)
+    with records.store.connection(write=True) as connection:
+        assert hasattr(records, 'prune_kind'), 'the owner needs a family-scoped metadata prune operation'
+        assert records.prune_kind(connection, 'export', 2100.0) == 1
+        for item in items[1:]:
+            assert records.find(connection, item['id'])['kind'] == item['kind']
+
+
+def test_kind_pruning_requires_a_writer_and_cannot_advance_expiry(tmp_path, monkeypatch):
+    records = make_records(tmp_path, monkeypatch)
+    item = record()
+    with records.store.connection(write=True) as connection:
+        records.reserve(connection, item)
+        records.revoke(connection, item['id'])
+        records.release(connection, item['id'])
+    with records.store.connection() as connection:
+        with pytest.raises(AgentTaskError, match='writer'):
+            records.prune_kind(connection, 'export', 2100.0)
+    with records.store.connection(write=True) as connection:
+        assert records.prune_kind(connection, 'export', 2100.0) == 0
+        assert records.find(connection, item['id'])['expires'] == item['expires']
+        with pytest.raises(AgentTaskError, match='family'):
+            records.prune_kind(connection, 'unknown', 2100.0)
+
+
 def test_reservation_needs_explicit_consent_and_exact_retry_survives_restart(tmp_path, monkeypatch):
     records = make_records(tmp_path, monkeypatch)
     item = record()

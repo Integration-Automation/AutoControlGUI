@@ -42,9 +42,9 @@ def post(server, path, payload, *, token=None, headers=None, raw=None):
         connection.close()
 
 
-def approved_export(server, task, *, token=None):
+def approved_export(server, task, *, token=None, selection=None):
     status, review = post(server, '/agent/transfer', {'operation': 'review_export', 'request': {
-        'source_task': task, 'selection': [{'criterion': 0, 'names': []}],
+        'source_task': task, 'selection': [{'criterion': 0, 'names': []}] if selection is None else selection,
         'recipient_policy': 'caller', 'idempotency_key': 'http-reviewed-export'}}, token=token)
     assert status == 200, review
     status, created = post(server, '/agent/transfer', {'operation': 'create_export', 'request': {

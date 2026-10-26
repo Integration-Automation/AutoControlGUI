@@ -117,6 +117,13 @@ class EvidenceHandoffs:
         if self.runtime._closed:
             raise AgentTaskError('runtime is closed')
 
+    def describe(self, connection: Any, request: dict, actor: dict, *, issuing: bool = False,
+                 issuer_policies: list[str] | None = None, authorization: dict | None = None) -> tuple:
+        """Supply current private proof to an owning host; this neither issues nor consumes a local grant."""
+        self._open()
+        return self._proof(connection, request, actor, issuing=issuing,
+                           issuer_policies=issuer_policies, authorization=authorization)
+
     def _issue(self, operation: str, request: dict) -> dict:
         actor = _principal()
         with self.runtime.store.connection(write=True) as connection:

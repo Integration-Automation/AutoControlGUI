@@ -125,3 +125,23 @@ class SourceLineage:
         if any(item['owner_key'] != owner or item['spec_hash'] != self.digest(row['spec']) for item in requests):
             raise AgentTaskError('source original accepted request witness changed')
         return requests
+
+    def accepted_requests(self, connection: Any, row: dict) -> list:
+        """Expose only actual validated private request witnesses to another host-owned proof builder."""
+        return self._requests(connection, row)
+
+    def evidence_context(self, connection: Any, source: dict, issuer: dict, origins: list[str] | None) -> dict:
+        """Preserve actual local DAG admission; remote accepted nodes keep their real task-only context."""
+        lineage = self.context(connection, source, issuer, origins)
+        rows, _links = self._chain(connection, source, issuer)
+        root = rows[0]
+        context, _accepted = self._root(connection, root, origins)
+        tagged = root['spec']['options'].get('dag_batch') is not None
+        if tagged and root['id'] != source['id']:
+            raise AgentTaskError('portable evidence must name the original accepted DAG source')
+        if 'admission' not in context['binding']:
+            context = {'binding': {'kind': 'task_completion', 'source_task': source['id'], 'owner': source['owner']},
+                       'source': source, 'state': source['state'], 'policy': None,
+                       'ancestor_links': len(rows) - 1, 'retained_rows': rows}
+        context['binding'] = {**context['binding'], 'transfer_lineage_digest': lineage['digest']}
+        return context

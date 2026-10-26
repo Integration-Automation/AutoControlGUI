@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased — managed cross-host outcomes
+
+Add manage_agent_transfer / AC_agent_transfer, MCP/REST/CLI/Builder parity and the Transfers view.
+Destination imports publish independently verified immutable bytes under destination-local authorization;
+portable evidence is live source proof, separate from artifact receipts and input permission.
+Preserve original local handoff/skill ownership, accepted trials/versions, current-role and retired-input rules.
+Remote adoption stays provisional until post-write source confirmation; revocation pauses only actually
+admitted owned descendants and retains uncertain retirement. GUI closure detaches observers only.
+Registered endpoint/token replacements invalidate consent. Review/create/retry retain exact keys/notes,
+source/destination expiry, generation fencing and exclusively owned cleanup. Existing task APIs stay intact.
+The browser helper requires the reviewed je_web_runner managed contracts; an old installed SDK refuses
+explicitly, without selecting another browser engine. Isolated helper proof is not production deployment.
+Full tests and compatibility evidence: docs/updates/2026-10-d.md; unresolved legacy evidence-cache ownership,
+historical timing causes and all deferred native/device/browser acceptance remain in Progress.md.
+
+### Earlier implementation checkpoints
+
 Registered source management now routes review/create/get/list/revoke through a coordinator-owned
 opaque review. Consent binds the actual local caller, current host fingerprint, peer review, manifest
 digest and original key. Approved intent commits before forwarding; lost replies and coordinator

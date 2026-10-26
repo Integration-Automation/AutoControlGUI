@@ -9,6 +9,7 @@ from je_auto_control.utils.agent_runtime import api
 from je_auto_control.utils.agent_runtime.client import AgentRuntimeClient
 from je_auto_control.utils.agent_runtime.task_recovery import OPERATIONS as RECOVERY_OPERATIONS
 from je_auto_control.utils.agent_runtime.dag_batches import OPERATIONS as DAG_OPERATIONS
+from je_auto_control.utils.agent_runtime.transfer_operations import OPERATIONS as TRANSFER_OPERATIONS
 from je_auto_control.utils.path_guard.path_guard import validate_path
 
 
@@ -19,7 +20,7 @@ def register_parser(subparsers: Any, handler: Callable[..., int]) -> None:
     for operation in ("start", "stop", "status", "submit", "list", "get", "lookup", "inspect-dag",
                       "observe", "act", "finish",
                       "pause", "resume", "cancel", "draft", "stop-all", "receipts", "reconcile", "prune", "trigger",
-                      "recover-target", "skill", "target", "targets", "recovery", "dag"):
+                      "recover-target", "skill", "target", "targets", "recovery", "dag", "transfer"):
         item = operations.add_parser(operation)
         item.set_defaults(func=handler)
         _operation_arguments(item, operation)
@@ -43,6 +44,9 @@ def _operation_arguments(item: Any, operation: str) -> None:
         from je_auto_control.utils.agent_runtime.workflow_specs import WORKFLOWS
         item.add_argument("workflow", choices=WORKFLOWS)
         item.add_argument("config", help="JSON workflow configuration")
+    elif operation == "transfer":
+        item.add_argument("--operation", dest="transfer_operation", choices=TRANSFER_OPERATIONS, required=True)
+        item.add_argument("--request", help="JSON reviewed transfer management request")
     elif operation in {"trigger", "skill", "target", "recovery", "dag"}:
         _reviewed_arguments(item, operation)
     elif operation == "recover-target":
@@ -77,6 +81,8 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
     """Run one parsed operation and return a JSON-compatible result."""
     operation = arguments.agent_operation
     operations = {"start": lambda: api.start_agent_runtime(arguments.directory),
+                  "transfer": lambda: api.manage_agent_transfer(arguments.transfer_operation,
+                                                                _read(arguments.request) if arguments.request else {}),
                   "targets": api.list_agent_targets,
                   "dag": lambda: api.manage_agent_dag(arguments.dag_operation,
                                                         _read(arguments.request) if arguments.request else {}),

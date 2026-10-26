@@ -2,16 +2,19 @@
 from __future__ import annotations
 
 import json
+from contextlib import nullcontext
 import time
 import uuid
 from typing import Any
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
-from je_auto_control.utils.agent_runtime.models import detached
+from je_auto_control.utils.agent_runtime.models import detached, positive
 from je_auto_control.utils.agent_runtime.store import request_spec_digest
 from je_auto_control.utils.agent_runtime.dag_batch_recording import bound_node
 from je_auto_control.utils.agent_runtime.dag_continuation_evidence import ContinuationEvidence, completion
 from je_auto_control.utils.agent_runtime.dag_continuation_plan import dispatch_template, validate_decision
+from je_auto_control.utils.agent_runtime.dag_transfer_checks import DagTransferChecks, remote_reports
+from je_auto_control.utils.agent_runtime.dag_transfer_stop import pause_dependents
 from je_auto_control.utils.dag.batch_contract import batch_definition, bind_definition
 
 FIELDS = {"pause_batch": {"batch_id"}, "review_continuation": {"batch_id", "definition"},
@@ -35,6 +38,12 @@ def _decisions(value: Any, batch: dict) -> dict[str, dict] | None:
     if set(result) != {node["id"] for node in batch["definition"]["nodes"]}:
         raise AgentTaskError("DAG continuation decisions do not match the original graph")
     return result
+
+
+def _deadline(request: dict) -> float:
+    timeout = request.get('timeout_seconds', 30)
+    positive(timeout, 'DAG continuation timeout_seconds', 300)
+    return time.monotonic() + timeout
 
 
 def _input_matches(batch: dict, definition: Any) -> None:
@@ -114,12 +123,14 @@ class DagContinuation:
         with self.batches.runtime.store.connection(write=True) as connection:
             connection.execute("UPDATE agent_dag_batches SET state='waiting_review',attempt='',updated=? WHERE id=?",
                                (time.time(), batch["id"]))
-            connection.execute("UPDATE agent_dag_approvals SET state='cancelled' WHERE batch_id=? AND state='ready'",
+            connection.execute("UPDATE agent_dag_approvals SET state='cancelled' WHERE batch_id=? "
+                               "AND state IN ('ready','provisional','starting')",
                                (batch["id"],))
         # pylint: disable-next=protected-access  # reason: preserve the registry's owner-scoped public projection
         return self.batches._describe(self.batches._row(batch["id"]))
 
     def _approve(self, batch: dict, request: dict) -> dict:
+        deadline = _deadline(request)
         note = request["note"]
         if not isinstance(note, str) or not note.strip() or len(note) > 4000:
             raise AgentTaskError("DAG continuation requires a bounded nonempty review note")
@@ -128,26 +139,59 @@ class DagContinuation:
             raise AgentTaskError("DAG continuation approval requires explicit decisions for every node")
         plan_hash = request_spec_digest({"decisions": selected, "actor": self.actor})
         with self.batches.runtime.store.connection() as connection:
-            previous = connection.execute("SELECT id,state FROM agent_dag_approvals "
+            previous = connection.execute("SELECT id,state,details FROM agent_dag_approvals "
                 "WHERE batch_id=? AND source_snapshot=? AND plan_hash=?",
                 (batch["id"], request["snapshot"], plan_hash)).fetchone()
         if previous is not None:
+            if previous['state'] == 'provisional':
+                return self._resume_approval(batch, request, dict(previous), deadline)
             return {"batch_id": batch["id"], "approval_id": previous["id"], "approval_state": previous["state"]}
         if batch["state"] != "waiting_review":
             raise AgentTaskError("DAG continuation approval requires a stopped batch")
         review = self._gather(self._baseline(batch), request["decisions"], request.get("timeout_seconds", 30))
         if review["public"]["snapshot"] != request["snapshot"] or not review["public"]["can_approve"]:
             raise AgentTaskError("DAG continuation evidence or decisions changed; review again")
+        return self._save_approval(batch, request, review, plan_hash, deadline)
+
+    def _save_approval(self, batch: dict, request: dict, review: dict, plan_hash: str, deadline: float) -> dict:
         identifier = uuid.uuid4().hex
-        details = {**review, "note": note, "actor": self.actor}
-        with self.batches.runtime.store.connection(write=True) as connection:
-            connection.execute("INSERT INTO agent_dag_approvals VALUES (?,?,?,?,?,?,?)",
-                (identifier, batch["id"], request["snapshot"], plan_hash, json.dumps(details), "ready", time.time()))
-            self._apply(connection, batch, identifier, review["reports"])
-            connection.execute("UPDATE agent_dag_batches SET state='approved',attempt='',updated=? WHERE id=?",
-                               (time.time(), batch["id"]))
-            self._handoff_checks(connection, batch, review['reports'])
+        details = {**review, "note": request['note'], "actor": self.actor}
+        checks = (DagTransferChecks(self.batches.runtime.store, batch,
+            lambda: self._remote_checks(batch, review['reports'], deadline), baseline=review['baseline'])
+            if remote_reports(batch, review['reports']) else None)
+        with (self.batches.runtime.transfers.activity() if checks is not None else nullcontext()):
+            with self.batches.runtime.store.connection(write=True) as connection:
+                connection.execute("INSERT INTO agent_dag_approvals VALUES (?,?,?,?,?,?,?)",
+                    (identifier, batch["id"], request["snapshot"], plan_hash, json.dumps(details),
+                     'provisional' if checks is not None else 'ready', time.time()))
+                if checks is None:
+                    self._commit_approval(connection, batch, identifier, review['reports'])
+                else:
+                    checks.pin(connection, identifier)
+            if checks is not None:
+                checks.finish(identifier, 'provisional', lambda connection:
+                              self._commit_approval(connection, batch, identifier, review['reports']))
         return {"batch_id": batch["id"], "approval_id": identifier, "approval_state": "ready"}
+
+    def _commit_approval(self, connection: Any, batch: dict, identifier: str, reports: list) -> None:
+        self._apply(connection, batch, identifier, reports)
+        connection.execute("UPDATE agent_dag_approvals SET state='ready' WHERE id=?", (identifier,))
+        connection.execute("UPDATE agent_dag_batches SET state='approved',attempt='',updated=? WHERE id=?",
+                           (time.time(), batch['id']))
+        self._handoff_checks(connection, batch, reports)
+
+    def _resume_approval(self, batch: dict, request: dict, previous: dict, deadline: float) -> dict:
+        details = json.loads(previous['details'])
+        if batch['state'] != 'waiting_review' or details['actor'] != self.actor or details['note'] != request['note']:
+            raise AgentTaskError('provisional adoption requires its original explicit approval request')
+        checks = DagTransferChecks(self.batches.runtime.store, batch,
+            lambda: self._remote_checks(batch, details['reports'], deadline), baseline=details['baseline'])
+        with self.batches.runtime.transfers.activity():
+            with self.batches.runtime.store.connection() as connection:
+                checks.pin(connection, previous['id'])
+            checks.finish(previous['id'], 'provisional', lambda connection:
+                          self._commit_approval(connection, batch, previous['id'], details['reports']))
+        return {'batch_id': batch['id'], 'approval_id': previous['id'], 'approval_state': 'ready'}
 
     @staticmethod
     def _apply(connection: Any, batch: dict, identifier: str, reports: list[dict]) -> None:
@@ -169,6 +213,7 @@ class DagContinuation:
                     (batch["id"], node_id, decision["task_id"], report["original"]["task_id"], identifier))
 
     def _start(self, batch: dict, request: dict) -> dict:
+        deadline = _deadline(request)
         with self.batches.runtime.store.connection() as connection:
             row = connection.execute("SELECT * FROM agent_dag_approvals WHERE id=? AND batch_id=?",
                                      (request["approval_id"], batch["id"])).fetchone()
@@ -176,20 +221,40 @@ class DagContinuation:
             raise AgentTaskError("DAG continuation approval was consumed or cancelled")
         details = json.loads(row["details"])
         self._start_context(batch, request, details)
+        baseline = self._baseline(batch) if remote_reports(batch, details['reports']) else None
         review = self._gather(details["baseline"], details["public"]["decisions"], request.get("timeout_seconds", 30))
         if review["public"]["snapshot"] != row["source_snapshot"] or not review["public"]["can_approve"]:
             raise AgentTaskError("DAG continuation evidence changed after approval")
-        attempt = uuid.uuid4().hex
-        with self.batches.runtime.store.connection(write=True) as connection:
-            connection.execute("UPDATE agent_dag_approvals SET state='used' WHERE id=?", (row["id"],))
-            connection.execute("UPDATE agent_dag_batches SET state='running',attempt=?,updated=? WHERE id=?",
-                               (attempt, time.time(), batch["id"]))
-            self._handoff_checks(connection, batch, review['reports'])
+        attempt = self._activate(batch, row['id'], review['reports'], deadline, baseline)
         adopted = {item["decision"]["node_id"]: item["decision"]["task_id"] for item in review["reports"]
                    if item["decision"]["action"] != "dispatch"}
         return {"batch_id": batch["id"], "attempt": attempt, "hosts": batch["hosts"], "adopted": adopted,
                 "max_parallel": batch["max_parallel"],
                 "definition": bind_definition(batch["definition"], batch["id"], batch["graph_hash"], batch["bindings"])}
+
+    def _activate(self, batch: dict, identifier: str, reports: list, deadline: float, baseline: dict | None) -> str:
+        attempt = uuid.uuid4().hex
+        checks = (DagTransferChecks(self.batches.runtime.store, batch,
+            lambda: self._remote_checks(batch, reports, deadline), baseline=baseline)
+            if remote_reports(batch, reports) else None)
+        with (self.batches.runtime.transfers.activity() if checks is not None else nullcontext()):
+            with self.batches.runtime.store.connection(write=True) as connection:
+                if checks is not None:
+                    checks.pin(connection, identifier)
+                    checks.guard(connection, identifier, 'ready')
+                    connection.execute("UPDATE agent_dag_approvals SET state='starting' WHERE id=?", (identifier,))
+                else:
+                    self._commit_start(connection, batch, identifier, attempt, reports)
+            if checks is not None:
+                checks.finish(identifier, 'starting', lambda connection:
+                              self._commit_start(connection, batch, identifier, attempt, reports))
+        return attempt
+
+    def _commit_start(self, connection: Any, batch: dict, identifier: str, attempt: str, reports: list) -> None:
+        connection.execute("UPDATE agent_dag_approvals SET state='used' WHERE id=?", (identifier,))
+        connection.execute("UPDATE agent_dag_batches SET state='running',attempt=?,updated=? WHERE id=?",
+                           (attempt, time.time(), batch['id']))
+        self._handoff_checks(connection, batch, reports)
 
     def _start_context(self, batch: dict, request: dict, details: dict) -> None:
         parallel = request["max_parallel"]
@@ -214,6 +279,11 @@ class DagContinuation:
                 connection.execute("UPDATE agent_dag_nodes SET phase='unknown',receipt=?,updated=? "
                                    "WHERE batch_id=? AND node_id=?",
                                    (receipt, time.time(), batch["id"], node_id))
+            if self._remote_grant(batch, node_id, dict(adoption)):
+                nodes = bind_definition(
+                    batch['definition'], batch['id'], batch['graph_hash'], batch['bindings'])['nodes']
+                pause_dependents(self.batches.runtime, batch, node_id, nodes,
+                                 ContinuationEvidence(batch, runtime=self.batches.runtime).connection)
             raise
         return {"outcome": "completed", "task_id": adoption["task_id"],
                 "task_state": "succeeded", "input_released": True}
@@ -239,9 +309,31 @@ class DagContinuation:
             else:
                 evidence.successor(node, original, adoption['task_id'])
 
+    def _remote_grant(self, batch: dict, node_id: str, adoption: dict) -> bool:
+        if bound_node(batch, node_id)['host'] == 'local':
+            return False
+        with self.batches.runtime.store.connection() as connection:
+            row = connection.execute('SELECT details FROM agent_dag_approvals WHERE id=? AND batch_id=?',
+                (adoption['approval_id'], batch['id'])).fetchone()
+        return row is not None and any(item['node_id'] == node_id and 'handoff_id' in item
+            for item in json.loads(row['details'])['public']['decisions'])
+
     def _handoff_checks(self, connection: Any, batch: dict, reports: list[dict]) -> None:
         for report in reports:
             decision = report['decision']
-            if 'handoff_id' in decision:
+            if 'handoff_id' in decision and bound_node(batch, decision['node_id'])['host'] == 'local':
                 self.batches.runtime.recovery.handoff_evidence(batch['id'], decision['node_id'],
                     report['original']['task_id'], decision['task_id'], decision['handoff_id'], connection=connection)
+
+    def _remote_checks(self, batch: dict, reports: list[dict], deadline: float) -> None:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise AgentTaskError('remote adoption confirmation deadline expired')
+        evidence = ContinuationEvidence(batch, remaining, self.batches.runtime)
+        for report in remote_reports(batch, reports):
+            decision = report['decision']
+            node = bound_node(batch, decision['node_id'])
+            current = validate_decision(self.batches.runtime, decision, node, 'claimed',
+                                       evidence.original(node), evidence, '')
+            if current != report:
+                raise AgentTaskError('remote adoption evidence changed after its local provisional write')

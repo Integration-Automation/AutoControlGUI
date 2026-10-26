@@ -14,6 +14,10 @@ import shutil
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Tuple
 
+from je_auto_control.utils.agent_runtime.transfer_models import (
+    MAX_MANIFEST_BYTES, MAX_TRANSFER_BYTES, MAX_TRANSFER_FILES, TransferManifest,
+)
+from je_auto_control.utils.agent_runtime.transfer_operations import OPERATIONS
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint, cancellation_progress
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -278,7 +282,17 @@ def _check_executor() -> Check:
     )
 
 
+def _check_agent_transfer_contract() -> Check:
+    return Check(name='agent_transfer_contract', ok=True, severity=_SEVERITY_INFO,
+        detail='Local transfer contract only; no live grant, remote peer or native capability was verified.',
+        extra={'contract': TransferManifest.contract, 'operations': list(OPERATIONS),
+               'max_manifest_bytes': MAX_MANIFEST_BYTES, 'max_transfer_bytes': MAX_TRANSFER_BYTES,
+               'max_files': MAX_TRANSFER_FILES, 'state': 'contract_only', 'authority_granted': False,
+               'remote_verified': False, 'native_verified': False})
+
+
 _ALL_CHECKS: Tuple[CheckFn, ...] = (
+    _check_agent_transfer_contract,
     _check_platform,
     _check_optional_deps,
     _check_executor,

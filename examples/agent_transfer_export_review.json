@@ -1,0 +1,12 @@
+{
+  "host": "<registered-source-host>",
+  "source_task": "<source-task-id>",
+  "selection": [
+    {
+      "criterion": 0,
+      "names": []
+    }
+  ],
+  "recipient_policy": "source_owner",
+  "idempotency_key": "<idempotency-key>"
+}

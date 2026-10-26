@@ -180,3 +180,12 @@ def _manifest_files(files: tuple[TransferFile, ...]) -> None:
     if sum(item.blob.size for item in files) > MAX_TRANSFER_BYTES:
         raise AgentTaskError('transfer manifest exceeds sixty-four mebibytes')
     _portable_files(tuple(AssetFile(item.name, item.blob.sha256, item.blob.size) for item in files))
+
+
+def _review_envelope(reply: Mapping) -> tuple[Mapping, TransferManifest]:
+    """Parse the shared closed review envelope before source or destination identity checks."""
+    value = _object(reply, {'review', 'digest', 'manifest', 'review_expires', 'approval_required'})
+    _hex(value['review'], 32)
+    _hex(value['digest'], 64)
+    _deadline(value['review_expires'])
+    return value, TransferManifest.from_dict(value['manifest'])

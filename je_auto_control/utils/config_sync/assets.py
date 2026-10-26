@@ -2,23 +2,34 @@
 from __future__ import annotations
 
 from concurrent.futures import CancelledError
+from contextlib import contextmanager
 import errno
 from hashlib import sha256
 from itertools import islice
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import BinaryIO, Callable, Iterable, Optional, Protocol
+from typing import BinaryIO, Callable, ContextManager, Iterable, Iterator, Optional, Protocol
 
 from je_auto_control.utils.config_sync.asset_models import (
     MAX_ASSETS, MAX_BUNDLE_BYTES, MAX_FILE_BYTES, AssetFile, AssetManifest, AssetSyncResult,
 )
 from je_auto_control.utils.config_sync.contract import ConfigSyncError, _encoded
-from je_auto_control.utils.path_guard import validate_path
+from je_auto_control.utils.path_guard.path_guard import validate_path
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 
 _CHUNK_BYTES = 64 * 1024
 _Cancelled = Optional[Callable[[], bool]]
+
+
+class _AssetStaging(Protocol):
+    """Trusted internal producers can journal exclusive staging before supplying any output stream."""
+
+    def directory(self, root: Path, manifest: AssetManifest) -> ContextManager[Path]:
+        """Prepare an exclusive directory and its manifest-selected empty files."""
+
+    def open(self, path: Path) -> ContextManager[BinaryIO]:
+        """Open only a journaled exclusive output file for its first write."""
 
 
 class AssetTransport(Protocol):
@@ -80,6 +91,12 @@ def build_asset_manifest(source_root: str | Path, paths: Iterable[str], *,
 def sync_assets(manifest: AssetManifest, transport: AssetTransport, *,
                 cancelled: _Cancelled = None) -> AssetSyncResult:
     """Publish all verified assets together, or leave previous generations intact; never run a synced script."""
+    return _sync_assets(manifest, transport, cancelled=cancelled)
+
+
+def _sync_assets(manifest: AssetManifest, transport: AssetTransport, *,
+                 cancelled: _Cancelled = None, staging: _AssetStaging | None = None) -> AssetSyncResult:
+    """Keep the existing publisher while permitting a host-owned staging journal and output factory."""
     _check(cancelled)
     if not isinstance(manifest, AssetManifest):
         raise ConfigSyncError('asset transfer requires a validated manifest')
@@ -89,22 +106,22 @@ def sync_assets(manifest: AssetManifest, transport: AssetTransport, *,
         if destination.exists() or destination.is_symlink():
             return _verified_result(destination, manifest, True, cancelled)
         root.mkdir(parents=True, exist_ok=True)
-        with TemporaryDirectory(prefix='.incoming-', dir=root) as temporary:
-            staging = Path(temporary)
-            files = staging / 'files'
-            files.mkdir()
+        with _staging_directory(root, manifest, staging) as temporary:
+            stage = Path(temporary)
+            files = stage / 'files'
+            files.mkdir(exist_ok=staging is not None)
             for asset in manifest.files:
                 _check(cancelled)
                 path = _asset_path(files, asset)
                 path.parent.mkdir(parents=True, exist_ok=True)
-                _copy_asset(transport, asset, path, cancelled)
-            with (staging / 'manifest.json').open('wb') as output:
+                _copy_asset(transport, asset, path, cancelled, staging)
+            with _output_file(stage / 'manifest.json', staging) as output:
                 output.write(_encoded(manifest.to_dict()).encode('ascii'))
                 output.flush()
                 os.fsync(output.fileno())
             _check(cancelled)
             validate_path(destination, allowed_roots=[root])
-            reused = _publish(staging, destination)
+            reused = _publish(stage, destination)
         return _verified_result(destination, manifest, reused, cancelled=None)
     except (OSError, ConfigSyncError) as error:
         raise_caused_run_interruption(error)
@@ -113,15 +130,31 @@ def sync_assets(manifest: AssetManifest, transport: AssetTransport, *,
         raise ConfigSyncError('asset transfer could not publish a complete generation') from error
 
 
-def _copy_asset(transport: AssetTransport, asset: AssetFile, path: Path, cancelled: _Cancelled) -> None:
+@contextmanager
+def _staging_directory(root: Path, manifest: AssetManifest, staging: _AssetStaging | None) -> Iterator[Path]:
+    if staging is None:
+        with TemporaryDirectory(prefix='.incoming-', dir=root) as temporary:
+            yield Path(temporary)
+    else:
+        with staging.directory(root, manifest) as directory:
+            yield directory
+
+
+def _output_file(path: Path, staging: _AssetStaging | None) -> ContextManager[BinaryIO]:
+    return path.open('xb') if staging is None else staging.open(path)
+
+
+def _copy_asset(transport: AssetTransport, asset: AssetFile, path: Path, cancelled: _Cancelled,
+                staging: _AssetStaging | None = None) -> None:
     with transport.open(asset) as source:
         _check(cancelled)
-        _copy_stream(source, asset, path, cancelled)
+        _copy_stream(source, asset, path, cancelled, staging)
 
 
-def _copy_stream(source: BinaryIO, asset: AssetFile, path: Path, cancelled: _Cancelled) -> None:
+def _copy_stream(source: BinaryIO, asset: AssetFile, path: Path, cancelled: _Cancelled,
+                  staging: _AssetStaging | None = None) -> None:
     digest, size = sha256(), 0
-    with path.open('xb') as output:
+    with _output_file(path, staging) as output:
         while True:
             _check(cancelled)
             chunk = source.read(_CHUNK_BYTES)

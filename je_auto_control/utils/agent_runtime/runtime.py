@@ -22,7 +22,7 @@ from je_auto_control.utils.agent_runtime.policy import (
     TaskPolicy, durable_payload, canonical_spec, owns_task, validate_root_snapshot,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock
+from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock, close_runtime_ownership
 from je_auto_control.utils.agent_runtime.retained_browser import RetainedBrowsers
 from je_auto_control.utils.agent_runtime.retained_browser_runtime import retire_target, maintain_retained
 from je_auto_control.utils.agent_runtime.budget_clock import BudgetClock
@@ -31,7 +31,7 @@ from je_auto_control.utils.agent_runtime.receipts import reconcile, row_report
 from je_auto_control.utils.agent_runtime.task_triggers import AgentTriggers
 from je_auto_control.utils.agent_runtime.task_skills import AgentSkills
 from je_auto_control.utils.agent_runtime.task_recovery import AgentRecovery, recovery_link, require_no_successor
-from je_auto_control.utils.agent_runtime.origin_policy import bind_origin, validate_origins
+from je_auto_control.utils.agent_runtime.origin_policy import bind_origin, validate_origins, origin_ceilings
 from je_auto_control.utils.agent_runtime.store import AgentTaskStore, request_spec_digest
 from je_auto_control.utils.agent_runtime.dag_batches import DagBatches
 from je_auto_control.utils.agent_runtime.transfer_host import TransferHost
@@ -114,16 +114,18 @@ class AgentRuntime:
     @property
     def transfers(self) -> AgentTransfers:
         """Use one lazily constructed transfer controller owned by this exact runtime generation."""
+        if self._transfers is not None and not self._closed:
+            return self._transfers
         with self._mutex:
             if self._closed:
                 raise AgentTaskError('runtime is closed')
             if self._transfers is None:
                 def retired(task_id: str) -> bool:
-                    with self._mutex:
-                        return task_id not in self._leases and task_id not in self._executing
+                    # Publication already owns the SQLite writer; avoid reversing its runtime-mutex order.
+                    return task_id not in self._leases and task_id not in self._executing
                 policy = (lambda value: TaskPolicy(bind_origin(AgentTaskSpec.from_dict(value))),
                           submitted_digest, request_spec_digest, recorded_recovery_owner,
-                          self.batches.transfer_private_files)
+                          self.batches.transfer_private_files, self.target_profiles.transfer_profile, origin_ceilings)
                 host = TransferHost(self, policy, check_completion_authority,
                                     lambda: not self._closed, retired)
                 self._transfers = AgentTransfers(self, TransferPeer(self.batches.transfer_call), host=host,
@@ -654,9 +656,10 @@ class AgentRuntime:
             if not self._retire(task_id):
                 raise AgentTaskError("runtime still has active input or cleanup")
         self._retained_browsers.close()
-        self._closed = True
-        self.evidence.history.close()
-        self._owner_lock.close()
+        with close_runtime_ownership(self._mutex, self._owner_lock, self.evidence.history,
+                                     lambda: (self._closed, self._transfers)) as retiring:
+            if retiring:
+                self._closed = True
 
     def maintain(self) -> None:
         """Expire abandoned leases and retire revoked owners even between client requests."""
@@ -682,6 +685,8 @@ class AgentRuntime:
         maintain_retained(self)
         self._settle_stopped()
         self.evidence.flush()
+        if self._transfers is not None or AgentTransfers.maintenance_pending(self.store):
+            self.transfers.maintain()
         if time.monotonic() >= self._next_retention:
             self.prune()
             self._next_retention = time.monotonic() + 3600

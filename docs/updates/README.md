@@ -58,6 +58,8 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261027-02 | 2026-10-27 | Align transfer guides with the verified shared surfaces | #docs #agent #handoff #compatibility #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-01 | 2026-10-27 | Verify cross-host outcomes and isolated browser helper | #snapshot #agent #handoff #browser #verification | [2026-10-d](2026-10-d.md) |
 | U-20261026-07 | 2026-10-26 | Bind source exports and routed consent to current host authority | #snapshot #agent #handoff #authority #routing #verification | [2026-10-c](2026-10-c.md) |
 | U-20261026-06 | 2026-10-26 | Separate authenticated source peer reads from local delegation | #snapshot #agent #handoff #http #verification | [2026-10-c](2026-10-c.md) |
 | U-20261026-05 | 2026-10-26 | Bind reviewed local artifact snapshots to current source authority | #snapshot #agent #handoff #source #verification | [2026-10-c](2026-10-c.md) |

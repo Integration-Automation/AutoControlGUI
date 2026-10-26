@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module  # reason: 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.task_controller import TaskController, TaskOutcome
+from je_auto_control.gui.agent_transfer_view import AgentTransferView
 from je_auto_control.gui.agent_observation_view import AgentObservationView
 from je_auto_control.utils.agent_runtime.client import AgentRuntimeClient
 from je_auto_control.utils.agent_runtime.api import start_agent_runtime, stop_agent_runtime
@@ -141,6 +142,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._page('agent_page_handoffs', (('agent_handoff_scope', self._handoff_scope),
                                           ('agent_handoff_operation', self._handoff_operation),
                                           ('agent_handoff_request', self._handoff_request)))
+        self._transfer = AgentTransferView(self)
+        self._pages.addTab(self._transfer, _translate("agent_page_transfers"))
+        self._page_keys.append("agent_page_transfers")
         self._page("agent_page_observation", (("agent_action", self._action),))
         self._pages.widget(self._pages.count() - 1).layout().addWidget(self._observation)
 
@@ -168,6 +172,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         for index, key in enumerate(self._page_keys):
             self._pages.setTabText(index, _translate(key))
         self._observation.retranslate()
+        self._transfer.retranslate()
         for combo, prefix in ((self._trigger_operation, "agent_trigger_"), (self._trigger_kind, "agent_trigger_kind_"),
                               (self._owner_policy, "agent_owner_"),
                               (self._handoff_scope, 'agent_handoff_scope_')):
@@ -215,6 +220,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ('agent_handoff_apply', self._handoff_apply),
                 *[('agent_handoff_example_' + name, partial(self._handoff_example, name)) for name in
                   ('review_handoff', 'create_handoff', 'revoke_handoff')],
+                *[(key, partial(self._transfer_action, action)) for key, action in self._transfer.menu_actions()],
                 ("agent_skill_list", partial(self._dispatch, "skill", {"operation": "list"})),
                 ("agent_target_apply", self._target_apply),
                 ("agent_browser_example", self._browser_example),
@@ -225,6 +231,15 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_lookup", self._lookup),
                 *[("agent_" + name, partial(self._dispatch, name)) for name in
                   ("get", "observe", "finish", "pause", "resume", "cancel", "receipts")]]
+
+    def _transfer_action(self, action: Any) -> None:
+        self._pages.setCurrentWidget(self._transfer)
+        action()
+
+    def closeEvent(self, event: Any) -> None:
+        """Detach transfer observers without stopping service-owned imports or revoking grants."""
+        self._transfer.detach()
+        super().closeEvent(event)
 
     def _lookup(self) -> None:
         self._dispatch("lookup", {"idempotency_key": self._request_key.text()})
@@ -305,6 +320,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._pages.setCurrentIndex(self._page_keys.index("agent_page_targets"))
 
     def _clear_observation(self, _task_id: str = "") -> None:
+        self._transfer.invalidate()
         self._observation.clear()
         self._remainder_request.setPlainText("{}")
 

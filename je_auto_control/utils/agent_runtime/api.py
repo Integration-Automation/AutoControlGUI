@@ -130,6 +130,11 @@ def manage_agent_dag(operation: str, request: Mapping[str, Any] | None = None) -
     return AgentRuntimeClient().call("dag", {"operation": operation, "request": dict(request or {})}, timeout=305)
 
 
+def manage_agent_transfer(operation: str, request: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Manage explicitly reviewed artifact transfers and evidence grants through the owning local service."""
+    return AgentRuntimeClient().call("transfer", {"operation": operation, "request": dict(request or {})})
+
+
 def manage_agent_skill(operation: str, request: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Record, reauthorize, validate, explicitly publish or run an immutable managed skill version."""
     return AgentRuntimeClient().call("skill", {"operation": operation, "request": dict(request or {})})

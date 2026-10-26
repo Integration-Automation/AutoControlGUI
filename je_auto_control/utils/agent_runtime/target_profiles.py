@@ -3,12 +3,13 @@ from __future__ import annotations
 
 import json
 import time
+from contextlib import nullcontext
 from dataclasses import replace
 from typing import Any, Mapping
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached, thaw
-from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile, reviewed_tools
+from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile, reviewed_tools, validate_root_snapshot
 from je_auto_control.utils.agent_runtime.target_factory import build_target
 from je_auto_control.utils.agent_runtime.native_target import NativeDesktopTarget
 from je_auto_control.utils.rbac.authorization import current_authorization
@@ -18,6 +19,15 @@ _PROBE_FIELDS = frozenset({"status", "reason", "python", "sdk", "readback_contra
                             "playwright", "browser_launch", "native_evidence"})
 _PROBE_STATUSES = frozenset({"python_dependencies_ready", "dependency_missing", "incompatible", "unknown",
                               "not_supported"})
+
+
+def _transfer_profile(profile: AgentTargetProfile, row: Any) -> dict:
+    if row is None or row['digest'] != profile.digest or row['config'] != json.dumps(profile.to_dict()):
+        raise AgentTaskError('destination target profile integrity changed')
+    if profile.kind != 'files' or not profile.roots:
+        raise AgentTaskError('destination requires a rooted files target profile')
+    validate_root_snapshot(profile.roots)
+    return {'name': profile.name, 'digest': profile.digest, 'roots': list(profile.roots)}
 
 
 class AgentTargetProfiles:
@@ -143,6 +153,18 @@ class AgentTargetProfiles:
         """List resource names and declared adapter support without native probes or sensitive configuration."""
         with self._runtime._mutex:
             return {"targets": [self._summary(name) for name in sorted(self._runtime._targets)]}
+
+    def transfer_profile(self, name: str, *, connection: Any = None) -> dict:
+        """Require an actual enabled immutable files profile using the caller's existing SQL snapshot."""
+        if not isinstance(name, str) or name not in self._profiles:
+            raise AgentTaskError('destination requires a configured files target profile')
+        transaction = self._runtime.store.connection() if connection is None else nullcontext(connection)
+        with transaction as reading:
+            row = reading.execute('SELECT config,digest FROM agent_target_profiles WHERE name=?', (name,)).fetchone()
+            control = reading.execute('SELECT enabled FROM agent_target_controls WHERE name=?', (name,)).fetchone()
+            if control is None or control['enabled'] != 1:
+                raise AgentTaskError('destination target profile is disabled')
+            return _transfer_profile(self._profiles[name], row)
 
     def _summary(self, name: str) -> dict:
         profile = self._profiles.get(name)

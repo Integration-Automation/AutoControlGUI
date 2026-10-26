@@ -1,5 +1,93 @@
 # AutoControl
 
+Transfer management now shares `manage_agent_transfer(operation, request)`, `AC_agent_transfer`,
+`ac_agent_transfer`, authenticated `POST /agent/transfer`, and Script Builder metadata. The CLI uses
+`agent-task transfer --operation review_export --request request.json`. Review returns an approval
+token; creation requires that token, the original request key and an explicit note. Export/import
+management and portable evidence management support registered hosts, with source-local authority checks.
+The Transfers page exposes these operations through explicit Actions, editable JSON and four locales.
+Review never sends approval; preparing approval preserves the original host, review token and request
+key with an empty note. Changed selections and closed views reject late replies; accepted imports
+remain service-owned. Routed evidence consent is persisted before forwarding; exact retries after lost
+replies or a coordinator
+restart reuse the same grant. Passive diagnostics describe only the local contract, not a live grant
+or verified remote/native capability. Read-only completion grants revalidate their retained private
+consent at creation and resolution, without reviving original input authority.
+Implementation verification is recorded in docs/updates/2026-10-d.md; remaining delivery and acceptance
+are tracked in Progress.md.
+Editable request templates are provided in examples/agent_transfer_export_review.json,
+agent_transfer_import_review.json and agent_transfer_evidence_review.json, with separate create templates.
+
+Experimental source-host skill operations may select a portable grant with the existing
+`handoff_id` and explicit completion/execution task. The source rechecks its actual consent,
+recipient and private proof in the skill transaction, including after candidate/publication writes.
+Original actions, the candidate's own validation trial and explicit version approval remain required.
+New skill trials receive a fresh service-generated request key; legacy unkeyed trials are not backfilled.
+Selected evidence retains the source host's actual actions, trials and versions under current authority.
+Remaining cross-host acceptance and production delivery are tracked in Progress.md.
+Runtime ownership is retained throughout the selected-evidence skill operation and released afterward.
+
+Destination import remains experimental. An explicitly started service accepts
+`review_import` / `create_import` / `get_import` / `run_import` / `cancel_import` / `list_imports`
+through its runtime transfer controller and authenticated `/agent/transfer` route. A coordinator can
+route these finite operations through its own opaque consent token. The destination resolves the
+source using its own registry and account; coordinator principals, origins and source credentials
+are not forwarded. Approval commits before dispatch, and exact lost-ACK retries retain one import.
+Startup resumes accepted never-claimed work and fences unsettled claims for review. Explicit
+`run_import` rechecks the original recipient, profile, live origins and source grant under a new
+queue generation. Verified private chunks can be reused; an owned complete generation is inspected
+and hashed without downloading or publishing again. Additional attempt origins remain restrictive.
+An explicitly queued, never-claimed inspection survives another restart; current bytes, profile
+and retained attempt origins are rechecked before accepting its result.
+Changed ownership, bytes or authority cannot confirm publication. Cancellation fences the producer;
+unaccepted publication remains requires_review, and confirmed published files remain user output.
+Cancelled or expired private chunk accounts are cleaned only after their exact producer retires;
+failed cleanup retains capacity until a confirmed retry. Receipts keep their original fixed expiry.
+Staging directories and preallocated files are journaled by filesystem identity before bytes
+are copied. Expiry retries their exact cleanup after the producer retires, including after restart;
+replaced or unrecognized objects retain capacity for review and are never recursively deleted.
+Source maintenance retires expired or revoked private export accounts, including after restart
+or issuer removal. Failed cleanup retains its reservation. Runtime ownership remains held until
+source or destination cleanup finishes; idle maintenance takes no runtime writer.
+Create/run replies describe the committed receipt assembled before waking new delivery work;
+a later get_import reads current progress. This avoids reading that receipt behind the new writer.
+A later maintenance sweep prunes already-cleaned, revoked and expired source metadata to reclaim
+its record quota, preserving consent/revocation tombstones and other record families. Cold runtime
+maintenance discovers pending source records through a read-only probe; unused controllers stay lazy.
+Final runtime owner release is serialized with lazy controller construction and rechecks any late
+controller. Active construction or cleanup keeps ownership held for a later close attempt.
+Redirected private cache paths are refused before storage opens; failed cleanup retains capacity.
+Subsequent maintenance also prunes expired destination import/delivery metadata and its terminal queue
+rows after confirmed private cleanup. Active, rebound or unknown queue work prevents pruning; original
+consent/revocation tombstones and published user files remain. Cold maintenance performs this retirement
+without a listener or producer. Cleanup scans held accounts independently of retained unexpired metadata.
+Portable evidence retention and shared surfaces are implemented; remaining fault acceptance and delivery
+are tracked in Progress.md.
+Experimental source evidence now supports review_evidence/create_evidence/get_evidence/revoke_evidence/
+list_evidence through the owning runtime and authenticated local transfer route. Separate durable
+consent reuses real recovery/completion proof, current accounts and original local DAG admission.
+The registered peer evidence operation matches the actual accepted key/spec and optional DAG node;
+it returns only IDs, hashes and finite verification, with evidence_only=true/input_authorized=false.
+Review summaries omit the node request_digest; live resolution supplies it for the exact reviewed
+accepted key. Source grants do not grant ordinary task reads or input. Selected source-owned skill evidence, routed management and shared public surfaces are implemented.
+Remaining fault acceptance and production delivery are tracked in Progress.md.
+Experimental coordinator continuation accepts a separately reviewed live remote recovery grant for
+the exact original source/key/spec/graph/node and pinned host. Approval and start persist provisional
+states, resolve again outside the coordinator writer, then recheck immutable local consent and claims
+before activation. Stop cancels pending states; an interrupted provisional approval requires the same
+explicit request. Runtime ownership remains held during confirmation without serializing peer readers.
+Dependency checks repeat around claim/record and final remote adoption acceptance. A failed grant
+fences scheduling and requests bounded pause only for independently matched accepted dependents;
+unknown or lost acknowledgements retain claims and require review. Completed effects and unrelated
+tasks remain intact. This does not certify native input retirement or complete the full fault matrix.
+Legacy delivery-schema upgrade preserves the accepted origin and fixed expiry. Additional origins
+remain cumulative across resumes. Stopping an attached REST observer leaves the same service-owned
+delivery and runtime owner intact; reattachment reads its result without redispatch.
+Actual two-host and separate-process three-host tests independently verify bytes and account scope.
+Further restart/cancellation faults, further staging faults, full retention, portable evidence,
+client/GUI surfaces and complete-stage verification remain in Progress.md. A receipt grants no
+task-input authority or task-completion evidence.
+
 Registered source management now routes review/create/get/list/revoke through a coordinator-owned
 opaque review. Consent binds the actual local caller, current host fingerprint, peer review, manifest
 digest and original key. Approved intent commits before forwarding; lost replies and coordinator
@@ -7,22 +95,23 @@ restart retry the same source grant. Changed actor/host/token/note/key or a diff
 is refused. Pending reviews and retained route records each cap at128; expiry removes only local
 route metadata while preserving consent fences. Runtime closure discards unapproved cached reviews;
 durable approvals remain recoverable. The source uses its own account, and local principal/
-origin headers stay local. Destination import, portable completion evidence and public surfaces remain pending.
+origin headers stay local. Destination lifecycle, source-owned skill evidence and shared surfaces are implemented; remaining
+acceptance and production delivery are tracked in Progress.md.
 
 Existing remote DAG calls now read the actual persisted host book when pinning a host and before
 and after each retained connection call. Another process replacing/removing the endpoint or token,
 damaged configuration or revoked captured local authority invalidates the operation. Reads neither
 initialize nor quarantine the book; local service delegation and the closed remote routes stay compatible.
 
-Cross-host outcome handoff remains unavailable. The runtime-owned local source core reviews
+Cross-host outcome handoff remains experimental and incomplete. The runtime-owned local source core reviews
 selected completed file outcomes and commits consent-bound immutable blobs with actual issuer and
 recipient checks. Authenticated source management and peer-read HTTP routes now expose those reviewed
 manifests/chunks. Peer reads use the receiving server's ordinary bearer/RBAC gate and rate limits;
 local principal/origin headers are refused before foreign principal/store lookup. The local service
 client preserves real owner delegation for management only. Transfer requests are capped at1MiB before
 server reads; the bounded client refuses oversized request dispatch and success/error reply decoding
-without changing ordinary HTTP limits. Complete cross-host lifecycle acceptance, destination publication/evidence adoption and shared public surfaces remain pending in
-Progress.md. A transfer receipt grants no task-input authority.
+without changing ordinary HTTP limits. Destination publication, live evidence adoption and shared public surfaces are implemented.
+Remaining lifecycle acceptance and production delivery are tracked in Progress.md. A transfer receipt grants no task-input authority.
 
 Source export excludes actual runtime/transfer databases and sidecars, current source-owner and
 issuer user stores, service-owned connection files and owned evidence directories before opening
@@ -38,7 +127,7 @@ also join the digest and their user stores stay private. Source operations honor
 cancellation around byte access and grant writes; a committed intent remains exactly recoverable
 after a cancelled reply. Artifact expiry is its completed source updated+30days; retries/restarts do
 not refresh it or substitute an older ancestor deadline. Real local renewed readers use their current
-private completion authority while old input remains revoked. Cross-host commit races, automatic cleanup and destination publication/evidence remain open.
+private completion authority while old input remains revoked. Cross-host commit races, automatic cleanup and destination lifecycle/evidence remain open.
 
 Runtime owns a TransferPeer through its actual batch host adapter. Registered transfer reads pin the
 persisted endpoint/credential and reread the book before and after HTTP, with current local caller
@@ -47,7 +136,7 @@ are absent. Actual configured credential-book paths stay private without initial
 console. Closed manifests and canonical base64 chunks require matching export IDs/hashes, at most256KiB
 per chunk and a fixed deadline. The1MiB transfer wire cap also applies behind URL path prefixes;
 ordinary HTTP keeps its existing limit. Invalid numeric budgets, including oversized integers, fail
-with typed errors before dispatch. Two/three-host import delivery remains pending.
+with typed errors before dispatch. Remaining cross-host fault acceptance and production delivery are tracked in Progress.md.
 
 Idle background workers check empty work queues without reserving a database writer, reducing
 contention with task status and completion transactions. A nonempty hint still requires the original
@@ -502,7 +591,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 855 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 856 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -717,7 +806,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 855 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 856 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -822,7 +911,7 @@ under a relative name are written below that directory.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 759 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 760 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |

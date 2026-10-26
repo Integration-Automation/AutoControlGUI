@@ -16,6 +16,7 @@ from je_auto_control.utils.agent_runtime.store import request_spec_digest
 from je_auto_control.utils.agent_runtime.dag_batch_recording import (
     bound_node, claim_node, record_node, verify_node, validate_receipt,
 )
+from je_auto_control.utils.agent_runtime.dag_transfer_checks import remote_reports
 from je_auto_control.utils.agent_runtime.dag_continuation import DagContinuation, FIELDS as CONTINUATION_FIELDS
 from je_auto_control.utils.agent_runtime.dag_jobs import delivery_status
 from je_auto_control.utils.agent_runtime.local_evidence import runtime_evidence_scope
@@ -195,8 +196,9 @@ class DagBatches:
     def stop_all(self) -> None:
         """Fence visible active/approved coordinators before stop-all snapshots destination tasks."""
         with self.runtime.store.connection() as connection:
-            rows = connection.execute("SELECT id,owner FROM agent_dag_batches "
-                                      "WHERE state IN ('running','approved')").fetchall()
+            rows = connection.execute("SELECT id,owner FROM agent_dag_batches b "
+                "WHERE state IN ('running','approved') OR EXISTS (SELECT 1 FROM agent_dag_approvals a "
+                "WHERE a.batch_id=b.id AND a.state IN ('provisional','starting'))").fetchall()
         for row in rows:
             if owns_task(json.loads(row["owner"]), current_authorization()):
                 self.control("pause_batch", {"batch_id": row["id"]})
@@ -303,10 +305,20 @@ class DagBatches:
                 "definition": bind_definition(definition, batch["id"], batch["graph_hash"])}
 
     def _execution(self, operation: str, batch: dict, request: dict) -> dict:
+        with (self.runtime.transfers.activity() if self._remote_transfer_batch(batch) else nullcontext()):
+            return self._execute_attempt(operation, batch, request)
+
+    def _remote_transfer_batch(self, batch: dict) -> bool:
+        with self.runtime.store.connection() as connection:
+            rows = connection.execute('SELECT a.details FROM agent_dag_adoptions d '
+                'JOIN agent_dag_approvals a ON a.id=d.approval_id AND a.batch_id=d.batch_id '
+                'WHERE d.batch_id=?', (batch['id'],)).fetchall()
+        return any(remote_reports(batch, json.loads(row['details'])['reports']) for row in rows)
+
+    def _execute_attempt(self, operation: str, batch: dict, request: dict) -> dict:
         if batch["state"] != "running" or request["attempt"] != batch["attempt"]:
             raise AgentTaskError("batch execution attempt is inactive")
-        if operation == "claim":
-            self._validate_adopted_dependencies(batch, request)
+        self._execution_checks(operation, batch, request)
         if operation == "record":
             receipt = validate_receipt(request["receipt"])
             if receipt["outcome"] == "completed":
@@ -323,7 +335,25 @@ class DagBatches:
                 state = "waiting_review" if unfinished else "succeeded"
                 connection.execute("UPDATE agent_dag_batches SET state=?,updated=? WHERE id=?",
                                    (state, time.time(), batch["id"]))
+        self._execution_checks(operation, batch, request)
         return self._describe(self._row(batch["id"]))
+
+    def _execution_checks(self, operation: str, batch: dict, request: dict) -> None:
+        if operation in {'claim', 'record'}:
+            self._validate_adopted_dependencies(batch, request)
+        if operation == 'finish':
+            self._validate_final_remote_adoptions(batch)
+
+    def _validate_final_remote_adoptions(self, batch: dict) -> None:
+        with self.runtime.store.connection() as connection:
+            rows = connection.execute('SELECT d.node_id,a.details FROM agent_dag_adoptions d '
+                'JOIN agent_dag_approvals a ON a.id=d.approval_id AND a.batch_id=d.batch_id WHERE d.batch_id=?',
+                (batch['id'],)).fetchall()
+        continuation = DagContinuation(self, {})
+        for row in rows:
+            reports = remote_reports(batch, json.loads(row['details'])['reports'])
+            if any(report['decision']['node_id'] == row['node_id'] for report in reports):
+                continuation.validate_node(batch, row['node_id'], batch['attempt'])
 
     def _validate_adopted_dependencies(self, batch: dict, request: dict) -> None:
         node = bound_node(batch, request["node_id"])

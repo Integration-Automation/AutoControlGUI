@@ -1,0 +1,8 @@
+{
+  "host": "<registered-destination-host>",
+  "source_host": "<source-host-on-destination>",
+  "export_id": "<export-id>",
+  "target": "<destination-files-profile>",
+  "directory": "<approved-destination-directory>",
+  "idempotency_key": "<idempotency-key>"
+}

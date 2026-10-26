@@ -31,6 +31,17 @@ def _public(record: dict) -> dict:
             'cleanup_pending': state == 'revoked' and record['held']}
 
 
+def source_maintenance_pending(store: Any) -> bool:
+    """Discover persisted source cleanup without constructing a controller or acquiring a runtime writer."""
+    with store.connection() as connection:
+        if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                              "AND name='agent_transfer_grants'").fetchone() is None:
+            return False
+        return connection.execute("SELECT 1 FROM agent_transfer_grants WHERE kind IN ('export','evidence') "
+                                  "AND (expires<=? OR (held=1 AND state='revoked')) LIMIT 1",
+                                  (time.time(),)).fetchone() is not None
+
+
 class TransferSource:
     """Only an injected host can derive source paths, actual identities and current completion proof."""
 
@@ -233,6 +244,26 @@ class TransferSource:
         body = self._cache.store.read_chunk(row['account'], value['sha256'])
         self._live(row)
         return {'contract': 1, 'sha256': value['sha256'], 'data': base64.b64encode(body).decode('ascii')}
+
+    def maintain(self) -> None:
+        """Under controller serialization, retire expired or revoked source accounts without user authority."""
+        cutoff = time.time()
+        with self.runtime.store.connection() as connection:
+            initialized = connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                                             "AND name='agent_transfer_grants'").fetchone()
+            if initialized is None:
+                return
+            prunable = connection.execute("SELECT 1 FROM agent_transfer_grants WHERE kind='export' AND held=0 "
+                                          "AND state='revoked' AND expires<=? LIMIT 1", (cutoff,)).fetchone()
+            rows = connection.execute("SELECT id FROM agent_transfer_grants WHERE kind='export' AND held=1 "
+                                      "AND (expires<=? OR state='revoked') ORDER BY id LIMIT 128",
+                                      (cutoff,)).fetchall()
+            pending = [self.records.find(connection, row['id']) for row in rows]
+        if prunable is not None:
+            with self.runtime.store.connection(write=True) as connection:
+                self.records.prune_kind(connection, 'export', cutoff)
+        for record in pending:
+            self._cleanup(record)
 
     def _cleanup(self, record: dict) -> None:
         with self.runtime.store.connection(write=True) as connection:

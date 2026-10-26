@@ -46,6 +46,9 @@ class AgentSkills:
         handlers = {"record": self._record, "repair": self._repair, "list": self._list,
                     "get": self._get_request, "preview": self._preview, "validate": self._validate,
                     "accept": self._accept, "run": self._run, "review_execution": self._review_execution}
+        if 'handoff_id' in request:
+            with self.runtime.transfers.activity():
+                return handlers[operation](request)
         return handlers[operation](request)
 
     @staticmethod
@@ -211,7 +214,7 @@ class AgentSkills:
 
     def _submit(self, candidate: dict, parameters: dict, purpose: str) -> dict:
         spec = self._materialize(candidate, parameters)
-        task = self.runtime.submit(spec)
+        task = self.runtime.submit(spec, idempotency_key='skill-trial-' + uuid.uuid4().hex)
         with self.runtime.store.connection(write=True) as connection:
             connection.execute("INSERT INTO agent_skill_trials VALUES (?,?,?,?,?)",
                                (task.task_id, candidate["id"], digest(spec), purpose, time.time()))
@@ -303,6 +306,9 @@ class AgentSkills:
         selected = request.get('completion_task_id', request.get('execution_task_id'))
         if not isinstance(selected, str):
             raise AgentTaskError('handoff requires an explicit completion or execution task')
+        portable = self.runtime.transfers.skill_evidence(connection, row['id'], selected, request['handoff_id'])
+        if portable is not None:
+            return portable
         return self.runtime.recovery.task_handoff_evidence(row['id'], selected, request['handoff_id'],
                                                            connection=connection)
 

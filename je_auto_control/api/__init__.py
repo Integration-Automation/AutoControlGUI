@@ -26,6 +26,7 @@ from je_auto_control.api.core import (
     manage_agent_target as manage_agent_target,
     list_agent_targets as list_agent_targets,
     recover_agent_target as recover_agent_target,
+    manage_agent_transfer as manage_agent_transfer,
     manage_agent_skill as manage_agent_skill,
     manage_agent_recovery as manage_agent_recovery,
     list_agent_skills as list_agent_skills,

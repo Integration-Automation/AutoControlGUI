@@ -1,4 +1,4 @@
-"""Closed source management envelopes validate foreign replies before local consent can retain them."""
+"""Closed management envelopes validate foreign source and destination replies before retaining consent."""
 from __future__ import annotations
 
 from copy import deepcopy
@@ -7,9 +7,13 @@ from typing import Any, Mapping
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.transfer_models import (
-    TransferManifest, TransferSelection, _deadline, _hex, _object,
+    TransferManifest, TransferSelection, _hex, _object, _review_envelope,
 )
 from je_auto_control.utils.agent_runtime.transfer_records import _text
+from je_auto_control.utils.agent_runtime.transfer_import_contract import IMPORT_FIELDS, import_request, import_reply
+
+from je_auto_control.utils.agent_runtime.transfer_evidence_contract import EVIDENCE_FIELDS
+from je_auto_control.utils.agent_runtime.transfer_evidence_management import evidence_request, evidence_reply
 
 SOURCE_FIELDS = {'review_export': {'source_task', 'selection', 'recipient_policy', 'idempotency_key'},
                  'create_export': {'review', 'note', 'idempotency_key'}, 'get_export': {'export_id'},
@@ -18,6 +22,10 @@ SOURCE_FIELDS = {'review_export': {'source_task', 'selection', 'recipient_policy
 
 def management_request(operation: str, request: Mapping[str, Any]) -> dict:
     """Accept only the finite source operation's exact public fields, never a host or private principal."""
+    if isinstance(operation, str) and operation in EVIDENCE_FIELDS:
+        return evidence_request(operation, request)
+    if isinstance(operation, str) and operation in IMPORT_FIELDS:
+        return import_request(operation, request)
     if not isinstance(operation, str) or operation not in SOURCE_FIELDS:
         raise AgentTaskError('source transfer management operation is unavailable')
     value = dict(_object(request, SOURCE_FIELDS[operation]))
@@ -45,6 +53,10 @@ def _review_request(value: dict) -> None:
 
 def management_reply(operation: str, reply: Mapping[str, Any], request: dict) -> dict:
     """Validate exact bounded public projections without granting source-task visibility or input authority."""
+    if operation in EVIDENCE_FIELDS:
+        return evidence_reply(operation, reply, request)
+    if operation in IMPORT_FIELDS:
+        return import_reply(operation, reply, request)
     if operation == 'review_export':
         return _review_reply(reply, request)
     if operation == 'list_exports':
@@ -69,11 +81,7 @@ def _list_reply(reply: Mapping[str, Any], source_task: str) -> dict:
 
 
 def _review_reply(reply: Mapping[str, Any], request: dict) -> dict:
-    value = _object(reply, {'review', 'digest', 'manifest', 'review_expires', 'approval_required'})
-    _hex(value['review'], 32)
-    _hex(value['digest'], 64)
-    _deadline(value['review_expires'])
-    manifest = TransferManifest.from_dict(value['manifest'])
+    value, manifest = _review_envelope(reply)
     if (manifest.source_task != request['source_task'] or manifest.digest != value['digest']
             or value['approval_required'] is not True or min(value['review_expires'], manifest.expires) <= time.time()):
         raise AgentTaskError('source review reply does not bind fresh explicit consent for the requested task')

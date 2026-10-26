@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import time
+from hashlib import sha256
 from typing import Any, cast
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import positive
 from je_auto_control.utils.agent_runtime.submission import submitted_digest
+from je_auto_control.utils.agent_runtime.transfer_adoption import remote_successor
 from je_auto_control.utils.dag import managed_tasks
 from je_auto_control.utils.rbac.authorization import AuthorizationError
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
@@ -49,9 +51,13 @@ class ContinuationEvidence:
     def _read(self, host: str, operation: str, body: dict, timeout: float) -> dict:
         if host == "local" and self.runtime is not None:
             return self._local(operation, body)
+        return self.connection(host)(operation, body, timeout)
+
+    def connection(self, host: str) -> Any:
+        """Supply the same pinned current task connection to narrowly owned retirement collaborators."""
         if host not in self.calls:
-            self.calls[host] = managed_tasks.bound_task_connection(host, self.batch["hosts"][host])
-        return self.calls[host](operation, body, timeout)
+            self.calls[host] = managed_tasks.bound_task_connection(host, self.batch['hosts'][host])
+        return self.calls[host]
 
     def _local(self, operation: str, body: dict) -> dict:
         with self.owner.scope():
@@ -90,7 +96,18 @@ class ContinuationEvidence:
         return self._ordinary_successor(node, original, identifier)
 
     def _handoff(self, node: dict, original: dict, identifier: str, handoff_id: str) -> tuple[dict, list[dict]]:
-        if node['host'] != 'local' or self.runtime is None:
+        if node['host'] != 'local':
+            binding = {'source_task': original['task_id'],
+                'request_key_hash': sha256(node['task']['idempotency_key'].encode('utf-8')).hexdigest(),
+                'submitted_spec_digest': submitted_digest(node['task']['spec']),
+                'batch_id': self.batch['id'], 'graph_hash': self.batch['graph_hash'], 'node_id': node['id']}
+            candidate, chain = remote_successor(self.runtime, self.batch, node, handoff_id,
+                                                binding, self.deadline, self.owner)
+            if candidate['task_id'] != identifier:
+                raise AgentTaskError('remote completion grant selects a different successor')
+            completion(candidate, node)
+            return candidate, chain
+        if self.runtime is None:
             raise AgentTaskError('local evidence handoff cannot be forwarded to a remote destination')
         with self.owner.scope():
             candidate, chain = self.runtime.recovery.handoff_evidence(

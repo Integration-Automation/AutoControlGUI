@@ -13,6 +13,7 @@ from je_auto_control.utils.agent_runtime.workflow_wait import workflow_wait
 from je_auto_control.utils.agent_runtime.task_triggers import OPERATIONS as TRIGGER_OPERATIONS
 from je_auto_control.utils.agent_runtime.task_skills import OPERATIONS as SKILL_OPERATIONS
 from je_auto_control.utils.agent_runtime.target_profiles import OPERATIONS as TARGET_OPERATIONS
+from je_auto_control.utils.agent_runtime.transfer_operations import OPERATIONS as TRANSFER_OPERATIONS
 from je_auto_control.utils.agent_runtime.browser_commands import (
     browser_navigate, browser_click, browser_fill, browser_select, browser_check, browser_read, browser_wait,
     browser_link, browser_download, browser_upload,
@@ -22,6 +23,9 @@ _ID = {"task_id": {"type": "string", "minLength": 1}}
 
 # name: (function, JSON properties, required, read_only, host_management)
 CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
+    "AC_agent_transfer": (api.manage_agent_transfer,
+        {"operation": {"type": "string", "enum": list(TRANSFER_OPERATIONS)}, "request": {"type": "object"}},
+        ("operation",), False, False),
     "AC_agent_dag": (api.manage_agent_dag, {"operation": {"type": "string", "enum": list(DAG_OPERATIONS)},
                                            "request": {"type": "object"}}, ("operation",), False, False),
     "AC_agent_dag_inspect": (api.inspect_agent_dag,

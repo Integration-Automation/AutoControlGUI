@@ -6,6 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
+目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-01；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -15,7 +16,10 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 1. **P4：瀏覽器與正式環境接合**
    - 選定正式服務專用 helper Python、AutoControl／WebRunner 套件版本與受管 Chromium 安裝；
      以已審閱的主機 profile 明列工具、來源與產物根目錄，再驗證正式服務載入該環境。
-     隔離環境的依賴診斷不能代替實際瀏覽器啟動／原生證據。
+     隔離候選、固定套件鎖、實際標準 helper IPC 與逐檔比對見 stage104；仍須選定穩定路徑、
+     審閱實際工具／來源／根目錄並安排部署，不能直接採用暫存候選或宣稱瀏覽器已啟動。
+     Python 相依與介面驗證不能代替受管 Chromium、實際登入／頁面及原生證據。
+
    - 核對既有瀏覽器呼叫者各自的環境是否已安裝相容 `je_web_runner`。舊 bridge 依賴呼叫環境的
      SDK，不會自動使用受管 helper；缺套件時應保留明確失敗，不能退回其他瀏覽器引擎。
    - 正式變更前仍須安排主工作樹、既有 Jeffrey_RPA 批次與服務的部署／回復步驟；不能直接將
@@ -86,13 +90,12 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      指標步驟提供可信新來源與語義轉換，不能把舊索引／座標或歷史欄位值直接移入新 session。
    - 補實際應用的語義錄製、參數化、候選修復、驗證 trial、人工接受／版本發布及執行中固定版本
      的完整驗收；持續拒絕沒有完整動作確認或獨立完成證據的試跑，不能僅憑舊收據發布。
-   - browser 唯讀完成驗證的原 helper／SDK context 保留、永久輸入／網路退休、私有完成與技能
-     接合已實作於 `browser_target.py`／`retained_browser*.py`；`WIP`：最新固定程式的全套仍有
-     第 8 組所列三個 DAG 前置協調失敗，須逐案釐清並取得完整成功；不能以分項通過代替。
-     真實瀏覽器能力、正式部署、冷啟動登入／欄位狀態重建與暫緩的原生驗收仍須各自完成。
+   - browser 仍須完成實際登入／欄位／視窗狀態重建、原 helper／SDK context 的完成讀回、
+     永久輸入／網路退休與技能的真實應用驗收；受控模擬頁面／IPC 證據不能取代原生驗收。
      remote 完成審閱／驗證／技能發布仍缺真實 SDK／裝置世代、永久唯讀來源、清理確證與
      舊 writer 結束證據；接入既有私有完成預覽／建立／執行與 API／GUI，不以旗標、另開 reader、
      舊動作收據或重播輸入替代。網路結束後的即時 DOM 不能當作新伺服器回應；未知隔離不可解除。
+
    - 針對新增平台／裝置及恢復路徑重驗服務重啟、WorkQueue 去重、事件／排程重新授權、
      journal／history／產物關聯及 30 天保留／清理，不擴大既有權限。
 
@@ -101,25 +104,21 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      判定；補必要的角色／跨節點證據與提示注入回歸。
    - 為實際主機配置受保護的 runtime 端點、背景派送、主機憑證與相容完成契約；明確記錄遠端
      目錄／目標設定、部署／回復方法。受管任務 DAG 不會自動部署遠端服務。
-   - 設計跨主機成果移交：明列讀寫權限、來源身分、摘要與目的地發布，不能以本機路徑當遠端
-     檔案證據，不能轉送本機 principal／使用者資料庫路徑／來源 witness。
-     `WIP`：依功能工作樹中的 `docs/superpowers/plans/2026-10-26-cross-host-handoff.md`
-     與同日 design 執行；尚缺兩／三個獨立 runtime 的實際匯入端到端驗證、目的端發布／清理、
-     遠端完成證據採認，
-     以及 API／AC／MCP／REST／CLI／Builder／GUI 接合。
-     `transfer_lineage.py`／`transfer_privacy.py` 後續仍須隨真正跨主機匯入重驗原始提交與
-     私有完成授權；遠端原始提交須在實際協調端核對，不能把來源端摘要當成遠端 DAG 接納證明。
-     跨主機最後提交／撤權／取消交錯，以及來源／目的端保留清理排程仍待接合。
-     本環境建立檔案符號連結遇到 WinError 1314；該置換驗收仍須在可建立的環境補齊，
-     不能把實際目錄 junction 測試當成檔案 symlink 變體通過。正常 standalone 不要求 DAG 提交列；
-     恢復子任務須沿真實祖先取得原始憑證，不能補造提交列或重算摘要取代遺失的 DAG 憑證。
-     目的端仍須使用自己核准的來源設定，補三主機協調者不能借用／轉送來源憑證的證據。
-     舊 DAG 的 `task_host_binding`／`bound_task_connection` 即時設定核對仍待完整 DAG 回歸成功，
-     包含跨程序變更、保留連線及實際 HTTP 回覆後撤權；分項驗證不能代替完整路徑完成。來源完整授權／生命週期
-     核實及 Tasks3–5 的目的端
-     發布／證據採認／共用介面仍待實作；不可把本機核心、摘要或收據當成跨主機完成證據。
-     須包含遠端任務證據的保留／移交契約；來源端保留未決批次不能自動延長目的端的 30 天保留期，
-     目的端證據到期或失聯須維持不可採認，不能以來源端協調收據取代獨立完成證據。
+   - 跨主機成果移交仍須依 cross-host-handoff design／plan 逐條完成來源、目的端、協調端、
+     可攜證據及技能消費端的交付稽核，並完成 Tasks2–5 的正式紀錄與功能分支提交／推送。
+     核對讀寫權限、當前來源／接收身分、原始提交與私有完成授權、摘要及目的端發布；
+     本機路徑、匯入收據或協調端摘要不得冒充遠端檔案／完成證據，也不得轉送本機權限。
+     核對兩／三主機故障矩陣：原 host／token／帳戶／origin 變更或撤銷、來源到期、讀者同意、
+     冷重啟與晚回覆、發布／取消交錯、舊派送 schema、多次續行 origin、精確產生者退出、
+     未知暫存與清理失敗、未決批次、配額回收及重啟後仍固定的來源／目的端／證據期限。
+     本環境無法建立字面 Windows 檔案 symlink（WinError1314）；仍須補該變體，不能由 junction 取代。
+     保留原有本機 DAG admission／憑證與跨程序 host binding 核對；實際本機祖先不能因 wire grant
+     省略、變更 tags 或補造提交列而繞過。standalone 與真正遠端節點沿各自實際接受憑證處理。
+     技能契約須核實來源主機的真實動作、原 trial／版本及當前權限；規範未要求補造協調端外國任務。
+     歷史 D 磁碟 2／3 秒協調與 HTTP 準備逾時的原因／部署影響仍須追查；C 預設暫存的完整成功
+     不代表所有磁碟上的相同期限均已根治。舊失敗與階段觀測保留於本次月誌及 stage74–104。
+     真正受保護端點、跨實體主機與正式環境驗收仍依第29／31項完成；不得直接部署功能工作樹。
+
    - 實際多機驗證斷線／晚到回覆、主機重啟、憑證撤銷／變更、協調端中斷及同資源序列／
      獨立資源並行；未知清理不得讓下游成功或搶走遠端控制權。
 
@@ -137,50 +136,24 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 8. **P0–P9 最終交付核對與檢查**
    - 每條交付契約整理實作、無頭回歸與原生／真機證據對照；補新平台／多機／恢復情境的漏洞，
      區分已實作、尚缺實作與只缺實測，不能用模擬目標取代原生驗收。
-     核對同名但不同副檔名 runtime 資料庫的既有 evidence／artifact 根目錄隔離與清理契約，
-     避免根目錄別名造成跨 runtime 產物存取或清理；新 transfer cache 的命名隔離不代表舊根目錄已修復。
-   - 於最後固定提交重跑完整 headless 與 `coverage run -m pytest`、跨功能／故障恢復回歸；
-     目前較早固定版本的全套證據不能冒充最新工作樹結果。
-     `WIP`：第 74 階段最新固定程式的全套為 15,361 passed／78 skipped／3 failed，
-     coverage 87.64%；測試期間 3,118 個輸入與 1,348 個套件／設定檔雜湊保持不變。
-     尚須釐清並修正下列失敗，取得全套成功：
-     `test_agent_dag_connection_binding.py::test_admin_inspection_uses_original_owners_keys_on_the_owning_runtime`、
-     `test_agent_dag_retention.py::test_completed_batch_keeps_its_gate_when_related_work_is_unsettled[uncertain]`、
-     `test_agent_dag_retention.py::test_completed_batch_keeps_its_gate_when_related_work_is_unsettled[phase]`。
-     管理員案在等待背景批次成功時失敗，節點 a 已轉 unknown／waiting_review；兩個保留變體
-     在兩秒 DAG 協調前置失敗，尚未進入保留斷言，節點 b 保持 unknown，工作停止／待審閱。
-     兩案回覆寫入另有 WinError 10053；須區分客戶端逾時與伺服器處理／持久化延遲。
-     先前自有 VFS 診斷曾量得成功 FlushFileBuffers 累計約 1.79 秒，但不能據此宣稱本輪
-     三案已逐案定位或修復；Windows flush 延遲的來源與重現條件仍待釐清。
-     後續須涵蓋全部 14 個 DAG 檔、原五案、背景／跨主機所有權與 fencing fixture，
-     以及 retention 的所有變體與 recovery_ownership 的撤權／接受策略重試案例；
-     持續核對並行認領、舊租約世代、停止發布與恢復快照，不放寬兩秒／15 秒期限、
-     降低持久化、重播已完成副作用，亦不以局部／診斷通過代替完整成功。
-     原始失敗、coverage、固定輸入及唯讀資料庫診斷均保留於自有 stage74。
-     `WIP`：第 85 階段固定版本的 69 檔回歸為 1,220 passed／1 skipped／5 failed，並非完整
-     coverage。尚須釐清 `test_agent_dag_connection_binding.py` 的 default_connection_discovery_change、
-     `test_agent_dag_continuation.py` 的 expired_origin_can_be_replaced_only_for_never_dispatched_scoped_work，
-     以及 `test_agent_dag_retention.py` 的 completed_batch_keeps_its_gate_when_related_work_is_unsettled
-     三個變體 `[queued_child]`／`[executing]`／`[fresh_delivery]`。
-     五案均在本機 DAG 協調失敗，三個 retention 案未通過初始 graph 執行；四案另有回覆寫入
-     WinError 10053。仍須核對實際伺服器／資料庫耗時與未知狀態，不可直接歸因於新主機設定核對
-     或已知 flush 延遲，也不可因本輪舊三案通過便宣稱修復。原始紀錄保留於功能工作樹
-     `.worktrees/agent-tools/stage85/source-host-final03-pytest.txt` 與對應專用 basetemp；此輪文件／
-     打包／隔離安裝尚未執行，完整 18 關檢查仍未完成。
-     `WIP`：完整套件曾在 `test_dag_managed_loopback.py::test_distinct_targets_run_concurrently_with_destination_verification`
-     偶發提交 HTTP 409，另一節點等待後限流；該次為 5,391 passed／17 skipped／1 failed。
-     單獨 20 次與整檔 60 次回歸均未重現；仍須取得最初拒絕原因，不能以後續通過宣稱已修復。
-     `WIP`：第 71 階段全套在
-     `test_agent_completion_handoff_security.py::test_matching_grant_digest_cannot_make_invalid_private_renewal_authoritative[completion_task-named_dag]`
-     的 fixture 首次 `observe` 發生 `native helper bootstrap deadline exhausted`；
-     該次為 15,235 passed／77 skipped／1 setup error，案例本體未執行。
-     須收集自有 helper 啟動時間與逾時前堆疊以釐清原因；不放寬 15 秒期限、不重試或略過錯誤，
-     單獨重跑通過與後續全套通過都不能代表此啟動問題已修復。
-     `WIP`：pytest 的 atexit `cleanup_dead_symlinks` 對共用暫存連結
-     `C:\Users\USER\AppData\Local\Temp\pytest-of-USER\pytest-current` 發生
-     `PermissionError: [WinError 5]`；已核對為目錄符號連結，讀取連結目標亦遭相同錯誤。
-     仍須查明權限／生命週期及清理契約，避免影響其他 pytest 執行者。不直接刪除共用連結或
-     修改共用 `.venv`；測試本體退出碼 0 不代表暫存清理已修復。
+     修正已重現的 evidence／artifact 根目錄隔離與清理缺口：同名但不同副檔名的 SQLite 備份
+     保留相同 task ID 後，備份 runtime 的公開 prune 會刪除原 runtime 尚未到期的 journal／report。
+     須綁定完整資料庫身分，保留既有 metadata／history／journal 的真實歸屬，不能盲目改名、搬移、
+     認領或刪除；新舊私有證據路徑亦須保持在成果匯出的拒絕範圍。來源仍成功／使用者檔案未變
+     不代表證據未受影響。可重現前提與結果見 stage104/public-evidence-retention-observation01.json。
+
+   - 於整份規範最後固定提交重跑完整 headless 與 coverage run -m pytest、跨功能／故障恢復回歸；
+     目前功能工作樹完整成功的來源範圍與78項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。
+     歷史原因仍須追查：stage74 的管理員 host binding 與 retention uncertain／phase 前置失敗；
+     stage85 的 default_connection_discovery_change、expired_origin_can_be_replaced_only_for_never_dispatched_scoped_work
+     及 retention queued_child／executing／fresh_delivery；stage88–93 的3秒來源匯出／匯入準備逾時。
+     C／D 儲存尾延遲對照不構成所有磁碟的根治；保留原始失敗與收據、逐案確認實際耗時／未知狀態，
+     不放寬2／3／15秒期限、不改 WAL／耐久性、不重播已完成效果、不以局部通過抵銷舊失敗。
+     test_dag_managed_loopback 的完整執行曾遇提交 HTTP409／限流，尚缺最初拒絕原因；
+     stage71 matching_grant_digest 的首次 observe 曾耗盡15秒 bootstrap，仍缺啟動堆疊／耗時原因。
+     共用 pytest-current 的 WinError5 權限／生命週期問題仍未修復；不得刪除共用連結、改共用環境
+     或將自有新 basetemp 成功視為清理問題已消失。原始計數與檔案位置已保留於本次月誌。
+
    - 重跑三平台型別、Ruff／Bandit、檔案／函式／複雜度及文件計數，檢查新增 lint 問題；
      AutoControl 全套 Pylint 仍有既有問題，不能把局部模組通過當全套零問題。
      WebRunner 既有全套 mypy／flake8／嚴格 Sphinx 債務見其 `Progress.md` #23，不能標示全綠。
@@ -195,6 +168,11 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 的原生雙向 bridge 驗收，以及 #21 的完整 24 小時驗收。只有使用者明確恢復後才可啟動，24 小時
 驗收須用新的 attempt 目錄與固定來源，短測／中斷紀錄不能代替完整結果。
 **範圍限制**：不新增付費依賴及收費功能；保持瀏覽器統一走 `je_web_runner`。
+**安裝前比對（使用者 2026-10-26 指示）**：任何安裝／升級前，先核對本紀錄與當前工作樹／
+環境，並比對已安裝版本、依賴、來源及待安裝內容；把差異與預期變更寫入紀錄後再處理安裝。
+本專案封裝還須比對來源提交、wheel／sdist 內容與檔案雜湊；安裝後再核實實際來源及依賴一致性。
+這項要求不授權變更共用環境、付費依賴或正式部署；本輪僅在全新自有 C 暫存目錄
+隔離安裝已逐項比對的套件。正式工作樹、共用環境、服務與瀏覽器均未變更。
 本輪執行全程背景，不切換前景、不移動使用者滑鼠或注入桌面輸入。Tripo 使用專用持久登入設定檔、
 螢幕外瀏覽器及 DOM 操作；AutoControlGUI 僅作必要唯讀觀測。登入狀態與 DOM 結果須分別驗證。
 
