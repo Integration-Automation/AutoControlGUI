@@ -11,6 +11,12 @@ Retention removes only recognized current cache files and local expired metadata
 files remain. Current, legacy and retained historical roots remain private to artifact exports.
 Native/device/browser acceptance and literal Windows file-symlink verification remain in Progress.md.
 
+Older runtimes do not recognize the new private cache roots: a rollback must use reviewed pre-upgrade
+state and keep retained newer private files outside every legacy task root after owned input retirement.
+Compare exact source/artifact hashes and preserve uncertain journals; the same version is insufficient.
+Windows USB enumeration now emits/decodes UTF-8 explicitly and hides its PowerShell process, preserving
+Unicode names/errors and preventing background reader exceptions in Python UTF-8 mode.
+
 ## Unreleased — managed cross-host outcomes
 
 Add manage_agent_transfer / AC_agent_transfer, MCP/REST/CLI/Builder parity and the Transfers view.

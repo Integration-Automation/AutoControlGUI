@@ -137,6 +137,12 @@ Same-path restart reuses the current segment. Status reads do not create one; ta
 Retention prunes only recognized files in the current namespace and this database's expired metadata.
 Historical physical files remain; current, legacy and retained historical roots stay private to exports.
 
+Before deployment or rollback, compare exact source and artifact hashes; the unchanged version number alone does
+not identify private-cache compatibility. A runtime without this private-root protection must not reuse the
+newer database/cache. A reviewed restore must use matching pre-upgrade state at its recorded locations, retire
+owned input first, and exclude retained newer private files from every legacy task root. Preserve uncertain
+journals and avoid replay. Keep the compatible runtime if these conditions cannot be established.
+
 ## Review and run workflows
 
 `draft_agent_workflow(workflow, config)` compiles `download_archive`, `batch_form`, `transfer` or

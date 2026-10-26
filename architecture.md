@@ -852,6 +852,12 @@ run/journal before commit; redirected or multiply linked artifacts are rejected 
 Only the current namespace is physically pruned. Source export guards current, legacy and actually
 retained historical roots; metadata exposes `artifact_cache_state` without adopting historical files.
 
+Storage schema1 does not make older runtime private-path policy compatible with new cache roots.
+Reviewed rollback restores matching state at recorded paths and excludes retained modern private files
+from all legacy task roots after input retirement; unknown journals stay fenced.
+Windows USB enumeration fixes the PowerShell producer and Python consumer to UTF-8, with no BOM or
+replacement decoding. The bounded subprocess stays hidden; other backend decoding is unchanged.
+
 AgentTriggers persists captured task templates, owner provenance and bounded schedule/file/event
 bindings. Event/request deduplication and task creation share one SQLite transaction before WorkQueue
 delivery. Trigger and lease watchers have independent owned threads. Canonical root snapshots and

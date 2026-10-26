@@ -573,6 +573,15 @@ Evidence caches bind the complete database path and a persistent database identi
 the next action or report starts a new owned journal segment without reading or moving historical files.
 Task metadata reports `artifact_cache_state` as `owned` or `historical`. Retention removes only the current
 database's recognized cache files; historical files remain, and retained private roots cannot be exported.
+
+Before deployment or rollback, compare exact source and artifact hashes; the unchanged version number alone does
+not identify private-cache compatibility. A runtime without this private-root protection must not reuse the
+newer database/cache. A reviewed restore must use matching pre-upgrade state at its recorded locations, retire
+owned input first, and exclude retained newer private files from every legacy task root. Preserve uncertain
+journals and avoid replay. Keep the compatible runtime if these conditions cannot be established.
+
+Windows USB enumeration emits and decodes UTF-8 explicitly and keeps its PowerShell process hidden.
+Unicode device names and diagnostics are preserved in both Python UTF-8 modes; enumeration remains read-only.
 Native calls use an owned helper with cancellation/deadlines, recorded input cleanup and per-session
 exclusion across runtime databases. Windows shared-desktop tasks wait for sixty seconds of unlocked inactivity and pause on physical
 input; `agent-task stop-all` stops visible tasks. Other shared desktops require a trusted activity adapter.

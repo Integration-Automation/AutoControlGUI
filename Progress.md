@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-03；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-04；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -24,6 +24,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      SDK，不會自動使用受管 helper；缺套件時應保留明確失敗，不能退回其他瀏覽器引擎。
    - 正式變更前仍須安排主工作樹、既有 Jeffrey_RPA 批次與服務的部署／回復步驟；不能直接將
      功能工作樹當作已部署版本，也不能替換共用 `.venv` 或自動重啟正式服務。
+     舊版回復須先取得輸入退場確證，審閱相符的升級前狀態及原位置，並從全部舊版任務根目錄
+     排除留存的新版私有檔案；不能讓不識別新私有根的舊程式沿用新版資料庫／快取。
+     須比對來源／成品雜湊，不能只看相同版本號；保留不明 journal，不重播副作用。
    - 瀏覽器統一使用 WebRunner（`je_web_runner`），來源 `D:\Codes\WebRunner`。
      真實頁面驗收尚缺登入狀態、目前頁面身分、表單讀回、獨立 DOM 完成條件、來源限制、
      上／下載權限與摘要、非預期視窗／對話框、逾時／取消及 session 清理證據。
@@ -39,6 +42,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 3. **P1／P7：跨平台桌面與真人接回**
    - Windows：補跨任務／helper 世代的持續真人活動及閒置來源，再驗證注入事件排除、鎖定、
      真人接回、明確恢復與閒置 60 秒條件。原生 HWND／PID、遮擋、縮放與輸入清理仍缺實測。
+     此項新設計草案寫入遭自動核准審核拒絕（僅回覆 blocked by policy），檔案未建立；
+     尚須釐清該寫入限制，再完成持續來源，未以其他工具繞過。
    - macOS、X11、Wayland：實作可信真人活動來源，接合授權／鎖定／閒置判定、觀察目標身分、
      視窗範圍輸入及自有 helper 隔離；補非 Windows 對話框／未儲存 gate。
      目前不能解除不支援平台的共用桌面拒絕保護。
@@ -141,6 +146,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      實際 SQLite 備份／prune、並行與回滾、私有成果匯出及連結拒絕；補完整 coverage、
      三平台型別／品質、嚴格文件、來源／wheel／sdist／隔離安裝逐檔比對與功能分支交付紀錄。
      字面 Windows 檔案 symlink 仍缺權限驗證，不得以 junction 取代；歷史證據檔不自動認領或刪除。
+     另須完成 UTF-8 模式下 USB 子程序編碼／隱藏執行修正的新完整回歸，確認沒有未處理的
+     讀取執行緒警告，再完成三語回復說明、文件與成品比對。保留首輪7警告原始紀錄。
 
    - 於整份規範最後固定提交重跑完整 headless 與 coverage run -m pytest、跨功能／故障恢復回歸；
      目前功能工作樹完整成功的來源範圍與78項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。

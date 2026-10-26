@@ -817,6 +817,13 @@ where creation is denied (WinError1314). Historical physical cache files are pre
 Task metadata's `artifact_cache_state` distinguishes current ownership from a historical reference;
 it does not prove completion, file integrity or permission to input.
 
+An actual pre-fix runtime can review a new-layout private report as an ordinary source; the current runtime
+refuses it. Rollback requires matching pre-upgrade state and excluding retained new private files from
+all legacy task roots after owned input retirement. Schema/version equality alone is not protection.
+
+Windows USB Unicode/diagnostic and hidden-process regressions use a real PowerShell stream producer
+with synthetic payloads in both Python UTF-8 modes. They do not open or write USB hardware.
+
 Preauthorized triggers have fake-source and real owned file-helper coverage for atomic deduplication,
 restart, bounded pending work, owner revocation, authority-store isolation and event-scoped outputs.
 Canonical-root symlink replacement is tested only where the filesystem grants symlink creation.

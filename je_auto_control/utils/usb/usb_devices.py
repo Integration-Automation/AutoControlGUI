@@ -109,6 +109,7 @@ def _pyusb_to_device(dev: Any) -> UsbDevice:
 def _enumerate_windows() -> UsbEnumerationResult:
     cmd = [
         "powershell", "-NoProfile", "-NonInteractive", "-Command",
+        "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); "
         "Get-PnpDevice -PresentOnly -Class USB"
         " | Select-Object FriendlyName, InstanceId, Manufacturer, Status"
         " | ConvertTo-Json -Compress",
@@ -210,6 +211,8 @@ def _run_capture(cmd: List[str], backend: str) -> Any:
     try:
         completed = subprocess.run(  # nosec B603 B607  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: argv list (never shell=True); cmd is built from project-controlled allowlists in _enumerate_via_lsusb / _enumerate_via_system_profiler — no user input flows in
             cmd, capture_output=True, text=True,
+            encoding="utf-8" if backend == "windows" else None,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             timeout=SUBPROCESS_TIMEOUT_S, check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as error:

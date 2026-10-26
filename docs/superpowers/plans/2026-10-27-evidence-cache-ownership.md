@@ -61,6 +61,10 @@ The listed paths are one argv, displayed across lines for readability.
 ### Task 2: Coherent verification and delivery
 
 **Files:** three READMEs/Sphinx2/architecture/map/lifecycle/capability/Progress/monthly/changelog as applicable.
+Full-run integration fix: `je_auto_control/utils/usb/usb_devices.py` and
+`test/unit_test/headless/test_usb_windows_encoding.py`; source byte changes require a fresh full run.
+The retained first full run has7unhandled reader-thread warnings and is not accepted as clean.
+
 
 - [ ] Run task/evidence/history/retention/recovery/transfer/ownership regressions and prescribed static gates.
 - [ ] Check exact original58 import edges; preserve existing raw lint debt without new issues/cycles/duplicates.

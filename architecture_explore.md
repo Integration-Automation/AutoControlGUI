@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,390 |
-| 程式碼總行數 | 206,538 |
+| 程式碼總行數 | 206,541 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 856 |
 | 套件門面 `__all__` 公開名稱數 | 1445 |
@@ -522,7 +522,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 29,521 行。
+> 6 個套件、約 29,524 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -530,7 +530,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_sync/` | 8,496 | 持久化設定與條件交易：`contract.py` 管理有限 JSON 與協定例外；`store.py` 以 SQLite 原子比較版本／記錄重送收據；`routes.py` 提供第二版 HTTP 與明確盲寫相容；`commands.py` 共用 AC／MCP／Builder；`client.py` 條件提交，另有因果模型、peer ledger 與本機 SQLite outbox；第三版 /causal 交易已接上確認／退休／回收與刪除憑證；client／outbox 已接上原請求重送、有界 CAS 重合併及原子快照確認；持久化控制、原子本機 full-resync／舊待送退役與歷史收據已接上。本機資產工具另提供 manifest、整版雜湊驗證與不可變目錄發布；七種來源 adapters 保存可攜因果 profiles；workspace INI 與 GUI 共用偏好正規化。來源／outbox 與原子 full-resync 基準已由 SyncWorkspace 協調；引用資產以不可變分塊／完整 hash 收據、具驗證 HTTP 與完整 profile 串流發布接上；Sync UI 仍屬 C3。 |
 | `utils/device_matrix/` | 143 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 14,634 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
-| `utils/usb/` | 4,816 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
+| `utils/usb/` | 4,819 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 1,008 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
@@ -827,7 +827,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 64 / 74 / 56 / 40 / 28 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
 | `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 40 / 29 / 146 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
 
-#### `utils/usb/`（4,816 行）與 `utils/usbip/`（1,008 行）
+#### `utils/usb/`（4,819 行）與 `utils/usbip/`（1,008 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -843,7 +843,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `usb/passthrough/descriptor.py` | 134 | USB 標準裝置描述元解析。 |
 | `usb/passthrough/key_provider.py` | 125 | ACL 的可插拔 HMAC 金鑰來源。 |
 | `usb/passthrough/commands.py` | 150 | 無頭直通指令（單一真實來源）。 |
-| `usb/usb_devices.py` | 296 | 跨平台 USB 裝置列舉。 |
+| `usb/usb_devices.py` | 299 | 跨平台 USB 裝置列舉。 |
 | `usb/usb_watcher.py` | 308 | 輪詢式 USB 熱插拔監看。 |
 | `usbip/protocol.py` | 342 | USB/IP 線路格式封裝／解析。 |
 | `usbip/server.py` | 295 | USB/IP 主機端 TCP 伺服器。 |
@@ -1440,7 +1440,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/mcp_server/` | 53 | 20,971 |
 | `utils/remote_desktop/` | 63 | 14,634 |
 | `utils/executor/` | 9 | 9,880 |
-| `utils/usb/` | 17 | 4,816 |
+| `utils/usb/` | 17 | 4,819 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,682 |
 | `utils/accessibility/` | 14 | 3,143 |
 | `wrapper/` | 21 | 4,466 |
@@ -1457,7 +1457,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 951 | 92,719 |
-| **總計** | **1,382** | **206,369** |
+| **總計** | **1,382** | **206,372** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

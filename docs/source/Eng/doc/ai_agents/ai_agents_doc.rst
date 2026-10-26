@@ -391,6 +391,15 @@ files. Task metadata exposes ``artifact_cache_state`` as ``owned`` or ``historic
 association, not completion or input authority. Retention removes only recognized current cache files.
 Historical files remain, and retained private roots stay excluded from artifact exports.
 
+Before deployment or rollback, compare exact source and artifact hashes; the unchanged version number alone does
+not identify private-cache compatibility. A runtime without this private-root protection must not reuse the
+newer database/cache. A reviewed restore must use matching pre-upgrade state at its recorded locations, retire
+owned input first, and exclude retained newer private files from every legacy task root. Preserve uncertain
+journals and avoid replay. Keep the compatible runtime if these conditions cannot be established.
+
+Windows USB enumeration emits and decodes UTF-8 explicitly and keeps its PowerShell process hidden.
+Unicode device names and diagnostics are preserved in both Python UTF-8 modes; enumeration remains read-only.
+
 ``manage_agent_trigger`` captures approved interval/cron/file/event templates and refreshes the owner
 on each fire. Event/task deduplication commits atomically. ``submit_agent_task`` accepts an optional
 idempotency key; CLI and Actions expose trigger controls. Managed scopes reject ambient vault resolution.
