@@ -568,6 +568,11 @@ Durable interval/cron/file/event bindings capture approved task scopes, reauthor
 deduplicate notifications. Submission keys prevent duplicate tasks across retries and restart.
 Owner-scoped receipts and explicit uncertain-outcome review link to run history, journals and task
 reports. Generated cache expires after 30 days; user outputs and external journals are preserved.
+Evidence caches bind the complete database path and a persistent database identity under
+`.agent-evidence-cache/`. Restored databases and legacy caches retain their original history references;
+the next action or report starts a new owned journal segment without reading or moving historical files.
+Task metadata reports `artifact_cache_state` as `owned` or `historical`. Retention removes only the current
+database's recognized cache files; historical files remain, and retained private roots cannot be exported.
 Native calls use an owned helper with cancellation/deadlines, recorded input cleanup and per-session
 exclusion across runtime databases. Windows shared-desktop tasks wait for sixty seconds of unlocked inactivity and pause on physical
 input; `agent-task stop-all` stops visible tasks. Other shared desktops require a trusted activity adapter.

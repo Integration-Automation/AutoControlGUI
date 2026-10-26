@@ -12,6 +12,7 @@ from typing import Any
 from je_auto_control.utils.action_journal.events import ActionEvent, EventStatus
 from je_auto_control.utils.action_journal.store import ActionJournal
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.evidence_cache import EvidenceCache
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, TERMINAL
 from je_auto_control.utils.agent_runtime.policy import durable_payload
 from je_auto_control.utils.agent_runtime.receipts import row_report
@@ -26,39 +27,59 @@ class TaskEvidence:
     def __init__(self, store: Any) -> None:
         self.store = store
         path = Path(store.path)
-        self.root = path.with_suffix(".evidence")
+        self.cache = EvidenceCache(store)
         self.history = HistoryStore(path)
+
+    @property
+    def root(self) -> Path:
+        """Return the current database-bound cache, distinct from historical journal locations."""
+        return self.cache.root
 
     def directory(self, task_id: str) -> Path:
         """Resolve a generated task directory, refusing symlink escapes even during cleanup."""
-        if re.fullmatch(r"[0-9a-f]{32}", task_id) is None:
-            raise AgentTaskError("invalid task artifact identifier")
-        path = self.root / task_id
-        if self.root.is_symlink() or path.is_symlink() or path.resolve().parent != self.root.resolve():
-            raise AgentTaskError("task artifact directory escapes its owner cache")
-        return path
+        return self.cache.directory(task_id)
 
     def ensure(self, task_id: str) -> dict[str, Any]:
         """Create one history link and private artifact directory, idempotently after restart."""
+        journal = self.cache.file(task_id, 'journal.jsonl')
         with self.store.connection() as connection:
-            row = connection.execute("SELECT * FROM agent_evidence WHERE task_id=?", (task_id,)).fetchone()
-        if row is not None:
-            return dict(row)
+            current = self._current_link(connection, task_id, journal)
+        if current is not None:
+            if not journal.is_file():
+                raise AgentTaskError('owned task journal is missing; review required')
+            return current
         self.history.list_runs(limit=1)  # initialize the existing history schema before the shared transaction
         directory = self.directory(task_id)
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-        journal = directory / "journal.jsonl"
+        journal = self.cache.file(task_id, 'journal.jsonl')
         journal.touch(mode=0o600, exist_ok=True)
         with self.store.connection(write=True) as connection:
-            row = connection.execute("SELECT * FROM agent_evidence WHERE task_id=?", (task_id,)).fetchone()
-            if row is not None:
-                return dict(row)
+            self.cache.check_identity(connection)
+            current = self._current_link(connection, task_id, journal)
+            if current is not None:
+                return current
             cursor = connection.execute("INSERT INTO runs(source_type,source_id,script_path,started_at,status) "
                                         "VALUES ('manual',?,'',?,'running')", ("agent:" + task_id, time.time()))
             run_id = last_row_id(cursor)
             connection.execute("INSERT INTO run_journals VALUES (?,?,?)", (run_id, str(journal), task_id))
-            connection.execute("INSERT INTO agent_evidence VALUES (?,?,?)", (task_id, run_id, str(journal)))
+            connection.execute('INSERT INTO agent_evidence VALUES (?,?,?) ON CONFLICT(task_id) DO UPDATE '
+                               'SET history_id=excluded.history_id,journal_path=excluded.journal_path',
+                               (task_id, run_id, str(journal)))
+            self.cache.check_identity(connection)
+            if self._current_link(connection, task_id, journal) != {
+                    'task_id': task_id, 'history_id': run_id, 'journal_path': str(journal)}:
+                raise AgentTaskError('task artifact history ownership changed; review required')
         return {"task_id": task_id, "history_id": run_id, "journal_path": str(journal)}
+
+    @staticmethod
+    def _current_link(connection: Any, task_id: str, journal: Path) -> dict | None:
+        row = connection.execute('SELECT * FROM agent_evidence WHERE task_id=?', (task_id,)).fetchone()
+        if row is None or Path(row['journal_path']) != journal:
+            return None
+        linked = connection.execute('SELECT 1 FROM runs r JOIN run_journals j ON r.id=j.run_id '
+                                    'WHERE r.id=? AND r.source_id=? AND j.journal_path=? AND j.journal_run_id=?',
+                                    (row['history_id'], 'agent:' + task_id, str(journal), task_id)).fetchone()
+        return dict(row) if linked is not None else None
 
     def metadata(self, task_id: str) -> dict[str, Any]:
         """Read provenance without creating artifacts as a side effect of a status request."""
@@ -74,6 +95,8 @@ class TaskEvidence:
         artifacts = [str(path) for path in paths if path.is_file() and not path.is_symlink()]
         return {"history_path": self.history.path, "history_id": row["history_id"],
                 "journal_path": row["journal_path"], "artifacts": sorted(artifacts),
+                "artifact_cache_state": "owned" if Path(row['journal_path']) == directory / 'journal.jsonl'
+                else "historical",
                 "report_pending": pending is not None, "completion_contract": completion[0] if completion else 0}
 
     def defer(self, task_ids: list[str]) -> None:
@@ -92,10 +115,12 @@ class TaskEvidence:
 
     def action(self, task_id: str, receipt: dict[str, Any], *, finished: bool = False) -> None:
         """Mirror receipt certainty into the existing append-only action journal."""
-        link = self.ensure(task_id)
+        self.ensure(task_id)
+        journal = self.cache.file(task_id, 'journal.jsonl')
+        self.cache.file(task_id, 'journal.jsonl.lock')
         status: EventStatus = "incomplete" if not finished else (
             "ok" if receipt["status"] == "confirmed" else "error")
-        ActionJournal(link["journal_path"]).append(ActionEvent(
+        ActionJournal(journal).append(ActionEvent(
             run_id=task_id, step_id=receipt["id"], command=receipt["command"],
             parameters=durable_payload(receipt["arguments"]), started_at=receipt["created"],
             finished_at=max(time.time(), receipt["created"]) if finished else None,
@@ -111,7 +136,7 @@ class TaskEvidence:
         report = {"task_id": task_id, "state": row["state"], "reason": row["reason"],
                   "verification": row["verification"], "rows": row_report(spec, receipts),
                   "action_count": len(receipts), "actions": [_summary(item) for item in receipts[-1000:]]}
-        destination = self.directory(task_id) / "report.json"
+        destination = self.cache.file(task_id, 'report.json')
         atomic_write_text(destination, json.dumps(durable_payload(report), ensure_ascii=False, indent=2))
         destination.chmod(0o600)
         if row["state"] in TERMINAL or row["state"] == "waiting_user":
@@ -134,7 +159,7 @@ class TaskEvidence:
         directory = self.directory(task_id)
         if sum(1 for _path in directory.glob("*.jpg")) >= 100:
             raise AgentTaskError("persistent task images exceed the one-hundred artifact limit")
-        path = directory / (observation_id + ".jpg")
+        path = self.cache.file(task_id, observation_id + '.jpg')
         with path.open("xb") as handle:
             handle.write(data)
         path.chmod(0o600)
@@ -147,8 +172,10 @@ class TaskEvidence:
             if any(not _owned_artifact(path) for path in paths):
                 raise AgentTaskError("task cache contains unrecognized data; retention needs review")
             for path in paths:
-                path.unlink()
-            directory.rmdir()
+                self.cache.file(task_id, path.name)
+            for path in paths:
+                self.cache.file(task_id, path.name).unlink()
+            self.directory(task_id).rmdir()
         if Path(self.history.path).exists():
             with self.store.connection(write=True) as connection:
                 identifiers = [row[0] for row in connection.execute("SELECT id FROM runs WHERE source_id=?",

@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-01；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-03；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -136,11 +136,11 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 8. **P0–P9 最終交付核對與檢查**
    - 每條交付契約整理實作、無頭回歸與原生／真機證據對照；補新平台／多機／恢復情境的漏洞，
      區分已實作、尚缺實作與只缺實測，不能用模擬目標取代原生驗收。
-     修正已重現的 evidence／artifact 根目錄隔離與清理缺口：同名但不同副檔名的 SQLite 備份
-     保留相同 task ID 後，備份 runtime 的公開 prune 會刪除原 runtime 尚未到期的 journal／report。
-     須綁定完整資料庫身分，保留既有 metadata／history／journal 的真實歸屬，不能盲目改名、搬移、
-     認領或刪除；新舊私有證據路徑亦須保持在成果匯出的拒絕範圍。來源仍成功／使用者檔案未變
-     不代表證據未受影響。可重現前提與結果見 stage104/public-evidence-retention-observation01.json。
+     完成 evidence／artifact 資料庫身分隔離修正的擴大回歸與交付：依
+     docs/superpowers/plans/2026-10-27-evidence-cache-ownership.md 核對新舊歷史分段、
+     實際 SQLite 備份／prune、並行與回滾、私有成果匯出及連結拒絕；補完整 coverage、
+     三平台型別／品質、嚴格文件、來源／wheel／sdist／隔離安裝逐檔比對與功能分支交付紀錄。
+     字面 Windows 檔案 symlink 仍缺權限驗證，不得以 junction 取代；歷史證據檔不自動認領或刪除。
 
    - 於整份規範最後固定提交重跑完整 headless 與 coverage run -m pytest、跨功能／故障恢復回歸；
      目前功能工作樹完整成功的來源範圍與78項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。

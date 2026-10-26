@@ -810,6 +810,12 @@ Persistent budget rollback/restart/regression handling and owner-scoped emergenc
 Receipt review, non-effect retry, atomic history/journal linkage, image opt-in and owner-scoped 30-day
 retention have fake-effect/cache coverage. These are persistence guarantees, not new native acceptance.
 Cleanup preserves user outputs, external journal files and unrecognized cache content.
+Real FileTarget/SQLite-backup regressions cover database-path/identity isolation, same-path restart,
+legacy provenance segments, concurrent/rolled-back rebind and current/historical private-source refusal.
+Directory junction and hardlink refusal are covered; literal Windows file symlinks remain unverified
+where creation is denied (WinError1314). Historical physical cache files are preserved, not adopted.
+Task metadata's `artifact_cache_state` distinguishes current ownership from a historical reference;
+it does not prove completion, file integrity or permission to input.
 
 Preauthorized triggers have fake-source and real owned file-helper coverage for atomic deduplication,
 restart, bounded pending work, owner revocation, authority-store isolation and event-scoped outputs.

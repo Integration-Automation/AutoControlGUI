@@ -42,6 +42,9 @@ CREATE TABLE IF NOT EXISTS agent_reviews (
 CREATE TABLE IF NOT EXISTS agent_evidence (
  task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE,
  history_id INTEGER NOT NULL, journal_path TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_evidence_identity (
+ singleton INTEGER PRIMARY KEY CHECK(singleton=1), nonce TEXT NOT NULL);
+INSERT OR IGNORE INTO agent_evidence_identity VALUES (1,lower(hex(randomblob(16))));
 CREATE TABLE IF NOT EXISTS agent_request_keys (
  owner_key TEXT NOT NULL, key_hash TEXT NOT NULL, spec_hash TEXT NOT NULL,
  task_id TEXT NOT NULL REFERENCES agent_tasks(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,

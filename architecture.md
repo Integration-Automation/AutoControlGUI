@@ -844,6 +844,13 @@ TaskEvidence atomically links the runtime task with the existing HistoryStore sc
 SQLite transaction. Append-only journals mirror receipt certainty; reports summarize per-row outcomes.
 Owner testimony reconciles uncertain attempts without automatic resume. Retention only removes validated
 generated cache files and matching private metadata; external journals and user outputs remain separate.
+EvidenceCache binds the complete canonical database path and its persistent private nonce beneath
+`.agent-evidence-cache/`. A copied database or old-layout journal starts a new owned history segment
+on publication; the original run/journal/report references and historical bytes remain untouched.
+Same-path restarts reuse the segment. Rebind checks the actual SQLite writer's identity and linked
+run/journal before commit; redirected or multiply linked artifacts are rejected before effects.
+Only the current namespace is physically pruned. Source export guards current, legacy and actually
+retained historical roots; metadata exposes `artifact_cache_state` without adopting historical files.
 
 AgentTriggers persists captured task templates, owner provenance and bounded schedule/file/event
 bindings. Event/request deduplication and task creation share one SQLite transaction before WorkQueue

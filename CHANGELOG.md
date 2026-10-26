@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — database-owned task evidence
+
+Bind generated evidence to the complete database path and a persistent private identity, preventing
+an expired SQLite backup from pruning another runtime's current journal/report. Restored and legacy
+references remain historical provenance; new publication creates an owned history/journal segment
+without reading, moving or rewriting old files. Same-path restart retains the segment.
+Task metadata adds `artifact_cache_state`; existing task commands and schema version stay unchanged.
+Retention removes only recognized current cache files and local expired metadata; historical physical
+files remain. Current, legacy and retained historical roots remain private to artifact exports.
+Native/device/browser acceptance and literal Windows file-symlink verification remain in Progress.md.
+
 ## Unreleased — managed cross-host outcomes
 
 Add manage_agent_transfer / AC_agent_transfer, MCP/REST/CLI/Builder parity and the Transfers view.

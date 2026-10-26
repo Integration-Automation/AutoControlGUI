@@ -1234,3 +1234,25 @@ Actual two-host and separate-process three-host tests independently verify bytes
 Further restart/cancellation faults, further staging faults, full retention, portable evidence,
 client/GUI surfaces and complete-stage verification remain in Progress.md. A receipt grants no
 task-input authority or task-completion evidence.
+
+## Database-owned task evidence caches
+
+Managed task metadata adds `artifact_cache_state`: `owned` associates the journal with the current
+cache namespace, while `historical` preserves a stored reference outside it. Neither value is
+completion, file-integrity or input-authority proof. Existing get/list/inspect/GUI JSON surfaces carry
+this field; no new command, schema-version bump or dependency is required.
+
+The internal `.agent-evidence-cache/` layout binds the complete canonical database path and a
+persistent private database identity. Same-path restarts retain the segment. An SQLite backup at a
+different path or a legacy `*.evidence` link does not authorize reading/writing/deleting those files.
+The next action/report atomically creates a new owned HistoryStore run/journal segment, changing only
+the task's current link. Prior history/journal/report references and physical files remain unchanged.
+Status reads do not create a segment or enumerate a historical cache. Failed or competing rebinds
+preserve the original link; actual writer identity and run/journal association are checked.
+
+Thirty-day retention physically removes only recognized artifacts in the current namespace and this
+database's expired task/history rows. Historical files remain, like external journals. Current, legacy
+and actually retained historical private roots stay excluded from source artifact exports; ordinary
+output directories with similar basenames are not reserved. Directory redirection and multiply linked
+files require review before an artifact effect. Literal Windows file-symlink acceptance remains open
+where the host refuses creation; junction tests do not substitute for it.

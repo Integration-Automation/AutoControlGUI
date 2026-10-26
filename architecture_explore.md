@@ -6,7 +6,7 @@
 > 擷取每個模組的 docstring 與頂層公開名稱；統計數字取自實際檔案，非估算。
 > 指令數與公開 API 數以 `executor.known_commands()` 與 `je_auto_control.__all__` 在工作樹上實測取得。
 >
-> **掃描時間**：2026-10-26　**版本**：`pyproject.toml` version `0.0.228`　**分支**：`feat/agent-task-runtime`
+> **掃描時間**：2026-10-27　**版本**：`pyproject.toml` version `0.0.228`　**分支**：`feat/agent-task-runtime`
 
 ---
 
@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,389 |
-| 程式碼總行數 | 206,416 |
+| Python 模組總數（含周邊子專案） | 1,390 |
+| 程式碼總行數 | 206,538 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 856 |
 | 套件門面 `__all__` 公開名稱數 | 1445 |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 45,529 行。
+> 14 個套件、約 45,651 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 19,962 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 20,084 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -989,7 +989,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（19,962 行／147 檔）
+#### `utils/agent_runtime/`（20,084 行／148 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1040,7 +1040,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `dialog_scope.py` | 54 | Pause managed desktop work at unsaved-content or unrecognized modal windows. |
 | `document_launch.py` | 46 | Bounded document handoff runs outside the disposable native input helper's process tree. |
 | `errors.py` | 18 | Typed failures for managed tasks, observations and control ownership. |
-| `evidence.py` | 185 | Service-owned task provenance, redacted artifacts and thirty-day metadata retention. |
+| `evidence.py` | 212 | Service-owned task provenance, redacted artifacts and thirty-day metadata retention. |
+| `evidence_cache.py` | 91 | Database-bound evidence paths never turn historical journal references into filesystem ownership. |
 | `evidence_handoff.py` | 365 | Explicit revocable evidence-only grants preserve ordinary task ownership and input isolation. |
 | `file_dialog_scope.py` | 62 | Bind the existing file-dialog executor to one task-owned window and rooted absolute path. |
 | `file_target.py` | 35 | A noninteractive target for rooted archive workflows, separate from desktop input. |
@@ -1088,7 +1089,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `skill_parameters.py` | 110 | Explicit typed parameter slots modify data values without widening a skill's authority. |
 | `skill_reauthorization.py` | 105 | Review origin renewal into a new immutable candidate without inheriting skill publication. |
 | `skill_recording.py` | 105 | Semantic skill drafts retain verified actions, original scope and independent completion evidence. |
-| `store.py` | 424 | Transactional task metadata, durable action receipts and input ownership. |
+| `store.py` | 427 | Transactional task metadata, durable action receipts and input ownership. |
 | `submission.py` | 40 | Admission witnesses bind tagged DAG requests before live scope normalization, without granting authority. |
 | `target_config.py` | 198 | Immutable host-reviewed target configuration, distinct from untrusted task options. |
 | `target_continuity.py` | 16 | Require a live UI target context before trusting a finite skill's verified prefix. |
@@ -1112,7 +1113,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `transfer_host.py` | 201 | Host-injected source authority and destination scope keep task policy out of transfer leaves. |
 | `transfer_lineage.py` | 147 | Bind artifact authority to real bounded recovery ancestry and original accepted DAG admission. |
 | `transfer_models.py` | 191 | Portable criterion selections and immutable descriptors for reviewed outcome transfers. |
-| `transfer_privacy.py` | 52 | Exclude actual host private stores and evidence roots without reserving ordinary output basenames. |
+| `transfer_privacy.py` | 53 | Exclude actual host private stores and evidence roots without reserving ordinary output basenames. |
 | `transfer_protocol.py` | 169 | Runtime-owned transfer serialization coordinates source consent and service-owned destination imports. |
 | `transfer_transport.py` | 145 | Bounded source reads and management replies use an injected adapter without foreign task authority. |
 | `transfer_management.py` | 103 | Closed management envelopes validate foreign source and destination replies before retaining consent. |
@@ -1455,8 +1456,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 950 | 92,597 |
-| **總計** | **1,381** | **206,247** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 951 | 92,719 |
+| **總計** | **1,382** | **206,369** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

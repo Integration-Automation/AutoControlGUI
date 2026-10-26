@@ -384,6 +384,13 @@ owner witness for an uncertain effect before resume. Task metadata links history
 Generated cache expires after thirty days; user outputs and external journals are preserved. Images
 are ephemeral unless strict-redacted persistence is explicitly enabled.
 
+Evidence caches bind the complete database path and persistent database identity beneath
+``.agent-evidence-cache/``. Restored databases and legacy caches keep their original history references.
+The next action or report creates a new owned journal segment without reading or moving historical
+files. Task metadata exposes ``artifact_cache_state`` as ``owned`` or ``historical``; this is cache
+association, not completion or input authority. Retention removes only recognized current cache files.
+Historical files remain, and retained private roots stay excluded from artifact exports.
+
 ``manage_agent_trigger`` captures approved interval/cron/file/event templates and refreshes the owner
 on each fire. Event/task deduplication commits atomically. ``submit_agent_task`` accepts an optional
 idempotency key; CLI and Actions expose trigger controls. Managed scopes reject ambient vault resolution.

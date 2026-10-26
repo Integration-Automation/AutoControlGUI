@@ -47,6 +47,7 @@ class SourceFilePolicy:
         for ceiling in self.historical:
             ceiling.path(str(path))
         if (path.is_relative_to(Path(self.runtime.evidence.root).resolve())
+                or self.runtime.evidence.cache.is_private(path)
                 or any(_same_file(path, private) for private in _private_files(self.runtime, self.actors))):
             raise AgentTaskError('private runtime or principal files cannot be exported')
         return str(path)

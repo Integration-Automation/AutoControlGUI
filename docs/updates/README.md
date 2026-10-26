@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261027-03 | 2026-10-27 | Bind task evidence cache to its owning database | #snapshot #agent #persistence #verification | [2026-10-d](2026-10-d.md) |
 | U-20261027-02 | 2026-10-27 | Align transfer guides with the verified shared surfaces | #docs #agent #handoff #compatibility #verification | [2026-10-d](2026-10-d.md) |
 | U-20261027-01 | 2026-10-27 | Verify cross-host outcomes and isolated browser helper | #snapshot #agent #handoff #browser #verification | [2026-10-d](2026-10-d.md) |
 | U-20261026-07 | 2026-10-26 | Bind source exports and routed consent to current host authority | #snapshot #agent #handoff #authority #routing #verification | [2026-10-c](2026-10-c.md) |

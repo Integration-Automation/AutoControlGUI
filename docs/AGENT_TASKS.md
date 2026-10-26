@@ -128,6 +128,15 @@ dispatch from evidence. WorkQueue claim numbers fence stale delivery settlements
 defer delivery without spending application retries. History links, action journals, structured reports
 and owned cache retention share the task lifecycle; images stay ephemeral unless explicitly opted in.
 
+The private `.agent-evidence-cache/` namespace binds the complete canonical database path and a
+persistent database identity. Restoring a database elsewhere does not adopt its stored journal path.
+On the next action/report, the runtime atomically creates one new owned history/journal segment;
+old run/journal/report references stay unchanged and historical files are not inspected or moved.
+Same-path restart reuses the current segment. Status reads do not create one; task metadata reports
+`artifact_cache_state` as `owned` or `historical`, without granting completion or input authority.
+Retention prunes only recognized files in the current namespace and this database's expired metadata.
+Historical physical files remain; current, legacy and retained historical roots stay private to exports.
+
 ## Review and run workflows
 
 `draft_agent_workflow(workflow, config)` compiles `download_archive`, `batch_form`, `transfer` or
