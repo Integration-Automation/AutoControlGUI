@@ -147,7 +147,8 @@ def _principal(value: Any) -> None:
         raise AgentTaskError('invalid recovery execution principal')
 
 
-def _recorded_owner(connection: Any, task_id: str) -> dict | None:
+def recorded_recovery_owner(connection: Any, task_id: str) -> dict | None:
+    """Decode actual host-owned recovery principals and validate their complete reviewed binding."""
     row = connection.execute('SELECT details FROM agent_recovery_owners WHERE task_id=?', (task_id,)).fetchone()
     if row is None:
         return None
@@ -179,7 +180,7 @@ def check_recovery_authority(runtime: Any, connection: Any, source: dict, child:
     """Keep actual legacy/explicit reviewers, both owners and current effect scopes live."""
     _principal(source['owner'])
     _principal(child['owner'])
-    ownership = _recorded_owner(connection, child['id'])
+    ownership = recorded_recovery_owner(connection, child['id'])
     if ownership is not None:
         if (ownership['source_snapshot'] != link['snapshot']
                 or actor_identity(ownership['owner']) != actor_identity(child['owner'])
@@ -191,7 +192,7 @@ def check_recovery_authority(runtime: Any, connection: Any, source: dict, child:
 
 
 def _task_effect_identity(runtime: Any, connection: Any, row: dict, historical: bool) -> None:
-    recorded = _recorded_owner(connection, row['id'])
+    recorded = recorded_recovery_owner(connection, row['id'])
     if recorded is not None and actor_identity(recorded['owner']) != actor_identity(row['owner']):
         raise AgentTaskError('recovery execution task ownership changed')
     if historical:
@@ -265,7 +266,7 @@ def _handoff_retired(runtime: Any, source: dict, child: dict, link: dict, eviden
 
 def check_historical_recovery_identity(runtime: Any, connection: Any, source: dict, child: dict, link: dict) -> None:
     """Refresh actual historical ownership/admission without reviving unavailable input policies."""
-    ownership = _recorded_owner(connection, child['id'])
+    ownership = recorded_recovery_owner(connection, child['id'])
     _check_pair(ownership or {'owner': source['owner'], 'actor': child['owner']})
     if ownership is not None and (ownership['source_snapshot'] != link['snapshot']
                                  or actor_identity(ownership['owner']) != actor_identity(source['owner'])):

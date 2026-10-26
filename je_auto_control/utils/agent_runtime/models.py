@@ -58,7 +58,7 @@ def positive(value: Any, name: str, maximum: float) -> None:
     """Require a finite positive numeric budget, excluding boolean values."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise AgentTaskError(f"{name} must be numeric")
-    if not math.isfinite(value) or not 0 < value <= maximum:
+    if not 0 < value <= maximum or not math.isfinite(value):
         raise AgentTaskError(f"{name} must be positive and at most {maximum}")
 
 

@@ -36,9 +36,12 @@ from je_auto_control.utils.agent_runtime.store import AgentTaskStore, request_sp
 from je_auto_control.utils.agent_runtime.dag_batches import DagBatches
 from je_auto_control.utils.agent_runtime.transfer_host import TransferHost
 from je_auto_control.utils.agent_runtime.transfer_protocol import AgentTransfers
+from je_auto_control.utils.agent_runtime.transfer_transport import TransferPeer
 from je_auto_control.utils.agent_runtime.submission import TaskAdmission, submitted_digest, submission_metadata
 from je_auto_control.utils.agent_runtime.dag_admission import current_admission
-from je_auto_control.utils.agent_runtime.task_authority import RecoveryBinding, CompletionBinding, check_task_authority
+from je_auto_control.utils.agent_runtime.task_authority import (
+    RecoveryBinding, CompletionBinding, check_task_authority, recorded_recovery_owner,
+)
 from je_auto_control.utils.agent_runtime.completion_recovery import (
     completion_target, completion_evidence, completion_metadata, require_executable_task,
     check_completion_authority, completion_spec, completion_details,
@@ -75,6 +78,7 @@ class AgentRuntime:
         self.broker = ControlBroker(self.store)
         self.clock = BudgetClock(self.store)
         self.evidence = TaskEvidence(self.store)
+        self.source_private_files: tuple[Path, ...] = ()
         self.triggers = AgentTriggers(self)
         self.skills = AgentSkills(self, completion_authority=check_completion_authority,
                                   completion_template=completion_spec, recovery_review=self.recovery.review_evidence)
@@ -117,10 +121,13 @@ class AgentRuntime:
                 def retired(task_id: str) -> bool:
                     with self._mutex:
                         return task_id not in self._leases and task_id not in self._executing
-                policy = (lambda value: TaskPolicy(bind_origin(AgentTaskSpec.from_dict(value))), submitted_digest)
+                policy = (lambda value: TaskPolicy(bind_origin(AgentTaskSpec.from_dict(value))),
+                          submitted_digest, request_spec_digest, recorded_recovery_owner,
+                          self.batches.transfer_private_files)
                 host = TransferHost(self, policy, check_completion_authority,
                                     lambda: not self._closed, retired)
-                self._transfers = AgentTransfers(self, host=host, task_active=lambda: current_operation() is not None)
+                self._transfers = AgentTransfers(self, TransferPeer(self.batches.transfer_call), host=host,
+                                                task_active=lambda: current_operation() is not None)
             return self._transfers
 
     @property

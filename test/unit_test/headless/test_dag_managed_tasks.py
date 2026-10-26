@@ -228,14 +228,15 @@ def test_remote_task_cannot_serialize_local_origin_witnesses(monkeypatch):
     assert "origin witnesses" in result.nodes["one"].error
 
 
-def test_remote_connection_uses_only_closed_routes_and_registered_token(monkeypatch):
+def test_remote_connection_uses_only_closed_routes_and_registered_token(tmp_path, monkeypatch):
     from types import SimpleNamespace
     from je_auto_control.utils.admin import admin_client
     from je_auto_control.utils.agent_runtime import transport
 
     host = SimpleNamespace(label="remote", base_url="https://fixture.invalid/base", token="fixture-host-token")
-    console = SimpleNamespace(list_hosts=lambda: [host])
-    monkeypatch.setattr(admin_client, "default_admin_console", lambda: console)
+    console = admin_client.AdminConsoleClient(persist_path=tmp_path / 'hosts.json')
+    console.add_host(host.label, host.base_url, host.token)
+    monkeypatch.setattr(admin_client, "_default_console", console)
     calls = []
 
     def request(url, **kwargs):
@@ -258,11 +259,13 @@ def test_remote_connection_uses_only_closed_routes_and_registered_token(monkeypa
 
 @pytest.mark.parametrize("url", ["file:///private", "https://user:pass@fixture.invalid", "http://fixture.invalid:0",
                               "https://fixture.invalid/?token=bad", "https://fixture.invalid/#bad"])
-def test_invalid_registered_endpoint_is_refused(url, monkeypatch):
-    from types import SimpleNamespace
+def test_invalid_registered_endpoint_is_refused(url, tmp_path, monkeypatch):
+    import json
     from je_auto_control.utils.admin import admin_client
 
-    host = SimpleNamespace(label="remote", base_url=url, token="fixture-host-token")
-    monkeypatch.setattr(admin_client, "default_admin_console", lambda: SimpleNamespace(list_hosts=lambda: [host]))
+    console = admin_client.AdminConsoleClient(persist_path=tmp_path / 'hosts.json')
+    console.persist_path.write_text(json.dumps({'hosts': [
+        {'label': 'remote', 'base_url': url, 'token': 'fixture-host-token'}]}), encoding='utf-8')
+    monkeypatch.setattr(admin_client, "_default_console", console)
     with pytest.raises(AgentTaskError):
         managed_tasks._connection("remote")

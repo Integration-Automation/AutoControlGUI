@@ -1,18 +1,21 @@
-"""Bounded task transport and coordination with verified remote completion."""
+"""Bounded task and artifact transports preserve registered-host authority and completion contracts."""
 from __future__ import annotations
 
 import re
+import json
 import threading
 import time
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any, Callable, Iterator, Mapping
 from urllib.parse import urlencode, urlsplit
+from pathlib import Path
 
+from je_auto_control.utils.admin.admin_client import current_admin_hosts_path
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.agent_runtime.completion_contract import require_completion as _require_completion
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
-from je_auto_control.utils.agent_runtime.models import STATES, thaw
+from je_auto_control.utils.agent_runtime.models import STATES, thaw, positive
 from je_auto_control.utils.dag.batch_contract import host_fingerprint
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint, cancellation_scope
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
@@ -23,6 +26,75 @@ Call = Callable[[str, dict[str, Any], float], dict[str, Any]]
 _STOP: ContextVar[threading.Event | None] = ContextVar("dag_managed_stop", default=None)
 _RUNTIME: ContextVar[tuple[Call, Callable[[], None]] | None] = ContextVar("dag_managed_runtime", default=None)
 _ACTIVE = frozenset({"queued", "running", "verifying", "pausing", "cancelling"})
+
+
+def registered_transfer_private_files() -> tuple[Path, ...]:
+    """Expose only the actual host credential book location without loading configuration or tokens."""
+    return (current_admin_hosts_path(),)
+
+
+def registered_transfer_binding(host: str) -> str:
+    """Pin the current persisted transfer endpoint and credential without loading or rewriting its book."""
+    owner = _transfer_owner(host)
+    identity = _registered_transfer_identity(host)
+    _authorize(owner, host)
+    return host_fingerprint(*identity)
+
+
+def registered_host_transfer(host: str, binding: str, path: str, body: dict, timeout: float) -> dict:
+    """Use only reviewed transfer routes with fresh pre/post host and local authorization checks."""
+    if not isinstance(path, str) or path not in {'/agent/transfer', '/agent/transfer/peer'}:
+        raise AgentTaskError('unavailable registered transfer route')
+    if (not isinstance(body, dict) or set(body) != {'operation', 'request'}
+            or not isinstance(body['operation'], str) or not isinstance(body['request'], dict)):
+        raise AgentTaskError('invalid registered transfer envelope')
+    if not isinstance(binding, str) or re.fullmatch('[0-9a-f]{64}', binding) is None:
+        raise AgentTaskError('invalid registered transfer binding')
+    positive(timeout, 'transfer timeout', 30)
+    deadline = time.monotonic() + timeout
+    owner = _transfer_owner(host)
+    base, token = _transfer_live(host, binding, owner, deadline)
+    result = _remote_json(base + path, body=body, token=token, timeout=deadline - time.monotonic())
+    _transfer_live(host, binding, owner, deadline)
+    return result
+
+
+def _transfer_owner(host: str) -> DeferredAuthorization:
+    if not isinstance(host, str) or not host or host == 'local':
+        raise AgentTaskError('transfer requires an actual registered remote host')
+    if current_operation() is not None:
+        raise AgentTaskError('a managed task cannot recursively dispatch registered transfers')
+    owner = DeferredAuthorization.capture()
+    _authorize(owner, host)
+    return owner
+
+
+def _transfer_live(host: str, binding: str, owner: DeferredAuthorization, deadline: float) -> tuple[str, str]:
+    _authorize(owner, host)
+    identity = _registered_transfer_identity(host)
+    if host_fingerprint(*identity) != binding:
+        raise AgentTaskError('registered transfer host configuration changed')
+    if time.monotonic() >= deadline:
+        raise AgentTaskError('registered transfer deadline exhausted')
+    return identity
+
+
+def _registered_transfer_identity(host: str) -> tuple[str, str]:
+    try:
+        payload = json.loads(current_admin_hosts_path().read_text(encoding='utf-8-sig'))
+        entries = payload['hosts']
+        if not isinstance(entries, list):
+            raise ValueError('invalid host collection')
+        matches = [entry for entry in entries if isinstance(entry, dict) and entry.get('label') == host]
+        if len(matches) != 1:
+            raise ValueError('host must be uniquely registered')
+        entry = matches[0]
+        if (not {'label', 'base_url', 'token'} <= set(entry)
+                or set(entry) - {'label', 'base_url', 'token', 'tags'}):
+            raise ValueError('invalid host entry')
+        return _validated_host_identity(entry['base_url'], entry['token'])
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        raise AgentTaskError('current registered transfer host is unavailable') from error
 
 
 class ManagedTaskDispatchError(AgentTaskError):
@@ -108,8 +180,7 @@ def _connection(host: str) -> Call:
         from je_auto_control.utils.agent_runtime.client import AgentRuntimeClient
         client = AgentRuntimeClient()
         return lambda operation, body, timeout: client.call(operation, body, timeout=timeout)
-    base, token = _host_identity(host)
-    return _remote_connection(base, token)
+    return bound_task_connection(host, task_host_binding(host))
 
 
 def task_host_binding(host: str) -> str:
@@ -121,48 +192,77 @@ def task_host_binding(host: str) -> str:
 
 
 def bound_task_connection(host: str, binding: str) -> Call:
-    """Capture matching endpoint/credential once, refusing a replaced host before any dispatch."""
-    authorize_task_host(DeferredAuthorization.capture(), host)
+    """Pin a registered endpoint and revalidate its current configuration and owner around every call."""
+    owner = DeferredAuthorization.capture()
+    authorize_task_host(owner, host)
     if host == "local":
         if binding != "local":
             raise AgentTaskError("managed batch host configuration changed")
         return _connection(host)
+    base, token = _live_task_host(host, binding, owner)
+    remote = _remote_connection(base, token)
+
+    def checked(operation: str, body: dict[str, Any], timeout: float) -> dict[str, Any]:
+        _live_task_host(host, binding, owner)
+        result = remote(operation, body, timeout)
+        _live_task_host(host, binding, owner)
+        return result
+    return checked
+
+
+def _live_task_host(host: str, binding: str, owner: DeferredAuthorization) -> tuple[str, str]:
+    _authorize(owner, host)
     base, token = _host_identity(host)
     if host_fingerprint(base, token) != binding:
         raise AgentTaskError("managed batch host configuration changed")
-    return _remote_connection(base, token)
+    return base, token
 
 
 def _remote_connection(base: str, token: str) -> Call:
 
     def remote(operation: str, body: dict[str, Any], timeout: float) -> dict[str, Any]:
-        from je_auto_control.utils.agent_runtime.transport import request_json
         if operation == "get":
-            return request_json(base + "/agent/task?" + urlencode(body), token=token, timeout=timeout)
+            return _remote_json(base + "/agent/task?" + urlencode(body), token=token, timeout=timeout)
         if operation not in {"submit", "pause", "lookup"}:
             raise AgentTaskError("unsupported remote DAG task operation")
-        return request_json(base + "/agent/" + operation, body=body, token=token, timeout=timeout,
+        return _remote_json(base + "/agent/" + operation, body=body, token=token, timeout=timeout,
                             control=operation == "pause")
     return remote
 
 
+def _remote_json(url: str, *, body: dict | None = None, token: str, timeout: float, control: bool = False) -> dict:
+    from je_auto_control.utils.agent_runtime.transport import request_json
+    options: dict[str, Any] = {'body': body, 'token': token, 'timeout': timeout, 'control': control}
+    if urlsplit(url).path.endswith(('/agent/transfer', '/agent/transfer/peer')):
+        options['delegate_local'] = False
+    return request_json(url, **options)
+
+
 def _host_identity(host: str) -> tuple[str, str]:
-    from je_auto_control.utils.admin.admin_client import default_admin_console
-    matches = [entry for entry in default_admin_console().list_hosts() if entry.label == host]
-    if len(matches) != 1:
-        raise AgentTaskError("DAG task host is not registered uniquely")
-    base, token = matches[0].base_url.rstrip("/"), matches[0].token
+    return _registered_transfer_identity(host)
+
+
+def _validated_host_identity(base: Any, token: Any) -> tuple[str, str]:
+    if not isinstance(base, str):
+        raise AgentTaskError('invalid registered DAG task host')
+    base = base.rstrip('/')
     try:
         parsed = urlsplit(base)
         checks = (parsed.scheme in {"http", "https"}, bool(parsed.hostname), parsed.username is None,
-                  parsed.password is None, not parsed.query, not parsed.fragment, parsed.port != 0)
+                  parsed.password is None, '?' not in base, '#' not in base, parsed.port != 0)
         if not all(checks):
             raise ValueError("invalid host URL")
     except (TypeError, ValueError):
         raise AgentTaskError("invalid registered DAG task host") from None
+    return base, _checked_host_token(token)
+
+
+def _checked_host_token(token: Any) -> str:
     if not isinstance(token, str) or not token:
         raise AgentTaskError("DAG task host requires a registered token")
-    return base, token
+    if any(ord(character) < 32 or ord(character) == 127 for character in token):
+        raise AgentTaskError('registered host credential contains invalid header characters')
+    return token
 
 
 class _TaskWaiter:

@@ -107,7 +107,7 @@ def test_two_host_batch_tags_match_without_forwarding_local_principal_or_origins
         metadata = json.loads((remote.directory / "agent_runtime.json").read_text())
         console = AdminConsoleClient(persist_path=tmp_path / "hosts.json")
         console.add_host("remote-fixture", metadata["url"], metadata["token"])
-        monkeypatch.setattr(admin_client, "default_admin_console", lambda: console)
+        monkeypatch.setattr(admin_client, "_default_console", console)
         definition = graph()
         definition["nodes"][1]["host"] = "remote-fixture"
         owner = AuthorizationContext("local-admin", "admin")

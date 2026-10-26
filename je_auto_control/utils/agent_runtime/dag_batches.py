@@ -1,4 +1,4 @@
-"""Owner-scoped durable graph registration and one-shot managed batch execution records."""
+"""Owner-scoped graph lifecycle and runtime-owned task/artifact host adapters."""
 from __future__ import annotations
 
 from contextlib import nullcontext
@@ -22,7 +22,9 @@ from je_auto_control.utils.agent_runtime.local_evidence import runtime_evidence_
 from je_auto_control.utils.agent_runtime.dag_local import DagLocalTasks
 from je_auto_control.utils.dag.batch_contract import batch_definition, bind_definition
 from je_auto_control.utils.dag.inspection import inspect_definition
-from je_auto_control.utils.dag.managed_tasks import task_host_binding
+from je_auto_control.utils.dag.managed_tasks import (
+    task_host_binding, registered_transfer_private_files, registered_transfer_binding, registered_host_transfer,
+)
 from je_auto_control.utils.rbac.authorization import AuthorizationContext, current_authorization
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 
@@ -63,6 +65,25 @@ class DagBatches:
 
     def __init__(self, runtime: Any) -> None:
         self.runtime = runtime
+
+    @staticmethod
+    def transfer_private_files() -> tuple:
+        """Supply current host-owned credential paths without initializing a console or service."""
+        return registered_transfer_private_files()
+
+    def transfer_binding(self, host: str) -> str:
+        """Pin a current registered transfer host only while this runtime remains available."""
+        self.runtime.transfers.source.host.check_open()
+        binding = registered_transfer_binding(host)
+        self.runtime.transfers.source.host.check_open()
+        return binding
+
+    def transfer_call(self, host: str, binding: str, path: str, body: dict, timeout: float) -> dict:
+        """Keep registered transfer I/O behind this runtime's existing host-owned adapter boundary."""
+        self.runtime.transfers.source.host.check_open()
+        result = registered_host_transfer(host, binding, path, body, timeout)
+        self.runtime.transfers.source.host.check_open()
+        return result
 
     def handoff_context(self, batch_id: str, node_id: str, *, origin_policies: list[str] | None = None,
                         connection: Any = None, identity_only: bool = False) -> dict:

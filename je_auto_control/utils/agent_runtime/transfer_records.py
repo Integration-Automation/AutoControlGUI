@@ -134,6 +134,9 @@ def _quota(connection: Any, record: dict[str, Any]) -> None:
         raise AgentTaskError('retained transfer grant quota exceeded')
     if record['kind'] == 'import' and imports >= 16:
         raise AgentTaskError('active or uncleared transfer import quota exceeded')
+    if record['kind'] == 'route' and connection.execute(
+            'SELECT count(*) FROM agent_transfer_routed_reviews').fetchone()[0] >= 128:
+        raise AgentTaskError('retained routed transfer consent quota exceeded')
     size = chunks = 0
     for table in _TABLES:
         row = connection.execute(_sql(table, 'totals')).fetchone()
@@ -267,3 +270,12 @@ class TransferRecords:
                 cursor = connection.execute(_sql(table, 'prune'), (cutoff,))
                 removed += cursor.rowcount
         return {'removed': removed, 'held': held}
+
+    def prune_routes(self, connection: Any) -> int:
+        """Retire expired coordinator-only metadata under its writer, preserving key/revocation tombstones."""
+        _writer(connection)
+        now = time.time()
+        connection.execute('INSERT OR IGNORE INTO agent_transfer_revocations '
+                           'SELECT id FROM agent_transfer_routed_reviews WHERE expires<=?', (now,))
+        cursor = connection.execute('DELETE FROM agent_transfer_routed_reviews WHERE expires<=?', (now,))
+        return cursor.rowcount

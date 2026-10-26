@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261026-07 | 2026-10-26 | Bind source exports and routed consent to current host authority | #snapshot #agent #handoff #authority #routing #verification | [2026-10-c](2026-10-c.md) |
 | U-20261026-06 | 2026-10-26 | Separate authenticated source peer reads from local delegation | #snapshot #agent #handoff #http #verification | [2026-10-c](2026-10-c.md) |
 | U-20261026-05 | 2026-10-26 | Bind reviewed local artifact snapshots to current source authority | #snapshot #agent #handoff #source #verification | [2026-10-c](2026-10-c.md) |
 | U-20261026-04 | 2026-10-26 | Bind private transfer reservations and owned cleanup | #snapshot #agent #handoff #storage #verification | [2026-10-c](2026-10-c.md) |

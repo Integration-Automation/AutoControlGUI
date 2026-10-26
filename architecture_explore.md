@@ -6,7 +6,7 @@
 > 擷取每個模組的 docstring 與頂層公開名稱；統計數字取自實際檔案，非估算。
 > 指令數與公開 API 數以 `executor.known_commands()` 與 `je_auto_control.__all__` 在工作樹上實測取得。
 >
-> **掃描時間**：2026-10-25　**版本**：`pyproject.toml` version `0.0.228`　**分支**：`feat/agent-task-runtime`
+> **掃描時間**：2026-10-26　**版本**：`pyproject.toml` version `0.0.228`　**分支**：`feat/agent-task-runtime`
 
 ---
 
@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,369 |
-| 程式碼總行數 | 203,116 |
+| Python 模組總數（含周邊子專案） | 1,374 |
+| 程式碼總行數 | 203,838 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 855 |
 | 套件門面 `__all__` 公開名稱數 | 1444 |
@@ -278,7 +278,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 25 個套件、約 17,845 行。
+> 25 個套件、約 17,945 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -286,7 +286,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/action_signing/` | 716 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
 | `utils/checkpoint/` | 129 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 1,094 | 由 action list 或結構化日誌產生 pytest／Python／Robot 候選；來源清單、靜態／乾跑驗證與原子 ZIP 審閱匯出。 |
-| `utils/dag/` | 1,250 | 跨主機動作／受管任務 DAG；權限及停止傳遞、目的地完成／釋放驗證、去重與未知結果審閱 |
+| `utils/dag/` | 1,350 | 跨主機動作／受管任務 DAG；權限及停止傳遞、目的地完成／釋放驗證、去重與未知結果審閱 |
 | `utils/decision_table/` | 112 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 116 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
 | `utils/action_journal/` | 855 | 結構化動作日誌：schema v1、寫入前遮罩、跨行程排序／尾端復原、executor 明確 scope 擷取與本機 parallel／DAG parent 傳遞；門面、AC／MCP、Script Builder 與 CLI 擷取／有界查閱；observer／路徑政策隨巢狀根與 workers 保留，Run History 查閱與手動 history 關聯共用相同來源。 |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 42,689 行。
+> 14 個套件、約 43,305 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 17,122 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 17,738 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -522,11 +522,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 29,482 行。
+> 6 個套件、約 29,488 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/admin/` | 418 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
+| `utils/admin/` | 424 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 8,463 | 持久化設定與條件交易：`contract.py` 管理有限 JSON 與協定例外；`store.py` 以 SQLite 原子比較版本／記錄重送收據；`routes.py` 提供第二版 HTTP 與明確盲寫相容；`commands.py` 共用 AC／MCP／Builder；`client.py` 條件提交，另有因果模型、peer ledger 與本機 SQLite outbox；第三版 /causal 交易已接上確認／退休／回收與刪除憑證；client／outbox 已接上原請求重送、有界 CAS 重合併及原子快照確認；持久化控制、原子本機 full-resync／舊待送退役與歷史收據已接上。本機資產工具另提供 manifest、整版雜湊驗證與不可變目錄發布；七種來源 adapters 保存可攜因果 profiles；workspace INI 與 GUI 共用偏好正規化。來源／outbox 與原子 full-resync 基準已由 SyncWorkspace 協調；引用資產以不可變分塊／完整 hash 收據、具驗證 HTTP 與完整 profile 串流發布接上；Sync UI 仍屬 C3。 |
 | `utils/device_matrix/` | 143 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 14,634 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
@@ -989,7 +989,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（17,122 行／128 檔）
+#### `utils/agent_runtime/`（17,738 行／133 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1028,7 +1028,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `control_admission.py` | 29 | Closed runtime stop requests share a bounded reserve separate from ordinary HTTP polling. |
 | `dag_admission.py` | 79 | Trusted local DAG admission records bind original ownership, caller authority and a live attempt. |
 | `dag_batch_recording.py` | 93 | Durable dispatch claims and independent destination verification for one managed DAG batch. |
-| `dag_batches.py` | 315 | Owner-scoped durable graph registration and one-shot managed batch execution records. |
+| `dag_batches.py` | 336 | Owner-scoped graph lifecycle and runtime-owned task/artifact host adapters. |
 | `dag_continuation.py` | 247 | Whole-graph review and one-shot continuation approval never replay a possible delivery. |
 | `dag_continuation_evidence.py` | 152 | Bounded read-only destination evidence for explicit whole-batch continuation decisions. |
 | `dag_continuation_plan.py` | 89 | Explicit per-node decisions preserve graph scope and never reset a possible delivery claim. |
@@ -1080,9 +1080,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `retained_browser.py` | 147 | Bounded effect-task ownership of actual permanently read-only browser helper processes. |
 | `retained_browser_runtime.py` | 91 | Connect actual browser retirement to existing runtime leases and private completion bindings. |
 | `retained_browser_target.py` | 98 | Closed transient read borrowers; the runtime collection owns the original helper lifetime. |
-| `runtime.py` | 738 | Shared managed-task lifecycle with fenced dispatch and evidence-based completion. |
+| `runtime.py` | 745 | Shared managed-task lifecycle with fenced dispatch and evidence-based completion. |
 | `runtime_lock.py` | 40 | Cross-process ownership for one runtime database; imports never acquire locks. |
-| `service.py` | 113 | Explicit local runtime service lifecycle over the existing authenticated REST server. |
+| `service.py` | 114 | Explicit local runtime service lifecycle over the existing authenticated REST server. |
 | `skill_completion.py` | 120 | Private read-only evidence for skill recording and publication preserves original workflow identity. |
 | `skill_execution.py` | 110 | Exact original skill effects across real reviewed recovery, without granting input or replacing trials. |
 | `skill_parameters.py` | 110 | Explicit typed parameter slots modify data values without widening a skill's authority. |
@@ -1095,19 +1095,24 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `target_factory.py` | 27 | Create inert managed adapters from host profiles; SDKs and native resources stay lazy. |
 | `target_profiles.py` | 172 | Durable target profiles, live controls and explicit dependency diagnostics separate from native evidence. |
 | `targets.py` | 193 | Explicit target adapters; native imports occur only during requested operations. |
-| `task_authority.py` | 311 | Trusted source-owner recovery admission and live owner/reviewer authority checks. |
+| `task_authority.py` | 312 | Trusted source-owner recovery admission and live owner/reviewer authority checks. |
 | `task_handoff.py` | 81 | Real non-DAG source identity for explicit completion evidence, without fabricated admission. |
 | `task_recovery.py` | 482 | Review stopped tasks and create one explicitly approved successor without replay. |
 | `task_skills.py` | 367 | Immutable managed skill candidates require a verified trial and explicit version publication. |
 | `task_triggers.py` | 272 | Durable preauthorized task bindings with owner refresh, bounded backlog and event deduplication. |
-| `transfer_cache.py` | 28 | One runtime-derived private blob cache never accepts a public path or configuration account selector. |
+| `transfer_cache.py` | 33 | One runtime-derived private blob cache never accepts a public path or configuration account selector. |
 | `transfer_files.py` | 110 | Bounded source-file descriptors and verified chunks remain private until export consent commits. |
-| `transfer_host.py` | 104 | Host-injected source authority keeps policy and private completion validators out of transfer leaves. |
+| `transfer_host.py` | 113 | Host-injected source authority keeps policy and private completion validators out of transfer leaves. |
+| `transfer_lineage.py` | 127 | Bind artifact authority to real bounded recovery ancestry and original accepted DAG admission. |
 | `transfer_models.py` | 182 | Portable criterion selections and immutable descriptors for reviewed outcome transfers. |
-| `transfer_protocol.py` | 74 | Runtime-owned transfer serialization keeps finite source operations separate from future import/evidence paths. |
-| `transfer_records.py` | 269 | Private transfer reservations bind consent and retain capacity until owned cleanup is confirmed. |
-| `transfer_selection.py` | 108 | Resolve only source-owned passed file criteria and their explicitly selected manifest names. |
-| `transfer_source.py` | 245 | Explicitly reviewed source artifacts publish immutable blobs under live host-derived authority. |
+| `transfer_privacy.py` | 52 | Exclude actual host private stores and evidence roots without reserving ordinary output basenames. |
+| `transfer_protocol.py` | 100 | Runtime-owned transfer serialization keeps finite source operations separate from future import/evidence paths. |
+| `transfer_transport.py` | 115 | Bounded source reads and management replies use an injected adapter without foreign task authority. |
+| `transfer_management.py` | 95 | Closed source management envelopes validate foreign replies before local consent can retain them. |
+| `transfer_routing.py` | 122 | Coordinator-owned routed consent persists exact approval before forwarding source creation. |
+| `transfer_records.py` | 281 | Private transfer reservations bind consent and retain capacity until owned cleanup is confirmed. |
+| `transfer_selection.py` | 134 | Resolve only source-owned passed file criteria and their explicitly selected manifest names. |
+| `transfer_source.py` | 242 | Explicitly reviewed source artifacts publish immutable blobs under live host-derived authority. |
 | `transport.py` | 117 | Bounded HTTP requests; cancellation discards late inference replies before any input. |
 | `trigger_config.py` | 69 | Validate durable trigger schedules and rooted file-version notifications without side effects. |
 | `trigger_history.py` | 89 | Renewed trigger lineages share accepted event tombstones and outstanding-task limits. |
@@ -1122,7 +1127,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `workflow_wait.py` | 31 | Bounded, cancellable semantic read-back polling never repeats an input operation. |
 | `workspace_scope.py` | 36 | Bounded workspace bootstrap only focuses explicitly approved application windows. |
 
-#### `utils/dag/`（1,250 行／8 檔）
+#### `utils/dag/`（1,350 行／8 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1131,7 +1136,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `batch_execution.py` | 95 | Initial execution of a registered graph with durable pre-delivery claims and verified receipts. |
 | `graph.py` | 168 | DAG types: nodes, definition, topological ordering, cycle detection. |
 | `inspection.py` | 166 | Inspect keyed DAG requests without submitting work or granting continuation. |
-| `managed_tasks.py` | 246 | Bounded task transport and coordination with verified remote completion. |
+| `managed_tasks.py` | 346 | Bounded task and artifact transports preserve registered-host authority and completion contracts. |
 | `runner.py` | 440 | DAG runner: schedule nodes with parallel execution + skip cascade. |
 | `task_contract.py` | 25 | Closed immutable managed-task payloads for existing DAG surfaces. |
 
@@ -1434,8 +1439,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 931 | 89,603 |
-| **總計** | **1,361** | **202,947** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 936 | 90,325 |
+| **總計** | **1,366** | **203,669** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

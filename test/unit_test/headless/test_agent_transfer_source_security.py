@@ -20,6 +20,32 @@ def test_unconfirmed_completion_marker_cannot_create_a_source_review(tmp_path):
             review_for(runtime, task)
 
 
+@pytest.mark.parametrize('boundary', ['review', 'create', 'export', 'chunk'])
+def test_tagged_source_cannot_replace_a_missing_real_submission_witness_with_a_computed_digest(tmp_path, boundary):
+    with completed_source(tmp_path) as (runtime, _initial, output, body, _users):
+        task = runtime.submit({'goal': 'verify an actual accepted tagged request', 'target': 'local-files',
+            'allowed_tools': ['AC_workflow_manifest'], 'roots': [str(tmp_path)],
+            'success_criteria': [{'kind': 'file_sha256', 'path': str(output), 'value': sha256(body).hexdigest()}],
+            'options': {'dag_batch': {'batch_id': 'a' * 32, 'graph_hash': 'b' * 64, 'node_id': 'file-node'}}},
+            idempotency_key='actual-accepted-tagged-file-request')
+        assert runtime.finish(task.task_id).state == 'succeeded'
+        assert runtime.get(task.task_id).metadata['submission_contract'] == 1
+        review = review_for(runtime, task.task_id) if boundary != 'review' else None
+        exported = create_for(runtime, review) if boundary in {'export', 'chunk'} else None
+        with runtime.store.connection(write=True) as connection:
+            connection.execute('DELETE FROM agent_task_submissions WHERE task_id=?', (task.task_id,))
+        with pytest.raises(AgentTaskError):
+            if boundary == 'review':
+                review_for(runtime, task.task_id)
+            elif boundary == 'create':
+                create_for(runtime, review)
+            else:
+                request = {'export_id': exported['export_id']}
+                if boundary == 'chunk':
+                    request['sha256'] = exported['manifest']['files'][0]['chunks'][0]
+                runtime.transfers.peer(boundary, request)
+
+
 @pytest.mark.parametrize('boundary', ['reserve', 'consume_review'])
 @pytest.mark.parametrize('lost', ['owner', 'reviewer'])
 def test_actual_principal_loss_after_source_sql_never_leaves_readable_authority(tmp_path, monkeypatch, boundary, lost):

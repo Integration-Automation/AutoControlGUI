@@ -136,7 +136,7 @@ def test_real_destination_matches_the_reviewed_skill_without_repeating_effects(t
         metadata = json.loads((service.directory / "agent_runtime.json").read_text())
         console = AdminConsoleClient(persist_path=tmp_path / "hosts.json")
         console.add_host("remote", metadata["url"], metadata["token"])
-        monkeypatch.setattr(admin_client, "default_admin_console", lambda: console)
+        monkeypatch.setattr(admin_client, "_default_console", console)
         with authorization_scope(AuthorizationContext("local-admin", "admin")):
             result = inspect_agent_dag(graph)
             changed = copy.deepcopy(graph)

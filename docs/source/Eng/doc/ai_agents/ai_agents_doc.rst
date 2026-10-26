@@ -1,6 +1,20 @@
 AI agents and computer use
 ===========================
 
+Registered source management now routes review/create/get/list/revoke through a coordinator-owned
+opaque review. Consent binds the actual local caller, current host fingerprint, peer review, manifest
+digest and original key. Approved intent commits before forwarding; lost replies and coordinator
+restart retry the same source grant. Changed actor/host/token/note/key or a different reply manifest
+is refused. Pending reviews and retained route records each cap at128; expiry removes only local
+route metadata while preserving consent fences. Runtime closure discards unapproved cached reviews;
+durable approvals remain recoverable. The source uses its own account, and local principal/
+origin headers stay local. Destination import, portable completion evidence and public surfaces remain pending.
+
+Existing remote DAG calls read the persisted host book when pinning a host and around each retained
+connection call. Other-process endpoint/token replacement or removal, damaged configuration and
+revoked captured local callers refuse dispatch or reply acceptance. Reads never initialize or
+quarantine the book. Local service delegation and the closed remote operation set remain compatible.
+
 Cross-host outcome handoff remains unavailable. The runtime-owned local source core reviews
 selected completed file outcomes and commits consent-bound immutable blobs with actual issuer and
 recipient checks. Authenticated source management and peer-read HTTP routes now expose those reviewed
@@ -8,9 +22,33 @@ manifests/chunks. Peer reads use the receiving server's ordinary bearer/RBAC gat
 local principal/origin headers are refused before foreign principal/store lookup. The local service
 client preserves real owner delegation for management only. Transfer requests are capped at1MiB before
 server reads; the bounded client refuses oversized request dispatch and success/error reply decoding
-without changing ordinary HTTP limits. Registered-host routing, complete private-lineage/lifecycle
-acceptance, destination publication/evidence adoption and shared public surfaces remain pending in
+without changing ordinary HTTP limits. Complete cross-host lifecycle acceptance, destination publication/evidence adoption and shared public surfaces remain pending in
 ``Progress.md``. A transfer receipt grants no task-input authority.
+
+Source export excludes actual runtime/transfer databases and sidecars, current source-owner and
+issuer user stores, service-owned connection files and owned evidence directories before opening
+selected bytes. The service registers its actual private files; ordinary same-named outputs remain
+valid. Manifest checks apply to selected outputs. Peer reads and exact retries recheck current path
+authority without rehashing historical user output, and path checks retain the operation deadline.
+DAG artifacts follow at most sixteen real recovery links to the original submitted task, binding
+actual accepted requests and local DAG admission. The admitting actor is reauthorized, and its actual
+user store is private even when distinct from the source owner. Recovery children need no fabricated
+submission row; genuine standalone sources need no DAG row. A private lineage digest is rechecked at
+review, creation, exact retry and peer reads. Actual private recovery ownership/reviewer bindings
+also join the digest and their user stores stay private. Source operations honor cooperative
+cancellation around byte access and grant writes; a committed intent remains exactly recoverable
+after a cancelled reply. Artifact expiry is its completed source updated+30days; retries/restarts do
+not refresh it or substitute an older ancestor deadline. Real local renewed readers use their current
+private completion authority while old input remains revoked. Cross-host commit races, automatic cleanup and destination publication/evidence remain open.
+
+Runtime owns a TransferPeer through its actual batch host adapter. Registered transfer reads pin the
+persisted endpoint/credential and reread the book before and after HTTP, with current local caller
+checks. Source authentication uses the receiving host's own credential; local principal/origin headers
+are absent. Actual configured credential-book paths stay private without initializing or reloading the
+console. Closed manifests and canonical base64 chunks require matching export IDs/hashes, at most256KiB
+per chunk and a fixed deadline. The1MiB transfer wire cap also applies behind URL path prefixes;
+ordinary HTTP keeps its existing limit. Invalid numeric budgets, including oversized integers, fail
+with typed errors before dispatch. Two/three-host import delivery remains pending.
 
 Reviewed completion after confirmed effects
 -------------------------------------------

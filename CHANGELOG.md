@@ -1,5 +1,36 @@
 # Changelog
 
+Registered source management now routes review/create/get/list/revoke through a coordinator-owned
+opaque review. Consent binds the actual local caller, current host fingerprint, peer review, manifest
+digest and original key. Approved intent commits before forwarding; lost replies and coordinator
+restart retry the same source grant. Changed actor/host/token/note/key or a different reply manifest
+is refused. Pending reviews and retained route records each cap at128; expiry removes only local
+route metadata while preserving consent fences. Runtime closure discards unapproved cached reviews;
+durable approvals remain recoverable. The source uses its own account, and local principal/
+origin headers stay local. Destination import, portable completion evidence and public surfaces remain pending.
+
+Existing remote DAG host bindings and retained connections now recheck persisted endpoint/credential
+configuration and captured local authority around every request. External replacement/removal,
+damaged books and revoked owners fail closed without initializing or quarantining configuration.
+Keep local service delegation and legacy closed-route request conventions unchanged.
+
+Reject known private runtime/transfer stores, actor stores, service credential files and evidence
+roots as source artifacts before byte access. Recheck selected path permissions on peer reads/retries
+within the original deadline; preserve legitimate same-named outputs and historical artifact bytes.
+Resolve DAG artifacts through actual recovery ancestry, original requests and local admission;
+recheck admitting actors and protect their stores. Do not require a fabricated child submission row.
+Bind a private lineage digest across review/create/retry/peer reads, including validated actual
+private recovery reviewers and their stores. Honor source cancellation before bytes and around SQL;
+recover a committed intent after cancelled feedback without a second grant/account. Keep artifact
+expiry at its completed source updated+30days independently of older ancestor deadlines. Local renewed
+readers retain current private authority and revoked old input. Runtime-owned registered peer reads
+now validate persisted endpoint/credential before and after HTTP, current caller authority and closed
+manifest/chunk replies. Actual credential books stay private without loading/quarantining them.
+Transfer wire caps include proxy path prefixes; invalid empty query/fragment and header-control
+credentials are refused. Oversized numeric budgets produce typed failures before float conversion.
+Remote management consent routing, cross-host import/publication/evidence
+and cleanup scheduling remain pending.
+
 Add authenticated source transfer management and peer-read HTTP routes with separate authority.
 Reject peer delegation headers before foreign identity lookup while preserving receiving-gate limits.
 Bound transfer ingress and per-call HTTP replies to1MiB; retain ordinary HTTP limits and local owner

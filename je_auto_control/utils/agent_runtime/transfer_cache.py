@@ -8,12 +8,17 @@ from je_auto_control.utils.agent_runtime.transfer_models import MAX_TRANSFER_BYT
 from je_auto_control.utils.config_sync.blob_store import SyncAssetStore
 
 
+def private_cache_path(runtime_path: str | Path) -> Path:
+    """Preserve the complete runtime database name for both cache ownership and source exclusion."""
+    runtime = Path(runtime_path)
+    return runtime.with_name(runtime.name + '.transfers.sqlite3')
+
+
 class PrivateTransferCache:
     """Bind cache operations to the owning runtime; the host separately proves each generated account's ownership."""
 
     def __init__(self, runtime_path: str) -> None:
-        runtime = Path(runtime_path)
-        self.path = runtime.with_name(runtime.name + '.transfers.sqlite3')
+        self.path = private_cache_path(runtime_path)
         self.store = SyncAssetStore(self.path, max_bytes=MAX_TRANSFER_BYTES)
 
     def check(self) -> None:

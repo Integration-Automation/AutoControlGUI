@@ -42,7 +42,8 @@ def wire_server(body, *, status=200):
 
 
 @pytest.mark.parametrize('status', [200, 400, 302])
-@pytest.mark.parametrize('path', ['/agent/transfer', '/agent/transfer/peer'])
+@pytest.mark.parametrize('path', ['/agent/transfer', '/agent/transfer/peer',
+                                '/proxy/v1/agent/transfer', '/proxy/v1/agent/transfer/peer'])
 def test_transfer_refuses_oversized_success_and_error_bodies_over_real_http(status, path):
     body = b'{"padding":"' + b'x' * (1024 * 1024 - 13) + b'"}'
     assert len(body) == 1024 * 1024 + 1
@@ -58,7 +59,8 @@ def test_transfer_reply_bound_does_not_reduce_ordinary_http_reply_limit():
         assert request_json(url + '/ordinary', body={}, timeout=3) == {'padding': text}
 
 
-@pytest.mark.parametrize('path', ['/agent/transfer', '/agent/transfer/peer'])
+@pytest.mark.parametrize('path', ['/agent/transfer', '/agent/transfer/peer',
+                                '/proxy/v1/agent/transfer', '/proxy/v1/agent/transfer/peer'])
 def test_transfer_refuses_large_request_before_any_network_dispatch(path):
     with wire_server(b'{}') as (url, received):
         with pytest.raises(AgentTaskError, match='request'):

@@ -104,13 +104,18 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
    - 設計跨主機成果移交：明列讀寫權限、來源身分、摘要與目的地發布，不能以本機路徑當遠端
      檔案證據，不能轉送本機 principal／使用者資料庫路徑／來源 witness。
      `WIP`：依功能工作樹中的 `docs/superpowers/plans/2026-10-26-cross-host-handoff.md`
-     與同日 design 執行；尚待來源快照／私有 grant、具名來源驗證的 peer 讀取、目的端分塊
-     匯入／發布／清理、遠端完成證據採認，以及 API／AC／MCP／REST／CLI／Builder／GUI 接合。
-     原始 recovery／DAG 私有授權鏈、禁止私有產物輸出、取消／重啟／審閱到期與
-     保留清理失敗、晚到／最終提交競態仍須逐案核實。須驗證原始接受提交列遺失或摘要不符
-     時拒絕來源授權；目前 transfer_host.context 的重算摘要 fallback 不能取代原始提交憑證。
-     具名主機傳輸還須核對跨程序修改實際通訊錄檔後的快取失效、主機／憑證替換，及目的端
-     使用自己核准的來源設定；不能只修改同一個記憶體物件來證明。來源完整授權／生命週期
+     與同日 design 執行；尚缺兩／三個獨立 runtime 的實際匯入端到端驗證、目的端發布／清理、
+     遠端完成證據採認，
+     以及 API／AC／MCP／REST／CLI／Builder／GUI 接合。
+     `transfer_lineage.py`／`transfer_privacy.py` 後續仍須隨真正跨主機匯入重驗原始提交與
+     私有完成授權；遠端原始提交須在實際協調端核對，不能把來源端摘要當成遠端 DAG 接納證明。
+     跨主機最後提交／撤權／取消交錯，以及來源／目的端保留清理排程仍待接合。
+     本環境建立檔案符號連結遇到 WinError 1314；該置換驗收仍須在可建立的環境補齊，
+     不能把實際目錄 junction 測試當成檔案 symlink 變體通過。正常 standalone 不要求 DAG 提交列；
+     恢復子任務須沿真實祖先取得原始憑證，不能補造提交列或重算摘要取代遺失的 DAG 憑證。
+     目的端仍須使用自己核准的來源設定，補三主機協調者不能借用／轉送來源憑證的證據。
+     舊 DAG 的 `task_host_binding`／`bound_task_connection` 即時設定核對仍待完整 DAG 回歸成功，
+     包含跨程序變更、保留連線及實際 HTTP 回覆後撤權；分項驗證不能代替完整路徑完成。來源完整授權／生命週期
      核實及 Tasks3–5 的目的端
      發布／證據採認／共用介面仍待實作；不可把本機核心、摘要或收據當成跨主機完成證據。
      須包含遠端任務證據的保留／移交契約；來源端保留未決批次不能自動延長目的端的 30 天保留期，
@@ -152,6 +157,16 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      持續核對並行認領、舊租約世代、停止發布與恢復快照，不放寬兩秒／15 秒期限、
      降低持久化、重播已完成副作用，亦不以局部／診斷通過代替完整成功。
      原始失敗、coverage、固定輸入及唯讀資料庫診斷均保留於自有 stage74。
+     `WIP`：第 85 階段固定版本的 69 檔回歸為 1,220 passed／1 skipped／5 failed，並非完整
+     coverage。尚須釐清 `test_agent_dag_connection_binding.py` 的 default_connection_discovery_change、
+     `test_agent_dag_continuation.py` 的 expired_origin_can_be_replaced_only_for_never_dispatched_scoped_work，
+     以及 `test_agent_dag_retention.py` 的 completed_batch_keeps_its_gate_when_related_work_is_unsettled
+     三個變體 `[queued_child]`／`[executing]`／`[fresh_delivery]`。
+     五案均在本機 DAG 協調失敗，三個 retention 案未通過初始 graph 執行；四案另有回覆寫入
+     WinError 10053。仍須核對實際伺服器／資料庫耗時與未知狀態，不可直接歸因於新主機設定核對
+     或已知 flush 延遲，也不可因本輪舊三案通過便宣稱修復。原始紀錄保留於功能工作樹
+     `.worktrees/agent-tools/stage85/source-host-final03-pytest.txt` 與對應專用 basetemp；此輪文件／
+     打包／隔離安裝尚未執行，完整 18 關檢查仍未完成。
      `WIP`：完整套件曾在 `test_dag_managed_loopback.py::test_distinct_targets_run_concurrently_with_destination_verification`
      偶發提交 HTTP 409，另一節點等待後限流；該次為 5,391 passed／17 skipped／1 failed。
      單獨 20 次與整檔 60 次回歸均未重現；仍須取得最初拒絕原因，不能以後續通過宣稱已修復。

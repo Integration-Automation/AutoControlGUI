@@ -28,6 +28,7 @@ class AgentRuntimeService:
         self._server: Any = None
         self._stop = threading.Event()
         self._connection = self.directory / "agent_runtime.json"
+        self.runtime.source_private_files = (*self.runtime.source_private_files, self._connection)
         self._generation = secrets.token_hex(16)
         self._maintenance: threading.Thread | None = None
         self._triggers: threading.Thread | None = None

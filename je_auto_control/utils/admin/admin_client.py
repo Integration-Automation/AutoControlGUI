@@ -397,6 +397,12 @@ _default_console: Optional[AdminConsoleClient] = None
 _default_lock = threading.Lock()
 
 
+def current_admin_hosts_path() -> Path:
+    """Return the actual configured credential location without initializing or loading its console."""
+    with _default_lock:
+        return _default_console.persist_path if _default_console is not None else default_admin_hosts_path()
+
+
 def default_admin_console() -> AdminConsoleClient:
     """Process-wide singleton on the default address-book path."""
     global _default_console
@@ -408,5 +414,5 @@ def default_admin_console() -> AdminConsoleClient:
 
 __all__ = [
     "AdminConsoleClient", "AdminHost", "HostStatus",
-    "default_admin_console", "default_admin_hosts_path",
+    "default_admin_console", "default_admin_hosts_path", "current_admin_hosts_path",
 ]

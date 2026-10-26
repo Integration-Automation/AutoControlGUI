@@ -53,7 +53,7 @@ def test_two_host_dag_deduplicates_and_keeps_local_principal_and_witnesses_local
         metadata = json.loads((remote.directory / "agent_runtime.json").read_text())
         console = AdminConsoleClient(persist_path=tmp_path / "hosts.json")
         console.add_host("reviewed-remote", metadata["url"], metadata["token"])
-        monkeypatch.setattr(admin_client, "default_admin_console", lambda: console)
+        monkeypatch.setattr(admin_client, "_default_console", console)
         graph = {"nodes": [
             {"id": "local", "task": task(idempotency_key="reviewed-local")},
             {"id": "remote", "host": "reviewed-remote", "depends_on": ["local"],

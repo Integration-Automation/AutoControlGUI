@@ -12,17 +12,13 @@ from je_auto_control.utils.agent_runtime.transfer_cache import PrivateTransferCa
 from je_auto_control.utils.agent_runtime.transfer_files import SourceFile, snapshot_file, verify_source_files
 from je_auto_control.utils.agent_runtime.transfer_host import actor_key, principal
 from je_auto_control.utils.agent_runtime.transfer_models import MAX_TRANSFER_BYTES, TransferManifest, _hex, _object
+from je_auto_control.utils.agent_runtime.transfer_management import SOURCE_FIELDS as _FIELDS
 from je_auto_control.utils.agent_runtime.transfer_records import TransferRecords, _text
-from je_auto_control.utils.agent_runtime.transfer_selection import TextCriterion, selected_files
-
-_FIELDS = {'review_export': {'source_task', 'selection', 'recipient_policy', 'idempotency_key'},
-           'create_export': {'review', 'note', 'idempotency_key'}, 'get_export': {'export_id'},
-           'revoke_export': {'export_id'}, 'list_exports': {'source_task'}}
-
+from je_auto_control.utils.agent_runtime.transfer_selection import TextCriterion, check_source_paths, selected_files
 
 def _binding(context: dict) -> dict:
     return {key: context[key] for key in ('source_snapshot', 'completion_snapshot', 'submission_digest',
-                                         'origin_scope', 'expires')}
+                                         'origin_scope', 'expires', 'lineage_digest')}
 
 
 def _public(record: dict) -> dict:
@@ -210,6 +206,7 @@ class TransferSource:
                                     origin_scope=scope['binding']['origin_scope'])
         if _binding(current) != scope['binding']:
             raise AgentTaskError('source export evidence or scope changed')
+        check_source_paths(current, scope['selection'], self._checkpoint)
         self._cache.check()
         return current
 

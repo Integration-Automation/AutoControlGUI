@@ -4,12 +4,15 @@ from __future__ import annotations
 from contextlib import nullcontext
 from dataclasses import asdict
 from hashlib import sha256
+from pathlib import Path
 import time
 from typing import Any, Callable
 
 from je_auto_control.utils.agent_runtime.completion_contract import validate_recorded_completion
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.transfer_models import _canonical, _deadline, _hex
+from je_auto_control.utils.agent_runtime.transfer_privacy import SourceFilePolicy
+from je_auto_control.utils.agent_runtime.transfer_lineage import SourceLineage
 from je_auto_control.utils.rbac.authorization import AuthorizationContext, current_authorization
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 
@@ -50,10 +53,11 @@ def _with_origin_scope(spec: dict, scope: list[str] | None) -> dict:
 class TransferHost:
     """Actual runtime callbacks supply policy, private completion checks and lifecycle observations."""
 
-    def __init__(self, runtime: Any, policy: tuple[Callable, Callable], completion: Callable,
-                 available: Callable[[], bool], retired: Callable[[str], bool]) -> None:
+    def __init__(self, runtime: Any, policy: tuple[Callable, Callable, Callable, Callable, Callable],
+                 completion: Callable, available: Callable[[], bool], retired: Callable[[str], bool]) -> None:
         self.runtime, self.completion = runtime, completion
-        self.policy, self.submitted = policy
+        self.policy, submitted, digest, ownership, self.private_paths = policy
+        self.lineage = SourceLineage(runtime, digest, submitted, _manager, retired, ownership)
         self.available, self.retired = available, retired
 
     def managed(self, source_task: str, actor: dict, *, connection: Any = None) -> dict:
@@ -87,18 +91,23 @@ class TransferHost:
                     'metadata': {'completion_contract': marker[0] if marker else 0, 'input_released': released}},
                     row['spec'])
                 snapshot = self.runtime.recovery.handoff_snapshot(reading, row)
-            accepted = reading.execute('SELECT spec_digest FROM agent_task_submissions WHERE task_id=?',
-                                       (source_task,)).fetchone()
+                lineage = self.lineage.context(reading, row, issuer, origin_scope)
         _deadline(row['updated'])
         expires = row['updated'] + 30 * 86400
         if row['updated'] > time.time() or expires <= time.time():
             raise AgentTaskError('source evidence retention is expired or invalid')
-        return {'row': row, 'policy': policy,
+        return {'row': row, 'policy': SourceFilePolicy(policy, self.runtime, (*lineage['owners'], issuer),
+                                                       lineage['policies']),
                 'origin_scope': list(policy.spec.options.get('origin_policies', ())),
                 'source_snapshot': snapshot['snapshot'], 'completion_snapshot': snapshot['completion_snapshot'],
-                'submission_digest': accepted[0] if accepted else self.submitted(row['spec']), 'expires': expires}
+                'submission_digest': lineage['submission_digest'], 'lineage_digest': lineage['digest'],
+                'expires': expires}
 
     def check_open(self) -> None:
         """Fail before opening stores after the owning runtime has closed."""
         if not self.available():
             raise AgentTaskError('runtime is closed')
+        for path in self.private_paths():
+            private = Path(path).expanduser().resolve()
+            if private not in self.runtime.source_private_files:
+                self.runtime.source_private_files += (private,)

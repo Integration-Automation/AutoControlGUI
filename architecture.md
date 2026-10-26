@@ -1,5 +1,19 @@
 # AutoControl Architecture
 
+Registered source management now routes review/create/get/list/revoke through a coordinator-owned
+opaque review. Consent binds the actual local caller, current host fingerprint, peer review, manifest
+digest and original key. Approved intent commits before forwarding; lost replies and coordinator
+restart retry the same source grant. Changed actor/host/token/note/key or a different reply manifest
+is refused. Pending reviews and retained route records each cap at128; expiry removes only local
+route metadata while preserving consent fences. Runtime closure discards unapproved cached reviews;
+durable approvals remain recoverable. The source uses its own account, and local principal/
+origin headers stay local. Destination import, portable completion evidence and public surfaces remain pending.
+
+Existing DAG host bindings use the same non-mutating persisted registration reader as transfers.
+Bound connections retain the reviewed endpoint/credential fingerprint and captured local authority;
+each request rechecks both before dispatch and before accepting its reply. The cached admin-console
+host list is not an authority source. Local runtime connections keep their existing delegation.
+
 manage_agent_skill adds review_execution(candidate_id, task_id, execution_task_id,
 optional completion_task_id), returning an execution_review token, bounded evidence, expected_version
 and approval_required. accept with execution_task_id requires that token plus the existing explicit
@@ -1235,3 +1249,33 @@ body reads. The existing bounded HTTP worker selects an immutable per-call1MiB r
 fixed transfer paths, applying it before success/error decoding without mutating the64MiB default.
 An oversized outgoing transfer request fails before network dispatch. Registered-host transport and
 the remaining private-lineage/lifecycle/import/evidence/surface contract are still open in Progress.
+
+SourceFilePolicy in transfer_privacy composes the existing root/origin policy with actual private
+runtime/transfer SQLite files and sidecars, owner/issuer stores and the runtime evidence root. It
+compares locations/file identities instead of reserving basenames. AgentRuntime.source_private_files
+is host-owned setup metadata; AgentRuntimeService registers its actual connection file before
+starting workers/listeners. No transfer request can set this tuple or supply a private path selector.
+Metadata-only selected-criterion checks run before snapshot opens and on every live peer read/retry;
+they preserve consented historical bytes without rereading user files or manifest content. Deadline
+checkpoints bracket path authority checks before cache reads. SourceLineage walks at most sixteen
+actual recovery links and validates original accepted requests, real local admission and its current
+actor via existing host callbacks. Existing handoff scope/history checks apply to every real segment;
+historical root policies also bound selected paths. Child recovery tasks do not fabricate submission
+rows. A private lineage digest joins the existing source binding at every live boundary, so prior
+bindings without that proof require a new review. Actual ancestor-owner and admitting-actor stores
+remain private. Runtime also injects recorded_recovery_owner from its existing authority collaborator;
+the decoder validates the complete private ownership review without a reverse transfer-leaf import.
+Actual reviewed owner/reviewer records bind the lineage digest and private-file exclusions. Shared
+cancellation checkpoints run before handlers, around hashing and writer checks, and after responses.
+Pre-commit cancellation rolls back/revokes only owned reservations; after commit the approved fixed
+intent survives a lost/cancelled reply. Source artifact expiry uses that source terminal updated+30days;
+the separate evidence contract retains its earliest-terminal rule. Local renewed read-only artifact
+sources reuse real private scope/history validators without launching helpers or reviving old input.
+TransferPeer is a neutral injected-adapter leaf validating closed manifests, exact export/hash
+identity, canonical256KiB base64 chunks and fixed response deadlines. Runtime owns it via actual
+DagBatches.transfer_call/transfer_binding; the adapter shares managed_tasks authorization and bounded
+request_json without a reverse leaf import. Registered transfer identity is read from the actual
+persisted book at every boundary; a second real process can replace credentials/endpoints without
+the stale cached console authorizing dispatch. current_admin_hosts_path peeks without constructing/
+loading a console; host-injected paths exclude the actual credential book on each source boundary.
+Transfer response/request caps include registered URL prefixes. cross-host commit races, cleanup scheduling and portable completion adoption remain open.

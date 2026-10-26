@@ -41,18 +41,55 @@ class TextCriterion:
 
 def selected_files(context: dict, values: Any, checkpoint: Callable[[], None]) -> list[tuple[str, dict]]:
     """Compile exact source criteria; no request path or replacement filename is accepted."""
-    selections = _selections(values)
-    criteria = context['row']['spec']['success_criteria']
+    criteria = _criteria(context, values)
+    _check_paths(context, criteria, checkpoint)
     result = []
-    for selection in selections:
+    for selection, clause in criteria:
         checkpoint()
-        if selection.criterion >= len(criteria):
-            raise AgentTaskError('selected criterion is outside the completed source')
-        clause = criteria[selection.criterion]
-        result.extend(_selected_clause(context['policy'], clause, selection, checkpoint))
-        if len(result) > 500:
-            raise AgentTaskError('export selection exceeds five hundred files')
+        if clause['kind'] == 'file_manifest':
+            result.extend(_manifest_selection(context['policy'], clause, selection, checkpoint))
+        else:
+            result.append((clause['path'], clause))
     return result
+
+
+def check_source_paths(context: dict, values: Any, checkpoint: Callable[[], None]) -> None:
+    """Recheck selected source path authority without rereading historical output or manifest bytes."""
+    _check_paths(context, _criteria(context, values), checkpoint)
+
+
+def _check_paths(context: dict, criteria: list[tuple[TransferSelection, dict]], checkpoint: Callable[[], None]) -> None:
+    for selection, clause in criteria:
+        paths = ([Path(clause['directory']) / name for name in selection.names]
+                 if clause['kind'] == 'file_manifest' else [Path(clause['path'])])
+        for path in paths:
+            checkpoint()
+            context['policy'].path(str(path))
+            checkpoint()
+
+
+def _criteria(context: dict, values: Any) -> list[tuple[TransferSelection, dict]]:
+    result = []
+    count = 0
+    for selection in _selections(values):
+        clause = _source_criterion(context['row']['spec']['success_criteria'], selection)
+        count += len(selection.names) if clause['kind'] == 'file_manifest' else 1
+        if count > 500:
+            raise AgentTaskError('export selection exceeds five hundred files')
+        result.append((selection, clause))
+    return result
+
+
+def _source_criterion(criteria: list, selection: TransferSelection) -> dict:
+    if selection.criterion >= len(criteria):
+        raise AgentTaskError('selected criterion is outside the completed source')
+    clause = criteria[selection.criterion]
+    if clause['kind'] == 'file_manifest':
+        if not selection.names or not set(selection.names) <= set(clause['names']):
+            raise AgentTaskError('manifest selection must explicitly name original source outputs')
+    elif clause['kind'] not in {'file_exists', 'file_sha256', 'file_text'} or selection.names:
+        raise AgentTaskError('selected criterion is not an explicit supported source file')
+    return clause
 
 
 def _selections(values: Any) -> list[TransferSelection]:
@@ -64,19 +101,8 @@ def _selections(values: Any) -> list[TransferSelection]:
     return selections
 
 
-def _selected_clause(policy: Any, clause: dict, selection: TransferSelection,
-                      checkpoint: Callable[[], None]) -> list[tuple[str, dict]]:
-    if clause['kind'] == 'file_manifest':
-        return _manifest_selection(policy, clause, selection, checkpoint)
-    if clause['kind'] in {'file_exists', 'file_sha256', 'file_text'} and not selection.names:
-        return [(clause['path'], clause)]
-    raise AgentTaskError('selected criterion is not an explicit supported source file')
-
-
 def _manifest_selection(policy: Any, clause: dict, selection: TransferSelection,
                         checkpoint: Callable[[], None]) -> list[tuple[str, dict]]:
-    if not selection.names or not set(selection.names) <= set(clause['names']):
-        raise AgentTaskError('manifest selection must explicitly name original source outputs')
     pieces: list[bytes] = []
     source = snapshot_file(policy, clause['path'], checkpoint, max_bytes=1_000_000, inspect=pieces.append)
     try:
