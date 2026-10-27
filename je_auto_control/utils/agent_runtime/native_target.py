@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Sequence, Mapping
 
-from je_auto_control.utils.agent_runtime.context import current_operation
+from je_auto_control.utils.agent_runtime.context import current_operation, current_takeover
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.input_ledger import InputLedger
 from je_auto_control.utils.agent_runtime.input_journal import InputJournal
@@ -193,7 +193,7 @@ class NativeDesktopTarget:
             check_host_platform(self._profile)
             self._profile.check(spec)
         owner = context.owner
-        self._takeover = context.takeover
+        self._takeover = current_takeover()
         identity = {"user_id": owner.user_id, "role": owner.role,
                     "store_path": owner.store_path} if owner is not None else {}
         payload = {"spec": spec.to_dict(), "owner": identity}

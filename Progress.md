@@ -6,11 +6,11 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-13；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-14；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-先完成第 3 組 Windows 最新來源的完整 coverage／嚴格文件／成品比對交付，
+先完成第 3 組 Windows 修正版本的完整 coverage、DAG 提交拒絕追查及交付核對，
 再續第 5 組 browser／remote reader、第 6 組跨主機移交，核對第 4 組裝置來源及第 8 組交付。
 
 1. **P4：瀏覽器與正式環境接合**
@@ -42,10 +42,13 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 3. **P1／P7：跨平台桌面與真人接回**
    - Windows：完成持續真人活動及閒置來源的全量驗證與交付，再實測注入事件排除、鎖定、
      真人接回、明確恢復與閒置 60 秒條件。原生 HWND／PID、遮擋、縮放與輸入清理仍缺實測。
-     持續來源的最新 runtime／標準 worker／session guard 接線仍須完成 Task4 的全量 coverage、
-     嚴格文件與逐檔新成品比對；原生驗收解除暫緩前，仍缺 Raw Input 實體／注入／觸控涵蓋、
+     最新持續來源及 scope／SQLite 修正仍須完成 Task4 的修正版本全量 coverage 與交付核對；
+     原生驗收解除暫緩前，仍缺 Raw Input 實體／注入／觸控涵蓋、
      真實本機 console／鎖定轉換、來源／helper 崩潰與輸入清理的實測證據，
      不可用虛擬來源、受控原生後端或局部 IPC 成功取代。
+     原固定版本全量仍有 DAG 同目標提交 HTTP409 的未明原因；單案及受控占用排隊成功
+     不構成已修復證據。保留 stage117 原始失敗，下一輪須記錄該案例的實際拒絕內容，
+     不放寬既有提交／等待／清理期限，也不重播已完成效果。
    - macOS、X11、Wayland：實作可信真人活動來源，接合授權／鎖定／閒置判定、觀察目標身分、
      視窗範圍輸入及自有 helper 隔離；補非 Windows 對話框／未儲存 gate。
      目前不能解除不支援平台的共用桌面拒絕保護。

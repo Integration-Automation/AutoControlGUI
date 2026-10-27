@@ -1439,3 +1439,7 @@ Builder share the same operations and actual caller identities. Editable request
 
 Cross-host handoffs, remote readers, actual application/device providers, deferred native
 and twenty-four-hour acceptance, and unresolved HTTP409/bootstrap issues remain in `Progress.md`.
+
+Installed wheel and source distributions include the REST Dashboard and Swagger HTML, CSS and
+JavaScript resources. The same localhost REST routes and authentication rules apply to an
+installed package; serving static pages grants no task or desktop input authority.

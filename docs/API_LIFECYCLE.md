@@ -1278,3 +1278,7 @@ expose coarse presence/cleanup classes with native_evidence=not_recorded, no pro
 File/browser/custom reviewed workers stay inert. Native/browser/device/24hour acceptance stays deferred;
 see Progress.md and the persistent-windows-presence spec/plan. Bounded JSON/budget primitives reside in
 wire_data.py and keep their models reexports, separating owned transports from runtime/model cycles.
+
+Installed wheel and source distributions include the REST Dashboard and Swagger HTML, CSS and
+JavaScript resources. The same localhost REST routes and authentication rules apply to an
+installed package; serving static pages grants no task or desktop input authority.

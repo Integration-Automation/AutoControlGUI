@@ -1,12 +1,16 @@
 """Generation-bound negative-only takeover notices with retained coarse cleanup failure diagnostics."""
 from __future__ import annotations
 
-import sqlite3
 import threading
 from typing import Any, Callable
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
+
+_TAKEOVER_ERRORS: tuple[type[BaseException], ...] = (
+    AutoControlException, OSError, RuntimeError, ValueError, TypeError, *SQLITE_ERRORS,
+)
 
 
 class NativeControl:
@@ -44,7 +48,7 @@ class NativeControl:
         try:
             if self._takeover is not None:
                 self._takeover()
-        except (AutoControlException, OSError, RuntimeError, ValueError, TypeError, sqlite3.Error) as error:
+        except _TAKEOVER_ERRORS as error:
             # The runtime's durable control/journal state retains input ownership for an explicit retry.
             with self._mutex:
                 self._error = type(error).__name__

@@ -1192,3 +1192,6 @@ Handoffs 页可明确选原本机 DAG 或原任务来准备 JSON；三个技能 
 
 跨主机移交、remote 读取者、实际应用／设备来源、暂缓的原生与二十四小时验收，以及未解的
 HTTP409／bootstrap 问题仍列于 `Progress.md`。
+
+wheel 与源码分发包包含 REST Dashboard 和 Swagger 的 HTML、CSS、JavaScript 资源。
+安装后的套件沿用相同的本机 REST 路由与授权规则；提供静态页面不授予任务或桌面输入权限。

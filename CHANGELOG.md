@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — installed REST dashboard resources
+
+Include Dashboard and Swagger HTML, CSS and JavaScript in both wheel and source distributions.
+Installed REST routes now have the same static resources as a source checkout; task authorization
+and desktop control rules remain unchanged.
+
 ## Unreleased — database-owned task evidence
 
 Bind generated evidence to the complete database path and a persistent private identity, preventing

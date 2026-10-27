@@ -1154,3 +1154,10 @@ as a coarse error class instead of escaping the notice thread. Target descriptio
 coarse ``presence`` metadata with ``native_evidence=not_recorded``; they start no probes and disclose
 no capability IDs or input contents. File/browser/custom reviewed workers remain inert here.
 Native, browser, device and24hour acceptance remains deferred in Progress.md.
+
+Installed dashboard resources
+------------------------------------------------
+
+Installed wheel and source distributions include the REST Dashboard and Swagger HTML, CSS and
+JavaScript resources. The same localhost REST routes and authentication rules apply to an
+installed package; serving static pages grants no task or desktop input authority.
