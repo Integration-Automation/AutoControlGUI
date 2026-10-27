@@ -165,11 +165,12 @@ class OwnedChannel:
         self._send({"ack": True})
 
     def _stop_process(self) -> None:
+        deadline = time.monotonic() + 3
         # Never poll/reap the POSIX leader before killing its owned group: the
         # unreaped child reserves that PID, preventing a signal to a reused ID.
         if sys.platform == "win32":
             if self._job is not None:
-                self._job.close()
+                self._job.close(timeout=max(0, deadline - time.monotonic()))
             else:
                 self._process.kill()
         else:
@@ -178,7 +179,7 @@ class OwnedChannel:
             except ProcessLookupError:
                 pass
         try:
-            self._process.wait(timeout=3)
+            self._process.wait(timeout=max(0, deadline - time.monotonic()))
         except subprocess.TimeoutExpired as error:
             raise AgentTaskError("native helper has not retired") from error
 

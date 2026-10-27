@@ -6,12 +6,12 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-08；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-09；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-接續完成第 5 組 browser／remote reader 與第 6 組跨主機成果移交，
-並核對第 4 組真實裝置控制／擷取來源、其餘實作及第 8 組交付核對。
+先完成第 3 組 Windows 持續來源的 source／broker／runtime 接線，再續第 5 組
+browser／remote reader 與第 6 組跨主機成果移交，並核對第 4 組裝置來源及第 8 組交付。
 
 1. **P4：瀏覽器與正式環境接合**
    - 選定正式服務專用 helper Python、AutoControl／WebRunner 套件版本與受管 Chromium 安裝；
@@ -42,9 +42,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 3. **P1／P7：跨平台桌面與真人接回**
    - Windows：補跨任務／helper 世代的持續真人活動及閒置來源，再驗證注入事件排除、鎖定、
      真人接回、明確恢復與閒置 60 秒條件。原生 HWND／PID、遮擋、縮放與輸入清理仍缺實測。
-     完成具實際 DACL／首個 instance／遠端拒絕的 named pipe、雙向新 challenge 交握、
-     source／broker 服務與阻塞／斷線退場證據，再接合跨 helper／runtime 生命週期、
-     主機租約與即時 reader；尚不能宣稱持續監看已啟用。
+     完成 source／broker 背景服務，接合受保護通訊、16個連線的隔離與來源擁有權；
+     補兩個 broker 共用世代、借用端關閉、擁有端退出及替換後重新等60秒的證據，
+     再接合跨 helper／runtime 生命週期、主機租約與即時 reader，才可啟用持續監看。
    - macOS、X11、Wayland：實作可信真人活動來源，接合授權／鎖定／閒置判定、觀察目標身分、
      視窗範圍輸入及自有 helper 隔離；補非 Windows 對話框／未儲存 gate。
      目前不能解除不支援平台的共用桌面拒絕保護。
@@ -146,7 +146,7 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      歷史證據檔不自動認領或刪除。
 
    - 於整份規範最後固定提交重跑完整 headless 與 coverage run -m pytest、跨功能／故障恢復回歸；
-     最新 ACK 邊界與 presence 來源／通訊組件仍須納入完整 coverage 與新成品逐檔比對；
+     最新 ACK、presence 來源／通訊與 helper 退場修正仍須納入完整 coverage 及新成品逐檔比對；
      前輪完整成功只涵蓋714db30的程式碼，不能代替新修正及持續來源的完整驗證。
      目前功能工作樹完整成功的來源範圍與80項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。
      歷史原因仍須追查：stage74 的管理員 host binding 與 retention uncertain／phase 前置失敗；

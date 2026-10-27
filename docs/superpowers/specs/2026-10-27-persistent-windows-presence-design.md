@@ -84,6 +84,13 @@ No potentially unbounded pipe call runs directly in the runtime process. Prove b
 accept retirement independently. This chooses owned-process fencing instead of assuming stdlib pipe
 waits are bounded; earlier draft's native-event proposal is not required.
 
+Actual Job active-process count0 alone may precede process-object termination signals. Retirement
+also retains query/synchronize handles to native-enumerated members, verifies their actual Job
+membership and waits for their process objects to signal. Job-empty checks, member enumeration,
+process-object waits and launcher reaping share the original3second bound. An exhausted bound still
+issues termination only through the owned Job; unknown/failed retirement retains ownership and cannot
+claim retired. Never terminate a process by a PID from a frame or a process-list value.
+
 Host TaskOperation supplies a lazy presence provider, never model/task JSON authority. Default desktop
 workers require the host binding; no GetLastInputInfo fallback. They check the same lease before
 and after ACK. File/browser/custom reviewed extensions do not start native monitoring. Task cleanup
@@ -108,3 +115,10 @@ Primary sources:
 - https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-rawinputheader
 - https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getrawinputdata
 - https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-msgwaitformultipleobjectsex
+- https://learn.microsoft.com/en-us/windows/win32/api/namedpipeapi/nf-namedpipeapi-createnamedpipew
+- https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew
+- https://learn.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-getnamedpipeserverprocessid
+- https://learn.microsoft.com/en-us/windows/win32/ipc/named-pipe-security-and-access-rights
+- https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-terminatejobobject
+- https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-queryinformationjobobject
+- https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess

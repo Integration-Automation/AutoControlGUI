@@ -60,11 +60,14 @@ test_agent_presence_windows.py. Update measured map/Progress/monthly for a coher
 ### Task 2: Session source, secure byte pipes and bounded private brokers
 
 **Files:** Create presence_frames.py/presence_protocol.py, presence_security_windows.py,
-presence_pipe_windows.py, presence_worker.py/presence_broker.py. Modify presence_windows.py only
+presence_handshake.py/presence_pipe_windows.py, presence_worker.py/presence_broker.py. Modify presence_windows.py only
 to share closed body validation and add passive status/direct negative-only presence release.
 Extract the existing resource-free native layout views to presence_native_types.py and retain
 presence_win32.py's private alias/ABI; the security layer must not depend on an observer implementation.
-Tests test_agent_presence_protocol.py / test_agent_presence_transport.py and existing source tests.
+Tests test_agent_presence_protocol.py / test_agent_presence_handshake.py / test_agent_presence_pipe.py /
+test_agent_presence_transport.py and existing source tests. Correct native_job.py/native_channel.py's
+actual owned-tree retirement when real peer-process checks expose launcher-only retirement; cover it
+with test_agent_native_job.py under the same original3second bound, without PID-selected termination.
 
 **Interfaces:** PresenceProtocol(source:WindowsPresenceSource).request(value:dict)->dict implements
 exact protocol1 request_id/operation/body. PresencePipe.connect()->connection and .listen()->listener
@@ -140,3 +143,7 @@ New files satisfy structural budgets without exemptions; runtime.py stays750. A 
 12path feature commit and actual task-done1 verifier bind these bytes. Tasks2-4, full latest
 coverage/artifacts, native acceptance and original40items remain open. No runtime wiring
 or current installed-artifact success is claimed from this partial component checkpoint.
+
+Task2 second partial checkpoint: stage112 actual secured pipe/challenge components, owned-member retirement proof,22modules393passed145.08s,0skip0warning; all actual raw failures retained.
+Actual source server/broker, shared-source ownership and runtime reader wiring remain absent.
+Only the first Task2 checkbox is formally complete; no task-done2 or full Windows/goal completion.
