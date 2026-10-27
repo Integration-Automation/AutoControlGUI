@@ -40,7 +40,7 @@ New private roots must not make old/historical journal/image/report paths export
 - [x] RED/GREEN source export denies current/old/retained private paths while ordinary filenames stay usable.
 
 Task1 behavior evidence: stage106 broad998JUnit includes all51 acceptance cases (49pass2Win1314skip).
-Formal completion still requires the coherent verified commit and actual task-done acceptance command.
+Task1 formally completed at3cc488e: actual task-done acceptance49passed2Win1314skipped23.51s.
 
 Acceptance command (append a fresh owned C `--basetemp`):
 
@@ -66,9 +66,20 @@ Full-run integration fix: `je_auto_control/utils/usb/usb_devices.py` and
 The retained first full run has7unhandled reader-thread warnings and is not accepted as clean.
 
 
-- [ ] Run task/evidence/history/retention/recovery/transfer/ownership regressions and prescribed static gates.
-- [ ] Check exact original58 import edges; preserve existing raw lint debt without new issues/cycles/duplicates.
-- [ ] Freeze inputs and run full configured coverage; inspect every skip/error/warning/atexit and hashes.
-- [ ] Strict docs, exact fresh wheel/sdist/installed metadata/bytes and real installed-worker proof.
-- [ ] Compare/write differences before any isolated installation; mirror only main Agent bytes, monthly ID lock,
+- [x] Run task/evidence/history/retention/recovery/transfer/ownership regressions and prescribed static gates.
+- [x] Check exact original58 import edges; preserve existing raw lint debt without new issues/cycles/duplicates.
+- [x] Freeze inputs and run full configured coverage; inspect every skip/error/warning/atexit and hashes.
+- [x] Strict docs, exact fresh wheel/sdist/installed metadata/bytes and real installed-worker proof.
+- [x] Compare/write differences before any isolated installation; mirror only main Agent bytes, monthly ID lock,
   explicit owned-path commit/push and remote SHA/clean proof. Do not mark the original goal complete.
+
+Final Task2 evidence: stage108/completed-full-suite-audit01.json binds actual native89939 terminal0,
+16129passed80skipped3105.86s and coverage87.85%, all3310input hashes/inventory unchanged.
+All skips and raw logs are retained; no warnings/tracebacks/atexit findings. The25cache cases
+include2Win1314skips;4USBcases and20priorcriticalregressions passed. Stage107 proves static,
+strict docs, exact1377source/wheel/sdist/installed bytes and actual installed-worker origins.
+Final changes are four unshipped record files only. Reuse the immutable code/test/artifact proof;
+the real task-done2 command must run stage108/verify_recorded_delivery.py after the coherent
+record commit. It checks actual full audit, raw runtime bytes, record-only Git delta, archive
+exclusions, clean feature and main non-Agent bytes. No rerun solely for record/task labels.
+Original40items and all native/device/browser/24hour deferrals remain open; no merge/deploy.

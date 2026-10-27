@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261027-05 | 2026-10-27 | Verify evidence ownership and USB full regression | #done #agent #persistence #usb #verification | [2026-10-d](2026-10-d.md) |
 | U-20261027-04 | 2026-10-27 | Preserve USB Unicode diagnostics and define evidence rollback | #snapshot #agent #usb #compatibility #verification | [2026-10-d](2026-10-d.md) |
 | U-20261027-03 | 2026-10-27 | Bind task evidence cache to its owning database | #snapshot #agent #persistence #verification | [2026-10-d](2026-10-d.md) |
 | U-20261027-02 | 2026-10-27 | Align transfer guides with the verified shared surfaces | #docs #agent #handoff #compatibility #verification | [2026-10-d](2026-10-d.md) |

@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-04；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-05；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -42,8 +42,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 3. **P1／P7：跨平台桌面與真人接回**
    - Windows：補跨任務／helper 世代的持續真人活動及閒置來源，再驗證注入事件排除、鎖定、
      真人接回、明確恢復與閒置 60 秒條件。原生 HWND／PID、遮擋、縮放與輸入清理仍缺實測。
-     此項新設計草案寫入遭自動核准審核拒絕（僅回覆 blocked by policy），檔案未建立；
-     尚須釐清該寫入限制，再完成持續來源，未以其他工具繞過。
+     補 ACK 等待期間真人活動／目標改變後的再次檢查；保留接回後自有按住輸入的清理。
+     持續來源的實際 Windows driver、跨 helper 生命週期與有界通訊仍待實作。
    - macOS、X11、Wayland：實作可信真人活動來源，接合授權／鎖定／閒置判定、觀察目標身分、
      視窗範圍輸入及自有 helper 隔離；補非 Windows 對話框／未儲存 gate。
      目前不能解除不支援平台的共用桌面拒絕保護。
@@ -141,16 +141,11 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 8. **P0–P9 最終交付核對與檢查**
    - 每條交付契約整理實作、無頭回歸與原生／真機證據對照；補新平台／多機／恢復情境的漏洞，
      區分已實作、尚缺實作與只缺實測，不能用模擬目標取代原生驗收。
-     完成 evidence／artifact 資料庫身分隔離修正的擴大回歸與交付：依
-     docs/superpowers/plans/2026-10-27-evidence-cache-ownership.md 核對新舊歷史分段、
-     實際 SQLite 備份／prune、並行與回滾、私有成果匯出及連結拒絕；補完整 coverage、
-     三平台型別／品質、嚴格文件、來源／wheel／sdist／隔離安裝逐檔比對與功能分支交付紀錄。
-     字面 Windows 檔案 symlink 仍缺權限驗證，不得以 junction 取代；歷史證據檔不自動認領或刪除。
-     另須完成 UTF-8 模式下 USB 子程序編碼／隱藏執行修正的新完整回歸，確認沒有未處理的
-     讀取執行緒警告，再完成三語回復說明、文件與成品比對。保留首輪7警告原始紀錄。
+     字面 Windows 檔案 symlink 仍缺權限驗證，不得以 junction 取代；
+     歷史證據檔不自動認領或刪除。
 
    - 於整份規範最後固定提交重跑完整 headless 與 coverage run -m pytest、跨功能／故障恢復回歸；
-     目前功能工作樹完整成功的來源範圍與78項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。
+     目前功能工作樹完整成功的來源範圍與80項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。
      歷史原因仍須追查：stage74 的管理員 host binding 與 retention uncertain／phase 前置失敗；
      stage85 的 default_connection_discovery_change、expired_origin_can_be_replaced_only_for_never_dispatched_scoped_work
      及 retention queued_child／executing／fresh_delivery；stage88–93 的3秒來源匯出／匯入準備逾時。
