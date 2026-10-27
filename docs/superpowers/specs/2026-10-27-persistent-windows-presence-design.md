@@ -142,3 +142,16 @@ Primary sources:
 - https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-terminatejobobject
 - https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-queryinformationjobobject
 - https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess
+
+Supported-session guard: current process session must match WTSGetActiveConsoleSessionId; current
+WTS protocol16/local0, remote29/false and connection8/active0 must all be confirmed with exact
+native buffer sizes and WTSFreeMemory cleanup. Remote/shadow metrics, detached/service/unknown
+sessions refuse; guard failure permanently fences the source. Check before window creation and
+each poll. This is not native hardware/injection acceptance. Takeover binds actual owned channel
+and control lease; host safety pause requires no ambient actor grant and never grants new input.
+Cleanup failure remains durable/diagnosable for explicit owned-release retry.
+
+Additional primary sources consulted2026-10-27:
+- https://learn.microsoft.com/en-us/windows/win32/api/wtsapi32/nf-wtsapi32-wtsquerysessioninformationw
+- https://learn.microsoft.com/en-us/windows/win32/api/wtsapi32/ne-wtsapi32-wts_info_class
+- https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-wtsgetactiveconsolesessionid

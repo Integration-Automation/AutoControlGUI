@@ -95,7 +95,7 @@ class FakeWindows:
 def observer(monkeypatch):
     from je_auto_control.utils.agent_runtime import presence_win32 as module
     fake = FakeWindows(module)
-    api = module.Win32PresenceAPI((fake.user, fake.kernel), interactive=lambda: True)
+    api = module.Win32PresenceAPI((fake.user, fake.kernel), interactive=lambda: True, session=lambda: None)
     fake.api = api
     return api, fake
 

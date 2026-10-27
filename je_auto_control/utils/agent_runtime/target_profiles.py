@@ -5,6 +5,7 @@ import json
 import time
 from contextlib import nullcontext
 from dataclasses import replace
+from pathlib import Path
 from typing import Any, Mapping
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
@@ -178,10 +179,12 @@ class AgentTargetProfiles:
                 "digest": profile.digest if profile is not None else None}
         # pylint: disable-next=protected-access  # reason: no custom adapter descriptor runs during passive diagnostics
         adapter = self._runtime._targets[name]
-        # pylint: disable-next=unidiomatic-typecheck  # reason: only the built-in proxy's passive property is trusted here
+        # pylint: disable-next=unidiomatic-typecheck  # reason: only built-in proxy properties are trusted
         declared = type(adapter) is NativeDesktopTarget and adapter.supports_readonly_completion
         result["readonly_completion"] = {"contract": 1, "status": "not_probed"} if declared else {
             "status": "not_supported"}
+        if declared and kind == 'desktop':
+            result['presence'] = adapter.presence_status
         if name in self._last_probes:
             result["last_probe"] = detached(self._last_probes[name])
         return result
@@ -192,3 +195,10 @@ class AgentTargetProfiles:
         if profile is not None:
             result["profile"] = profile.to_dict()
         return result
+
+    @staticmethod
+    def defaults() -> dict[str, Any]:
+        """Construct inert reserved target adapters; actual input/source acquisition remains explicit."""
+        return {'local-desktop': NativeDesktopTarget(),
+                'local-files': NativeDesktopTarget(resource_path=Path.home() / '.je_auto_control' /
+                    'input_ownership' / 'file-workflows.lock', recovery_probe=lambda: None)}

@@ -69,6 +69,15 @@ class PresenceReference:
         """Report this reference's permanent closure without touching a native source."""
         return self._owner.closed.is_set()
 
+    @property
+    def retired(self) -> bool:
+        """Report actual shared process/thread retirement, never a native-input cleanup proof."""
+        return self._pool.retired
+
+    def status(self) -> dict:
+        """Inspect this reference's shared source without creating resources or granting input."""
+        return self._pool.status()
+
     def acquire(self, check: Callable[[], None], timeout: float) -> dict:
         """Wait within this caller's budget; cancellation abandons only this caller's grant."""
         return self._pool.acquire_reference(self._owner, check, timeout)

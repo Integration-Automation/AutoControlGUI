@@ -13,7 +13,7 @@ import uuid
 from typing import Any, Callable, Sequence
 
 from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError, AgentHumanReview
-from je_auto_control.utils.agent_runtime.models import detached, positive
+from je_auto_control.utils.agent_runtime.wire_data import detached, positive
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
 
 _PACKET_LIMIT = 1_100_000

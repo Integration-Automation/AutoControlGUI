@@ -6,11 +6,11 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-12；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-13；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-先完成第 3 組 Windows 持續來源的 runtime 共享生命週期、reader 與主機租約接線，
+先完成第 3 組 Windows 最新來源的完整 coverage／嚴格文件／成品比對交付，
 再續第 5 組 browser／remote reader、第 6 組跨主機移交，核對第 4 組裝置來源及第 8 組交付。
 
 1. **P4：瀏覽器與正式環境接合**
@@ -40,12 +40,12 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
    - 覆蓋外部 agent、本機模型及固定 skill 的完整路徑；模型停止或舊收據不能取代完成證據。
 
 3. **P1／P7：跨平台桌面與真人接回**
-   - Windows：補跨任務／helper 世代的持續真人活動及閒置來源，再驗證注入事件排除、鎖定、
+   - Windows：完成持續真人活動及閒置來源的全量驗證與交付，再實測注入事件排除、鎖定、
      真人接回、明確恢復與閒置 60 秒條件。原生 HWND／PID、遮擋、縮放與輸入清理仍缺實測。
-     將共享來源 pool 與即時 reader 接到 runtime、標準 input helper 的首次綁定／關閉及主機租約；
-     補兩個 runtime／資料庫及 task／helper 替換、來源失效後明確恢復與關閉競爭的完整接合證據，
-     將同一租約檢查接到 ACK 前後與真人接回通知；先拒絕未支援的遠端／不明 session，
-     核實 Raw Input 與注入／觸控涵蓋範圍，才可啟用持續監看。
+     持續來源的最新 runtime／標準 worker／session guard 接線仍須完成 Task4 的全量 coverage、
+     嚴格文件與逐檔新成品比對；原生驗收解除暫緩前，仍缺 Raw Input 實體／注入／觸控涵蓋、
+     真實本機 console／鎖定轉換、來源／helper 崩潰與輸入清理的實測證據，
+     不可用虛擬來源、受控原生後端或局部 IPC 成功取代。
    - macOS、X11、Wayland：實作可信真人活動來源，接合授權／鎖定／閒置判定、觀察目標身分、
      視窗範圍輸入及自有 helper 隔離；補非 Windows 對話框／未儲存 gate。
      目前不能解除不支援平台的共用桌面拒絕保護。
@@ -144,6 +144,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
    - 每條交付契約整理實作、無頭回歸與原生／真機證據對照；補新平台／多機／恢復情境的漏洞，
      區分已實作、尚缺實作與只缺實測，不能用模擬目標取代原生驗收。
      字面 Windows 檔案 symlink 仍缺權限驗證，不得以 junction 取代；
+     目錄 symlink 同樣缺實測：test_agent_task_triggers 的 canonical_root_replacement
+     案例因本環境無法建立自有目錄 symlink 而跳過，須在具權限環境補驗。
      歷史證據檔不自動認領或刪除。
 
    - 於整份規範最後固定提交重跑完整 headless 與 coverage run -m pytest、跨功能／故障恢復回歸；

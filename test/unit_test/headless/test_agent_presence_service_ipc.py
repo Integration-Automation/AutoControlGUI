@@ -30,6 +30,7 @@ class ControlledSource(Source):
         super().__init__()
         self.base = float(Path({str(clock)!r}).read_text())
         self.lock = threading.RLock()
+        self.input_version = ''
     def start(self):
         super().start()
         with Path({str(instances)!r}).open('a', encoding='utf-8') as output:
@@ -45,6 +46,11 @@ class ControlledSource(Source):
             if age < self.now:
                 raise RuntimeError('controlled source clock regressed')
             self.advance(age - self.now)
+            marker = Path({str(clock.parent / 'physical.txt')!r})
+            version = marker.read_text() if marker.exists() else ''
+            if version and version != self.input_version:
+                self.state.physical()
+                self.input_version = version
             return super().request(operation, body)
     def release(self, **body):
         super().release(**body)

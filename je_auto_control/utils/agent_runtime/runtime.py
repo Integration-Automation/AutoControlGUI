@@ -12,7 +12,9 @@ from pathlib import Path
 from typing import Any, Iterator, Mapping, List
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError, AgentObservationStale, AgentHumanReview
-from je_auto_control.utils.agent_runtime.context import TaskOperation, operation_scope, current_operation
+from je_auto_control.utils.agent_runtime.context import (
+    TaskOperation, operation_scope, current_operation, ready_with_takeover,
+)
 from je_auto_control.utils.agent_runtime.models import (
     AgentActionRequest, AgentActionResult, AgentObservation, AgentTaskHandle, AgentTaskResult,
     AgentTaskSpec, TERMINAL, detached, freeze, thaw,
@@ -22,7 +24,8 @@ from je_auto_control.utils.agent_runtime.policy import (
     TaskPolicy, durable_payload, canonical_spec, owns_task, validate_root_snapshot,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock, close_runtime_ownership
+from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock, close_runtime_ownership, retire_runtime_inputs
+from je_auto_control.utils.agent_runtime.presence_host import RuntimePresence
 from je_auto_control.utils.agent_runtime.retained_browser import RetainedBrowsers
 from je_auto_control.utils.agent_runtime.retained_browser_runtime import retire_target, maintain_retained
 from je_auto_control.utils.agent_runtime.budget_clock import BudgetClock
@@ -82,7 +85,7 @@ class AgentRuntime:
         self.triggers = AgentTriggers(self)
         self.skills = AgentSkills(self, completion_authority=check_completion_authority,
                                   completion_template=completion_spec, recovery_review=self.recovery.review_evidence)
-        self._targets = dict(targets) if targets is not None else _default_targets()
+        self._targets = dict(targets) if targets is not None else {}
         self._completion_targets: dict[str, Any] = {}
         self._retained_browsers = RetainedBrowsers()
         self._tokens: dict[str, CancellationToken] = {}
@@ -94,6 +97,7 @@ class AgentRuntime:
         self._mutex = threading.RLock()
         self._task_locks: dict[str, Any] = {}
         self._closed = False
+        self._presence = RuntimePresence(self._mutex, lambda: self._closed)
         self._transfers: AgentTransfers | None = None
         self.background: Any = None
         self.background_dags: Any = None
@@ -101,6 +105,8 @@ class AgentRuntime:
         self._next_retention = 0.0
         try:
             from je_auto_control.utils.agent_runtime.target_profiles import AgentTargetProfiles
+            if targets is None:
+                self._targets = AgentTargetProfiles.defaults()
             self.target_profiles = AgentTargetProfiles(self)
             self.store.recover()
         except BaseException:  # reason: construction failure must release only the newly owned OS lock
@@ -319,7 +325,8 @@ class AgentRuntime:
         try:
             with DeferredAuthorization(owner).scope(), cancellation_scope(self._token(task_id)):
                 with (command_guard(guard), execution_scope(thaw(spec.inputs)),
-                      operation_scope(TaskOperation(spec, checkpoint, current_authorization(), takeover))):
+                      operation_scope(TaskOperation(spec, checkpoint, current_authorization(), takeover,
+                                                    self._presence.reference))):
                     yield policy
         except AuthorizationError:
             self.cancel(task_id)
@@ -358,8 +365,10 @@ class AgentRuntime:
                 self._leases[row["id"]] = lease
         try:
             self._token(row["id"]).checkpoint()
-            with self.broker.dispatch(self._leases[row["id"]]):
-                ready, reason = self._target(row).ready(spec)
+            lease = self._leases[row["id"]]
+            with self.broker.dispatch(lease):
+                ready, reason = ready_with_takeover(self._target(row), spec, lambda: self._stop_owned(
+                    row['id'], lease, 'paused', pending='pausing', report=False))
             if not ready:
                 raise AgentTaskError(reason or "target is not ready")
             self.store.start(row["id"])
@@ -649,15 +658,9 @@ class AgentRuntime:
         """Retire owned input before releasing the service lock; live tasks remain recoverable."""
         if self._closed:
             return
-        if self._transfers is not None:
-            self._transfers.close()
-        for task_id in list(self._leases):
-            self._token(task_id).cancel()
-            if not self._retire(task_id):
-                raise AgentTaskError("runtime still has active input or cleanup")
-        self._retained_browsers.close()
+        retire_runtime_inputs(self._transfers, list(self._leases), self._token, self._retire, self._retained_browsers)
         with close_runtime_ownership(self._mutex, self._owner_lock, self.evidence.history,
-                                     lambda: (self._closed, self._transfers)) as retiring:
+                                     lambda: (self._closed, self._transfers), self._presence) as retiring:
             if retiring:
                 self._closed = True
 
@@ -692,16 +695,16 @@ class AgentRuntime:
             self._next_retention = time.monotonic() + 3600
 
     def _stop_owned(self, task_id: str, lease: ControlLease, settled: str, *,
-                    reason: str = "") -> AgentTaskResult | None:
+                    reason: str = "", pending: str = 'cancelling', report: bool = True) -> AgentTaskResult | None:
         control = (lease.target, lease.owner, lease.generation)
         def accepted() -> None:
             self._stop_final[task_id] = settled
             self._token(task_id).cancel()
-        if not self.store.request_stop(task_id, "cancelling", control=control, accepted=accepted, reason=reason):
+        if not self.store.request_stop(task_id, pending, control=control, accepted=accepted, reason=reason):
             return None
         if task_id not in self._executing:
             self._settle_control(task_id)
-        return self.get(task_id)
+        return self.get(task_id) if report else None
 
     def _settle_stopped(self) -> None:
         with self.store.connection() as connection:
@@ -741,10 +744,3 @@ class AgentRuntime:
             raise AgentTaskError("runtime still has active input or cleanup")
         self.shutdown_requested.set()
         return {"stopping": True}
-
-
-def _default_targets() -> dict[str, Any]:
-    from je_auto_control.utils.agent_runtime.native_target import NativeDesktopTarget
-    return {"local-desktop": NativeDesktopTarget(),
-            "local-files": NativeDesktopTarget(resource_path=Path.home() / ".je_auto_control" /
-                                                "input_ownership" / "file-workflows.lock", recovery_probe=lambda: None)}

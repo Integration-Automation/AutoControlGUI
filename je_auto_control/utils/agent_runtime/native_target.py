@@ -6,7 +6,7 @@ import hashlib
 import os
 import socket
 import sys
-import threading
+import time
 from pathlib import Path
 from typing import Any, Callable, Sequence, Mapping
 
@@ -20,6 +20,8 @@ from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile
 from je_auto_control.utils.agent_runtime.native_channel import OwnedChannel
 from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock
 from je_auto_control.utils.agent_runtime.target_continuity import require_context_continuity
+from je_auto_control.utils.agent_runtime.presence_host import TargetPresence
+from je_auto_control.utils.agent_runtime.native_control import NativeControl
 
 
 def _desktop_lock_path() -> Path:
@@ -57,7 +59,8 @@ class NativeDesktopTarget:
         self._channel: OwnedChannel | None = None
         self._ledger = InputLedger()
         self._takeover: Any = None
-        self._takeover_sent = threading.Event()
+        self._channel_control: NativeControl | None = None
+        self._presence = TargetPresence()
 
     def _ensure(self) -> OwnedChannel:
         if self._resource is None:
@@ -73,9 +76,12 @@ class NativeDesktopTarget:
         if self._channel is None or self._channel.retired:
             if not self._ledger.empty:
                 raise AgentTaskError("native input cleanup is required before another operation")
-            self._takeover_sent.clear()
             context = current_operation()
-            self._channel = self._launch(context.checkpoint if context is not None else lambda: None, self._control)
+            control = NativeControl(self._takeover)
+            self._channel = self._launch(context.checkpoint if context is not None else lambda: None,
+                                         lambda kind: control.notify(kind, self._channel))
+            control.bind(self._channel)
+            self._channel_control = control
         return self._channel
 
     def check_resume(self, spec: AgentTaskSpec, receipts: list[dict]) -> None:
@@ -100,6 +106,14 @@ class NativeDesktopTarget:
     def has_browser_context(self) -> bool:
         """Report ownership of an unretired browser channel without implying SDK retirement proof."""
         return self.is_managed_browser and self._channel is not None and not self._channel.retired
+
+    @property
+    def presence_status(self) -> dict:
+        """Return passive source/binding metadata without any monitor, helper or native probe."""
+        result = self._presence.status()
+        if self._channel_control is not None:
+            result['takeover'] = self._channel_control.status()
+        return result
 
     def completion_reader(self, spec: AgentTaskSpec) -> Any:
         """Open fresh observation-only ownership; never continue an old input attempt."""
@@ -132,15 +146,7 @@ class NativeDesktopTarget:
         return (self._channel is not None and not self._channel.retired
                 and self._ledger.empty and self._pending is None)
 
-    def _control(self, _kind: str) -> None:
-        if self._takeover is None or self._takeover_sent.is_set():
-            return
-        self._takeover_sent.set()
-        # The reader must stay available while cancellation/cleanup retires
-        # its channel; it cannot join itself from a control notification.
-        threading.Thread(target=self._takeover, name="AgentTakeover", daemon=True).start()
-
-    def _request(self, operation: str, payload: dict) -> Any:
+    def _request(self, operation: str, payload: dict, *, deadline: float | None = None) -> Any:
         context = current_operation()
         if context is None:
             raise AgentTaskError("native targets require an explicitly managed operation scope")
@@ -148,7 +154,12 @@ class NativeDesktopTarget:
         channel = self._ensure()
         self._pending = operation
         self._persist()
-        result = channel.request(operation, payload, timeout=context.spec.budget.action_seconds,
+        timeout = context.spec.budget.action_seconds
+        if deadline is not None:
+            timeout = min(timeout, deadline - time.monotonic())
+            if timeout <= 0:
+                raise AgentTaskError('native configuration action deadline exhausted')
+        result = channel.request(operation, payload, timeout=timeout,
                                  check=context.checkpoint, on_event=self._input)
         self._pending = None
         self._persist()
@@ -176,6 +187,7 @@ class NativeDesktopTarget:
         context = current_operation()
         if context is None or context.spec != spec:
             raise AgentTaskError("native target scope does not match its owner")
+        context.checkpoint()
         if self._profile is not None:
             from je_auto_control.utils.agent_runtime.target_config import check_host_platform
             check_host_platform(self._profile)
@@ -187,7 +199,14 @@ class NativeDesktopTarget:
         payload = {"spec": spec.to_dict(), "owner": identity}
         if self._profile is not None:
             payload["profile"] = self._profile.to_dict()
-        result = self._request("configure", payload)
+        deadline = None
+        if (self.supports_readonly_completion and spec.target != 'local-files'
+                and (self._profile is None or self._profile.kind == 'desktop')):
+            self._presence.check_platform()
+            channel = self._ensure()
+            deadline = time.monotonic() + spec.budget.action_seconds
+            payload['presence'] = self._presence.bind(context, channel, spec.budget.action_seconds)
+        result = self._request("configure", payload, deadline=deadline)
         return bool(result["ready"]), str(result.get("reason", ""))
 
     def observe(self) -> dict[str, Any]:
@@ -266,6 +285,7 @@ class NativeDesktopTarget:
         self._channel = None
         if not self._ledger.empty:
             raise AgentTaskError("native input cleanup has not been confirmed")
+        self._presence.release()
         if self._journal is not None:
             self._journal.release()
             self._journal = None

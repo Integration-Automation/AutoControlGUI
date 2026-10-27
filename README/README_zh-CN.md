@@ -452,7 +452,12 @@ Python、AC、MCP、REST、CLI 与 Agent 任务面板共用后台服务，明确
 Windows USB 枚举明确以 UTF-8 输出及解码，PowerShell 子进程保持隐藏。
 Python UTF-8 模式开启或关闭时，Unicode 设备名称与诊断均完整保留；枚举仍为只读。
 原生调用使用专属 helper，支持取消、超时、输入记录清理与跨数据库的桌面排他控制。
-Windows 共享桌面须解锁并空闲 60 秒，实体键鼠活动会触发暂停；`agent-task stop-all` 停止可见任务。
+Windows 共享桌面的持续来源跨 runtime／任务／helper 共用，监看开始后须重新累积解锁空闲 60 秒。
+仅支持已确认的活动本机 console；远程、shadow 及未知 session 一律拒绝。
+每个 helper 在输入 ACK 前后实时核实同一主机租约；来源／reader 失效会暂停输入，
+未确认的按住输入清理仍保持隔离，须明确重试。关闭一个 runtime 不会停止其他 runtime 的来源。
+目标说明只公开粗略 `presence` 状态与 `native_evidence=not_recorded`，不启动探测。
+`agent-task stop-all` 停止可见任务。
 其他共享桌面须有可信活动 adapter。原生平台验收与其余待办列在 `Progress.md`。
 
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)

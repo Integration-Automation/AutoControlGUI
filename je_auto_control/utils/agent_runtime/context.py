@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass
-from typing import Callable, Iterator
+from dataclasses import dataclass, replace
+from typing import Any, Callable, Iterator
 
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
+from je_auto_control.utils.agent_runtime.presence_pool import PresenceReference
 from je_auto_control.utils.rbac.authorization import AuthorizationContext
 from je_auto_control.utils.script_vars.ref_guard import _vault_guard
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
@@ -20,6 +21,7 @@ class TaskOperation:
     checkpoint: Callable[[], None]
     owner: AuthorizationContext | None
     takeover: Callable[[], None] | None = None
+    presence: Callable[[], PresenceReference] | None = None
 
 
 _CURRENT: ContextVar[TaskOperation | None] = ContextVar("agent_task_operation", default=None)
@@ -28,6 +30,17 @@ _CURRENT: ContextVar[TaskOperation | None] = ContextVar("agent_task_operation", 
 def current_operation() -> TaskOperation | None:
     """Return the host-bound operation, or None outside managed dispatch."""
     return _CURRENT.get()
+
+
+def ready_with_takeover(target: Any, spec: AgentTaskSpec, takeover: Callable[[], Any]) -> tuple[bool, str]:
+    """Bind a host callback for the exact acquired control lease before configuring any target helper."""
+    operation = current_operation()
+    if operation is None:
+        raise AgentTaskError('target readiness requires a managed host operation')
+    def notify() -> None:
+        takeover()
+    with operation_scope(replace(operation, takeover=notify)):
+        return target.ready(spec)
 
 
 def _deny_ambient_secret(_name: str) -> None:

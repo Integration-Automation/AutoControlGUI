@@ -1132,3 +1132,25 @@ Actual two-host and separate-process three-host tests independently verify bytes
 Further restart/cancellation faults, further staging faults, full retention, portable evidence,
 client/GUI surfaces and complete-stage verification remain in Progress.md. A receipt grants no
 task-input authority or task-completion evidence.
+
+
+Windows persistent desktop presence
+-----------------------------------
+
+Standard Windows desktop helpers use a host-issued capability from one lazy session source shared
+across runtime, task and helper generations. Monitoring starts on explicit desktop acquisition and
+requires sixty seconds of new unlocked idle. Each input boundary checks the same capability before
+and after owner ACK. The source verifies the actual active physical console, local protocol and
+nonremote state; remote, shadowed, detached, malformed or unknown session data refuses acquisition.
+The input helper has one private reader I/O owner and an independent bounded watchdog. Source/reader
+loss permanently fences that binding and sends one takeover notice. Explicit resume needs a new
+lease and fresh idle; a replacement source also starts a new generation and observation period.
+
+Runtime close retires its input/helpers before releasing its shared source reference. Closing a
+borrower preserves other runtimes. Unknown held-input cleanup retains the input lock/journal and
+requires explicit owned-release ACK retry, independently of source health. Notices are pinned to
+the exact owned channel/control lease and can only request pause. Cleanup failure remains visible
+as a coarse error class instead of escaping the notice thread. Target descriptions expose only
+coarse ``presence`` metadata with ``native_evidence=not_recorded``; they start no probes and disclose
+no capability IDs or input contents. File/browser/custom reviewed workers remain inert here.
+Native, browser, device and24hour acceptance remains deferred in Progress.md.

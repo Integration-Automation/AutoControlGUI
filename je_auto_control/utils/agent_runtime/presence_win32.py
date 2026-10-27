@@ -12,6 +12,7 @@ import uuid
 from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError
 from je_auto_control.utils.agent_runtime.activity_windows import _interactive
 from je_auto_control.utils.agent_runtime.presence_native_types import NativeLayout as _Layout
+from je_auto_control.utils.agent_runtime.presence_session_windows import WindowsConsoleSession
 
 _U32, _PTR = ctypes.c_uint32, ctypes.c_void_p
 
@@ -64,6 +65,12 @@ def _bind(user: Any, kernel: Any) -> None:
 
 
 @dataclass
+class _SupportProbes:
+    interactive: Callable[[], bool]
+    session: Callable[[], None]
+
+
+@dataclass
 class _NativeWindow:
     callback: Any = field(default=None, init=False)
     physical: Callable[[], None] | None = field(default=None, init=False)
@@ -78,9 +85,10 @@ class Win32PresenceAPI:
     """Own only an invisible message window and its three raw registrations on one helper thread."""
 
     def __init__(self, libraries: tuple[Any, Any] | None = None,
-                 interactive: Callable[[], bool] = _interactive) -> None:
+                 interactive: Callable[[], bool] = _interactive,
+                 session: Callable[[], None] | None = None) -> None:
         self._libraries = libraries
-        self._interactive = interactive
+        self._support = _SupportProbes(interactive, session if session is not None else WindowsConsoleSession().check)
         self._user: Any = None
         self._kernel: Any = None
         self._resources = _NativeWindow()
@@ -110,6 +118,7 @@ class Win32PresenceAPI:
         self._resources.thread, self._resources.physical = threading.get_ident(), physical
         try:
             self._load()
+            self._support.session()
             prototype = getattr(ctypes, 'WINFUNCTYPE', ctypes.CFUNCTYPE)
             self._resources.callback = prototype(ctypes.c_ssize_t, _PTR, _U32, ctypes.c_size_t,
                                        ctypes.c_ssize_t)(self._window_proc)
@@ -199,6 +208,7 @@ class Win32PresenceAPI:
             raise AgentTaskError('physical presence poll deadline must be finite and at most fifty milliseconds')
         if not self._resources.window or self._callback_failed:
             raise AgentTaskError('physical presence observer is unavailable')
+        self._support.session()
         result = self._user.MsgWaitForMultipleObjectsEx(0, None, math.ceil(timeout * 1000), 0x04FF, 4)
         if result not in (0, 258):
             raise AgentTaskError('physical presence native wait failed')
@@ -206,7 +216,8 @@ class Win32PresenceAPI:
         if self.registrations() != self._expected():
             raise AgentTaskError('physical presence registration changed')
         held = any(self._user.GetAsyncKeyState(code) & 0x8000 for code in range(1, 256))
-        return self._interactive(), held
+        self._support.session()
+        return self._support.interactive(), held
 
     def _owned_classes(self) -> set[tuple[int, int]]:
         classes = {(page, usage) for page, usage, _flags, _window in self._expected()}

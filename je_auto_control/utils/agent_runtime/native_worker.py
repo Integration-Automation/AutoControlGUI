@@ -20,6 +20,8 @@ from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.script_vars.execution import execution_scope
 from je_auto_control.wrapper._input_observer import input_observer
 from je_auto_control.utils.agent_runtime.context import TaskOperation, operation_scope
+from je_auto_control.utils.agent_runtime.presence_frames import presence_body
+from je_auto_control.utils.agent_runtime.presence_reader import PresenceReader
 
 _LIMIT = 1_100_000
 
@@ -39,6 +41,9 @@ class NativeWorker:
         self._activity: Any = None
         self._control_event = threading.Event()
         self._sink_lock = threading.Lock()
+        self._presence_binding: dict | None = None
+        self._notice_stop = threading.Event()
+        self._notice_thread: threading.Thread | None = None
 
     @property
     def _browser_readonly(self) -> bool:
@@ -53,8 +58,10 @@ class NativeWorker:
             self._sink.flush()
 
     def _physical_takeover(self) -> None:
-        self._control_event.wait()
-        self._reply({"control": "physical_input"})
+        while not self._notice_stop.is_set():
+            if self._control_event.wait(0.05):
+                self._reply({"control": "physical_input"})
+                return
 
     def _validate_input(self, event: dict) -> None:
         """Recheck live permission; cleanup may acknowledge owned release boundaries only."""
@@ -86,6 +93,12 @@ class NativeWorker:
 
     def run(self) -> None:
         """Serve one serial stream; native exceptions remain confined to this owned process."""
+        try:
+            self._serve()
+        finally:
+            self.close()
+
+    def _serve(self) -> None:
         while True:
             line = self._source.readline(_LIMIT + 1)
             if not line:
@@ -175,8 +188,10 @@ class NativeWorker:
         return inspect_browser_dependencies(payload["transfer"])
 
     def _configure_scope(self, payload: dict) -> None:
-        self._spec = AgentTaskSpec.from_dict(payload["spec"])
-        self._owner = AuthorizationContext(**payload["owner"]) if payload.get("owner") else None
+        spec = AgentTaskSpec.from_dict(payload["spec"])
+        owner = AuthorizationContext(**payload["owner"]) if payload.get("owner") else None
+        self._check_presence_pin(spec, owner, payload)
+        self._spec, self._owner = spec, owner
         self._configure_profile(payload)
         if not self._custom_target and (self._spec.target == "local-files" or self._profile_kind == "files"):
             from je_auto_control.utils.agent_runtime.file_target import FileTarget
@@ -184,6 +199,23 @@ class NativeWorker:
         if not self._custom_target and self._profile_kind == "browser":
             if not isinstance(self._target, BrowserTarget):
                 self._target = BrowserTarget()
+        self._configure_presence(payload)
+
+    def _check_presence_pin(self, spec: AgentTaskSpec, owner: AuthorizationContext | None, payload: dict) -> None:
+        if self._presence_binding is not None and (spec != self._spec or owner != self._owner
+                                                  or payload.get('presence') != self._presence_binding):
+            raise AgentTaskError('configured desktop presence cannot change capability or owner scope')
+
+    def _configure_presence(self, payload: dict) -> None:
+        if self._requires_presence():
+            binding = payload.get('presence')
+            if not isinstance(binding, dict):
+                raise AgentTaskError('standard desktop worker requires a host presence binding')
+            self._presence_binding = presence_body('check', binding)
+
+    def _requires_presence(self) -> bool:
+        return (not self._custom_target and self._spec is not None and self._spec.target != 'local-files'
+                and self._profile_kind not in {'files', 'browser'})
 
     def _configure_profile(self, payload: dict) -> None:
         if "profile" not in payload:
@@ -227,18 +259,42 @@ class NativeWorker:
         raise AgentTaskError("unknown native worker operation")
 
     def _ready_activity(self) -> None:
-        if self._custom_target or self._spec is None or self._profile_kind in {"files", "browser"}:
-            return
-        if self._spec.target == "local-files":
+        if not self._requires_presence():
             return
         if self._activity is None:
-            from je_auto_control.utils.agent_runtime.activity import desktop_activity_gate
-            self._activity = desktop_activity_gate(self._control_event.set)
-            threading.Thread(target=self._physical_takeover, name="AgentPresenceNotice", daemon=True).start()
+            if self._presence_binding is None:
+                raise AgentTaskError('standard desktop worker has no host presence binding')
+            self._activity = PresenceReader(self._presence_binding, self._control_event.set)
+            self._notice_thread = threading.Thread(target=self._physical_takeover,
+                                                   name='AgentPresenceNotice', daemon=True)
+            try:
+                self._notice_thread.start()
+            except (RuntimeError, OSError) as error:
+                self.close()
+                raise AgentTaskError('physical presence notice thread could not start') from error
         self._activity.ready()
 
-    def _release_owned(self, payload: dict) -> dict:
+    def close(self) -> None:
+        """Retire only this worker's reader/notice; input release remains a separate owner ACK path."""
+        if self._presence_binding is None:
+            return
+        self._notice_stop.set()
+        if self._activity is not None:
+            self._activity.close()
+        if self._notice_thread is not None and self._notice_thread.ident is not None:
+            self._notice_thread.join(timeout=0.25)
+            if self._notice_thread.is_alive():
+                raise AgentTaskError('physical presence notice has not retired; owned helper must retire')
+
+    @staticmethod
+    def _release_key(key: dict) -> None:
         from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key, _release_unicode_unit
+        if key.get('unicode'):
+            _release_unicode_unit(key['keycode'])
+        else:
+            release_keyboard_key(key['keycode'], key['is_shift'], skip_record=True)
+
+    def _release_owned(self, payload: dict) -> dict:
         from je_auto_control.wrapper.auto_control_mouse import release_mouse
         if set(payload) != {"keys", "buttons"}:
             raise AgentTaskError("cleanup payload is invalid")
@@ -248,10 +304,7 @@ class NativeWorker:
             with input_observer(self._input):
                 for key in reversed(payload["keys"]):
                     try:
-                        if key.get("unicode"):
-                            _release_unicode_unit(key["keycode"])
-                        else:
-                            release_keyboard_key(key["keycode"], key["is_shift"], skip_record=True)
+                        self._release_key(key)
                     except AutoControlException as error:
                         failures.append(type(error).__name__)
                 for button in reversed(payload["buttons"]):
@@ -264,6 +317,7 @@ class NativeWorker:
         if failures:
             raise AgentTaskError("owned native input cleanup is incomplete")
         self._target.cleanup()
+        self.close()
         return {"cleaned": True}
 
 

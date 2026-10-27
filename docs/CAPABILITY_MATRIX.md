@@ -1130,3 +1130,16 @@ Actual two-host and separate-process three-host tests independently verify bytes
 Further restart/cancellation faults, further staging faults, full retention, portable evidence,
 client/GUI surfaces and complete-stage verification remain in Progress.md. A receipt grants no
 task-input authority or task-completion evidence.
+
+
+Windows persistent presence uses a lazy runtime-owned source reference and one fixed host capability
+per input-helper lifetime. The supported-session guard queries the current active physical console,
+WTS local protocol/remote/connection state and remote/shadow indicators before observation and each
+fresh sample. Reader checks and its independent0.25second watchdog permanently fence source loss.
+Actual input locks, journals and release-only ACK cleanup remain separate; cleanup failure retains
+ownership for explicit retry. Takeover callbacks are pinned to the actual channel/control lease and
+perform negative-only pause without depending on ambient caller authority. Passive target summaries
+expose coarse presence/cleanup classes with native_evidence=not_recorded, no probes or capability IDs.
+File/browser/custom reviewed workers stay inert. Native/browser/device/24hour acceptance stays deferred;
+see Progress.md and the persistent-windows-presence spec/plan. Bounded JSON/budget primitives reside in
+wire_data.py and keep their models reexports, separating owned transports from runtime/model cycles.

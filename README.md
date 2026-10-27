@@ -583,8 +583,13 @@ journals and avoid replay. Keep the compatible runtime if these conditions canno
 Windows USB enumeration emits and decodes UTF-8 explicitly and keeps its PowerShell process hidden.
 Unicode device names and diagnostics are preserved in both Python UTF-8 modes; enumeration remains read-only.
 Native calls use an owned helper with cancellation/deadlines, recorded input cleanup and per-session
-exclusion across runtime databases. Windows shared-desktop tasks wait for sixty seconds of unlocked inactivity and pause on physical
-input; `agent-task stop-all` stops visible tasks. Other shared desktops require a trusted activity adapter.
+exclusion across runtime databases. Windows shared-desktop tasks share a persistent session source across
+runtime/task/helper lifetimes and wait for sixty seconds of fresh unlocked inactivity after monitoring starts.
+Only an active supported local console can acquire input; remote, shadowed and unknown sessions fail closed.
+Each helper freshly checks its fixed host lease before and after input ACK. Source/reader loss pauses input;
+unconfirmed held-input cleanup stays fenced for explicit retry. Closing one runtime preserves another's source.
+Target descriptions expose coarse `presence` metadata with `native_evidence=not_recorded` and start no probes.
+`agent-task stop-all` stops visible tasks. Other shared desktops require a trusted activity adapter.
 Native acceptance and the remaining workflows are in `Progress.md`.
 
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)

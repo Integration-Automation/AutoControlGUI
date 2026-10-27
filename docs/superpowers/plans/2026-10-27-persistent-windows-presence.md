@@ -115,13 +115,13 @@ PresenceReader(binding:dict,takeover:Callable).ready()/check()/close() implement
 gate interface, one private I/O thread and0.25second bounded watch. Default desktop workers require
 actual source binding; no local idle fallback. All blocking I/O remains in the owned input helper.
 
-- [ ] RED two real runtimes/databases and task/helper replacement retain source generation/idle;
+- [x] RED two real runtimes/databases and task/helper replacement retain source generation/idle;
   inert file/browser/status paths and borrower close never start/stop another runtime's source.
-- [ ] Implement lazy shared ownership, reader fresh checks before/after ACK and physical_input notices.
+- [x] Implement lazy shared ownership, reader fresh checks before/after ACK and physical_input notices.
   Preserve input lock/journal/owned-release gates independently of presence health.
-- [ ] RED/GREEN first-bind/close, owner/reader loss, stale replies, revoked/old lease, blocked watch,
+- [x] RED/GREEN first-bind/close, owner/reader loss, stale replies, revoked/old lease, blocked watch,
   native cleanup failure and explicit resume; retired readers never rearm or continue new input.
-- [ ] Expose coarse passive states with native_evidence=not_recorded; verify existing shared API/GUI/
+- [x] Expose coarse passive states with native_evidence=not_recorded; verify existing shared API/GUI/
   trigger lifetimes and non-Windows refusal. Keep runtime.py750 and original action deadlines.
 
 ### Task 4: Complete Windows feature verification and delivery
@@ -169,3 +169,9 @@ Actual worker ACK/preparation and release-only cleanup use patched native backen
 for exact proof. All4Task3 and4Task4 checks remain open: runtime/standard-worker host binding and
 real runtime/database replacement/close integration, supported-session guard, full current
 coverage/artifacts and original40goal remain incomplete. Native acceptance remains deferred.
+
+Task3 implemented at stage116: lazy runtime reference, fixed standard-worker host binding, supported
+local-console guard, exact-channel/control-lease negative takeover and coarse passive diagnostics.
+Read U-20261027-13 and actual Task3 delivery gate for exact frozen source/test/publication proof.
+Task4 remains open: full current coverage, strict docs and fresh compared artifacts. Original40goal
+and native/browser/device/24hour acceptance remain incomplete/deferred.
