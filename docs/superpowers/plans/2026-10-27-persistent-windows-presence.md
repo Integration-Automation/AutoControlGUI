@@ -128,13 +128,13 @@ actual source binding; no local idle fallback. All blocking I/O remains in the o
 
 **Files:** README3/Sphinx2/architecture/map/AGENT_TASKS/API_LIFECYCLE/CAPABILITY_MATRIX/Progress/monthly.
 
-- [ ] Run complete task/native/ownership/trigger/GUI/recovery/retention/reader regressions, original58
+- [x] Run complete task/native/ownership/trigger/GUI/recovery/retention/reader regressions, original58
   exact import/SCC and full current Pylint normalized audit; whole Ruff/typing/Bandit/Radon/structure.
-- [ ] Freeze actual inputs; full configured coverage in an absent owned C basetemp, inspect all skips/
+- [x] Freeze actual inputs; full configured coverage in an absent owned C basetemp, inspect all skips/
   warnings/errors/atexit and raw hashes. Latest ACK source must be covered; preserve historical failures.
-- [ ] Strict bilingual docs and exact fresh source/wheel/sdist/installed worker proof; record actual
+- [x] Strict bilingual docs and exact fresh source/wheel/sdist/installed worker proof; record actual
   versions/deps/artifact hashes/target differences before any new owned isolated installation.
-- [ ] Use actual monthly ID lock, Agent-only main mirror, explicit path commit/push/remote SHA/clean
+- [x] Use actual monthly ID lock, Agent-only main mirror, explicit path commit/push/remote SHA/clean
   proof and actual task-done gates. Native/browser/device/24hour evidence stays deferred; original
   other platforms/devices/workflows/model/cross-host/full-goal requirements remain open.
 
@@ -175,3 +175,12 @@ local-console guard, exact-channel/control-lease negative takeover and coarse pa
 Read U-20261027-13 and actual Task3 delivery gate for exact frozen source/test/publication proof.
 Task4 remains open: full current coverage, strict docs and fresh compared artifacts. Original40goal
 and native/browser/device/24hour acceptance remain incomplete/deferred.
+
+
+Task4 complete verification checkpoint: U-20261027-15, corrected52cfa38b full16,511pass/80skip,
+coverage88.01%,3,357immutable inputs,0failure/error/warning/newskip and actual controller exit0.
+Stage117 exact unchanged source/static/import/lint/docs/artifact/386installed-case proof remains valid.
+Stage118 retains all prior failures and the unexplained historical409, plus the new actual late-import
+integrity RED and privately tested candidate in Progress.md. That candidate is not part of this source.
+Finite project-local publication gates bind this record; unavailable plugin wrappers are not claimed.
+Original40items and deferred native/browser/device/24hour acceptance remain open.

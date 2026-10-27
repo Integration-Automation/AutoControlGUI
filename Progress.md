@@ -6,12 +6,12 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-14；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-15；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-先完成第 3 組 Windows 修正版本的完整 coverage、DAG 提交拒絕追查及交付核對，
-再續第 5 組 browser／remote reader、第 6 組跨主機移交，核對第 4 組裝置來源及第 8 組交付。
+先修正第 6 組匯入成果發布與收據接受之間的完整性缺口，再續第 5 組 browser／remote reader、
+第 6 組跨主機交付稽核，並核對第 4 組裝置來源及第 8 組交付。
 
 1. **P4：瀏覽器與正式環境接合**
    - 選定正式服務專用 helper Python、AutoControl／WebRunner 套件版本與受管 Chromium 安裝；
@@ -40,14 +40,13 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
    - 覆蓋外部 agent、本機模型及固定 skill 的完整路徑；模型停止或舊收據不能取代完成證據。
 
 3. **P1／P7：跨平台桌面與真人接回**
-   - Windows：完成持續真人活動及閒置來源的全量驗證與交付，再實測注入事件排除、鎖定、
+   - Windows：實測持續來源的注入事件排除、鎖定、
      真人接回、明確恢復與閒置 60 秒條件。原生 HWND／PID、遮擋、縮放與輸入清理仍缺實測。
-     最新持續來源及 scope／SQLite 修正仍須完成 Task4 的修正版本全量 coverage 與交付核對；
      原生驗收解除暫緩前，仍缺 Raw Input 實體／注入／觸控涵蓋、
      真實本機 console／鎖定轉換、來源／helper 崩潰與輸入清理的實測證據，
      不可用虛擬來源、受控原生後端或局部 IPC 成功取代。
-     原固定版本全量仍有 DAG 同目標提交 HTTP409 的未明原因；單案及受控占用排隊成功
-     不構成已修復證據。保留 stage117 原始失敗，下一輪須記錄該案例的實際拒絕內容，
+     歷史固定版本的 DAG 同目標提交 HTTP409 原因仍未明；後續完整執行沒有拒絕回應
+     不構成該次原因已修復。保留 stage117 原始失敗及後續實際拒絕內容的追查，
      不放寬既有提交／等待／清理期限，也不重播已完成效果。
    - macOS、X11、Wayland：實作可信真人活動來源，接合授權／鎖定／閒置判定、觀察目標身分、
      視窗範圍輸入及自有 helper 隔離；補非 Windows 對話框／未儲存 gate。
@@ -116,6 +115,10 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      目錄／目標設定、部署／回復方法。受管任務 DAG 不會自動部署遠端服務。
    - 跨主機成果移交仍須依 cross-host-handoff design／plan 逐條完成來源、目的端、協調端、
      可攜證據及技能消費端的交付稽核，並完成 Tasks2–5 的正式紀錄與功能分支提交／推送。
+     新確認的匯入驗收缺口：已驗證的檔案發布後、完成收據接受前，若同大小內容被改寫、
+     增加額外檔案或刪除檔案，目前仍會錯誤回報 published。stage118 隔離真實 HTTP 重現為
+     6 failed／2 passed；須補接受前的檔案／目錄身分、完整清單與摘要重驗，保留使用者變更，
+     不重播發布。仍須套用隔離候選、加入正式回歸／文件、驗證成品並交付。
      核對讀寫權限、當前來源／接收身分、原始提交與私有完成授權、摘要及目的端發布；
      本機路徑、匯入收據或協調端摘要不得冒充遠端檔案／完成證據，也不得轉送本機權限。
      核對兩／三主機故障矩陣：原 host／token／帳戶／origin 變更或撤銷、來源到期、讀者同意、
@@ -152,8 +155,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      歷史證據檔不自動認領或刪除。
 
    - 於整份規範最後固定提交重跑完整 headless 與 coverage run -m pytest、跨功能／故障恢復回歸；
-     最新 ACK、presence 來源／通訊與 helper 退場修正仍須納入完整 coverage 及新成品逐檔比對；
-     前輪完整成功只涵蓋714db30的程式碼，不能代替新修正及持續來源的完整驗證。
+     後續平台／恢復／匯入完整性修正仍須納入完整 coverage 及新成品逐檔比對；
+     後續修正不得沿用較早提交的完整驗證；來源、測試、設定與文件須重新固定並核實。
      目前功能工作樹完整成功的來源範圍與80項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。
      歷史原因仍須追查：stage74 的管理員 host binding 與 retention uncertain／phase 前置失敗；
      stage85 的 default_connection_discovery_change、expired_origin_can_be_replaced_only_for_never_dispatched_scoped_work
