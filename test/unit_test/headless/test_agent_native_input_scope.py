@@ -89,7 +89,7 @@ def test_desktop_prepares_and_confirms_pointer_before_acknowledging_button(monke
     monkeypatch.setattr(mouse, "get_mouse_position", lambda: tuple(position))
     worker = NativeWorker(io.BytesIO(b'{"ack": true}\n'), Sink(), target=target)
     worker._input({"kind": "mouse_press", "keycode": "left", "x": 30, "y": 40, "move_before_press": True})
-    assert events == ["validate", "position", "validate", "acknowledge press"]
+    assert events == ["validate", "position", "validate", "acknowledge press", "validate"]
 
 
 def test_failed_pointer_positioning_never_acknowledges_a_press(monkeypatch):

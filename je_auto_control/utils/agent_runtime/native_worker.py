@@ -56,22 +56,33 @@ class NativeWorker:
         self._control_event.wait()
         self._reply({"control": "physical_input"})
 
+    def _validate_input(self, event: dict) -> None:
+        """Recheck live permission; cleanup may acknowledge owned release boundaries only."""
+        if self._cleanup:
+            if event.get("kind") not in {"key_release", "key_released", "mouse_release", "mouse_released"}:
+                raise AgentTaskError("native cleanup permits owned release events only")
+            return
+        self._check_activity()
+        self._target.validate_input(event)
+
     def _input(self, event: dict) -> None:
         if self._browser_readonly:
             raise AgentTaskError("read-only browser cannot acknowledge native input")
-        if not self._cleanup:
-            if self._activity is not None:
-                self._activity.check()
-            self._target.validate_input(event)
-            if event.get("move_before_press"):
-                if event.get("kind") != "mouse_press":
-                    raise AgentTaskError("only a mouse press may request pointer preparation")
-                self._target.prepare_input(event)
-                self._target.validate_input(event)
+        self._validate_input(event)
+        if not self._cleanup and event.get("move_before_press"):
+            if event.get("kind") != "mouse_press":
+                raise AgentTaskError("only a mouse press may request pointer preparation")
+            self._target.prepare_input(event)
+            self._validate_input(event)
         self._reply({"id": self._request_id, "event": event})
         line = self._source.readline(_LIMIT + 1)
-        if not line or len(line) > _LIMIT or json.loads(line) != {"ack": True}:
+        if not line or len(line) > _LIMIT:
             raise AgentTaskError("native input was not acknowledged by its owner")
+        acknowledgement = json.loads(line)
+        if (not isinstance(acknowledgement, dict) or set(acknowledgement) != {"ack"}
+                or acknowledgement["ack"] is not True):
+            raise AgentTaskError("native input was not acknowledged by its owner")
+        self._validate_input(event)
 
     def run(self) -> None:
         """Serve one serial stream; native exceptions remain confined to this owned process."""
