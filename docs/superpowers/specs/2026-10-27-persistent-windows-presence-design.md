@@ -61,6 +61,19 @@ Expected busy/locked/revoked outcomes remain normal broker results: throwing ins
 would destroy the persistent source on each failed early acquisition. Fatal transport/deadline/native
 source loss still retires the actual owned helper tree.
 
+The fixed broker's owner bootstrap body is empty. Its internally created SourceProcess uses an
+actual nested OwnedChannel/NativeJob and sends one private source bootstrap only after containment;
+the source reserves first-instance ownership before constructing/starting an observer. Its optional
+namespace is a trusted-code test seam on the child-owner protocol, never accepted on the broker's
+task-facing bootstrap. The default is the actual current SID/session endpoint. Only native
+ERROR_FILE_NOT_FOUND permits source creation; busy, access-denied or unknown connection failures do
+not mean absent. A first-instance loser closes its own child and borrows the authenticated winner.
+Busy initial inspection keeps the existing source/connection, just as early busy acquisition does.
+At most16connection workers exist; a bounded admission queue transfers each slot to its worker's
+cleanup. Each worker checks retained-peer liveness before dispatch and reply. Disconnect during
+acquire still revokes a token minted before that worker observes the disconnect; it never stops a
+different runtime's source. Source loss cannot implicitly relaunch/replay an existing binding.
+
 One protocol instance owns one connection's issued tokens. Other connections may check an explicitly
 received host lease capability but cannot release it. Disconnect permanently revokes only issued
 presence tokens, including when the observation queue is blocked. WindowsPresenceSource.status()

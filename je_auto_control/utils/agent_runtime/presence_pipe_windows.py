@@ -150,9 +150,23 @@ class WindowsPresencePipe:
 
     def connect(self) -> PresenceBytePipe:
         """Open once, with identification-only QoS; never retry, impersonate or select another endpoint."""
+        connection = self.connect_if_present()
+        if connection is None:
+            raise AgentTaskError('physical presence endpoint does not exist')
+        return connection
+
+    def connect_if_present(self) -> PresenceBytePipe | None:
+        """Report absence only for native ERROR_FILE_NOT_FOUND; other failures never launch a source."""
         self._load()
-        handle = self._retain(self._native.kernel.CreateFileW(
-            self._name, 0xC0000000, 0, None, 3, 0x40110000, None))
+        handle = self._native.kernel.CreateFileW(self._name, 0xC0000000, 0, None, 3, 0x40110000, None)
+        if handle in (None, 0, _INVALID):
+            error = _error()
+            if error == 2:
+                return None
+            if error == 231:
+                raise AgentControlBusy('physical presence connection capacity is busy')
+            raise AgentTaskError('physical presence native pipe connection is unavailable')
+        self._retain(handle)
         try:
             mode = _U32(2)
             if not self._native.kernel.SetNamedPipeHandleState(handle, ctypes.byref(mode), None, None):

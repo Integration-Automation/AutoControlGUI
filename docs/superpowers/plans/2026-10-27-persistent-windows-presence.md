@@ -68,6 +68,8 @@ Tests test_agent_presence_protocol.py / test_agent_presence_handshake.py / test_
 test_agent_presence_transport.py and existing source tests. Correct native_job.py/native_channel.py's
 actual owned-tree retirement when real peer-process checks expose launcher-only retirement; cover it
 with test_agent_native_job.py under the same original3second bound, without PID-selected termination.
+Split the source service and shared owner-envelope codec into presence_server.py/presence_owner.py;
+test server/broker/worker/service_ipc plus presence_test_support.py with an explicitly virtual source.
 
 **Interfaces:** PresenceProtocol(source:WindowsPresenceSource).request(value:dict)->dict implements
 exact protocol1 request_id/operation/body. PresencePipe.connect()->connection and .listen()->listener
@@ -86,13 +88,13 @@ never substitutes for a fresh check. Ordinary busy/lease_lost broker results can
 OwnedChannel.request. Handshake challenge/birth/source-generation fields are fixed in the spec.
 
 - [x] RED closed frames/duplicates/oversize/nonfinite/wrong generations, no pickle or forwarded PID authority.
-- [ ] RED secured native pipe factory with fake APIs and actual independent owned fake-source IPC:
+- [x] RED secured native pipe factory with fake APIs and actual independent owned fake-source IPC:
   two brokers share generation, borrower close survives, owner loss refuses, replacement waits fresh60.
-- [ ] Implement actual Windows pipe DACL/first-instance/remote-reject and peer/user/session checks;
+- [x] Implement actual Windows pipe DACL/first-instance/remote-reject and peer/user/session checks;
   only owned helpers call blocking byte APIs, outer original deadlines/retirement bound every operation.
-- [ ] Test blocked read/write/accept, half handshakes, capacity/late responses and loss during acquire;
+- [x] Test blocked read/write/accept, half handshakes, capacity/late responses and loss during acquire;
   preserve source ownership and unknown input journals, no automatic second source or retries.
-- [ ] Verify static/native-free regression and coherent records/publication; keep runtime wiring open.
+- [x] Verify static/native-free regression and coherent records/publication; keep runtime wiring open.
 
 Task2 partial checkpoint: stage111 protocol/source RED54failed19passed5deselected6.83s,
 GREEN79passed8.51s includes an actual owned helper surviving expected busy and retaining its source
@@ -147,3 +149,9 @@ or current installed-artifact success is claimed from this partial component che
 Task2 second partial checkpoint: stage112 actual secured pipe/challenge components, owned-member retirement proof,22modules393passed145.08s,0skip0warning; all actual raw failures retained.
 Actual source server/broker, shared-source ownership and runtime reader wiring remain absent.
 Only the first Task2 checkbox is formally complete; no task-done2 or full Windows/goal completion.
+
+Task2 completed implementation checkpoint: stage113 source/server/broker,26modules435passed135.26s,
+3342inputs unchanged, static/import/whole lint/doc contracts verified. Read Task2 delivery gate
+and U-20261027-10 for exact behavioral evidence and the unavailable-plugin wrapper replacement.
+Earlier partial-checkpoint absence statements describe their historical commits. Tasks3-4,
+runtime binding, latest full coverage/artifacts, native acceptance and original40items remain open.

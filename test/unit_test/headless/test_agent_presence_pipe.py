@@ -150,6 +150,22 @@ def test_client_uses_identification_only_qos_overlapped_message_mode_and_no_retr
     assert not native.handles
 
 
+def test_only_verified_missing_endpoint_may_be_reported_as_absent(monkeypatch):
+    api, native, _security = factory(monkeypatch)
+    native.fail_create, native.error = True, 2
+    assert api.connect_if_present() is None
+    assert len(native.kernel.CreateFileW.calls) == 1 and not native.handles
+
+
+@pytest.mark.parametrize('error,kind', [(5, AgentTaskError), (231, AgentControlBusy), (53, AgentTaskError)])
+def test_denied_busy_or_unknown_endpoint_is_never_reported_missing(monkeypatch, error, kind):
+    api, native, _security = factory(monkeypatch)
+    native.fail_create, native.error = True, error
+    with pytest.raises(kind):
+        api.connect_if_present()
+    assert len(native.kernel.CreateFileW.calls) == 1 and not native.handles
+
+
 @pytest.mark.parametrize('listen', [True, False])
 def test_open_failure_never_wraps_or_borrows_a_foreign_handle(monkeypatch, listen):
     api, native, _ = factory(monkeypatch)
