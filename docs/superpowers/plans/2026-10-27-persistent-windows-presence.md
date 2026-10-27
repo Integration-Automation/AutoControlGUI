@@ -162,3 +162,10 @@ never reaches shared source RPC. Replacement requires actual process/thread reti
 for exact proof. All4Task3 and4Task4 checks remain open: reader/runtime/input binding, full current
 coverage/artifacts and whole40goal are incomplete. Before default binding, explicitly refuse unsupported
 remote/unknown sessions and verify documented Raw Input coverage; native acceptance remains deferred.
+
+Task3 reader component checkpoint: stage115 one raw-I/O owner and independent bounded watchdog,
+same-capability fresh checks,34unit/7actual owned virtual-source IPC cases,30modules493passed.
+Actual worker ACK/preparation and release-only cleanup use patched native backends. See U-20261027-12
+for exact proof. All4Task3 and4Task4 checks remain open: runtime/standard-worker host binding and
+real runtime/database replacement/close integration, supported-session guard, full current
+coverage/artifacts and original40goal remain incomplete. Native acceptance remains deferred.

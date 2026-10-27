@@ -104,6 +104,13 @@ process-object waits and launcher reaping share the original3second bound. An ex
 issues termination only through the owned Job; unknown/failed retirement retains ownership and cannot
 claim retired. Never terminate a process by a PID from a frame or a process-list value.
 
+The reader has one raw-I/O owner and an independent private watchdog that only queues bounded
+checks. Watch expiry is measured from the last successful fresh check; a blocked owner cannot
+stall takeover notification. Known handles remain owned after failed close and permit explicit
+negative-only retirement retry. An unresolved connect/handshake handoff cannot claim local reader
+retirement even if its owner thread exits; actual parent-owned input-helper Job retirement is
+required. Reader close never releases another connection's source capability or keyboard/mouse.
+
 Host TaskOperation supplies a lazy presence provider, never model/task JSON authority. Default desktop
 workers require the host binding; no GetLastInputInfo fallback. They check the same lease before
 and after ACK. File/browser/custom reviewed extensions do not start native monitoring. Task cleanup
