@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-10；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-11；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -42,9 +42,10 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 3. **P1／P7：跨平台桌面與真人接回**
    - Windows：補跨任務／helper 世代的持續真人活動及閒置來源，再驗證注入事件排除、鎖定、
      真人接回、明確恢復與閒置 60 秒條件。原生 HWND／PID、遮擋、縮放與輸入清理仍缺實測。
-     接合 runtime 共享來源 pool、reader 與主機租約；補兩個 runtime／資料庫及 task／helper
-     替換後的連續世代、首次綁定／關閉競爭、來源／reader 失效與舊回覆隔離，
-     將同一租約的即時檢查接到 ACK 前後與真人接回通知，才可啟用持續監看。
+     將已具備的共享來源 pool 接到 runtime 首次綁定／關閉與主機租約；實作即時 reader，
+     補兩個 runtime／資料庫及 task／helper 替換的連續世代、來源／reader 失效、舊回覆隔離，
+     將同一租約檢查接到 ACK 前後與真人接回通知；先拒絕未支援的遠端／不明 session，
+     核實 Raw Input 與注入／觸控涵蓋範圍，才可啟用持續監看。
    - macOS、X11、Wayland：實作可信真人活動來源，接合授權／鎖定／閒置判定、觀察目標身分、
      視窗範圍輸入及自有 helper 隔離；補非 Windows 對話框／未儲存 gate。
      目前不能解除不支援平台的共用桌面拒絕保護。

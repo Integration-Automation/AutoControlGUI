@@ -155,3 +155,10 @@ Task2 completed implementation checkpoint: stage113 source/server/broker,26modul
 and U-20261027-10 for exact behavioral evidence and the unavailable-plugin wrapper replacement.
 Earlier partial-checkpoint absence statements describe their historical commits. Tasks3-4,
 runtime binding, latest full coverage/artifacts, native acceptance and original40items remain open.
+
+Task3 partial pool checkpoint: stage114 lazy shared owner/reference/registry and late-token cleanup,
+14pool cases/3actual owned virtual-source IPC cases,28modules452passed. Individual caller cancellation
+never reaches shared source RPC. Replacement requires actual process/thread retirement. See U-20261027-11
+for exact proof. All4Task3 and4Task4 checks remain open: reader/runtime/input binding, full current
+coverage/artifacts and whole40goal are incomplete. Before default binding, explicitly refuse unsupported
+remote/unknown sessions and verify documented Raw Input coverage; native acceptance remains deferred.
