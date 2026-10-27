@@ -211,11 +211,12 @@ class TransferImporter:
             return min(30, deadline - time.monotonic())
         with _refresh(row['scope']['issuer']).scope():
             manifest = self._manifest(row, budget())
-            if delivery['publication']:
-                result = inspect_import(row, manifest, delivery['publication'], checkpoint)
-            else:
-                result = self._receive(row, manifest, generation, checkpoint, budget)
+            if not delivery['publication']:
+                self._receive(row, manifest, generation, checkpoint, budget)
             self._manifest(row, budget())
+            with self.runtime.store.connection() as connection:
+                publication = jobs.ledger.check(connection, import_id, generation)['publication']
+            result = inspect_import(row, manifest, publication, checkpoint)
             with self.runtime.store.connection(write=True) as connection:
                 self._local(row, connection=connection)
                 jobs.ledger.advance(connection, import_id, generation, 'published',

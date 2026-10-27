@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — destination import receipt integrity
+
+Recheck the published generation file list and content digests after the final source response
+and under the same delivery claim before accepting an import receipt. Files changed, removed
+or added before acceptance leave `requires_review`, preserving user changes and the original
+publication. Existing cancellation, fixed expiry and explicit restart rules remain in force.
+
 ## Unreleased — installed REST dashboard resources
 
 Include Dashboard and Swagger HTML, CSS and JavaScript in both wheel and source distributions.

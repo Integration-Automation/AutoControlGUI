@@ -6,11 +6,11 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-d.md #U-20261027-15；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261027-16；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-先修正第 6 組匯入成果發布與收據接受之間的完整性缺口，再續第 5 組 browser／remote reader、
+先完成第 6 組匯入完整性修正後的固定來源全量 coverage，再續第 5 組 browser／remote reader、
 第 6 組跨主機交付稽核，並核對第 4 組裝置來源及第 8 組交付。
 
 1. **P4：瀏覽器與正式環境接合**
@@ -115,10 +115,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      目錄／目標設定、部署／回復方法。受管任務 DAG 不會自動部署遠端服務。
    - 跨主機成果移交仍須依 cross-host-handoff design／plan 逐條完成來源、目的端、協調端、
      可攜證據及技能消費端的交付稽核，並完成 Tasks2–5 的正式紀錄與功能分支提交／推送。
-     新確認的匯入驗收缺口：已驗證的檔案發布後、完成收據接受前，若同大小內容被改寫、
-     增加額外檔案或刪除檔案，目前仍會錯誤回報 published。stage118 隔離真實 HTTP 重現為
-     6 failed／2 passed；須補接受前的檔案／目錄身分、完整清單與摘要重驗，保留使用者變更，
-     不重播發布。仍須套用隔離候選、加入正式回歸／文件、驗證成品並交付。
+     匯入完整性修正後仍須以新固定輸入完成全量 coverage；52cfa38b 的完整成功
+     僅涵蓋修正前來源，不能代替本次來源與新增8個時序／完整性案例的全量驗證。
      核對讀寫權限、當前來源／接收身分、原始提交與私有完成授權、摘要及目的端發布；
      本機路徑、匯入收據或協調端摘要不得冒充遠端檔案／完成證據，也不得轉送本機權限。
      核對兩／三主機故障矩陣：原 host／token／帳戶／origin 變更或撤銷、來源到期、讀者同意、

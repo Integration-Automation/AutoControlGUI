@@ -1,5 +1,11 @@
 # Managed agent tasks
 
+## Destination import receipts
+
+Before accepting a published import receipt, the destination rechecks the complete file list
+and content digests after its final source response. Changed, missing or extra files leave
+the import in requires_review, preserving user edits and the original publication for review.
+
 MCP asynchronous calls preserve the accepting caller's role, session, exact root policy and
 disclosure view; retired sessions and path policies reject late dispatch. Stateless async calls keep
 their fixed profile. HTTP tool-list changes reach all live session streams for plugin updates, while

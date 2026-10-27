@@ -14,7 +14,7 @@ replies or a coordinator
 restart reuse the same grant. Passive diagnostics describe only the local contract, not a live grant
 or verified remote/native capability. Read-only completion grants revalidate their retained private
 consent at creation and resolution, without reviving original input authority.
-Implementation verification is recorded in docs/updates/2026-10-d.md; remaining delivery and acceptance
+Implementation verification is recorded in docs/updates/README.md; remaining delivery and acceptance
 are tracked in Progress.md.
 Editable request templates are provided in examples/agent_transfer_export_review.json,
 agent_transfer_import_review.json and agent_transfer_evidence_review.json, with separate create templates.
@@ -1084,6 +1084,9 @@ queue generation. Verified private chunks can be reused; an owned complete gener
 and hashed without downloading or publishing again. Additional attempt origins remain restrictive.
 An explicitly queued, never-claimed inspection survives another restart; current bytes, profile
 and retained attempt origins are rechecked before accepting its result.
+Before accepting a published import receipt, the destination rechecks the complete file list
+and content digests after its final source response. Changed, missing or extra files leave
+the import in requires_review, preserving user edits and the original publication for review.
 Changed ownership, bytes or authority cannot confirm publication. Cancellation fences the producer;
 unaccepted publication remains requires_review, and confirmed published files remain user output.
 Cancelled or expired private chunk accounts are cleaned only after their exact producer retires;

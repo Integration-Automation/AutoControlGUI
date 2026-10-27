@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261027-16 | 2026-10-27 | Reject changed destination output before import acceptance | #done #agent #handoff #integrity #verification | [2026-10-e](2026-10-e.md) |
 | U-20261027-15 | 2026-10-27 | Verify corrected Windows presence through the full configured suite | #done #agent #presence #windows #verification | [2026-10-d](2026-10-d.md) |
 | U-20261027-14 | 2026-10-27 | Preserve readiness scope and optional imports in shipped task packages | #done #agent #scope #packaging #verification | [2026-10-d](2026-10-d.md) |
 | U-20261027-13 | 2026-10-27 | Bind persistent Windows presence to runtime and standard input lifetimes | #done #agent #presence #windows #ownership #verification | [2026-10-d](2026-10-d.md) |
@@ -462,6 +463,9 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
+| [2026-10-e.md](2026-10-e.md) | 2026-10 | 1 |
+| [2026-10-d.md](2026-10-d.md) | 2026-10 | 15 |
+| [2026-10-c.md](2026-10-c.md) | 2026-10 | 75 |
 | [2026-10-b.md](2026-10-b.md) | 2026-10 | 15 |
 | [2026-10.md](2026-10.md) | 2026-10 | 82 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |

@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,409 |
-| 程式碼總行數 | 209,491 |
+| 程式碼總行數 | 209,492 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 856 |
 | 套件門面 `__all__` 公開名稱數 | 1445 |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 48,601 行。
+> 14 個套件、約 48,602 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 23,034 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 23,035 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -989,7 +989,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（23,034 行／167 檔）
+#### `utils/agent_runtime/`（23,035 行／167 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1121,7 +1121,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `task_triggers.py` | 272 | Durable preauthorized task bindings with owner refresh, bounded backlog and event deduplication. |
 | `transfer_destination_scope.py` | 33 | Injected destination profiles and live origin ceilings confine reviewed import directories. |
 | `transfer_import_contract.py` | 83 | Closed destination management envelopes carry opaque foreign paths without forwarding local authority. |
-| `transfer_import.py` | 341 | Destination-owned consent and fenced recovery bind source manifests to immutable local files profiles. |
+| `transfer_import.py` | 342 | Destination-owned consent and fenced recovery bind source manifests to immutable local files profiles. |
 | `transfer_import_files.py` | 126 | Verified import chunks and owned generations reuse existing asset publication and verification. |
 | `transfer_import_jobs.py` | 98 | An explicitly started runtime service owns import workers independently of GUI observers. |
 | `transfer_import_ledger.py` | 201 | Destination delivery generations bind durable import intents to exact existing WorkQueue claims. |
@@ -1475,8 +1475,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 970 | 95,669 |
-| **總計** | **1,401** | **209,322** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 970 | 95,670 |
+| **總計** | **1,401** | **209,323** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.
