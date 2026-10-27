@@ -53,6 +53,29 @@ request_id/operation/body fields; replies echo request_id and a closed result/er
 Operations inspect/acquire/check/release; check/release accept exact generation/lease_id fields.
 Reject duplicate/unknown fields, nonfinite data, bool-as-number and stale/wrong generations.
 
+Each connection starts request_id at integer1 and accepts only the next value, at most2**63-1,
+excluding bool. Reply fields are exactly request_id/status/result; status is ok/busy/lease_lost/
+source_lost, with result=null on non-ok. Successful results have the exact existing source snapshot,
+acquire generation/lease_id or release {released:true} shape. Validate replies before trusting them.
+Expected busy/locked/revoked outcomes remain normal broker results: throwing inside OwnedChannel
+would destroy the persistent source on each failed early acquisition. Fatal transport/deadline/native
+source loss still retires the actual owned helper tree.
+
+One protocol instance owns one connection's issued tokens. Other connections may check an explicitly
+received host lease capability but cannot release it. Disconnect permanently revokes only issued
+presence tokens, including when the observation queue is blocked. WindowsPresenceSource.status()
+provides passive classification only; .release(generation,lease_id) directly removes a token through
+the state mutex without native calls, queues or keyboard/mouse cleanup. Neither can authorize input.
+
+Handshake frames use protocol1, random32lowerhex challenges, native process creation time1..2**64-1
+and source generation. Server sends protocol/challenge/birth/generation after opening the actual peer
+process handle. Client verifies native peer user/session, then sends protocol/server_challenge/
+challenge/birth with a fresh challenge. Server verifies the echo/client birth and live peer, then
+replies protocol/challenge/birth/generation echoing the client's challenge. Client verifies echo,
+birth/generation and actual peer-handle liveness. A buffered pre-challenge reply cannot prove a live
+connection to a reused PID. No supplied PID selects process operations. The native pipe client uses
+identification-only security QoS; current-user/System DACL and remote rejection remain mandatory.
+
 Input helpers use one private I/O thread per live reader. Every check/watch has a0.25second outer
 deadline; a blocked read/write invalidates the gate and emits the existing physical_input notice.
 Its thread cannot be reused or retried; the parent retires the owned input-helper process. Broker

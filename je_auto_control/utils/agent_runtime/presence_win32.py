@@ -11,21 +11,9 @@ import uuid
 
 from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError
 from je_auto_control.utils.agent_runtime.activity_windows import _interactive
+from je_auto_control.utils.agent_runtime.presence_native_types import NativeLayout as _Layout
 
 _U32, _PTR = ctypes.c_uint32, ctypes.c_void_p
-
-
-class _Layout(ctypes.Structure):
-    """Expose size and a nonowning pointer for explicit Win32 structure arguments."""
-
-    @classmethod
-    def size(cls) -> int:
-        """Return the actual ABI size of this native layout."""
-        return ctypes.sizeof(cls)
-
-    def pointer(self) -> Any:
-        """Borrow this structure's memory only for the duration of a native call."""
-        return ctypes.byref(self)
 
 
 class _RawDevice(_Layout):

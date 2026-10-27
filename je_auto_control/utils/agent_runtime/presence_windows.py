@@ -4,7 +4,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from contextlib import contextmanager
 import queue
-import re
 import threading
 import time
 from typing import Any, Callable, Iterator
@@ -13,6 +12,7 @@ from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTa
 from je_auto_control.utils.agent_runtime.models import positive
 from je_auto_control.utils.agent_runtime.presence_state import PresenceState
 from je_auto_control.utils.agent_runtime.presence_win32 import Win32PresenceAPI
+from je_auto_control.utils.agent_runtime.presence_frames import presence_body as _body
 
 
 @dataclass
@@ -24,18 +24,6 @@ class _Ticket:
     abandoned: threading.Event = field(default_factory=threading.Event, init=False)
     accepted: threading.Event = field(default_factory=threading.Event, init=False)
     lease: dict | None = field(default=None, init=False)
-
-
-def _body(operation: str, value: dict) -> dict:
-    fields = {'inspect': set(), 'acquire': set(), 'check': {'generation', 'lease_id'},
-              'release': {'generation', 'lease_id'}}
-    if not isinstance(operation, str) or operation not in fields:
-        raise AgentTaskError('unknown physical presence operation')
-    if not isinstance(value, dict) or set(value) != fields[operation]:
-        raise AgentTaskError('invalid physical presence request fields')
-    if any(not isinstance(item, str) or not re.fullmatch('[0-9a-f]{32}', item) for item in value.values()):
-        raise AgentTaskError('invalid physical presence lease identity')
-    return dict(value)
 
 
 @dataclass
@@ -236,6 +224,14 @@ class WindowsPresenceSource:
             raise result
         ticket.accepted.set()
         return result
+
+    def status(self) -> dict:
+        """Read passive availability only; this cannot authorize input or start native monitoring."""
+        return self._state.inspect()
+
+    def release(self, generation: str, lease_id: str) -> None:
+        """Revoke a presence token without waiting for observation or releasing keyboard/mouse input."""
+        self._state.release(generation, lease_id)
 
     def close(self) -> None:
         """Fence presence before bounded thread retirement; native failure remains an owned-helper concern."""

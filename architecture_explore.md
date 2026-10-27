@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,393 |
-| 程式碼總行數 | 207,219 |
+| Python 模組總數（含周邊子專案） | 1,397 |
+| 程式碼總行數 | 207,650 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 856 |
 | 套件門面 `__all__` 公開名稱數 | 1445 |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 46,329 行。
+> 14 個套件、約 46,760 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 20,762 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 21,193 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -989,7 +989,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（20,762 行／151 檔）
+#### `utils/agent_runtime/`（21,193 行／155 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1067,9 +1067,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `ownership.py` | 86 | Fenced input ownership; running dispatch must retire before ownership transfers. |
 | `parent_watch.py` | 25 | POSIX helpers retire their own live process group when the owning parent disappears. |
 | `policy.py` | 119 | Explicit task scopes, rooted data paths and secret-safe durable payloads. |
+| `presence_frames.py` | 137 | Closed finite JSON byte frames and exact presence request/result validation. |
+| `presence_native_types.py` | 16 | Resource-free native structure size and pointer views for presence components. |
+| `presence_protocol.py` | 74 | Per-connection sequences and issued-token ownership; shared source lifetime remains separate. |
+| `presence_security_windows.py` | 220 | Query-only endpoint identity and noninheritable current-user/System security descriptors. |
 | `presence_state.py` | 159 | Presence-only monotonic state; source leases never substitute for native input ownership. |
-| `presence_win32.py` | 256 | Header-only Raw Input observation for the dedicated presence helper; runtime wiring remains pending. |
-| `presence_windows.py` | 252 | Fresh bounded source actor with retained native resources; session transport remains pending. |
+| `presence_win32.py` | 244 | Header-only Raw Input observation for the dedicated presence helper; runtime wiring remains pending. |
+| `presence_windows.py` | 248 | Fresh bounded source actor with retained native resources; session transport remains pending. |
 | `readonly_target.py` | 157 | Fresh isolated completion observations with live scope checks and permanent no-input helper contracts. |
 | `readonly_worker.py` | 70 | Permanently read-only owned helper: observation never upgrades to native input or task execution. |
 | `receipts.py` | 84 | Owner-reviewed uncertain outcomes and per-row workflow reports without blind replay. |
@@ -1459,8 +1463,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 954 | 93,397 |
-| **總計** | **1,385** | **207,050** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 958 | 93,828 |
+| **總計** | **1,389** | **207,481** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

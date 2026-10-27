@@ -59,8 +59,12 @@ test_agent_presence_windows.py. Update measured map/Progress/monthly for a coher
 
 ### Task 2: Session source, secure byte pipes and bounded private brokers
 
-**Files:** Create presence_protocol.py, presence_pipe_windows.py, presence_worker.py,
-presence_broker.py; tests test_agent_presence_protocol.py / test_agent_presence_transport.py.
+**Files:** Create presence_frames.py/presence_protocol.py, presence_security_windows.py,
+presence_pipe_windows.py, presence_worker.py/presence_broker.py. Modify presence_windows.py only
+to share closed body validation and add passive status/direct negative-only presence release.
+Extract the existing resource-free native layout views to presence_native_types.py and retain
+presence_win32.py's private alias/ABI; the security layer must not depend on an observer implementation.
+Tests test_agent_presence_protocol.py / test_agent_presence_transport.py and existing source tests.
 
 **Interfaces:** PresenceProtocol(source:WindowsPresenceSource).request(value:dict)->dict implements
 exact protocol1 request_id/operation/body. PresencePipe.connect()->connection and .listen()->listener
@@ -70,7 +74,15 @@ and releases only each disconnected connection's presence tokens. Broker stdin/s
 OwnedChannel envelopes: bootstrap, inspect, acquire, check, release. Launch source only after parent
 has established its NativeJob. Source/borrower ownership is internal, never selected by task arguments.
 
-- [ ] RED closed frames/duplicates/oversize/nonfinite/wrong generations, no pickle or forwarded PID authority.
+Refined interfaces before code: encode_frame(dict)->bytes/decode_frame(bytes)->dict enforce4096bytes,
+unique JSON keys/finite values; presence_body(str,dict)->dict shares existing source request validation.
+validate_request(dict)->tuple[int,str,dict] and validate_response(dict,str,int,str)->dict require exact
+sequence/status/result shapes in the spec. PresenceProtocol.request consumes sequential IDs, tracks
+issued tokens, and .close revokes only those tokens via source.release; source.status is passive and
+never substitutes for a fresh check. Ordinary busy/lease_lost broker results cannot raise inside
+OwnedChannel.request. Handshake challenge/birth/source-generation fields are fixed in the spec.
+
+- [x] RED closed frames/duplicates/oversize/nonfinite/wrong generations, no pickle or forwarded PID authority.
 - [ ] RED secured native pipe factory with fake APIs and actual independent owned fake-source IPC:
   two brokers share generation, borrower close survives, owner loss refuses, replacement waits fresh60.
 - [ ] Implement actual Windows pipe DACL/first-instance/remote-reject and peer/user/session checks;
@@ -78,6 +90,13 @@ has established its NativeJob. Source/borrower ownership is internal, never sele
 - [ ] Test blocked read/write/accept, half handshakes, capacity/late responses and loss during acquire;
   preserve source ownership and unknown input journals, no automatic second source or retries.
 - [ ] Verify static/native-free regression and coherent records/publication; keep runtime wiring open.
+
+Task2 partial checkpoint: stage111 protocol/source RED54failed19passed5deselected6.83s,
+GREEN79passed8.51s includes an actual owned helper surviving expected busy and retaining its source
+generation. Native process/security RED15failed3.08s, GREEN15passed3.03s: fake peer/process cases and
+an actual query-only current-process/descriptor check, no observer/window/input. Final18modules
+333passed85.85s/0skips0warnings/3327inputs unchanged. This is not the pipe/listener/server/broker
+implementation: the remaining four Task2 checks and all Tasks3-4 stay open. No task-done2 claim.
 
 ### Task 3: Runtime pool, host binding and live reader gate
 

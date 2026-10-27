@@ -67,6 +67,7 @@ def lease(source):
 def test_inert_inspection_does_not_create_a_native_api_or_thread():
     api = FakeAPI()
     source = actor(api)
+    assert source.status()['state'] == 'not_started'
     assert source.request('inspect', {})['state'] == 'not_started'
     assert api.opened == 0
     source.close()
@@ -152,6 +153,29 @@ def test_timed_out_request_does_not_allocate_a_late_lease():
         source.request('inspect', {})
         assert len(source._state._leases) == 1
         assert source.request('check', first)['state'] == 'monitoring'
+    finally:
+        api.allow.set()
+        source.close()
+
+
+def test_passive_status_and_negative_release_do_not_wait_for_a_blocked_observer():
+    api = FakeAPI()
+    source = actor(api)
+    try:
+        source.start()
+        first = lease(source)
+        api.allow.clear()
+        api.block.set()
+        assert api.blocked.wait(1)
+        calls = len(api.threads)
+        assert source.status()['native_evidence'] == 'not_recorded'
+        source.release(**first)
+        assert source._queue.empty()
+        assert len(api.threads) == calls
+        api.block.clear()
+        api.allow.set()
+        with pytest.raises(AgentTaskError):
+            source.request('check', first)
     finally:
         api.allow.set()
         source.close()

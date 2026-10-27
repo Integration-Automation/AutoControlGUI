@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261027-08 | 2026-10-27 | Add closed presence protocol and native security primitives | #snapshot #agent #presence #windows #verification | [2026-10-d](2026-10-d.md) |
 | U-20261027-07 | 2026-10-27 | Implement header-only Windows presence source | #snapshot #agent #presence #windows #verification | [2026-10-d](2026-10-d.md) |
 | U-20261027-06 | 2026-10-27 | Revalidate native input after owner acknowledgement | #done #agent #input #ownership #verification | [2026-10-d](2026-10-d.md) |
 | U-20261027-05 | 2026-10-27 | Verify evidence ownership and USB full regression | #done #agent #persistence #usb #verification | [2026-10-d](2026-10-d.md) |
