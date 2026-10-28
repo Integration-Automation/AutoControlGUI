@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261028-07；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261028-08；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -60,8 +60,12 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      Popen.returncode 尚未設定不能證明 PID 仍被保留。須驗證啟動時取得的程序身分、
      取消／早退／外部回收與原程序群組退場；送出訊號、主程序退出或單次錯誤碼均不足以
      證明全部後代已退出。涵蓋既有環境探測、桌面／瀏覽器及遠端 helper 呼叫者。
-     stage127 已記錄實測反例與隔離原型設計；仍須核實原生繫結 ABI、實際群組行為及
-     失敗清理，不能由介面存在推定可用。現有驗證 Linux 缺編譯器／標頭，安裝前仍須比對。
+     正式繫結仍須核實取消發生於 native spawn 期間的所有權、失敗清理、群組與逸出後代退場，
+     並補受支援版本／架構驗證；隔離 ctypes 原型不等於正式 helper 已接合，安裝前仍須比對。
+     真實 Linux 套件啟動還須處理 facade 匯入時連接 X11，以及 presence_worker 仍使用
+     Windows source／pipe 的接合缺口。須先比對並隔離配置依賴，移除測試程序的桌面 session
+     環境變數，以真實套件與固定模組驗證啟動、未支援回覆及退場；不得替換空白 initializer
+     或偽裝 Wayland session 取代完整應用驗證。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、
      helper／半開交握回收與取消／停止生命週期，避免兩條實作各自接管相同原生資源。
    - 驗證相同實體桌面在不同 profile、資料庫、服務及 DAG 節點間仍只有一位輸入擁有者；
