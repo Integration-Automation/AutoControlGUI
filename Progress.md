@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261028-01；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261028-02；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -51,6 +51,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
    - macOS、X11、Wayland：實作可信真人活動來源，接合授權／鎖定／閒置判定、觀察目標身分、
      視窗範圍輸入及自有 helper 隔離；補非 Windows 對話框／未儲存 gate。
      目前不能解除不支援平台的共用桌面拒絕保護。
+     Linux helper 仍須接合原連線程序證據、可信逐訊息 writer、受保護 Unix socket，及真正的
+     登入／seat／鎖定／真人活動來源；presence_peer_linux 的 pidfd 不等於目前 writer 或桌面權限，
+     不可只憑連線程序仍存活、同帳號或相同 namespace 解除輸入拒絕。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、
      helper／半開交握回收與取消／停止生命週期，避免兩條實作各自接管相同原生資源。
    - 驗證相同實體桌面在不同 profile、資料庫、服務及 DAG 節點間仍只有一位輸入擁有者；
@@ -153,7 +156,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      歷史證據檔不自動認領或刪除。
 
    - 於整份規範最後固定提交重跑完整 headless 與 coverage run -m pytest、跨功能／故障恢復回歸；
-     後續平台／恢復／匯入完整性修正仍須納入完整 coverage 及新成品逐檔比對；
+     Linux 連線程序元件及新增21項案例仍須納入新固定來源的完整 coverage；
+     26c1626e 的完整結果不涵蓋此元件，不能代替本次來源的全量驗證；
+     後續平台／恢復修正亦須納入完整 coverage 及新成品逐檔比對；
      後續修正不得沿用較早提交的完整驗證；來源、測試、設定與文件須重新固定並核實。
      目前功能工作樹完整成功的來源範圍與80項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。
      歷史原因仍須追查：stage74 的管理員 host binding 與 retention uncertain／phase 前置失敗；
@@ -175,8 +180,6 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      `C:\Users\USER\AppData\Local\Temp\autocontrol-wheel-stage72-mbpvem9h` 尚未清理；
      刪除操作遭自動審核拒絕（僅回覆 `blocked by policy`），保持原樣，不改用其他工具繞過。
    - 功能分支到正式環境的整合／部署仍未執行；正式工作樹與既有批次須保持可回復。
-     stage121 的 Linux 連線程序元件仍是私有候選，尚未接入產品；後續須審閱與正式接合，
-     不能把15項獨立 IPC 測試及候選靜態檢查當作非 Windows 桌面功能已完成。
 
 **仍暫緩的驗收**：原生桌面、實際瀏覽器與 Android／iOS 真機驗收；WebRunner `Progress.md` #20
 的原生雙向 bridge 驗收，以及 #21 的完整 24 小時驗收。只有使用者明確恢復後才可啟動，24 小時

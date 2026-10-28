@@ -1158,6 +1158,16 @@ coarse ``presence`` metadata with ``native_evidence=not_recorded``; they start n
 no capability IDs or input contents. File/browser/custom reviewed workers remain inert here.
 Native, browser, device and24hour acceptance remains deferred in Progress.md.
 
+Linux connected-process evidence
+----------------------------------------
+
+Linux's internal presence_peer_linux component retains a noninheritable SO_PEERPIDFD for the
+original connector and checks live account, process birth and user/PID namespaces. It closes only
+its owned descriptor and refuses unavailable kernel/ABI or metadata without reopening a PID.
+This does not identify a replacement socket writer, establish an active desktop/lock/activity state,
+or authorize input. Non-Windows shared desktop tasks remain unavailable pending trusted per-message
+sender checks, session/activity sources and contained transport integration.
+
 Installed dashboard resources
 ------------------------------------------------
 

@@ -463,6 +463,11 @@ Windows 共用桌面的持續來源跨 runtime／任務／helper 共用，監看
 `agent-task stop-all` 停止可見任務。
 其他共用桌面須有可信活動 adapter。原生平台驗收與其餘待辦列在 `Progress.md`。
 
+Linux 內部 presence_peer_linux 元件以不可繼承的 SO_PEERPIDFD 保留原始連線者，查核存活帳戶、
+程序建立時間及 user／PID namespace；只關閉自有描述元，核心／ABI 或 metadata 不可用時直接拒絕，
+不另依 PID 開啟程序。此證據不表示 socket 轉交後的目前 writer，也不證明作用中桌面、鎖定或真人活動，
+不授予輸入權限。非 Windows 共用桌面仍須接合可信逐訊息發送者、session／活動來源與受保護 transport。
+
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)

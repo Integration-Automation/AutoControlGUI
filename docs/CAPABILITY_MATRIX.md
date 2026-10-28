@@ -1147,6 +1147,13 @@ File/browser/custom reviewed workers stay inert. Native/browser/device/24hour ac
 see Progress.md and the persistent-windows-presence spec/plan. Bounded JSON/budget primitives reside in
 wire_data.py and keep their models reexports, separating owned transports from runtime/model cycles.
 
+Linux's internal presence_peer_linux component retains a noninheritable SO_PEERPIDFD for the
+original connector and checks live account, process birth and user/PID namespaces. It closes only
+its owned descriptor and refuses unavailable kernel/ABI or metadata without reopening a PID.
+This does not identify a replacement socket writer, establish an active desktop/lock/activity state,
+or authorize input. Non-Windows shared desktop tasks remain unavailable pending trusted per-message
+sender checks, session/activity sources and contained transport integration.
+
 Installed wheel and source distributions include the REST Dashboard and Swagger HTML, CSS and
 JavaScript resources. The same localhost REST routes and authentication rules apply to an
 installed package; serving static pages grants no task or desktop input authority.

@@ -595,6 +595,13 @@ Target descriptions expose coarse `presence` metadata with `native_evidence=not_
 `agent-task stop-all` stops visible tasks. Other shared desktops require a trusted activity adapter.
 Native acceptance and the remaining workflows are in `Progress.md`.
 
+Linux's internal presence_peer_linux component retains a noninheritable SO_PEERPIDFD for the
+original connector and checks live account, process birth and user/PID namespaces. It closes only
+its owned descriptor and refuses unavailable kernel/ABI or metadata without reopening a PID.
+This does not identify a replacement socket writer, establish an active desktop/lock/activity state,
+or authorize input. Non-Windows shared desktop tasks remain unavailable pending trusted per-message
+sender checks, session/activity sources and contained transport integration.
+
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

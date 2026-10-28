@@ -949,6 +949,14 @@ runtime 先完成輸入／helper 退場，才關閉共用來源參照；借用�
 目標說明只公開粗略 ``presence`` 狀態與 ``native_evidence=not_recorded``，不啟動探測，也不公開能力 ID 或輸入內容。
 檔案／瀏覽器／經審閱自訂 worker 不啟動此來源；原生、瀏覽器、裝置與24小時驗收仍依 Progress.md 暫緩。
 
+Linux 連線程序證據
+----------------------------------------
+
+Linux 內部 presence_peer_linux 元件以不可繼承的 SO_PEERPIDFD 保留原始連線者，查核存活帳戶、
+程序建立時間及 user／PID namespace；只關閉自有描述元，核心／ABI 或 metadata 不可用時直接拒絕，
+不另依 PID 開啟程序。此證據不表示 socket 轉交後的目前 writer，也不證明作用中桌面、鎖定或真人活動，
+不授予輸入權限。非 Windows 共用桌面仍須接合可信逐訊息發送者、session／活動來源與受保護 transport。
+
 安裝套件中的管理頁面資源
 ------------------------------------------------
 
