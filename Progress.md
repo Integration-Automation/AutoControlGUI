@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261028-05；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261028-06；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -56,6 +56,12 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      核對實際 helper 世代、故障退場與完整應用接合，不能以獨立元件 IPC 取代這些證據。
      程序／逐訊息身分及受保護路徑不代表桌面權限，也不能隔離同 UID／特權敵對程序；
      使用者空間有界等待不能冒稱核心 syscall 的硬即時完成，未知清理仍不得移交控制權。
+     POSIX helper 尚須修正 native_channel 的程序身分與清理依據；SIGCHLD 自動回收時，
+     Popen.returncode 尚未設定不能證明 PID 仍被保留。須驗證啟動時取得的程序身分、
+     取消／早退／外部回收與原程序群組退場；送出訊號、主程序退出或單次錯誤碼均不足以
+     證明全部後代已退出。涵蓋既有環境探測、桌面／瀏覽器及遠端 helper 呼叫者。
+     stage127 已記錄實測反例與隔離原型設計；仍須核實原生繫結 ABI、實際群組行為及
+     失敗清理，不能由介面存在推定可用。現有驗證 Linux 缺編譯器／標頭，安裝前仍須比對。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、
      helper／半開交握回收與取消／停止生命週期，避免兩條實作各自接管相同原生資源。
    - 驗證相同實體桌面在不同 profile、資料庫、服務及 DAG 節點間仍只有一位輸入擁有者；
@@ -118,7 +124,7 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      判定；補必要的角色／跨節點證據與提示注入回歸。
    - 為實際主機配置受保護的 runtime 端點、背景派送、主機憑證與相容完成契約；明確記錄遠端
      目錄／目標設定、部署／回復方法。受管任務 DAG 不會自動部署遠端服務。
-   - 跨主機成果移交仍缺 cross-host-handoff plan Task2 的字面 Windows symlink 變體，
+   - 跨主機成果移交仍須核對 cross-host-handoff plan Task2 的字面 Windows symlink 行為證據，
      以及實際受保護端點、跨實體主機與正式環境交付；各有限來源／接收／採認案例的
      驗證不能取代實際遠端部署及目前來源／接收端的應用狀態證據。
      核對讀寫權限、當前來源／接收身分、原始提交與私有完成授權、摘要及目的端發布；
@@ -126,7 +132,7 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      核對兩／三主機故障矩陣：原 host／token／帳戶／origin 變更或撤銷、來源到期、讀者同意、
      冷重啟與晚回覆、發布／取消交錯、舊派送 schema、多次續行 origin、精確產生者退出、
      未知暫存與清理失敗、未決批次、配額回收及重啟後仍固定的來源／目的端／證據期限。
-     本環境無法建立字面 Windows 檔案 symlink（WinError1314）；仍須補該變體，不能由 junction 取代。
+     目前已實測可建立字面檔案與目錄 symlink；Task2 的剩餘交付範圍仍須逐條核對。
      保留原有本機 DAG admission／憑證與跨程序 host binding 核對；實際本機祖先不能因 wire grant
      省略、變更 tags 或補造提交列而繞過。standalone 與真正遠端節點沿各自實際接受憑證處理。
      技能契約須核實來源主機的真實動作、原 trial／版本及當前權限；規範未要求補造協調端外國任務。
@@ -152,17 +158,12 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 8. **P0–P9 最終交付核對與檢查**
    - 每條交付契約整理實作、無頭回歸與原生／真機證據對照；補新平台／多機／恢復情境的漏洞，
      區分已實作、尚缺實作與只缺實測，不能用模擬目標取代原生驗收。
-     字面 Windows 檔案 symlink 仍缺權限驗證，不得以 junction 取代；
-     目錄 symlink 同樣缺實測：test_agent_task_triggers 的 canonical_root_replacement
-     案例因本環境無法建立自有目錄 symlink 而跳過，須在具權限環境補驗。
      歷史證據檔不自動認領或刪除。
 
    - 於整份規範最後固定提交重跑完整 headless 與 coverage run -m pytest、跨功能／故障恢復回歸；
-     本輪新增 Linux transport 與案例仍須納入固定來源完整 coverage；7e0cd292 的完整結果
-     只涵蓋先前連線程序元件，不能代替本輪新來源與新成品的完整驗證。
      後續平台／恢復修正亦須納入完整 coverage 及新成品逐檔比對；
      後續修正不得沿用較早提交的完整驗證；來源、測試、設定與文件須重新固定並核實。
-     目前功能工作樹完整成功的來源範圍與95項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。
+     目前功能工作樹完整成功的來源範圍與131項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。
      歷史原因仍須追查：stage74 的管理員 host binding 與 retention uncertain／phase 前置失敗；
      stage85 的 default_connection_discovery_change、expired_origin_can_be_replaced_only_for_never_dispatched_scoped_work
      及 retention queued_child／executing／fresh_delivery；stage88–93 的3秒來源匯出／匯入準備逾時。
