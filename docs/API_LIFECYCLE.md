@@ -1,5 +1,22 @@
 # Public API lifecycle
 
+The root and remote-desktop packages resolve public exports on first attribute access.
+Export names, order and source-object identities stay unchanged. Required import errors occur
+when the corresponding export is requested. Optional remote features retain their grouped
+`ImportError` outcome: every member of the affected group is `None`; other exceptions propagate.
+`is_webrtc_available()` reads the current public WebRTC host value.
+
+`__all__` and `dir()` support discovery without resolving every export. `vars()` contains only
+resolved values and ordinary module attributes. Wildcard import resolves every public name.
+The remote `registry` export remains the shared singleton, while
+`importlib.import_module("je_auto_control.utils.remote_desktop.registry")` returns its actual module.
+`signaling_client` remains a module export. `keyboard_keys_table` returns the ordinary shared
+mutable dictionary through the current getter.
+
+Reloading either facade with `importlib.reload()` does not refresh exports already cached in
+its namespace or outcomes cached in private optional-feature modules. Reload is not a feature
+availability refresh operation. First-access resolution changes import and side-effect timing.
+
 Plain package import on X11 does not open a display or input device or start a keyboard listener.
 The operation display and RECORD listener have separate lifetimes. Screen, mouse and keyboard
 operations do not start the listener. A key-state check or recording request starts observation;

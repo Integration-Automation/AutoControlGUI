@@ -4,6 +4,11 @@ API Reference
 
 Complete API documentation for all AutoControl modules.
 
+The root package resolves public exports when accessed. ``__all__`` and ``dir()``
+list names without loading every feature; wildcard import resolves them all.
+Unresolved exports are absent from ``vars(je_auto_control)``. Exported functions,
+classes and shared objects retain their original identities.
+
 Wrapper API
 ===========
 

@@ -496,6 +496,8 @@ Linux 內部 presence_peer_linux 以不可繼承的 pidfd 保留原始 Unix stre
 - **不寫 Python 也能腳本化。** 856 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
+  公開匯出項目在被存取時才載入來源模組。`__all__` 與 `dir()` 可列出名稱，不必載入全部功能；
+  萬用字元匯入會要求所有名稱。尚未解析的名稱不會出現在 `vars(je_auto_control)`。
   X11 的一般套件匯入不開啟顯示連線或輸入裝置，也不啟動鍵盤監聽。
   桌面操作在呼叫時才取得資源。讀取 `keyboard_keys_table` 或呼叫
   `get_keyboard_keys_table()` 會解析實際伺服器鍵碼，因此需要 X 連線。

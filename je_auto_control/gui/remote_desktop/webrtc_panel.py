@@ -328,17 +328,16 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
     def _on_hw_codec_changed(self) -> None:
         codec = self._hw_codec_combo.currentData() or ""
         if not codec:
-            uninstall_hardware_codec()
-            self._status_label.setText(_t("rd_webrtc_hw_codec_off_status"))
-            return
-        if install_hardware_codec(codec):
-            self._status_label.setText(
-                _t("rd_webrtc_hw_codec_active").format(codec=codec),
-            )
+            if uninstall_hardware_codec is None:
+                key = "rd_webrtc_unavailable"
+            else:
+                uninstall_hardware_codec()
+                key = "rd_webrtc_hw_codec_off_status"
+        elif install_hardware_codec is not None and install_hardware_codec(codec):
+            key = "rd_webrtc_hw_codec_active"
         else:
-            self._status_label.setText(
-                _t("rd_webrtc_hw_codec_failed").format(codec=codec),
-            )
+            key = "rd_webrtc_hw_codec_failed"
+        self._status_label.setText(_t(key).format(codec=codec))
 
     def _on_export_trust(self) -> None:
         import json as _json

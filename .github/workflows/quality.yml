@@ -36,6 +36,9 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
+      - name: Verify generated facade exports
+        run: python scripts/generate_facade_exports.py --check
+
       - name: Install ruff
         run: "pip install --only-binary :all: ruff==0.16.0"
 

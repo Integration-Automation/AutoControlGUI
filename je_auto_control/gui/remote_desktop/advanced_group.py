@@ -78,6 +78,10 @@ def _add_hw_codec_row(panel: AdvancedGroupHost, grid: QGridLayout) -> None:
     combo = QComboBox()
     panel._hw_codec_combo = combo
     combo.addItem(_t("rd_webrtc_hw_codec_off"), "")
+    grid.addWidget(combo, 3, 1, 1, 3)
+    if available_hardware_codecs is None or active_hardware_codec is None:
+        combo.setEnabled(False)
+        return
     for name in available_hardware_codecs():
         combo.addItem(name, name)
     active = active_hardware_codec()
@@ -86,7 +90,6 @@ def _add_hw_codec_row(panel: AdvancedGroupHost, grid: QGridLayout) -> None:
         if index >= 0:
             combo.setCurrentIndex(index)
     combo.currentIndexChanged.connect(lambda _i: panel._on_hw_codec_changed())
-    grid.addWidget(combo, 3, 1, 1, 3)
 
 
 __all__ = ["DEFAULT_STUN", "AdvancedGroupHost", "build_advanced_group"]

@@ -76,7 +76,7 @@ CITATIONS: List[Tuple[str, str, str, Callable[[], int]]] = [
      "facade names", _facade_names),
     ("architecture_explore.md", r"把 ([\d,]+) 個公開名稱集中再匯出",
      "facade names", _facade_names),
-    ("architecture_explore.md", r"集中匯入並再匯出 ([\d,]+) 個公開名稱",
+    ("architecture_explore.md", r"按首次存取解析 ([\d,]+) 個公開名稱",
      "facade names", _facade_names),
     ("architecture_explore.md",
      r"`AC_\*` 動作指令數（`known_commands\(\)` 實測） \| (\d+) \|",

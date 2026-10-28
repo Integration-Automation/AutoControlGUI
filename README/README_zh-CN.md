@@ -497,6 +497,8 @@ Linux 内部 presence_peer_linux 以不可继承的 pidfd 保留原始 Unix stre
 - **不写 Python 也能脚本化。** 856 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
+  公开导出项在被访问时才加载来源模块。`__all__` 与 `dir()` 可列出名称，不必加载全部功能；
+  通配符导入会请求所有名称。尚未解析的名称不会出现在 `vars(je_auto_control)`。
   X11 的普通包导入不会打开显示连接或输入设备，也不会启动键盘监听。
   桌面操作在调用时才获取资源。读取 `keyboard_keys_table` 或调用
   `get_keyboard_keys_table()` 会解析实际服务器键码，因此需要 X 连接。

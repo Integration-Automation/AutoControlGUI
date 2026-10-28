@@ -98,10 +98,9 @@ def write_default_config(path: Optional[Path] = None) -> Path:
 
 def run_daemon(config: HostServiceConfig) -> None:
     """Block forever: publish offer → wait for answer → accept → loop."""
-    from je_auto_control.utils.remote_desktop import (
-        WebRTCConfig, default_trust_list,
-    )
+    from je_auto_control.utils.remote_desktop import default_trust_list
     from je_auto_control.utils.remote_desktop.multi_viewer import MultiViewerHost
+    from je_auto_control.utils.remote_desktop.webrtc_transport import WebRTCConfig
 
     multi = MultiViewerHost(
         token=config.token,

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased: public exports resolved on demand
+
+Resolve root and remote-desktop exports on first access while preserving public names, order,
+source objects and concrete type signatures. Optional remote features retain grouped
+ImportError-to-None outcomes. Plain import avoids loading unrelated feature dependencies.
+Use `__all__` or `dir()` for discovery; unresolved exports are absent from `vars()`.
+Wildcard imports request every export. Reloading a facade does not refresh cached exports
+or private optional-feature outcomes; import failures and side effects occur on first access.
+
 ## Unreleased: lazy X11 resources
 
 Defer X11 displays, keycode resolution, RECORD listener startup and uinput device selection until

@@ -1,1380 +1,1915 @@
-"""
-import all wrapper function
-"""
+"""Public automation exports, resolved from their original owners on first access."""
+import sys as _sys
+from typing import TYPE_CHECKING as _TYPE_CHECKING
 
-# callback
-from je_auto_control.utils.agent_runtime import (
-    browser_navigate, browser_click, browser_fill, browser_select, browser_check, browser_read, browser_wait,
-    browser_link, browser_download, browser_upload,
-    draft_agent_workflow, workflow_download, workflow_manifest, workflow_control, workflow_open, workflow_wait,
-    AgentActionRequest, AgentActionResult, AgentControlBusy, AgentObservation, AgentRuntime,
-    AgentTaskBudget, AgentTaskError, AgentTaskHandle, AgentTaskResult, AgentTaskSpec,
-    get_agent_task_receipts, reconcile_agent_task, prune_agent_tasks, manage_agent_trigger, list_agent_triggers,
-    recover_agent_target, manage_agent_transfer, manage_agent_skill, list_agent_skills, manage_agent_recovery,
-    AgentObservationStale, AgentHumanReview,
-    AgentTargetProfile, manage_agent_target, list_agent_targets,
-    act_agent_task, agent_runtime_status, cancel_agent_task, finish_agent_task, get_agent_task, lookup_agent_task,
-    inspect_agent_dag, manage_agent_dag,
-    list_agent_tasks, observe_agent_task, pause_agent_task, resume_agent_task,
-    start_agent_runtime, stop_agent_runtime, submit_agent_task, stop_all_agent_tasks,
-)
+from je_auto_control._export_bindings import EXPORTS as _EXPORTS
+from je_auto_control._lazy_exports import resolve_export as _resolve_export
 
-from je_auto_control.utils.callback.callback_function_executor import \
-    callback_executor
-# Critical
-from je_auto_control.utils.critical_exit.critical_exit import CriticalExit
-from je_auto_control.utils.cv2_utils.screen_record import ScreenRecorder
-# utils cv2_utils
-from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-# Recording
-from je_auto_control.utils.cv2_utils.video_recording import RecordingThread
-from je_auto_control.utils.exception.exceptions import \
-    AutoControlActionException
-from je_auto_control.utils.exception.exceptions import \
-    AutoControlActionNullException
-from je_auto_control.utils.exception.exceptions import \
-    AutoControlCantFindKeyException
-# Exception
-from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.exception.exceptions import \
-    AutoControlJsonActionException
-from je_auto_control.utils.exception.exceptions import \
-    AutoControlKeyboardException
-from je_auto_control.utils.exception.exceptions import \
-    AutoControlMouseException
-from je_auto_control.utils.exception.exceptions import \
-    AutoControlRecordException
-from je_auto_control.utils.exception.exceptions import \
-    AutoControlScreenException
-from je_auto_control.utils.exception.exceptions import \
-    AutoControlFlatTemplateException
-from je_auto_control.utils.exception.exceptions import ImageNotFoundException
-from je_auto_control.utils.executor.action_executor import \
-    add_command_to_executor
-# executor
-from je_auto_control.utils.executor.action_executor import execute_action
-from je_auto_control.utils.executor.action_executor import \
-    execute_action_with_vars
-from je_auto_control.utils.executor.action_executor import execute_files
-from je_auto_control.utils.executor.action_executor import executor
-# Accessibility (headless)
-from je_auto_control.utils.accessibility import (
-    AccessibilityElement, accessibility_status, AccessibilityNotAvailableError,
-    AccessibilityRecorder, AXRecorderEvent, AXTreeNode,
-    click_accessibility_element, control_get_state, control_get_value,
-    control_invoke,
-    control_set_value, control_toggle, dump_accessibility_tree,
-    find_accessibility_element, find_accessibility_elements,
-    focused_accessibility_element, list_accessibility_elements, read_control_table,
-)
-# Extended UIA control patterns (Expand / Select / Range / Scroll)
-from je_auto_control.utils.control_patterns import (
-    collapse_control, control_expand_state, control_range, expand_control,
-    scroll_control_into_view, select_control_item, set_control_range,
-)
-# Native text via UIA TextPattern (read / find / select / attributes)
-from je_auto_control.utils.ax_text import (
-    control_text_attributes, find_control_text, get_control_text,
-    get_selected_text, get_visible_text, select_control_text,
-)
-# Readable / addressable a11y-tree post-processing (role names + node paths)
-from je_auto_control.utils.ax_tree_walk import (
-    assign_node_paths, control_type_name, find_by_path, humanize_role,
-    humanize_tree,
-)
-# Keyboard focus order (tab sequence / WCAG audit / set-focus)
-from je_auto_control.utils.focus_order import (
-    audit_focus_order, focus_control, is_interactive_role, tab_order,
-)
-# Realize off-screen items in virtualized lists / grids (UIA VirtualizedItem)
-from je_auto_control.utils.virtualized import realize_item
-# Rich UIA element properties (enabled / offscreen / help / status / keys)
-from je_auto_control.utils.ax_props import (
-    get_element_properties, is_element_enabled,
-)
-# Table headers + cell addressing for native grids (UIA TablePattern)
-from je_auto_control.utils.table_pattern import (
-    cell_by_header, table_cell, table_headers,
-)
-# Move/resize UIA elements + window state (Transform + Window patterns)
-from je_auto_control.utils.transform_window import (
-    move_element, resize_element, set_window_state, window_interaction_state,
-)
-# MSAA bridge for old controls UIA can't model (LegacyIAccessiblePattern)
-from je_auto_control.utils.legacy_accessible import (
-    legacy_default_action, legacy_info,
-)
-# Container selection state + view switching (Selection / MultipleView patterns)
-from je_auto_control.utils.selection_view import (
-    get_selection, list_views, set_view,
-)
-# Reactive UIA event waits (focus-changed)
-from je_auto_control.utils.ax_events import wait_for_focus_change
-# Open a file with its registered app / a URL through je_web_runner
-from je_auto_control.utils.shell_open import open_path, plan_open
-# Detect user-idle time and keep the machine awake during unattended runs
-from je_auto_control.utils.idle_keepawake import (
-    allow_sleep, idle_seconds, is_idle, keep_awake, keep_awake_on,
-    plan_keep_awake,
-)
-# Resolve which application is registered to open a given file type
-from je_auto_control.utils.file_assoc import file_association, normalize_ext
-# Read and control the system master volume and mute state
-from je_auto_control.utils.system_volume import (
-    change_volume, get_volume, is_muted, mute, set_mute, set_volume,
-    toggle_mute, unmute,
-)
-# Lock the workstation, wait for unlock, classify lock transitions
-from je_auto_control.utils.lock_session import (
-    classify_lock_transitions, lock_session, plan_lock_session,
-    wait_for_lock, wait_for_unlock,
-)
-# Read the live IME composition / conversion state for safe CJK entry
-from je_auto_control.utils.ime_state import (
-    decode_conversion_mode, ime_state, is_composing,
-    wait_for_composition_commit,
-)
-# Retry budget — deadline + jitter retries over a callable
-from je_auto_control.utils.retry_budget import (
-    RetryBudget, backoff_delay, jittered_delay, run_with_budget,
-)
-# Read a field back after typing and confirm the intended value landed
-from je_auto_control.utils.verify_field import (
-    compare_field_value, fill_and_verify, verify_field_value,
-)
-# Derive a wait timeout from observed step durations
-from je_auto_control.utils.adaptive_timeout import (
-    recommend_timeout, timeout_stats,
-)
-# Idempotently bring a control / setting to a desired state
-from je_auto_control.utils.ensure_state import ensure_state, ensure_toggle
-# Wait until an application stops being busy before the next step
-from je_auto_control.utils.app_idle import idle_point, wait_until_app_idle
-# Colour-vision-deficiency simulation + colour-collision check
-from je_auto_control.utils.cvd_simulate import (
-    color_distance, colors_collide, simulate_cvd,
-)
-# Lay out Set-of-Marks labels without overlap + readable colour
-from je_auto_control.utils.marks_layout import label_color, place_labels
-# Grade on-screen text legibility by sampling its actual colours (WCAG)
-from je_auto_control.utils.contrast_map import (
-    dominant_pair, grade_contrast, region_contrast,
-)
-# Theme-invariant matching so a light template matches dark mode
-from je_auto_control.utils.theme_normalize import match_theme, normalize_theme
-# Attribute a screen change to the specific element boxes that changed
-from je_auto_control.utils.change_localize import localize_changes, rank_changes
-# Classify what kind of widget a box is from its pixel shape
-from je_auto_control.utils.icon_classify import (
-    box_features, classify_icon, classify_widget,
-)
-# Propose a clean element list from raw pixels (template-free)
-from je_auto_control.utils.element_proposal import propose_elements, tag_kinds
-# Scroll a target into view, then act on it once it is actionable
-from je_auto_control.utils.act_in_view import ScrollPlan, act_in_view
-# Trial / force action modes over the actionability gate
-from je_auto_control.utils.act_modes import act_with_mode
-# Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
-from je_auto_control.utils.clipboard_rich_formats import (
-    build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
-    rtf_to_text, set_clipboard_csv, set_clipboard_rtf,
-)
-# Clipboard format inspection (classify / diff available formats)
-from je_auto_control.utils.clipboard_formats import (
-    classify_format, classify_formats, clipboard_formats, diff_formats,
-    list_clipboard_formats,
-)
-# Drop files onto a window (WM_DROPFILES sender)
-from je_auto_control.utils.file_drop import drop_files, plan_file_drop
-# Image quality scoring (sharpness / contrast / brightness gate before OCR)
-from je_auto_control.utils.image_quality import (
-    image_quality, is_blurry, quality_gate,
-)
-# Display-scale / visual-DPI detection (per-scale match profile)
-from je_auto_control.utils.scale_detect import detect_scale, scale_sweep
-# Spectral-residual visual saliency (where to look — map + salient regions)
-from je_auto_control.utils.saliency import (
-    most_salient, salient_regions, saliency_map,
-)
-# Stable failure signatures (normalise + hash error text; group failures)
-from je_auto_control.utils.failure_signature import (
-    failure_signature, group_failures, normalize_error,
-)
-# Run-trace diff (LCS-aligned: added/removed steps, status flips, regressions)
-from je_auto_control.utils.run_diff import diff_runs, summarize_run_diff
-# Flaky-test co-failure clustering (Jaccard over shared failing runs)
-from je_auto_control.utils.flake_cluster import cofailure_pairs, failure_clusters
-# Per-run step waterfall + bottleneck (critical) steps
-from je_auto_control.utils.step_timeline import build_timeline, critical_steps
-# VLM element locator (headless)
-from je_auto_control.utils.vision import (
-    VLMNotAvailableError, click_by_description, locate_by_description,
-    verify_description,
-)
-# Self-healing locator (image template first, VLM fallback, audit log)
-from je_auto_control.utils.self_healing import (
-    HealEvent, HealEventLog, HealOutcome, SelfHealError,
-    default_heal_log, self_heal_click, self_heal_locate,
-    SelfHealRequest, SelfHealRequestError, SelfHealRunResult, SelfHealVerificationError,
-    VerificationRequest, self_heal_run, inspect_heal_source,
-    create_template_candidate, preview_template_candidate, verify_template_candidate,
-    accept_template_candidate, revert_template_candidate,
-    TemplateCandidateState, TemplateCandidatePreview, TemplateCandidateVerification, TemplateCandidateTransition,
-    TemplateRevisionError, TemplateRevisionConflict,
-    EvaluationRatio, EvaluationSample, HealingAttempt, HealingComparison, HealingEvaluationError,
-    HealingVersionReport, LocatorCandidate, LocatorStrategy, TemplateFrameLocator, VLMFrameLocator,
-    evaluate_healing_manifest, evaluate_locators, write_healing_report,
-)
-# Screenshot PII redaction (blur regions before VLM upload / audit log).
-from je_auto_control.utils.redaction import (
-    POLICY_MODERATE, POLICY_OFF, POLICY_STRICT,
-    RedactionEngine, RedactionPolicy, RedactionResult,
-    default_policy as default_redaction_policy,
-    policy_from_name as redaction_policy_from_name,
-    redact_png_bytes,
-)
-# Screenshot annotation (draw boxes / highlights / arrows / labels).
-from je_auto_control.utils.annotate import annotate_screenshot
-# Cross-platform desktop notifications.
-from je_auto_control.utils.notify import NotifyResult, notify
-# Region colour statistics (dominant / average colour).
-from je_auto_control.utils.color_stats import ColorStats, region_color_stats
-# Per-window capture, window-layout save / restore, snap/tile.
-from je_auto_control.utils.window_capture import (
-    arrange_cascade, arrange_grid, capture_window, get_window_geometry,
-    restore_window_layout, save_window_layout, snap_window,
-)
-# Scroll until a target image / text is visible.
-from je_auto_control.utils.scroll_find import scroll_until_visible
-# Recoverable deletion (move files to the OS recycle bin).
-from je_auto_control.utils.trash import move_to_trash
-# QR code decoding from a screen region / image.
-from je_auto_control.utils.qr import read_qr_codes
-# WebRunner bridge (headless: optional je_web_runner dependency)
-from je_auto_control.utils.webrunner_bridge import (
-    WebRunnerBridgeError, is_webrunner_available, list_webrunner_commands,
-    run_webrunner_action, run_webrunner_actions,
-    web_current_url, web_open, web_quit, web_screenshot,
-)
-# Clipboard (headless)
-from je_auto_control.utils.clipboard.clipboard import (
-    get_clipboard, get_clipboard_image, set_clipboard, set_clipboard_image,
-)
-# Hotkey daemon (headless)
-from je_auto_control.utils.hotkey.hotkey_daemon import (
-    HotkeyBinding, HotkeyDaemon, default_hotkey_daemon,
-)
-# OTP/TOTP for automated 2FA logins
-from je_auto_control.utils.otp import (
-    TOTPError, generate_secret, generate_totp, verify_totp,
-)
-# Native file Open/Save/folder dialog helper
-from je_auto_control.utils.file_dialog import (
-    FileDialogDriver, handle_file_dialog,
-)
-# Locked / non-interactive session guard
-from je_auto_control.utils.session_guard import (
-    ensure_interactive_session, is_session_locked,
-)
-# Transactional work queue (dispatcher/performer)
-from je_auto_control.utils.work_queue import (
-    BusinessError, WorkItem, WorkQueue, WorkQueueError,
-)
-# Seeded synthetic test-data generation
-from je_auto_control.utils.test_data import generate_rows, write_dataset
-# Risk-based test selection from run history
-from je_auto_control.utils.test_select import rank_flows, select_flows
-# MCP registry server.json manifest
-from je_auto_control.utils.mcp_registry import (
-    build_server_manifest, write_server_manifest,
-)
-# Named locator repository (object repository) for native UI
-from je_auto_control.utils.element_repository import ElementRepository
-# Step-through debugger / tracer for action lists
-from je_auto_control.utils.flow_debugger import FlowDebugger, trace_actions
-# Persistent library of reusable action sequences (skills/playbooks)
-from je_auto_control.utils.skill_library import Skill, SkillLibrary
-# Heuristic prompt-injection guardrail for untrusted on-screen text
-from je_auto_control.utils.guardrail import (
-    assess_text, redact_text, scan_text,
-)
-# A2A (agent-to-agent) agent card
-from je_auto_control.utils.a2a import build_agent_card, write_agent_card
-# Headless Office I/O (optional [office] extra: openpyxl/python-docx/pptx)
-from je_auto_control.utils.office import (
-    read_document, read_presentation, read_workbook,
-    write_document, write_presentation, write_workbook,
-)
-# Persistent episodic memory for agents (goal -> trajectory -> outcome)
-from je_auto_control.utils.agent_memory import AgentMemory, Episode
-# Deterministic run controls (seeded RNG + frozen wall clock)
-from je_auto_control.utils.deterministic import (
-    DeterministicRun, seed_everything,
-)
-# Reactive screen observer (appear / vanish / change -> callback)
-from je_auto_control.utils.observer import (
-    ScreenObserver, WatchRule, default_observer,
-    image_predicate, pixel_predicate, text_predicate,
-)
-# CycloneDX SBOM generation (supply-chain compliance)
-from je_auto_control.utils.sbom import build_sbom, write_sbom
-# Duration-aware suite sharding + shard-result merge
-from je_auto_control.utils.test_shard import merge_results, shard_flows
-# Data-quality: row schema validation, field extraction, masking
-from je_auto_control.utils.data_quality import (
-    extract_fields, mask_rows, validate_rows,
-)
-# Data profiling: per-column stats + schema inference from observed rows
-from je_auto_control.utils.data_profile import infer_schema, profile_rows
-# Distribution drift: PSI, KS two-sample, categorical drift
-from je_auto_control.utils.data_drift import (
-    categorical_drift, detect_drift, ks_two_sample, psi,
-)
-# JSON-Schema compatibility (backward / forward / full classification)
-from je_auto_control.utils.schema_compat import (
-    SchemaChange, check_compatibility, diff_schemas, is_backward_compatible,
-    is_forward_compatible, is_full_compatible,
-)
-# Tabular row-set diff (CDC-style added/removed/changed by key)
-from je_auto_control.utils.dataset_diff import (
-    cell_changes, diff_rows, summarize_diff,
-)
-# Cross-dataset referential integrity (foreign-key / unique / accepted values)
-from je_auto_control.utils.referential import (
-    check_accepted_values, check_foreign_key, check_row_count, check_unique_key,
-)
-# i18n / l10n testing: pseudo-localize, overflow + catalog checks
-from je_auto_control.utils.i18n_test import (
-    check_catalog, check_overflow, pseudo_localize, pseudo_localize_catalog,
-)
-# Flow checkpoint & resume (durable execution for long action lists)
-from je_auto_control.utils.checkpoint import (
-    Checkpoint, CheckpointStore, CheckpointStoreError, run_resumable,
-)
-# Set-of-Marks overlay (number elements for VLM grounding)
-from je_auto_control.utils.set_of_marks import (
-    mark_click, mark_elements, mark_screen, render_marks, resolve_mark,
-)
-# Semantic screen state (snapshot/diff + structured description)
-from je_auto_control.utils.screen_state import (
-    describe_screen, diff_snapshots, screen_changed, snapshot,
-    snapshot_screen,
-)
-# Timed input replay + declarative input-sequence DSL
-from je_auto_control.utils.input_macro import replay_timeline, run_sequence
-# Resilience primitives (retry-with-backoff + circuit breaker)
-from je_auto_control.utils.resilience import (
-    CircuitBreaker, CircuitOpenError, RetryPolicy, retry_call,
-)
-# Idempotency-key store with stored responses (Stripe-style request dedup)
-from je_auto_control.utils.idempotency import (
-    IdempotencyConflict, IdempotencyStore, request_fingerprint,
-)
-# Time-windowed message deduplication (exactly-once inbox)
-from je_auto_control.utils.dedup_window import DedupWindow
-# Per-stream sequence-gap / ordering detection
-from je_auto_control.utils.sequence_gap import SequenceTracker
-# Optimistic-concurrency versioned store (compare-and-swap / If-Match)
-from je_auto_control.utils.optimistic import (
-    VersionConflict, VersionedStore, check_if_match, if_match_header,
-)
-# Transactional outbox (durable at-least-once event delivery)
-from je_auto_control.utils.outbox import Outbox
-# Locale-aware string collation (deterministic multi-level sort keys)
-from je_auto_control.utils.locale_collation import (
-    collation_key, sort_strings,
-)
-from je_auto_control.utils.locale_collation import compare as collation_compare
-# Confusable / homoglyph detection (Unicode-spoofing skeletons)
-from je_auto_control.utils.confusables import (
-    detect_homoglyphs, is_confusable, is_mixed_script, scripts_of,
-)
-from je_auto_control.utils.confusables import skeleton as confusable_skeleton
-# Readability scoring (Flesch / Flesch-Kincaid / Gunning Fog / SMOG / ARI)
-from je_auto_control.utils.readability import (
-    automated_readability_index, count_syllables, flesch_kincaid_grade,
-    flesch_reading_ease, gunning_fog, readability_report, readability_stats,
-    smog_index,
-)
-# Bidirectional-text QA (bidi controls, nesting balance, Trojan-source scan)
-from je_auto_control.utils.bidi_check import (
-    base_direction, bidi_controls, detect_bidi_issues, has_bidi_controls,
-    is_trojan_source, strip_bidi_controls,
-)
-from je_auto_control.utils.bidi_check import is_balanced as is_bidi_balanced
-# Locale-aware list formatting ("A, B, and C") in the style of CLDR
-from je_auto_control.utils.list_format import format_list
-# ICU-lite MessageFormat (plural / select / selectordinal rendering)
-from je_auto_control.utils.message_format import (
-    format_message, ordinal_category, plural_category,
-)
-# GNU gettext catalog I/O (parse .po, compile/read .mo, message lookup)
-from je_auto_control.utils.gettext_catalog import (
-    GettextCatalog, parse_po, parse_po_file, read_mo, read_mo_file,
-)
-# Check-digit algorithms (Luhn / Verhoeff / Damm / ISO 7064 MOD 97-10)
-from je_auto_control.utils.checksum import (
-    damm_check_digit, damm_validate, luhn_check_digit, luhn_validate,
-    mod97_10_check_digits, mod97_10_validate, verhoeff_check_digit,
-    verhoeff_validate,
-)
-# Multi-waypoint mouse gestures (move / drag through a polyline of points)
-from je_auto_control.utils.mouse_path import (
-    drag_path, move_along_path, path_easings, plan_path,
-)
-# Clear-then-type a text field (Playwright `fill` idiom; paste for Unicode)
-from je_auto_control.utils.field_entry import plan_field_set, set_field_text
-# Hold a key for a duration / auto-repeat at a fixed rate
-from je_auto_control.utils.key_hold import hold_key, plan_key_hold
-# Relative mouse movement (move by a delta from the current position)
-from je_auto_control.utils.mouse_relative import (
-    move_mouse_relative, relative_target,
-)
-# Type arbitrary Unicode (emoji / CJK) by key injection or the clipboard
-from je_auto_control.utils.text_unicode import (
-    plan_paste, plan_unicode_keys, type_unicode, type_unicode_keys,
-    type_unicode_text, unicode_code_units, unicode_keys_supported,
-)
-# Hold modifier keys across a group of actions (release-on-error)
-from je_auto_control.utils.modifier_state import (
-    hold_modifiers, plan_with_modifiers,
-)
-# Address a table / grid cell by (row, column) from bounding boxes
-from je_auto_control.utils.grid_locator import cluster_grid, locate_cell
-# Confidence-returning template matching (score / multi-scale / find-all + NMS)
-from je_auto_control.utils.visual_match import (
-    best_matches, match_masked, match_masked_all, match_template,
-    match_template_all,
-)
-from je_auto_control.utils.visual_match import Match as TemplateMatch
-# Rotation- and scale-tolerant template matching (scale-space x angle sweep)
-from je_auto_control.utils.rotated_match import (
-    RotatedMatch, match_rotated, match_rotated_all, scale_space,
-)
-# Template-match trustworthiness (second-peak ratio + peak-to-sidelobe)
-from je_auto_control.utils.match_trust import (
-    TrustedMatch, match_with_trust, score_peaks,
-)
-# Edge-shape (Chamfer / distance-transform) template matching
-from je_auto_control.utils.edge_match import (
-    chamfer_distance, edge_match, edge_match_all,
-)
-# Multi-template consensus matching (vote references onto one location)
-from je_auto_control.utils.match_ensemble import (
-    match_ensemble, vote_centers,
-)
-# Colour-aware template matching on HSV channels
-from je_auto_control.utils.color_match import (
-    match_color, match_color_all,
-)
-# Pre-match settle gating + match persistence over a frame sequence
-from je_auto_control.utils.match_stability import (
-    match_persistence, region_stability,
-)
-# Otsu auto-thresholding for template matching (no hand-tuned min_score)
-from je_auto_control.utils.match_autothresh import (
-    auto_threshold, match_auto,
-)
-# Sub-pixel refinement of a template match (quadratic peak fit)
-from je_auto_control.utils.subpixel_match import (
-    SubPixelMatch, match_subpixel, refine_peak,
-)
-# Coarse labelled cell grid for VLM grounding (point <-> cell mapping)
-from je_auto_control.utils.screen_grid import (
-    GridCell, cell_for_point, grid_cells, point_for_cell,
-)
-# Fill a ruling-line grid with OCR text → addressable table
-from je_auto_control.utils.table_grid_fill import (
-    assign_text_to_grid, populate_table, table_to_csv, table_to_records,
-)
-# Token-budgeted observation delta (what changed between two UI frames)
-from je_auto_control.utils.observation_delta import (
-    delta_index, delta_observation, summarize_delta,
-)
-# Infer columns from vertical whitespace (borderless tables)
-from je_auto_control.utils.column_layout import (
-    assign_columns, column_gutters, detect_borderless_table, vertical_projection,
-)
-# Column-aware reading order via recursive XY-cut
-from je_auto_control.utils.reading_flow import (
-    flow_order, to_blocks, xy_cut,
-)
-# Group OCR lines into paragraphs and bulleted / numbered lists
-from je_auto_control.utils.text_blocks import (
-    detect_lists, group_paragraphs,
-)
-# Classify OCR lines as headings vs body and build a document outline
-from je_auto_control.utils.heading_segment import (
-    classify_lines, outline,
-)
-# Associate form labels with values (multi-direction) + checkbox state
-from je_auto_control.utils.form_fields import (
-    associate_fields, checkbox_state, match_labels_to_widgets,
-)
-# Classify whether an action did anything (target-local attribution)
-from je_auto_control.utils.action_effect import (
-    EffectVerdict, classify_effect, effect_near_point, is_no_op,
-)
-# Declarative action postconditions (expected outcome vs before/after)
-from je_auto_control.utils.postcondition import (
-    PostconditionReport, check_postcondition, compile_postcondition,
-)
-# Repair-tactic policy for failed / no-effect actions (self-correction loop)
-from je_auto_control.utils.step_repair import (
-    RepairOutcome, RepairPolicy, next_tactic, plan_repair, run_with_repair,
-)
-# Self-consistency over multiple grounding proposals for one target
-from je_auto_control.utils.grounding_consensus import (
-    ConsensusResult, consensus_element, consensus_point, is_confident,
-)
-# Decide when a UI has settled, as a pure seam over a churn series
-from je_auto_control.utils.settle_detector import (
-    SettleState, SettleTracker, is_settled, settle_point,
-)
-# Per-step critic feature bundle + rule-based step scorer
-from je_auto_control.utils.critic_features import (
-    build_critic_record, score_step_rule_based, to_judge_prompt,
-)
-# Locate on-screen regions by colour (mask + connected components)
-from je_auto_control.utils.color_region import (
-    find_color_region, find_color_regions,
-)
-# Structural-similarity comparison (perceptual score + changed regions)
-from je_auto_control.utils.ssim import (
-    ssim_changed_regions, ssim_compare,
-)
-# ORB feature matching (rotation / scale / theme-robust template location)
-from je_auto_control.utils.feature_match import feature_match
-from je_auto_control.utils.feature_match import FeatureMatch
-# Locate UI elements by edge/contour detection (rectangles / shapes, no template)
-from je_auto_control.utils.shape_locator import (
-    find_rectangles, find_shapes,
-)
-# Window tiling/layout geometry planner (halves, quadrants, grids, cascade)
-from je_auto_control.utils.window_layout import (
-    WindowRect, available_slots, cascade_rects, grid_rects, tile_rect,
-)
-# Image pre-processing for OCR / template matching (grayscale, binarize, deskew, …)
-from je_auto_control.utils.preprocess import (
-    binarize, denoise, deskew, detect_skew_angle, enhance_contrast,
-    preprocess_image, to_grayscale, upscale,
-)
-# Multi-monitor / virtual-desktop geometry (which monitor, where, remapping)
-from je_auto_control.utils.monitor_layout import (
-    Monitor, enumerate_monitors, grab_logical, logical_scale,
-    logical_virtual_rect, monitor_at_point, monitor_for_window, needs_rescale,
-    primary_monitor, remap_point, to_local, to_virtual, virtual_bounds,
-)
-# Pre-action readiness gate (visible + stable + enabled + not-occluded)
-from je_auto_control.utils.actionability import (
-    ActionabilityReport, GateConfig, act_when_ready, wait_actionable,
-)
-# Fuse and order on-screen element boxes (IoU, merge, fuse sources, reading order)
-from je_auto_control.utils.element_parse import (
-    fuse_elements, iou, merge_boxes, reading_order,
-)
-# HSV colour-space segmentation (lighting-robust colour masking + blob boxes)
-from je_auto_control.utils.hsv_segment import (
-    color_mask, dominant_hue_regions, segment_hsv,
-)
-# Model-free on-screen text-region detection (MSER): regions and lines
-from je_auto_control.utils.text_regions import (
-    find_text_lines, find_text_regions,
-)
-# Line / grid / separator detection on raw pixels (Hough transform)
-from je_auto_control.utils.edge_lines import (
-    find_grid, find_lines, find_separators,
-)
-# Retry an arbitrary value until it matches (Playwright-style expect.poll)
-from je_auto_control.utils.expect_poll import (
-    PollResult, assert_poll, expect_poll, to_be_greater_than, to_be_stable,
-    to_be_truthy, to_contain, to_equal, to_match_regex,
-)
-# Composable / filtered candidate locators (chained-locator idiom)
-from je_auto_control.utils.locator_chain import Candidates, from_boxes
-# Rich clipboard formats — HTML (CF_HTML) build / parse / get / set
-from je_auto_control.utils.rich_clipboard import (
-    build_cf_html, get_clipboard_html, parse_cf_html, set_clipboard_html,
-)
-# Clipboard file-drop list (CF_HDROP): pure DROPFILES packing + Win32 set/get
-from je_auto_control.utils.clipboard_files import (
-    build_dropfiles, get_clipboard_files, parse_dropfiles, set_clipboard_files,
-)
-# Colour-histogram fingerprint & change detection (illumination-robust)
-from je_auto_control.utils.img_histogram import (
-    compare_histograms, histogram_changed, image_histogram,
-)
-# Localized change / activity detection between two frames (absdiff)
-from je_auto_control.utils.motion_regions import (
-    activity_score, changed_regions, has_motion,
-)
-# Window z-order control (topmost / bring-to-front / send-to-back)
-from je_auto_control.utils.window_zorder import (
-    bring_to_front, plan_zorder, send_to_back, set_topmost,
-)
-# Soft assertions (accumulate checks, raise the aggregate at block end)
-from je_auto_control.utils.soft_assert import SoftAssertions, SoftAssertionsFailed
-# Perceptual (YIQ) image diff with anti-alias edge suppression
-from je_auto_control.utils.perceptual_diff import (
-    PerceptualDiffResult, assert_perceptual, perceptual_diff,
-)
-# Window client-area geometry (frame insets, client-to-screen mapping)
-from je_auto_control.utils.window_geometry import (
-    client_point, client_to_screen, frame_insets, get_client_rect,
-)
-# Canonical computer-use action schema (normalize Anthropic / OpenAI -> AC_*)
-from je_auto_control.utils.cua_action import (
-    canonical_action, from_anthropic, from_openai_cua, to_ac_command,
-)
-# Token-budgeted, indexed a11y text observation for VLM/agent grounding
-from je_auto_control.utils.observation import (
-    flatten_tree, observation_index, serialize_observation,
-)
-# Pre-action grounding guard (bounds check + snap-to-element)
-from je_auto_control.utils.action_grounding import (
-    in_bounds, snap_to_element, validate_action,
-)
-# Portable agent-trajectory trace (record observation->action steps, replay)
-from je_auto_control.utils.agent_replay import (
-    from_jsonl, record_step, replay_trace, to_jsonl,
-)
-# Geometry-aware element matching across frames (stable IDs, move tracking)
-from je_auto_control.utils.element_diff import (
-    assign_stable_ids, match_elements,
-)
-# Weighted candidate scoring (role + name similarity + proximity + enabled)
-from je_auto_control.utils.element_scoring import (
-    ScoredCandidate, best_candidate, score_candidates,
-)
-# 1-D barcode decoding (EAN / UPC) with an injectable decoder seam
-from je_auto_control.utils.barcode import read_barcodes
-# CI workflow annotations (GitHub Actions)
-from je_auto_control.utils.ci_annotations import (
-    emit_annotations, format_annotation,
-)
-# Clipboard history (ring buffer + background poller)
-from je_auto_control.utils.clipboard_history import (
-    ClipboardHistory, default_clipboard_history,
-)
-# Self-heal analytics + action-secrets scanning (audit/analysis)
-from je_auto_control.utils.heal_analytics import analyze_heal_log, heal_stats
-from je_auto_control.utils.secrets_scan import scan_secrets
-# Process-documentation (SOP) generator from an action list
-from je_auto_control.utils.process_doc import (
-    describe_step, generate_sop, write_sop,
-)
-# Eased / tweened interpolated drag
-from je_auto_control.utils.tween_drag import (
-    easing_names, tween_drag, tween_points,
-)
-# Plugin SDK: discover/load third-party AC_* commands via entry points
-from je_auto_control.utils.plugin_sdk import (
-    COMMANDS_GROUP, discover_plugins, load_plugins,
-)
-# Maker-checker approval gate + just-in-time credential leases (PAM/governance)
-from je_auto_control.utils.governance import (
-    ApprovalGate, CredentialBroker, CredentialBrokerError, approval_gate,
-    default_broker, set_secret_resolver,
-)
-# Network egress allowlist guard for the headless HTTP client
-from je_auto_control.utils.egress import (
-    EgressBlocked, EgressPolicy, get_egress_policy, set_egress_policy,
-)
-# Approval testing: verify artifacts against a human-approved baseline
-from je_auto_control.utils.approval import (
-    ApprovalResult, approve_artifact, pending_artifacts, verify_artifact,
-)
-# Agent trajectory evaluation: score a recorded run against a rubric
-from je_auto_control.utils.trajectory_eval import evaluate_trajectory
-# Compliance: map governance evidence to SOC2 / ISO 27001 controls
-from je_auto_control.utils.compliance import (
-    build_compliance_report, render_compliance_html, write_compliance_report,
-)
-# Agent observability: OpenTelemetry GenAI-convention spans
-from je_auto_control.utils.agent_trace import (
-    AgentTrace, default_trace, reset_trace,
-)
-# Video step-overlay report: caption screenshots into a walkthrough video
-from je_auto_control.utils.video_report import (
-    VideoStep, build_overlay_plan, render_overlay_frame, write_step_video,
-)
-# Fuzzy string matching / dedupe (difflib default, optional rapidfuzz)
-from je_auto_control.utils.fuzzy import (
-    fuzzy_best_match, fuzzy_dedupe, fuzzy_matches, fuzzy_ratio,
-)
-# Unicode text normalisation + slugify (canonicalise before matching)
-from je_auto_control.utils.text_normalize import (
-    deaccent, fold_whitespace, normalize_quotes, normalize_text, slugify,
-)
-# String-distance metrics (Levenshtein / Jaro-Winkler / Jaccard / Dice)
-from je_auto_control.utils.text_similarity import (
-    damerau_levenshtein, dice, jaccard, jaro, jaro_winkler, levenshtein,
-    similarity,
-)
-# Near-duplicate text detection (SimHash / MinHash fingerprints)
-# (hamming_distance is already exported by image_dedup with identical semantics)
-from je_auto_control.utils.near_dup import (
-    minhash_signature, minhash_similarity, near_duplicates, simhash,
-)
-# S3-compatible artifact store (optional boto3, injectable client)
-from je_auto_control.utils.artifact_store import (
-    S3ArtifactStore, configure_default_store, get_default_store,
-    set_default_store,
-)
-# Perceptual-hash image dedupe (Pillow aHash/dHash)
-from je_auto_control.utils.image_dedup import (
-    average_hash, dedupe_images, dhash, hamming_distance, images_similar,
-)
-# RFC 3986 URL canonicalisation / normalisation and query helpers
-from je_auto_control.utils.url_canon import (
-    build_query, canonicalize_url, normalize_url, parse_query, urls_equal,
-)
-# Locale-aware number/currency/date parsing & formatting (optional babel)
-from je_auto_control.utils.locale_parse import (
-    format_currency, format_date, format_decimal, parse_decimal, parse_number,
-)
-# Voice-command router (injectable speech-to-text)
-from je_auto_control.utils.voice import (
-    VoiceCommand, VoiceRouter, default_voice_router,
-)
-# Coordinate-space mapping (model grid <-> physical pixels)
-from je_auto_control.utils.coordinate_space import (
-    CoordinateSpace, downscale_png, normalized_space, xga_space,
-)
-# Mechanical stuck-loop detection for agent loops
-from je_auto_control.utils.loop_guard import (
-    LoopGuard, LoopVerdict, default_loop_guard, digest_result,
-)
-# Task/process mining: automation-candidate discovery from action logs
-from je_auto_control.utils.process_mining import (
-    Candidate, MiningReport, SequencePattern, directly_follows,
-    find_repeated_sequences, mine_action_log, rank_automation_candidates,
-)
-# Environment-scoped typed asset/config store
-from je_auto_control.utils.assets import (
-    Asset, AssetStore, AssetValue, active_environment,
-)
-# .env file parsing / serialisation (12-factor config ingestion)
-from je_auto_control.utils.dotenv import (
-    dotenv_values, dump_dotenv, load_dotenv, parse_dotenv,
-)
-# Layered config resolver (defaults < file < env < CLI, with provenance)
-from je_auto_control.utils.layered_config import (
-    LayeredConfig, SourceTrace, deep_merge,
-)
-# Typed config schema validation (coerce + required + choices)
-from je_auto_control.utils.config_schema import (
-    ConfigField, ConfigSchema, coerce, validate_config,
-)
-# Opt-in confinement of file paths to configured root directories
-from je_auto_control.utils.path_guard import PathNotAllowedError, PathPolicy
-# URI-scheme secret/value reference resolver (env:// / file:// / secret://)
-from je_auto_control.utils.secret_ref import (
-    RefResolver, SecretRefError, is_ref, resolve_ref, resolve_refs_in,
-)
-# Secret redaction for config structures and log strings
-from je_auto_control.utils.config_redaction import (
-    redact_config, redact_secret_text,
-)
-# Outbound CloudEvents emitter
-from je_auto_control.utils.events import (
-    EventEmitter, post_cloudevent, to_cloudevent,
-)
-# Outbound chat/webhook notifications (Slack/Discord/Teams/raw)
-from je_auto_control.utils.notify_channels import (
-    WebhookChannel, WebhookResult, notify_webhook, set_default_poster,
-)
-# JSONPath-style querying over parsed JSON
-from je_auto_control.utils.jsonpath import (
-    json_extract, json_query, json_query_one,
-)
-# Saga orchestrator: multi-step flow with compensating rollback
-from je_auto_control.utils.saga import Saga, SagaResult, run_saga
-# DMN-style decision tables (rules + hit policy)
-from je_auto_control.utils.decision_table import (
-    DecisionTable, Rule, evaluate_table,
-)
-# Self-healing write-back: persist corrected locators from heal events
-from je_auto_control.utils.locator_repair import (
-    RepairStore, RepairSuggestion, repair_from_heal,
-)
-# Text PII detection / redaction (free-text emails, phones, SSNs, cards, …)
-from je_auto_control.utils.pii_text import (
-    PIIFinding, detect_pii, redact_pii_text,
-)
-# SARIF 2.1.0 export (unify findings for code-scanning)
-from je_auto_control.utils.sarif import (
-    from_audit_findings, from_lint_issues, make_finding, to_sarif, write_sarif,
-)
-# JSON Schema (Draft 2020-12 subset) validation of parsed JSON
-from je_auto_control.utils.json_schema import (
-    SchemaValidationResult, assert_schema, is_valid, validate_json,
-)
-# OSV vulnerability matching for SBOM components
-from je_auto_control.utils.vuln_scan import (
-    findings_to_sarif, is_affected, match_package, scan_components, version_key,
-)
-# OpenVEX triage over vulnerability findings
-from je_auto_control.utils.vex import (
-    VEX_JUSTIFICATIONS, VEX_STATUSES, apply_vex, build_vex, vex_statement,
-)
-# SPDX license allow/deny policy over SBOM components
-from je_auto_control.utils.license_policy import (
-    DEFAULT_COPYLEFT, evaluate_license, evaluate_sbom,
-    license_findings_to_sarif, normalize_spdx,
-)
-# JSON Web Token (HMAC family) encode/decode + claim validation
-from je_auto_control.utils.jwt import (
-    ClaimsPolicy, ExpiredTokenError, InvalidSignatureError, JwtError,
-    decode_jwt, encode_jwt,
-)
-# Client-side rate limiting (token bucket / sliding window / throttle)
-from je_auto_control.utils.rate_limit import (
-    SlidingWindowLimiter, TokenBucket, throttle,
-)
-# JSON Pointer / Patch / Merge Patch (RFC 6901 / 6902 / 7386)
-from je_auto_control.utils.json_patch import (
-    PatchError, PatchTestFailed, apply_patch, make_merge_patch, make_patch,
-    merge_patch, remove_pointer, resolve_pointer, set_pointer,
-)
-# In-memory BM25 / TF-IDF full-text search
-from je_auto_control.utils.search_index import (
-    SearchHit, SearchIndex, search_documents, tokenize,
-)
-# Descriptive statistics and A/B significance testing
-from je_auto_control.utils.stats import (
-    chi_square_2x2, cohens_d, describe, normal_cdf, percentile,
-    two_proportion_z_test, welch_t_test,
-)
-# RFC 5545 recurrence-rule expansion (calendar scheduling above cron)
-from je_auto_control.utils.recurrence import (
-    Recurrence, next_occurrence, occurrences, parse_rrule,
-)
-# Unified-diff generate/apply + three-way text merge
-from je_auto_control.utils.text_diff import (
-    MergeResult, PatchApplyError, apply_unified, three_way_merge, unified_diff,
-)
-# Feature flags with targeting rules + deterministic rollout
-from je_auto_control.utils.feature_flags import (
-    Flag, FlagStore, assign_variant, evaluate_flag, is_enabled,
-    percentage_bucket,
-)
-# SLSA build provenance (in-toto v1 statements over file digests)
-from je_auto_control.utils.provenance import (
-    build_provenance, subject_for, subject_for_bytes, verify_provenance,
-    write_provenance,
-)
-# JSON contract / snapshot matching
-from je_auto_control.utils.json_contract import (
-    MatchReport, diff_json, match_json, normalize_json, snapshot_json,
-)
-# Deterministic chaos experiments (steady-state hypothesis + fault injection)
-from je_auto_control.utils.chaos import (
-    ChaosExperiment, Fault, Probe, exception_fault, latency_fault,
-    run_experiment,
-)
-# SLO: SLI, error budget and multi-window burn-rate alerts
-from je_auto_control.utils.slo import (
-    BurnRule, burn_alerts, burn_rate, default_burn_rules, evaluate_slo,
-)
-# Mergeable streaming latency digest + exact percentiles
-from je_auto_control.utils.percentiles import LatencyDigest, exact_percentiles
-# Time-series transforms: rate / irate / delta / downsample / resample
-from je_auto_control.utils.timeseries import (
-    ts_delta, ts_downsample, ts_idelta, ts_increase, ts_irate, ts_rate,
-    ts_resample,
-)
-# Single-series anomaly detection (z-score / MAD / EWMA control)
-from je_auto_control.utils.anomaly import (
-    detect_anomalies, ewma_control, mad_anomalies, mad_scores,
-    zscore_anomalies, zscore_scores,
-)
-# Moving-average smoothing (SMA / WMA / EWMA / rolling)
-from je_auto_control.utils.smoothing import ewma, rolling, sma, wma
-# Bulkhead concurrency isolation + rate-limit header parsing
-from je_auto_control.utils.bulkhead import (
-    Bulkhead, BulkheadFullError, next_delay, parse_ratelimit, parse_retry_after,
-)
-# HTTP record/replay cassette (deterministic offline API tests)
-from je_auto_control.utils.http_cassette import Cassette, CassetteMissError
-# RFC 9457 problem+json error parsing
-from je_auto_control.utils.http_problem import (
-    HttpProblemError, ProblemDetails, is_problem, parse_problem,
-    raise_for_problem,
-)
-# Server-Sent Events (text/event-stream) client parser
-from je_auto_control.utils.sse_client import (
-    SSEEvent, SSEParser, parse_event_stream,
-)
-# RFC 8288 Link header parsing + rel="next" pagination
-from je_auto_control.utils.link_header import (
-    Link, links_by_rel, next_url, paginate, parse_link_header,
-)
-# multipart/form-data building + parsing (file upload bodies)
-from je_auto_control.utils.multipart import (
-    MultipartFile, build_multipart, new_boundary, parse_multipart,
-)
-# HTTP content negotiation + gzip/deflate response decoding
-from je_auto_control.utils.http_content import (
-    build_accept, build_accept_encoding, decode_body, negotiated_call,
-    parse_quality_values,
-)
-# RFC 6265 cookie jar (carry a session across HTTP calls)
-from je_auto_control.utils.cookie_jar import CookieJar, parse_set_cookie
-# Conditional HTTP requests + RFC 9111 cache validators (ETag / 304)
-from je_auto_control.utils.http_conditional import (
-    conditioned_call, is_fresh, is_not_modified, parse_cache_control,
-    store_validators,
-)
-# W3C Trace Context propagation (traceparent / tracestate)
-from je_auto_control.utils.trace_context import (
-    SpanContext, TraceContextError, child_context, extract_context,
-    format_traceparent, format_tracestate, inject_context, new_root_context,
-    new_span_id, new_trace_id, parse_traceparent, parse_tracestate,
-)
-# W3C Baggage propagation (cross-cutting key-value context)
-from je_auto_control.utils.baggage import (
-    Baggage, extract_baggage, format_baggage, inject_baggage, parse_baggage,
-)
-# Canonical (wide-event) log lines + structured JSON logging
-from je_auto_control.utils.canonical_log import (
-    CanonicalLogLine, JSONLogFormatter, bind_trace_context,
-)
-# OTLP/JSON span export (resourceSpans envelope)
-from je_auto_control.utils.otlp_export import (
-    attributes_to_otlp, spans_to_otlp, write_otlp,
-)
-# Background popup/interrupt watchdog (unattended automation)
-from je_auto_control.utils.watchdog import (
-    PopupWatchdog, WatchdogRule, default_popup_watchdog,
-)
-# OCR (headless)
-from je_auto_control.utils.ocr.ocr_engine import (
-    TextMatch, click_text, find_text_matches, find_text_regex,
-    locate_text_center, read_text_in_region, set_tesseract_cmd,
-    wait_for_text,
-)
-# Tesseract engine discovery, configuration and health checks
-from je_auto_control.utils.ocr.tesseract_setup import (
-    OCRStatus, find_tesseract_cmd, ocr_languages, ocr_status, set_tessdata_dir,
-)
-# Group OCR word boxes into lines / runs (engines box one word at a time)
-from je_auto_control.utils.ocr.text_span import find_spans, group_lines
-# Whether input this process sends can actually arrive
-from je_auto_control.utils.input_reach import (
-    input_desktop_available, input_reaches_system,
-)
-# What character each key produces on the active keyboard layout
-from je_auto_control.utils.keyboard_layout import (
-    char_table, foreground_keyboard_layout, layout_char_table, vk_to_char,
-)
-# LLM action planner (headless)
-from je_auto_control.utils.llm import (
-    LLMBackend, LLMNotAvailableError, LLMPlanError,
-    plan_actions, run_from_description,
-)
-# Agent loop + production backends (headless)
-from je_auto_control.utils.agent.agent_loop import (
-    AgentBackend, AgentBudget, AgentLoop, AgentResult, AgentStep,
-    FakeAgentBackend, run_agent,
-)
-from je_auto_control.utils.agent.backends import (
-    AgentBackendError, AnthropicAgentBackend, ComputerUseAgentBackend,
-    OpenAIAgentBackend,
-)
-from je_auto_control.utils.agent.computer_use import (
-    result_to_dict as computer_use_result_to_dict,
-    run_computer_use,
-)
-# Cross-host DAG orchestrator
-from je_auto_control.utils.dag import (
-    DagDefinition, DagDefinitionError, DagNode, DagRunResult,
-    NodeResult, parse_dag, run_dag,
-)
-# Remote-desktop presence (multi-viewer roster + roles)
-from je_auto_control.utils.remote_desktop.presence import (
-    PresenceError, PresenceRegistry, ROLE_CONTROLLER, ROLE_OBSERVER,
-    ViewerPresence, default_presence_registry,
-)
-# Chat-ops bot (Slack / generic command router)
-from je_auto_control.utils.chatops import (
-    ChatOpsError, CommandResult, CommandRouter, SlackBot, SlackError,
-    make_default_slack_bot, register_chatops_default_commands,
-)
-# Anchor-based locators (spatial composition of locator backends)
-from je_auto_control.utils.anchor_locator import (
-    AnchorLocatorError, AnchorOutcome, Locator as AnchorLocator,
-    a11y_locator, anchor_locate, anchor_locate_all, image_locator,
-    ocr_locator, vlm_locator,
-)
-# Structured OCR (rows / tables / form fields)
-from je_auto_control.utils.ocr.structure import (
-    OCRField, OCRRow, OCRTable, StructuredOCR,
-    cluster_matches as ocr_cluster_matches,
-    read_structure as ocr_read_structure,
-)
-# Smart waits (frame-diff replacements for time.sleep)
-from je_auto_control.utils.smart_waits import (
-    WaitOutcome, wait_until_clipboard_changes, wait_until_color,
-    wait_until_file, wait_until_gone, wait_until_image_gone,
-    wait_until_pixel_changes, wait_until_port, wait_until_process,
-    wait_until_region_idle, wait_until_screen_stable, wait_until_text_gone,
-    wait_until_window_closed, wait_until_window_title,
-)
-# Visual regression (golden-image comparison)
-from je_auto_control.utils.visual_regression import (
-    DiffResult, MaskRegion, compare_to_golden, image_difference, take_golden,
-)
-# Declarative finite-state-machine engine for action JSON
-from je_auto_control.utils.state_machine import (
-    StateMachine, StateMachineError, run_state_machine,
-)
-# Assertion DSL (verify screen state; raise on mismatch)
-from je_auto_control.utils.assertion import (
-    AssertionResult, GroupAssertionResult, assert_all, assert_any,
-    assert_by_description, assert_clipboard, assert_duration,
-    assert_eventually, assert_file, assert_http, assert_image, assert_pixel,
-    assert_process, assert_text, assert_variable, assert_window,
-    run_assertion_spec,
-)
-# Data-driven execution (load rows from CSV / JSON / SQLite / Excel)
-from je_auto_control.utils.data_source import data_source_kinds, load_rows
-# Flaky-test detection (analytics over the run-history store)
-from je_auto_control.utils.flakiness import (
-    FlakinessReport, FlakyEntry, analyze_flakiness,
-)
-# QA suite orchestration + CI report output (JUnit / Allure)
-from je_auto_control.utils.test_suite import (
-    TestCaseResult, TestSuiteResult, run_suite,
-    to_allure_results, to_junit_xml, write_allure_results, write_junit_xml,
-)
-# Flaky-test quarantine (skip known-unstable cases)
-from je_auto_control.utils.quarantine import (
-    QuarantineEntry, QuarantineStore, auto_quarantine_from_flakiness,
-    default_quarantine_store,
-)
-# Accessibility / i18n audit (missing labels, WCAG contrast, truncation)
-from je_auto_control.utils.a11y_audit import (
-    AuditIssue, AuditReport, audit_contrast, audit_missing_labels,
-    audit_target_size, contrast_ratio, detect_truncation, run_audit,
-    wcag_audit,
-)
-# Mobile device matrix (parallel script execution across devices)
-from je_auto_control.utils.device_matrix import (
-    DeviceResult, MatrixReport, run_on_devices,
-)
-# Media assertions (audio activity, video motion)
-from je_auto_control.utils.media_assert import (
-    MediaAssertionResult, assert_audio_activity, assert_video_changes,
-    measure_audio_rms, video_segment_motion,
-)
-# Cost telemetry (per-LLM-call token + USD tracking)
-from je_auto_control.utils.cost_telemetry import (
-    CostEvent, CostSummary, default_cost_store, estimate_llm_usd,
-    record_llm_call, summarise_llm_costs,
-)
-# Failure → ticket automation (Jira / Linear / GitHub fan-out)
-from je_auto_control.utils.failure_hooks import (
-    FailureHookManager, FailureReport, GitHubBackend, JiraBackend,
-    LinearBackend, TicketResult, default_failure_hook_manager,
-)
-# A/B locator framework (race N strategies, recommend best)
-from je_auto_control.utils.ab_locator import (
-    ABRunOutcome, ab_best_strategy, ab_locate, ab_report_for,
-    default_ab_store,
-)
-# Remote desktop (headless)
-from je_auto_control.utils.remote_desktop import (
-    AuthenticationError as RemoteDesktopAuthError,
-    InputDispatchError as RemoteDesktopInputError,
-    ProtocolError as RemoteDesktopProtocolError,
-    RemoteDesktopHost, RemoteDesktopViewer,
-)
-from je_auto_control.utils.remote_desktop.connect_coordinator import (
-    ConnectTarget as RemoteDesktopConnectTarget,
-    UnresolvableTargetError as RemoteDesktopUnresolvableTargetError,
-    parse_target as parse_remote_desktop_target,
-)
-from je_auto_control.utils.remote_desktop.registry import (
-    registry as remote_desktop_registry,
-)
-from je_auto_control.utils.gamepad import (
-    GamepadUnavailable, VirtualGamepad,
-    default_gamepad as default_virtual_gamepad,
-    is_available as is_virtual_gamepad_available,
-)
-# MCP server (headless stdio bridge for Claude / other MCP clients)
-from je_auto_control.utils.mcp_server.disclosure import ToolView, ToolPage, plan_mcp_tool_profile
-from je_auto_control.utils.mcp_server.discovery import (
-    ToolDiscoveryError, ToolIndex, ToolSummary, search_mcp_tools, get_mcp_tool_schema,
-)
-from je_auto_control.utils.mcp_server import (
-    AuditLogger, HttpMCPServer, MCPContent, MCPPrompt, MCPPromptArgument,
-    MCPResource, MCPServer, MCPTool, MCPToolAnnotations, MCPToolResult,
-    OperationCancelledError, PromptProvider, RateLimiter,
-    ResourceProvider, ToolCallContext, build_default_tool_registry,
-    default_prompt_provider, default_resource_provider,
-    make_plugin_tool, register_plugin_tools, start_mcp_http_server,
-    start_mcp_stdio_server,
-)
-# Plugin loader (headless)
-from je_auto_control.utils.plugin_loader.plugin_loader import (
-    discover_plugin_commands, load_plugin_directory, load_plugin_file,
-    register_plugin_commands,
-)
-# REST API (headless)
-from je_auto_control.utils.rest_api.rest_server import (
-    RestApiServer, start_rest_api_server,
-)
-# RBAC for the REST API and the MCP HTTP transport (opt-in)
-from je_auto_control.utils.rbac import (
-    AuthorizationContext, AuthorizationError, UserAuthError, UserRecord,
-    UserStore, authorization_scope,
-)
-# Admin console (headless multi-host client)
-from je_auto_control.utils.admin import (
-    AdminConsoleClient, AdminHost, default_admin_console,
-)
-# WebRTC inspector (headless rolling stats history)
-from je_auto_control.utils.remote_desktop.webrtc_inspector import (
-    WebRTCInspector, default_webrtc_inspector,
-)
-# USB device enumeration + hotplug + passthrough Phase 2a (read-only on
-# the wire by default — passthrough opcode dispatch needs an explicit
-# opt-in via enable_usb_passthrough() or JE_AUTOCONTROL_USB_PASSTHROUGH=1)
-from je_auto_control.utils.usb import (
-    UsbAcl, UsbDevice, UsbEnumerationResult, UsbEvent, UsbHotplugWatcher,
-    UsbPassthroughClient, UsbPassthroughSession, default_usb_watcher,
-    enable_usb_passthrough, is_usb_passthrough_enabled, list_usb_devices,
-)
-# System diagnostics (headless self-test)
-from je_auto_control.utils.exception.cancellation import CancellationToken, TaskProgress, cancellation_scope
-from je_auto_control.wrapper.capabilities import (
-    BackendContext, CapabilitySnapshot, CapabilityStatus, probe_capabilities,
-)
-from je_auto_control.utils.diagnostics import (
-    Check, DiagnosticsReport, run_diagnostics,
-)
-# Config bundle (export / import user configuration)
-from je_auto_control.utils.config_bundle import (
-    ConfigBundleExporter, ConfigBundleImporter, ImportReport,
-    export_config_bundle, import_config_bundle,
-)
-# Profiler (headless)
-from je_auto_control.utils.profiler import (
-    ActionProfiler, ActionStats, default_profiler,
-)
-# Secrets (headless)
-from je_auto_control.utils.secrets import (
-    SecretManager, SecretStoreError, SecretStoreLocked,
-    default_secret_manager, default_secret_store_path,
-)
-# Action-file security (Ed25519 / HMAC-SHA256 sign/verify + Fernet encrypt, headless)
-from je_auto_control.utils.action_signing import (
-    SigningConfig, VerifyResult, action_signing_config, create_signing_keypair,
-    decrypt_action_file, encrypt_action_file,
-    require_signed_actions, sign_action_file, verify_action_file,
-)
-from je_auto_control.utils.exception.exceptions import CryptographyUnavailableError
-# Observability (Prometheus metrics + OpenTelemetry traces, headless)
-from je_auto_control.utils.observability import (
-    Counter as MetricCounter,
-    Gauge as MetricGauge,
-    Histogram as MetricHistogram,
-    MetricRegistry, PrometheusExporter, Tracer,
-    default_exporter as default_metrics_exporter,
-    default_registry as default_metric_registry,
-    default_tracer, render_metrics_text, traced,
-)
-# Run history (headless)
-from je_auto_control.utils.run_history.history_store import (
-    HistoryStore, JournalLink, RunRecord, default_history_store,
-)
-from je_auto_control.utils.run_history import HistoryBinding, manual_history_scope
-# Structured action provenance (headless, explicit capture only)
-from je_auto_control.utils.action_journal import (
-    ActionEvent, ActionJournal, ActionJournalError, JournalBinding, JournalRunOptions, JournalRunResult,
-    execute_action_with_journal, execute_journal_run, inspect_journal, journal_scope, read_events,
-)
-# Triggers (headless)
-from je_auto_control.utils.triggers.trigger_engine import (
-    AllOfTrigger, AnyOfTrigger, CronTrigger, FilePathTrigger,
-    ImageAppearsTrigger, PixelColorTrigger, SequenceTrigger, TriggerEngine,
-    WindowAppearsTrigger, default_trigger_engine,
-)
-from je_auto_control.utils.triggers.webhook_server import (
-    WebhookTrigger, WebhookTriggerServer, default_webhook_server,
-)
-from je_auto_control.utils.triggers.email_trigger import (
-    EmailTrigger, EmailTriggerWatcher, default_email_trigger_watcher,
-)
-# Recording editor (headless helpers)
-from je_auto_control.utils.recording_edit.editor import (
-    adjust_delays, dedupe_moves, filter_actions, insert_action,
-    merge_sleeps, remove_action, scale_coordinates, trim_actions,
-)
-# Scheduler (headless)
-from je_auto_control.utils.scheduler.scheduler import (
-    ScheduledJob, Scheduler, default_scheduler,
-)
-# Script variables (headless)
-from je_auto_control.utils.script_vars.execution import execution_scope
-from je_auto_control.utils.script_vars.interpolate import (
-    interpolate_actions, interpolate_value, load_vars_from_json,
-)
-from je_auto_control.utils.script_vars.scope import VariableScope
-# Watchers (headless)
-from je_auto_control.utils.watcher.watcher import (
-    LogTail, MouseWatcher, PixelWatcher,
-)
-# file process
-from je_auto_control.utils.file_process.get_dir_file_list import \
-    get_dir_files_as_list
-# html report
-from je_auto_control.utils.generate_report.generate_html_report import \
-    generate_html
-from je_auto_control.utils.generate_report.generate_html_report import \
-    generate_html_report
-from je_auto_control.utils.generate_report.generate_json_report import \
-    generate_json
-from je_auto_control.utils.generate_report.generate_json_report import \
-    generate_json_report
-# xml
-from je_auto_control.utils.generate_report.generate_xml_report import \
-    generate_xml
-from je_auto_control.utils.generate_report.generate_xml_report import \
-    generate_xml_report
-# json
-from je_auto_control.utils.json.json_file import read_action_json, read_executable_action_json
-from je_auto_control.utils.json.json_file import write_action_json
-from je_auto_control.utils.json.json_file import format_action_json
-# codegen: action list -> pytest / python / robot source
-from je_auto_control.utils.codegen.codegen import (
-    generate_code,
-    generate_code_file,
-)
-from je_auto_control.utils.codegen.candidate_models import CandidateGenerationError, CandidateScript
-from je_auto_control.utils.codegen.journal_import import generate_candidate_from_log
-from je_auto_control.utils.codegen.candidate_archive import write_candidate_archive
-from je_auto_control.utils.config_sync.client import ConfigBucket, ConfigSyncClient, ConfigSyncError
-from je_auto_control.utils.config_sync.store import (
-    ConfigRevisionConflict, ConfigStore, ConfigStoreError, ConfigStoreFull,
-)
-from je_auto_control.utils.config_sync.versions import MergeDecision, SyncConflict, SyncEntry, merge_entries
-from je_auto_control.utils.config_sync.causal_models import CausalConflict, DeletionFence, SyncActor
-from je_auto_control.utils.config_sync.causal_state import CausalBucket
-from je_auto_control.utils.config_sync.causal_store import CausalConfigStore
-from je_auto_control.utils.config_sync.causal_client import CausalSyncClient
-from je_auto_control.utils.config_sync.causal_receipt import CausalReceipt
-from je_auto_control.utils.config_sync.control_models import SyncControlOperation, SyncControlRequest, SyncControlResult
-from je_auto_control.utils.config_sync.asset_models import AssetFile, AssetManifest, AssetSyncResult
-from je_auto_control.utils.config_sync.adapter_references import SyncBindings, SyncReference
-from je_auto_control.utils.config_sync.adapter_schema import ApplyReport
-from je_auto_control.utils.config_sync.adapter_state import SyncAdapterState
-from je_auto_control.utils.config_sync.adapters import (
-    AddressBookSyncAdapter, HotkeySyncAdapter, LocatorSyncAdapter, ScriptSyncAdapter, SettingsSyncAdapter,
-    SyncAdapter, TriggerSyncAdapter, WorkspaceSettingsSyncAdapter,
-)
-from je_auto_control.utils.config_sync.adapter_profiles import materialize_sync_profile
-from je_auto_control.utils.config_sync.adapter_factory import adapter_from_profile
-from je_auto_control.utils.config_sync.workspace_sync import SyncWorkspace
-from je_auto_control.utils.config_sync.profile_load import load_sync_profile
-from je_auto_control.utils.config_sync.profile_models import LoadedSyncProfile
-from je_auto_control.utils.config_sync.blob_models import SyncAssetBlob, SyncAssetReference
-from je_auto_control.utils.config_sync.blob_store import SyncAssetStore
-from je_auto_control.utils.config_sync.blob_http import SyncAssetHTTPClient
-from je_auto_control.utils.config_sync.workspace_models import SyncWorkspaceError, WorkspaceSyncResult
-from je_auto_control.utils.config_sync.assets import (
-    AssetTransport, DirectoryAssetTransport, build_asset_manifest, sync_assets,
-)
-from je_auto_control.utils.config_sync.peers import FullResyncRequired, SyncPeer, SyncPeers
-from je_auto_control.utils.config_sync.outbox import (
-    SyncDrainResult, SyncLocalIdentity, SyncOperation, SyncOutbox, SyncRetryPolicy,
-)
-# HTTP/API request action (dependency-free, stdlib urllib)
-from je_auto_control.utils.http_client.http_client import http_request
-# Ad-hoc read-only SQL query against SQLite
-from je_auto_control.utils.sql.sql_query import query_sqlite
-# Send email via SMTP
-from je_auto_control.utils.email_send.email_sender import send_email
-# PDF document text extraction + assertion (optional pypdf backend)
-from je_auto_control.utils.pdf.pdf_reader import (
-    assert_pdf_text, extract_pdf_text, pdf_metadata, pdf_page_count,
-)
-# package manager
-from je_auto_control.utils.package_manager.package_manager_class import \
-    package_manager
-from je_auto_control.utils.project.create_project_structure import \
-    create_project_dir
-# Shell command
-from je_auto_control.utils.shell_process.shell_exec import ShellManager
-from je_auto_control.utils.shell_process.shell_exec import default_shell_manager
-# socket server
-from je_auto_control.utils.socket_server.auto_control_socket_server import \
-    start_autocontrol_socket_server
-# Start exe
-from je_auto_control.utils.start_exe.start_another_process import start_exe
-# test record
-from je_auto_control.utils.test_record.record_test_class import \
-    test_record_instance
-from je_auto_control.wrapper.auto_control_image import locate_all_image
-from je_auto_control.wrapper.auto_control_image import locate_and_click
-from je_auto_control.wrapper.auto_control_image import locate_image_center
-# Keyboard wrappers
-from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
-from je_auto_control.wrapper.auto_control_keyboard import get_keyboard_keys_table
-from je_auto_control.wrapper.auto_control_keyboard import hotkey
-from je_auto_control.wrapper.auto_control_keyboard import keyboard_key_name
-from je_auto_control.wrapper.auto_control_keyboard import press_keyboard_key
-from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key
-from je_auto_control.wrapper.auto_control_keyboard import send_key_event_to_window
-from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
-from je_auto_control.wrapper.auto_control_keyboard import write
-from je_auto_control.wrapper.auto_control_keyboard import write_secret
-# Mouse wrappers
-from je_auto_control.wrapper.auto_control_mouse import click_mouse
-from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
-from je_auto_control.wrapper.auto_control_mouse import mouse_keys_table
-from je_auto_control.wrapper.auto_control_mouse import mouse_scroll
-from je_auto_control.wrapper.auto_control_mouse import mouse_scroll_error_message
-from je_auto_control.wrapper.auto_control_mouse import press_mouse
-from je_auto_control.wrapper.auto_control_mouse import release_mouse
-from je_auto_control.wrapper.auto_control_mouse import send_mouse_event_to_window
-from je_auto_control.wrapper.auto_control_mouse import set_mouse_position
-from je_auto_control.wrapper.auto_control_mouse import special_mouse_keys_table
-# Human-like input: motion + typing (headless)
-from je_auto_control.utils.humanize.motion import (
-    HumanizedMotion, humanized_path, move_mouse_humanized,
-)
-from je_auto_control.utils.humanize.typing import (
-    humanized_key_delays, type_text_humanized,
-)
-# record
-from je_auto_control.wrapper.auto_control_record import record
-from je_auto_control.wrapper.auto_control_record import stop_record
-from je_auto_control.wrapper.auto_control_record import stop_record_timeline
-from je_auto_control.wrapper.auto_control_record import record_to_json
-# Screen wrappers
-from je_auto_control.wrapper.auto_control_screen import screen_size
-from je_auto_control.wrapper.auto_control_screen import screenshot
-from je_auto_control.wrapper.auto_control_screen import get_pixel
-# Cross-platform window manager (headless)
-from je_auto_control.wrapper.auto_control_window import (
-    close_window_by_title, find_window, focus_window, foreground_window,
-    foreground_window_process_id, list_windows, minimize_window_by_title,
-    minimize_windows_for_process, move_window_by_title, post_click_to_window,
-    post_key_to_window, show_window_by_title, wait_for_window,
-    window_process_id, window_rect, windows_for_process_id,
-)
-# Windows-only modules (ctypes.WINFUNCTYPE / Win32 API) — gated so
-# ``import je_auto_control`` keeps working on macOS / Linux. Kept last
-# so every preceding statement is a plain top-level import (ruff E402).
-import sys as _sys_for_platform_check  # noqa: E402
-if _sys_for_platform_check.platform in ("win32", "cygwin", "msys"):
-    from je_auto_control.windows.window import windows_window_manage  # noqa: E402
+
+if _TYPE_CHECKING:
+    from je_auto_control.utils.agent_runtime import (
+        browser_navigate,
+        browser_click,
+        browser_fill,
+        browser_select,
+        browser_check,
+        browser_read,
+        browser_wait,
+        browser_link,
+        browser_download,
+        browser_upload,
+        draft_agent_workflow,
+        workflow_download,
+        workflow_manifest,
+        workflow_control,
+        workflow_open,
+        workflow_wait,
+        AgentActionRequest,
+        AgentActionResult,
+        AgentControlBusy,
+        AgentObservation,
+        AgentRuntime,
+        AgentTaskBudget,
+        AgentTaskError,
+        AgentTaskHandle,
+        AgentTaskResult,
+        AgentTaskSpec,
+        get_agent_task_receipts,
+        reconcile_agent_task,
+        prune_agent_tasks,
+        manage_agent_trigger,
+        list_agent_triggers,
+        recover_agent_target,
+        manage_agent_transfer,
+        manage_agent_skill,
+        list_agent_skills,
+        manage_agent_recovery,
+        AgentObservationStale,
+        AgentHumanReview,
+        AgentTargetProfile,
+        manage_agent_target,
+        list_agent_targets,
+        act_agent_task,
+        agent_runtime_status,
+        cancel_agent_task,
+        finish_agent_task,
+        get_agent_task,
+        lookup_agent_task,
+        inspect_agent_dag,
+        manage_agent_dag,
+        list_agent_tasks,
+        observe_agent_task,
+        pause_agent_task,
+        resume_agent_task,
+        start_agent_runtime,
+        stop_agent_runtime,
+        submit_agent_task,
+        stop_all_agent_tasks,
+    )
+    from je_auto_control.utils.callback.callback_function_executor import callback_executor
+    from je_auto_control.utils.critical_exit.critical_exit import CriticalExit
+    from je_auto_control.utils.cv2_utils.screen_record import ScreenRecorder
+    from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
+    from je_auto_control.utils.cv2_utils.video_recording import RecordingThread
+    from je_auto_control.utils.exception.exceptions import AutoControlActionException
+    from je_auto_control.utils.exception.exceptions import (
+        AutoControlActionNullException,
+    )
+    from je_auto_control.utils.exception.exceptions import (
+        AutoControlCantFindKeyException,
+    )
+    from je_auto_control.utils.exception.exceptions import AutoControlException
+    from je_auto_control.utils.exception.exceptions import (
+        AutoControlJsonActionException,
+    )
+    from je_auto_control.utils.exception.exceptions import AutoControlKeyboardException
+    from je_auto_control.utils.exception.exceptions import AutoControlMouseException
+    from je_auto_control.utils.exception.exceptions import AutoControlRecordException
+    from je_auto_control.utils.exception.exceptions import AutoControlScreenException
+    from je_auto_control.utils.exception.exceptions import (
+        AutoControlFlatTemplateException,
+    )
+    from je_auto_control.utils.exception.exceptions import ImageNotFoundException
+    from je_auto_control.utils.executor.action_executor import add_command_to_executor
+    from je_auto_control.utils.executor.action_executor import execute_action
+    from je_auto_control.utils.executor.action_executor import execute_action_with_vars
+    from je_auto_control.utils.executor.action_executor import execute_files
+    from je_auto_control.utils.executor.action_executor import executor
+    from je_auto_control.utils.accessibility import (
+        AccessibilityElement,
+        accessibility_status,
+        AccessibilityNotAvailableError,
+        AccessibilityRecorder,
+        AXRecorderEvent,
+        AXTreeNode,
+        click_accessibility_element,
+        control_get_state,
+        control_get_value,
+        control_invoke,
+        control_set_value,
+        control_toggle,
+        dump_accessibility_tree,
+        find_accessibility_element,
+        find_accessibility_elements,
+        focused_accessibility_element,
+        list_accessibility_elements,
+        read_control_table,
+    )
+    from je_auto_control.utils.control_patterns import (
+        collapse_control,
+        control_expand_state,
+        control_range,
+        expand_control,
+        scroll_control_into_view,
+        select_control_item,
+        set_control_range,
+    )
+    from je_auto_control.utils.ax_text import (
+        control_text_attributes,
+        find_control_text,
+        get_control_text,
+        get_selected_text,
+        get_visible_text,
+        select_control_text,
+    )
+    from je_auto_control.utils.ax_tree_walk import (
+        assign_node_paths,
+        control_type_name,
+        find_by_path,
+        humanize_role,
+        humanize_tree,
+    )
+    from je_auto_control.utils.focus_order import (
+        audit_focus_order,
+        focus_control,
+        is_interactive_role,
+        tab_order,
+    )
+    from je_auto_control.utils.virtualized import realize_item
+    from je_auto_control.utils.ax_props import (
+        get_element_properties,
+        is_element_enabled,
+    )
+    from je_auto_control.utils.table_pattern import (
+        cell_by_header,
+        table_cell,
+        table_headers,
+    )
+    from je_auto_control.utils.transform_window import (
+        move_element,
+        resize_element,
+        set_window_state,
+        window_interaction_state,
+    )
+    from je_auto_control.utils.legacy_accessible import (
+        legacy_default_action,
+        legacy_info,
+    )
+    from je_auto_control.utils.selection_view import (
+        get_selection,
+        list_views,
+        set_view,
+    )
+    from je_auto_control.utils.ax_events import wait_for_focus_change
+    from je_auto_control.utils.shell_open import open_path, plan_open
+    from je_auto_control.utils.idle_keepawake import (
+        allow_sleep,
+        idle_seconds,
+        is_idle,
+        keep_awake,
+        keep_awake_on,
+        plan_keep_awake,
+    )
+    from je_auto_control.utils.file_assoc import file_association, normalize_ext
+    from je_auto_control.utils.system_volume import (
+        change_volume,
+        get_volume,
+        is_muted,
+        mute,
+        set_mute,
+        set_volume,
+        toggle_mute,
+        unmute,
+    )
+    from je_auto_control.utils.lock_session import (
+        classify_lock_transitions,
+        lock_session,
+        plan_lock_session,
+        wait_for_lock,
+        wait_for_unlock,
+    )
+    from je_auto_control.utils.ime_state import (
+        decode_conversion_mode,
+        ime_state,
+        is_composing,
+        wait_for_composition_commit,
+    )
+    from je_auto_control.utils.retry_budget import (
+        RetryBudget,
+        backoff_delay,
+        jittered_delay,
+        run_with_budget,
+    )
+    from je_auto_control.utils.verify_field import (
+        compare_field_value,
+        fill_and_verify,
+        verify_field_value,
+    )
+    from je_auto_control.utils.adaptive_timeout import (
+        recommend_timeout,
+        timeout_stats,
+    )
+    from je_auto_control.utils.ensure_state import ensure_state, ensure_toggle
+    from je_auto_control.utils.app_idle import idle_point, wait_until_app_idle
+    from je_auto_control.utils.cvd_simulate import (
+        color_distance,
+        colors_collide,
+        simulate_cvd,
+    )
+    from je_auto_control.utils.marks_layout import label_color, place_labels
+    from je_auto_control.utils.contrast_map import (
+        dominant_pair,
+        grade_contrast,
+        region_contrast,
+    )
+    from je_auto_control.utils.theme_normalize import match_theme, normalize_theme
+    from je_auto_control.utils.change_localize import localize_changes, rank_changes
+    from je_auto_control.utils.icon_classify import (
+        box_features,
+        classify_icon,
+        classify_widget,
+    )
+    from je_auto_control.utils.element_proposal import propose_elements, tag_kinds
+    from je_auto_control.utils.act_in_view import ScrollPlan, act_in_view
+    from je_auto_control.utils.act_modes import act_with_mode
+    from je_auto_control.utils.clipboard_rich_formats import (
+        build_rtf,
+        csv_to_rows,
+        get_clipboard_csv,
+        get_clipboard_rtf,
+        rows_to_csv,
+        rtf_to_text,
+        set_clipboard_csv,
+        set_clipboard_rtf,
+    )
+    from je_auto_control.utils.clipboard_formats import (
+        classify_format,
+        classify_formats,
+        clipboard_formats,
+        diff_formats,
+        list_clipboard_formats,
+    )
+    from je_auto_control.utils.file_drop import drop_files, plan_file_drop
+    from je_auto_control.utils.image_quality import (
+        image_quality,
+        is_blurry,
+        quality_gate,
+    )
+    from je_auto_control.utils.scale_detect import detect_scale, scale_sweep
+    from je_auto_control.utils.saliency import (
+        most_salient,
+        salient_regions,
+        saliency_map,
+    )
+    from je_auto_control.utils.failure_signature import (
+        failure_signature,
+        group_failures,
+        normalize_error,
+    )
+    from je_auto_control.utils.run_diff import diff_runs, summarize_run_diff
+    from je_auto_control.utils.flake_cluster import (
+        cofailure_pairs,
+        failure_clusters,
+    )
+    from je_auto_control.utils.step_timeline import build_timeline, critical_steps
+    from je_auto_control.utils.vision import (
+        VLMNotAvailableError,
+        click_by_description,
+        locate_by_description,
+        verify_description,
+    )
+    from je_auto_control.utils.self_healing import (
+        HealEvent,
+        HealEventLog,
+        HealOutcome,
+        SelfHealError,
+        default_heal_log,
+        self_heal_click,
+        self_heal_locate,
+        SelfHealRequest,
+        SelfHealRequestError,
+        SelfHealRunResult,
+        SelfHealVerificationError,
+        VerificationRequest,
+        self_heal_run,
+        inspect_heal_source,
+        create_template_candidate,
+        preview_template_candidate,
+        verify_template_candidate,
+        accept_template_candidate,
+        revert_template_candidate,
+        TemplateCandidateState,
+        TemplateCandidatePreview,
+        TemplateCandidateVerification,
+        TemplateCandidateTransition,
+        TemplateRevisionError,
+        TemplateRevisionConflict,
+        EvaluationRatio,
+        EvaluationSample,
+        HealingAttempt,
+        HealingComparison,
+        HealingEvaluationError,
+        HealingVersionReport,
+        LocatorCandidate,
+        LocatorStrategy,
+        TemplateFrameLocator,
+        VLMFrameLocator,
+        evaluate_healing_manifest,
+        evaluate_locators,
+        write_healing_report,
+    )
+    from je_auto_control.utils.redaction import (
+        POLICY_MODERATE,
+        POLICY_OFF,
+        POLICY_STRICT,
+        RedactionEngine,
+        RedactionPolicy,
+        RedactionResult,
+        default_policy as default_redaction_policy,
+        policy_from_name as redaction_policy_from_name,
+        redact_png_bytes,
+    )
+    from je_auto_control.utils.annotate import annotate_screenshot
+    from je_auto_control.utils.notify import NotifyResult, notify
+    from je_auto_control.utils.color_stats import ColorStats, region_color_stats
+    from je_auto_control.utils.window_capture import (
+        arrange_cascade,
+        arrange_grid,
+        capture_window,
+        get_window_geometry,
+        restore_window_layout,
+        save_window_layout,
+        snap_window,
+    )
+    from je_auto_control.utils.scroll_find import scroll_until_visible
+    from je_auto_control.utils.trash import move_to_trash
+    from je_auto_control.utils.qr import read_qr_codes
+    from je_auto_control.utils.webrunner_bridge import (
+        WebRunnerBridgeError,
+        is_webrunner_available,
+        list_webrunner_commands,
+        run_webrunner_action,
+        run_webrunner_actions,
+        web_current_url,
+        web_open,
+        web_quit,
+        web_screenshot,
+    )
+    from je_auto_control.utils.clipboard.clipboard import (
+        get_clipboard,
+        get_clipboard_image,
+        set_clipboard,
+        set_clipboard_image,
+    )
+    from je_auto_control.utils.hotkey.hotkey_daemon import (
+        HotkeyBinding,
+        HotkeyDaemon,
+        default_hotkey_daemon,
+    )
+    from je_auto_control.utils.otp import (
+        TOTPError,
+        generate_secret,
+        generate_totp,
+        verify_totp,
+    )
+    from je_auto_control.utils.file_dialog import (
+        FileDialogDriver,
+        handle_file_dialog,
+    )
+    from je_auto_control.utils.session_guard import (
+        ensure_interactive_session,
+        is_session_locked,
+    )
+    from je_auto_control.utils.work_queue import (
+        BusinessError,
+        WorkItem,
+        WorkQueue,
+        WorkQueueError,
+    )
+    from je_auto_control.utils.test_data import generate_rows, write_dataset
+    from je_auto_control.utils.test_select import rank_flows, select_flows
+    from je_auto_control.utils.mcp_registry import (
+        build_server_manifest,
+        write_server_manifest,
+    )
+    from je_auto_control.utils.element_repository import ElementRepository
+    from je_auto_control.utils.flow_debugger import FlowDebugger, trace_actions
+    from je_auto_control.utils.skill_library import Skill, SkillLibrary
+    from je_auto_control.utils.guardrail import (
+        assess_text,
+        redact_text,
+        scan_text,
+    )
+    from je_auto_control.utils.a2a import build_agent_card, write_agent_card
+    from je_auto_control.utils.office import (
+        read_document,
+        read_presentation,
+        read_workbook,
+        write_document,
+        write_presentation,
+        write_workbook,
+    )
+    from je_auto_control.utils.agent_memory import AgentMemory, Episode
+    from je_auto_control.utils.deterministic import (
+        DeterministicRun,
+        seed_everything,
+    )
+    from je_auto_control.utils.observer import (
+        ScreenObserver,
+        WatchRule,
+        default_observer,
+        image_predicate,
+        pixel_predicate,
+        text_predicate,
+    )
+    from je_auto_control.utils.sbom import build_sbom, write_sbom
+    from je_auto_control.utils.test_shard import merge_results, shard_flows
+    from je_auto_control.utils.data_quality import (
+        extract_fields,
+        mask_rows,
+        validate_rows,
+    )
+    from je_auto_control.utils.data_profile import infer_schema, profile_rows
+    from je_auto_control.utils.data_drift import (
+        categorical_drift,
+        detect_drift,
+        ks_two_sample,
+        psi,
+    )
+    from je_auto_control.utils.schema_compat import (
+        SchemaChange,
+        check_compatibility,
+        diff_schemas,
+        is_backward_compatible,
+        is_forward_compatible,
+        is_full_compatible,
+    )
+    from je_auto_control.utils.dataset_diff import (
+        cell_changes,
+        diff_rows,
+        summarize_diff,
+    )
+    from je_auto_control.utils.referential import (
+        check_accepted_values,
+        check_foreign_key,
+        check_row_count,
+        check_unique_key,
+    )
+    from je_auto_control.utils.i18n_test import (
+        check_catalog,
+        check_overflow,
+        pseudo_localize,
+        pseudo_localize_catalog,
+    )
+    from je_auto_control.utils.checkpoint import (
+        Checkpoint,
+        CheckpointStore,
+        CheckpointStoreError,
+        run_resumable,
+    )
+    from je_auto_control.utils.set_of_marks import (
+        mark_click,
+        mark_elements,
+        mark_screen,
+        render_marks,
+        resolve_mark,
+    )
+    from je_auto_control.utils.screen_state import (
+        describe_screen,
+        diff_snapshots,
+        screen_changed,
+        snapshot,
+        snapshot_screen,
+    )
+    from je_auto_control.utils.input_macro import replay_timeline, run_sequence
+    from je_auto_control.utils.resilience import (
+        CircuitBreaker,
+        CircuitOpenError,
+        RetryPolicy,
+        retry_call,
+    )
+    from je_auto_control.utils.idempotency import (
+        IdempotencyConflict,
+        IdempotencyStore,
+        request_fingerprint,
+    )
+    from je_auto_control.utils.dedup_window import DedupWindow
+    from je_auto_control.utils.sequence_gap import SequenceTracker
+    from je_auto_control.utils.optimistic import (
+        VersionConflict,
+        VersionedStore,
+        check_if_match,
+        if_match_header,
+    )
+    from je_auto_control.utils.outbox import Outbox
+    from je_auto_control.utils.locale_collation import collation_key, sort_strings
+    from je_auto_control.utils.locale_collation import compare as collation_compare
+    from je_auto_control.utils.confusables import (
+        detect_homoglyphs,
+        is_confusable,
+        is_mixed_script,
+        scripts_of,
+    )
+    from je_auto_control.utils.confusables import skeleton as confusable_skeleton
+    from je_auto_control.utils.readability import (
+        automated_readability_index,
+        count_syllables,
+        flesch_kincaid_grade,
+        flesch_reading_ease,
+        gunning_fog,
+        readability_report,
+        readability_stats,
+        smog_index,
+    )
+    from je_auto_control.utils.bidi_check import (
+        base_direction,
+        bidi_controls,
+        detect_bidi_issues,
+        has_bidi_controls,
+        is_trojan_source,
+        strip_bidi_controls,
+    )
+    from je_auto_control.utils.bidi_check import is_balanced as is_bidi_balanced
+    from je_auto_control.utils.list_format import format_list
+    from je_auto_control.utils.message_format import (
+        format_message,
+        ordinal_category,
+        plural_category,
+    )
+    from je_auto_control.utils.gettext_catalog import (
+        GettextCatalog,
+        parse_po,
+        parse_po_file,
+        read_mo,
+        read_mo_file,
+    )
+    from je_auto_control.utils.checksum import (
+        damm_check_digit,
+        damm_validate,
+        luhn_check_digit,
+        luhn_validate,
+        mod97_10_check_digits,
+        mod97_10_validate,
+        verhoeff_check_digit,
+        verhoeff_validate,
+    )
+    from je_auto_control.utils.mouse_path import (
+        drag_path,
+        move_along_path,
+        path_easings,
+        plan_path,
+    )
+    from je_auto_control.utils.field_entry import plan_field_set, set_field_text
+    from je_auto_control.utils.key_hold import hold_key, plan_key_hold
+    from je_auto_control.utils.mouse_relative import (
+        move_mouse_relative,
+        relative_target,
+    )
+    from je_auto_control.utils.text_unicode import (
+        plan_paste,
+        plan_unicode_keys,
+        type_unicode,
+        type_unicode_keys,
+        type_unicode_text,
+        unicode_code_units,
+        unicode_keys_supported,
+    )
+    from je_auto_control.utils.modifier_state import (
+        hold_modifiers,
+        plan_with_modifiers,
+    )
+    from je_auto_control.utils.grid_locator import cluster_grid, locate_cell
+    from je_auto_control.utils.visual_match import (
+        best_matches,
+        match_masked,
+        match_masked_all,
+        match_template,
+        match_template_all,
+    )
+    from je_auto_control.utils.visual_match import Match as TemplateMatch
+    from je_auto_control.utils.rotated_match import (
+        RotatedMatch,
+        match_rotated,
+        match_rotated_all,
+        scale_space,
+    )
+    from je_auto_control.utils.match_trust import (
+        TrustedMatch,
+        match_with_trust,
+        score_peaks,
+    )
+    from je_auto_control.utils.edge_match import (
+        chamfer_distance,
+        edge_match,
+        edge_match_all,
+    )
+    from je_auto_control.utils.match_ensemble import match_ensemble, vote_centers
+    from je_auto_control.utils.color_match import match_color, match_color_all
+    from je_auto_control.utils.match_stability import (
+        match_persistence,
+        region_stability,
+    )
+    from je_auto_control.utils.match_autothresh import auto_threshold, match_auto
+    from je_auto_control.utils.subpixel_match import (
+        SubPixelMatch,
+        match_subpixel,
+        refine_peak,
+    )
+    from je_auto_control.utils.screen_grid import (
+        GridCell,
+        cell_for_point,
+        grid_cells,
+        point_for_cell,
+    )
+    from je_auto_control.utils.table_grid_fill import (
+        assign_text_to_grid,
+        populate_table,
+        table_to_csv,
+        table_to_records,
+    )
+    from je_auto_control.utils.observation_delta import (
+        delta_index,
+        delta_observation,
+        summarize_delta,
+    )
+    from je_auto_control.utils.column_layout import (
+        assign_columns,
+        column_gutters,
+        detect_borderless_table,
+        vertical_projection,
+    )
+    from je_auto_control.utils.reading_flow import flow_order, to_blocks, xy_cut
+    from je_auto_control.utils.text_blocks import detect_lists, group_paragraphs
+    from je_auto_control.utils.heading_segment import classify_lines, outline
+    from je_auto_control.utils.form_fields import (
+        associate_fields,
+        checkbox_state,
+        match_labels_to_widgets,
+    )
+    from je_auto_control.utils.action_effect import (
+        EffectVerdict,
+        classify_effect,
+        effect_near_point,
+        is_no_op,
+    )
+    from je_auto_control.utils.postcondition import (
+        PostconditionReport,
+        check_postcondition,
+        compile_postcondition,
+    )
+    from je_auto_control.utils.step_repair import (
+        RepairOutcome,
+        RepairPolicy,
+        next_tactic,
+        plan_repair,
+        run_with_repair,
+    )
+    from je_auto_control.utils.grounding_consensus import (
+        ConsensusResult,
+        consensus_element,
+        consensus_point,
+        is_confident,
+    )
+    from je_auto_control.utils.settle_detector import (
+        SettleState,
+        SettleTracker,
+        is_settled,
+        settle_point,
+    )
+    from je_auto_control.utils.critic_features import (
+        build_critic_record,
+        score_step_rule_based,
+        to_judge_prompt,
+    )
+    from je_auto_control.utils.color_region import (
+        find_color_region,
+        find_color_regions,
+    )
+    from je_auto_control.utils.ssim import ssim_changed_regions, ssim_compare
+    from je_auto_control.utils.feature_match import feature_match
+    from je_auto_control.utils.feature_match import FeatureMatch
+    from je_auto_control.utils.shape_locator import find_rectangles, find_shapes
+    from je_auto_control.utils.window_layout import (
+        WindowRect,
+        available_slots,
+        cascade_rects,
+        grid_rects,
+        tile_rect,
+    )
+    from je_auto_control.utils.preprocess import (
+        binarize,
+        denoise,
+        deskew,
+        detect_skew_angle,
+        enhance_contrast,
+        preprocess_image,
+        to_grayscale,
+        upscale,
+    )
+    from je_auto_control.utils.monitor_layout import (
+        Monitor,
+        enumerate_monitors,
+        grab_logical,
+        logical_scale,
+        logical_virtual_rect,
+        monitor_at_point,
+        monitor_for_window,
+        needs_rescale,
+        primary_monitor,
+        remap_point,
+        to_local,
+        to_virtual,
+        virtual_bounds,
+    )
+    from je_auto_control.utils.actionability import (
+        ActionabilityReport,
+        GateConfig,
+        act_when_ready,
+        wait_actionable,
+    )
+    from je_auto_control.utils.element_parse import (
+        fuse_elements,
+        iou,
+        merge_boxes,
+        reading_order,
+    )
+    from je_auto_control.utils.hsv_segment import (
+        color_mask,
+        dominant_hue_regions,
+        segment_hsv,
+    )
+    from je_auto_control.utils.text_regions import (
+        find_text_lines,
+        find_text_regions,
+    )
+    from je_auto_control.utils.edge_lines import (
+        find_grid,
+        find_lines,
+        find_separators,
+    )
+    from je_auto_control.utils.expect_poll import (
+        PollResult,
+        assert_poll,
+        expect_poll,
+        to_be_greater_than,
+        to_be_stable,
+        to_be_truthy,
+        to_contain,
+        to_equal,
+        to_match_regex,
+    )
+    from je_auto_control.utils.locator_chain import Candidates, from_boxes
+    from je_auto_control.utils.rich_clipboard import (
+        build_cf_html,
+        get_clipboard_html,
+        parse_cf_html,
+        set_clipboard_html,
+    )
+    from je_auto_control.utils.clipboard_files import (
+        build_dropfiles,
+        get_clipboard_files,
+        parse_dropfiles,
+        set_clipboard_files,
+    )
+    from je_auto_control.utils.img_histogram import (
+        compare_histograms,
+        histogram_changed,
+        image_histogram,
+    )
+    from je_auto_control.utils.motion_regions import (
+        activity_score,
+        changed_regions,
+        has_motion,
+    )
+    from je_auto_control.utils.window_zorder import (
+        bring_to_front,
+        plan_zorder,
+        send_to_back,
+        set_topmost,
+    )
+    from je_auto_control.utils.soft_assert import (
+        SoftAssertions,
+        SoftAssertionsFailed,
+    )
+    from je_auto_control.utils.perceptual_diff import (
+        PerceptualDiffResult,
+        assert_perceptual,
+        perceptual_diff,
+    )
+    from je_auto_control.utils.window_geometry import (
+        client_point,
+        client_to_screen,
+        frame_insets,
+        get_client_rect,
+    )
+    from je_auto_control.utils.cua_action import (
+        canonical_action,
+        from_anthropic,
+        from_openai_cua,
+        to_ac_command,
+    )
+    from je_auto_control.utils.observation import (
+        flatten_tree,
+        observation_index,
+        serialize_observation,
+    )
+    from je_auto_control.utils.action_grounding import (
+        in_bounds,
+        snap_to_element,
+        validate_action,
+    )
+    from je_auto_control.utils.agent_replay import (
+        from_jsonl,
+        record_step,
+        replay_trace,
+        to_jsonl,
+    )
+    from je_auto_control.utils.element_diff import (
+        assign_stable_ids,
+        match_elements,
+    )
+    from je_auto_control.utils.element_scoring import (
+        ScoredCandidate,
+        best_candidate,
+        score_candidates,
+    )
+    from je_auto_control.utils.barcode import read_barcodes
+    from je_auto_control.utils.ci_annotations import (
+        emit_annotations,
+        format_annotation,
+    )
+    from je_auto_control.utils.clipboard_history import (
+        ClipboardHistory,
+        default_clipboard_history,
+    )
+    from je_auto_control.utils.heal_analytics import analyze_heal_log, heal_stats
+    from je_auto_control.utils.secrets_scan import scan_secrets
+    from je_auto_control.utils.process_doc import (
+        describe_step,
+        generate_sop,
+        write_sop,
+    )
+    from je_auto_control.utils.tween_drag import (
+        easing_names,
+        tween_drag,
+        tween_points,
+    )
+    from je_auto_control.utils.plugin_sdk import (
+        COMMANDS_GROUP,
+        discover_plugins,
+        load_plugins,
+    )
+    from je_auto_control.utils.governance import (
+        ApprovalGate,
+        CredentialBroker,
+        CredentialBrokerError,
+        approval_gate,
+        default_broker,
+        set_secret_resolver,
+    )
+    from je_auto_control.utils.egress import (
+        EgressBlocked,
+        EgressPolicy,
+        get_egress_policy,
+        set_egress_policy,
+    )
+    from je_auto_control.utils.approval import (
+        ApprovalResult,
+        approve_artifact,
+        pending_artifacts,
+        verify_artifact,
+    )
+    from je_auto_control.utils.trajectory_eval import evaluate_trajectory
+    from je_auto_control.utils.compliance import (
+        build_compliance_report,
+        render_compliance_html,
+        write_compliance_report,
+    )
+    from je_auto_control.utils.agent_trace import (
+        AgentTrace,
+        default_trace,
+        reset_trace,
+    )
+    from je_auto_control.utils.video_report import (
+        VideoStep,
+        build_overlay_plan,
+        render_overlay_frame,
+        write_step_video,
+    )
+    from je_auto_control.utils.fuzzy import (
+        fuzzy_best_match,
+        fuzzy_dedupe,
+        fuzzy_matches,
+        fuzzy_ratio,
+    )
+    from je_auto_control.utils.text_normalize import (
+        deaccent,
+        fold_whitespace,
+        normalize_quotes,
+        normalize_text,
+        slugify,
+    )
+    from je_auto_control.utils.text_similarity import (
+        damerau_levenshtein,
+        dice,
+        jaccard,
+        jaro,
+        jaro_winkler,
+        levenshtein,
+        similarity,
+    )
+    from je_auto_control.utils.near_dup import (
+        minhash_signature,
+        minhash_similarity,
+        near_duplicates,
+        simhash,
+    )
+    from je_auto_control.utils.artifact_store import (
+        S3ArtifactStore,
+        configure_default_store,
+        get_default_store,
+        set_default_store,
+    )
+    from je_auto_control.utils.image_dedup import (
+        average_hash,
+        dedupe_images,
+        dhash,
+        hamming_distance,
+        images_similar,
+    )
+    from je_auto_control.utils.url_canon import (
+        build_query,
+        canonicalize_url,
+        normalize_url,
+        parse_query,
+        urls_equal,
+    )
+    from je_auto_control.utils.locale_parse import (
+        format_currency,
+        format_date,
+        format_decimal,
+        parse_decimal,
+        parse_number,
+    )
+    from je_auto_control.utils.voice import (
+        VoiceCommand,
+        VoiceRouter,
+        default_voice_router,
+    )
+    from je_auto_control.utils.coordinate_space import (
+        CoordinateSpace,
+        downscale_png,
+        normalized_space,
+        xga_space,
+    )
+    from je_auto_control.utils.loop_guard import (
+        LoopGuard,
+        LoopVerdict,
+        default_loop_guard,
+        digest_result,
+    )
+    from je_auto_control.utils.process_mining import (
+        Candidate,
+        MiningReport,
+        SequencePattern,
+        directly_follows,
+        find_repeated_sequences,
+        mine_action_log,
+        rank_automation_candidates,
+    )
+    from je_auto_control.utils.assets import (
+        Asset,
+        AssetStore,
+        AssetValue,
+        active_environment,
+    )
+    from je_auto_control.utils.dotenv import (
+        dotenv_values,
+        dump_dotenv,
+        load_dotenv,
+        parse_dotenv,
+    )
+    from je_auto_control.utils.layered_config import (
+        LayeredConfig,
+        SourceTrace,
+        deep_merge,
+    )
+    from je_auto_control.utils.config_schema import (
+        ConfigField,
+        ConfigSchema,
+        coerce,
+        validate_config,
+    )
+    from je_auto_control.utils.path_guard import PathNotAllowedError, PathPolicy
+    from je_auto_control.utils.secret_ref import (
+        RefResolver,
+        SecretRefError,
+        is_ref,
+        resolve_ref,
+        resolve_refs_in,
+    )
+    from je_auto_control.utils.config_redaction import (
+        redact_config,
+        redact_secret_text,
+    )
+    from je_auto_control.utils.events import (
+        EventEmitter,
+        post_cloudevent,
+        to_cloudevent,
+    )
+    from je_auto_control.utils.notify_channels import (
+        WebhookChannel,
+        WebhookResult,
+        notify_webhook,
+        set_default_poster,
+    )
+    from je_auto_control.utils.jsonpath import (
+        json_extract,
+        json_query,
+        json_query_one,
+    )
+    from je_auto_control.utils.saga import Saga, SagaResult, run_saga
+    from je_auto_control.utils.decision_table import (
+        DecisionTable,
+        Rule,
+        evaluate_table,
+    )
+    from je_auto_control.utils.locator_repair import (
+        RepairStore,
+        RepairSuggestion,
+        repair_from_heal,
+    )
+    from je_auto_control.utils.pii_text import (
+        PIIFinding,
+        detect_pii,
+        redact_pii_text,
+    )
+    from je_auto_control.utils.sarif import (
+        from_audit_findings,
+        from_lint_issues,
+        make_finding,
+        to_sarif,
+        write_sarif,
+    )
+    from je_auto_control.utils.json_schema import (
+        SchemaValidationResult,
+        assert_schema,
+        is_valid,
+        validate_json,
+    )
+    from je_auto_control.utils.vuln_scan import (
+        findings_to_sarif,
+        is_affected,
+        match_package,
+        scan_components,
+        version_key,
+    )
+    from je_auto_control.utils.vex import (
+        VEX_JUSTIFICATIONS,
+        VEX_STATUSES,
+        apply_vex,
+        build_vex,
+        vex_statement,
+    )
+    from je_auto_control.utils.license_policy import (
+        DEFAULT_COPYLEFT,
+        evaluate_license,
+        evaluate_sbom,
+        license_findings_to_sarif,
+        normalize_spdx,
+    )
+    from je_auto_control.utils.jwt import (
+        ClaimsPolicy,
+        ExpiredTokenError,
+        InvalidSignatureError,
+        JwtError,
+        decode_jwt,
+        encode_jwt,
+    )
+    from je_auto_control.utils.rate_limit import (
+        SlidingWindowLimiter,
+        TokenBucket,
+        throttle,
+    )
+    from je_auto_control.utils.json_patch import (
+        PatchError,
+        PatchTestFailed,
+        apply_patch,
+        make_merge_patch,
+        make_patch,
+        merge_patch,
+        remove_pointer,
+        resolve_pointer,
+        set_pointer,
+    )
+    from je_auto_control.utils.search_index import (
+        SearchHit,
+        SearchIndex,
+        search_documents,
+        tokenize,
+    )
+    from je_auto_control.utils.stats import (
+        chi_square_2x2,
+        cohens_d,
+        describe,
+        normal_cdf,
+        percentile,
+        two_proportion_z_test,
+        welch_t_test,
+    )
+    from je_auto_control.utils.recurrence import (
+        Recurrence,
+        next_occurrence,
+        occurrences,
+        parse_rrule,
+    )
+    from je_auto_control.utils.text_diff import (
+        MergeResult,
+        PatchApplyError,
+        apply_unified,
+        three_way_merge,
+        unified_diff,
+    )
+    from je_auto_control.utils.feature_flags import (
+        Flag,
+        FlagStore,
+        assign_variant,
+        evaluate_flag,
+        is_enabled,
+        percentage_bucket,
+    )
+    from je_auto_control.utils.provenance import (
+        build_provenance,
+        subject_for,
+        subject_for_bytes,
+        verify_provenance,
+        write_provenance,
+    )
+    from je_auto_control.utils.json_contract import (
+        MatchReport,
+        diff_json,
+        match_json,
+        normalize_json,
+        snapshot_json,
+    )
+    from je_auto_control.utils.chaos import (
+        ChaosExperiment,
+        Fault,
+        Probe,
+        exception_fault,
+        latency_fault,
+        run_experiment,
+    )
+    from je_auto_control.utils.slo import (
+        BurnRule,
+        burn_alerts,
+        burn_rate,
+        default_burn_rules,
+        evaluate_slo,
+    )
+    from je_auto_control.utils.percentiles import LatencyDigest, exact_percentiles
+    from je_auto_control.utils.timeseries import (
+        ts_delta,
+        ts_downsample,
+        ts_idelta,
+        ts_increase,
+        ts_irate,
+        ts_rate,
+        ts_resample,
+    )
+    from je_auto_control.utils.anomaly import (
+        detect_anomalies,
+        ewma_control,
+        mad_anomalies,
+        mad_scores,
+        zscore_anomalies,
+        zscore_scores,
+    )
+    from je_auto_control.utils.smoothing import ewma, rolling, sma, wma
+    from je_auto_control.utils.bulkhead import (
+        Bulkhead,
+        BulkheadFullError,
+        next_delay,
+        parse_ratelimit,
+        parse_retry_after,
+    )
+    from je_auto_control.utils.http_cassette import Cassette, CassetteMissError
+    from je_auto_control.utils.http_problem import (
+        HttpProblemError,
+        ProblemDetails,
+        is_problem,
+        parse_problem,
+        raise_for_problem,
+    )
+    from je_auto_control.utils.sse_client import (
+        SSEEvent,
+        SSEParser,
+        parse_event_stream,
+    )
+    from je_auto_control.utils.link_header import (
+        Link,
+        links_by_rel,
+        next_url,
+        paginate,
+        parse_link_header,
+    )
+    from je_auto_control.utils.multipart import (
+        MultipartFile,
+        build_multipart,
+        new_boundary,
+        parse_multipart,
+    )
+    from je_auto_control.utils.http_content import (
+        build_accept,
+        build_accept_encoding,
+        decode_body,
+        negotiated_call,
+        parse_quality_values,
+    )
+    from je_auto_control.utils.cookie_jar import CookieJar, parse_set_cookie
+    from je_auto_control.utils.http_conditional import (
+        conditioned_call,
+        is_fresh,
+        is_not_modified,
+        parse_cache_control,
+        store_validators,
+    )
+    from je_auto_control.utils.trace_context import (
+        SpanContext,
+        TraceContextError,
+        child_context,
+        extract_context,
+        format_traceparent,
+        format_tracestate,
+        inject_context,
+        new_root_context,
+        new_span_id,
+        new_trace_id,
+        parse_traceparent,
+        parse_tracestate,
+    )
+    from je_auto_control.utils.baggage import (
+        Baggage,
+        extract_baggage,
+        format_baggage,
+        inject_baggage,
+        parse_baggage,
+    )
+    from je_auto_control.utils.canonical_log import (
+        CanonicalLogLine,
+        JSONLogFormatter,
+        bind_trace_context,
+    )
+    from je_auto_control.utils.otlp_export import (
+        attributes_to_otlp,
+        spans_to_otlp,
+        write_otlp,
+    )
+    from je_auto_control.utils.watchdog import (
+        PopupWatchdog,
+        WatchdogRule,
+        default_popup_watchdog,
+    )
+    from je_auto_control.utils.ocr.ocr_engine import (
+        TextMatch,
+        click_text,
+        find_text_matches,
+        find_text_regex,
+        locate_text_center,
+        read_text_in_region,
+        set_tesseract_cmd,
+        wait_for_text,
+    )
+    from je_auto_control.utils.ocr.tesseract_setup import (
+        OCRStatus,
+        find_tesseract_cmd,
+        ocr_languages,
+        ocr_status,
+        set_tessdata_dir,
+    )
+    from je_auto_control.utils.ocr.text_span import find_spans, group_lines
+    from je_auto_control.utils.input_reach import (
+        input_desktop_available,
+        input_reaches_system,
+    )
+    from je_auto_control.utils.keyboard_layout import (
+        char_table,
+        foreground_keyboard_layout,
+        layout_char_table,
+        vk_to_char,
+    )
+    from je_auto_control.utils.llm import (
+        LLMBackend,
+        LLMNotAvailableError,
+        LLMPlanError,
+        plan_actions,
+        run_from_description,
+    )
+    from je_auto_control.utils.agent.agent_loop import (
+        AgentBackend,
+        AgentBudget,
+        AgentLoop,
+        AgentResult,
+        AgentStep,
+        FakeAgentBackend,
+        run_agent,
+    )
+    from je_auto_control.utils.agent.backends import (
+        AgentBackendError,
+        AnthropicAgentBackend,
+        ComputerUseAgentBackend,
+        OpenAIAgentBackend,
+    )
+    from je_auto_control.utils.agent.computer_use import (
+        result_to_dict as computer_use_result_to_dict,
+        run_computer_use,
+    )
+    from je_auto_control.utils.dag import (
+        DagDefinition,
+        DagDefinitionError,
+        DagNode,
+        DagRunResult,
+        NodeResult,
+        parse_dag,
+        run_dag,
+    )
+    from je_auto_control.utils.remote_desktop.presence import (
+        PresenceError,
+        PresenceRegistry,
+        ROLE_CONTROLLER,
+        ROLE_OBSERVER,
+        ViewerPresence,
+        default_presence_registry,
+    )
+    from je_auto_control.utils.chatops import (
+        ChatOpsError,
+        CommandResult,
+        CommandRouter,
+        SlackBot,
+        SlackError,
+        make_default_slack_bot,
+        register_chatops_default_commands,
+    )
+    from je_auto_control.utils.anchor_locator import (
+        AnchorLocatorError,
+        AnchorOutcome,
+        Locator as AnchorLocator,
+        a11y_locator,
+        anchor_locate,
+        anchor_locate_all,
+        image_locator,
+        ocr_locator,
+        vlm_locator,
+    )
+    from je_auto_control.utils.ocr.structure import (
+        OCRField,
+        OCRRow,
+        OCRTable,
+        StructuredOCR,
+        cluster_matches as ocr_cluster_matches,
+        read_structure as ocr_read_structure,
+    )
+    from je_auto_control.utils.smart_waits import (
+        WaitOutcome,
+        wait_until_clipboard_changes,
+        wait_until_color,
+        wait_until_file,
+        wait_until_gone,
+        wait_until_image_gone,
+        wait_until_pixel_changes,
+        wait_until_port,
+        wait_until_process,
+        wait_until_region_idle,
+        wait_until_screen_stable,
+        wait_until_text_gone,
+        wait_until_window_closed,
+        wait_until_window_title,
+    )
+    from je_auto_control.utils.visual_regression import (
+        DiffResult,
+        MaskRegion,
+        compare_to_golden,
+        image_difference,
+        take_golden,
+    )
+    from je_auto_control.utils.state_machine import (
+        StateMachine,
+        StateMachineError,
+        run_state_machine,
+    )
+    from je_auto_control.utils.assertion import (
+        AssertionResult,
+        GroupAssertionResult,
+        assert_all,
+        assert_any,
+        assert_by_description,
+        assert_clipboard,
+        assert_duration,
+        assert_eventually,
+        assert_file,
+        assert_http,
+        assert_image,
+        assert_pixel,
+        assert_process,
+        assert_text,
+        assert_variable,
+        assert_window,
+        run_assertion_spec,
+    )
+    from je_auto_control.utils.data_source import data_source_kinds, load_rows
+    from je_auto_control.utils.flakiness import (
+        FlakinessReport,
+        FlakyEntry,
+        analyze_flakiness,
+    )
+    from je_auto_control.utils.test_suite import (
+        TestCaseResult,
+        TestSuiteResult,
+        run_suite,
+        to_allure_results,
+        to_junit_xml,
+        write_allure_results,
+        write_junit_xml,
+    )
+    from je_auto_control.utils.quarantine import (
+        QuarantineEntry,
+        QuarantineStore,
+        auto_quarantine_from_flakiness,
+        default_quarantine_store,
+    )
+    from je_auto_control.utils.a11y_audit import (
+        AuditIssue,
+        AuditReport,
+        audit_contrast,
+        audit_missing_labels,
+        audit_target_size,
+        contrast_ratio,
+        detect_truncation,
+        run_audit,
+        wcag_audit,
+    )
+    from je_auto_control.utils.device_matrix import (
+        DeviceResult,
+        MatrixReport,
+        run_on_devices,
+    )
+    from je_auto_control.utils.media_assert import (
+        MediaAssertionResult,
+        assert_audio_activity,
+        assert_video_changes,
+        measure_audio_rms,
+        video_segment_motion,
+    )
+    from je_auto_control.utils.cost_telemetry import (
+        CostEvent,
+        CostSummary,
+        default_cost_store,
+        estimate_llm_usd,
+        record_llm_call,
+        summarise_llm_costs,
+    )
+    from je_auto_control.utils.failure_hooks import (
+        FailureHookManager,
+        FailureReport,
+        GitHubBackend,
+        JiraBackend,
+        LinearBackend,
+        TicketResult,
+        default_failure_hook_manager,
+    )
+    from je_auto_control.utils.ab_locator import (
+        ABRunOutcome,
+        ab_best_strategy,
+        ab_locate,
+        ab_report_for,
+        default_ab_store,
+    )
+    from je_auto_control.utils.remote_desktop import (
+        AuthenticationError as RemoteDesktopAuthError,
+        InputDispatchError as RemoteDesktopInputError,
+        ProtocolError as RemoteDesktopProtocolError,
+        RemoteDesktopHost,
+        RemoteDesktopViewer,
+    )
+    from je_auto_control.utils.remote_desktop.connect_coordinator import (
+        ConnectTarget as RemoteDesktopConnectTarget,
+        UnresolvableTargetError as RemoteDesktopUnresolvableTargetError,
+        parse_target as parse_remote_desktop_target,
+    )
+    from je_auto_control.utils.remote_desktop.registry import registry as remote_desktop_registry
+    from je_auto_control.utils.gamepad import (
+        GamepadUnavailable,
+        VirtualGamepad,
+        default_gamepad as default_virtual_gamepad,
+        is_available as is_virtual_gamepad_available,
+    )
+    from je_auto_control.utils.mcp_server.disclosure import (
+        ToolView,
+        ToolPage,
+        plan_mcp_tool_profile,
+    )
+    from je_auto_control.utils.mcp_server.discovery import (
+        ToolDiscoveryError,
+        ToolIndex,
+        ToolSummary,
+        search_mcp_tools,
+        get_mcp_tool_schema,
+    )
+    from je_auto_control.utils.mcp_server import (
+        AuditLogger,
+        HttpMCPServer,
+        MCPContent,
+        MCPPrompt,
+        MCPPromptArgument,
+        MCPResource,
+        MCPServer,
+        MCPTool,
+        MCPToolAnnotations,
+        MCPToolResult,
+        OperationCancelledError,
+        PromptProvider,
+        RateLimiter,
+        ResourceProvider,
+        ToolCallContext,
+        build_default_tool_registry,
+        default_prompt_provider,
+        default_resource_provider,
+        make_plugin_tool,
+        register_plugin_tools,
+        start_mcp_http_server,
+        start_mcp_stdio_server,
+    )
+    from je_auto_control.utils.plugin_loader.plugin_loader import (
+        discover_plugin_commands,
+        load_plugin_directory,
+        load_plugin_file,
+        register_plugin_commands,
+    )
+    from je_auto_control.utils.rest_api.rest_server import (
+        RestApiServer,
+        start_rest_api_server,
+    )
+    from je_auto_control.utils.rbac import (
+        AuthorizationContext,
+        AuthorizationError,
+        UserAuthError,
+        UserRecord,
+        UserStore,
+        authorization_scope,
+    )
+    from je_auto_control.utils.admin import (
+        AdminConsoleClient,
+        AdminHost,
+        default_admin_console,
+    )
+    from je_auto_control.utils.remote_desktop.webrtc_inspector import (
+        WebRTCInspector,
+        default_webrtc_inspector,
+    )
+    from je_auto_control.utils.usb import (
+        UsbAcl,
+        UsbDevice,
+        UsbEnumerationResult,
+        UsbEvent,
+        UsbHotplugWatcher,
+        UsbPassthroughClient,
+        UsbPassthroughSession,
+        default_usb_watcher,
+        enable_usb_passthrough,
+        is_usb_passthrough_enabled,
+        list_usb_devices,
+    )
+    from je_auto_control.utils.exception.cancellation import (
+        CancellationToken,
+        TaskProgress,
+        cancellation_scope,
+    )
+    from je_auto_control.wrapper.capabilities import (
+        BackendContext,
+        CapabilitySnapshot,
+        CapabilityStatus,
+        probe_capabilities,
+    )
+    from je_auto_control.utils.diagnostics import (
+        Check,
+        DiagnosticsReport,
+        run_diagnostics,
+    )
+    from je_auto_control.utils.config_bundle import (
+        ConfigBundleExporter,
+        ConfigBundleImporter,
+        ImportReport,
+        export_config_bundle,
+        import_config_bundle,
+    )
+    from je_auto_control.utils.profiler import (
+        ActionProfiler,
+        ActionStats,
+        default_profiler,
+    )
+    from je_auto_control.utils.secrets import (
+        SecretManager,
+        SecretStoreError,
+        SecretStoreLocked,
+        default_secret_manager,
+        default_secret_store_path,
+    )
+    from je_auto_control.utils.action_signing import (
+        SigningConfig,
+        VerifyResult,
+        action_signing_config,
+        create_signing_keypair,
+        decrypt_action_file,
+        encrypt_action_file,
+        require_signed_actions,
+        sign_action_file,
+        verify_action_file,
+    )
+    from je_auto_control.utils.exception.exceptions import CryptographyUnavailableError
+    from je_auto_control.utils.observability import (
+        Counter as MetricCounter,
+        Gauge as MetricGauge,
+        Histogram as MetricHistogram,
+        MetricRegistry,
+        PrometheusExporter,
+        Tracer,
+        default_exporter as default_metrics_exporter,
+        default_registry as default_metric_registry,
+        default_tracer,
+        render_metrics_text,
+        traced,
+    )
+    from je_auto_control.utils.run_history.history_store import (
+        HistoryStore,
+        JournalLink,
+        RunRecord,
+        default_history_store,
+    )
+    from je_auto_control.utils.run_history import (
+        HistoryBinding,
+        manual_history_scope,
+    )
+    from je_auto_control.utils.action_journal import (
+        ActionEvent,
+        ActionJournal,
+        ActionJournalError,
+        JournalBinding,
+        JournalRunOptions,
+        JournalRunResult,
+        execute_action_with_journal,
+        execute_journal_run,
+        inspect_journal,
+        journal_scope,
+        read_events,
+    )
+    from je_auto_control.utils.triggers.trigger_engine import (
+        AllOfTrigger,
+        AnyOfTrigger,
+        CronTrigger,
+        FilePathTrigger,
+        ImageAppearsTrigger,
+        PixelColorTrigger,
+        SequenceTrigger,
+        TriggerEngine,
+        WindowAppearsTrigger,
+        default_trigger_engine,
+    )
+    from je_auto_control.utils.triggers.webhook_server import (
+        WebhookTrigger,
+        WebhookTriggerServer,
+        default_webhook_server,
+    )
+    from je_auto_control.utils.triggers.email_trigger import (
+        EmailTrigger,
+        EmailTriggerWatcher,
+        default_email_trigger_watcher,
+    )
+    from je_auto_control.utils.recording_edit.editor import (
+        adjust_delays,
+        dedupe_moves,
+        filter_actions,
+        insert_action,
+        merge_sleeps,
+        remove_action,
+        scale_coordinates,
+        trim_actions,
+    )
+    from je_auto_control.utils.scheduler.scheduler import (
+        ScheduledJob,
+        Scheduler,
+        default_scheduler,
+    )
+    from je_auto_control.utils.script_vars.execution import execution_scope
+    from je_auto_control.utils.script_vars.interpolate import (
+        interpolate_actions,
+        interpolate_value,
+        load_vars_from_json,
+    )
+    from je_auto_control.utils.script_vars.scope import VariableScope
+    from je_auto_control.utils.watcher.watcher import (
+        LogTail,
+        MouseWatcher,
+        PixelWatcher,
+    )
+    from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
+    from je_auto_control.utils.generate_report.generate_html_report import generate_html
+    from je_auto_control.utils.generate_report.generate_html_report import generate_html_report
+    from je_auto_control.utils.generate_report.generate_json_report import generate_json
+    from je_auto_control.utils.generate_report.generate_json_report import generate_json_report
+    from je_auto_control.utils.generate_report.generate_xml_report import generate_xml
+    from je_auto_control.utils.generate_report.generate_xml_report import generate_xml_report
+    from je_auto_control.utils.json.json_file import (
+        read_action_json,
+        read_executable_action_json,
+    )
+    from je_auto_control.utils.json.json_file import write_action_json
+    from je_auto_control.utils.json.json_file import format_action_json
+    from je_auto_control.utils.codegen.codegen import (
+        generate_code,
+        generate_code_file,
+    )
+    from je_auto_control.utils.codegen.candidate_models import (
+        CandidateGenerationError,
+        CandidateScript,
+    )
+    from je_auto_control.utils.codegen.journal_import import generate_candidate_from_log
+    from je_auto_control.utils.codegen.candidate_archive import write_candidate_archive
+    from je_auto_control.utils.config_sync.client import (
+        ConfigBucket,
+        ConfigSyncClient,
+        ConfigSyncError,
+    )
+    from je_auto_control.utils.config_sync.store import (
+        ConfigRevisionConflict,
+        ConfigStore,
+        ConfigStoreError,
+        ConfigStoreFull,
+    )
+    from je_auto_control.utils.config_sync.versions import (
+        MergeDecision,
+        SyncConflict,
+        SyncEntry,
+        merge_entries,
+    )
+    from je_auto_control.utils.config_sync.causal_models import (
+        CausalConflict,
+        DeletionFence,
+        SyncActor,
+    )
+    from je_auto_control.utils.config_sync.causal_state import CausalBucket
+    from je_auto_control.utils.config_sync.causal_store import CausalConfigStore
+    from je_auto_control.utils.config_sync.causal_client import CausalSyncClient
+    from je_auto_control.utils.config_sync.causal_receipt import CausalReceipt
+    from je_auto_control.utils.config_sync.control_models import (
+        SyncControlOperation,
+        SyncControlRequest,
+        SyncControlResult,
+    )
+    from je_auto_control.utils.config_sync.asset_models import (
+        AssetFile,
+        AssetManifest,
+        AssetSyncResult,
+    )
+    from je_auto_control.utils.config_sync.adapter_references import (
+        SyncBindings,
+        SyncReference,
+    )
+    from je_auto_control.utils.config_sync.adapter_schema import ApplyReport
+    from je_auto_control.utils.config_sync.adapter_state import SyncAdapterState
+    from je_auto_control.utils.config_sync.adapters import (
+        AddressBookSyncAdapter,
+        HotkeySyncAdapter,
+        LocatorSyncAdapter,
+        ScriptSyncAdapter,
+        SettingsSyncAdapter,
+        SyncAdapter,
+        TriggerSyncAdapter,
+        WorkspaceSettingsSyncAdapter,
+    )
+    from je_auto_control.utils.config_sync.adapter_profiles import materialize_sync_profile
+    from je_auto_control.utils.config_sync.adapter_factory import adapter_from_profile
+    from je_auto_control.utils.config_sync.workspace_sync import SyncWorkspace
+    from je_auto_control.utils.config_sync.profile_load import load_sync_profile
+    from je_auto_control.utils.config_sync.profile_models import LoadedSyncProfile
+    from je_auto_control.utils.config_sync.blob_models import (
+        SyncAssetBlob,
+        SyncAssetReference,
+    )
+    from je_auto_control.utils.config_sync.blob_store import SyncAssetStore
+    from je_auto_control.utils.config_sync.blob_http import SyncAssetHTTPClient
+    from je_auto_control.utils.config_sync.workspace_models import (
+        SyncWorkspaceError,
+        WorkspaceSyncResult,
+    )
+    from je_auto_control.utils.config_sync.assets import (
+        AssetTransport,
+        DirectoryAssetTransport,
+        build_asset_manifest,
+        sync_assets,
+    )
+    from je_auto_control.utils.config_sync.peers import (
+        FullResyncRequired,
+        SyncPeer,
+        SyncPeers,
+    )
+    from je_auto_control.utils.config_sync.outbox import (
+        SyncDrainResult,
+        SyncLocalIdentity,
+        SyncOperation,
+        SyncOutbox,
+        SyncRetryPolicy,
+    )
+    from je_auto_control.utils.http_client.http_client import http_request
+    from je_auto_control.utils.sql.sql_query import query_sqlite
+    from je_auto_control.utils.email_send.email_sender import send_email
+    from je_auto_control.utils.pdf.pdf_reader import (
+        assert_pdf_text,
+        extract_pdf_text,
+        pdf_metadata,
+        pdf_page_count,
+    )
+    from je_auto_control.utils.package_manager.package_manager_class import package_manager
+    from je_auto_control.utils.project.create_project_structure import create_project_dir
+    from je_auto_control.utils.shell_process.shell_exec import ShellManager
+    from je_auto_control.utils.shell_process.shell_exec import default_shell_manager
+    from je_auto_control.utils.socket_server.auto_control_socket_server import (
+        start_autocontrol_socket_server,
+    )
+    from je_auto_control.utils.start_exe.start_another_process import start_exe
+    from je_auto_control.utils.test_record.record_test_class import test_record_instance
+    from je_auto_control.wrapper.auto_control_image import locate_all_image
+    from je_auto_control.wrapper.auto_control_image import locate_and_click
+    from je_auto_control.wrapper.auto_control_image import locate_image_center
+    from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
+    from je_auto_control.wrapper.auto_control_keyboard import get_keyboard_keys_table
+    from je_auto_control.wrapper.auto_control_keyboard import hotkey
+    from je_auto_control.wrapper.auto_control_keyboard import keyboard_key_name
+    from je_auto_control.wrapper.auto_control_keyboard import press_keyboard_key
+    from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key
+    from je_auto_control.wrapper.auto_control_keyboard import send_key_event_to_window
+    from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
+    from je_auto_control.wrapper.auto_control_keyboard import write
+    from je_auto_control.wrapper.auto_control_keyboard import write_secret
+    from je_auto_control.wrapper.auto_control_mouse import click_mouse
+    from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
+    from je_auto_control.wrapper.auto_control_mouse import mouse_keys_table
+    from je_auto_control.wrapper.auto_control_mouse import mouse_scroll
+    from je_auto_control.wrapper.auto_control_mouse import mouse_scroll_error_message
+    from je_auto_control.wrapper.auto_control_mouse import press_mouse
+    from je_auto_control.wrapper.auto_control_mouse import release_mouse
+    from je_auto_control.wrapper.auto_control_mouse import send_mouse_event_to_window
+    from je_auto_control.wrapper.auto_control_mouse import set_mouse_position
+    from je_auto_control.wrapper.auto_control_mouse import special_mouse_keys_table
+    from je_auto_control.utils.humanize.motion import (
+        HumanizedMotion,
+        humanized_path,
+        move_mouse_humanized,
+    )
+    from je_auto_control.utils.humanize.typing import (
+        humanized_key_delays,
+        type_text_humanized,
+    )
+    from je_auto_control.wrapper.auto_control_record import record
+    from je_auto_control.wrapper.auto_control_record import stop_record
+    from je_auto_control.wrapper.auto_control_record import stop_record_timeline
+    from je_auto_control.wrapper.auto_control_record import record_to_json
+    from je_auto_control.wrapper.auto_control_screen import screen_size
+    from je_auto_control.wrapper.auto_control_screen import screenshot
+    from je_auto_control.wrapper.auto_control_screen import get_pixel
+    from je_auto_control.wrapper.auto_control_window import (
+        close_window_by_title,
+        find_window,
+        focus_window,
+        foreground_window,
+        foreground_window_process_id,
+        list_windows,
+        minimize_window_by_title,
+        minimize_windows_for_process,
+        move_window_by_title,
+        post_click_to_window,
+        post_key_to_window,
+        show_window_by_title,
+        wait_for_window,
+        window_process_id,
+        window_rect,
+        windows_for_process_id,
+    )
+
+if _sys.platform in ("win32", "cygwin", "msys"):
+    if _TYPE_CHECKING:
+        from je_auto_control.windows.window import windows_window_manage
 else:
     windows_window_manage = None  # type: ignore[assignment]
-del _sys_for_platform_check
 
 
 def start_autocontrol_gui(*args, **kwargs):
@@ -2125,8 +2660,13 @@ __all__ = [
 keyboard_keys_table: dict[str, int]
 
 
-def __getattr__(name: str) -> dict:
-    """Resolve the public key table only when explicitly requested."""
+def __getattr__(name: str) -> object:
+    """Resolve one export, keeping the mutable platform key table uncached."""
     if name == "keyboard_keys_table":
-        return get_keyboard_keys_table()
-    raise AttributeError(name)
+        return getattr(_sys.modules[__name__], "get_keyboard_keys_table")()
+    return _resolve_export(globals(), _EXPORTS, name)
+
+
+def __dir__() -> list[str]:
+    """List public exports without importing their owners."""
+    return sorted(set(globals()) | set(__all__))

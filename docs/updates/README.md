@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-02 | 2026-10-29 | Verify lazy exports and refine source and documentation gates | #snapshot #agent #startup #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-01 | 2026-10-29 | Verify native owner fixtures and retain full-suite failures | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261028-09 | 2026-10-28 | Defer X11 resources until explicit desktop use | #snapshot #agent #linux #startup #verification | [2026-10-e](2026-10-e.md) |
 | U-20261028-08 | 2026-10-28 | Verify atomic Linux spawn attributes and private pipes | #snapshot #agent #presence #linux #verification | [2026-10-e](2026-10-e.md) |
@@ -595,3 +596,4 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261025-14 | 2026-10-25 | Renew completion consent without restoring input authority | #done #agent #recovery #authorization | [2026-10-c](2026-10-c.md) |
 | U-20261025-15 | 2026-10-25 | Hand renewed read-only completion to its original local DAG | #done #agent #handoff #recovery #authorization | [2026-10-c](2026-10-c.md) |
 | U-20261025-16 | 2026-10-25 | Adopt explicit non-DAG completion evidence without widening task access | #done #agent #handoff #recovery #authorization | [2026-10-c](2026-10-c.md) |
+| U-20261029-03 | 2026-10-29 | Verify lazy facade delivery against the complete suite | #done #agent #startup #verification | [2026-10-e](2026-10-e.md) |

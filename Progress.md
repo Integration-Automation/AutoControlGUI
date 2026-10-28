@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-01；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-02；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -62,10 +62,7 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      證明全部後代已退出。涵蓋既有環境探測、桌面／瀏覽器及遠端 helper 呼叫者。
      正式繫結仍須核實取消發生於 native spawn 期間的所有權、失敗清理、群組與逸出後代退場，
      並補受支援版本／架構驗證；隔離原型與直接子程序驗收不等於正式 helper 已接合，安裝前仍須比對。
-     固定來源完整回歸仍須排除 test_webrtc_file_registry.py 的兩個子程序逾時失敗；
-     原始 10 秒期限內 stdout 讀取未結束；後續診斷停在套件匯入，尚未進入 GC，
-     仍須定位匯入耗時根因與原始失敗的關聯，不能直接宣稱 registry 死鎖。
-     保留原始失敗與覆蓋率資料，定位匯入／GC／退出階段並修正根因後補相應回歸；不得放寬期限。
+     不得把原始逾時改稱 registry 死鎖，也不得放寬原始 10 秒期限或改動跳過政策。
      presence_worker 仍須接合 Linux source／pipe／security，處理真正登入、seat、鎖定與活動來源；
      已安裝固定模組的未支援回覆及正常 EOF 退場不能證明實體來源或完整後代退場。
      不得替換空白 initializer 或偽裝 Wayland session 取代完整應用驗證。
@@ -181,7 +178,7 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
    - 於整份規範最後固定提交重跑完整 headless 與 coverage run -m pytest、跨功能／故障恢復回歸；
      後續平台／恢復修正亦須納入完整 coverage 及新成品逐檔比對；
      後續修正不得沿用較早提交的完整驗證；來源、測試、設定與文件須重新固定並核實。
-     目前功能工作樹完整成功的來源範圍與131項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。
+     目前功能工作樹完整成功的來源範圍與133項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。
      歷史原因仍須追查：stage74 的管理員 host binding 與 retention uncertain／phase 前置失敗；
      stage85 的 default_connection_discovery_change、expired_origin_can_be_replaced_only_for_never_dispatched_scoped_work
      及 retention queued_child／executing／fresh_delivery；stage88–93 的3秒來源匯出／匯入準備逾時。
@@ -271,7 +268,7 @@ D2 仍缺 helper 隔離與半開交握資源回收；D3 的錄製／全域停止
 
 **本質豁免（flat data tables）**：`utils/mcp_server/tools/_factories.py`、
 `utils/executor/action_executor.py`、`gui/script_builder/command_schema.py`、
-`je_auto_control/__init__.py` 與
+`je_auto_control/__init__.py`、`je_auto_control/_export_bindings.py`（產生的公開名稱來源查表）與
 `gui/language_wrapper/{english,japanese,traditional_chinese,simplified_chinese}.py` 語系字串表。
 
 ## Windows arm64:裝得起來了，但少了影像與加密

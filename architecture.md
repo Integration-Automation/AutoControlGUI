@@ -1,5 +1,12 @@
 # AutoControl Architecture
 
+The package facade resolves each public export from its existing source module. Concrete typing
+declarations generate runtime binding tables, checked by
+`python scripts/generate_facade_exports.py --check` in CI. Resolution obtains the real object
+before publishing it and preserves explicit assignments made during import. Six private modules
+own the existing optional remote feature groups and their complete `ImportError` outcomes.
+The remote registry stays eager to preserve its singleton export despite its same-named child module.
+
 The X11 assembly is importable without acquiring desktop resources. A shared operation display
 is acquired through get_display, while the RECORD listener owns a separate connection and
 synchronizes recording admission with retirement. Static key symbols resolve into a cached real

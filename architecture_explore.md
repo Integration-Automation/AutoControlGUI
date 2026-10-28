@@ -1,12 +1,17 @@
 # AutoControl 架構全覽（architecture_explore）
 
+根套件與遠端桌面套件的公開匯出按項目載入既有來源模組。具體型別宣告產生執行期對照表，
+CI 以 `python scripts/generate_facade_exports.py --check` 檢查一致性。六個私有模組保留遠端
+選用功能原有的整組失敗語意；`registry` 仍提前綁定共用實例，以維持同名子模組的既有行為。
+這項匯入變更不代表 Linux 原生服務或完整程序樹退場已交付。
+
 > 本文件為全專案架構掃描結果，逐層記錄每個模組的職責。
 >
 > **掃描方法**：以 AST 走訪 `je_auto_control/`、`autocontrol-lsp/`、`autocontrol_driver/`、`AutoControl/`、`exe/`、`benchmarks/`，
 > 擷取每個模組的 docstring 與頂層公開名稱；統計數字取自實際檔案，非估算。
 > 指令數與公開 API 數以 `executor.known_commands()` 與 `je_auto_control.__all__` 在工作樹上實測取得。
 >
-> **掃描時間**：2026-10-27　**版本**：`pyproject.toml` version `0.0.228`　**分支**：`feat/agent-task-runtime`
+> **掃描時間**：2026-10-29　**版本**：`pyproject.toml` version `0.0.228`　**分支**：`feat/agent-task-runtime`
 
 ---
 
@@ -19,8 +24,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,413 |
-| 程式碼總行數 | 210,461 |
+| Python 模組總數（含周邊子專案） | 1,423 |
+| 程式碼總行數 | 212,764 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 856 |
 | 套件門面 `__all__` 公開名稱數 | 1445 |
@@ -157,7 +162,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `je_auto_control/__init__.py` | 2,132 | **套件門面**。集中匯入並再匯出 1445 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
+| `je_auto_control/__init__.py` | 2,672 | **套件門面**。按首次存取解析 1445 個公開名稱，具體型別宣告與 `__all__` 保留原始來源及順序。 |
+| `je_auto_control/_lazy_exports.py` | 29 | 公開名稱的來源屬性／模組繫結與首次存取解析；保留並行的明確指派。 |
+| `je_auto_control/_export_bindings.py` | 1,518 | 由具體型別宣告產生的公開名稱來源查表；CI 檢查產生結果與順序。 |
 | `je_auto_control/__main__.py` | 106 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
 | `je_auto_control/cli.py` | 453 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`／`--journal`）、`journal`（依 run 篩選與有界遮罩快照）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`。所有子命令延遲匯入，確保不碰 Qt。 |
 | `je_auto_control/api/__init__.py` | 99 | 版本化整合進入點。 |
@@ -522,14 +529,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 29,524 行。
+> 6 個套件、約 29,738 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 424 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 8,496 | 持久化設定與條件交易：`contract.py` 管理有限 JSON 與協定例外；`store.py` 以 SQLite 原子比較版本／記錄重送收據；`routes.py` 提供第二版 HTTP 與明確盲寫相容；`commands.py` 共用 AC／MCP／Builder；`client.py` 條件提交，另有因果模型、peer ledger 與本機 SQLite outbox；第三版 /causal 交易已接上確認／退休／回收與刪除憑證；client／outbox 已接上原請求重送、有界 CAS 重合併及原子快照確認；持久化控制、原子本機 full-resync／舊待送退役與歷史收據已接上。本機資產工具另提供 manifest、整版雜湊驗證與不可變目錄發布；七種來源 adapters 保存可攜因果 profiles；workspace INI 與 GUI 共用偏好正規化。來源／outbox 與原子 full-resync 基準已由 SyncWorkspace 協調；引用資產以不可變分塊／完整 hash 收據、具驗證 HTTP 與完整 profile 串流發布接上；Sync UI 仍屬 C3。 |
 | `utils/device_matrix/` | 143 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 14,634 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/remote_desktop/` | 14,848 | **遠端桌面子系統**：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈；私有選用功能模組保留整組匯入結果。 |
 | `utils/usb/` | 4,819 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 1,008 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
@@ -769,9 +776,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 126 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（14,634 行／63 檔）
+#### `utils/remote_desktop/`（14,848 行／71 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
+`_export_bindings.py` 保存產生的來源對照；`_optional/` 分別管理 WebRTC、錄影、多檢視者、
+麥克風上傳、檔案傳輸與硬體編碼的選用匯入。各組 `ImportError` 產生整組 `None`，
+其他例外仍向外傳遞；不在門面內持有跨匯入鎖。
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -779,7 +789,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `webrtc_viewer.py` | 698 | WebRTC 檢視端：接收視訊並送出輸入。 |
 | `host.py` | 669 | TCP 主機：接受迴圈、TLS 包裝、連線／認證握手、音訊與剪貼簿廣播、檔案推送、單次 token。 |
 | `viewer.py` | 661 | TCP 檢視端。 |
-| `host_service.py` | 562 | 無頭 WebRTC 主機執行器 + 多平台服務安裝器。 |
+| `host_service.py` | 561 | 無頭 WebRTC 主機執行器 + 多平台服務安裝器。 |
 | `host_client.py` | 459 | TCP 主機的每連線處理器：一個檢視端一個實例,擁有它的認證交換、sender／audio／receiver 三條執行緒,以及入站訊息的路由表。 |
 | `registry.py` | 564 | `AC_remote_*` 指令使用的行程級單例。 |
 | `webrtc_transport.py` | 421 | 共用 WebRTC 管線：asyncio 橋接執行緒、螢幕視訊軌、設定。 |
@@ -1307,7 +1317,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，只需要 PySide6
 | dag_runner | `dag_tab.py` | 355 | 編輯、驗證、執行跨主機 DAG。 |
 | chatops | `chatops_tab.py` | 107 | 在接上 Slack 前先本機測試 slash 指令。 |
 | trace_replay | `trace_replay_tab.py` | 192 | 拖曳捲動時光回溯錄製內容。 |
-| remote_desktop | `remote_desktop/`（17 檔） | 6,909 | 見下。 |
+| remote_desktop | `remote_desktop/`（17 檔） | 6,911 | 見下。 |
 | presence | `presence_tab.py` | 155 | 多檢視者在場名單。 |
 | rest_api | `rest_api_tab.py` | 199 | 啟停 HTTP 前端並顯示 URL、實際驗證模式與可用 token。 |
 | admin_console | `admin_console_tab.py` | 310 | 管理多個遠端 AutoControl REST 端點。 |
@@ -1325,15 +1335,15 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，只需要 PySide6
 | --- | ---: | --- |
 | `gui/diagnostics_capabilities.py` | 60 | 只呈現既有不可變能力快照與四語狀態；不探測、不連線，不持有原生物件。 |
 
-#### 遠端桌面 GUI（`gui/remote_desktop/`，21 檔／6,909 行）
+#### 遠端桌面 GUI（`gui/remote_desktop/`，21 檔／6,911 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `folder_sync_controls.py` | 65 | Translate the existing folder toggle into owned start, reconnect handoff and explicit baseline reset. |
 | `folder_sync_io.py` | 128 | Bind confirmed folder sends, cancellation and frozen receipts to one captured GUI owner. |
-| `webrtc_panel.py` | 2,488 | WebRTC 子分頁主體。 |
+| `webrtc_panel.py` | 2,487 | WebRTC 子分頁主體。 |
 | `webrtc_dialogs.py` | 519 | WebRTC GUI 用的自訂對話框與清單元件（待審檢視者、信任清單、通訊錄、遠端檔案表、稽核記錄、LAN 瀏覽）。 |
-| `advanced_group.py` | 92 | 兩個 WebRTC 面板共用的 Advanced STUN／TURN（含選用硬體編碼器）群組，含它寫回面板的 Protocol。 |
+| `advanced_group.py` | 95 | 兩個 WebRTC 面板共用的 Advanced STUN／TURN（含選用硬體編碼器）群組，含它寫回面板的 Protocol。 |
 | `trusted_group.py` | 70 | WebRTC host 面板的信任 viewer 清單群組（移除／清空／匯入／匯出），含它寫回面板的 Protocol。 |
 | `connection_screen.py` | 729 | Quick Connect —— AnyDesk 風格單畫面入口。 |
 | `viewer_panel.py` | 563 | 「控制另一台機器」子分頁。 |
@@ -1459,12 +1469,12 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 120 | 34,872 |
+| `gui/` | 120 | 34,874 |
 | `utils/mcp_server/` | 53 | 20,971 |
-| `utils/remote_desktop/` | 63 | 14,634 |
+| `utils/remote_desktop/` | 71 | 14,848 |
 | `utils/executor/` | 9 | 9,880 |
 | `utils/usb/` | 17 | 4,819 |
-| `je_auto_control/`（頂層 3 檔） | 3 | 2,691 |
+| `je_auto_control/`（頂層 3 檔） | 5 | 4,778 |
 | `utils/accessibility/` | 14 | 3,143 |
 | `wrapper/` | 21 | 4,368 |
 | `windows/` | 23 | 2,154 |
@@ -1480,7 +1490,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 974 | 96,640 |
-| **總計** | **1,405** | **210,292** |
+| **總計** | **1,415** | **212,595** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

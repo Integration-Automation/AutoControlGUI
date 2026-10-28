@@ -634,6 +634,9 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
   optional extra that wraps the same headless core.
+  Public exports load their source modules when requested. `__all__` and `dir()` list names
+  without loading every feature; wildcard import requests them all. Unresolved names are absent
+  from `vars(je_auto_control)`.
   On X11, plain package import opens no display or input device and starts no keyboard listener.
   Desktop operations acquire resources when called. Reading `keyboard_keys_table` or calling
   `get_keyboard_keys_table()` resolves actual server keycodes and requires an X connection.
