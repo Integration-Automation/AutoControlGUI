@@ -160,11 +160,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      歷史證據檔不自動認領或刪除。
 
    - 於整份規範最後固定提交重跑完整 headless 與 coverage run -m pytest、跨功能／故障恢復回歸；
-     Linux 連線程序元件及新增21項案例仍須納入新固定來源的完整 coverage；
-     26c1626e 的完整結果不涵蓋此元件，不能代替本次來源的全量驗證；
      後續平台／恢復修正亦須納入完整 coverage 及新成品逐檔比對；
      後續修正不得沿用較早提交的完整驗證；來源、測試、設定與文件須重新固定並核實。
-     目前功能工作樹完整成功的來源範圍與80項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。
+     目前功能工作樹完整成功的來源範圍與95項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。
      歷史原因仍須追查：stage74 的管理員 host binding 與 retention uncertain／phase 前置失敗；
      stage85 的 default_connection_discovery_change、expired_origin_can_be_replaced_only_for_never_dispatched_scoped_work
      及 retention queued_child／executing／fresh_delivery；stage88–93 的3秒來源匯出／匯入準備逾時。
