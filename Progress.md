@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261028-08；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-01；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -61,14 +61,26 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      取消／早退／外部回收與原程序群組退場；送出訊號、主程序退出或單次錯誤碼均不足以
      證明全部後代已退出。涵蓋既有環境探測、桌面／瀏覽器及遠端 helper 呼叫者。
      正式繫結仍須核實取消發生於 native spawn 期間的所有權、失敗清理、群組與逸出後代退場，
-     並補受支援版本／架構驗證；隔離 ctypes 原型不等於正式 helper 已接合，安裝前仍須比對。
-     X11 延遲初始化修改仍須完成提交後固定來源的完整回歸。
-     真正 Linux helper 執行仍須處理 presence_worker 使用 Windows source／pipe 的接合缺口，
-     以真實套件與固定模組驗證啟動、未支援回覆及退場；模組可匯入不等於 worker 已執行，
+     並補受支援版本／架構驗證；隔離原型與直接子程序驗收不等於正式 helper 已接合，安裝前仍須比對。
+     固定來源完整回歸仍須排除 test_webrtc_file_registry.py 的兩個子程序逾時失敗；
+     原始 10 秒期限內 stdout 讀取未結束；後續診斷停在套件匯入，尚未進入 GC，
+     仍須定位匯入耗時根因與原始失敗的關聯，不能直接宣稱 registry 死鎖。
+     保留原始失敗與覆蓋率資料，定位匯入／GC／退出階段並修正根因後補相應回歸；不得放寬期限。
+     presence_worker 仍須接合 Linux source／pipe／security，處理真正登入、seat、鎖定與活動來源；
+     已安裝固定模組的未支援回覆及正常 EOF 退場不能證明實體來源或完整後代退場。
      不得替換空白 initializer 或偽裝 Wayland session 取代完整應用驗證。
-     程序樹退場設計仍須核實 cgroup 權限隔離與禁止後代遷出、native 啟動取消及服務崩潰
-     清理；目前尚未建立可用 delegation。獨立 owner 服務方案只有設計評審，未實作或部署，
-     不得以 cgroup.kill 成功或空樹讀值單獨宣告全部後代已退場。
+     獨立 owner 核心仍須完成每筆記錄的啟動、取消、句柄發布、執行緒回收與服務端持續所有權；
+     失敗 clone 的輸出暫存值不得當成擁有的 fd，晚到成功必須接管後清理，啟動確認遺失亦不得漏失。
+     須涵蓋建立執行緒回傳前 worker 已完成、建立失敗、記憶體配置失敗、失去通知及句柄重用。
+     每個 nested helper 仍須獨立受保護子樹；關閉來源保留 broker 與 sibling，關閉父程序則等待
+     所有後代啟動解決、子樹清空與精確目錄移除。mkdir 成功但 open 失敗仍須保有清理責任。
+     程序樹退場仍須核實 cgroup 權限隔離、禁止後代遷出、可信 peer 身分、native 啟動取消及
+     服務／guardian 崩潰復原；目前尚未建立可用 delegation，不能以 kill 成功或空樹讀值單獨結案。
+     Python Linux 接合層仍須讓 close 獨立於等待回覆的 request 鎖送出取消，核實關閉先於啟動、
+     啟動確認遺失、延遲回覆及連線中斷；每個 channel 的 lease 不得連帶取消 sibling。
+     原有 5 類呼叫者、parent_watch、輸入 journal／lease 與本機 pipe 執行緒退場均須一併接合。
+     正式 owner 服務交付尚缺封裝、架構／libc 相容性、stable／dev 一致性、安裝內容比對及實際
+     已安裝執行驗收；隔離編譯的 ELF 不得冒充通用 wheel，不能匯入時下載或暗中部署服務。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、
      helper／半開交握回收與取消／停止生命週期，避免兩條實作各自接管相同原生資源。
    - 驗證相同實體桌面在不同 profile、資料庫、服務及 DAG 節點間仍只有一位輸入擁有者；

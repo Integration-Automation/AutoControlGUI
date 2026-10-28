@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-01 | 2026-10-29 | Verify native owner fixtures and retain full-suite failures | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261028-09 | 2026-10-28 | Defer X11 resources until explicit desktop use | #snapshot #agent #linux #startup #verification | [2026-10-e](2026-10-e.md) |
 | U-20261028-08 | 2026-10-28 | Verify atomic Linux spawn attributes and private pipes | #snapshot #agent #presence #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261028-07 | 2026-10-28 | Verify literal source links and missing export chunks | #done #agent #transfer #verification | [2026-10-e](2026-10-e.md) |
