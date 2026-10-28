@@ -496,6 +496,9 @@ Linux 內部 presence_peer_linux 以不可繼承的 pidfd 保留原始 Unix stre
 - **不寫 Python 也能腳本化。** 856 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
   能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
 - **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
+  X11 的一般套件匯入不開啟顯示連線或輸入裝置，也不啟動鍵盤監聽。
+  桌面操作在呼叫時才取得資源。讀取 `keyboard_keys_table` 或呼叫
+  `get_keyboard_keys_table()` 會解析實際伺服器鍵碼，因此需要 X 連線。
 - **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
 - **相依基線輕薄。** REST 伺服器、JSON Schema 驗證、JWT、TOTP、WebSocket 框架、ACME 用戶端、
   USB/IP 協定與 Prometheus 指標全部以標準庫實作；較重的相依都是選用。

@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,413 |
-| 程式碼總行數 | 210,462 |
+| 程式碼總行數 | 210,461 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 856 |
 | 套件門面 `__all__` 公開名稱數 | 1445 |
@@ -157,7 +157,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `je_auto_control/__init__.py` | 2,123 | **套件門面**。集中匯入並再匯出 1445 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
+| `je_auto_control/__init__.py` | 2,132 | **套件門面**。集中匯入並再匯出 1445 個公開名稱，以功能區塊註解分段（callback／exception／executor／a11y／vision／clipboard…）。 |
 | `je_auto_control/__main__.py` | 106 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
 | `je_auto_control/cli.py` | 453 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`／`--journal`）、`journal`（依 run 篩選與有界遮罩快照）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`。所有子命令延遲匯入，確保不碰 Qt。 |
 | `je_auto_control/api/__init__.py` | 99 | 版本化整合進入點。 |
@@ -174,16 +174,16 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `wrapper/platform_wrapper.py` | 119 | **Strategy 樞紐**。依 `sys.platform` 匯入唯一後端並匯出 `keyboard`、`keyboard_check`、`keyboard_keys_table`、`mouse`、`mouse_keys_table`、`special_mouse_keys_table`、`screen`、`recorder`；八個名稱都帶著 `backend_contract` 的型別出去，其中 `keyboard`／`mouse` 因為四個分支綁的是三種互不相容的形狀，先落在私有的 `_keyboard`／`_mouse`（`Any`）上再標合約；載入失敗直接拋 `AutoControlException`（fail fast）。 |
+| `wrapper/platform_wrapper.py` | 137 | **Strategy 樞紐**。依 `sys.platform` 匯入唯一後端並匯出 `keyboard`、`keyboard_check`、`keyboard_keys_table`、`mouse`、`mouse_keys_table`、`special_mouse_keys_table`、`screen`、`recorder`；八個名稱都帶著 `backend_contract` 的型別出去，其中 `keyboard`／`mouse` 因為四個分支綁的是三種互不相容的形狀，先落在私有的 `_keyboard`／`_mouse`（`Any`）上再標合約；載入失敗直接拋 `AutoControlException`（fail fast）；X11 的 `keyboard_keys_table` 透過明確存取才取得真正 dict，其他後端保留原有表。 |
 | `wrapper/backend_contract.py` | 249 | 平台縫的型別合約：`ScreenBackend`／`KeyboardCheckBackend`／`RecorderBackend` 三個跨平台 Protocol，加上 `keyboard`／`mouse` 各自的三份——`Win32*`（SendInput 與 Interception）、`Darwin*`（Quartz）、`X11Unix*`（XTest／uinput／Wayland／BSD），因為這兩個名稱的呼叫形狀真的因平台而異；`KeyboardBackend`／`MouseBackend` 依 `sys.platform` 別名到其中一組，所以呼叫端被檢查的是它真的會走到的簽章。四個 `_platform_*` 組裝模組各自標注自己綁的是什麼，少一個成員就在該後端自己的檔案裡紅掉，而不是在三層之上的呼叫點。 |
 | `wrapper/capabilities.py` | 283 | 無副作用的 immutable context／input-capture metadata；不載入原生依賴或要求授權，XWayland 範圍明示。 |
 | `wrapper/_platform_windows.py` | 366 | Windows 後端組裝：Win32 ctypes 模組 + 虛擬鍵表（含 OEM 鍵與 `keyboard_key_aliases` 別名表）+ 選用 Interception 驅動。 |
 | `wrapper/_platform_osx.py` | 162 | macOS 後端組裝（Quartz 事件 + osx 虛擬鍵表）。 |
-| `wrapper/_platform_linux.py` | 278 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
+| `wrapper/_platform_linux.py` | 155 | X11 後端組裝（python-Xlib + 選用 uinput）。鍵盤／滑鼠共用延後選擇的輸入後端；匯入不探測 uinput，鍵碼表只在明確存取時解析成共用 dict。 |
 | `wrapper/_platform_wayland.py` | 63 | Wayland 後端組裝（libei／ydotool／grim）。 |
 | `wrapper/_input_observer.py` | 30 | Optional context-local native input announcements; legacy callers remain unaffected. |
 | `wrapper/auto_control_mouse.py` | 600 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
-| `wrapper/auto_control_keyboard.py` | 550 | 鍵盤 API：鍵表查詢、`keyboard_key_name` 反查標準鍵名（不回別名）、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。**`type_keyboard` 與 `hotkey` 的放開走 `finally`**（見下）。 |
+| `wrapper/auto_control_keyboard.py` | 557 | 鍵盤 API：鍵表查詢、`keyboard_key_name` 反查標準鍵名（不回別名）、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。**`type_keyboard` 與 `hotkey` 的放開走 `finally`**（見下）。 |
 | `wrapper/auto_control_screen.py` | 111 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
 | `wrapper/auto_control_image.py` | 85 | 影像 API：`locate_all_image`、`locate_image_center`、`locate_and_click`。 |
 | `wrapper/auto_control_record.py` | 124 | 錄製 API：`record`／`stop_record`／`record_to_json`（支援 stop event 與逾時）。 |
@@ -223,17 +223,17 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `screen/osx_screen.py` | 143 | 螢幕擷取與尺寸（含 Retina 座標處理）。 |
 | `pid/pid_control.py` | 53 | 以 PID 操作應用程式。 |
 
-#### Linux X11（`linux_with_x11/`，19 檔／1,281 行）
+#### Linux X11（`linux_with_x11/`，19 檔／1,369 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `core/utils/x11_linux_display.py` | 16 | 共用 `Xlib.display.Display` 實例。 |
-| `core/utils/x11_linux_vk.py` | 199 | X11 keysym 對照表。 |
-| `mouse/x11_linux_mouse_control.py` | 158 | XTest 滑鼠事件。 |
-| `keyboard/x11_linux_keyboard_control.py` | 99 | XTest 鍵盤事件。 |
-| `listener/x11_linux_listener.py` | 208 | XRecord 監聽。 |
+| `core/utils/x11_linux_display.py` | 28 | Own the lazily acquired shared X11 operation display. |
+| `core/utils/x11_linux_vk.py` | 231 | Resolve X11 key symbols on explicit table or legacy constant access. |
+| `mouse/x11_linux_mouse_control.py` | 163 | XTest 滑鼠事件。 |
+| `keyboard/x11_linux_keyboard_control.py` | 101 | XTest 鍵盤事件。 |
+| `listener/x11_linux_listener.py` | 243 | Acquire and own an independent X11 RECORD connection on first observation. |
 | `record/x11_linux_record.py` | 78 | 錄製。 |
-| `screen/x11_linux_screen.py` | 65 | 螢幕尺寸與擷取。 |
+| `screen/x11_linux_screen.py` | 67 | 螢幕尺寸與擷取。 |
 | `uinput/_device.py` | 246 | `/dev/uinput` 封裝（核心層輸入，選用）。 |
 | `uinput/keyboard.py` | 44 | uinput 鍵盤後端，介面與 X11 版一致。 |
 | `uinput/mouse.py` | 130 | uinput 滑鼠後端。 |
@@ -1464,13 +1464,13 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/remote_desktop/` | 63 | 14,634 |
 | `utils/executor/` | 9 | 9,880 |
 | `utils/usb/` | 17 | 4,819 |
-| `je_auto_control/`（頂層 3 檔） | 3 | 2,682 |
+| `je_auto_control/`（頂層 3 檔） | 3 | 2,691 |
 | `utils/accessibility/` | 14 | 3,143 |
-| `wrapper/` | 21 | 4,466 |
+| `wrapper/` | 21 | 4,368 |
 | `windows/` | 23 | 2,154 |
 | `utils/rest_api/` | 8 | 2,191 |
 | `utils/agent/` | 9 | 2,142 |
-| `linux_with_x11/` | 19 | 1,281 |
+| `linux_with_x11/` | 19 | 1,369 |
 | `linux_wayland/` | 18 | 3,155 |
 | `utils/triggers/` | 4 | 1,401 |
 | `utils/ocr/` | 10 | 1,381 |
@@ -1480,7 +1480,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 974 | 96,640 |
-| **總計** | **1,405** | **210,293** |
+| **總計** | **1,405** | **210,292** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

@@ -634,6 +634,9 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
   optional extra that wraps the same headless core.
+  On X11, plain package import opens no display or input device and starts no keyboard listener.
+  Desktop operations acquire resources when called. Reading `keyboard_keys_table` or calling
+  `get_keyboard_keys_table()` resolves actual server keycodes and requires an X connection.
 - **Locate things four ways.** Template matching, OCR, the accessibility tree, and a
   vision-language model — composable through anchor locators and self-healing fallbacks.
 - **Light dependency floor.** The REST server, JSON Schema validator, JWT, TOTP,

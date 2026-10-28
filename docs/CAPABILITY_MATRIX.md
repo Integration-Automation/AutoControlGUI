@@ -1,5 +1,11 @@
 # Capability matrix
 
+X11 package import defers display connections, server keycode resolution, RECORD listener startup
+and uinput device selection until use. Explicit key-table retrieval returns a real mutable dict
+and requires an X connection. Screen and input operations do not start recording. This startup
+behavior does not establish Linux agent physical-presence authority or helper-tree retirement;
+those integration requirements remain in Progress.md.
+
 Transfer management now shares `manage_agent_transfer(operation, request)`, `AC_agent_transfer`,
 `ac_agent_transfer`, authenticated `POST /agent/transfer`, and Script Builder metadata. The CLI uses
 `agent-task transfer --operation review_export --request request.json`. Review returns an approval

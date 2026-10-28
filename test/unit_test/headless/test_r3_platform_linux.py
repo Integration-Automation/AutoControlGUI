@@ -86,7 +86,7 @@ def test_finding4_x11_get_pixel_returns_rgb(monkeypatch):
             return _FakeScreen()
 
     display_mod = types.ModuleType("x11_linux_display")
-    display_mod.display = _FakeDisplay()
+    display_mod.get_display = _FakeDisplay
     monkeypatch.setitem(
         sys.modules,
         "je_auto_control.linux_with_x11.core.utils.x11_linux_display",

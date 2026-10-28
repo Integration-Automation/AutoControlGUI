@@ -1,5 +1,12 @@
 # AutoControl Architecture
 
+The X11 assembly is importable without acquiring desktop resources. A shared operation display
+is acquired through get_display, while the RECORD listener owns a separate connection and
+synchronizes recording admission with retirement. Static key symbols resolve into a cached real
+dictionary only on explicit value access. Keyboard and mouse share deferred XTest/uinput selection.
+The facade retains its key-table exports; this startup boundary does not supply Linux agent
+physical-presence authority or owned-helper retirement.
+
 Transfer management now shares `manage_agent_transfer(operation, request)`, `AC_agent_transfer`,
 `ac_agent_transfer`, authenticated `POST /agent/transfer`, and Script Builder metadata. The CLI uses
 `agent-task transfer --operation review_export --request request.json`. Review returns an approval

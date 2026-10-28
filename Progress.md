@@ -62,10 +62,13 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      證明全部後代已退出。涵蓋既有環境探測、桌面／瀏覽器及遠端 helper 呼叫者。
      正式繫結仍須核實取消發生於 native spawn 期間的所有權、失敗清理、群組與逸出後代退場，
      並補受支援版本／架構驗證；隔離 ctypes 原型不等於正式 helper 已接合，安裝前仍須比對。
-     真實 Linux 套件啟動還須處理 facade 匯入時連接 X11，以及 presence_worker 仍使用
-     Windows source／pipe 的接合缺口。須先比對並隔離配置依賴，移除測試程序的桌面 session
-     環境變數，以真實套件與固定模組驗證啟動、未支援回覆及退場；不得替換空白 initializer
-     或偽裝 Wayland session 取代完整應用驗證。
+     X11 延遲初始化修改仍須完成提交後固定來源的完整回歸。
+     真正 Linux helper 執行仍須處理 presence_worker 使用 Windows source／pipe 的接合缺口，
+     以真實套件與固定模組驗證啟動、未支援回覆及退場；模組可匯入不等於 worker 已執行，
+     不得替換空白 initializer 或偽裝 Wayland session 取代完整應用驗證。
+     程序樹退場設計仍須核實 cgroup 權限隔離與禁止後代遷出、native 啟動取消及服務崩潰
+     清理；目前尚未建立可用 delegation。獨立 owner 服務方案只有設計評審，未實作或部署，
+     不得以 cgroup.kill 成功或空樹讀值單獨宣告全部後代已退場。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、
      helper／半開交握回收與取消／停止生命週期，避免兩條實作各自接管相同原生資源。
    - 驗證相同實體桌面在不同 profile、資料庫、服務及 DAG 節點間仍只有一位輸入擁有者；

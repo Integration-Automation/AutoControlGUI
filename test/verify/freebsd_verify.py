@@ -217,8 +217,9 @@ def check_mouse_position() -> None:
 def check_mouse_buttons() -> None:
     """A pressed button is a button the *server* reports as down."""
     from je_auto_control.linux_with_x11.core.utils.x11_linux_display import (
-        display,
+        get_display,
     )
+    display = get_display()
     from je_auto_control.linux_with_x11.mouse import x11_linux_mouse_control as m
 
     def _mask() -> int:
@@ -258,8 +259,9 @@ def check_keyboard() -> None:
     out of the server, so this needs no second client to read the event back.
     """
     from je_auto_control.linux_with_x11.core.utils.x11_linux_display import (
-        display,
+        get_display,
     )
+    display = get_display()
     from je_auto_control.linux_with_x11.keyboard import (
         x11_linux_keyboard_control as k,
     )
@@ -304,8 +306,9 @@ def check_scroll() -> None:
     from Xlib import X
 
     from je_auto_control.linux_with_x11.core.utils.x11_linux_display import (
-        display,
+        get_display,
     )
+    display = get_display()
 
     screen = display.screen()
     window = screen.root.create_window(

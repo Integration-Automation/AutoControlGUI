@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261028-09 | 2026-10-28 | Defer X11 resources until explicit desktop use | #snapshot #agent #linux #startup #verification | [2026-10-e](2026-10-e.md) |
 | U-20261028-08 | 2026-10-28 | Verify atomic Linux spawn attributes and private pipes | #snapshot #agent #presence #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261028-07 | 2026-10-28 | Verify literal source links and missing export chunks | #done #agent #transfer #verification | [2026-10-e](2026-10-e.md) |
 | U-20261028-06 | 2026-10-28 | Verify Linux transport in the corrected full suite | #snapshot #agent #presence #linux #verification | [2026-10-e](2026-10-e.md) |
@@ -471,7 +472,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10-e.md](2026-10-e.md) | 2026-10 | 9 |
+| [2026-10-e.md](2026-10-e.md) | 2026-10 | 10 |
 | [2026-10-d.md](2026-10-d.md) | 2026-10 | 15 |
 | [2026-10-c.md](2026-10-c.md) | 2026-10 | 75 |
 | [2026-10-b.md](2026-10-b.md) | 2026-10 | 15 |

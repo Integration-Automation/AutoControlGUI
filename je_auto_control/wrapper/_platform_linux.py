@@ -1,66 +1,9 @@
+"""Assemble X11 services without acquiring displays or input devices."""
 from typing import Dict, Tuple
 
-from je_auto_control.linux_with_x11.core.utils.x11_linux_vk import (
-    x11_linux_key_backspace, x11_linux_key_slash_b, x11_linux_key_tab,
-    x11_linux_key_enter, x11_linux_key_return, x11_linux_key_shift,
-    x11_linux_key_ctrl, x11_linux_key_alt, x11_linux_key_pause,
-    x11_linux_key_capslock, x11_linux_key_esc, x11_linux_key_pgup,
-    x11_linux_key_pgdn, x11_linux_key_pageup, x11_linux_key_pagedown,
-    x11_linux_key_end, x11_linux_key_home, x11_linux_key_left,
-    x11_linux_key_up, x11_linux_key_right, x11_linux_key_down,
-    x11_linux_key_select, x11_linux_key_print, x11_linux_key_execute,
-    x11_linux_key_prtsc, x11_linux_key_prtscr, x11_linux_key_prntscrn,
-    x11_linux_key_insert, x11_linux_key_del, x11_linux_key_delete,
-    x11_linux_key_help, x11_linux_key_win, x11_linux_key_winleft,
-    x11_linux_key_winright, x11_linux_key_apps,
-    x11_linux_key_num0, x11_linux_key_num1, x11_linux_key_num2,
-    x11_linux_key_num3, x11_linux_key_num4, x11_linux_key_num5,
-    x11_linux_key_num6, x11_linux_key_num7, x11_linux_key_num8,
-    x11_linux_key_num9, x11_linux_key_multiply, x11_linux_key_add,
-    x11_linux_key_separator, x11_linux_key_subtract,
-    x11_linux_key_decimal, x11_linux_key_divide,
-    x11_linux_key_f1, x11_linux_key_f2, x11_linux_key_f3, x11_linux_key_f4,
-    x11_linux_key_f5, x11_linux_key_f6, x11_linux_key_f7, x11_linux_key_f8,
-    x11_linux_key_f9, x11_linux_key_f10, x11_linux_key_f11, x11_linux_key_f12,
-    x11_linux_key_f13, x11_linux_key_f14, x11_linux_key_f15, x11_linux_key_f16,
-    x11_linux_key_f17, x11_linux_key_f18, x11_linux_key_f19, x11_linux_key_f20,
-    x11_linux_key_f21, x11_linux_key_f22, x11_linux_key_f23, x11_linux_key_f24,
-    x11_linux_key_numlock, x11_linux_key_scrolllock,
-    x11_linux_key_shiftleft, x11_linux_key_shiftright,
-    x11_linux_key_ctrlleft, x11_linux_key_ctrlright,
-    x11_linux_key_altleft, x11_linux_key_altright,
-    x11_linux_key_space, x11_linux_key_newline_n, x11_linux_key_newline_r,
-    x11_linux_key_newline_t, x11_linux_key_exclam, x11_linux_key_numbersign,
-    x11_linux_key_percent, x11_linux_key_dollar, x11_linux_key_ampersand,
-    x11_linux_key_quotedbl, x11_linux_key_apostrophe,
-    x11_linux_key_parenleft, x11_linux_key_parenright,
-    x11_linux_key_asterisk, x11_linux_key_equal, x11_linux_key_plus,
-    x11_linux_key_comma, x11_linux_key_minus, x11_linux_key_period,
-    x11_linux_key_slash, x11_linux_key_colon, x11_linux_key_semicolon,
-    x11_linux_key_less, x11_linux_key_greater, x11_linux_key_question,
-    x11_linux_key_at, x11_linux_key_bracketleft, x11_linux_key_bracketright,
-    x11_linux_key_backslash, x11_linux_key_asciicircum,
-    x11_linux_key_underscore, x11_linux_key_grave,
-    x11_linux_key_braceleft, x11_linux_key_bar, x11_linux_key_braceright,
-    x11_linux_key_asciitilde,
-    x11_linux_key_a, x11_linux_key_b, x11_linux_key_c, x11_linux_key_d,
-    x11_linux_key_e, x11_linux_key_f, x11_linux_key_g, x11_linux_key_h,
-    x11_linux_key_i, x11_linux_key_j, x11_linux_key_k, x11_linux_key_l,
-    x11_linux_key_m, x11_linux_key_n, x11_linux_key_o, x11_linux_key_p,
-    x11_linux_key_q, x11_linux_key_r, x11_linux_key_s, x11_linux_key_t,
-    x11_linux_key_u, x11_linux_key_v, x11_linux_key_w, x11_linux_key_x,
-    x11_linux_key_y, x11_linux_key_z,
-    x11_linux_key_A, x11_linux_key_B, x11_linux_key_C, x11_linux_key_D,
-    x11_linux_key_E, x11_linux_key_F, x11_linux_key_G, x11_linux_key_H,
-    x11_linux_key_I, x11_linux_key_J, x11_linux_key_K, x11_linux_key_L,
-    x11_linux_key_M, x11_linux_key_N, x11_linux_key_O, x11_linux_key_P,
-    x11_linux_key_Q, x11_linux_key_R, x11_linux_key_S, x11_linux_key_T,
-    x11_linux_key_U, x11_linux_key_V, x11_linux_key_W, x11_linux_key_X,
-    x11_linux_key_Y, x11_linux_key_Z,
-    x11_linux_key_1, x11_linux_key_2, x11_linux_key_3, x11_linux_key_4,
-    x11_linux_key_5, x11_linux_key_6, x11_linux_key_7, x11_linux_key_8,
-    x11_linux_key_9, x11_linux_key_0,
-)
+from threading import Lock
+
+from je_auto_control.linux_with_x11.core.utils.x11_linux_vk import get_keyboard_keys_table
 from je_auto_control.linux_with_x11.keyboard import x11_linux_keyboard_control
 from je_auto_control.linux_with_x11.listener import x11_linux_listener
 from je_auto_control.linux_with_x11.mouse import x11_linux_mouse_control
@@ -76,134 +19,6 @@ from je_auto_control.wrapper.backend_contract import (
     KeyboardCheckBackend, RecorderBackend, ScreenBackend,
     X11UnixKeyboardBackend, X11UnixMouseBackend,
 )
-
-keyboard_keys_table = {
-    "backspace": x11_linux_key_backspace,
-    "\b": x11_linux_key_slash_b,
-    "tab": x11_linux_key_tab,
-    "enter": x11_linux_key_enter,
-    "return": x11_linux_key_return,
-    "shift": x11_linux_key_shift,
-    "ctrl": x11_linux_key_ctrl,
-    "alt": x11_linux_key_alt,
-    "pause": x11_linux_key_pause,
-    "capslock": x11_linux_key_capslock,
-    "esc": x11_linux_key_esc,
-    "pgup": x11_linux_key_pgup,
-    "pgdn": x11_linux_key_pgdn,
-    "pageup": x11_linux_key_pageup,
-    "pagedown": x11_linux_key_pagedown,
-    "end": x11_linux_key_end,
-    "home": x11_linux_key_home,
-    "left": x11_linux_key_left,
-    "up": x11_linux_key_up,
-    "right": x11_linux_key_right,
-    "down": x11_linux_key_down,
-    "select": x11_linux_key_select,
-    "print": x11_linux_key_print,
-    "execute": x11_linux_key_execute,
-    "prtsc": x11_linux_key_prtsc,
-    "prtscr": x11_linux_key_prtscr,
-    "prntscrn": x11_linux_key_prntscrn,
-    "insert": x11_linux_key_insert,
-    "del": x11_linux_key_del,
-    "delete": x11_linux_key_delete,
-    "help": x11_linux_key_help,
-    "win": x11_linux_key_win,
-    "winleft": x11_linux_key_winleft,
-    "winright": x11_linux_key_winright,
-    "apps": x11_linux_key_apps,
-    "num0": x11_linux_key_num0,
-    "num1": x11_linux_key_num1,
-    "num2": x11_linux_key_num2,
-    "num3": x11_linux_key_num3,
-    "num4": x11_linux_key_num4,
-    "num5": x11_linux_key_num5,
-    "num6": x11_linux_key_num6,
-    "num7": x11_linux_key_num7,
-    "num8": x11_linux_key_num8,
-    "num9": x11_linux_key_num9,
-    "multiply": x11_linux_key_multiply,
-    "add": x11_linux_key_add,
-    "separator": x11_linux_key_separator,
-    "subtract": x11_linux_key_subtract,
-    "decimal": x11_linux_key_decimal,
-    "divide": x11_linux_key_divide,
-    "f1": x11_linux_key_f1, "f2": x11_linux_key_f2, "f3": x11_linux_key_f3,
-    "f4": x11_linux_key_f4, "f5": x11_linux_key_f5, "f6": x11_linux_key_f6,
-    "f7": x11_linux_key_f7, "f8": x11_linux_key_f8, "f9": x11_linux_key_f9,
-    "f10": x11_linux_key_f10, "f11": x11_linux_key_f11, "f12": x11_linux_key_f12,
-    "f13": x11_linux_key_f13, "f14": x11_linux_key_f14, "f15": x11_linux_key_f15,
-    "f16": x11_linux_key_f16, "f17": x11_linux_key_f17, "f18": x11_linux_key_f18,
-    "f19": x11_linux_key_f19, "f20": x11_linux_key_f20, "f21": x11_linux_key_f21,
-    "f22": x11_linux_key_f22, "f23": x11_linux_key_f23, "f24": x11_linux_key_f24,
-    "numlock": x11_linux_key_numlock,
-    "scrolllock": x11_linux_key_scrolllock,
-    "shiftleft": x11_linux_key_shiftleft,
-    "shiftright": x11_linux_key_shiftright,
-    "ctrlleft": x11_linux_key_ctrlleft,
-    "ctrlright": x11_linux_key_ctrlright,
-    "altleft": x11_linux_key_altleft,
-    "altright": x11_linux_key_altright,
-    "space": x11_linux_key_space,
-    "\n": x11_linux_key_newline_n,
-    "\r": x11_linux_key_newline_r,
-    "\t": x11_linux_key_newline_t,
-    "!": x11_linux_key_exclam,
-    "#": x11_linux_key_numbersign,
-    "%": x11_linux_key_percent,
-    "$": x11_linux_key_dollar,
-    "&": x11_linux_key_ampersand,
-    '"': x11_linux_key_quotedbl,
-    "'": x11_linux_key_apostrophe,
-    "(": x11_linux_key_parenleft,
-    ")": x11_linux_key_parenright,
-    "*": x11_linux_key_asterisk,
-    "=": x11_linux_key_equal,
-    "+": x11_linux_key_plus,
-    ",": x11_linux_key_comma,
-    "-": x11_linux_key_minus,
-    ".": x11_linux_key_period,
-    "/": x11_linux_key_slash,
-    ":": x11_linux_key_colon,
-    ";": x11_linux_key_semicolon,
-    "<": x11_linux_key_less,
-    ">": x11_linux_key_greater,
-    "?": x11_linux_key_question,
-    "@": x11_linux_key_at,
-    "[": x11_linux_key_bracketleft,
-    "]": x11_linux_key_bracketright,
-    "\\": x11_linux_key_backslash,
-    "^": x11_linux_key_asciicircum,
-    "_": x11_linux_key_underscore,
-    "`": x11_linux_key_grave,
-    "{": x11_linux_key_braceleft,
-    "|": x11_linux_key_bar,
-    "}": x11_linux_key_braceright,
-    "~": x11_linux_key_asciitilde,
-    "a": x11_linux_key_a, "b": x11_linux_key_b, "c": x11_linux_key_c,
-    "d": x11_linux_key_d, "e": x11_linux_key_e, "f": x11_linux_key_f,
-    "g": x11_linux_key_g, "h": x11_linux_key_h, "i": x11_linux_key_i,
-    "j": x11_linux_key_j, "k": x11_linux_key_k, "l": x11_linux_key_l,
-    "m": x11_linux_key_m, "n": x11_linux_key_n, "o": x11_linux_key_o,
-    "p": x11_linux_key_p, "q": x11_linux_key_q, "r": x11_linux_key_r,
-    "s": x11_linux_key_s, "t": x11_linux_key_t, "u": x11_linux_key_u,
-    "v": x11_linux_key_v, "w": x11_linux_key_w, "x": x11_linux_key_x,
-    "y": x11_linux_key_y, "z": x11_linux_key_z,
-    "A": x11_linux_key_A, "B": x11_linux_key_B, "C": x11_linux_key_C,
-    "D": x11_linux_key_D, "E": x11_linux_key_E, "F": x11_linux_key_F,
-    "G": x11_linux_key_G, "H": x11_linux_key_H, "I": x11_linux_key_I,
-    "J": x11_linux_key_J, "K": x11_linux_key_K, "L": x11_linux_key_L,
-    "M": x11_linux_key_M, "N": x11_linux_key_N, "O": x11_linux_key_O,
-    "P": x11_linux_key_P, "Q": x11_linux_key_Q, "R": x11_linux_key_R,
-    "S": x11_linux_key_S, "T": x11_linux_key_T, "U": x11_linux_key_U,
-    "V": x11_linux_key_V, "W": x11_linux_key_W, "X": x11_linux_key_X,
-    "Y": x11_linux_key_Y, "Z": x11_linux_key_Z,
-    "1": x11_linux_key_1, "2": x11_linux_key_2, "3": x11_linux_key_3,
-    "4": x11_linux_key_4, "5": x11_linux_key_5, "6": x11_linux_key_6,
-    "7": x11_linux_key_7, "8": x11_linux_key_8, "9": x11_linux_key_9,
-    "0": x11_linux_key_0,
-}
 
 mouse_keys_table = {
     "mouse_left": x11_linux_mouse_left,
@@ -266,7 +81,62 @@ def _select_input_backend() -> Tuple[X11UnixKeyboardBackend,
     return uinput_keyboard, uinput_mouse
 
 
-keyboard, mouse = _select_input_backend()
+_INPUT_PAIR: Tuple[X11UnixKeyboardBackend, X11UnixMouseBackend] | None = None
+_input_lock = Lock()
+
+
+def _get_input_backend() -> Tuple[X11UnixKeyboardBackend, X11UnixMouseBackend]:
+    global _INPUT_PAIR  # pylint: disable=global-statement  # reason: one module owns this lazy cache
+    with _input_lock:
+        if _INPUT_PAIR is None:
+            _INPUT_PAIR = _select_input_backend()
+        return _INPUT_PAIR
+
+
+class _Keyboard:
+
+    """Select the shared input pair on the first keyboard operation."""
+    def press_key(self, keycode: int) -> None:
+        """Press a key through the selected input backend."""
+        x11_linux_keyboard_control.validate_keycode(keycode)
+        _get_input_backend()[0].press_key(keycode)
+
+    def release_key(self, keycode: int) -> None:
+        """Release a key through the selected input backend."""
+        x11_linux_keyboard_control.validate_keycode(keycode)
+        _get_input_backend()[0].release_key(keycode)
+
+
+class _Mouse:
+
+    """Select the shared input pair on the first pointer operation."""
+    def position(self) -> Tuple[int, int]:
+        """Read the pointer position through the selected input backend."""
+        return _get_input_backend()[1].position()
+
+    def set_position(self, x: int, y: int) -> None:
+        """Move the pointer through the selected input backend."""
+        _get_input_backend()[1].set_position(x, y)
+
+    def press_mouse(self, mouse_keycode: int) -> None:
+        """Press a button through the selected input backend."""
+        _get_input_backend()[1].press_mouse(mouse_keycode)
+
+    def release_mouse(self, mouse_keycode: int) -> None:
+        """Release a button through the selected input backend."""
+        _get_input_backend()[1].release_mouse(mouse_keycode)
+
+    def click_mouse(self, mouse_keycode: int, x: int | None = None, y: int | None = None) -> None:
+        """Click through the selected input backend."""
+        _get_input_backend()[1].click_mouse(mouse_keycode, x, y)
+
+    def scroll(self, scroll_value: int, scroll_direction: int) -> None:
+        """Scroll through the selected input backend."""
+        _get_input_backend()[1].scroll(scroll_value, scroll_direction)
+
+
+keyboard: X11UnixKeyboardBackend = _Keyboard()
+mouse: X11UnixMouseBackend = _Mouse()
 keyboard_check: KeyboardCheckBackend = x11_linux_listener
 screen: ScreenBackend = x11_linux_screen
 recorder: RecorderBackend = x11_linux_recorder
@@ -274,5 +144,12 @@ recorder: RecorderBackend = x11_linux_recorder
 #: Aliases of canonical key names; none on this backend (see ``_platform_windows``).
 keyboard_key_aliases: Dict[str, str] = {}
 
-if None in [keyboard_keys_table, mouse_keys_table, special_mouse_keys_table, keyboard, mouse, screen, recorder]:
+if None in [mouse_keys_table, special_mouse_keys_table, keyboard, mouse, screen, recorder]:
     raise AutoControlException("Can't init auto control")
+
+
+def __getattr__(name: str) -> dict[str, int]:
+    """Keep explicit access to the public key table compatible."""
+    if name == "keyboard_keys_table":
+        return get_keyboard_keys_table()
+    raise AttributeError(name)

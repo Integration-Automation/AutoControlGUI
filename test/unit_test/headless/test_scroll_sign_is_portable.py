@@ -42,7 +42,7 @@ def x11_mouse(monkeypatch):
     monkeypatch.setitem(sys.modules, "Xlib.ext.xtest", xtest)
 
     display_mod = types.ModuleType("x11_linux_display")
-    display_mod.display = types.SimpleNamespace(sync=lambda: None)
+    display_mod.get_display = lambda: types.SimpleNamespace(sync=lambda: None)
     monkeypatch.setitem(
         sys.modules,
         "je_auto_control.linux_with_x11.core.utils.x11_linux_display",

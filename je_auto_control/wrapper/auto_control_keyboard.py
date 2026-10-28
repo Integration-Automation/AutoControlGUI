@@ -28,7 +28,7 @@ from je_auto_control.utils.platform_id import is_windows, is_x11_unix
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.utils.text_unicode.text_unicode import CONTROL_KEYS, unicode_code_units
 from je_auto_control.wrapper.platform_wrapper import (
-    keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
+    keyboard, keyboard_check, keyboard_key_aliases, get_keyboard_keys_table as _get_platform_key_table,
 )
 from je_auto_control.wrapper._input_observer import input_event, has_input_observer
 
@@ -37,7 +37,7 @@ def get_keyboard_keys_table() -> dict:
     取得鍵盤對應表
     Get keyboard keys table
     """
-    return keyboard_keys_table
+    return globals()["keyboard_keys_table"] if "keyboard_keys_table" in globals() else _get_platform_key_table()
 
 
 #: A key name a user can type back: lower case, digits, underscore.
@@ -58,7 +58,7 @@ def keyboard_key_name(keycode: int) -> Optional[str]:
     then the shortest, then the alphabetically first, so every machine with
     the same table gives the same answer.
     """
-    names = [name for name, code in keyboard_keys_table.items()
+    names = [name for name, code in get_keyboard_keys_table().items()
              if code == keycode and name not in keyboard_key_aliases]
     if not names:
         return None
@@ -71,7 +71,7 @@ def _resolve_keycode(keycode: Union[int, str]) -> int:
     Resolve string key name to keycode
     """
     if isinstance(keycode, str):
-        resolved = keyboard_keys_table.get(keycode)
+        resolved = get_keyboard_keys_table().get(keycode)
         if resolved is None:
             raise AutoControlCantFindKeyException(table_cant_find_key_error_message)
         return resolved
@@ -269,7 +269,7 @@ def check_key_is_press(keycode: Union[int, str]) -> Optional[bool]:
     """
     autocontrol_logger.info(f"check_key_is_press, keycode={keycode}")
     try:
-        get_key_code = keycode if isinstance(keycode, int) else keyboard_keys_table.get(keycode)
+        get_key_code = keycode if isinstance(keycode, int) else get_keyboard_keys_table().get(keycode)
         if get_key_code is None:
             # 表裡沒有這個鍵名。原本會把 None 送進後端，讓它自己去炸——
             # Windows 後端會 TypeError，X11 後端則是安靜地回 False。
@@ -314,7 +314,7 @@ def _needs_shift(single_char: str, key: int) -> bool:
         return False
     lowered = single_char.lower()
     partner = lowered if lowered != single_char else _SHIFT_PARTNERS.get(single_char)
-    return partner is not None and keyboard_keys_table.get(partner) == key
+    return partner is not None and get_keyboard_keys_table().get(partner) == key
 
 
 def _write_char_via_unicode(single_char: str) -> bool:
@@ -360,9 +360,9 @@ def _tracked_unicode_unit(unit: int) -> None:
 
 def _write_one_char(single_char: str, is_shift: bool) -> None:
     """Type one character of ``write``'s string, or raise if nothing can."""
-    key = keyboard_keys_table.get(single_char)
+    key = get_keyboard_keys_table().get(single_char)
     control_key = WRITE_CONTROL_KEYS.get(single_char)
-    if control_key is not None and control_key in keyboard_keys_table:
+    if control_key is not None and control_key in get_keyboard_keys_table():
         # Before the table lookup: a newline must press Enter, not type
         # U+000A and not fall through to the space fallback below.
         type_keyboard(control_key, is_shift, skip_record=True)
@@ -443,7 +443,7 @@ def write_secret(secret: str) -> None:
     try:
         for single_char in secret.replace("\r\n", "\n"):
             control_key = WRITE_CONTROL_KEYS.get(single_char)
-            if control_key is not None and control_key in keyboard_keys_table:
+            if control_key is not None and control_key in get_keyboard_keys_table():
                 type_keyboard(control_key, skip_record=True)
             else:
                 _write_char_via_unicode(single_char)
@@ -548,3 +548,10 @@ def send_key_event_to_window(window_title: str, keycode: Union[int, str]) -> Non
         autocontrol_logger.error(
             f"send_key_event_to_window failed, window={window_title}, keycode={keycode}, error={repr(error)}"
         )
+
+
+def __getattr__(name: str) -> dict:
+    """Preserve explicit table access and caller replacement of that attribute."""
+    if name == "keyboard_keys_table":
+        return get_keyboard_keys_table()
+    raise AttributeError(name)

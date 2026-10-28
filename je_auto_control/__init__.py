@@ -1325,7 +1325,6 @@ from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
 from je_auto_control.wrapper.auto_control_keyboard import get_keyboard_keys_table
 from je_auto_control.wrapper.auto_control_keyboard import hotkey
 from je_auto_control.wrapper.auto_control_keyboard import keyboard_key_name
-from je_auto_control.wrapper.auto_control_keyboard import keyboard_keys_table
 from je_auto_control.wrapper.auto_control_keyboard import press_keyboard_key
 from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key
 from je_auto_control.wrapper.auto_control_keyboard import send_key_event_to_window
@@ -2121,3 +2120,13 @@ __all__ = [
     "ScreenRecorder", "get_pixel",
     "start_autocontrol_gui"
 ]
+
+
+keyboard_keys_table: dict[str, int]
+
+
+def __getattr__(name: str) -> dict:
+    """Resolve the public key table only when explicitly requested."""
+    if name == "keyboard_keys_table":
+        return get_keyboard_keys_table()
+    raise AttributeError(name)

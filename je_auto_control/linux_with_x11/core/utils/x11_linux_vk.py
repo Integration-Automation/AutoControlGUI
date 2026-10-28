@@ -1,199 +1,231 @@
-
-from je_auto_control.utils.exception.exception_tags import linux_import_error_message
-from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.platform_id import is_x11_unix
-
-# Not "is this Linux" but "is this an X11 unix": a FreeBSD, OpenBSD or
-# NetBSD desktop runs the same X server and the same python-Xlib, and
-# nothing below is Linux-specific.
-if not is_x11_unix():
-    raise AutoControlException(linux_import_error_message)
-
+"""Resolve X11 key symbols on explicit table or legacy constant access."""
+from threading import Lock
+from typing import NamedTuple
 from Xlib import XK
-from je_auto_control.linux_with_x11.core.utils.x11_linux_display import display
+from je_auto_control.linux_with_x11.core.utils.x11_linux_display import get_display
 
-# x11 linux virtual keycode
+class _KeySymbol(NamedTuple):
+    suffix: str
+    symbol: str
+    public_name: str | None
 
-x11_linux_key_backspace = display.keysym_to_keycode(XK.string_to_keysym("BackSpace"))
-x11_linux_key_slash_b = display.keysym_to_keycode(XK.string_to_keysym("backslash"))
-x11_linux_key_tab = display.keysym_to_keycode(XK.string_to_keysym("Tab"))
-x11_linux_key_enter = display.keysym_to_keycode(XK.string_to_keysym("Return"))
-x11_linux_key_return = display.keysym_to_keycode(XK.string_to_keysym("Return"))
-x11_linux_key_shift = display.keysym_to_keycode(XK.string_to_keysym("Shift_L"))
-x11_linux_key_ctrl = display.keysym_to_keycode(XK.string_to_keysym("Control_L"))
-x11_linux_key_alt = display.keysym_to_keycode(XK.string_to_keysym("Alt_L"))
-x11_linux_key_pause = display.keysym_to_keycode(XK.string_to_keysym("Pause"))
-x11_linux_key_capslock = display.keysym_to_keycode(XK.string_to_keysym("Caps_Lock"))
-x11_linux_key_esc = display.keysym_to_keycode(XK.string_to_keysym("Escape"))
-x11_linux_key_escape = display.keysym_to_keycode(XK.string_to_keysym("Escape"))
-x11_linux_key_pgup = display.keysym_to_keycode(XK.string_to_keysym("Page_Up"))
-x11_linux_key_pgdn = display.keysym_to_keycode(XK.string_to_keysym("Page_Down"))
-x11_linux_key_pageup = display.keysym_to_keycode(XK.string_to_keysym("Page_Up"))
-x11_linux_key_pagedown = display.keysym_to_keycode(XK.string_to_keysym("Page_Down"))
-x11_linux_key_end = display.keysym_to_keycode(XK.string_to_keysym("End"))
-x11_linux_key_home = display.keysym_to_keycode(XK.string_to_keysym("Home"))
-x11_linux_key_left = display.keysym_to_keycode(XK.string_to_keysym("Left"))
-x11_linux_key_up = display.keysym_to_keycode(XK.string_to_keysym("Up"))
-x11_linux_key_right = display.keysym_to_keycode(XK.string_to_keysym("Right"))
-x11_linux_key_down = display.keysym_to_keycode(XK.string_to_keysym("Down"))
-x11_linux_key_select = display.keysym_to_keycode(XK.string_to_keysym("Select"))
-x11_linux_key_print = display.keysym_to_keycode(XK.string_to_keysym("Print"))
-x11_linux_key_execute = display.keysym_to_keycode(XK.string_to_keysym("Execute"))
-x11_linux_key_prtsc = display.keysym_to_keycode(XK.string_to_keysym("Print"))
-x11_linux_key_prtscr = display.keysym_to_keycode(XK.string_to_keysym("Print"))
-x11_linux_key_prntscrn = display.keysym_to_keycode(XK.string_to_keysym("Print"))
-x11_linux_key_printscreen = display.keysym_to_keycode(XK.string_to_keysym("Print"))
-x11_linux_key_insert = display.keysym_to_keycode(XK.string_to_keysym("Insert"))
-x11_linux_key_del = display.keysym_to_keycode(XK.string_to_keysym("Delete"))
-x11_linux_key_delete = display.keysym_to_keycode(XK.string_to_keysym("Delete"))
-x11_linux_key_help = display.keysym_to_keycode(XK.string_to_keysym("Help"))
-x11_linux_key_win = display.keysym_to_keycode(XK.string_to_keysym("Super_L"))
-x11_linux_key_winleft = display.keysym_to_keycode(XK.string_to_keysym("Super_L"))
-x11_linux_key_winright = display.keysym_to_keycode(XK.string_to_keysym("Super_R"))
-x11_linux_key_apps = display.keysym_to_keycode(XK.string_to_keysym("Menu"))
-x11_linux_key_num0 = display.keysym_to_keycode(XK.string_to_keysym("KP_0"))
-x11_linux_key_num1 = display.keysym_to_keycode(XK.string_to_keysym("KP_1"))
-x11_linux_key_num2 = display.keysym_to_keycode(XK.string_to_keysym("KP_2"))
-x11_linux_key_num3 = display.keysym_to_keycode(XK.string_to_keysym("KP_3"))
-x11_linux_key_num4 = display.keysym_to_keycode(XK.string_to_keysym("KP_4"))
-x11_linux_key_num5 = display.keysym_to_keycode(XK.string_to_keysym("KP_5"))
-x11_linux_key_num6 = display.keysym_to_keycode(XK.string_to_keysym("KP_6"))
-x11_linux_key_num7 = display.keysym_to_keycode(XK.string_to_keysym("KP_7"))
-x11_linux_key_num8 = display.keysym_to_keycode(XK.string_to_keysym("KP_8"))
-x11_linux_key_num9 = display.keysym_to_keycode(XK.string_to_keysym("KP_9"))
-x11_linux_key_multiply = display.keysym_to_keycode(XK.string_to_keysym("KP_Multiply"))
-x11_linux_key_add = display.keysym_to_keycode(XK.string_to_keysym("KP_Add"))
-x11_linux_key_separator = display.keysym_to_keycode(XK.string_to_keysym("KP_Separator"))
-x11_linux_key_subtract = display.keysym_to_keycode(XK.string_to_keysym("KP_Subtract"))
-x11_linux_key_decimal = display.keysym_to_keycode(XK.string_to_keysym("KP_Decimal"))
-x11_linux_key_divide = display.keysym_to_keycode(XK.string_to_keysym("KP_Divide"))
-x11_linux_key_f1 = display.keysym_to_keycode(XK.string_to_keysym("F1"))
-x11_linux_key_f2 = display.keysym_to_keycode(XK.string_to_keysym("F2"))
-x11_linux_key_f3 = display.keysym_to_keycode(XK.string_to_keysym("F3"))
-x11_linux_key_f4 = display.keysym_to_keycode(XK.string_to_keysym("F4"))
-x11_linux_key_f5 = display.keysym_to_keycode(XK.string_to_keysym("F5"))
-x11_linux_key_f6 = display.keysym_to_keycode(XK.string_to_keysym("F6"))
-x11_linux_key_f7 = display.keysym_to_keycode(XK.string_to_keysym("F7"))
-x11_linux_key_f8 = display.keysym_to_keycode(XK.string_to_keysym("F8"))
-x11_linux_key_f9 = display.keysym_to_keycode(XK.string_to_keysym("F9"))
-x11_linux_key_f10 = display.keysym_to_keycode(XK.string_to_keysym("F10"))
-x11_linux_key_f11 = display.keysym_to_keycode(XK.string_to_keysym("F11"))
-x11_linux_key_f12 = display.keysym_to_keycode(XK.string_to_keysym("F12"))
-x11_linux_key_f13 = display.keysym_to_keycode(XK.string_to_keysym("F13"))
-x11_linux_key_f14 = display.keysym_to_keycode(XK.string_to_keysym("F14"))
-x11_linux_key_f15 = display.keysym_to_keycode(XK.string_to_keysym("F15"))
-x11_linux_key_f16 = display.keysym_to_keycode(XK.string_to_keysym("F16"))
-x11_linux_key_f17 = display.keysym_to_keycode(XK.string_to_keysym("F17"))
-x11_linux_key_f18 = display.keysym_to_keycode(XK.string_to_keysym("F18"))
-x11_linux_key_f19 = display.keysym_to_keycode(XK.string_to_keysym("F19"))
-x11_linux_key_f20 = display.keysym_to_keycode(XK.string_to_keysym("F20"))
-x11_linux_key_f21 = display.keysym_to_keycode(XK.string_to_keysym("F21"))
-x11_linux_key_f22 = display.keysym_to_keycode(XK.string_to_keysym("F22"))
-x11_linux_key_f23 = display.keysym_to_keycode(XK.string_to_keysym("F23"))
-x11_linux_key_f24 = display.keysym_to_keycode(XK.string_to_keysym("F24"))
-x11_linux_key_numlock = display.keysym_to_keycode(XK.string_to_keysym("Num_Lock"))
-x11_linux_key_scrolllock = display.keysym_to_keycode(XK.string_to_keysym("Scroll_Lock"))
-x11_linux_key_shiftleft = display.keysym_to_keycode(XK.string_to_keysym("Shift_L"))
-x11_linux_key_shiftright = display.keysym_to_keycode(XK.string_to_keysym("Shift_R"))
-x11_linux_key_ctrlleft = display.keysym_to_keycode(XK.string_to_keysym("Control_L"))
-x11_linux_key_ctrlright = display.keysym_to_keycode(XK.string_to_keysym("Control_R"))
-x11_linux_key_altleft = display.keysym_to_keycode(XK.string_to_keysym("Alt_L"))
-x11_linux_key_altright = display.keysym_to_keycode(XK.string_to_keysym("Alt_R"))
-x11_linux_key_space = display.keysym_to_keycode(XK.string_to_keysym("space"))
-x11_linux_key_newline_n = display.keysym_to_keycode(XK.string_to_keysym("Return"))
-x11_linux_key_newline_r = display.keysym_to_keycode(XK.string_to_keysym("Return"))
-x11_linux_key_newline_t = display.keysym_to_keycode(XK.string_to_keysym("Tab"))
-x11_linux_key_exclam = display.keysym_to_keycode(XK.string_to_keysym("exclam"))
-x11_linux_key_numbersign = display.keysym_to_keycode(XK.string_to_keysym("numbersign"))
-x11_linux_key_percent = display.keysym_to_keycode(XK.string_to_keysym("percent"))
-x11_linux_key_dollar = display.keysym_to_keycode(XK.string_to_keysym("dollar"))
-x11_linux_key_ampersand = display.keysym_to_keycode(XK.string_to_keysym("ampersand"))
-x11_linux_key_quotedbl = display.keysym_to_keycode(XK.string_to_keysym("quotedbl"))
-x11_linux_key_apostrophe = display.keysym_to_keycode(XK.string_to_keysym("apostrophe"))
-x11_linux_key_parenleft = display.keysym_to_keycode(XK.string_to_keysym("parenleft"))
-x11_linux_key_parenright = display.keysym_to_keycode(XK.string_to_keysym("parenright"))
-x11_linux_key_asterisk = display.keysym_to_keycode(XK.string_to_keysym("asterisk"))
-x11_linux_key_equal = display.keysym_to_keycode(XK.string_to_keysym("equal"))
-x11_linux_key_plus = display.keysym_to_keycode(XK.string_to_keysym("plus"))
-x11_linux_key_comma = display.keysym_to_keycode(XK.string_to_keysym("comma"))
-x11_linux_key_minus = display.keysym_to_keycode(XK.string_to_keysym("minus"))
-x11_linux_key_period = display.keysym_to_keycode(XK.string_to_keysym("period"))
-x11_linux_key_slash = display.keysym_to_keycode(XK.string_to_keysym("slash"))
-x11_linux_key_colon = display.keysym_to_keycode(XK.string_to_keysym("colon"))
-x11_linux_key_semicolon = display.keysym_to_keycode(XK.string_to_keysym("semicolon"))
-x11_linux_key_less = display.keysym_to_keycode(XK.string_to_keysym("less"))
-x11_linux_key_greater = display.keysym_to_keycode(XK.string_to_keysym("greater"))
-x11_linux_key_question = display.keysym_to_keycode(XK.string_to_keysym("question"))
-x11_linux_key_at = display.keysym_to_keycode(XK.string_to_keysym("at"))
-x11_linux_key_bracketleft = display.keysym_to_keycode(XK.string_to_keysym("bracketleft"))
-x11_linux_key_bracketright = display.keysym_to_keycode(XK.string_to_keysym("bracketright"))
-x11_linux_key_backslash = display.keysym_to_keycode(XK.string_to_keysym("backslash"))
-x11_linux_key_asciicircum = display.keysym_to_keycode(XK.string_to_keysym("asciicircum"))
-x11_linux_key_underscore = display.keysym_to_keycode(XK.string_to_keysym("underscore"))
-x11_linux_key_grave = display.keysym_to_keycode(XK.string_to_keysym("grave"))
-x11_linux_key_braceleft = display.keysym_to_keycode(XK.string_to_keysym("braceleft"))
-x11_linux_key_bar = display.keysym_to_keycode(XK.string_to_keysym("bar"))
-x11_linux_key_braceright = display.keysym_to_keycode(XK.string_to_keysym("braceright"))
-x11_linux_key_asciitilde = display.keysym_to_keycode(XK.string_to_keysym("asciitilde"))
-x11_linux_key_a = display.keysym_to_keycode(XK.string_to_keysym("a"))
-x11_linux_key_b = display.keysym_to_keycode(XK.string_to_keysym("b"))
-x11_linux_key_c = display.keysym_to_keycode(XK.string_to_keysym("c"))
-x11_linux_key_d = display.keysym_to_keycode(XK.string_to_keysym("d"))
-x11_linux_key_e = display.keysym_to_keycode(XK.string_to_keysym("e"))
-x11_linux_key_f = display.keysym_to_keycode(XK.string_to_keysym("f"))
-x11_linux_key_g = display.keysym_to_keycode(XK.string_to_keysym("g"))
-x11_linux_key_h = display.keysym_to_keycode(XK.string_to_keysym("h"))
-x11_linux_key_i = display.keysym_to_keycode(XK.string_to_keysym("i"))
-x11_linux_key_j = display.keysym_to_keycode(XK.string_to_keysym("j"))
-x11_linux_key_k = display.keysym_to_keycode(XK.string_to_keysym("k"))
-x11_linux_key_l = display.keysym_to_keycode(XK.string_to_keysym("l"))
-x11_linux_key_m = display.keysym_to_keycode(XK.string_to_keysym("m"))
-x11_linux_key_n = display.keysym_to_keycode(XK.string_to_keysym("n"))
-x11_linux_key_o = display.keysym_to_keycode(XK.string_to_keysym("o"))
-x11_linux_key_p = display.keysym_to_keycode(XK.string_to_keysym("p"))
-x11_linux_key_q = display.keysym_to_keycode(XK.string_to_keysym("q"))
-x11_linux_key_r = display.keysym_to_keycode(XK.string_to_keysym("r"))
-x11_linux_key_s = display.keysym_to_keycode(XK.string_to_keysym("s"))
-x11_linux_key_t = display.keysym_to_keycode(XK.string_to_keysym("t"))
-x11_linux_key_u = display.keysym_to_keycode(XK.string_to_keysym("u"))
-x11_linux_key_v = display.keysym_to_keycode(XK.string_to_keysym("v"))
-x11_linux_key_w = display.keysym_to_keycode(XK.string_to_keysym("w"))
-x11_linux_key_x = display.keysym_to_keycode(XK.string_to_keysym("x"))
-x11_linux_key_y = display.keysym_to_keycode(XK.string_to_keysym("y"))
-x11_linux_key_z = display.keysym_to_keycode(XK.string_to_keysym("z"))
-x11_linux_key_A = display.keysym_to_keycode(XK.string_to_keysym("A"))
-x11_linux_key_B = display.keysym_to_keycode(XK.string_to_keysym("B"))
-x11_linux_key_C = display.keysym_to_keycode(XK.string_to_keysym("C"))
-x11_linux_key_D = display.keysym_to_keycode(XK.string_to_keysym("D"))
-x11_linux_key_E = display.keysym_to_keycode(XK.string_to_keysym("E"))
-x11_linux_key_F = display.keysym_to_keycode(XK.string_to_keysym("F"))
-x11_linux_key_G = display.keysym_to_keycode(XK.string_to_keysym("G"))
-x11_linux_key_H = display.keysym_to_keycode(XK.string_to_keysym("H"))
-x11_linux_key_I = display.keysym_to_keycode(XK.string_to_keysym("I"))
-x11_linux_key_J = display.keysym_to_keycode(XK.string_to_keysym("J"))
-x11_linux_key_K = display.keysym_to_keycode(XK.string_to_keysym("K"))
-x11_linux_key_L = display.keysym_to_keycode(XK.string_to_keysym("L"))
-x11_linux_key_M = display.keysym_to_keycode(XK.string_to_keysym("M"))
-x11_linux_key_N = display.keysym_to_keycode(XK.string_to_keysym("N"))
-x11_linux_key_O = display.keysym_to_keycode(XK.string_to_keysym("O"))
-x11_linux_key_P = display.keysym_to_keycode(XK.string_to_keysym("P"))
-x11_linux_key_Q = display.keysym_to_keycode(XK.string_to_keysym("Q"))
-x11_linux_key_R = display.keysym_to_keycode(XK.string_to_keysym("R"))
-x11_linux_key_S = display.keysym_to_keycode(XK.string_to_keysym("S"))
-x11_linux_key_T = display.keysym_to_keycode(XK.string_to_keysym("T"))
-x11_linux_key_U = display.keysym_to_keycode(XK.string_to_keysym("U"))
-x11_linux_key_V = display.keysym_to_keycode(XK.string_to_keysym("V"))
-x11_linux_key_W = display.keysym_to_keycode(XK.string_to_keysym("W"))
-x11_linux_key_X = display.keysym_to_keycode(XK.string_to_keysym("X"))
-x11_linux_key_Y = display.keysym_to_keycode(XK.string_to_keysym("Y"))
-x11_linux_key_Z = display.keysym_to_keycode(XK.string_to_keysym("Z"))
-x11_linux_key_1 = display.keysym_to_keycode(XK.string_to_keysym("1"))
-x11_linux_key_2 = display.keysym_to_keycode(XK.string_to_keysym("2"))
-x11_linux_key_3 = display.keysym_to_keycode(XK.string_to_keysym("3"))
-x11_linux_key_4 = display.keysym_to_keycode(XK.string_to_keysym("4"))
-x11_linux_key_5 = display.keysym_to_keycode(XK.string_to_keysym("5"))
-x11_linux_key_6 = display.keysym_to_keycode(XK.string_to_keysym("6"))
-x11_linux_key_7 = display.keysym_to_keycode(XK.string_to_keysym("7"))
-x11_linux_key_8 = display.keysym_to_keycode(XK.string_to_keysym("8"))
-x11_linux_key_9 = display.keysym_to_keycode(XK.string_to_keysym("9"))
-x11_linux_key_0 = display.keysym_to_keycode(XK.string_to_keysym("0"))
+
+_KEY_SYMBOLS = (
+    _KeySymbol('backspace', 'BackSpace', 'backspace'),
+    _KeySymbol('slash_b', 'backslash', '\x08'),
+    _KeySymbol('tab', 'Tab', 'tab'),
+    _KeySymbol('enter', 'Return', 'enter'),
+    _KeySymbol('return', 'Return', 'return'),
+    _KeySymbol('shift', 'Shift_L', 'shift'),
+    _KeySymbol('ctrl', 'Control_L', 'ctrl'),
+    _KeySymbol('alt', 'Alt_L', 'alt'),
+    _KeySymbol('pause', 'Pause', 'pause'),
+    _KeySymbol('capslock', 'Caps_Lock', 'capslock'),
+    _KeySymbol('esc', 'Escape', 'esc'),
+    _KeySymbol('escape', 'Escape', None),
+    _KeySymbol('pgup', 'Page_Up', 'pgup'),
+    _KeySymbol('pgdn', 'Page_Down', 'pgdn'),
+    _KeySymbol('pageup', 'Page_Up', 'pageup'),
+    _KeySymbol('pagedown', 'Page_Down', 'pagedown'),
+    _KeySymbol('end', 'End', 'end'),
+    _KeySymbol('home', 'Home', 'home'),
+    _KeySymbol('left', 'Left', 'left'),
+    _KeySymbol('up', 'Up', 'up'),
+    _KeySymbol('right', 'Right', 'right'),
+    _KeySymbol('down', 'Down', 'down'),
+    _KeySymbol('select', 'Select', 'select'),
+    _KeySymbol('print', 'Print', 'print'),
+    _KeySymbol('execute', 'Execute', 'execute'),
+    _KeySymbol('prtsc', 'Print', 'prtsc'),
+    _KeySymbol('prtscr', 'Print', 'prtscr'),
+    _KeySymbol('prntscrn', 'Print', 'prntscrn'),
+    _KeySymbol('printscreen', 'Print', None),
+    _KeySymbol('insert', 'Insert', 'insert'),
+    _KeySymbol('del', 'Delete', 'del'),
+    _KeySymbol('delete', 'Delete', 'delete'),
+    _KeySymbol('help', 'Help', 'help'),
+    _KeySymbol('win', 'Super_L', 'win'),
+    _KeySymbol('winleft', 'Super_L', 'winleft'),
+    _KeySymbol('winright', 'Super_R', 'winright'),
+    _KeySymbol('apps', 'Menu', 'apps'),
+    _KeySymbol('num0', 'KP_0', 'num0'),
+    _KeySymbol('num1', 'KP_1', 'num1'),
+    _KeySymbol('num2', 'KP_2', 'num2'),
+    _KeySymbol('num3', 'KP_3', 'num3'),
+    _KeySymbol('num4', 'KP_4', 'num4'),
+    _KeySymbol('num5', 'KP_5', 'num5'),
+    _KeySymbol('num6', 'KP_6', 'num6'),
+    _KeySymbol('num7', 'KP_7', 'num7'),
+    _KeySymbol('num8', 'KP_8', 'num8'),
+    _KeySymbol('num9', 'KP_9', 'num9'),
+    _KeySymbol('multiply', 'KP_Multiply', 'multiply'),
+    _KeySymbol('add', 'KP_Add', 'add'),
+    _KeySymbol('separator', 'KP_Separator', 'separator'),
+    _KeySymbol('subtract', 'KP_Subtract', 'subtract'),
+    _KeySymbol('decimal', 'KP_Decimal', 'decimal'),
+    _KeySymbol('divide', 'KP_Divide', 'divide'),
+    _KeySymbol('f1', 'F1', 'f1'),
+    _KeySymbol('f2', 'F2', 'f2'),
+    _KeySymbol('f3', 'F3', 'f3'),
+    _KeySymbol('f4', 'F4', 'f4'),
+    _KeySymbol('f5', 'F5', 'f5'),
+    _KeySymbol('f6', 'F6', 'f6'),
+    _KeySymbol('f7', 'F7', 'f7'),
+    _KeySymbol('f8', 'F8', 'f8'),
+    _KeySymbol('f9', 'F9', 'f9'),
+    _KeySymbol('f10', 'F10', 'f10'),
+    _KeySymbol('f11', 'F11', 'f11'),
+    _KeySymbol('f12', 'F12', 'f12'),
+    _KeySymbol('f13', 'F13', 'f13'),
+    _KeySymbol('f14', 'F14', 'f14'),
+    _KeySymbol('f15', 'F15', 'f15'),
+    _KeySymbol('f16', 'F16', 'f16'),
+    _KeySymbol('f17', 'F17', 'f17'),
+    _KeySymbol('f18', 'F18', 'f18'),
+    _KeySymbol('f19', 'F19', 'f19'),
+    _KeySymbol('f20', 'F20', 'f20'),
+    _KeySymbol('f21', 'F21', 'f21'),
+    _KeySymbol('f22', 'F22', 'f22'),
+    _KeySymbol('f23', 'F23', 'f23'),
+    _KeySymbol('f24', 'F24', 'f24'),
+    _KeySymbol('numlock', 'Num_Lock', 'numlock'),
+    _KeySymbol('scrolllock', 'Scroll_Lock', 'scrolllock'),
+    _KeySymbol('shiftleft', 'Shift_L', 'shiftleft'),
+    _KeySymbol('shiftright', 'Shift_R', 'shiftright'),
+    _KeySymbol('ctrlleft', 'Control_L', 'ctrlleft'),
+    _KeySymbol('ctrlright', 'Control_R', 'ctrlright'),
+    _KeySymbol('altleft', 'Alt_L', 'altleft'),
+    _KeySymbol('altright', 'Alt_R', 'altright'),
+    _KeySymbol('space', 'space', 'space'),
+    _KeySymbol('newline_n', 'Return', '\n'),
+    _KeySymbol('newline_r', 'Return', '\r'),
+    _KeySymbol('newline_t', 'Tab', '\t'),
+    _KeySymbol('exclam', 'exclam', '!'),
+    _KeySymbol('numbersign', 'numbersign', '#'),
+    _KeySymbol('percent', 'percent', '%'),
+    _KeySymbol('dollar', 'dollar', '$'),
+    _KeySymbol('ampersand', 'ampersand', '&'),
+    _KeySymbol('quotedbl', 'quotedbl', '"'),
+    _KeySymbol('apostrophe', 'apostrophe', "'"),
+    _KeySymbol('parenleft', 'parenleft', '('),
+    _KeySymbol('parenright', 'parenright', ')'),
+    _KeySymbol('asterisk', 'asterisk', '*'),
+    _KeySymbol('equal', 'equal', '='),
+    _KeySymbol('plus', 'plus', '+'),
+    _KeySymbol('comma', 'comma', ','),
+    _KeySymbol('minus', 'minus', '-'),
+    _KeySymbol('period', 'period', '.'),
+    _KeySymbol('slash', 'slash', '/'),
+    _KeySymbol('colon', 'colon', ':'),
+    _KeySymbol('semicolon', 'semicolon', ';'),
+    _KeySymbol('less', 'less', '<'),
+    _KeySymbol('greater', 'greater', '>'),
+    _KeySymbol('question', 'question', '?'),
+    _KeySymbol('at', 'at', '@'),
+    _KeySymbol('bracketleft', 'bracketleft', '['),
+    _KeySymbol('bracketright', 'bracketright', ']'),
+    _KeySymbol('backslash', 'backslash', '\\'),
+    _KeySymbol('asciicircum', 'asciicircum', '^'),
+    _KeySymbol('underscore', 'underscore', '_'),
+    _KeySymbol('grave', 'grave', '`'),
+    _KeySymbol('braceleft', 'braceleft', '{'),
+    _KeySymbol('bar', 'bar', '|'),
+    _KeySymbol('braceright', 'braceright', '}'),
+    _KeySymbol('asciitilde', 'asciitilde', '~'),
+    _KeySymbol('a', 'a', 'a'),
+    _KeySymbol('b', 'b', 'b'),
+    _KeySymbol('c', 'c', 'c'),
+    _KeySymbol('d', 'd', 'd'),
+    _KeySymbol('e', 'e', 'e'),
+    _KeySymbol('f', 'f', 'f'),
+    _KeySymbol('g', 'g', 'g'),
+    _KeySymbol('h', 'h', 'h'),
+    _KeySymbol('i', 'i', 'i'),
+    _KeySymbol('j', 'j', 'j'),
+    _KeySymbol('k', 'k', 'k'),
+    _KeySymbol('l', 'l', 'l'),
+    _KeySymbol('m', 'm', 'm'),
+    _KeySymbol('n', 'n', 'n'),
+    _KeySymbol('o', 'o', 'o'),
+    _KeySymbol('p', 'p', 'p'),
+    _KeySymbol('q', 'q', 'q'),
+    _KeySymbol('r', 'r', 'r'),
+    _KeySymbol('s', 's', 's'),
+    _KeySymbol('t', 't', 't'),
+    _KeySymbol('u', 'u', 'u'),
+    _KeySymbol('v', 'v', 'v'),
+    _KeySymbol('w', 'w', 'w'),
+    _KeySymbol('x', 'x', 'x'),
+    _KeySymbol('y', 'y', 'y'),
+    _KeySymbol('z', 'z', 'z'),
+    _KeySymbol('A', 'A', 'A'),
+    _KeySymbol('B', 'B', 'B'),
+    _KeySymbol('C', 'C', 'C'),
+    _KeySymbol('D', 'D', 'D'),
+    _KeySymbol('E', 'E', 'E'),
+    _KeySymbol('F', 'F', 'F'),
+    _KeySymbol('G', 'G', 'G'),
+    _KeySymbol('H', 'H', 'H'),
+    _KeySymbol('I', 'I', 'I'),
+    _KeySymbol('J', 'J', 'J'),
+    _KeySymbol('K', 'K', 'K'),
+    _KeySymbol('L', 'L', 'L'),
+    _KeySymbol('M', 'M', 'M'),
+    _KeySymbol('N', 'N', 'N'),
+    _KeySymbol('O', 'O', 'O'),
+    _KeySymbol('P', 'P', 'P'),
+    _KeySymbol('Q', 'Q', 'Q'),
+    _KeySymbol('R', 'R', 'R'),
+    _KeySymbol('S', 'S', 'S'),
+    _KeySymbol('T', 'T', 'T'),
+    _KeySymbol('U', 'U', 'U'),
+    _KeySymbol('V', 'V', 'V'),
+    _KeySymbol('W', 'W', 'W'),
+    _KeySymbol('X', 'X', 'X'),
+    _KeySymbol('Y', 'Y', 'Y'),
+    _KeySymbol('Z', 'Z', 'Z'),
+    _KeySymbol('1', '1', '1'),
+    _KeySymbol('2', '2', '2'),
+    _KeySymbol('3', '3', '3'),
+    _KeySymbol('4', '4', '4'),
+    _KeySymbol('5', '5', '5'),
+    _KeySymbol('6', '6', '6'),
+    _KeySymbol('7', '7', '7'),
+    _KeySymbol('8', '8', '8'),
+    _KeySymbol('9', '9', '9'),
+    _KeySymbol('0', '0', '0'),
+)
+
+__all__ = ["x11_linux_key_" + key.suffix for key in _KEY_SYMBOLS] + ["get_keyboard_keys_table"]
+_LEGACY_NAMES = frozenset(__all__[:-1])
+
+_TABLE: dict[str, int] | None = None
+_constants: dict[str, int] = {}
+_lock = Lock()
+
+
+def get_keyboard_keys_table() -> dict[str, int]:
+    """Return the shared mutable dict of server-resolved integer keycodes."""
+    global _TABLE  # pylint: disable=global-statement  # reason: one module owns this lazy cache
+    with _lock:
+        if _TABLE is None:
+            display = get_display()
+            codes = {key.symbol: display.keysym_to_keycode(XK.string_to_keysym(key.symbol))
+                     for key in _KEY_SYMBOLS}
+            table = {key.public_name: codes[key.symbol] for key in _KEY_SYMBOLS if key.public_name is not None}
+            constants = {"x11_linux_key_" + key.suffix: codes[key.symbol] for key in _KEY_SYMBOLS}
+            _constants.update(constants)
+            _TABLE = table
+        return _TABLE
+
+
+def __getattr__(name: str) -> int:
+    """Resolve only the existing legacy key constants."""
+    if name not in _LEGACY_NAMES:
+        raise AttributeError(name)
+    get_keyboard_keys_table()
+    return _constants[name]
+
+
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | set(__all__))

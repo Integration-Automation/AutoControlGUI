@@ -13,7 +13,7 @@ if not is_x11_unix():
     raise AutoControlException(linux_import_error_message)
 
 from Xlib import X
-from je_auto_control.linux_with_x11.core.utils.x11_linux_display import display
+from je_auto_control.linux_with_x11.core.utils.x11_linux_display import get_display
 
 
 def _decode_pixel(data: bytes) -> Tuple[int, int, int]:
@@ -39,6 +39,7 @@ def size() -> Tuple[int, int]:
 
     :return: (width, height) 螢幕寬度與高度
     """
+    display = get_display()
     return display.screen().width_in_pixels, display.screen().height_in_pixels
 
 
@@ -56,6 +57,7 @@ def get_pixel(x: int, y: int) -> Tuple[int, int, int]:
     :return: (R, G, B) 三原色值
     """
     # 建立 root window 物件 Create root window object
+    display = get_display()
     root = display.screen().root
 
     # 取得影像資料 Get image data

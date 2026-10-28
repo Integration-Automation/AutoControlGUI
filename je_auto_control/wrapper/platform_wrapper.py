@@ -1,5 +1,5 @@
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.platform_id import is_bsd, is_macos, is_windows
@@ -13,6 +13,7 @@ from je_auto_control.wrapper.backend_contract import (
 # branch is measured against one contract instead of against whichever branch
 # mypy happened to read first — which was always the Windows one, on every
 # target.
+_get_x11_key_table: Callable[[], Dict[str, int]]
 keyboard_check: KeyboardCheckBackend
 keyboard_keys_table: Dict[str, int]
 #: Alias -> canonical name for entries of ``keyboard_keys_table`` that are
@@ -75,13 +76,15 @@ elif sys.platform.startswith("linux"):
                 "this warning.", _wayland_error,
             )
             from je_auto_control.wrapper._platform_linux import (  # noqa: F401  # reason: facade re-export
-                keyboard as _keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
+                keyboard as _keyboard, keyboard_check, keyboard_key_aliases,
+                get_keyboard_keys_table as _get_x11_key_table,
                 mouse as _mouse, mouse_keys_table, special_mouse_keys_table,
                 screen, recorder,
             )
     else:
         from je_auto_control.wrapper._platform_linux import (  # noqa: F401  # reason: facade re-export
-            keyboard as _keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
+            keyboard as _keyboard, keyboard_check, keyboard_key_aliases,
+            get_keyboard_keys_table as _get_x11_key_table,
             mouse as _mouse, mouse_keys_table, special_mouse_keys_table,
             screen, recorder,
         )
@@ -92,7 +95,8 @@ elif is_bsd():
     # whose socket and portal are Linux desktop infrastructure; a BSD running
     # Wayland reaches this through XWayland like any other X11 client.
     from je_auto_control.wrapper._platform_linux import (  # noqa: F401  # reason: facade re-export
-        keyboard as _keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
+        keyboard as _keyboard, keyboard_check, keyboard_key_aliases,
+        get_keyboard_keys_table as _get_x11_key_table,
         mouse as _mouse, mouse_keys_table, special_mouse_keys_table,
         screen, recorder,
     )
@@ -108,7 +112,7 @@ else:
 keyboard: KeyboardBackend = _keyboard
 mouse: MouseBackend = _mouse
 
-if None in [keyboard_keys_table, mouse_keys_table, keyboard, mouse, screen]:
+if None in [mouse_keys_table, keyboard, mouse, screen]:
     raise AutoControlException("Can't init auto control")
 
 
@@ -117,3 +121,17 @@ __all__ = [
     "mouse", "mouse_keys_table", "special_mouse_keys_table",
     "screen", "recorder",
 ]
+
+
+def get_keyboard_keys_table() -> Dict[str, int]:
+    """Resolve the X11 table only on explicit access."""
+    if "keyboard_keys_table" in globals():
+        return keyboard_keys_table
+    return _get_x11_key_table()
+
+
+def __getattr__(name: str) -> Dict[str, int]:
+    """Preserve explicit access to the ordinary platform key dictionary."""
+    if name == "keyboard_keys_table":
+        return get_keyboard_keys_table()
+    raise AttributeError(name)

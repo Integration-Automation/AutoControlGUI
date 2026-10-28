@@ -1,5 +1,14 @@
 # Public API lifecycle
 
+Plain package import on X11 does not open a display or input device or start a keyboard listener.
+The operation display and RECORD listener have separate lifetimes. Screen, mouse and keyboard
+operations do not start the listener. A key-state check or recording request starts observation;
+events before that request are not captured. Stopping recording before it starts returns an empty
+result without opening a display. The public key table remains an ordinary mutable dict with
+server-derived values. Explicit table access, including wildcard imports requesting that name,
+can connect to X. XTest or uinput selection occurs on the first input-backend operation.
+Import success does not establish Linux agent presence or helper-retirement support.
+
 Transfer management now shares `manage_agent_transfer(operation, request)`, `AC_agent_transfer`,
 `ac_agent_transfer`, authenticated `POST /agent/transfer`, and Script Builder metadata. The CLI uses
 `agent-task transfer --operation review_export --request request.json`. Review returns an approval

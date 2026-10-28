@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased: lazy X11 resources
+
+Defer X11 displays, keycode resolution, RECORD listener startup and uinput device selection until
+use. Plain package import no longer activates those desktop resources. Explicit key-table access
+retains real mutable dictionary behavior, and legacy key constants remain available on demand.
+Internal X11 callers use get_display instead of importing a global display instance.
+Recording starts observation on request and rejects queue admission once listener cleanup begins.
+Linux agent physical-presence and helper-retirement integration remain tracked in Progress.md.
+
 ## Unreleased — destination import receipt integrity
 
 Recheck the published generation file list and content digests after the final source response
