@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261028-03 | 2026-10-28 | Verify Linux peer evidence in the complete fixed-source suite | #snapshot #agent #presence #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261028-02 | 2026-10-28 | Retain Linux connected peer evidence without desktop authority | #snapshot #agent #presence #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261028-01 | 2026-10-28 | Verify corrected import source and audit finite cross-host delivery | #done #agent #handoff #verification | [2026-10-e](2026-10-e.md) |
 | U-20261027-16 | 2026-10-27 | Reject changed destination output before import acceptance | #done #agent #handoff #integrity #verification | [2026-10-e](2026-10-e.md) |
@@ -465,7 +466,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10-e.md](2026-10-e.md) | 2026-10 | 3 |
+| [2026-10-e.md](2026-10-e.md) | 2026-10 | 4 |
 | [2026-10-d.md](2026-10-d.md) | 2026-10 | 15 |
 | [2026-10-c.md](2026-10-c.md) | 2026-10 | 75 |
 | [2026-10-b.md](2026-10-b.md) | 2026-10 | 15 |
