@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261028-07 | 2026-10-28 | Verify literal source links and missing export chunks | #done #agent #transfer #verification | [2026-10-e](2026-10-e.md) |
 | U-20261028-06 | 2026-10-28 | Verify Linux transport in the corrected full suite | #snapshot #agent #presence #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261028-05 | 2026-10-28 | Own Linux packet lifetime and preserve uncertain cleanup | #snapshot #agent #presence #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261028-04 | 2026-10-28 | Keep completed Linux peer regression out of pending work | #decision #agent #verification | [2026-10-e](2026-10-e.md) |
@@ -469,7 +470,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10-e.md](2026-10-e.md) | 2026-10 | 7 |
+| [2026-10-e.md](2026-10-e.md) | 2026-10 | 8 |
 | [2026-10-d.md](2026-10-d.md) | 2026-10 | 15 |
 | [2026-10-c.md](2026-10-c.md) | 2026-10 | 75 |
 | [2026-10-b.md](2026-10-b.md) | 2026-10 | 15 |

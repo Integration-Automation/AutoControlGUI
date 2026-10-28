@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261028-06；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261028-07；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -124,15 +124,14 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      判定；補必要的角色／跨節點證據與提示注入回歸。
    - 為實際主機配置受保護的 runtime 端點、背景派送、主機憑證與相容完成契約；明確記錄遠端
      目錄／目標設定、部署／回復方法。受管任務 DAG 不會自動部署遠端服務。
-   - 跨主機成果移交仍須核對 cross-host-handoff plan Task2 的字面 Windows symlink 行為證據，
-     以及實際受保護端點、跨實體主機與正式環境交付；各有限來源／接收／採認案例的
+   - 跨主機成果移交仍須完成實際受保護端點、跨實體主機與正式環境交付；
+     各有限來源／接收／採認案例的
      驗證不能取代實際遠端部署及目前來源／接收端的應用狀態證據。
      核對讀寫權限、當前來源／接收身分、原始提交與私有完成授權、摘要及目的端發布；
      本機路徑、匯入收據或協調端摘要不得冒充遠端檔案／完成證據，也不得轉送本機權限。
      核對兩／三主機故障矩陣：原 host／token／帳戶／origin 變更或撤銷、來源到期、讀者同意、
      冷重啟與晚回覆、發布／取消交錯、舊派送 schema、多次續行 origin、精確產生者退出、
      未知暫存與清理失敗、未決批次、配額回收及重啟後仍固定的來源／目的端／證據期限。
-     目前已實測可建立字面檔案與目錄 symlink；Task2 的剩餘交付範圍仍須逐條核對。
      保留原有本機 DAG admission／憑證與跨程序 host binding 核對；實際本機祖先不能因 wire grant
      省略、變更 tags 或補造提交列而繞過。standalone 與真正遠端節點沿各自實際接受憑證處理。
      技能契約須核實來源主機的真實動作、原 trial／版本及當前權限；規範未要求補造協調端外國任務。

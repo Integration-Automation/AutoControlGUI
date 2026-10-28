@@ -117,7 +117,7 @@ Tasks3/4; passive support describes those operations separately rather than adve
 - [x] Implement current policy/descriptor snapshot, selected-file hashing and immutable blob creation
   outside the runtime writer. Recheck current source/scope after the grant INSERT within its writer.
   No public source roots/principals/origin witnesses or raw result/journal exports.
-- [ ] Add changed-file-between-review/create, symlink swap, scope change, corrupt/missing chunk,
+- [x] Add changed-file-between-review/create, symlink swap, scope change, corrupt/missing chunk,
   off-manifest digest, host/token replacement and late reply cases. Post-export original-file edits
   do not change the consented blob; snapshot transfer never claims current application state.
 - [x] Run source/peer and existing transport/local-delegation/RBAC suites. Expected: all pass, peer
