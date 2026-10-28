@@ -105,22 +105,22 @@ Tasks3/4; passive support describes those operations separately rather than adve
   DagBatches.transfer_call delegates to it; no new neutral module imports managed_tasks/TaskPolicy.
 - Peer source calls accept only export/chunk/evidence; management and peer route dispatch stay separate.
 
-- [ ] RED actual files/real store tests: review selects a passed file criterion, binds its exact
+- [x] RED actual files/real store tests: review selects a passed file criterion, binds its exact
   digest, creation yields one immutable grant, and one actual authorized peer read returns those bytes.
   Refuse an unconfirmed task/unsupported criterion/arbitrary path before touching unrelated files.
-- [ ] RED named-source RBAC tests: recipient_policy derives only actual caller or original source owner;
+- [x] RED named-source RBAC tests: recipient_policy derives only actual caller or original source owner;
   administrator export to caller and reviewer grant to source_owner both use real source identities.
   Changing that reviewed policy or supplying an arbitrary principal/store path fails. Another operator with
   the grant ID cannot read; removed/revoked issuer/owner/grant loses access. Shared-token tests assert
   shared-account semantics without fabricating a user. Poison a foreign-store loader and ensure the
   peer route refuses principal/origin headers before that loader is called.
-- [ ] Implement current policy/descriptor snapshot, selected-file hashing and immutable blob creation
+- [x] Implement current policy/descriptor snapshot, selected-file hashing and immutable blob creation
   outside the runtime writer. Recheck current source/scope after the grant INSERT within its writer.
   No public source roots/principals/origin witnesses or raw result/journal exports.
 - [ ] Add changed-file-between-review/create, symlink swap, scope change, corrupt/missing chunk,
   off-manifest digest, host/token replacement and late reply cases. Post-export original-file edits
   do not change the consented blob; snapshot transfer never claims current application state.
-- [ ] Run source/peer and existing transport/local-delegation/RBAC suites. Expected: all pass, peer
+- [x] Run source/peer and existing transport/local-delegation/RBAC suites. Expected: all pass, peer
   bodies bounded before allocation and legacy local service forwarding unchanged. Commit source step.
 
 ## Task 3: Service-owned destination import/publication and retention
@@ -138,22 +138,22 @@ delivery wiring and retention.py; tests test_agent_transfer_import.py / test_age
   Existing host recovery/profile methods supply actual policy/proof objects through runtime
   collaborators; new neutral modules do not import Runtime/AgentRecovery/TaskPolicy in reverse.
 
-- [ ] RED two independent real HTTP runtimes with distinct roots/accounts: an approved import of
+- [x] RED two independent real HTTP runtimes with distinct roots/accounts: an approved import of
   source bytes reaches the destination generation, whose files/hash/layout are independently read.
   Coordinator-local path substitution must fail even if a same-named local file exists.
-- [ ] RED a third real coordinator routing source-B to destination-C. C resolves B through its
+- [x] RED a third real coordinator routing source-B to destination-C. C resolves B through its
   own registered source account; A forwards no bearer/local principal/root. Replacing C's host
   registration or replaying its raw review token at A fails before a create call. Lost create ACK
   preserves one exact intent/key and no duplicate import; unrelated host work remains untouched.
-- [ ] RED finite review/create/run/cancel and queue generation tests: wrong owner/profile/root/host
+- [x] RED finite review/create/run/cancel and queue generation tests: wrong owner/profile/root/host
   cannot start; UI observer closure leaves owned delivery intact. Generation replacement fences old work.
-- [ ] Implement source grant checks and existing chunk store + sync_assets staging/publication.
+- [x] Implement source grant checks and existing chunk store + sync_assets staging/publication.
   Bind both local issuer/recipient authority and immutable files target profile before every effect;
   preserve exact published versus partial/unknown states and never replace differing user output.
-- [ ] Add restart/late ACK/cancel-after-publication races, partial transfer/content corruption, profile
+- [x] Add restart/late ACK/cancel-after-publication races, partial transfer/content corruption, profile
   disable/root move/credential revoke, independent source/destination expiry and cleanup-failure cases.
   Assert retained unresolved batches do not refresh receipt expiry or grant surviving expired bytes.
-- [ ] Run actual import/lifecycle plus queue/retention/GUI-task-lifetime regressions. Expected: correct
+- [x] Run actual import/lifecycle plus queue/retention/GUI-task-lifetime regressions. Expected: correct
   finite outcomes, byte verification and exclusively owned cleanup. Commit source/lifecycle step.
 
 ## Task 4: Portable evidence source and actual DAG/skill adoption
@@ -170,22 +170,22 @@ skill evidence consumers; tests test_agent_transfer_evidence.py / test_agent_tra
 - ContinuationEvidence.successor keeps its existing signature; remote handoff IDs select the new
   validated source protocol, local IDs keep the old local engine. Stable portable views do not broaden get.
 
-- [ ] RED real source recovery/completion grant adopted by its actual coordinator node, with leaf
+- [x] RED real source recovery/completion grant adopted by its actual coordinator node, with leaf
   evidence owned by a different reviewed source account. Ordinary foreign task get remains denied.
   Original request key/spec, actual source task, graph/node and source fingerprint must all match.
-- [ ] RED local-DAG bypass attempts: strip/change tags, use a new wire grant over a real local
+- [x] RED local-DAG bypass attempts: strip/change tags, use a new wire grant over a real local
   admission or choose standalone ancestry. Every actual local admission still needs its original
   private grant checks; no synthetic DAG/admission/ownership row is created for a remote node.
-- [ ] Implement source current proof using existing injected snapshot/witness/scope collaborators,
+- [x] Implement source current proof using existing injected snapshot/witness/scope collaborators,
   bounded sixteen-link ancestry and distinct private remote grant family. Post-insertion changes
   roll back. Portable fields contain only IDs/hashes/finite criteria, not private owners or policies.
-- [ ] Implement live resolution at review/approval/claim/downstream completion, plus selected skill
+- [x] Implement live resolution at review/approval/claim/downstream completion, plus selected skill
   evidence integration preserving original actions/trial/version. Add revoke/expiry/source mutation,
   unavailable peer, expired reader consent and wrong completion/retirement-contract cases.
   Barrier tests revoke between local adoption write and post-write source check: no downstream
   dispatch from provisional state. Revoke after actual dispatch preserves owned pause uncertainty
   and blocks further success; it cannot pretend to undo remote inputs or grant input authority.
-- [ ] Run all actual local handoff/renewal/ownership/recovery/skill and fourteen DAG files with new
+- [x] Run all actual local handoff/renewal/ownership/recovery/skill and fourteen DAG files with new
   remote cases. Preserve exact deadlines and prior failed runs. Commit the coherent evidence step.
 
 ## Task 5: Public surfaces, full verification and delivery
@@ -199,18 +199,52 @@ Tests: test_agent_transfer_surfaces.py / test_agent_transfer_gui.py and existing
 AC_agent_transfer(operation,request); agent-task transfer --operation --request;
 POST /agent/transfer {operation,request}; existing TaskController transports one finite request.
 
-- [ ] RED Python/AC/MCP/authenticated REST/CLI/Builder parity and four locale/Actions tests. GUI
+- [x] RED Python/AC/MCP/authenticated REST/CLI/Builder parity and four locale/Actions tests. GUI
   request/result views reject stale replies after selection/close and never auto-send consent.
-- [ ] Implement thin surface wiring, source/destination/grant selection examples and passive
+- [x] Implement thin surface wiring, source/destination/grant selection examples and passive
   transfer-contract diagnostics distinct from an actual grant or verified remote/native capability.
-- [ ] Self-check every spec section against its owning tests; compare exact import edges against
+- [x] Self-check every spec section against its owning tests; compare exact import edges against
   committed58c17e05, including edges inside old cyclic components; reject added cycles/duplicates.
-- [ ] Run focused/real loopback/three-platform typing/Ruff/full Pylint normalized audit/Bandit/Radon,
+- [x] Run focused/real loopback/three-platform typing/Ruff/full Pylint normalized audit/Bandit/Radon,
   strict Sphinx and measured counts; build fresh wheel/sdist and verify exact source/installed bytes.
-- [ ] Freeze actual code/test/config/doc inputs; run a fresh full coverage suite in an absent owned
+- [x] Freeze actual code/test/config/doc inputs; run a fresh full coverage suite in an absent owned
   basetemp, inspect all failures/errors/warnings/atexit and exact coverage. Prior three DAG failures
   and409/bootstrap/shared-pytest-link concerns cannot disappear through a passing subset or retry.
-- [ ] Publish accurate current records under the monthly ID lock, mirror only main Agent Progress
+- [x] Publish accurate current records under the monthly ID lock, mirror only main Agent Progress
   preserving unrelated raw bytes, stage explicit owned paths, commit/push feature and verify remote
   SHA/clean state. Do not mark the original goal complete; real-host deployment/acceptance and other
   original requirements remain until their separate evidence exists.
+
+## Fixed-source verification U-20261028-01
+
+Source `26c1626e728d3f07aeaf5cb8e07de92f7f198ba4`; see `docs/updates/2026-10-e.md` #U-20261028-01.
+The actual configured suite passed16,519 cases with80unchanged skips; all717transfer cases passed.
+The following counts identify exact owning-module cases, not additional tests or native acceptance.
+
+| Step | Owning-module cases | Finite evidence |
+|---|---:|---|
+| T2.1 | 133 | verified |
+| T2.2 | 147 | verified |
+| T2.3 | 169 | verified |
+| T2.4 | 173 | partial; literal Windows symlink unverified |
+| T2.5 | 349 | verified |
+| T3.1 | 96 | verified |
+| T3.2 | 25 | verified |
+| T3.3 | 122 | verified |
+| T3.4 | 105 | verified |
+| T3.5 | 100 | verified |
+| T3.6 | 138 | verified |
+| T4.1 | 44 | verified |
+| T4.2 | 95 | verified |
+| T4.3 | 73 | verified |
+| T4.4 | 46 | verified |
+| T4.5 | 745 | verified |
+| T5.1 | 29 | verified |
+| T5.2 | 23 | verified |
+| T5.3 | — | exact closed contracts and original58 import graph verified |
+| T5.4 | — | quality, strict docs and1,405artifact payloads verified |
+| T5.5 | 16,599 | actual complete configured suite verified |
+| T5.6 | — | monthly record and Agent-only mirror; verify feature publication SHA |
+
+Task2.4 remains open: actual literal file/directory creation failedWinError1314.
+Original40items, historical failures and deferred acceptance remain in Progress.md.

@@ -2,16 +2,16 @@
 
 ## Agent 電腦接管與任務自動化
 
-`WIP` — **依使用者恢復要求繼續交付；個別原生／真機／24 小時驗收仍暫緩。**
+`WIP` — **依使用者恢復目標繼續交付；個別原生／真機／24 小時驗收仍暫緩。**
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261027-16；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261028-01；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
-先完成第 6 組匯入完整性修正後的固定來源全量 coverage，再續第 5 組 browser／remote reader、
-第 6 組跨主機交付稽核，並核對第 4 組裝置來源及第 8 組交付。
+接續第 5 組 browser／remote reader、第 3 組非 Windows helper 與第 6 組跨主機剩餘驗證，
+並核對第 4 組裝置來源及第 8 組正式交付。
 
 1. **P4：瀏覽器與正式環境接合**
    - 選定正式服務專用 helper Python、AutoControl／WebRunner 套件版本與受管 Chromium 安裝；
@@ -113,10 +113,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      判定；補必要的角色／跨節點證據與提示注入回歸。
    - 為實際主機配置受保護的 runtime 端點、背景派送、主機憑證與相容完成契約；明確記錄遠端
      目錄／目標設定、部署／回復方法。受管任務 DAG 不會自動部署遠端服務。
-   - 跨主機成果移交仍須依 cross-host-handoff design／plan 逐條完成來源、目的端、協調端、
-     可攜證據及技能消費端的交付稽核，並完成 Tasks2–5 的正式紀錄與功能分支提交／推送。
-     匯入完整性修正後仍須以新固定輸入完成全量 coverage；52cfa38b 的完整成功
-     僅涵蓋修正前來源，不能代替本次來源與新增8個時序／完整性案例的全量驗證。
+   - 跨主機成果移交仍缺 cross-host-handoff plan Task2 的字面 Windows symlink 變體，
+     以及實際受保護端點、跨實體主機與正式環境交付；各有限來源／接收／採認案例的
+     驗證不能取代實際遠端部署及目前來源／接收端的應用狀態證據。
      核對讀寫權限、當前來源／接收身分、原始提交與私有完成授權、摘要及目的端發布；
      本機路徑、匯入收據或協調端摘要不得冒充遠端檔案／完成證據，也不得轉送本機權限。
      核對兩／三主機故障矩陣：原 host／token／帳戶／origin 變更或撤銷、來源到期、讀者同意、
@@ -139,8 +138,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
    - 為自訂／外部 target 補經審閱的語義觀察與遮罩覆蓋契約；沒有能力旗標的舊 target 仍沿用
      既有判定，不能因此宣稱已證明完整畫面或遮罩內容的不存在。深化部分證據的計數／狀態／
      變動判定與受保護欄位比較，目前缺少充分證據時仍為未知。
-   - 在明確配置且已安裝的本機 Ollama 工具／視覺模型上補端到端證據：模型不符、拒絕連線、
-     逾時、取消、預算與完成驗證；不可自動下載或切換外部服務。
+   - 本機 Ollama 模型／端點尚未設定（使用者2026-10-28確認）；待明確配置已安裝的
+     工具／視覺模型與本機端點後，補模型不符、拒絕連線、逾時、取消、預算與完成驗證的
+     端到端證據；不可自動下載或切換外部服務。
    - 新增／深化功能須同步公開 API、命令目錄、MCP／REST／CLI／Builder、薄 GUI Actions 及語系，
      並重驗匿名／具名權限、來源限制、GUI 關閉／重開、服務獨立生命週期與跨 session 隔離。
 
@@ -175,6 +175,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      `C:\Users\USER\AppData\Local\Temp\autocontrol-wheel-stage72-mbpvem9h` 尚未清理；
      刪除操作遭自動審核拒絕（僅回覆 `blocked by policy`），保持原樣，不改用其他工具繞過。
    - 功能分支到正式環境的整合／部署仍未執行；正式工作樹與既有批次須保持可回復。
+     stage121 的 Linux 連線程序元件仍是私有候選，尚未接入產品；後續須審閱與正式接合，
+     不能把15項獨立 IPC 測試及候選靜態檢查當作非 Windows 桌面功能已完成。
 
 **仍暫緩的驗收**：原生桌面、實際瀏覽器與 Android／iOS 真機驗收；WebRunner `Progress.md` #20
 的原生雙向 bridge 驗收，以及 #21 的完整 24 小時驗收。只有使用者明確恢復後才可啟動，24 小時
