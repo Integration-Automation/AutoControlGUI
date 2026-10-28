@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,410 |
-| 程式碼總行數 | 209,696 |
+| Python 模組總數（含周邊子專案） | 1,413 |
+| 程式碼總行數 | 210,462 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 856 |
 | 套件門面 `__all__` 公開名稱數 | 1445 |
@@ -501,13 +501,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 48,806 行。
+> 14 個套件、約 49,572 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 23,239 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 24,005 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -989,7 +989,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（23,239 行／168 檔）
+#### `utils/agent_runtime/`（24,005 行／171 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1068,13 +1068,16 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `ownership.py` | 86 | Fenced input ownership; running dispatch must retire before ownership transfers. |
 | `parent_watch.py` | 25 | POSIX helpers retire their own live process group when the owning parent disappears. |
 | `policy.py` | 119 | Explicit task scopes, rooted data paths and secret-safe durable payloads. |
+| `presence_channel_linux.py` | 424 | Own authenticated Linux packet channels, bounded leases and protected listeners. |
+| `presence_endpoint_linux.py` | 226 | Own protected Linux socket paths without stale-path reuse or recursive cleanup. |
 | `presence_frames.py` | 137 | Closed finite JSON byte frames and exact presence request/result validation. |
 | `presence_broker.py` | 164 | Private broker with internally selected source ownership and normal busy/lease-lost results. |
 | `presence_handshake.py` | 77 | Fresh byte challenges bound to native peer identity, birth and process-object liveness. |
 | `presence_host.py` | 100 | Lazy host-owned source lifetimes and fixed per-helper capabilities, never task-selected authority. |
+| `presence_messages_linux.py` | 102 | Authenticate each Linux packet and retire every received descriptor before delivery. |
 | `presence_native_types.py` | 16 | Resource-free native structure size and pointer views for presence components. |
 | `presence_owner.py` | 38 | Closed bounded owner-only line envelopes for private presence helpers. |
-| `presence_peer_linux.py` | 204 | Retain Linux connected-process evidence only; no desktop session or input authority. |
+| `presence_peer_linux.py` | 218 | Retain Linux connected-process evidence only; no desktop session or input authority. |
 | `presence_pipe_windows.py` | 209 | Secured local byte pipes for owned helpers; no desktop observation or runtime binding. |
 | `presence_pool.py` | 380 | Host-only shared presence ownership; task cancellation never cancels another runtime's source. |
 | `presence_protocol.py` | 74 | Per-connection sequences and issued-token ownership; shared source lifetime remains separate. |
@@ -1476,8 +1479,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 971 | 95,874 |
-| **總計** | **1,402** | **209,527** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 974 | 96,640 |
+| **總計** | **1,405** | **210,293** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

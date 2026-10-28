@@ -463,10 +463,17 @@ Windows 共享桌面的持续来源跨 runtime／任务／helper 共用，监看
 `agent-task stop-all` 停止可见任务。
 其他共享桌面须有可信活动 adapter。原生平台验收与其余待办列在 `Progress.md`。
 
-Linux 内部 presence_peer_linux 组件以不可继承的 SO_PEERPIDFD 保留原始连接者，核验存活账户、
-进程创建时间及 user／PID namespace；只关闭自有描述符，内核／ABI 或 metadata 不可用时直接拒绝，
-不另依 PID 打开进程。此证据不表示 socket 转交后的当前 writer，也不证明活动桌面、锁定或真人活动，
-不授予输入权限。非 Windows 共享桌面仍须接入可信逐消息发送者、session／活动来源与受保护 transport。
+Linux 内部 presence_peer_linux 以不可继承的 pidfd 保留原始 Unix stream 或 seqpacket 连接者，
+核验账户、进程创建时间、namespace 与存活状态，不另依 PID 打开进程。进程身份不代表桌面或输入权限。
+
+内部 LinuxListener 与 LinuxChannel transport 拥有受保护的 Unix endpoint、socket 与 peer。
+每个有界 JSON 数据包须有仍存活的原始 writer 的内核凭证与 pidfd；额外、缺失、负值或截断的控制数据
+直接拒绝，收到的描述符在交付前释放。排队与 I/O 共用同一期限；取消撤销交付，尚未完成或失败的
+清理维持未确定。未知文件系统对象保留不动。路径权限不能隔离同 UID 的敌对进程，用户空间的有界
+等待也不保证内核 syscall 的硬实时完成。
+
+可信 helper 启动与 endpoint 传递、预期 helper 政策、presence challenge 与 lease 接入，以及登录、seat、
+锁定与真人活动来源仍待完成。非 Windows 共享桌面仍不可用；此 transport 不是完整 Linux 应用或原生输入验收。
 
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)

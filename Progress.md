@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261028-03；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261028-05；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -51,13 +51,11 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
    - macOS、X11、Wayland：實作可信真人活動來源，接合授權／鎖定／閒置判定、觀察目標身分、
      視窗範圍輸入及自有 helper 隔離；補非 Windows 對話框／未儲存 gate。
      目前不能解除不支援平台的共用桌面拒絕保護。
-     Linux helper 仍須接合原連線程序證據、可信逐訊息 writer、受保護 Unix socket，及真正的
-     登入／seat／鎖定／真人活動來源；presence_peer_linux 的 pidfd 不等於目前 writer 或桌面權限，
-     不可只憑連線程序仍存活、同帳號或相同 namespace 解除輸入拒絕。
-     待建 presence_messages_linux.py 接收端須依 stage123 核心實驗補逐訊息身分與資源驗證：
-     拒絕額外 SCM_RIGHTS、截斷／遺失控制資料及負的 SCM_PIDFD（含 -EMFILE）；所有錯誤路徑
-     都須釋放實際取得的自有描述元，不關閉負值，也不依原連線者或重新開啟 PID 補造 sender 證據。
-     另補有界取消、close 與收訊交錯及 socket 身分／權限／清理；核心實驗不代表接收端已實作。
+     Linux helper 仍須將 presence_channel_linux transport 接入自有 helper 啟動與可信 endpoint 傳遞，
+     補預期 helper 程序政策、既有 presence challenge／lease 與真正登入／seat／鎖定／真人活動來源；
+     核對實際 helper 世代、故障退場與完整應用接合，不能以獨立元件 IPC 取代這些證據。
+     程序／逐訊息身分及受保護路徑不代表桌面權限，也不能隔離同 UID／特權敵對程序；
+     使用者空間有界等待不能冒稱核心 syscall 的硬即時完成，未知清理仍不得移交控制權。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、
      helper／半開交握回收與取消／停止生命週期，避免兩條實作各自接管相同原生資源。
    - 驗證相同實體桌面在不同 profile、資料庫、服務及 DAG 節點間仍只有一位輸入擁有者；
@@ -160,6 +158,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      歷史證據檔不自動認領或刪除。
 
    - 於整份規範最後固定提交重跑完整 headless 與 coverage run -m pytest、跨功能／故障恢復回歸；
+     本輪新增 Linux transport 與案例仍須納入固定來源完整 coverage；7e0cd292 的完整結果
+     只涵蓋先前連線程序元件，不能代替本輪新來源與新成品的完整驗證。
      後續平台／恢復修正亦須納入完整 coverage 及新成品逐檔比對；
      後續修正不得沿用較早提交的完整驗證；來源、測試、設定與文件須重新固定並核實。
      目前功能工作樹完整成功的來源範圍與95項跳過原因見本次月誌，不能替代尚缺的原生／裝置驗收。

@@ -1398,12 +1398,21 @@ File/browser/custom reviewed workers stay inert. Native/browser/device/24hour ac
 see Progress.md and the persistent-windows-presence spec/plan. Bounded JSON/budget primitives reside in
 wire_data.py and keep their models reexports, separating owned transports from runtime/model cycles.
 
-Linux's internal presence_peer_linux component retains a noninheritable SO_PEERPIDFD for the
-original connector and checks live account, process birth and user/PID namespaces. It closes only
-its owned descriptor and refuses unavailable kernel/ABI or metadata without reopening a PID.
-This does not identify a replacement socket writer, establish an active desktop/lock/activity state,
-or authorize input. Non-Windows shared desktop tasks remain unavailable pending trusted per-message
-sender checks, session/activity sources and contained transport integration.
+Linux's internal presence_peer_linux retains a noninheritable pidfd for the original connected
+Unix stream or sequenced-packet peer. It checks account, birth, namespaces and liveness without
+reopening a PID. This process identity does not establish desktop or input authority.
+
+The internal LinuxListener and LinuxChannel transport owns its protected Unix endpoint, socket
+and peer. Each bounded JSON packet requires the live original writer's kernel credentials and
+pidfd. Extra, missing, negative or truncated descriptor controls are refused; received descriptors
+retire before delivery. Admission and I/O share one deadline. Cancellation revokes delivery, and
+unfinished or failed cleanup stays unconfirmed. Unknown filesystem objects remain untouched.
+Pathname permissions do not isolate hostile processes sharing a UID. Bounded userspace waits
+do not promise hard realtime kernel syscall completion.
+
+Trusted helper launch and endpoint transfer, expected-helper policy, presence challenge and lease
+integration, and login, seat, lock and physical-activity sources remain pending. Non-Windows shared
+desktop tasks remain unavailable. This transport is not full Linux application or native input acceptance.
 
 Installed wheel and source distributions include the REST Dashboard and Swagger HTML, CSS and
 JavaScript resources. The same localhost REST routes and authentication rules apply to an

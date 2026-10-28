@@ -15,6 +15,10 @@ import threading
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 
 
+class _RetirementUnconfirmed(AgentTaskError):
+    """Owned-resource retirement has not been confirmed."""
+
+
 @dataclass(frozen=True)
 class LinuxPeerIdentity:
     """Private connector identity; no active-desktop or current-writer claim."""
@@ -27,16 +31,21 @@ class LinuxPeerIdentity:
     pid_namespace: str
 
 
-def _peer_option() -> int:
-    value = getattr(socket, 'SO_PEERPIDFD', None)
+def _socket_constant(name: str) -> int:
+    """Resolve native constants, with only the reviewed asm-generic pidfd fallback."""
+    value = getattr(socket, name, None)
     if value is None:
-        # Linux asm-generic ABI; other architectures can assign another number (e.g. SPARC).
-        if platform.machine() not in {'x86_64', 'aarch64'}:
-            raise AgentTaskError('Linux connected-peer pidfd ABI is unavailable')
-        return 77
+        fallback = {'SO_PEERPIDFD': 77, 'SO_PASSPIDFD': 76, 'SCM_PIDFD': 4}
+        if name not in fallback or platform.machine() not in {'x86_64', 'aarch64'}:
+            raise AgentTaskError('Linux socket credential ABI is unavailable')
+        return fallback[name]
     if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 65535:
         raise AgentTaskError('Linux connected-peer pidfd option is invalid')
     return value
+
+
+def _peer_option() -> int:
+    return _socket_constant('SO_PEERPIDFD')
 
 
 def _bounded(path: str, maximum: int = 65536) -> str:
@@ -162,14 +171,16 @@ def _close_descriptor(descriptor: int) -> None:
     try:
         os.close(descriptor)
     except OSError:
-        raise AgentTaskError('Linux connected-peer descriptor retirement is unconfirmed') from None
+        raise _RetirementUnconfirmed('Linux connected-peer descriptor retirement is unconfirmed') from None
 
 
-def _stream_credentials(connection: socket.socket) -> tuple[int, int, int]:
+def _connected_credentials(connection: socket.socket) -> tuple[int, int, int]:
     if not isinstance(connection, socket.socket) or connection.family != getattr(socket, 'AF_UNIX'):
-        raise AgentTaskError('Linux connected-peer evidence requires a Unix stream socket')
-    if connection.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE) != socket.SOCK_STREAM:
-        raise AgentTaskError('Linux connected-peer evidence requires a Unix stream socket')
+        raise AgentTaskError('Linux connected-peer evidence requires a connected Unix socket')
+    kinds = {socket.SOCK_STREAM, getattr(socket, 'SOCK_SEQPACKET', None)}
+    if connection.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE) not in kinds:
+        raise AgentTaskError('Linux connected-peer evidence requires stream or sequenced packets')
+    connection.getpeername()
     raw = connection.getsockopt(socket.SOL_SOCKET, getattr(socket, 'SO_PEERCRED'),
                                struct.calcsize('iII'))
     pid, uid, gid = struct.unpack('iII', raw)
@@ -186,8 +197,11 @@ def retain_connected_peer(connection: socket.socket) -> LinuxPeerProcess:
     retained = False
     try:
         option = _peer_option()
-        pid, uid, gid = _stream_credentials(connection)
+        pid, uid, gid = _connected_credentials(connection)
         descriptor = connection.getsockopt(socket.SOL_SOCKET, option)
+        if descriptor < 0:
+            descriptor = None
+            raise AgentTaskError('Linux connected-peer pidfd is unavailable')
         os.set_inheritable(descriptor, False)
         if os.get_inheritable(descriptor):
             raise AgentTaskError('Linux connected-peer descriptor inheritance is unconfirmed')

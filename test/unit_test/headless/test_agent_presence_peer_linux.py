@@ -18,12 +18,12 @@ from je_auto_control.utils.agent_runtime import presence_peer_linux as module
 
 
 @contextmanager
-def connected(*, unusual_name=False, forward_writer=False):
+def connected(*, unusual_name=False, forward_writer=False, kind=socket.SOCK_STREAM):
     script = '''
 import ctypes,os,socket,subprocess,sys
 if sys.argv[2]=='1':
     ctypes.CDLL(None).prctl(15,b'peer ) 123 ( hi',0,0,0)
-s=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
+s=socket.socket(socket.AF_UNIX,int(sys.argv[4]))
 s.connect(sys.argv[1])
 if sys.argv[3]=='1':
     reader,writer=os.pipe()
@@ -44,13 +44,13 @@ if sys.argv[3]=='1':
     os._exit(0)
 '''
     with tempfile.TemporaryDirectory(prefix='autocontrol-peer-candidate-') as base:
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as listener:
+        with socket.socket(socket.AF_UNIX, kind) as listener:
             address = str(Path(base) / 'owned.sock')
             listener.bind(address)
             listener.listen(1)
             listener.settimeout(5)
             child = subprocess.Popen([sys.executable, '-c', script, address,
-                str(int(unusual_name)), str(int(forward_writer))],
+                str(int(unusual_name)), str(int(forward_writer)), str(int(kind))],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
             connection = None
             descendant = None
@@ -104,11 +104,10 @@ def descriptors():
 class ConnectedPeerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        option = getattr(socket, 'SO_PEERPIDFD', None)
-        if option is None:
-            if os.uname().machine not in {'x86_64', 'aarch64'}:
-                raise unittest.SkipTest('native pidfd socket option ABI is unavailable')
-            option = 77
+        try:
+            option = module._peer_option()
+        except AgentTaskError as error:
+            raise unittest.SkipTest('native pidfd socket option ABI is unavailable') from error
         left, right = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
         with left, right:
             try:
@@ -118,6 +117,19 @@ class ConnectedPeerTests(unittest.TestCase):
                     raise unittest.SkipTest('kernel has no connected-peer pidfd socket option') from error
                 raise
             os.close(descriptor)
+
+    def test_stream_and_seqpacket_factories_pin_actual_subprocess(self):
+        for kind in (socket.SOCK_STREAM, socket.SOCK_SEQPACKET):
+            with self.subTest(kind=kind), connected(kind=kind) as (connection, child):
+                before = descriptors()
+                peer = module.retain_connected_peer(connection)
+                try:
+                    self.assertEqual(peer.identity.pid, child.pid)
+                    self.assertTrue(peer.alive())
+                    self.assertFalse(os.get_inheritable(peer._descriptor))
+                finally:
+                    peer.close()
+                self.assertEqual(descriptors(), before)
 
     def test_real_connected_child_has_kernel_identity_and_retained_liveness(self):
         with connected() as (connection, child):
