@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-05 | 2026-10-29 | Implement the isolated native service issuer with peer and lease evidence | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-04 | 2026-10-29 | Review isolated native ownership without enabling production | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-02 | 2026-10-29 | Verify lazy exports and refine source and documentation gates | #snapshot #agent #startup #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-01 | 2026-10-29 | Verify native owner fixtures and retain full-suite failures | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
