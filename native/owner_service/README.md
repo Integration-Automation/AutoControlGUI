@@ -25,7 +25,7 @@ lists what remains.
 | `src/guardian_*.c`, `guardian.h` | Root guardian. It holds a durable epoch journal, creates and delegates one cgroup epoch, accepts clients, checks their account and namespaces, starts the service and recovers after crashes. |
 | `src/service_*.c`, `native_service.*` | The service. It runs as its own account with CAP_SETUID, CAP_SETGID and CAP_SETPCAP only. It authenticates every packet by the sender's pidfd, issues leases, starts helpers and relays their I/O. |
 | `src/native_owner*.c`, `native_launch_linux.c`, `native_relay_linux.c` | The owner core. Each helper gets its own record, worker thread, cgroup and descriptors. |
-| `manifest/owner_manifest.example.c` | The compiled-in manifest: accounts, client namespaces, helper programs, paths. |
+| `config/owner_manifest.example.c` | The compiled-in manifest: accounts, client namespaces, helper programs, paths. |
 | `build.sh` | Builds `owner_service` and `owner_guardian` against a manifest. |
 | `tests/run_checks.py` | Unprivileged acceptance: compiles everything and runs the suites. |
 | `tests/protected_run.py` | Root acceptance on a disposable host. It provisions accounts and a cgroup subtree, runs real sessions, crashes and recovery, then removes everything. |
@@ -41,7 +41,7 @@ lists what remains.
 
 1. Create a service account and a payload account, both distinct from the client
    accounts.
-2. Copy `manifest/owner_manifest.example.c` to `owner_manifest.c`, fill in every
+2. Copy `config/owner_manifest.example.c` to `owner_manifest.c`, fill in every
    value marked `EDIT`, and review it.
 3. Run `build.sh owner_manifest.c build/`. Install `owner_guardian` and
    `owner_service` as root-owned files that nobody else can write, at the paths the
