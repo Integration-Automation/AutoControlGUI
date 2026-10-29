@@ -5,7 +5,7 @@ import sys
 from typing import Any, Callable
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
-from je_auto_control.utils.agent_runtime.native_channel import OwnedChannel
+from je_auto_control.utils.agent_runtime.owned_channel_factory import owned_channel
 from je_auto_control.utils.agent_runtime.presence_frames import identifier
 from je_auto_control.utils.agent_runtime.presence_owner import read_request, send_error, send_result
 from je_auto_control.utils.agent_runtime.presence_pipe_windows import WindowsPresencePipe
@@ -15,12 +15,12 @@ from je_auto_control.utils.agent_runtime.parent_watch import start_parent_watch
 
 
 class SourceProcess:
-    """Launch once through actual OwnedChannel/NativeJob; no source starts before its owner bootstrap."""
+    """Launch once through the owned channel factory; no source starts before its owner bootstrap."""
 
     def __init__(self, namespace: str | None = None, *,
                  channel_factory: Callable[[list[str]], Any] | None = None) -> None:
         self._namespace = identifier(namespace) if namespace is not None else None
-        self._factory = channel_factory if channel_factory is not None else OwnedChannel
+        self._factory = channel_factory if channel_factory is not None else owned_channel
         self._channel: Any = None
         self._started = False
 

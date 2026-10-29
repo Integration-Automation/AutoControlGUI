@@ -17,7 +17,7 @@ from je_auto_control.utils.agent_runtime.input_journal import InputJournal
 from je_auto_control.utils.agent_runtime.native_recovery import no_held_input
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
 from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile
-from je_auto_control.utils.agent_runtime.native_channel import OwnedChannel
+from je_auto_control.utils.agent_runtime.owned_channel_factory import HelperChannel, owned_channel
 from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock
 from je_auto_control.utils.agent_runtime.target_continuity import require_context_continuity
 from je_auto_control.utils.agent_runtime.presence_host import TargetPresence
@@ -56,13 +56,13 @@ class NativeDesktopTarget:
         self._journal: InputJournal | None = None
         self._recovery_probe = recovery_probe
         self._pending: str | None = None
-        self._channel: OwnedChannel | None = None
+        self._channel: HelperChannel | None = None
         self._ledger = InputLedger()
         self._takeover: Any = None
         self._channel_control: NativeControl | None = None
         self._presence = TargetPresence()
 
-    def _ensure(self) -> OwnedChannel:
+    def _ensure(self) -> HelperChannel:
         if self._resource is None:
             path = self._resource_path or _desktop_lock_path()
             resource = RuntimeLock(path)
@@ -132,8 +132,8 @@ class NativeDesktopTarget:
         transfers = bool(set(self._profile.allowed_tools) & BROWSER_TRANSFER_TOOLS)
         return probe_browser_helper(self._argv, transfer=transfers)
 
-    def _launch(self, check: Callable[[], None], control: Callable[[str], None] | None = None) -> OwnedChannel:
-        self._channel = OwnedChannel(self._argv, on_control=control)
+    def _launch(self, check: Callable[[], None], control: Callable[[str], None] | None = None) -> HelperChannel:
+        self._channel = owned_channel(self._argv, on_control=control)
         reply = self._channel.request("bootstrap", {}, timeout=15, check=check)
         if not isinstance(reply, dict) or type(reply.get("protocol")) is not int or reply["protocol"] != 1:
             self._channel.close()
@@ -230,7 +230,7 @@ class NativeDesktopTarget:
         """Delegate a pinned read-only completion check to the same owned browser helper."""
         return self._request("verify_browser", {"clause": clause})
 
-    def _readonly_source_channel(self) -> OwnedChannel | None:
+    def _readonly_source_channel(self) -> HelperChannel | None:
         if self._profile is None or self._profile.kind != "browser":
             raise AgentTaskError("only an owned browser can retain its read-only context")
         if self._pending is not None or not self._ledger.empty:
@@ -242,7 +242,7 @@ class NativeDesktopTarget:
             raise AgentTaskError("browser retirement requires its original input ownership")
         return channel
 
-    def detach_readonly(self) -> tuple[OwnedChannel, dict] | None:
+    def detach_readonly(self) -> tuple[HelperChannel, dict] | None:
         """Transfer only the actual frozen browser channel after confirmed empty input ownership."""
         channel = self._readonly_source_channel()
         if channel is None:
@@ -294,7 +294,7 @@ class NativeDesktopTarget:
             self._resource.close()
             self._resource = None
 
-    def _cleanup_browser(self, channel: OwnedChannel | None) -> None:
+    def _cleanup_browser(self, channel: HelperChannel | None) -> None:
         if (self._profile is not None and self._profile.kind == "browser"
                 and channel is not None and not channel.retired):
             channel.request("cleanup", self._ledger.snapshot(), timeout=3, check=lambda: None,

@@ -48,7 +48,7 @@ class Fixture:
         self.host, self.tmp_path = presence_host, tmp_path
         monkeypatch.setattr(presence_host, 'require_windows', lambda: None)
         monkeypatch.setattr(presence_host, 'shared_reference', self.pool.reference)
-        monkeypatch.setattr(native_target, 'OwnedChannel', self.helper)
+        monkeypatch.setattr(native_target, 'owned_channel', self.helper)
 
     def helper(self, argv, **kwargs):
         result = Helper(argv, **kwargs)

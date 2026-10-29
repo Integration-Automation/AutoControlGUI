@@ -8,7 +8,7 @@ from typing import Any, Callable, Sequence
 from je_auto_control.utils.agent_runtime.context import current_operation
 from je_auto_control.utils.agent_runtime.errors import AgentHumanReview, AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
-from je_auto_control.utils.agent_runtime.native_channel import OwnedChannel
+from je_auto_control.utils.agent_runtime.owned_channel_factory import HelperChannel, owned_channel
 from je_auto_control.utils.agent_runtime.remote_journal import RemoteInputJournal, device_identity, device_resource
 from je_auto_control.utils.agent_runtime.remote_effect import remote_scope_key
 from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock
@@ -28,7 +28,7 @@ class NativeRemoteTarget:  # pylint: disable=too-many-instance-attributes  # rea
         self._probe = recovery_probe
         self._resource: RuntimeLock | None = None
         self._journal: RemoteInputJournal | None = None
-        self._channel: OwnedChannel | None = None
+        self._channel: HelperChannel | None = None
         self._mutex = threading.RLock()
         self._bound: str | None = None
         self._takeover: Callable[[], None] | None = None
@@ -45,7 +45,7 @@ class NativeRemoteTarget:  # pylint: disable=too-many-instance-attributes  # rea
         connected = self._channel is not None and not self._channel.retired
         require_context_continuity(spec, receipts, connected, kind="desktop")
 
-    def _ensure(self, check: Callable[[], None]) -> tuple[OwnedChannel, RemoteInputJournal]:
+    def _ensure(self, check: Callable[[], None]) -> tuple[HelperChannel, RemoteInputJournal]:
         if self._resource is None:
             self._acquire()
         journal = self._journal
@@ -71,7 +71,7 @@ class NativeRemoteTarget:  # pylint: disable=too-many-instance-attributes  # rea
 
     def _launch(self, check: Callable[[], None]) -> None:
         self._takeover_sent.clear()
-        self._channel = OwnedChannel(self._argv, on_control=self._control)
+        self._channel = owned_channel(self._argv, on_control=self._control)
         for operation, expected in (("bootstrap", {"protocol": 1}),
                                     ("remote_capabilities", {"remote_effect_protocol": 1})):
             reply = self._channel.request(operation, {}, timeout=15, check=check)

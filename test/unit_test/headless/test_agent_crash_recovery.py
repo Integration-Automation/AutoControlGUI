@@ -89,7 +89,7 @@ def test_stale_journal_blocks_adapter_without_spawning_or_erasing(tmp_path, monk
     journal.acquire()
     before = journal.path.read_bytes()
     adapter = NativeDesktopTarget(resource_path=resource)
-    monkeypatch.setattr(native_target, "OwnedChannel", lambda *a, **k: pytest.fail("unreviewed helper spawned"))
+    monkeypatch.setattr(native_target, "owned_channel", lambda *a, **k: pytest.fail("unreviewed helper spawned"))
     with pytest.raises(AgentTaskError, match="explicit crash recovery"):
         adapter._ensure()
     adapter.cleanup()

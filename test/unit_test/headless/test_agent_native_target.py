@@ -63,7 +63,7 @@ def test_helper_bootstrap_has_a_separate_bound_without_extending_action_deadline
         def close(self):
             self.retired = True
 
-    monkeypatch.setattr(native_target, "OwnedChannel", Channel)
+    monkeypatch.setattr(native_target, "owned_channel", Channel)
     adapter = target(tmp_path)
     runtime = AgentRuntime(tmp_path / "one.sqlite", targets={"fixture": adapter})
     try:

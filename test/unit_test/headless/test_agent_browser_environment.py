@@ -116,7 +116,7 @@ def test_probe_protocol_never_configures_or_reuses_an_input_channel(monkeypatch)
     report = browser_environment._report("3.14.4", (True, True, True, True), True)
     channel = SimpleNamespace(request=Mock(side_effect=[{"protocol": 1}, report]), close=Mock())
     factory = Mock(return_value=channel)
-    monkeypatch.setattr(helper_environment, "OwnedChannel", factory)
+    monkeypatch.setattr(helper_environment, "owned_channel", factory)
     assert helper_environment.probe_browser_helper((sys.executable,), transfer=True) == report
     assert [call.args[0] for call in channel.request.call_args_list] == ["bootstrap", "probe_browser"]
     channel.close.assert_called_once()
@@ -127,7 +127,7 @@ def test_dependency_reply_cannot_claim_native_success_or_include_unknown_metadat
     report = browser_environment._report("3.14.4", (True, True, True, True), True)
     report["native_evidence"] = "verified"
     channel = SimpleNamespace(request=Mock(side_effect=[{"protocol": 1}, report]), close=Mock())
-    monkeypatch.setattr(helper_environment, "OwnedChannel", Mock(return_value=channel))
+    monkeypatch.setattr(helper_environment, "owned_channel", Mock(return_value=channel))
     result = helper_environment.probe_browser_helper((sys.executable,), transfer=True)
     assert result["status"] == "unknown" and result["native_evidence"] == "not_recorded"
     channel.close.assert_called_once()
@@ -137,7 +137,7 @@ def test_probe_preserves_cancellation_and_enforces_capacity_before_process_launc
     from je_auto_control.utils.agent_runtime import helper_environment
     channel = SimpleNamespace(request=Mock(side_effect=CancelledError()), close=Mock())
     factory = Mock(return_value=channel)
-    monkeypatch.setattr(helper_environment, "OwnedChannel", factory)
+    monkeypatch.setattr(helper_environment, "owned_channel", factory)
     with pytest.raises(CancelledError):
         helper_environment.probe_browser_helper((sys.executable,), transfer=False)
     channel.close.assert_called_once()

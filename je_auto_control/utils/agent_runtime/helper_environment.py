@@ -9,7 +9,7 @@ from typing import Any, Mapping, Sequence
 
 from je_auto_control.utils.agent_runtime.browser_environment import validate_browser_probe
 from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError
-from je_auto_control.utils.agent_runtime.native_channel import OwnedChannel
+from je_auto_control.utils.agent_runtime.owned_channel_factory import owned_channel
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 
@@ -41,7 +41,7 @@ def probe_browser_helper(argv: Sequence[str], *, transfer: bool) -> dict[str, An
     if not _PROBES.acquire(blocking=False):
         raise AgentControlBusy("browser helper dependency probe capacity is busy")
     try:
-        with closing(OwnedChannel(argv)) as channel:
+        with closing(owned_channel(argv)) as channel:
             hello = channel.request("bootstrap", {}, timeout=15)
             if hello != {"protocol": 1}:
                 raise AgentTaskError("incompatible browser helper bootstrap")

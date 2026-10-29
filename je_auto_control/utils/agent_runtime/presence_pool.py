@@ -11,7 +11,7 @@ import time
 from typing import Any, Callable
 
 from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError
-from je_auto_control.utils.agent_runtime.native_channel import OwnedChannel
+from je_auto_control.utils.agent_runtime.owned_channel_factory import owned_channel
 from je_auto_control.utils.agent_runtime.presence_frames import (
     identifier, presence_body, unsigned, validate_response,
 )
@@ -94,7 +94,7 @@ class PresenceReference:
 class PresencePool:
     """One lazy broker and I/O owner, shared independently of task helpers and caller cancellation."""
 
-    def __init__(self, *, channel_factory: Callable[[list[str]], Any] = OwnedChannel) -> None:
+    def __init__(self, *, channel_factory: Callable[[list[str]], Any] = owned_channel) -> None:
         self._factory = channel_factory
         self._mutex = threading.RLock()
         self._references: set[_Reference] = set()

@@ -77,7 +77,7 @@ class Fixture:
         self.pools = [self.pool]
         monkeypatch.setattr(presence_pool, '_SHARED', presence_pool._Registry(pool=self.pool))
         monkeypatch.setattr(presence_pool, 'PresencePool', self.new_pool)
-        monkeypatch.setattr(native_target, 'OwnedChannel', self.helper)
+        monkeypatch.setattr(native_target, 'owned_channel', self.helper)
 
     def source(self, argv):
         assert argv[-2:] == ['-m', 'je_auto_control.utils.agent_runtime.presence_broker']
