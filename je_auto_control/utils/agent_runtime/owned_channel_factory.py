@@ -104,6 +104,44 @@ def load_binding(path: str = BINDING_PATH) -> OwnerServiceBinding | None:
     return OwnerServiceBinding(_endpoint(data["endpoint"]), _policy_rows(data["policies"]))
 
 
+def _endpoint_reachable(endpoint: str) -> bool:
+    import socket
+    family, kind = getattr(socket, "AF_UNIX", None), getattr(socket, "SOCK_SEQPACKET", None)
+    if family is None or kind is None:
+        return False
+    with socket.socket(family, kind) as probe:
+        probe.settimeout(0.5)
+        try:
+            probe.connect(endpoint)
+        except OSError:
+            return False
+    return True
+
+
+def helper_containment() -> dict[str, Any]:
+    """Describe how this host owns helper processes, without launching one.
+
+    ``status`` separates what is not supported, not configured, refused, unreachable
+    and merely reachable. Reaching the service is not containment evidence, so
+    ``native_evidence`` is always ``not_recorded``: only protected acceptance records it.
+    """
+    result: dict[str, Any] = {"native_evidence": "not_recorded"}
+    if sys.platform == "win32":
+        return {**result, "mode": "local", "intended_containment": "windows_job_object", "status": "not_probed"}
+    if not sys.platform.startswith("linux"):
+        return {**result, "mode": "local", "intended_containment": "process_group", "status": "not_supported"}
+    try:
+        binding = load_binding()
+    except AgentTaskError as error:
+        return {**result, "mode": "owner_service", "intended_containment": "owner_service_cgroup",
+                "status": "binding_refused", "reason": str(error)}
+    if binding is None:
+        return {**result, "mode": "local", "intended_containment": "process_group", "status": "not_configured"}
+    status = "reachable_unverified" if _endpoint_reachable(binding.endpoint) else "unreachable"
+    return {**result, "mode": "owner_service", "intended_containment": "owner_service_cgroup", "status": status,
+            "policies": len(binding.policies)}
+
+
 def owned_channel(argv: Sequence[str], *, on_control: Callable[[str], None] | None = None,
                   nested: Any = None) -> HelperChannel:
     """Return the channel that owns this helper.

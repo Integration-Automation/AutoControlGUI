@@ -209,12 +209,15 @@ def stop_all_agent_tasks() -> dict[str, Any]:
 
 
 def agent_runtime_status() -> dict[str, Any]:
-    """Return inert local connection metadata without reading or returning credentials."""
+    """Return inert local connection metadata and how helpers are contained, without credentials."""
+    from je_auto_control.utils.agent_runtime.owned_channel_factory import helper_containment
     path = default_connection_path()
+    containment = helper_containment()
     if not path.is_file():
-        return {"configured": False, "connection_path": str(path)}
+        return {"configured": False, "connection_path": str(path), "helper_containment": containment}
     metadata = json.loads(path.read_text(encoding="utf-8"))
-    return {"configured": True, "connection_path": str(path), "generation": metadata.get("generation")}
+    return {"configured": True, "connection_path": str(path), "generation": metadata.get("generation"),
+            "helper_containment": containment}
 
 
 def stop_agent_runtime() -> dict[str, Any]:

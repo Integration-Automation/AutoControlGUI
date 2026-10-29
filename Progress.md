@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-15；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-16；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -186,6 +186,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
 7. **P3／P6／P7：能力、模型及共用介面驗證**
    - 補桌面權限、平台／裝置連線、來源／目標就緒與原生證據的診斷；區分未支援、缺依賴、
      未授權、未探測、未記錄與實測成功，不把 Python 套件匯入成功當原生可用。
+     runtime status 已加入 helper 程序擁有方式（helper_containment，native_evidence 固定
+     not_recorded）；桌面權限、裝置連線與來源／目標就緒的診斷仍缺。
    - 為自訂／外部 target 補經審閱的語義觀察與遮罩覆蓋契約；沒有能力旗標的舊 target 仍沿用
      既有判定，不能因此宣稱已證明完整畫面或遮罩內容的不存在。深化部分證據的計數／狀態／
      變動判定與受保護欄位比較，目前缺少充分證據時仍為未知。

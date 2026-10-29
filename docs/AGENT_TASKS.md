@@ -64,6 +64,23 @@ hidden local process and publishes its ephemeral loopback address and bearer cre
 per-user `agent_runtime.json`. Status never returns that credential. Stop requests cancel owned
 input first; active dispatch or cleanup prevents premature service retirement.
 
+Status also reports `helper_containment`: how this host owns helper processes, without launching one.
+
+- `mode`: `local` or `owner_service`.
+- `intended_containment`: `windows_job_object`, `process_group` or `owner_service_cgroup`.
+- `status`: one of the following.
+  - `not_probed`: Windows.
+  - `not_supported`: macOS and other POSIX systems.
+  - `not_configured`: Linux without an owner-service binding.
+  - `binding_refused`: the binding is untrusted or malformed. A `reason` is included.
+  - `unreachable`: the binding's endpoint does not answer.
+  - `reachable_unverified`: the endpoint answers.
+- `native_evidence`: always `not_recorded`. Reaching the service is not proof of
+  containment; only protected acceptance records that.
+
+The binding is a root-owned `/etc/je_auto_control/owner_service.json` installed by host
+management, holding the endpoint and the exact helper argv each policy launches.
+
 ## Task contract
 
 Submit a JSON file with `je_auto_control agent-task submit task.json`, or call

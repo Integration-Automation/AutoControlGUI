@@ -129,3 +129,37 @@ def test_nested_grant_reaches_the_service_channel_and_refuses_elsewhere(monkeypa
     with pytest.raises(AgentTaskError, match="needs the Linux owner service"):
         factory.owned_channel(ARGV, nested=grant)
     assert not local.calls
+
+
+@pytest.mark.parametrize("platform, status, containment", [
+    ("win32", "not_probed", "windows_job_object"),
+    ("darwin", "not_supported", "process_group"),
+    ("freebsd14", "not_supported", "process_group"),
+])
+def test_containment_status_outside_linux(monkeypatch, platform, status, containment):
+    monkeypatch.setattr(factory.sys, "platform", platform)
+    result = factory.helper_containment()
+    assert result == {"native_evidence": "not_recorded", "mode": "local", "intended_containment": containment,
+                      "status": status}
+
+
+def test_containment_status_on_linux_never_claims_native_evidence(monkeypatch, tmp_path):
+    monkeypatch.setattr(factory.sys, "platform", "linux")
+    monkeypatch.setattr(factory.load_binding, "__defaults__", (str(tmp_path / "absent.json"),))
+    assert factory.helper_containment()["status"] == "not_configured"
+    bind(monkeypatch, tmp_path, {"endpoint": "relative"})
+    refused = factory.helper_containment()
+    assert refused["status"] == "binding_refused" and refused["mode"] == "owner_service" and refused["reason"]
+    bind(monkeypatch, tmp_path, VALID)
+    for reachable, status in ((False, "unreachable"), (True, "reachable_unverified")):
+        monkeypatch.setattr(factory, "_endpoint_reachable", lambda _endpoint, value=reachable: value)
+        result = factory.helper_containment()
+        assert result["status"] == status and result["policies"] == 1
+        assert result["native_evidence"] == "not_recorded"
+
+
+def test_runtime_status_carries_the_containment_section(monkeypatch, tmp_path):
+    from je_auto_control.utils.agent_runtime import api
+    monkeypatch.setattr(api, "default_connection_path", lambda: tmp_path / "absent.json")
+    status = api.agent_runtime_status()
+    assert status["configured"] is False and status["helper_containment"]["native_evidence"] == "not_recorded"

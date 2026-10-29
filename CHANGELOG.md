@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased: helper containment in runtime status
+
+`agent_runtime_status()` (and `AC_agent_runtime_status`, `agent-task status`) adds a
+`helper_containment` object. It reports the helper ownership mode, the intended
+containment and a status of `not_probed`, `not_supported`, `not_configured`,
+`binding_refused`, `unreachable` or `reachable_unverified`, and always has
+`native_evidence: not_recorded`. Existing keys are unchanged. On Linux a root-owned
+`/etc/je_auto_control/owner_service.json` binding routes listed helpers through the owner
+service. Without a binding, helpers keep running as before.
+
 ## Unreleased: public exports resolved on demand
 
 Resolve root and remote-desktop exports on first access while preserving public names, order,
