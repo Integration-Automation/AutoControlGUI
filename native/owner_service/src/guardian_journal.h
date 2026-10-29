@@ -42,6 +42,9 @@ typedef struct {
 /* Opens the state directory without following links, checks its owner and mode, takes
  * the exclusive lock without waiting, and loads the current record. `installation`
  * comes from the provisioned manifest; a journal of another installation refuses. */
+/* Opens an absolute directory whose every ancestor is root's or `owner`'s and not writable
+ * by others unless sticky. EPERM names an untrusted directory on the way. */
+int gj_open_trusted_directory(const char *path, uid_t owner);
 gj_error gj_open(gj_journal *journal, const char *path, uid_t administrator,
                  const uint8_t installation[GJ_INSTALLATION_BYTES]);
 /* Fresh installation only: the first durable record, CLEAN with counter 0. */

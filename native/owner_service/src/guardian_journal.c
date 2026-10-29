@@ -89,12 +89,45 @@ static gj_error choose(gj_journal *journal, const gj_record records[2], const sl
     return GJ_ERROR_NONE;
 }
 
+/* Walks from "/" one component at a time without following links and returns the last
+ * descriptor. Every directory on the way is root's or `owner`'s, and one that others may
+ * write is sticky, so no other account can rename or replace anything below it. */
+int gj_open_trusted_directory(const char *path, uid_t owner) {
+    char copy[4096];
+    if (!path || path[0] != '/' || strlen(path) >= sizeof(copy)) { errno = EINVAL; return -1; }
+    strcpy(copy, path);
+    int current = open("/", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    char *cursor = copy + 1;
+    for (;;) {
+        struct stat status;
+        if (current < 0) return -1;
+        if (fstat(current, &status) != 0 || !S_ISDIR(status.st_mode) ||
+            (status.st_uid != 0 && status.st_uid != owner) ||
+            ((status.st_mode & (S_IWGRP | S_IWOTH)) && !(status.st_mode & S_ISVTX))) {
+            close(current);
+            errno = EPERM;
+            return -1;
+        }
+        while (*cursor == '/') ++cursor;
+        if (!*cursor) return current;
+        char *end = strchr(cursor, '/');
+        if (end) *end = 0;
+        if (!strcmp(cursor, "..")) { close(current); errno = EINVAL; return -1; }
+        int next = openat(current, cursor, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+        int saved = errno;
+        close(current);
+        errno = saved;
+        current = next;
+        cursor = end ? end + 1 : cursor + strlen(cursor);
+    }
+}
+
 gj_error gj_open(gj_journal *journal, const char *path, uid_t administrator,
                  const uint8_t installation[GJ_INSTALLATION_BYTES]) {
     *journal = (gj_journal){.directory = -1, .lock = -1, .administrator = administrator, .slot = -1};
     struct stat status;
-    journal->directory = open(path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
-    if (journal->directory < 0) return GJ_ERROR_DIRECTORY;
+    journal->directory = gj_open_trusted_directory(path, administrator);
+    if (journal->directory < 0) return errno == EPERM ? GJ_ERROR_PERMISSIONS : GJ_ERROR_DIRECTORY;
     gj_error error = GJ_ERROR_NONE;
     if (fstat(journal->directory, &status) != 0 || !trusted(&status, administrator, true))
         error = GJ_ERROR_PERMISSIONS;

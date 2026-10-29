@@ -102,6 +102,28 @@ static void case_lock_and_permissions(void) {
     gj_close(&second);
 }
 
+/* An ancestor others may write is trusted only when sticky; a symlinked ancestor or a
+ * relative path is never opened. */
+static void case_ancestors(void) {
+    char open_dir[128], state[160], link_dir[128], linked[160], lock[192];
+    path_of(open_dir, sizeof(open_dir), "open");
+    snprintf(state, sizeof(state), "%s/state", open_dir);
+    path_of(link_dir, sizeof(link_dir), "link");
+    snprintf(linked, sizeof(linked), "%s/state", link_dir);
+    snprintf(lock, sizeof(lock), "%s/lock", state);
+    CHECK(mkdir(open_dir, 0700) == 0 && chmod(open_dir, 0777) == 0);
+    CHECK(mkdir(state, 0700) == 0);
+    gj_journal journal;
+    CHECK(gj_open(&journal, state, getuid(), install) == GJ_ERROR_PERMISSIONS);
+    CHECK(chmod(open_dir, 01777) == 0);
+    CHECK(gj_open(&journal, state, getuid(), install) == GJ_ERROR_NONE);
+    gj_close(&journal);
+    CHECK(symlink(open_dir, link_dir) == 0);
+    CHECK(gj_open(&journal, linked, getuid(), install) == GJ_ERROR_DIRECTORY);
+    CHECK(gj_open(&journal, "tmp/relative", getuid(), install) == GJ_ERROR_DIRECTORY);
+    CHECK(unlink(link_dir) == 0 && unlink(lock) == 0 && rmdir(state) == 0 && rmdir(open_dir) == 0);
+}
+
 /* Leaves an older CLEAN record (counter 1) and a newer PLANNED record (counter 2); the
  * slots alternate, so which file holds which is recorded here. */
 static const char *older_name, *newer_name;
@@ -194,6 +216,7 @@ int main(void) {
     case_lock_and_permissions();
     case_torn_and_corrupt();
     case_overflow();
+    case_ancestors();
     reset();
     CHECK(rmdir(root) == 0);
     printf("{\"checks\": %u, \"evidence\": \"journal only, unprivileged temporary directory\"}\n", checks);

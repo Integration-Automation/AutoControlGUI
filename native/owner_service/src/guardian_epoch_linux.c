@@ -38,7 +38,7 @@ static guardian_result open_hierarchy(guardian_state *state) {
     const guardian_manifest *manifest = state->manifest;
     struct statfs filesystem;
     struct stat status;
-    state->mount = open(manifest->cgroup_mount, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+    state->mount = gj_open_trusted_directory(manifest->cgroup_mount, manifest->hierarchy_owner);
     if (state->mount < 0) return refuse(state, 10, errno, GUARDIAN_REFUSED);
     if (fstatfs(state->mount, &filesystem) != 0 || filesystem.f_type != CGROUP2_SUPER_MAGIC)
         return refuse(state, 11, ENOTDIR, GUARDIAN_REFUSED);
