@@ -14,6 +14,11 @@
 
 static const char *const payload_argv[] = {PAYLOAD_EXECUTABLE, "--owned-child", "rpc"};
 static const char *const parent_argv[] = {"/usr/bin/python3", "-I", NESTED_PARENT, REPOSITORY, ENDPOINT};
+/* The package's real native worker. -I ignores PYTHONPATH, so the repository is put on the
+ * path explicitly; an installed package would use `-m je_auto_control...native_worker`. */
+static const char *const worker_argv[] = {"/usr/bin/python3", "-I", "-B", "-c",
+    "import sys; sys.path.insert(0, '" REPOSITORY "'); "
+    "from je_auto_control.utils.agent_runtime.native_worker import main; main()"};
 /* 1: a top-level rpc helper. 2: the same helper, nested only. 3: a top-level parent that
  * may start policy 2 children through its own child leases. */
 static const service_launch_policy protected_policies[] = {{
@@ -25,6 +30,9 @@ static const service_launch_policy protected_policies[] = {{
 }, {
     .id = 3, .executable = "/usr/bin/python3", .cwd = "/", .fixed_argv = parent_argv, .fixed_argc = 5,
     .payload_uid = PAYLOAD_UID, .payload_gid = PAYLOAD_GID, .child_policies = UINT32_C(1) << 2,
+}, {
+    .id = 4, .executable = "/usr/bin/python3", .cwd = "/", .fixed_argv = worker_argv, .fixed_argc = 5,
+    .payload_uid = PAYLOAD_UID, .payload_gid = PAYLOAD_GID,
 }};
 
 const service_policy service_manifest = {
@@ -32,7 +40,7 @@ const service_policy service_manifest = {
     .clients = {{CLIENT_UID, CLIENT_GID}},
     .client_count = 1,
     .policies = protected_policies,
-    .policy_count = 3,
+    .policy_count = 4,
     /* Short enough that every session longer than a few seconds proves renewal works. */
     .lease_lifetime_ns = 4000000000ULL,
     .lease_max_age_ns = 600000000000ULL,

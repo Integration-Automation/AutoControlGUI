@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-11；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-12；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -114,8 +114,11 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      禁止 user namespace、clone3 回 ENOSYS）；閒置連線擋住輪替（MAJOR-2）、START 重送、guardian
      回收服務、renewer 錯誤處理、被拒連線回報為 AgentControlBusy、開機重建說明、每個 record 獨立的
      payload ID、每個父 record 的 nested 配額、guardian 每帳號連線速率與服務每輪讀完 handoff、cgroup
-     subtree 逐層檢查也已處理，閘門仍關閉。第二次審查剩餘項目（TODO）：範本的 native_worker policy
-     從未在服務下實際執行，且無 DISPLAY／Wayland／Xauthority 時 GUI worker 多半無法運作（NOTE-11）；
+     subtree 逐層檢查也已處理，閘門仍關閉；套件的 native_worker 已在服務下實際啟動並回覆。
+     DECIDE（NOTE-11）：受保護 helper 以獨立的範圍 ID、空環境執行，無法存取使用者的 X／Wayland
+     socket，桌面操作無從進行。選項：桌面 helper 繼續以本機程序執行、owner 服務只承載不需顯示的
+     helper；或由 client 以 SCM_RIGHTS 把顯示 socket／portal 的描述符交給該 helper（需另行設計與審查）。
+     第二次審查剩餘項目（TODO）：
      單一 epoch 內 lease／record 位置不能重用（`epoch_spent`，需世代計數的槽位重用），長壽 helper 會讓
      已用盡的 epoch 回 CAPACITY 直到它關閉。
      另缺：其他架構／libc／核心的相容性驗證、安裝內容比對、實際已安裝主機的執行驗收，以及處理上列

@@ -54,6 +54,24 @@ def race():
     sys.exit(0)
 
 
+def worker():
+    """Policy 4, the package's real native worker: bootstrap through the service, then close."""
+    channel = OwnerServiceChannel(SeqpacketTransport(endpoint), 4)
+    try:
+        emit({"stage": "bootstrap", "result": channel.request("bootstrap", {}, timeout=60)})
+    except AgentTaskError as error:
+        emit({"stage": "bootstrap", "error": str(error)})
+    sys.stdin.readline()
+    try:
+        channel.close()
+        emit({"stage": "close", "retired": channel.retired})
+    except AgentTaskError as error:
+        emit({"stage": "close", "error": str(error), "retired": channel.retired})
+    sys.exit(0)
+
+
+if mode == "worker":
+    worker()
 if mode == "nested":
     nested()
 if mode == "race":

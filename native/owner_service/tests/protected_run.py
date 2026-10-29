@@ -189,6 +189,7 @@ def status_of(pid):
             fields[key] = value.strip()
     return {"uid": fields["Uid"].split()[0], "cap_eff": fields["CapEff"], "cap_bnd": fields["CapBnd"],
             "no_new_privs": fields.get("NoNewPrivs"), "seccomp": fields.get("Seccomp"),
+            "threads": fields.get("Threads"),
             "gid": fields["Gid"].split()[0], "groups": fields.get("Groups", "").split()}
 
 
@@ -443,6 +444,21 @@ def scenario_service_crash(steps):
     steps["epochs_after_stop"] = epochs()
 
 
+def scenario_worker(steps):
+    """The template's helper program, the package's native worker, runs under the service."""
+    guardian = start_guardian()
+    epoch = epochs()[-1]
+    driver = client("worker")
+    steps["bootstrap"] = read_json(driver)
+    steps["inspection"] = session_inspection(epoch)
+    driver.stdin.write("\n")
+    driver.stdin.flush()
+    steps["close"] = read_json(driver)
+    driver.wait(timeout=60)
+    steps["guardian_stop"] = stop_guardian(guardian)
+    steps["epochs_after_stop"] = epochs()
+
+
 def scenario_delegated_subtree(steps):
     """A guardian whose subtree sits below a delegated cgroup refuses; once root owns that
     cgroup again it starts."""
@@ -596,6 +612,8 @@ def main():
         scenario_service_crash(report["steps"]["service_crash"])
         report["steps"]["delegated_subtree"] = {}
         scenario_delegated_subtree(report["steps"]["delegated_subtree"])
+        report["steps"]["worker"] = {}
+        scenario_worker(report["steps"]["worker"])
     except Exception as error:  # reason: cleanup must run and the failure must be reported, not lost
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
@@ -630,10 +648,11 @@ def expectations(result):
     rollover = result["steps"].get("rollover", {})
     service_crash = result["steps"].get("service_crash", {})
     delegated = result["steps"].get("delegated_subtree", {})
+    worker = result["steps"].get("worker", {})
     inspection = session.get("inspection", {})
     service, payload = inspection.get("service", [{}]), inspection.get("payload", [{}])
     if "error" in result or not all((session, crash, siblings, nested, race, renewal, rollover, service_crash,
-                                     delegated)):
+                                     delegated, worker)):
         return {"completed": False}
     return {
         "protected_reply": session["request"].get("reply") == "pong",
@@ -692,6 +711,13 @@ def expectations(result):
         and service_crash["next_session"]["retired"] and service_crash["guardian_stop"][0] == 0
         and not service_crash["epochs_after_stop"],
         # Read from the running payload, not the manifest: its own group and nothing else.
+        # The real worker: it answers through the service as its own range ID, under the
+        # identity filter, with its parent-watch thread created despite clone3 being refused.
+        "native_worker_runs": (worker["bootstrap"].get("result") or {}).get("protocol") == 1
+        and bool(worker["inspection"]["payload"]) and in_payload_range(worker["inspection"]["payload"][0].get("uid"))
+        and worker["inspection"]["payload"][0].get("seccomp") == "2"
+        and int(worker["inspection"]["payload"][0].get("threads") or 0) >= 2
+        and worker["close"].get("retired") is True and worker["guardian_stop"][0] == 0,
         "delegated_subtree_refused": delegated["delegated_refused"][0] != 0
         and "prepare operation 14" in delegated["delegated_refused"][1] and delegated["trusted_started"]
         and delegated["guardian_stop"][0] == 0 and not delegated["epochs_after_stop"],
