@@ -121,7 +121,8 @@ static bool adopt_grant(service_state *service, guardian_grant *grant, no_deadli
     if (!authentic) { *error = failure(EPERM, 25); return false; }
     if (packet.bytes != (ssize_t)sizeof(*grant) || grant->magic != SERVICE_MAGIC ||
         grant->version != SERVICE_VERSION || grant->kind != GRANT_EPOCH ||
-        (grant->epoch.high == 0 && grant->epoch.low == 0) || grant->generation == 0 || grant->payload_half > 1) {
+        (grant->epoch.high == 0 && grant->epoch.low == 0) || grant->generation == 0 ||
+        grant->payload_slice >= SERVICE_PAYLOAD_SLICES) {
         *error = failure(EPROTO, 26); return false;
     }
     return true;
@@ -163,11 +164,11 @@ bootstrap_result service_bootstrap(service_state *service, int inherited_channel
     service->runtime = no_runtime_create(&policy, &step);
     if (!service->runtime) return unwind(service, error, step);
     guardian_grant acknowledgement = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_ACKNOWLEDGED, grant.epoch,
-                                      grant.generation, grant.payload_half, 0};
+                                      grant.generation, grant.payload_slice, 0};
     if (!send_frame(inherited_channel, &acknowledgement)) return unwind(service, error, failure(errno, 30));
     service->epoch = grant.epoch;
     service->generation = grant.generation;
-    service->payload_half = grant.payload_half;
+    service->payload_slice = grant.payload_slice;
     service->phase = BOOT_ACTIVE;
     return BOOTSTRAP_READY;
 }

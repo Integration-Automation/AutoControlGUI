@@ -8,7 +8,7 @@
  * relative to the directory that was opened, so no rename on the way can redirect a
  * removal. Ownership is judged by user ID only: a file's group says nothing of who made it.
  * Anything a payload ID owns that cannot be removed makes the purge report unclean, and the
- * guardian then never hands that half out again until it restarts and purges anew. */
+ * guardian then never hands that slice out again until it restarts and purges anew. */
 #include "guardian.h"
 #include <dirent.h>
 #include <errno.h>
@@ -24,14 +24,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-typedef struct { const service_policy *service; int half; } purge_scope;
+typedef struct { const service_policy *service; int slice; } purge_scope;
 
-/* `half` 0 or 1 is one epoch's half of every user-ID range; -1 both halves. */
+/* `slice` below SERVICE_PAYLOAD_SLICES is one epoch's slice of every user-ID range; -1 all. */
 static bool payload_uid(const purge_scope *scope, uint32_t uid) {
-    uint32_t span = scope->half < 0 ? SERVICE_PAYLOAD_IDS : SERVICE_EPOCH_IDS;
+    uint32_t span = scope->slice < 0 ? SERVICE_PAYLOAD_IDS : SERVICE_EPOCH_IDS;
     for (size_t i = 0; i < scope->service->policy_count; ++i) {
         uint32_t low = scope->service->policies[i].payload_uid;
-        if (scope->half > 0) low += SERVICE_EPOCH_IDS;
+        if (scope->slice > 0) low += (uint32_t)scope->slice * SERVICE_EPOCH_IDS;
         if (uid >= low && uid - low < span) return true;
     }
     return false;
@@ -134,7 +134,7 @@ static bool purge_ipc(const purge_scope *scope, const char *table, int kind) {
     return clean;
 }
 
-bool guardian_purge_payloads(const service_policy *service, int half) {
+bool guardian_purge_payloads(const service_policy *service, int slice) {
     if (!service) return true;
     /* One descriptor per directory level: let a deep tree use every one root may hold. */
     struct rlimit files;
@@ -142,7 +142,7 @@ bool guardian_purge_payloads(const service_policy *service, int half) {
         files.rlim_cur = files.rlim_max;
         setrlimit(RLIMIT_NOFILE, &files);
     }
-    purge_scope scope = {service, half};
+    purge_scope scope = {service, slice};
     static const char *const roots[] = {"/tmp", "/var/tmp", "/dev/shm", "/dev/mqueue", "/run/lock"};
     bool clean = true;
     for (size_t i = 0; i < sizeof(roots) / sizeof(roots[0]); ++i) clean &= purge_tree(&scope, roots[i]);

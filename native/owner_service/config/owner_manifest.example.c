@@ -7,9 +7,9 @@
 
 /* EDIT: accounts. Guardian is root. The service account runs the service. One client
  * account may open top-level leases. Helpers run as IDs from a payload range: each helper
- * gets PAYLOAD_UID + k and PAYLOAD_GID + k, for k below 64, so no two live helpers share
- * an account, even across a retiring epoch and its successor. The range needs no
- * accounts, only 64 user and 64 group IDs nothing else uses (systemd keeps 61184-65519
+ * gets PAYLOAD_UID + k and PAYLOAD_GID + k, for k below 128, so no two live helpers share
+ * an account, even across retiring epochs and the current one. The range needs no
+ * accounts, only 128 user and 128 group IDs nothing else uses (systemd keeps 61184-65519
  * for its own dynamic IDs; pick a range outside it, too).
  * The socket group owns the listener and the client account is a supplementary member
  * of it; no helper ever is. Every client below is also named in the listener's ACL. */

@@ -86,6 +86,25 @@ def worker():
     sys.exit(0)
 
 
+def remote():
+    """Policy 5, a remote helper: the negotiation RemoteTarget performs, then close."""
+    channel = OwnerServiceChannel(SeqpacketTransport(endpoint), 5)
+    try:
+        replies = [channel.request(operation, {}, timeout=60) for operation in ("bootstrap", "remote_capabilities")]
+        emit({"stage": "negotiate", "replies": replies})
+    except AgentTaskError as error:
+        emit({"stage": "negotiate", "error": str(error)})
+    sys.stdin.readline()
+    try:
+        channel.close()
+        emit({"stage": "close", "retired": channel.retired})
+    except AgentTaskError as error:
+        emit({"stage": "close", "error": str(error), "retired": channel.retired})
+    sys.exit(0)
+
+
+if mode == "remote":
+    remote()
 if mode == "worker":
     worker()
 if mode == "nested":

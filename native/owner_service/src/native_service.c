@@ -329,10 +329,10 @@ static no_submit_result submit(service_state *service, service_lease *lease, con
     return no_submit(service->runtime, &lease->scope, key, spec, ticket, error);
 }
 
-/* The ID offset of a lease's helper within its policy's range: the half the guardian
+/* The ID offset of a lease's helper within its policy's range: the slice the guardian
  * granted this epoch, then the lease position, unique within the epoch. */
 static uint32_t payload_offset(const service_state *service, const service_lease *lease) {
-    return service->payload_half * SERVICE_EPOCH_IDS + (uint32_t)(lease - service->leases);
+    return service->payload_slice * SERVICE_EPOCH_IDS + (uint32_t)(lease - service->leases);
 }
 
 static void start(service_state *service, size_t index, const service_request *request) {
@@ -603,7 +603,7 @@ static void announce_retiring(service_state *service) {
     for (size_t i = 0; i < service->lease_count && !open; ++i) open = service->leases[i].phase == LEASE_OPEN;
     if (!open) return;
     guardian_grant frame = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_RETIRING, service->epoch, service->generation,
-                            service->payload_half, 0};
+                            service->payload_slice, 0};
     ssize_t sent;
     do {
         sent = send(service->guardian.number, &frame, sizeof(frame), MSG_NOSIGNAL | MSG_DONTWAIT);

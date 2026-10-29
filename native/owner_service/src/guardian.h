@@ -39,7 +39,9 @@ typedef struct {
     gj_journal journal;
     int mount, subtree, epoch;      /* Owned descriptors, -1 when closed. */
     uint32_t operation;             /* The step that refused, for the journal-free diagnostic. */
-    bool tainted[2];                /* A payload half whose purge left something: never handed out again. */
+    bool tainted[SERVICE_PAYLOAD_SLICES];  /* A slice whose purge left something: never handed out again. */
+    int purging[SERVICE_PAYLOAD_SLICES];   /* pidfd of a slice's purge child, -1 when none runs. */
+    bool purge_async;                      /* While serving: purges run in a child, the loop goes on. */
     int system_errno;
 } guardian_state;
 
@@ -52,20 +54,24 @@ extern const service_policy service_manifest;
 /* Installs the service's identity filter (guardian_seccomp_linux.c); needs no_new_privs. */
 bool guardian_confine_identities(const service_policy *policy, uint32_t service_uid, uint32_t service_gid);
 /* Removes files and SysV IPC objects the payload ranges own (guardian_purge_linux.c);
- * true when nothing they own remains. `half` 0 or 1 is one epoch's half of every range,
- * -1 both. Only once nothing runs as those IDs: after their epoch is killed. */
-bool guardian_purge_payloads(const service_policy *service, int half);
+ * true when nothing they own remains. `slice` below SERVICE_PAYLOAD_SLICES is one epoch's
+ * slice of every range, -1 all. Only once nothing runs as those IDs: after their epoch is
+ * killed. */
+bool guardian_purge_payloads(const service_policy *service, int slice);
+/* Waits for `slice`'s purge child, taints the slice if it left anything, frees the slot. */
+void guardian_purge_reap(guardian_state *state, int slice);
+#define GUARDIAN_PURGE_NONE (-2) /* guardian_recover: the epoch never ran, nothing to purge. */
 /* Refuses a manifest the service would refuse, or whose payload IDs anyone else holds: below
  * 1000, or known to the host's user and group databases. Run before anything starts. */
 bool guardian_manifest_valid(const guardian_manifest *manifest);
 /* After a retiring epoch's service ended: kills and removes its branch, then removes what
  * its half of the payload IDs left. The journal does not track a retiring epoch. */
-guardian_result guardian_reclaim_retired(guardian_state *state, const char *epoch, int half);
+guardian_result guardian_reclaim_retired(guardian_state *state, const char *epoch, int slice);
 /* Plans and creates the next epoch on a CLEAN journal (rollover after a drained one). */
 guardian_result guardian_next_epoch(guardian_state *state);
-/* Kills, waits for and removes the journaled branches, purges `half` of the payload
- * ranges (0 or 1; -1 both, once nothing runs; 2 none), then marks CLEAN. */
-guardian_result guardian_recover(guardian_state *state, int half);
+/* Kills, waits for and removes the journaled branches, purges `slice` of the payload
+ * ranges (-1 all, once nothing runs; GUARDIAN_PURGE_NONE none), then marks CLEAN. */
+guardian_result guardian_recover(guardian_state *state, int slice);
 void guardian_close(guardian_state *state);
 
 typedef enum { FORWARD_IDLE, FORWARD_HANDED, FORWARD_REFUSED, FORWARD_CHANNEL_FAILED } guardian_forward_result;

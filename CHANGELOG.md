@@ -57,6 +57,9 @@ epoch counter, picks each epoch's half of the payload ranges. Payload ranges mus
 the guardian refuses a manifest whose payload IDs the host's user or group databases know. An unreachable
 owner-service endpoint now raises `AgentTaskError`; only a connection closed after it was accepted raises
 `AgentControlBusy`.
+Payload ranges now hold four 32-ID slices (128 IDs): `guardian_grant.payload_half` becomes `payload_slice`,
+up to three spent epochs retire beside the current one, and each slice is purged in a child process
+before it is handed out again.
 
 ## Unreleased: helper containment in runtime status
 

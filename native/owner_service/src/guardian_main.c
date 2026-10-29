@@ -212,7 +212,7 @@ static bool send_grant(int channel, const guardian_grant *grant, int epoch) {
 }
 
 /* Request, grant, acknowledgment: each frame must come from the cloned service. */
-static bool grant_epoch(guardian_state *state, int channel, const peer_identity *service, uint32_t half,
+static bool grant_epoch(guardian_state *state, int channel, const peer_identity *service, uint32_t slice,
                         guardian_grant *granted) {
     uint64_t limit = owner_now() + GUARDIAN_GRANT_NS;
     guardian_grant frame;
@@ -221,7 +221,7 @@ static bool grant_epoch(guardian_state *state, int channel, const peer_identity 
     memcpy(&epoch.high, state->manifest->installation, sizeof(epoch.high));
     epoch.low = state->journal.current.counter;
     guardian_grant grant = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_EPOCH, epoch, state->journal.current.sequence,
-                            half, 0};
+                            slice, 0};
     if (!send_grant(channel, &grant, state->epoch)) return false;
     *granted = grant;
     return wait_frame(channel, service, &frame, limit) && frame.kind == GRANT_ACKNOWLEDGED &&
@@ -237,12 +237,25 @@ typedef struct {
     guardian_grant grant;
     char epoch[GJ_COMPONENT_BYTES];
     uint64_t counter, started_ns;
-    uint32_t half; /* Of every payload range; the other half belongs to the epoch beside it. */
+    uint32_t slice; /* Of every payload range; no other running epoch uses it. */
 } running_epoch;
+
+/* Epochs that may retire at once beside the current one: every other slice. Builds for the
+ * acceptance may lower it to exercise a handover that has to wait. */
+#ifndef GUARDIAN_RETIRING_LIMIT
+#define GUARDIAN_RETIRING_LIMIT (SERVICE_PAYLOAD_SLICES - 1)
+#endif
+
+typedef struct {
+    running_epoch current;
+    running_epoch retiring[GUARDIAN_RETIRING_LIMIT];
+} running_set;
 
 static void running_init(running_epoch *run) {
     *run = (running_epoch){.service = {.pidfd = {FD_EMPTY, -1}}, .channel = -1};
 }
+
+static bool running_live(const running_epoch *run) { return run->service.pidfd.state == FD_OWNED; }
 
 /* Whatever ended the epoch, the service is killed if still alive, waited for and its
  * exit logged: no zombie keeps a PID, its pids charge or a dying service cgroup. */
@@ -282,19 +295,32 @@ static bool back_off(int signals, unsigned quick_ends) {
     return rc > 0;
 }
 
-/* A half an epoch may use: never one `busy` (a retiring epoch's, or the current's at a
- * handover) still runs on, and never a tainted one. False when none is left. */
-static bool free_half(const guardian_state *state, const running_epoch *busy, uint32_t *half) {
-    bool occupied = busy && busy->service.pidfd.state == FD_OWNED;
-    for (uint32_t h = 0; h < 2; ++h)
-        if (!state->tainted[h] && !(occupied && busy->half == h)) { *half = h; return true; }
+static bool slice_in_use(const running_set *set, uint32_t slice) {
+    if (running_live(&set->current) && set->current.slice == slice) return true;
+    for (size_t i = 0; i < GUARDIAN_RETIRING_LIMIT; ++i)
+        if (running_live(&set->retiring[i]) && set->retiring[i].slice == slice) return true;
     return false;
 }
 
-/* Launches the journal's current epoch: service, grant with its half, then ACTIVE. */
-static bool start_epoch(guardian_state *state, running_epoch *run, uint32_t half) {
+/* A slice no running epoch uses, not tainted and not being purged. When only purges stand
+ * in the way, waits for one. False when every slice is in use or tainted. */
+static bool pick_slice(guardian_state *state, const running_set *set, uint32_t *slice) {
+    for (;;) {
+        int purging = -1;
+        for (uint32_t s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) {
+            if (state->tainted[s] || slice_in_use(set, s)) continue;
+            if (state->purging[s] < 0) { *slice = s; return true; }
+            purging = (int)s;
+        }
+        if (purging < 0) return false;
+        guardian_purge_reap(state, purging);
+    }
+}
+
+/* Launches the journal's current epoch: service, grant with its slice, then ACTIVE. */
+static bool start_epoch(guardian_state *state, running_epoch *run, uint32_t slice) {
     running_init(run);
-    run->half = half;
+    run->slice = slice;
     int pair[2];
     if (socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, pair) != 0) {
         state->operation = 30; state->system_errno = errno;
@@ -308,7 +334,7 @@ static bool start_epoch(guardian_state *state, running_epoch *run, uint32_t half
     run->counter = state->journal.current.counter;
     run->started_ns = monotonic_ns();
     if (!launch_error && peer_enable_credentials(pair[0], &error) &&
-        grant_epoch(state, pair[0], &run->service, half, &run->grant) &&
+        grant_epoch(state, pair[0], &run->service, slice, &run->grant) &&
         gj_mark(&state->journal, GJ_ACTIVE) == GJ_ERROR_NONE)
         return true;
     state->operation = 31; state->system_errno = launch_error;
@@ -333,78 +359,116 @@ static bool service_frame(const running_epoch *run, uint16_t *kind) {
     return authentic;
 }
 
-/* The current epoch is spent but serves open leases: it keeps them as the retiring epoch,
- * no longer journaled (a crash sweeps it), and the next epoch starts beside it. */
-static bool hand_over(guardian_state *state, running_epoch *current, running_epoch *retiring) {
-    uint32_t half;
-    if (!free_half(state, current, &half)) return true; /* No clean half: the epoch stays as it is. */
-    *retiring = *current;
-    running_init(current);
+static running_epoch *free_retiring_slot(running_set *set) {
+    for (size_t i = 0; i < GUARDIAN_RETIRING_LIMIT; ++i) if (!running_live(&set->retiring[i])) return &set->retiring[i];
+    return NULL;
+}
+
+/* The current epoch is spent but serves open leases: it keeps them as a retiring epoch, no
+ * longer journaled (a crash sweeps it), and the next epoch starts beside it. True with
+ * `*done` false when no retiring slot or clean slice is free yet: the handover waits. */
+static bool hand_over(guardian_state *state, running_set *set, bool *done) {
+    *done = false;
+    running_epoch *slot = free_retiring_slot(set);
+    uint32_t slice;
+    if (!slot || !pick_slice(state, set, &slice)) return true;
+    *slot = set->current;
+    running_init(&set->current);
+    *done = true;
     if (gj_mark(&state->journal, GJ_RECOVERING) != GJ_ERROR_NONE || gj_mark(&state->journal, GJ_CLEAN) != GJ_ERROR_NONE)
         return false;
-    return guardian_next_epoch(state) == GUARDIAN_READY && start_epoch(state, current, half);
+    return guardian_next_epoch(state) == GUARDIAN_READY && start_epoch(state, &set->current, slice);
 }
 
 typedef enum { LOOP_STOPPED, LOOP_REFUSED, LOOP_UNRESOLVED } loop_result;
 
-/* The current epoch ended on its own: reap it, reclaim it and start the next, on the half
- * a retiring epoch beside it does not use. */
-static loop_result replace_current(guardian_state *state, running_epoch *current, const running_epoch *retiring,
-                                   int signals, bool *stop) {
-    uint64_t started = current->started_ns;
-    running_close(current);
-    if (guardian_recover(state, (int)current->half) != GUARDIAN_READY) return LOOP_UNRESOLVED;
+/* The current epoch ended on its own: reap it, reclaim it and start the next, on a slice
+ * no retiring epoch uses. */
+static loop_result replace_current(guardian_state *state, running_set *set, int signals, bool *stop) {
+    uint64_t started = set->current.started_ns;
+    uint32_t ended = set->current.slice;
+    running_close(&set->current);
+    if (guardian_recover(state, (int)ended) != GUARDIAN_READY) return LOOP_UNRESOLVED;
     static unsigned quick_ends;
     quick_ends = monotonic_ns() - started < 1000000000ULL ? quick_ends + 1 : 0;
     if (quick_ends && back_off(signals, quick_ends)) { *stop = true; return LOOP_STOPPED; }
     guardian_result next = guardian_next_epoch(state);
     if (next != GUARDIAN_READY) return next == GUARDIAN_REFUSED ? LOOP_REFUSED : LOOP_UNRESOLVED;
-    uint32_t half;
-    if (!free_half(state, retiring, &half)) return LOOP_UNRESOLVED; /* Every free half is tainted. */
-    return start_epoch(state, current, half) ? LOOP_STOPPED : LOOP_REFUSED;
+    uint32_t slice;
+    if (!pick_slice(state, set, &slice)) return LOOP_UNRESOLVED; /* Every free slice is tainted. */
+    return start_epoch(state, &set->current, slice) ? LOOP_STOPPED : LOOP_REFUSED;
 }
 
-/* Forwards verified clients to the current epoch, rolls epochs over and reclaims a
- * retiring one when its service ends, until asked to stop or something fails. */
-static loop_result supervise(guardian_state *state, int signals, int listener, running_epoch *current,
-                             running_epoch *retiring) {
-    /* GRANT_RETIRING from the current epoch while another still retires: acted on as soon
-     * as that one is reclaimed, since the service sends it only once. */
+enum { EVENT_SIGNALS, EVENT_LISTENER, EVENT_CURRENT, EVENT_CHANNEL, EVENT_RETIRING,
+       EVENT_PURGE = EVENT_RETIRING + GUARDIAN_RETIRING_LIMIT, EVENT_COUNT = EVENT_PURGE + SERVICE_PAYLOAD_SLICES };
+
+/* Reaps retiring epochs whose service ended and purge children that finished. */
+static bool settle_finished(guardian_state *state, running_set *set, const struct pollfd *events) {
+    for (size_t i = 0; i < GUARDIAN_RETIRING_LIMIT; ++i) {
+        if (!events[EVENT_RETIRING + i].revents || !running_live(&set->retiring[i])) continue;
+        running_close(&set->retiring[i]);
+        if (guardian_reclaim_retired(state, set->retiring[i].epoch, (int)set->retiring[i].slice) != GUARDIAN_READY)
+            return false;
+        running_init(&set->retiring[i]);
+    }
+    for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s)
+        if (events[EVENT_PURGE + s].revents) guardian_purge_reap(state, s);
+    return true;
+}
+
+/* Forwards verified clients to the current epoch, rolls epochs over, reclaims retiring ones
+ * when their services end and reaps purges, until asked to stop or something fails. */
+static loop_result supervise(guardian_state *state, int signals, int listener, running_set *set) {
+    /* GRANT_RETIRING arrives once: while no retiring slot or clean slice is free it waits
+     * here, and is acted on as soon as one is. */
     bool retire_pending = false;
     for (;;) {
-        bool has_retiring = retiring->service.pidfd.state == FD_OWNED;
-        struct pollfd events[5] = {
-            {.fd = signals, .events = POLLIN}, {.fd = listener, .events = POLLIN},
-            {.fd = current->service.pidfd.number, .events = POLLIN}, {.fd = current->channel, .events = POLLIN},
-            {.fd = has_retiring ? retiring->service.pidfd.number : -1, .events = POLLIN}};
-        if (poll(events, 5, -1) < 0) { if (errno == EINTR) continue; return LOOP_REFUSED; }
-        if (events[0].revents) return LOOP_STOPPED;
-        if (events[4].revents) {
-            running_close(retiring);
-            if (guardian_reclaim_retired(state, retiring->epoch, (int)retiring->half) != GUARDIAN_READY)
-                return LOOP_UNRESOLVED;
-            running_init(retiring);
-            has_retiring = false;
-        }
-        bool ended = events[2].revents != 0;
+        struct pollfd events[EVENT_COUNT] = {
+            [EVENT_SIGNALS] = {.fd = signals, .events = POLLIN}, [EVENT_LISTENER] = {.fd = listener, .events = POLLIN},
+            [EVENT_CURRENT] = {.fd = set->current.service.pidfd.number, .events = POLLIN},
+            [EVENT_CHANNEL] = {.fd = set->current.channel, .events = POLLIN}};
+        for (size_t i = 0; i < GUARDIAN_RETIRING_LIMIT; ++i)
+            events[EVENT_RETIRING + i] = (struct pollfd){
+                .fd = running_live(&set->retiring[i]) ? set->retiring[i].service.pidfd.number : -1, .events = POLLIN};
+        for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s)
+            events[EVENT_PURGE + s] = (struct pollfd){.fd = state->purging[s], .events = POLLIN};
+        if (poll(events, EVENT_COUNT, -1) < 0) { if (errno == EINTR) continue; return LOOP_REFUSED; }
+        if (events[EVENT_SIGNALS].revents) return LOOP_STOPPED;
+        if (!settle_finished(state, set, events)) return LOOP_UNRESOLVED;
+        bool ended = events[EVENT_CURRENT].revents != 0;
         uint16_t kind = 0;
-        if (!ended && events[3].revents) ended = !service_frame(current, &kind);
+        if (!ended && events[EVENT_CHANNEL].revents) ended = !service_frame(&set->current, &kind);
         if (!ended && kind == GRANT_RETIRING) retire_pending = true;
-        if (!ended && retire_pending && !has_retiring) {
-            retire_pending = false;
-            if (!hand_over(state, current, retiring)) return LOOP_REFUSED;
-            continue;
+        if (!ended && retire_pending) {
+            bool done = false;
+            if (!hand_over(state, set, &done)) return LOOP_REFUSED;
+            if (done) { retire_pending = false; continue; }
         }
-        if (!ended && events[1].revents & POLLIN)
-            ended = guardian_forward(listener, current->channel, state->manifest, current->grant.epoch,
-                                     current->grant.generation) == FORWARD_CHANNEL_FAILED;
+        if (!ended && events[EVENT_LISTENER].revents & POLLIN)
+            ended = guardian_forward(listener, set->current.channel, state->manifest, set->current.grant.epoch,
+                                     set->current.grant.generation) == FORWARD_CHANNEL_FAILED;
         if (ended) {
             bool stop = false;
             retire_pending = false;
-            loop_result replaced = replace_current(state, current, retiring, signals, &stop);
+            loop_result replaced = replace_current(state, set, signals, &stop);
             if (stop || replaced != LOOP_STOPPED) return replaced;
         }
     }
+}
+
+/* Reclaims every running epoch and waits for every purge before the guardian exits. */
+static guardian_result shut_down(guardian_state *state, running_set *set) {
+    state->purge_async = false;
+    for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) guardian_purge_reap(state, s);
+    running_close(&set->current);
+    guardian_result recovered = guardian_recover(state, (int)set->current.slice);
+    for (size_t i = 0; i < GUARDIAN_RETIRING_LIMIT; ++i) {
+        if (!running_live(&set->retiring[i])) continue;
+        running_close(&set->retiring[i]);
+        if (guardian_reclaim_retired(state, set->retiring[i].epoch, (int)set->retiring[i].slice) != GUARDIAN_READY)
+            recovered = GUARDIAN_UNRESOLVED;
+    }
+    return recovered;
 }
 
 int main(void) {
@@ -427,28 +491,22 @@ int main(void) {
     }
     int listener = signals < 0 ? -1 : open_listener(state.manifest->listener_path, state.manifest->listener_gid,
                                                     state.manifest);
-    running_epoch current, retiring;
-    running_init(&current);
-    running_init(&retiring);
+    running_set set;
+    running_init(&set.current);
+    for (size_t i = 0; i < GUARDIAN_RETIRING_LIMIT; ++i) running_init(&set.retiring[i]);
     loop_result result = LOOP_REFUSED;
+    state.purge_async = true;
     if (listener < 0) { state.operation = 30; state.system_errno = errno; }
     else {
-        uint32_t half;
-        if (!free_half(&state, NULL, &half)) result = LOOP_UNRESOLVED;
-        else if (start_epoch(&state, &current, half)) result = supervise(&state, signals, listener, &current, &retiring);
+        uint32_t slice;
+        if (!pick_slice(&state, &set, &slice)) result = LOOP_UNRESOLVED;
+        else if (start_epoch(&state, &set.current, slice)) result = supervise(&state, signals, listener, &set);
     }
     if (listener >= 0) {
         close(listener);
         unlink(state.manifest->listener_path);
     }
-    /* Whatever happened, every running epoch is reclaimed before the guardian exits. */
-    running_close(&current);
-    guardian_result recovered = guardian_recover(&state, (int)current.half);
-    if (retiring.service.pidfd.state == FD_OWNED) {
-        running_close(&retiring);
-        if (guardian_reclaim_retired(&state, retiring.epoch, (int)retiring.half) != GUARDIAN_READY)
-            recovered = GUARDIAN_UNRESOLVED;
-    }
+    guardian_result recovered = shut_down(&state, &set);
     guardian_close(&state);
     if (recovered != GUARDIAN_READY) return report("recover", &state, EXIT_UNRESOLVED);
     if (result == LOOP_UNRESOLVED) return report("serve", &state, EXIT_UNRESOLVED);

@@ -8,10 +8,12 @@
 #include <sys/types.h>
 
 #define SERVICE_CONNECTION_LIMIT 16
-/* IDs in each policy's payload range: two halves, so a retiring epoch and its successor
- * never share an ID. An epoch uses the half its counter's parity picks. */
+/* IDs in each policy's payload range: one slice per epoch that may run at once, so
+ * retiring epochs and the current one never share an ID. The guardian picks each epoch's
+ * slice and sends it in the grant. */
 #define SERVICE_EPOCH_IDS SERVICE_LEASE_LIMIT
-#define SERVICE_PAYLOAD_IDS (2 * SERVICE_EPOCH_IDS)
+#define SERVICE_PAYLOAD_SLICES 4
+#define SERVICE_PAYLOAD_IDS (SERVICE_PAYLOAD_SLICES * SERVICE_EPOCH_IDS)
 #define SERVICE_IDLE_GRACE_NS 5000000000ULL /* A spent epoch waits this long for a lease-less connection. */
 #define SERVICE_MIN_PIDS 8                     /* Below this a helper cannot start its threads. */
 #define SERVICE_MIN_MEMORY (16ULL << 20)      /* 16 MiB. */
@@ -93,9 +95,9 @@ typedef struct {
     uint16_t version, kind;
     no_id epoch;
     uint64_t generation;
-    /* GRANT_EPOCH: the half of every payload range this epoch uses, 0 or 1. The guardian
-     * picks it so a retiring epoch and whichever epoch runs beside it never share one. */
-    uint32_t payload_half, reserved;
+    /* GRANT_EPOCH: the slice of every payload range this epoch uses, below
+     * SERVICE_PAYLOAD_SLICES. The guardian picks it so epochs running at once never share one. */
+    uint32_t payload_slice, reserved;
 } guardian_grant;
 enum { GRANT_EPOCH_DIRECTORY, GRANT_RIGHTS };
 
@@ -205,7 +207,7 @@ typedef struct service_state {
     no_error first_error;
     bool close_uncertain;
     bool retiring; /* GRANT_RETIRING was sent: the guardian hands this epoch nothing more. */
-    uint32_t payload_half; /* From the grant. */
+    uint32_t payload_slice; /* From the grant. */
 #ifdef NO_ACCEPTANCE_BUILD
     const char *fixture_executable; /* Acceptance only: START admits a direct-fixture relay record. */
 #endif

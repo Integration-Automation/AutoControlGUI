@@ -28,8 +28,8 @@ the gate.
   connection is open, the service drains, and the same guardian reclaims the epoch
   and grants the next one. A spent epoch that still holds open leases retires beside the
   next instead: it keeps serving those leases, the guardian hands new clients to the next
-  epoch, and reclaims the retiring one when its last lease ends. At most one epoch retires
-  at a time; if the next is spent too while it still runs, new opens get CAPACITY. A connection without an
+  epoch, and reclaims the retiring one when its last lease ends. Up to three epochs
+  retire at a time; beyond that, new opens get CAPACITY until one is reclaimed. A connection without an
   open lease holds a spent epoch for at most 5 seconds, so an idle or abandoned client
   cannot keep the host from rolling over; the Python channel connects only at its first
   request, and reports a connection turned away before it has a lease as
@@ -47,8 +47,8 @@ the gate.
   through an ACL on the listener that names every client account in the guardian's
   manifest, so `/run` must support POSIX ACLs (tmpfs does).
 - Every helper runs as its own user and group ID: the policy's payload range base, plus
-  its epoch's half (by counter parity), plus its lease position; 64 IDs per range, with
-  no account needed. No two live helpers share
+  its epoch's slice, plus its lease position; 128 IDs per range, with no account
+  needed. No two live helpers share
   an account, so none can ptrace, signal or take descriptors from another. Payload ranges
   must not contain the guardian's, the service's, the client's or the socket group's IDs;
   two policies' ranges are equal or disjoint; a nested child draws from its parent's
@@ -62,10 +62,12 @@ the gate.
   refuses any cgroup on the way (mount and subtree included) whose directory or
   `cgroup.procs`, `cgroup.threads` or `cgroup.subtree_control` belongs to another account
   or is writable by others: a delegated cgroup there could move helpers out of the epoch.
-- The guardian picks each epoch's payload half itself, never the half a retiring epoch
-  still uses, and sends it in the grant; a second retirement waits for the first epoch to
-  be reclaimed. A purge that leaves anything behind taints its half until the guardian
-  restarts. Before building the filter, the guardian refuses a manifest the service would
+- Payload ranges hold four slices of 32 IDs. The guardian picks each epoch's slice
+  itself, never one another running epoch uses, and sends it in the grant, so up to three
+  spent epochs can retire beside the current one; a further retirement waits for a slot.
+  Each slice is purged in a child process after its epoch ends and is not handed out
+  again until that purge finishes; a purge that leaves anything behind taints the slice
+  until the guardian restarts. Before building the filter, the guardian refuses a manifest the service would
   refuse, or whose payload IDs are below 1000 or known to the host's user and group
   databases. Payloads cannot use kernel keyrings. With CAP_SETUID and CAP_SETGID the
   service can still forge the UID or GID in SCM_CREDENTIALS; this project authenticates by
@@ -101,8 +103,9 @@ the gate.
 ## Install (administrator)
 
 1. Create a service account with its own primary group, and a socket group. Add the
-   client account to the socket group as a supplementary member. Reserve 64 user IDs and
-   the same 64 group IDs that nothing else uses for helpers; they need no accounts.
+   client account to the socket group as a supplementary member. Reserve 128 user IDs and
+   the same 128 group IDs, at 1000 or above, that nothing else uses for helpers; they need
+   no accounts.
 2. Copy `config/owner_manifest.example.c` to `owner_manifest.c`, fill in every
    value marked `EDIT`, and review it.
 3. Run `build.sh owner_manifest.c build/`. Install `owner_guardian` and

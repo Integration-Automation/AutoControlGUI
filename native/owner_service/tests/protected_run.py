@@ -24,9 +24,9 @@ OUTER, STATE2 = "/sys/fs/cgroup/autocontrol-outer", "/var/lib/autocontrol-test2"
 ENDPOINT = RUN + "/owner.sock"
 CLIENT = "user"
 ACCOUNTS = ("acsvc", "acother")
-# Helpers run as IDs from this range: an epoch's half, then its lease position. No account
+# Helpers run as IDs from this range: an epoch's slice, then its lease position. No account
 # is created.
-PAYLOAD_BASE, PAYLOAD_IDS, EPOCH_IDS = 62000, 64, 32
+PAYLOAD_BASE, PAYLOAD_IDS, EPOCH_IDS = 62000, 128, 32
 SOCKET_GROUP = "acsock"
 ROLLOVER_SESSIONS = 10  # More than the manifest's quota of 8 leases per epoch.
 SERVICE_SOURCES = ["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_child_linux.c",
@@ -115,9 +115,11 @@ def build():
                for key, value in values.items()]
     defines.append(f'-DPAYLOAD_EXECUTABLE="{OPT}/owner_core_acceptance"')
     defines += [f'-DNESTED_PARENT="{OPT}/nested_parent.py"', f'-DREPOSITORY="{REPOSITORY}"',
+                f'-DREMOTE_HELPER="{OPT}/remote_helper.py"',
                 f'-DENDPOINT="{ENDPOINT}"']
-    shutil.copy(os.path.join(TESTS, "nested_parent.py"), OPT + "/nested_parent.py")
-    os.chmod(OPT + "/nested_parent.py", 0o644)
+    for script in ("nested_parent.py", "remote_helper.py"):
+        shutil.copy(os.path.join(TESTS, script), f"{OPT}/{script}")
+        os.chmod(f"{OPT}/{script}", 0o644)
     gcc(SERVICE_SOURCES + ["native_service.c", "service_policy.c", "service_bootstrap_linux.c", "service_main.c",
                            "protected_manifests.c"],
         OPT + "/service_main", defines + ["-DNO_PROTECTED_ACCEPTANCE"])
@@ -128,6 +130,10 @@ def build():
     gcc(["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_child_linux.c",
          "native_relay_linux.c", "owner_core_acceptance.c"], OPT + "/owner_core_acceptance", acceptance=True)
     gcc(["seccomp_probe.c", "guardian_seccomp_linux.c", "protected_manifests.c"], OPT + "/seccomp_probe", defines)
+    gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
+                           "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
+                           "guardian_manifest_linux.c", "service_policy.c", "protected_manifests.c"],
+        OPT + "/guardian_one_retiring", defines + ["-DGUARDIAN_RETIRING_LIMIT=1"])
     taken = pwd.getpwnam("acother").pw_uid
     gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
                            "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
@@ -144,8 +150,8 @@ def build():
     report["accounts"] = {k: v for k, v in values.items() if not k.startswith("NS_")}
 
 
-def start_guardian():
-    guardian = subprocess.Popen([OPT + "/guardian"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+def start_guardian(binary="guardian"):
+    guardian = subprocess.Popen([OPT + "/" + binary], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, text=True, env={})
     limit = time.monotonic() + 15
     while not os.path.exists(ENDPOINT) and time.monotonic() < limit:
@@ -391,12 +397,21 @@ def scenario_renewal(steps):
 
 
 def children_of(pid):
-    """Every child of `pid`, zombies included: a zombie stays a child until it is reaped."""
+    """Every service child of `pid`, zombies included: a zombie stays a child, and keeps its
+    name, until it is reaped. Purge children are short-lived forks of the guardian itself."""
     kids = []
     for task in os.listdir(f"/proc/{pid}/task"):
         with open(f"/proc/{pid}/task/{task}/children") as handle:
             kids += [int(value) for value in handle.read().split()]
-    return kids
+    named = []
+    for kid in kids:
+        try:
+            with open(f"/proc/{kid}/comm") as handle:
+                if handle.read().strip() == "service_main":
+                    named.append(kid)
+        except OSError:
+            pass
+    return named
 
 
 def rollover_session():
@@ -508,8 +523,9 @@ def scenario_worker(steps):
 def scenario_second_overlap(steps):
     """Two overlaps in a row. E1 retires around H1; E2 drains on its own while E1 still
     retires, and E3 must not take H1's half or purge H1's files. Then E3 retires around H3
-    while E1 still does: that handover waits, and happens once E1 is reclaimed."""
-    guardian = start_guardian()
+    while E1 still does: that handover waits, and happens once E1 is reclaimed. A guardian
+    limited to one retiring epoch makes that wait."""
+    guardian = start_guardian("guardian_one_retiring")
     first = epochs()[-1]
     h1 = client("hold")
     steps["h1"] = read_json(h1)
@@ -548,11 +564,59 @@ def scenario_second_overlap(steps):
     steps["epochs_after_stop"] = epochs()
 
 
+def scenario_triple_overlap(steps):
+    """Two long-lived helpers keep two spent epochs retiring while a third serves: three
+    epochs at once, on three slices."""
+    guardian = start_guardian()
+    first = epochs()[-1]
+    h1 = client("hold")
+    steps["h1"] = read_json(h1)
+    steps["h1_uids"] = payload_uids(first)
+    steps["fill_first"] = [rollover_session() for _ in range(7)]       # E1 retires around H1.
+    second = epochs()[-1]
+    h2 = client("hold")
+    steps["h2"] = read_json(h2)
+    steps["h2_uids"] = payload_uids(second)
+    steps["fill_second"] = [rollover_session() for _ in range(7)]      # E2 spent around H2: retires.
+    steps["third"] = rollover_session()                                # Lands in E3.
+    steps["epochs_held"] = epochs()
+    for holder in (h1, h2):
+        holder.stdin.write("ping\n")
+        holder.stdin.flush()
+    steps["pings"] = [read_json(h1), read_json(h2)]
+    for holder in (h1, h2):
+        holder.stdin.write("close\n")
+        holder.stdin.flush()
+    steps["closes"] = [read_json(h1), read_json(h2)]
+    h1.wait(timeout=30)
+    h2.wait(timeout=30)
+    limit = time.monotonic() + 20
+    while len(epochs()) > 1 and time.monotonic() < limit:
+        time.sleep(0.1)
+    steps["guardian_children"] = children_of(guardian.pid)
+    steps["guardian_stop"] = stop_guardian(guardian)
+    steps["epochs_after_stop"] = epochs()
+
+
 def scenario_taken_range(steps):
     """A manifest whose payload range holds a real account is refused before anything starts."""
     refused = run([OPT + "/guardian_taken_range"], timeout=30)
     steps["refused"] = [refused.returncode, refused.stderr.strip()[-200:]]
     steps["epochs"] = epochs()
+
+
+def scenario_remote(steps):
+    """A remote helper under the service: negotiation through the relay as a payload ID."""
+    guardian = start_guardian()
+    epoch = epochs()[-1]
+    driver = client("remote")
+    steps["negotiate"] = read_json(driver)
+    steps["inspection"] = session_inspection(epoch)
+    driver.stdin.write("\n")
+    driver.stdin.flush()
+    steps["close"] = read_json(driver)
+    driver.wait(timeout=60)
+    steps["guardian_stop"] = stop_guardian(guardian)
 
 
 def scenario_delegated_subtree(steps):
@@ -716,6 +780,10 @@ def main():
         scenario_second_overlap(report["steps"]["second_overlap"])
         report["steps"]["taken_range"] = {}
         scenario_taken_range(report["steps"]["taken_range"])
+        report["steps"]["triple_overlap"] = {}
+        scenario_triple_overlap(report["steps"]["triple_overlap"])
+        report["steps"]["remote"] = {}
+        scenario_remote(report["steps"]["remote"])
     except Exception as error:  # reason: cleanup must run and the failure must be reported, not lost
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
@@ -725,8 +793,8 @@ def main():
     raise SystemExit(0 if report["expectations"] and all(report["expectations"].values()) else 1)
 
 
-def half_of(uids):
-    """The payload half all of `uids` lie in, or None if empty or mixed."""
+def slice_of(uids):
+    """The payload slice all of `uids` lie in, or None if empty or mixed."""
     halves = {(int(u) - PAYLOAD_BASE) // EPOCH_IDS for u in uids or []}
     return halves.pop() if len(halves) == 1 else None
 
@@ -760,10 +828,12 @@ def expectations(result):
     held = result["steps"].get("long_lived", {})
     second = result["steps"].get("second_overlap", {})
     taken = result["steps"].get("taken_range", {})
+    triple = result["steps"].get("triple_overlap", {})
+    remote = result["steps"].get("remote", {})
     inspection = session.get("inspection", {})
     service, payload = inspection.get("service", [{}]), inspection.get("payload", [{}])
     if "error" in result or not all((session, crash, siblings, nested, race, renewal, rollover, service_crash,
-                                     delegated, worker, held, second, taken)):
+                                     delegated, worker, held, second, taken, triple, remote)):
         return {"completed": False}
     return {
         "protected_reply": session["request"].get("reply") == "pong",
@@ -835,16 +905,31 @@ def expectations(result):
         and held["guardian_stop"][0] == 0 and not held["epochs_after_stop"],
         # E3 started while E1 still retired around H1: it took the other half and left H1's
         # files alone; E3's own handover waited for E1 and then happened.
-        "second_overlap_halves": half_of(second["third"].get("uids")) is not None
-        and half_of(second["third"].get("uids")) != half_of(second["h1_uids"]) and second["h1_files_kept"]
+        "second_overlap_halves": slice_of(second["third"].get("uids")) is not None
+        and slice_of(second["third"].get("uids")) != slice_of(second["h1_uids"]) and second["h1_files_kept"]
         and all(s["retired"] for s in second["fill_first"] + second["fill_second"] + second["fill_third"])
         and second["third"]["retired"],
         "second_overlap_pending_handover": len(second["epochs_pending"]) == 2 and second["h1_files_purged"]
         and second["fourth"]["retired"] and second["fourth"]["epochs"][-1] not in second["epochs_pending"]
-        and half_of(second["fourth"].get("uids")) == half_of(second["h1_uids"])
+        and slice_of(second["fourth"].get("uids")) not in (None, slice_of(second["third"].get("uids")))
         and second["h1_close"].get("retired") is True and second["h3_close"].get("retired") is True
         and len(second["guardian_children"]) == 1 and second["guardian_stop"][0] == 0
         and not second["epochs_after_stop"],
+        # Three epochs at once: two retiring around their helpers, one serving, three slices.
+        "triple_overlap": len(triple["epochs_held"]) == 3
+        and len({slice_of(triple["h1_uids"]), slice_of(triple["h2_uids"]), slice_of(triple["third"].get("uids"))}
+                - {None}) == 3
+        and all(s["retired"] for s in triple["fill_first"] + triple["fill_second"]) and triple["third"]["retired"]
+        and all(p.get("reply") == "pong" for p in triple["pings"])
+        and all(c.get("retired") is True for c in triple["closes"])
+        and len(triple["guardian_children"]) == 1 and triple["guardian_stop"][0] == 0
+        and not triple["epochs_after_stop"],
+        # A remote helper negotiates through the service as its own payload ID, under the filter.
+        "remote_helper_negotiates": remote["negotiate"].get("replies") == [{"protocol": 1},
+                                                                           {"remote_effect_protocol": 1}]
+        and bool(remote["inspection"]["payload"]) and in_payload_range(remote["inspection"]["payload"][0].get("uid"))
+        and remote["inspection"]["payload"][0].get("seccomp") == "2"
+        and remote["close"].get("retired") is True and remote["guardian_stop"][0] == 0,
         "taken_payload_range_refused": taken["refused"][0] != 0
         and "manifest is invalid" in taken["refused"][1] and not taken["epochs"],
         "native_worker_runs": (worker["bootstrap"].get("result") or {}).get("protocol") == 1

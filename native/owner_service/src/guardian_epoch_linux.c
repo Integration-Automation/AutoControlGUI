@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
+#include <sys/wait.h>
 #include <sys/syscall.h>
 #include <time.h>
 #include <unistd.h>
@@ -150,16 +151,46 @@ static bool reclaim_branch(guardian_state *state, const char *name) {
     return killed && empty && remove_tree(state->subtree, name, 0);
 }
 
-/* An unclean purge taints its half (both for -1): the guardian never grants it again. */
-static void purge(guardian_state *state, int half) {
-    if (guardian_purge_payloads(state->manifest->service, half)) return;
-    fprintf(stderr, "autocontrol-owner-guardian: payload half %d left files it could not remove\n", half);
-    for (int h = 0; h < 2; ++h) if (half < 0 || half == h) state->tainted[h] = true;
+static void taint(guardian_state *state, int slice) {
+    fprintf(stderr, "autocontrol-owner-guardian: payload slice %d left files it could not remove\n", slice);
+    for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) if (slice < 0 || slice == s) state->tainted[s] = true;
 }
 
-guardian_result guardian_reclaim_retired(guardian_state *state, const char *epoch, int half) {
+void guardian_purge_reap(guardian_state *state, int slice) {
+    if (state->purging[slice] < 0) return;
+    siginfo_t info;
+    memset(&info, 0, sizeof(info));
+    int rc;
+    do { rc = waitid(P_PIDFD, (id_t)state->purging[slice], &info, WEXITED); } while (rc < 0 && errno == EINTR);
+    close(state->purging[slice]);
+    state->purging[slice] = -1;
+    if (rc != 0 || info.si_code != CLD_EXITED || info.si_status != 0) taint(state, slice);
+}
+
+/* While serving, one slice's purge runs in a child, so a large tree in a shared directory
+ * cannot stall accepts or supervision; the slice is not handed out until it is reaped.
+ * Otherwise (startup, shutdown, all slices, or no child possible) it runs here. An unclean
+ * purge taints its slice: the guardian never grants it again. */
+static void purge(guardian_state *state, int slice) {
+    if (slice >= 0 && state->purge_async) {
+        guardian_purge_reap(state, slice);
+        pid_t child = fork();
+        if (child == 0) _exit(guardian_purge_payloads(state->manifest->service, slice) ? 0 : 1);
+        int pidfd = child > 0 ? (int)syscall(SYS_pidfd_open, child, 0) : -1;
+        if (pidfd >= 0) { state->purging[slice] = pidfd; return; }
+        if (child > 0) {
+            int status = 0;
+            while (waitpid(child, &status, 0) < 0 && errno == EINTR) continue;
+            if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) taint(state, slice);
+            return;
+        }
+    }
+    if (!guardian_purge_payloads(state->manifest->service, slice)) taint(state, slice);
+}
+
+guardian_result guardian_reclaim_retired(guardian_state *state, const char *epoch, int slice) {
     if (!reclaim_branch(state, epoch)) return refuse(state, 24, errno, GUARDIAN_UNRESOLVED);
-    purge(state, half);
+    purge(state, slice);
     return GUARDIAN_READY;
 }
 
@@ -189,7 +220,7 @@ static guardian_result sweep_strays(guardian_state *state) {
     return GUARDIAN_READY;
 }
 
-guardian_result guardian_recover(guardian_state *state, int half) {
+guardian_result guardian_recover(guardian_state *state, int slice) {
     gj_record *current = &state->journal.current;
     if (current->phase == GJ_CLEAN) return GUARDIAN_READY;
     if (current->phase != GJ_RECOVERING && gj_mark(&state->journal, GJ_RECOVERING) != GJ_ERROR_NONE)
@@ -199,7 +230,7 @@ guardian_result guardian_recover(guardian_state *state, int half) {
      * together, and the kernel kills anything they fork while the kill runs. */
     if (!reclaim_branch(state, current->epoch)) return refuse(state, 22, errno, GUARDIAN_UNRESOLVED);
     /* Nothing runs as this epoch's payload IDs now: what they left is removed before reuse. */
-    if (half != 2) purge(state, half);
+    if (slice != GUARDIAN_PURGE_NONE) purge(state, slice);
     if (gj_mark(&state->journal, GJ_CLEAN) != GJ_ERROR_NONE) return refuse(state, 23, EIO, GUARDIAN_UNRESOLVED);
     return GUARDIAN_READY;
 }
@@ -261,6 +292,7 @@ static int create_branches(guardian_state *state) {
 
 guardian_result guardian_prepare(guardian_state *state, const guardian_manifest *manifest) {
     *state = (guardian_state){.manifest = manifest, .mount = -1, .subtree = -1, .epoch = -1};
+    for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) state->purging[s] = -1;
     state->journal.directory = state->journal.lock = -1;
     gj_error opened = gj_open(&state->journal, manifest->state_directory, manifest->administrator,
                               manifest->installation);
@@ -285,7 +317,7 @@ guardian_result guardian_next_epoch(guardian_state *state) {
     if (!created) return GUARDIAN_READY;
     /* The counter is consumed; whatever was created is reclaimed before refusing. It never
      * ran, so no payload ID needs purging. */
-    guardian_result result = guardian_recover(state, 2);
+    guardian_result result = guardian_recover(state, GUARDIAN_PURGE_NONE);
     return refuse(state, 4, created, result == GUARDIAN_READY ? GUARDIAN_REFUSED : GUARDIAN_UNRESOLVED);
 }
 
