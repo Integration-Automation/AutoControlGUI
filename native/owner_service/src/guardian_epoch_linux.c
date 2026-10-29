@@ -150,6 +150,31 @@ static bool reclaim_branch(guardian_state *state, const char *name) {
     return killed && empty && remove_tree(state->subtree, name, 0);
 }
 
+guardian_result guardian_reclaim_retired(guardian_state *state, const char *epoch, uint64_t counter) {
+    if (!reclaim_branch(state, epoch)) return refuse(state, 24, errno, GUARDIAN_UNRESOLVED);
+    guardian_purge_payloads(state->manifest->service, (int)(counter & 1));
+    return GUARDIAN_READY;
+}
+
+/* A retiring epoch is not journaled: after a crash, every epoch branch the journal does
+ * not name is reclaimed, and with nothing running, both halves of every range purged. */
+static guardian_result sweep_strays(guardian_state *state) {
+    int copy = dup(state->subtree);
+    DIR *listing = copy < 0 ? NULL : fdopendir(copy);
+    if (!listing) { if (copy >= 0) close(copy); return refuse(state, 25, errno, GUARDIAN_UNRESOLVED); }
+    char names[8][GJ_COMPONENT_BYTES];
+    size_t count = 0;
+    for (struct dirent *entry; (entry = readdir(listing)) && count < 8;)
+        if (!strncmp(entry->d_name, "epoch-", 6) && strlen(entry->d_name) < GJ_COMPONENT_BYTES &&
+            (state->journal.current.phase == GJ_CLEAN || strcmp(entry->d_name, state->journal.current.epoch)))
+            strcpy(names[count++], entry->d_name);
+    closedir(listing);
+    for (size_t i = 0; i < count; ++i)
+        if (!reclaim_branch(state, names[i])) return refuse(state, 25, errno, GUARDIAN_UNRESOLVED);
+    guardian_purge_payloads(state->manifest->service, -1);
+    return GUARDIAN_READY;
+}
+
 guardian_result guardian_recover(guardian_state *state) {
     gj_record *current = &state->journal.current;
     if (current->phase == GJ_CLEAN) return GUARDIAN_READY;
@@ -159,8 +184,8 @@ guardian_result guardian_recover(guardian_state *state) {
     /* The epoch holds the service leaf and every helper: one cgroup.kill takes them
      * together, and the kernel kills anything they fork while the kill runs. */
     if (!reclaim_branch(state, current->epoch)) return refuse(state, 22, errno, GUARDIAN_UNRESOLVED);
-    /* Nothing runs as a payload ID now: what those IDs left is removed before they are reused. */
-    guardian_purge_payloads(state->manifest->service);
+    /* Nothing runs as this epoch's payload IDs now: what they left is removed before reuse. */
+    guardian_purge_payloads(state->manifest->service, (int)(current->counter & 1));
     if (gj_mark(&state->journal, GJ_CLEAN) != GJ_ERROR_NONE) return refuse(state, 23, EIO, GUARDIAN_UNRESOLVED);
     return GUARDIAN_READY;
 }
@@ -231,12 +256,15 @@ guardian_result guardian_prepare(guardian_state *state, const guardian_manifest 
         return refuse(state, 2, EIO, GUARDIAN_REFUSED);
     guardian_result result = open_hierarchy(state);
     if (result != GUARDIAN_READY) return result;
+    result = sweep_strays(state);
+    if (result != GUARDIAN_READY) return result;
     result = guardian_recover(state);
     if (result != GUARDIAN_READY) return result;
     return guardian_next_epoch(state);
 }
 
 guardian_result guardian_next_epoch(guardian_state *state) {
+    close_slot(&state->epoch); /* A retiring service holds its own copy of its records anchor. */
     gj_error planned = gj_plan(&state->journal);
     if (planned != GJ_ERROR_NONE) return refuse(state, 3, (int)planned, GUARDIAN_REFUSED);
     int created = create_branches(state);

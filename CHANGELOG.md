@@ -45,6 +45,11 @@ account to 32 handed-over connections per second.
 `records` cgroup at the per-helper limits times the record capacity, and payloads start with umask 077.
 When it reclaims an epoch, the guardian removes every file under `/tmp`, `/var/tmp`, `/dev/shm` and
 `/dev/mqueue` and every SysV IPC object owned by a payload ID, before those IDs are handed out again.
+A spent epoch that still holds open leases now retires beside the next one instead of refusing new
+helpers until they close: the service sends `GRANT_RETIRING`, the guardian starts the next epoch and
+reclaims the retiring one when its service ends. Payload ranges grow to 64 IDs, half per epoch by counter
+parity, so the two never share an ID; at most one epoch retires at a time. The guardian keeps one listener
+across epochs, and after a crash reclaims every epoch branch under the subtree, journaled or not.
 
 ## Unreleased: helper containment in runtime status
 

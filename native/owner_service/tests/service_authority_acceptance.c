@@ -378,6 +378,34 @@ static service_state *guarded_service(no_id epoch, int pair[2]) {
     return service;
 }
 
+/* Spent with a lease still open: the service asks the guardian, once, to start the next
+ * epoch beside it, and keeps serving instead of draining. */
+static void case_retiring(void) {
+    size_t quota = policy.client_lease_quota;
+    policy.client_lease_quota = 1;
+    int pair[2], to_holder[2], from_holder[2];
+    no_id epoch = {172, 1};
+    service_state *service = guarded_service(epoch, pair);
+    CHECK(pipe2(to_holder, O_CLOEXEC) == 0 && pipe2(from_holder, O_CLOEXEC) == 0);
+    pid_t holder = spawn(holder_client, to_holder[0], from_holder[1]);
+    pump_lease(service, from_holder[0]);
+    service_settle(service);
+    guardian_grant frame;
+    memset(&frame, 0, sizeof(frame));
+    CHECK(recv(pair[1], &frame, sizeof(frame), MSG_DONTWAIT) == (ssize_t)sizeof(frame));
+    CHECK(frame.kind == GRANT_RETIRING && same_id(frame.epoch, epoch) && frame.generation == 1);
+    service_settle(service);
+    CHECK(recv(pair[1], &frame, sizeof(frame), MSG_DONTWAIT) < 0 && errno == EAGAIN);  /* Once only. */
+    CHECK(service->retiring && service->phase == BOOT_PEER_EVIDENCE_ONLY);              /* Still serving. */
+    send_byte(to_holder[1]);
+    CHECK(pump_until_exit(service, holder) == 0);
+    drain_and_free(service);
+    close(pair[1]);
+    int pipes[] = {to_holder[0], to_holder[1], from_holder[0], from_holder[1]};
+    for (size_t i = 0; i < sizeof(pipes) / sizeof(pipes[0]); ++i) close(pipes[i]);
+    policy.client_lease_quota = quota;
+}
+
 static void case_guardian_handoff(void) {
     snprintf(guardian_path, sizeof(guardian_path), "%s/guardian", directory_path);
     int listener = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
@@ -746,6 +774,7 @@ int main(void) {
     case_renew();
     case_account_connections();
     case_idle_connection();
+    case_retiring();
     service_state *service = peer_service((no_id){139, 5});
     case_top_level(service);
     drain_and_free(service);

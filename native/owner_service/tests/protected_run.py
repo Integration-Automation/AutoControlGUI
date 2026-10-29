@@ -24,12 +24,13 @@ OUTER, STATE2 = "/sys/fs/cgroup/autocontrol-outer", "/var/lib/autocontrol-test2"
 ENDPOINT = RUN + "/owner.sock"
 CLIENT = "user"
 ACCOUNTS = ("acsvc", "acother")
-# Helpers run as IDs from this range, one per lease position; no account is created.
-PAYLOAD_BASE, PAYLOAD_IDS = 62000, 32
+# Helpers run as IDs from this range: an epoch's half, then its lease position. No account
+# is created.
+PAYLOAD_BASE, PAYLOAD_IDS, EPOCH_IDS = 62000, 64, 32
 SOCKET_GROUP = "acsock"
 ROLLOVER_SESSIONS = 10  # More than the manifest's quota of 8 leases per epoch.
-SERVICE_SOURCES = ["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_relay_linux.c",
-                   "service_peer_linux.c"]
+SERVICE_SOURCES = ["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_child_linux.c",
+                   "native_relay_linux.c", "service_peer_linux.c"]
 created_accounts = []
 created_groups = []
 enabled_controllers = []
@@ -117,13 +118,14 @@ def build():
                 f'-DENDPOINT="{ENDPOINT}"']
     shutil.copy(os.path.join(TESTS, "nested_parent.py"), OPT + "/nested_parent.py")
     os.chmod(OPT + "/nested_parent.py", 0o644)
-    gcc(SERVICE_SOURCES + ["native_service.c", "service_bootstrap_linux.c", "service_main.c", "protected_manifests.c"],
+    gcc(SERVICE_SOURCES + ["native_service.c", "service_policy.c", "service_bootstrap_linux.c", "service_main.c",
+                           "protected_manifests.c"],
         OPT + "/service_main", defines + ["-DNO_PROTECTED_ACCEPTANCE"])
     gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
                            "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
                            "protected_manifests.c"], OPT + "/guardian", defines)
-    gcc(["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_relay_linux.c",
-         "owner_core_acceptance.c"], OPT + "/owner_core_acceptance", acceptance=True)
+    gcc(["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_child_linux.c",
+         "native_relay_linux.c", "owner_core_acceptance.c"], OPT + "/owner_core_acceptance", acceptance=True)
     gcc(["seccomp_probe.c", "guardian_seccomp_linux.c", "protected_manifests.c"], OPT + "/seccomp_probe", defines)
     gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
                            "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
@@ -397,11 +399,12 @@ def rollover_session():
             reply = {}
         if reply.get("reply") == "pong":
             epoch = epochs()
+            uids = payload_uids(epoch[-1])
             holder.stdin.write("close\n")
             holder.stdin.flush()
             closed = read_json(holder)
             holder.wait(timeout=30)
-            return {"attempts": attempt, "epochs": epoch, "retired": closed.get("retired") is True}
+            return {"attempts": attempt, "epochs": epoch, "uids": uids, "retired": closed.get("retired") is True}
         holder.kill()
         holder.wait()
         time.sleep(0.25)
@@ -413,6 +416,39 @@ def scenario_rollover(steps):
     guardian = start_guardian()
     steps["sessions"] = [rollover_session() for _ in range(ROLLOVER_SESSIONS)]
     steps["guardian_alive"] = guardian.poll() is None
+    steps["guardian_children"] = children_of(guardian.pid)
+    steps["guardian_stop"] = stop_guardian(guardian)
+    steps["epochs_after_stop"] = epochs()
+
+
+def payload_uids(epoch):
+    return sorted({status["uid"] for status in session_inspection(epoch)["payload"]})
+
+
+def scenario_long_lived(steps):
+    """A helper that outlives its epoch's quota: the next epoch starts beside it, it keeps
+    serving, and its epoch is reclaimed only when it closes."""
+    guardian = start_guardian()
+    first = epochs()[-1]
+    holder = client("hold")
+    steps["holder"] = read_json(holder)
+    steps["holder_uids"] = payload_uids(first)
+    steps["sessions"] = [rollover_session() for _ in range(ROLLOVER_SESSIONS)]
+    steps["epochs_while_held"] = epochs()
+    # Helpers that ran in the successor epoch, recorded by each session while it was open.
+    steps["successor_uids"] = sorted({uid for s in steps["sessions"] if len(s.get("epochs", [])) == 2
+                                      for uid in s.get("uids", [])})
+    holder.stdin.write("ping\n")
+    holder.stdin.flush()
+    steps["holder_ping"] = read_json(holder)
+    holder.stdin.write("close\n")
+    holder.stdin.flush()
+    steps["holder_close"] = read_json(holder)
+    holder.wait(timeout=30)
+    limit = time.monotonic() + 20
+    while first in epochs() and time.monotonic() < limit:
+        time.sleep(0.1)
+    steps["first_reclaimed"] = first not in epochs()
     steps["guardian_children"] = children_of(guardian.pid)
     steps["guardian_stop"] = stop_guardian(guardian)
     steps["epochs_after_stop"] = epochs()
@@ -614,6 +650,8 @@ def main():
         scenario_delegated_subtree(report["steps"]["delegated_subtree"])
         report["steps"]["worker"] = {}
         scenario_worker(report["steps"]["worker"])
+        report["steps"]["long_lived"] = {}
+        scenario_long_lived(report["steps"]["long_lived"])
     except Exception as error:  # reason: cleanup must run and the failure must be reported, not lost
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
@@ -649,10 +687,11 @@ def expectations(result):
     service_crash = result["steps"].get("service_crash", {})
     delegated = result["steps"].get("delegated_subtree", {})
     worker = result["steps"].get("worker", {})
+    held = result["steps"].get("long_lived", {})
     inspection = session.get("inspection", {})
     service, payload = inspection.get("service", [{}]), inspection.get("payload", [{}])
     if "error" in result or not all((session, crash, siblings, nested, race, renewal, rollover, service_crash,
-                                     delegated, worker)):
+                                     delegated, worker, held)):
         return {"completed": False}
     return {
         "protected_reply": session["request"].get("reply") == "pong",
@@ -713,6 +752,15 @@ def expectations(result):
         # Read from the running payload, not the manifest: its own group and nothing else.
         # The real worker: it answers through the service as its own range ID, under the
         # identity filter, with its parent-watch thread created despite clone3 being refused.
+        # A long-lived helper no longer stops new helpers: its spent epoch retires beside the
+        # next, which serves every later session, from the other half of the ID range.
+        "long_lived_overlap": all(s["retired"] for s in held["sessions"]) and len(held["epochs_while_held"]) == 2
+        and held["holder_ping"].get("reply") == "pong" and held["holder_close"].get("retired") is True
+        and bool(held["holder_uids"]) and bool(held["successor_uids"])
+        and {(int(u) - PAYLOAD_BASE) // EPOCH_IDS for u in held["holder_uids"]}
+        != {(int(u) - PAYLOAD_BASE) // EPOCH_IDS for u in held["successor_uids"]}
+        and held["first_reclaimed"] and len(held["guardian_children"]) == 1
+        and held["guardian_stop"][0] == 0 and not held["epochs_after_stop"],
         "native_worker_runs": (worker["bootstrap"].get("result") or {}).get("protocol") == 1
         and bool(worker["inspection"]["payload"]) and in_payload_range(worker["inspection"]["payload"][0].get("uid"))
         and worker["inspection"]["payload"][0].get("seccomp") == "2"

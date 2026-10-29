@@ -23,7 +23,10 @@ the gate.
   `lease_max_age_ns`, so an idle helper is not killed when one lifetime ends.
 - When the client's quota or the record slots of an epoch are spent and no lease or
   connection is open, the service drains, and the same guardian reclaims the epoch
-  and grants the next one. A spent epoch answers new opens with CAPACITY until then. A connection without an
+  and grants the next one. A spent epoch that still holds open leases retires beside the
+  next instead: it keeps serving those leases, the guardian hands new clients to the next
+  epoch, and reclaims the retiring one when its last lease ends. At most one epoch retires
+  at a time; if the next is spent too while it still runs, new opens get CAPACITY. A connection without an
   open lease holds a spent epoch for at most 5 seconds, so an idle or abandoned client
   cannot keep the host from rolling over; the Python channel connects only at its first
   request, and reports a connection turned away before it has a lease as
@@ -40,8 +43,9 @@ the gate.
 - Payloads hold no supplementary group. A nested-capable payload reaches the guardian
   through an ACL on the listener that names every client account in the guardian's
   manifest, so `/run` must support POSIX ACLs (tmpfs does).
-- Every helper runs as its own user and group ID: the policy's payload range base plus
-  its lease position, 32 IDs per range, with no account needed. No two live helpers share
+- Every helper runs as its own user and group ID: the policy's payload range base, plus
+  its epoch's half (by counter parity), plus its lease position; 64 IDs per range, with
+  no account needed. No two live helpers share
   an account, so none can ptrace, signal or take descriptors from another. Payload ranges
   must not contain the guardian's, the service's, the client's or the socket group's IDs;
   two policies' ranges are equal or disjoint; a nested child draws from its parent's
@@ -85,8 +89,8 @@ the gate.
 ## Install (administrator)
 
 1. Create a service account with its own primary group, and a socket group. Add the
-   client account to the socket group as a supplementary member. Reserve 32 user IDs and
-   the same 32 group IDs that nothing else uses for helpers; they need no accounts.
+   client account to the socket group as a supplementary member. Reserve 64 user IDs and
+   the same 64 group IDs that nothing else uses for helpers; they need no accounts.
 2. Copy `config/owner_manifest.example.c` to `owner_manifest.c`, fill in every
    value marked `EDIT`, and review it.
 3. Run `build.sh owner_manifest.c build/`. Install `owner_guardian` and

@@ -200,6 +200,8 @@ void owner_relay_drain(owner_record *record);
 void owner_relay_close(owner_record *record);
 /* True once every record slot of the epoch has been admitted. */
 bool owner_records_full(no_runtime *runtime);
+/* The cloned child's side of a launch (native_child_linux.c); never returns. */
+_Noreturn void owner_child_exec(owner_record *record);
 /* False once the core closed admission for the epoch (join failure, revoke ledger full). */
 bool owner_admission_open(no_runtime *runtime);
 void owner_publish_payload(owner_record *record);

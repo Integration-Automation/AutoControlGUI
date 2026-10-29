@@ -18,9 +18,12 @@ SOURCE = TESTS.parent / "src"
 REPOSITORY = TESTS.parents[2]
 CC = os.environ.get("CC", "cc")
 FLAGS = ["-std=c11", "-pthread", "-Wall", "-Wextra", "-Werror", f"-I{SOURCE}", f"-I{TESTS}"]
-OWNER = ["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_relay_linux.c"]
-SERVICE = OWNER + ["native_service.c", "service_peer_linux.c", "service_bootstrap_linux.c"]
-SHARED = ["native_owner_lease.c", "native_launch_linux.c", "native_relay_linux.c", "native_service.c",
+OWNER = ["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_child_linux.c",
+         "native_relay_linux.c"]
+SERVICE = OWNER + ["native_service.c", "service_policy.c", "service_fixture_linux.c", "service_peer_linux.c",
+                   "service_bootstrap_linux.c"]
+SHARED = ["native_owner_lease.c", "native_launch_linux.c", "native_child_linux.c", "native_relay_linux.c",
+          "native_service.c", "service_policy.c", "service_fixture_linux.c",
           "service_peer_linux.c", "service_bootstrap_linux.c"]
 
 
@@ -60,7 +63,7 @@ def main():
         suites = {
             "service_acceptance": (["service_acceptance.c", *SHARED], [str(work / "service_main")], 0),
             "service_authority_acceptance": (["service_authority_acceptance.c", *SHARED], [], 0),
-            "ownership_contract_acceptance": (["ownership_contract_acceptance.c", *SHARED[:3]], [], 0),
+            "ownership_contract_acceptance": (["ownership_contract_acceptance.c", *SHARED[:4]], [], 0),
             "owner_core_acceptance": ([*OWNER, "owner_core_acceptance.c"], ["--suite=lifecycle"], 0),
             "service_e2e": (["service_e2e.c", *SHARED], None, None),
             "guardian_journal_acceptance": (["guardian_journal_acceptance.c", "guardian_journal.c"], [], 0),

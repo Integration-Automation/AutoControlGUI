@@ -51,8 +51,12 @@ extern const service_policy service_manifest;
 /* Installs the service's identity filter (guardian_seccomp_linux.c); needs no_new_privs. */
 bool guardian_confine_identities(const service_policy *policy, uint32_t service_uid, uint32_t service_gid);
 /* Removes files and SysV IPC objects the payload ranges own (guardian_purge_linux.c);
- * returns how many. Only after an epoch is killed: nothing may run as a payload ID. */
-size_t guardian_purge_payloads(const service_policy *service);
+ * returns how many. `half` 0 or 1 is one epoch's half of every range, -1 both. Only once
+ * nothing runs as those IDs: after their epoch is killed. */
+size_t guardian_purge_payloads(const service_policy *service, int half);
+/* After a retiring epoch's service ended: kills and removes its branch, then removes what
+ * its half of the payload IDs left. The journal does not track a retiring epoch. */
+guardian_result guardian_reclaim_retired(guardian_state *state, const char *epoch, uint64_t counter);
 /* Plans and creates the next epoch on a CLEAN journal (rollover after a drained one). */
 guardian_result guardian_next_epoch(guardian_state *state);
 /* Kills, waits for and removes the journaled branches, then marks CLEAN. */

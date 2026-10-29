@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261030-13 | 2026-10-30 | Let a spent owner-service epoch retire beside the next one | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261030-12 | 2026-10-30 | Run the package's native worker under the owner service | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261030-11 | 2026-10-30 | Remove what payload IDs left behind before reusing them | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-10 | 2026-10-30 | Cap the owner service's whole epoch and keep helper files private | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |

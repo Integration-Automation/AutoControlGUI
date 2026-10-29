@@ -23,96 +23,9 @@ static void note_close(service_state *service, owned_fd *slot) {
     if (!service_close_fd(slot)) service->close_uncertain = true;
 }
 
-/* Guardian, clients and payloads are disjoint accounts: a payload that matched a
- * client principal could open top-level leases outside its parent's fence. */
-static bool client_account(const service_policy *policy, uint32_t uid) {
-    for (size_t i = 0; i < policy->client_count; ++i) if (policy->clients[i].uid == uid) return true;
-    return false;
-}
-
-static bool in_range(uint32_t id, uint32_t base) { return id >= base && id - base < SERVICE_PAYLOAD_IDS; }
-
-/* No payload ID is the guardian's, a client's or this service's, and no payload group is
- * root's, a client's, the socket's or this service's: a shared group would give payloads
- * the client's files, and the service's own account would let a payload write the
- * epoch's cgroup.procs. The ranges never wrap and never reach -1, "unchanged". */
-static bool payload_accounts_valid(const service_policy *policy, const service_launch_policy *entry) {
-    uint32_t uid = entry->payload_uid, gid = entry->payload_gid;
-    if (uid > UINT32_MAX - SERVICE_PAYLOAD_IDS || gid > UINT32_MAX - SERVICE_PAYLOAD_IDS || !uid || !gid) return false;
-    if (in_range(policy->guardian.uid, uid) || in_range((uint32_t)geteuid(), uid) || in_range(0, gid) ||
-        in_range(policy->guardian.gid, gid) || in_range((uint32_t)getegid(), gid) ||
-        (policy->socket_gid && in_range(policy->socket_gid, gid))) return false;
-    for (size_t i = 0; i < policy->client_count; ++i)
-        if (in_range(policy->clients[i].uid, uid) || in_range(policy->clients[i].gid, gid)) return false;
-    return true;
-}
-
-/* Two policies' payload ranges are the same range or share no ID, so one lease position
- * never maps two live helpers to one account. */
-static bool ranges_valid(const service_policy *policy) {
-    for (size_t i = 0; i < policy->policy_count; ++i)
-        for (size_t j = 0; j < i; ++j) {
-            const service_launch_policy *a = &policy->policies[i], *b = &policy->policies[j];
-            bool same_uid = a->payload_uid == b->payload_uid, same_gid = a->payload_gid == b->payload_gid;
-            bool apart_uid = a->payload_uid >= b->payload_uid + SERVICE_PAYLOAD_IDS ||
-                b->payload_uid >= a->payload_uid + SERVICE_PAYLOAD_IDS;
-            bool apart_gid = a->payload_gid >= b->payload_gid + SERVICE_PAYLOAD_IDS ||
-                b->payload_gid >= a->payload_gid + SERVICE_PAYLOAD_IDS;
-            if (!(same_uid || apart_uid) || !(same_gid || apart_gid)) return false;
-        }
-    return true;
-}
-
-static bool launch_policy_valid(const service_policy *policy, const service_launch_policy *entry) {
-    return entry->id < 32 && entry->executable && entry->executable[0] == '/' && entry->cwd &&
-        entry->cwd[0] == '/' && entry->fixed_argc && entry->fixed_argv &&
-        entry->fixed_argc + entry->max_client_arguments <= NO_ARGUMENT_LIMIT &&
-        entry->envc <= NO_ARGUMENT_LIMIT && (!entry->envc || entry->env) &&
-        (!entry->max_client_arguments || (entry->argument_alphabet && entry->argument_alphabet[0])) &&
-        payload_accounts_valid(policy, entry);
-}
-
-static const service_launch_policy *policy_by_id(const service_policy *policy, uint32_t id) {
-    for (size_t i = 0; i < policy->policy_count; ++i) if (policy->policies[i].id == id) return &policy->policies[i];
-    return NULL;
-}
-
-/* Every child a policy may start exists, is nested-only, and draws from the parent's own
- * payload range: a nested child never reaches a range its parent did not have. */
-static bool children_valid(const service_policy *policy, const service_launch_policy *parent) {
-    for (uint32_t id = 0; id < 32; ++id) {
-        if (!(parent->child_policies & (UINT32_C(1) << id))) continue;
-        const service_launch_policy *child = policy_by_id(policy, id);
-        if (!child || !child->nested || child->payload_uid != parent->payload_uid ||
-            child->payload_gid != parent->payload_gid) return false;
-    }
-    return true;
-}
-
-static bool policy_valid(const service_policy *policy) {
-    if (!policy || !policy->policies || !policy->policy_count || !policy->lease_lifetime_ns ||
-        !policy->record_capacity || policy->record_capacity > NO_RECORD_LIMIT ||
-        policy->client_count > SERVICE_CLIENT_LIMIT || client_account(policy, policy->guardian.uid) ||
-        !policy->client_lease_quota || policy->client_lease_quota > SERVICE_LEASE_LIMIT ||
-        !policy->nested_lease_quota || policy->nested_lease_quota > SERVICE_LEASE_LIMIT ||
-        policy->lease_max_age_ns < policy->lease_lifetime_ns ||
-        policy->record_pids_max < SERVICE_MIN_PIDS || policy->record_memory_max < SERVICE_MIN_MEMORY ||
-        !policy->connections_per_account || policy->connections_per_account > SERVICE_CONNECTION_LIMIT / 2 ||
-        /* Payload accounts are shared by policy, so one client per service until each client
-         * has its own payload accounts. */
-        policy->client_count != 1) return false;
-    for (size_t i = 0; i < policy->policy_count; ++i) {
-        if (!launch_policy_valid(policy, &policy->policies[i])) return false;
-        for (size_t j = 0; j < i; ++j) if (policy->policies[j].id == policy->policies[i].id) return false;
-    }
-    for (size_t i = 0; i < policy->policy_count; ++i)
-        if (!children_valid(policy, &policy->policies[i])) return false;
-    return ranges_valid(policy);
-}
-
 service_state *service_allocate(const service_policy *policy, no_error *error) {
     *error = (no_error){0};
-    if (!policy_valid(policy)) { error->kind = NO_ERROR_ARGUMENT; return NULL; }
+    if (!service_policy_valid(policy)) { error->kind = NO_ERROR_ARGUMENT; return NULL; }
     service_state *service = calloc(1, sizeof(*service));
     if (!service) { error->kind = NO_ERROR_ALLOCATION; return NULL; }
     service->policy = policy;
@@ -377,30 +290,6 @@ static service_lease *held_lease(service_state *service, size_t index, no_id id)
     return lease;
 }
 
-/* The manifest grammar: a non-empty word over the policy alphabet that cannot be
- * read as an option. Anything richer needs its own reviewed policy. */
-static bool argument_allowed(const char *argument, size_t length, const service_launch_policy *policy) {
-    return length && argument[0] != '-' && strspn(argument, policy->argument_alphabet) == length;
-}
-
-static bool client_arguments(const service_request *request, const service_launch_policy *policy,
-                             const char **argv, size_t *argc) {
-    if (request->argc > policy->max_client_arguments) return false;
-    for (size_t i = 0; i < policy->fixed_argc; ++i) argv[i] = policy->fixed_argv[i];
-    size_t offset = 0;
-    for (size_t i = 0; i < request->argc; ++i) {
-        size_t length = strnlen(request->arguments + offset, SERVICE_ARGUMENT_BYTES - offset);
-        if (offset + length == SERVICE_ARGUMENT_BYTES ||
-            !argument_allowed(request->arguments + offset, length, policy)) return false;
-        argv[policy->fixed_argc + i] = request->arguments + offset;
-        offset += length + 1;
-    }
-    for (size_t i = offset; i < SERVICE_ARGUMENT_BYTES; ++i) if (request->arguments[i]) return false;
-    *argc = policy->fixed_argc + request->argc;
-    argv[*argc] = NULL;
-    return true;
-}
-
 /* Recorded only for a newly admitted record, with the bytes the core will deliver
  * to that record's child once its payload is published. A replayed START keeps the
  * first record and its capability; the fresh bytes of the retry are discarded. */
@@ -414,12 +303,6 @@ static void issue_nested_grant(service_state *service, const service_launch_poli
     grant->issued = true;
 }
 
-/* Only a policy that permits children carries a capability at all. */
-static bool fresh_capability(const service_launch_policy *policy, uint8_t *capability, bool *wanted) {
-    *wanted = policy->child_policies != 0;
-    return !*wanted || service_random(capability, SERVICE_CAPABILITY_BYTES);
-}
-
 /* Everything START checks before the core sees the request. */
 static service_status start_admissible(service_state *service, size_t index, const service_request *request,
                                        const service_lease *lease, const char **argv, size_t *argc) {
@@ -427,7 +310,7 @@ static service_status start_admissible(service_state *service, size_t index, con
     if (!admitting(service)) return STATUS_UNAVAILABLE;
     if (!lease) return STATUS_REJECTED;
     if (lease->phase != LEASE_OPEN) return STATUS_CLOSED;
-    if (!policy || !client_arguments(request, policy, argv, argc)) return STATUS_MALFORMED;
+    if (!policy || !service_client_arguments(request, policy, argv, argc)) return STATUS_MALFORMED;
     if (lease->nested) return nested_member(service, lease->parent, &service->connections[index].connector);
     return STATUS_OK;
 }
@@ -444,6 +327,12 @@ static no_submit_result submit(service_state *service, service_lease *lease, con
                                     (fixture_options){.relay = true, .rpc = true}, ticket, error);
 #endif
     return no_submit(service->runtime, &lease->scope, key, spec, ticket, error);
+}
+
+/* The ID offset of a lease's helper within its policy's range: the epoch's half, then the
+ * lease position, unique within the epoch. */
+static uint32_t payload_offset(const service_state *service, const service_lease *lease) {
+    return (uint32_t)(service->epoch.low & 1) * SERVICE_EPOCH_IDS + (uint32_t)(lease - service->leases);
 }
 
 static void start(service_state *service, size_t index, const service_request *request) {
@@ -465,13 +354,13 @@ static void start(service_state *service, size_t index, const service_request *r
     const service_launch_policy *policy = status == STATUS_OK ? find_policy(service, lease->policy) : NULL;
     uint8_t capability[SERVICE_CAPABILITY_BYTES];
     bool nested = false;
-    if (policy && !fresh_capability(policy, capability, &nested)) {
+    if (policy && !service_fresh_capability(policy, capability, &nested)) {
         status = STATUS_UNAVAILABLE;
         error = (no_error){NO_ERROR_UNAVAILABLE, errno, 11};
     } else if (policy) {
         no_validated_spec spec = {policy->executable, policy->cwd, argv, policy->env, argc, policy->envc,
-            policy->payload_uid + (uint32_t)(lease - service->leases),
-            policy->payload_gid + (uint32_t)(lease - service->leases), nested ? capability : NULL,
+            policy->payload_uid + payload_offset(service, lease),
+            policy->payload_gid + payload_offset(service, lease), nested ? capability : NULL,
             service->policy->record_pids_max,
             service->policy->record_memory_max};
         no_submit_result result = submit(service, lease, request, &spec, &ticket, &error);
@@ -713,6 +602,21 @@ static bool epoch_spent(service_state *service) {
     return positions_used(service, service->policy->clients[0].uid) >= service->policy->client_lease_quota;
 }
 
+/* Spent but still holding open leases: ask the guardian once to start the next epoch
+ * beside this one, so a long-lived helper never keeps the host from new helpers. */
+static void announce_retiring(service_state *service) {
+    if (service->retiring || service->guardian.state != FD_OWNED || !epoch_spent(service)) return;
+    bool open = false;
+    for (size_t i = 0; i < service->lease_count && !open; ++i) open = service->leases[i].phase == LEASE_OPEN;
+    if (!open) return;
+    guardian_grant frame = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_RETIRING, service->epoch, service->generation};
+    ssize_t sent;
+    do {
+        sent = send(service->guardian.number, &frame, sizeof(frame), MSG_NOSIGNAL | MSG_DONTWAIT);
+    } while (sent < 0 && errno == EINTR);
+    service->retiring = sent == (ssize_t)sizeof(frame);
+}
+
 static bool admission_ended(service_state *service) {
     bool guardian_gone = service->guardian_peer.pidfd.state == FD_OWNED && !peer_alive(&service->guardian_peer);
     if (guardian_gone || (service->runtime && !owner_admission_open(service->runtime))) return true;
@@ -741,6 +645,7 @@ void service_settle(service_state *service) {
     if (service->runtime) no_runtime_maintain(service->runtime, (no_deadline){owner_now() + 1000000});
     authentication_owner_scan(&service->scopes);
     if (admitting(service) && admission_ended(service)) service->phase = BOOT_DRAINING;
+    if (admitting(service)) announce_retiring(service);
 }
 
 #define SERVICE_FIXED_EVENTS 3 /* Listener, guardian channel, guardian pidfd. */
@@ -835,32 +740,3 @@ bool service_free(service_state **address) {
     *address = NULL;
     return true;
 }
-
-#ifdef NO_ACCEPTANCE_BUILD
-/* Real listener, peers and leases over a non-protected anchor. Never linked into
- * the installed service; its scopes can reach no_submit only to meet the gate. */
-bool fixture_service_guardian(service_state *service, int channel) {
-    no_error error;
-    service->guardian = (owned_fd){FD_OWNED, channel};
-    service->generation = 1;
-    return peer_identity_from_connection(&service->guardian_peer, channel, &error) &&
-        peer_enable_credentials(channel, &error);
-}
-
-bool fixture_service_peer_only(service_state *service, int listener, int anchor, no_id epoch) {
-    struct stat status;
-    no_error error;
-    service->listener = (owned_fd){FD_OWNED, listener};
-    service->epoch_anchor = (owned_fd){FD_OWNED, anchor};
-    if (fstat(anchor, &status) == -1 || !peer_enable_credentials(listener, &error)) return false;
-    int flags = fcntl(listener, F_GETFL);
-    if (flags == -1 || fcntl(listener, F_SETFL, flags | O_NONBLOCK) == -1) return false;
-    service->epoch_device = (uint64_t)status.st_dev;
-    service->epoch = epoch;
-    no_boot_policy policy = {.capacity = service->policy->record_capacity, .epoch = epoch};
-    service->runtime = no_runtime_create(&policy, &error);
-    if (!service->runtime) return false;
-    service->phase = BOOT_PEER_EVIDENCE_ONLY;
-    return true;
-}
-#endif

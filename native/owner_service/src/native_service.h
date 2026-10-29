@@ -8,7 +8,10 @@
 #include <sys/types.h>
 
 #define SERVICE_CONNECTION_LIMIT 16
-#define SERVICE_PAYLOAD_IDS SERVICE_LEASE_LIMIT /* IDs in each policy's payload range. */
+/* IDs in each policy's payload range: two halves, so a retiring epoch and its successor
+ * never share an ID. An epoch uses the half its counter's parity picks. */
+#define SERVICE_EPOCH_IDS SERVICE_LEASE_LIMIT
+#define SERVICE_PAYLOAD_IDS (2 * SERVICE_EPOCH_IDS)
 #define SERVICE_IDLE_GRACE_NS 5000000000ULL /* A spent epoch waits this long for a lease-less connection. */
 #define SERVICE_MIN_PIDS 8                     /* Below this a helper cannot start its threads. */
 #define SERVICE_MIN_MEMORY (16ULL << 20)      /* 16 MiB. */
@@ -81,7 +84,10 @@ _Static_assert(sizeof(service_reply) == 8312 && offsetof(service_reply, status) 
  * and the overflow UID, without SCM_PIDFD), so the guardian sends only after it. */
 /* GRANT_CONNECTION hands over one client connection the guardian accepted and verified
  * (principal and namespaces, which only root can read); the service never listens. */
-typedef enum { GRANT_EPOCH = 1, GRANT_ACKNOWLEDGED, GRANT_REQUESTED, GRANT_CONNECTION } grant_kind;
+/* GRANT_RETIRING, service to guardian: this epoch is spent but still holds open leases.
+ * The guardian stops handing it connections and starts the next epoch beside it; this one
+ * keeps serving its leases and drains when they end. */
+typedef enum { GRANT_EPOCH = 1, GRANT_ACKNOWLEDGED, GRANT_REQUESTED, GRANT_CONNECTION, GRANT_RETIRING } grant_kind;
 typedef struct {
     uint32_t magic;
     uint16_t version, kind;
@@ -102,8 +108,9 @@ typedef struct {
     const char *const *fixed_argv, *const *env;
     size_t fixed_argc, envc, max_client_arguments;
     const char *argument_alphabet; /* Every client argument byte; never empty, never a leading '-'. */
-    /* The first of SERVICE_PAYLOAD_IDS user and group IDs. A record runs as base + its lease
-     * position, so no two live helpers share an account; no account need exist for them. */
+    /* The first of SERVICE_PAYLOAD_IDS user and group IDs. A record runs as base + its
+     * epoch's half + its lease position, so no two live helpers share an account, even
+     * across a retiring epoch and its successor; no account need exist for them. */
     uint32_t payload_uid, payload_gid;
     uint32_t child_policies; /* Bit i permits nested policy id i under a record of this policy. */
 } service_launch_policy;
@@ -194,12 +201,21 @@ typedef struct service_state {
     nested_grant grants[NO_RECORD_LIMIT];
     no_error first_error;
     bool close_uncertain;
+    bool retiring; /* GRANT_RETIRING was sent: the guardian hands this epoch nothing more. */
 #ifdef NO_ACCEPTANCE_BUILD
     const char *fixture_executable; /* Acceptance only: START admits a direct-fixture relay record. */
 #endif
 } service_state;
 
 /* native_service.c: the single event owner for every resource above. */
+/* True when the compiled manifest is coherent (service_policy.c). */
+bool service_policy_valid(const service_policy *policy);
+/* argv for a START: the policy's fixed words, then the client's, each a non-empty word
+ * over the policy alphabet that cannot be read as an option (service_policy.c). */
+bool service_client_arguments(const service_request *request, const service_launch_policy *policy,
+                              const char **argv, size_t *argc);
+/* Fresh child capability bytes when the policy may start nested children. */
+bool service_fresh_capability(const service_launch_policy *policy, uint8_t *capability, bool *wanted);
 service_state *service_allocate(const service_policy *policy, no_error *error);
 service_result service_run_one(service_state *service, int timeout_ms);
 service_result service_drain(service_state *service, no_deadline deadline);

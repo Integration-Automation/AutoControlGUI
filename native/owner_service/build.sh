@@ -15,11 +15,12 @@ here=$(cd "$(dirname "$0")" && pwd)
 src="$here/src"
 cc=${CC:-cc}
 flags="-std=c11 -pthread -O2 -Wall -Wextra -Werror -I$src"
-owner="$src/native_owner.c $src/native_owner_lease.c $src/native_launch_linux.c $src/native_relay_linux.c"
+owner="$src/native_owner.c $src/native_owner_lease.c $src/native_launch_linux.c $src/native_child_linux.c $src/native_relay_linux.c"
 peer="$src/service_peer_linux.c"
 mkdir -p "$output"
 # shellcheck disable=SC2086  # reason: flag and source lists are intentionally word-split
-$cc $flags $owner $peer "$src/native_service.c" "$src/service_bootstrap_linux.c" "$src/service_main.c" \
+$cc $flags $owner $peer "$src/native_service.c" "$src/service_policy.c" "$src/service_bootstrap_linux.c" \
+    "$src/service_main.c" \
     "$manifest" -o "$output/owner_service"
 # shellcheck disable=SC2086  # reason: flag and source lists are intentionally word-split
 $cc $flags $owner $peer "$src/guardian_main.c" "$src/guardian_epoch_linux.c" "$src/guardian_journal.c" \

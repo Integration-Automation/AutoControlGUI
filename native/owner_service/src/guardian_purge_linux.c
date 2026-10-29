@@ -21,11 +21,20 @@
 
 #define PURGE_DEPTH 32
 
+static const service_policy *purged_service;
+static int purged_half; /* 0 or 1: one epoch's half of every range; -1: both. */
+
+static bool in_half(uint32_t id, uint32_t base) {
+    uint32_t low = purged_half < 0 ? base : base + (uint32_t)purged_half * SERVICE_EPOCH_IDS;
+    uint32_t span = purged_half < 0 ? SERVICE_PAYLOAD_IDS : SERVICE_EPOCH_IDS;
+    return id >= low && id - low < span;
+}
+
 static bool payload_id(const service_policy *service, uint32_t id) {
-    for (size_t i = 0; i < service->policy_count; ++i) {
-        const service_launch_policy *entry = &service->policies[i];
-        if (id >= entry->payload_uid && id - entry->payload_uid < SERVICE_PAYLOAD_IDS) return true;
-        if (id >= entry->payload_gid && id - entry->payload_gid < SERVICE_PAYLOAD_IDS) return true;
+    (void)service;
+    for (size_t i = 0; i < purged_service->policy_count; ++i) {
+        const service_launch_policy *entry = &purged_service->policies[i];
+        if (in_half(id, entry->payload_uid) || in_half(id, entry->payload_gid)) return true;
     }
     return false;
 }
@@ -87,8 +96,10 @@ static size_t purge_ipc(const service_policy *service, const char *table, int ki
     return removed;
 }
 
-size_t guardian_purge_payloads(const service_policy *service) {
+size_t guardian_purge_payloads(const service_policy *service, int half) {
     if (!service) return 0;
+    purged_service = service;
+    purged_half = half;
     static const char *const roots[] = {"/tmp", "/var/tmp", "/dev/shm", "/dev/mqueue"};
     size_t removed = 0;
     for (size_t i = 0; i < sizeof(roots) / sizeof(roots[0]); ++i) {

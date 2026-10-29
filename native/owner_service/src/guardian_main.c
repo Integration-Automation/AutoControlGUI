@@ -226,22 +226,19 @@ static bool grant_epoch(guardian_state *state, int channel, const peer_identity 
         frame.epoch.high == epoch.high && frame.epoch.low == epoch.low && frame.generation == grant.generation;
 }
 
-typedef enum { SERVED_SERVICE_ENDED, SERVED_STOP_REQUESTED, SERVED_FAILED } served_result;
+/* One running epoch: its service, the guardian's end of its channel and its grant. A
+ * retiring epoch keeps its channel open: the service would read a closed one as guardian
+ * loss and drain the leases it still serves. */
+typedef struct {
+    peer_identity service;
+    int channel;
+    guardian_grant grant;
+    char epoch[GJ_COMPONENT_BYTES];
+    uint64_t counter, started_ns;
+} running_epoch;
 
-/* Forwards verified clients until the service exits, the channel fails, or the
- * supervisor asks the guardian to stop. */
-static served_result supervise(const guardian_state *state, const peer_identity *service, int signals,
-                               int listener, int channel, const guardian_grant *grant) {
-    struct pollfd events[3] = {{.fd = service->pidfd.number, .events = POLLIN}, {.fd = signals, .events = POLLIN},
-                               {.fd = listener, .events = POLLIN}};
-    for (;;) {
-        if (poll(events, 3, -1) < 0) { if (errno == EINTR) continue; return SERVED_FAILED; }
-        if (events[1].revents) return SERVED_STOP_REQUESTED;
-        if (events[0].revents) return SERVED_SERVICE_ENDED;
-        if (events[2].revents & POLLIN &&
-            guardian_forward(listener, channel, state->manifest, grant->epoch, grant->generation) ==
-            FORWARD_CHANNEL_FAILED) return SERVED_SERVICE_ENDED;
-    }
+static void running_init(running_epoch *run) {
+    *run = (running_epoch){.service = {.pidfd = {FD_EMPTY, -1}}, .channel = -1};
 }
 
 /* Whatever ended the epoch, the service is killed if still alive, waited for and its
@@ -256,6 +253,13 @@ static void reap_service(const peer_identity *service) {
     if (rc == 0)
         fprintf(stderr, "autocontrol-owner-guardian: service ended (%s %d)\n",
                 info.si_code == CLD_EXITED ? "exit" : "signal", info.si_status);
+}
+
+static void running_close(running_epoch *run) {
+    reap_service(&run->service);
+    service_close_fd(&run->service.pidfd);
+    if (run->channel >= 0) close(run->channel);
+    run->channel = -1;
 }
 
 static uint64_t monotonic_ns(void) {
@@ -273,30 +277,103 @@ static bool back_off(int signals) {
     return rc > 0;
 }
 
-static served_result serve(guardian_state *state, int signals) {
-    int listener = open_listener(state->manifest->listener_path, state->manifest->listener_gid, state->manifest);
-    int pair[2] = {-1, -1};
-    if (listener < 0 || socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, pair) != 0) {
+/* Launches the journal's current epoch: service, grant, then ACTIVE. */
+static bool start_epoch(guardian_state *state, running_epoch *run) {
+    running_init(run);
+    int pair[2];
+    if (socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, pair) != 0) {
         state->operation = 30; state->system_errno = errno;
-        if (listener >= 0) close(listener);
-        return SERVED_FAILED;
+        return false;
     }
-    peer_identity service = {.pidfd = {FD_EMPTY, -1}};
     no_error error;
-    int launch_error = launch_service(state, pair[1], &service);
+    int launch_error = launch_service(state, pair[1], &run->service);
     close(pair[1]);
-    guardian_grant granted;
-    served_result result = SERVED_FAILED;
-    if (!launch_error && peer_enable_credentials(pair[0], &error) && grant_epoch(state, pair[0], &service, &granted) &&
-        gj_mark(&state->journal, GJ_ACTIVE) == GJ_ERROR_NONE)
-        result = supervise(state, &service, signals, listener, pair[0], &granted);
-    else { state->operation = 31; state->system_errno = launch_error; }
-    close(pair[0]);
-    close(listener);
-    unlink(state->manifest->listener_path);
-    reap_service(&service);
-    service_close_fd(&service.pidfd);
-    return result;
+    run->channel = pair[0];
+    memcpy(run->epoch, state->journal.current.epoch, sizeof(run->epoch));
+    run->counter = state->journal.current.counter;
+    run->started_ns = monotonic_ns();
+    if (!launch_error && peer_enable_credentials(pair[0], &error) &&
+        grant_epoch(state, pair[0], &run->service, &run->grant) && gj_mark(&state->journal, GJ_ACTIVE) == GJ_ERROR_NONE)
+        return true;
+    state->operation = 31; state->system_errno = launch_error;
+    return false;
+}
+
+/* One frame from a running service; only GRANT_RETIRING is expected after the grant.
+ * False on loss or a frame the service did not send. `kind` is 0 when nothing waited. */
+static bool service_frame(const running_epoch *run, uint16_t *kind) {
+    guardian_grant frame;
+    received_packet packet;
+    no_error error;
+    memset(&frame, 0, sizeof(frame));
+    *kind = 0;
+    if (!packet_receive(run->channel, &frame, sizeof(frame), MSG_DONTWAIT, &packet, &error))
+        return error.system_errno == EAGAIN || error.system_errno == EWOULDBLOCK;
+    bool authentic = packet.bytes == (ssize_t)sizeof(frame) && packet_authenticated(&packet, &run->service, 0) &&
+        frame.magic == SERVICE_MAGIC && frame.version == SERVICE_VERSION && frame.epoch.low == run->grant.epoch.low &&
+        frame.epoch.high == run->grant.epoch.high && frame.generation == run->grant.generation;
+    packet_release(&packet);
+    if (authentic) *kind = frame.kind;
+    return authentic;
+}
+
+/* The current epoch is spent but serves open leases: it keeps them as the retiring epoch,
+ * no longer journaled (a crash sweeps it), and the next epoch starts beside it. */
+static bool hand_over(guardian_state *state, running_epoch *current, running_epoch *retiring) {
+    *retiring = *current;
+    running_init(current);
+    if (gj_mark(&state->journal, GJ_RECOVERING) != GJ_ERROR_NONE || gj_mark(&state->journal, GJ_CLEAN) != GJ_ERROR_NONE)
+        return false;
+    return guardian_next_epoch(state) == GUARDIAN_READY && start_epoch(state, current);
+}
+
+typedef enum { LOOP_STOPPED, LOOP_REFUSED, LOOP_UNRESOLVED } loop_result;
+
+/* The current epoch ended on its own: reap it, reclaim it and start the next. */
+static loop_result replace_current(guardian_state *state, running_epoch *current, int signals, bool *stop) {
+    uint64_t started = current->started_ns;
+    running_close(current);
+    if (guardian_recover(state) != GUARDIAN_READY) return LOOP_UNRESOLVED;
+    if (monotonic_ns() - started < 1000000000ULL && back_off(signals)) { *stop = true; return LOOP_STOPPED; }
+    guardian_result next = guardian_next_epoch(state);
+    if (next != GUARDIAN_READY) return next == GUARDIAN_REFUSED ? LOOP_REFUSED : LOOP_UNRESOLVED;
+    return start_epoch(state, current) ? LOOP_STOPPED : LOOP_REFUSED;
+}
+
+/* Forwards verified clients to the current epoch, rolls epochs over and reclaims a
+ * retiring one when its service ends, until asked to stop or something fails. */
+static loop_result supervise(guardian_state *state, int signals, int listener, running_epoch *current,
+                             running_epoch *retiring) {
+    for (;;) {
+        bool has_retiring = retiring->service.pidfd.state == FD_OWNED;
+        struct pollfd events[5] = {
+            {.fd = signals, .events = POLLIN}, {.fd = listener, .events = POLLIN},
+            {.fd = current->service.pidfd.number, .events = POLLIN}, {.fd = current->channel, .events = POLLIN},
+            {.fd = has_retiring ? retiring->service.pidfd.number : -1, .events = POLLIN}};
+        if (poll(events, 5, -1) < 0) { if (errno == EINTR) continue; return LOOP_REFUSED; }
+        if (events[0].revents) return LOOP_STOPPED;
+        if (events[4].revents) {
+            running_close(retiring);
+            if (guardian_reclaim_retired(state, retiring->epoch, retiring->counter) != GUARDIAN_READY)
+                return LOOP_UNRESOLVED;
+            running_init(retiring);
+        }
+        bool ended = events[2].revents != 0;
+        uint16_t kind = 0;
+        if (!ended && events[3].revents) ended = !service_frame(current, &kind);
+        if (!ended && kind == GRANT_RETIRING && !has_retiring) {
+            if (!hand_over(state, current, retiring)) return LOOP_REFUSED;
+            continue;
+        }
+        if (!ended && events[1].revents & POLLIN)
+            ended = guardian_forward(listener, current->channel, state->manifest, current->grant.epoch,
+                                     current->grant.generation) == FORWARD_CHANNEL_FAILED;
+        if (ended) {
+            bool stop = false;
+            loop_result replaced = replace_current(state, current, signals, &stop);
+            if (stop || replaced != LOOP_STOPPED) return replaced;
+        }
+    }
 }
 
 int main(void) {
@@ -313,33 +390,28 @@ int main(void) {
         guardian_close(&state);
         return report("prepare", &state, prepared == GUARDIAN_REFUSED ? EXIT_REFUSED : EXIT_UNRESOLVED);
     }
-    if (signals < 0) {
-        guardian_recover(&state);
-        guardian_close(&state);
-        return EXIT_REFUSED;
+    int listener = signals < 0 ? -1 : open_listener(state.manifest->listener_path, state.manifest->listener_gid,
+                                                    state.manifest);
+    running_epoch current, retiring;
+    running_init(&current);
+    running_init(&retiring);
+    loop_result result = LOOP_REFUSED;
+    if (listener < 0) { state.operation = 30; state.system_errno = errno; }
+    else if (start_epoch(&state, &current)) result = supervise(&state, signals, listener, &current, &retiring);
+    if (listener >= 0) {
+        close(listener);
+        unlink(state.manifest->listener_path);
     }
-    /* A service that drained its spent epoch ends normally: reclaim it and grant the next.
-     * A stop request or a failure reclaims the epoch and leaves. */
-    for (;;) {
-        uint64_t started = monotonic_ns();
-        served_result served = serve(&state, signals);
-        guardian_result recovered = guardian_recover(&state);
-        if (recovered != GUARDIAN_READY) {
-            guardian_close(&state);
-            return report("recover", &state, EXIT_UNRESOLVED);
-        }
-        if (served == SERVED_STOP_REQUESTED) break;
-        if (served == SERVED_SERVICE_ENDED && monotonic_ns() - started < 1000000000ULL && back_off(signals)) break;
-        if (served == SERVED_FAILED) {
-            guardian_close(&state);
-            return report("serve", &state, EXIT_REFUSED);
-        }
-        guardian_result next = guardian_next_epoch(&state);
-        if (next != GUARDIAN_READY) {
-            guardian_close(&state);
-            return report("rollover", &state, next == GUARDIAN_REFUSED ? EXIT_REFUSED : EXIT_UNRESOLVED);
-        }
+    /* Whatever happened, every running epoch is reclaimed before the guardian exits. */
+    running_close(&current);
+    guardian_result recovered = guardian_recover(&state);
+    if (retiring.service.pidfd.state == FD_OWNED) {
+        running_close(&retiring);
+        if (guardian_reclaim_retired(&state, retiring.epoch, retiring.counter) != GUARDIAN_READY)
+            recovered = GUARDIAN_UNRESOLVED;
     }
     guardian_close(&state);
-    return EXIT_STOPPED;
+    if (recovered != GUARDIAN_READY) return report("recover", &state, EXIT_UNRESOLVED);
+    if (result == LOOP_UNRESOLVED) return report("serve", &state, EXIT_UNRESOLVED);
+    return result == LOOP_STOPPED ? EXIT_STOPPED : report("serve", &state, EXIT_REFUSED);
 }
