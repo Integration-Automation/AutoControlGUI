@@ -54,6 +54,23 @@ static bool launch_policy_valid(const service_policy *policy, const service_laun
         payload_accounts_valid(policy, entry);
 }
 
+static const service_launch_policy *policy_by_id(const service_policy *policy, uint32_t id) {
+    for (size_t i = 0; i < policy->policy_count; ++i) if (policy->policies[i].id == id) return &policy->policies[i];
+    return NULL;
+}
+
+/* Every child a policy may start exists, is nested-only, and runs as the parent's own
+ * payload account: a nested child never reaches an account its parent did not have. */
+static bool children_valid(const service_policy *policy, const service_launch_policy *parent) {
+    for (uint32_t id = 0; id < 32; ++id) {
+        if (!(parent->child_policies & (UINT32_C(1) << id))) continue;
+        const service_launch_policy *child = policy_by_id(policy, id);
+        if (!child || !child->nested || child->payload_uid != parent->payload_uid ||
+            child->payload_gid != parent->payload_gid) return false;
+    }
+    return true;
+}
+
 static bool policy_valid(const service_policy *policy) {
     if (!policy || !policy->policies || !policy->policy_count || !policy->lease_lifetime_ns ||
         !policy->record_capacity || policy->record_capacity > NO_RECORD_LIMIT ||
@@ -69,6 +86,8 @@ static bool policy_valid(const service_policy *policy) {
         if (!launch_policy_valid(policy, &policy->policies[i])) return false;
         for (size_t j = 0; j < i; ++j) if (policy->policies[j].id == policy->policies[i].id) return false;
     }
+    for (size_t i = 0; i < policy->policy_count; ++i)
+        if (!children_valid(policy, &policy->policies[i])) return false;
     return true;
 }
 
@@ -400,6 +419,12 @@ static void start(service_state *service, size_t index, const service_request *r
     service_lease *lease = held_lease(service, index, request->lease);
     no_error error = {0};
     no_ticket ticket = {0};
+    if (lease && lease->phase != LEASE_OPEN && lease->started && same_id(lease->start_request, request->request)) {
+        /* The admitted START's reply may have been lost and the lease closed for it: the
+         * holder's replay still learns the ticket, so it can observe the record settle. */
+        send_reply(&service->connections[index], request, STATUS_EXISTING, error, NULL, lease->ticket);
+        return;
+    }
     const char *argv[NO_ARGUMENT_LIMIT + 1];
     size_t argc = 0;
     if (lease && lease->phase == LEASE_OPEN && owner_now() >= lease->expires_ns)
@@ -418,6 +443,8 @@ static void start(service_state *service, size_t index, const service_request *r
             service->policy->record_memory_max};
         no_submit_result result = submit(service, lease, request, &spec, &ticket, &error);
         status = result == NO_ACCEPTED ? STATUS_OK : result == NO_EXISTING ? STATUS_EXISTING : status_for(error.kind);
+        if (result == NO_ACCEPTED || result == NO_EXISTING)
+            lease->started = true, lease->start_request = request->request, lease->ticket = ticket;
         if (result == NO_ACCEPTED) issue_nested_grant(service, policy, ticket, nested ? capability : NULL);
     }
     explicit_bzero(capability, sizeof(capability));

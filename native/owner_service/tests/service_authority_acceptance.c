@@ -31,7 +31,8 @@ static void case_policy_validation(void) {
     candidate.policies = entries;
     struct { size_t entry; int field; } faults[] = {{1, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4}, {2, 5}, {0, 6},
                                                     {1, 7}, {0, 8}, {0, 9}, {0, 10}, {0, 11}, {0, 12},
-                                                    {0, 13}, {0, 14}, {0, 15}};
+                                                    {0, 13}, {0, 14}, {0, 15}, {1, 16}, {0, 17},
+                                                    {0, 18}};
     for (size_t i = 0; i < sizeof(faults) / sizeof(faults[0]); ++i) {
         memcpy(entries, launch_policies, sizeof(entries));
         candidate = policy;
@@ -53,6 +54,9 @@ static void case_policy_validation(void) {
         if (faults[i].field == 13) candidate.record_memory_max = SERVICE_MIN_MEMORY - 1;
         if (faults[i].field == 14) candidate.connections_per_account = 0;
         if (faults[i].field == 15) candidate.connections_per_account = SERVICE_CONNECTION_LIMIT / 2 + 1;
+        if (faults[i].field == 16) entry->payload_uid = 65533;                 /* Child runs as another account. */
+        if (faults[i].field == 17) entry->child_policies |= UINT32_C(1) << 9;  /* Child policy does not exist. */
+        if (faults[i].field == 18) entry->child_policies |= UINT32_C(1) << OTHER_TOP; /* Child is top-level. */
         CHECK(service_allocate(&candidate, &error) == NULL && error.kind == NO_ERROR_ARGUMENT);
     }
     memcpy(entries, launch_policies, sizeof(entries));

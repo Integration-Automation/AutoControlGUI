@@ -15,6 +15,7 @@ sys.path.insert(0, repository)
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError  # noqa: E402
 from je_auto_control.utils.agent_runtime.helper_owner_linux import (  # noqa: E402
     OwnerServiceChannel, SeqpacketTransport)
+from je_auto_control.utils.agent_runtime import owner_service_wire as wire  # noqa: E402
 from je_auto_control.utils.agent_runtime.owner_service_nested import NestedGrant  # noqa: E402
 
 TOP = 1
@@ -62,6 +63,11 @@ checks["waiting_request"] = waiting.get("result")
 third = OwnerServiceChannel(SeqpacketTransport(endpoint, peer_uid=os.getuid()), TOP)
 third.request("ping", {}, timeout=10)
 checks["helper_exit"] = outcome(lambda: third.request("exit", {}, timeout=10))
+# Its lease is closed now. Replaying the admitted START still returns the same ticket,
+# which is how a client whose START reply was lost learns what to observe.
+replayed = third._call(wire.ServiceRequest(wire.OP_START, third._start_id, lease=third._lease,
+                                           request=third._start_id), time.monotonic() + 5)
+checks["start_replay_after_close"] = [replayed.status == wire.STATUS_EXISTING, replayed.ticket == third._ticket]
 
 # 4. A nested channel opens with OP_OPEN_CHILD; behind the closed gate no grant exists.
 nested = OwnerServiceChannel(SeqpacketTransport(endpoint, peer_uid=os.getuid()), NESTED,
@@ -90,6 +96,7 @@ expectations = {
     "nested_refused": checks["nested_open"][0] == "error"
     and "refused to open a lease (status 2" in checks["nested_open"][1],
     "nested_retired_without_helper": checks["nested_retired"] is True,
+    "start_replay_after_close": checks["start_replay_after_close"] == [True, True],
 }
 print(json.dumps({"checks": checks, "expectations": expectations}))
 sys.exit(0 if all(expectations.values()) else 1)

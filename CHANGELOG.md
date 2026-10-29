@@ -21,6 +21,8 @@ A service also closes a new connection once its account already holds the manife
 `connections_per_account` (1 to 8 of the 16), so neither the client nor a payload can lock the other out.
 The binding file is now refused when it is a symlink or sits under a directory another account can
 write, and a client refuses an owner-service endpoint whose listener is not root (`SO_PEERCRED`).
+A manifest whose policy lists a child policy that is missing, not nested, or runs as another payload
+account is now invalid.
 
 ## Unreleased: helper containment in runtime status
 

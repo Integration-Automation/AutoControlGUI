@@ -148,6 +148,9 @@ typedef struct {
     uint32_t policy;
     no_ticket parent;
     uint64_t expires_ns, opened_ns;
+    bool started;          /* START was admitted: its request ID and ticket are kept for replay. */
+    no_id start_request;
+    no_ticket ticket;
     no_authenticated_scope scope; /* The issuer's own reference, released once on close. */
 } service_lease;
 
