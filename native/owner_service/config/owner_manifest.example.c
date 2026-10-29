@@ -6,13 +6,15 @@
 #include "guardian.h"
 
 /* EDIT: accounts. Guardian is root. The service account runs the service, and the
- * payload account runs helpers. Client accounts may open top-level leases. All
- * accounts must be distinct, except that the payload account may share the client
- * group so nested helpers can reach the socket. */
+ * payload account runs helpers. One client account may open top-level leases. Every
+ * account and primary group must be distinct. The socket group owns the listener: the
+ * client account is a supplementary member of it, and the service gives it only to
+ * helpers whose policy may start nested children. The payload is never a member. */
 #define SERVICE_UID 990u
 #define SERVICE_GID 990u
 #define PAYLOAD_UID 991u
-#define PAYLOAD_GID 1000u
+#define PAYLOAD_GID 991u
+#define SOCKET_GID 992u
 #define CLIENT_UID 1000u
 #define CLIENT_GID 1000u
 
@@ -40,9 +42,15 @@ const service_policy service_manifest = {
     .client_count = 1,
     .policies = policies,
     .policy_count = sizeof(policies) / sizeof(policies[0]),
-    .lease_lifetime_ns = 60000000000ULL,
-    .client_lease_quota = 8,
-    .record_capacity = 8,
+    .lease_lifetime_ns = 60000000000ULL,  /* Clients renew while a helper stays in use. */
+    .lease_max_age_ns = 86400000000000ULL, /* No helper outlives a day. */
+    .socket_gid = SOCKET_GID,
+    /* Leases one client may use per epoch. When they are spent, or every record is used,
+     * and no lease or connection is open, the service drains and the guardian grants a
+     * fresh epoch. Until then a spent epoch answers new opens with CAPACITY, so one
+     * long-lived helper delays the rollover: keep both at the maximum, 32. */
+    .client_lease_quota = 32,
+    .record_capacity = 32,
 };
 
 static const guardian_client clients[] = {
@@ -61,7 +69,7 @@ const guardian_manifest guardian_compiled_manifest = {
     .service_gid = SERVICE_GID,
     .service_executable = "/usr/libexec/je_auto_control/owner_service",
     .listener_path = "/run/je_auto_control/owner.sock",
-    .listener_gid = CLIENT_GID,
+    .listener_gid = SOCKET_GID,
     .installation = {0}, /* EDIT: 16 random bytes, fixed for this installation's lifetime. */
     .manifest_version = 1,
     .clients = clients,

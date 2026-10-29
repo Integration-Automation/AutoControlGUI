@@ -29,20 +29,30 @@ static void case_policy_validation(void) {
     service_launch_policy entries[4];
     service_policy candidate = policy;
     candidate.policies = entries;
-    struct { size_t entry; int field; } faults[] = {{1, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4}};
+    struct { size_t entry; int field; } faults[] = {{1, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4}, {2, 5}, {0, 6},
+                                                    {1, 7}, {0, 8}, {0, 9}, {0, 10}, {0, 11}};
     for (size_t i = 0; i < sizeof(faults) / sizeof(faults[0]); ++i) {
         memcpy(entries, launch_policies, sizeof(entries));
-        candidate.guardian = policy.guardian;
+        candidate = policy;
+        candidate.policies = entries;
         service_launch_policy *entry = &entries[faults[i].entry];
         if (faults[i].field == 0) entry->payload_uid = policy.clients[0].uid;  /* Payload is a client. */
         if (faults[i].field == 1) entry->payload_uid = policy.guardian.uid;    /* Payload is the guardian. */
         if (faults[i].field == 2) candidate.guardian.uid = policy.clients[0].uid;
         if (faults[i].field == 3) entry->argument_alphabet = NULL;
         if (faults[i].field == 4) entry->argument_alphabet = "";
+        if (faults[i].field == 5) entry->payload_gid = policy.clients[0].gid;  /* Shares the client's files. */
+        if (faults[i].field == 6) entry->payload_gid = 0;
+        if (faults[i].field == 7) entry->payload_uid = (uint32_t)geteuid();    /* The service's own account. */
+        if (faults[i].field == 8) entry->payload_gid = candidate.socket_gid = 4242; /* Owns the socket group. */
+        if (faults[i].field == 9) candidate.client_count = 2; /* Payload accounts would be shared by clients. */
+        if (faults[i].field == 10) candidate.lease_max_age_ns = candidate.lease_lifetime_ns - 1;
+        if (faults[i].field == 11) entry->payload_gid = (uint32_t)getegid();
         CHECK(service_allocate(&candidate, &error) == NULL && error.kind == NO_ERROR_ARGUMENT);
     }
     memcpy(entries, launch_policies, sizeof(entries));
-    candidate.guardian = policy.guardian;
+    candidate = policy;
+    candidate.policies = entries;
     service_state *service = service_allocate(&candidate, &error);
     CHECK(service != NULL && service_free(&service));
 }
@@ -192,7 +202,9 @@ static void case_quota(void) {
     policy.client_lease_quota = 2;
     service_state *service = peer_service((no_id){151, 1});
     CHECK(pump_until_exit(service, spawn(quota_client, -1, -1)) == 0);
-    CHECK(service->lease_count == 2 && service->phase == BOOT_PEER_EVIDENCE_ONLY);
+    /* The quota is spent and nothing is open: the epoch drains so the guardian can grant the next. */
+    service_settle(service);
+    CHECK(service->lease_count == 2 && service->phase == BOOT_DRAINING);
     drain_and_free(service);
     policy.client_lease_quota = quota;
     no_error error;
@@ -201,6 +213,41 @@ static void case_quota(void) {
     CHECK(service_allocate(&candidate, &error) == NULL && error.kind == NO_ERROR_ARGUMENT);
     candidate.client_lease_quota = SERVICE_LEASE_LIMIT + 1;
     CHECK(service_allocate(&candidate, &error) == NULL && error.kind == NO_ERROR_ARGUMENT);
+}
+
+/* Leaves its renewed lease open; the parent reads the deadline after the client is gone. */
+static void renew_client(int in, int out) {
+    (void)in; (void)out;
+    int number = client_connect();
+    no_id lease = open_top(number, 1);
+    EXPECT(call(number, lease_request(OP_RENEW, lease)).status == STATUS_OK);
+}
+
+static void renew_refusal_client(int in, int out) {
+    (void)in; (void)out;
+    int number = client_connect();
+    no_id lease = open_top(number, 1), unknown = lease;
+    unknown.low ^= 1;
+    EXPECT(call(number, lease_request(OP_RENEW, unknown)).status == STATUS_REJECTED);
+    EXPECT(call(number, lease_request(OP_CLOSE, lease)).status == STATUS_OK);
+    EXPECT(call(number, lease_request(OP_RENEW, lease)).status == STATUS_CLOSED);
+}
+
+/* Renewal moves the deadline to one lifetime from now, never past the maximum age. */
+static void case_renew(void) {
+    uint64_t age = policy.lease_max_age_ns;
+    service_state *service = peer_service((no_id){153, 1});
+    CHECK(pump_until_exit(service, spawn(renew_client, -1, -1)) == 0);
+    const service_lease *renewed = &service->leases[0];
+    CHECK(renewed->expires_ns > renewed->opened_ns + policy.lease_lifetime_ns);
+    CHECK(pump_until_exit(service, spawn(renew_refusal_client, -1, -1)) == 0);
+    drain_and_free(service);
+    policy.lease_max_age_ns = policy.lease_lifetime_ns;
+    service = peer_service((no_id){153, 2});
+    CHECK(pump_until_exit(service, spawn(renew_client, -1, -1)) == 0);
+    CHECK(service->leases[0].expires_ns == service->leases[0].opened_ns + policy.lease_max_age_ns);
+    drain_and_free(service);
+    policy.lease_max_age_ns = age;
 }
 
 static void case_top_level(service_state *service) {
@@ -611,6 +658,7 @@ int main(void) {
     case_guardian_death();
     case_failed_issue();
     case_quota();
+    case_renew();
     service_state *service = peer_service((no_id){139, 5});
     case_top_level(service);
     drain_and_free(service);

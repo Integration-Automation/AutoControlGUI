@@ -68,7 +68,11 @@ static int child_descriptors(owner_record *record, int *error_fd) {
 static int child_protected_credentials(owner_record *record) {
     struct __user_cap_header_struct header = {_LINUX_CAPABILITY_VERSION_3, 0};
     struct __user_cap_data_struct capabilities[2] = {{0}, {0}};
-    if (syscall(SYS_setgroups, 0, NULL) == -1) return errno;
+    /* A nested-capable payload keeps exactly one supplementary group, the listener's,
+     * so it can reach the guardian; every other payload keeps none. */
+    gid_t groups[1] = {(gid_t)record->spec->socket_gid};
+    if (syscall(SYS_setgroups, record->spec->socket_gid ? 1 : 0, record->spec->socket_gid ? groups : NULL) == -1)
+        return errno;
     for (unsigned long capability = 0;; ++capability) {
         long present = syscall(SYS_prctl, PR_CAPBSET_READ, capability, 0, 0, 0);
         if (present < 0) { if (errno == EINVAL) break; return errno; }

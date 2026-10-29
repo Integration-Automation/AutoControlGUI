@@ -75,7 +75,8 @@ checks["service_exit"] = service.wait(timeout=20)
 leases, records = checks["service_report"]["leases"], checks["service_report"]["records"]
 expectations = {
     "round_trip": checks["round_trip"] == ["pong", "pong"],
-    "unprotected_close_refused": checks["unprotected_close"][0] == "error" and "not retired" in checks["unprotected_close"][1],
+    "unprotected_close_refused": checks["unprotected_close"][0] == "error"
+    and "not retired" in checks["unprotected_close"][1],
     "unprotected_not_retired": checks["unprotected_retired"] is False,
     "waiting_request_fenced": checks["waiting_request"] is not None and checks["waiting_request"][0] == "error"
     and "closed" in checks["waiting_request"][1],
@@ -85,7 +86,8 @@ expectations = {
     "three_children_dead": len(records) == 3 and all(record["child_dead"] for record in records),
     "no_descriptor_owned": all(record["owned"] == 0 for record in records),
     "service_drained": checks["service_exit"] == 0,
-    "nested_refused": checks["nested_open"][0] == "error" and "refused to open a lease (status 2" in checks["nested_open"][1],
+    "nested_refused": checks["nested_open"][0] == "error"
+    and "refused to open a lease (status 2" in checks["nested_open"][1],
     "nested_retired_without_helper": checks["nested_retired"] is True,
 }
 print(json.dumps({"checks": checks, "expectations": expectations}))

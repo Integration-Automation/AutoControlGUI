@@ -86,7 +86,7 @@ typedef struct {
     size_t argc, envc, bytes;
     char *argv[NO_ARGUMENT_LIMIT + 1], *env[NO_ARGUMENT_LIMIT + 1];
     char executable[NO_PATH_LIMIT], cwd[NO_PATH_LIMIT];
-    uint32_t uid, gid;
+    uint32_t uid, gid, socket_gid;
     /* Replay compares whether a capability exists, never its bytes: a retried START
      * carries a fresh one, and the record keeps the first. */
     nested_delivery delivery;
@@ -112,6 +112,7 @@ struct no_validated_spec {
     size_t argc, envc;
     uint32_t uid, gid;
     const uint8_t *nested_capability; /* NULL unless the policy permits child policies. */
+    uint32_t socket_gid; /* Only supplementary group of a nested-capable payload; 0 for none. */
 };
 
 typedef struct {
@@ -194,6 +195,8 @@ bool owner_observe_for_lease(no_runtime *runtime, no_id lease, no_ticket ticket,
 void owner_relay_pump(owner_record *record);
 void owner_relay_drain(owner_record *record);
 void owner_relay_close(owner_record *record);
+/* True once every record slot of the epoch has been admitted. */
+bool owner_records_full(no_runtime *runtime);
 /* False once the core closed admission for the epoch (join failure, revoke ledger full). */
 bool owner_admission_open(no_runtime *runtime);
 void owner_publish_payload(owner_record *record);

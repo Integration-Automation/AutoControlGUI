@@ -28,7 +28,9 @@ static bool send_connection(int channel, int connection, no_id epoch, uint64_t g
     message->cmsg_level = SOL_SOCKET; message->cmsg_type = SCM_RIGHTS; message->cmsg_len = CMSG_LEN(sizeof(int));
     memcpy(CMSG_DATA(message), &connection, sizeof(connection));
     ssize_t sent;
-    do { sent = sendmsg(channel, &header, MSG_NOSIGNAL); } while (sent < 0 && errno == EINTR);
+    /* Never blocks: a service that stopped reading (draining) loses the client, not the guardian. */
+    do { sent = sendmsg(channel, &header, MSG_NOSIGNAL | MSG_DONTWAIT); } while (sent < 0 && errno == EINTR);
+    if (sent < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return true;
     return sent == (ssize_t)sizeof(frame);
 }
 

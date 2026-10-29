@@ -20,7 +20,8 @@
 _Static_assert(SERVICE_LEASE_LIMIT == NO_RECORD_LIMIT, "lease ledger mirrors the core arrays");
 _Static_assert(SERVICE_CAPABILITY_BYTES == NO_CAPABILITY_BYTES, "the core delivers exactly the issued capability");
 
-typedef enum { OP_OPEN_TOP = 1, OP_OPEN_CHILD, OP_START, OP_CLOSE, OP_WRITE, OP_READ, OP_OBSERVE } service_opcode;
+typedef enum { OP_OPEN_TOP = 1, OP_OPEN_CHILD, OP_START, OP_CLOSE, OP_WRITE, OP_READ, OP_OBSERVE, OP_RENEW
+} service_opcode;
 enum { REPLY_EOF = 1 }; /* OP_READ: the helper closed fd 1 or stopped, and nothing remains. */
 typedef enum {
     STATUS_OK, STATUS_EXISTING, STATUS_REJECTED, STATUS_CLOSED, STATUS_CONFLICT,
@@ -109,6 +110,8 @@ typedef struct {
     const service_launch_policy *policies;
     size_t policy_count;
     uint64_t lease_lifetime_ns;
+    uint64_t lease_max_age_ns;   /* OP_RENEW never extends a lease past this age. */
+    uint32_t socket_gid;         /* The listener's group, given to nested-capable payloads only. */
     size_t client_lease_quota; /* Lease positions one account may use per epoch, open or spent. */
     size_t record_capacity;
 } service_policy;
@@ -139,7 +142,7 @@ typedef struct {
     bool nested;
     uint32_t policy;
     no_ticket parent;
-    uint64_t expires_ns;
+    uint64_t expires_ns, opened_ns;
     no_authenticated_scope scope; /* The issuer's own reference, released once on close. */
 } service_lease;
 

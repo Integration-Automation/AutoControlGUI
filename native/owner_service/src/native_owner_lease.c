@@ -118,6 +118,13 @@ bool owner_observe_for_lease(no_runtime *runtime, no_id lease, no_ticket ticket,
     return true;
 }
 
+bool owner_records_full(no_runtime *runtime) {
+    pthread_mutex_lock(&runtime->registry);
+    bool full = runtime->count == runtime->capacity;
+    pthread_mutex_unlock(&runtime->registry);
+    return full;
+}
+
 bool owner_admission_open(no_runtime *runtime) {
     pthread_mutex_lock(&runtime->registry);
     bool open = !runtime->admission_closed;

@@ -25,13 +25,17 @@ const service_policy service_manifest = {
     .client_count = 1,
     .policies = protected_policies,
     .policy_count = 3,
-    .lease_lifetime_ns = 60000000000ULL,
+    /* Short enough that every session longer than a few seconds proves renewal works. */
+    .lease_lifetime_ns = 4000000000ULL,
+    .lease_max_age_ns = 600000000000ULL,
+    .socket_gid = SOCKET_GID,
     .client_lease_quota = 8,
     .record_capacity = 8,
 };
 
-/* The payload account is forwarded too: a nested parent connects as itself, and the
- * service admits it only for OPEN_CHILD inside its own payload. */
+/* The payload account is forwarded too: a nested parent connects as itself (the service
+ * gives it the socket group), and the service admits it only for OPEN_CHILD inside its
+ * own payload. */
 static const guardian_client protected_clients[] = {
     {CLIENT_UID, CLIENT_GID, {NS_DEVICE, NS_USER, NS_PID, NS_MOUNT, NS_CGROUP}},
     {PAYLOAD_UID, PAYLOAD_GID, {NS_DEVICE, NS_USER, NS_PID, NS_MOUNT, NS_CGROUP}},
@@ -47,7 +51,7 @@ const guardian_manifest guardian_compiled_manifest = {
     .service_gid = SERVICE_GID,
     .service_executable = "/opt/autocontrol-test/service_main",
     .listener_path = "/run/autocontrol-test/owner.sock",
-    .listener_gid = CLIENT_GID,
+    .listener_gid = SOCKET_GID,
     .installation = {0x41, 0x43, 0x15, 0x00, 0x77, 0x53, 0x4c, 0x01},
     .manifest_version = 1,
     .clients = protected_clients,

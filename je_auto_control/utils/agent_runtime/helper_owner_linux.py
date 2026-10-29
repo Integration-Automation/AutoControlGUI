@@ -20,6 +20,8 @@ _LINE_LIMIT = 1_100_000
 _CALL_SECONDS = 2.0
 _RETIRE_SECONDS = 3.0
 _POLL_SECONDS = 0.02
+_RENEW_FLOOR_SECONDS = 0.2
+_RENEW_CEILING_SECONDS = 30.0
 _FINAL = (wire.REPORT_RETIRED, wire.REPORT_SETTLED_WITHOUT_SCOPE)
 
 
@@ -98,7 +100,8 @@ class OwnerServiceChannel:
 
     Construction allocates only. The first request opens this channel's own lease and
     starts the helper under a fixed request ID, so a lost acknowledgment is retried
-    without a second launch. ``close`` sets a monotone stop intent, waits at most for
+    without a second launch. A background thread renews the lease while the channel
+    lives, idle or not. ``close`` sets a monotone stop intent, waits at most for
     one in-flight call, closes the lease and reports retired only after the service
     observes the helper settled. No reply is delivered once close has begun.
     """
@@ -118,6 +121,10 @@ class OwnerServiceChannel:
         self._start_id = _nonce()
         self._lease: wire.Identifier | None = None
         self._ticket: wire.Ticket | None = None
+        self._start_state = "unsent"  # unsent / sent / refused / started
+        self._deadline_ns = 0
+        self._lease_lost = False
+        self._renewer: threading.Thread | None = None
         self._pending = bytearray()
         self._retired = False
 
@@ -169,13 +176,49 @@ class OwnerServiceChannel:
             if reply.status not in (wire.STATUS_OK, wire.STATUS_EXISTING):
                 raise _refusal(reply, "open a lease")
             self._lease = reply.lease
+            self._track_lease(reply.lease_deadline_ns)
         if self._ticket is None:
             start = wire.ServiceRequest(wire.OP_START, self._start_id, lease=self._lease, request=self._start_id,
                                         arguments=self._arguments)
+            self._start_state = "sent"
             reply = self._retried(start, deadline)
             if reply.status not in (wire.STATUS_OK, wire.STATUS_EXISTING):
+                self._start_state = "refused"
                 raise _refusal(reply, "start the helper")
             self._ticket = reply.ticket
+            self._start_state = "started"
+
+    def _track_lease(self, deadline_ns: int) -> None:
+        """Keep the lease renewed in the background; a fake or legacy reply without a deadline is not renewed."""
+        self._deadline_ns = deadline_ns
+        if deadline_ns and self._renewer is None:
+            self._renewer = threading.Thread(target=self._renew_loop, name="owner-service-renew", daemon=True)
+            self._renewer.start()
+
+    def _renew_delay(self) -> float:
+        """A third of the remaining lifetime. The service and this process share CLOCK_MONOTONIC:
+        the guardian admits only clients in its own user namespace, which cannot own a time namespace."""
+        remaining = (self._deadline_ns - time.monotonic_ns()) / 1e9
+        return min(max(remaining / 3, _RENEW_FLOOR_SECONDS), _RENEW_CEILING_SECONDS)
+
+    def _renew_loop(self) -> None:
+        while not self._stop.wait(self._renew_delay()):
+            request = wire.ServiceRequest(wire.OP_RENEW, _nonce(), lease=self._lease)
+            try:
+                reply = self._call(request, time.monotonic() + _CALL_SECONDS)
+            except TimeoutError:
+                continue
+            except OSError:  # reason: the transport is gone; the next relay call reports it
+                return
+            if reply.status != wire.STATUS_OK:
+                self._lease_lost = True
+                return
+            if reply.lease_deadline_ns <= self._deadline_ns:
+                return  # The lease reached its maximum age and ends at its deadline.
+            self._deadline_ns = reply.lease_deadline_ns
+
+    def _lease_expired(self) -> bool:
+        return self._lease_lost or bool(self._deadline_ns and time.monotonic_ns() >= self._deadline_ns)
 
     def _relay(self, opcode: int, deadline: float, data: bytes = b"") -> wire.ServiceReply:
         request = wire.ServiceRequest(opcode, _nonce(), lease=self._lease, ticket=self._ticket, data=data)
@@ -186,6 +229,8 @@ class OwnerServiceChannel:
             raise AgentTaskError("owner service relay reply was lost") from None
         if reply.status != wire.STATUS_OK:
             self._fenced()  # A lease this channel's own close just ended is a close, not a refusal.
+            if reply.status == wire.STATUS_CLOSED and self._lease_expired():
+                raise AgentTaskError("owner service lease expired, so the service stopped the helper")
             raise _refusal(reply, "relay helper traffic")
         return reply
 
@@ -309,6 +354,10 @@ class OwnerServiceChannel:
                     self._call(wire.ServiceRequest(wire.OP_CLOSE, _nonce(), lease=self._lease), deadline)
                 except TimeoutError:
                     raise AgentTaskError("owner service did not acknowledge the lease close") from None
+            if self._ticket is None and self._start_state == "sent":
+                # START went out but its ticket is unknown: a helper may run, so nothing is
+                # claimed. The request thread learns the ticket or fails, and closes again.
+                raise AgentTaskError("owner service cannot prove a helper of unknown start retired")
             if self._ticket is not None and not self._observe_settled(deadline):
                 raise AgentTaskError("owner service has not retired the native helper")
             self._transport.close()

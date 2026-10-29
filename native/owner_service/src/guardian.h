@@ -42,6 +42,8 @@ typedef struct {
  * its branches created and delegated. READY leaves the state holding the epoch
  * directory; REFUSED leaves the journal CLEAN; UNRESOLVED leaves it RECOVERING. */
 guardian_result guardian_prepare(guardian_state *state, const guardian_manifest *manifest);
+/* Plans and creates the next epoch on a CLEAN journal (rollover after a drained one). */
+guardian_result guardian_next_epoch(guardian_state *state);
 /* Kills, waits for and removes the journaled branches, then marks CLEAN. */
 guardian_result guardian_recover(guardian_state *state);
 void guardian_close(guardian_state *state);

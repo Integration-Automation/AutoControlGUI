@@ -13,10 +13,22 @@ reports which mode a host is in under `helper_containment`.
 ## Status
 
 The sources here pass their acceptance as root in one WSL distribution: Fedora 44,
-kernel 6.18. The production gate in `native_owner.c` is still closed in the builds
-`build.sh` produces, so protected launches are refused until a reviewed release opens
-it. Only the acceptance build (`NO_PROTECTED_ACCEPTANCE`) opens the gate. Progress.md
-lists what remains.
+kernel 6.18. An independent review found the blockers fixed below; its remaining
+findings are listed in Progress.md. The production gate in `native_owner.c` is still
+closed in the builds `build.sh` produces, so protected launches are refused until a
+reviewed release opens it. Only the acceptance build (`NO_PROTECTED_ACCEPTANCE`) opens
+the gate.
+
+- Clients renew their leases in the background (`OP_RENEW`), up to the manifest's
+  `lease_max_age_ns`, so an idle helper is not killed when one lifetime ends.
+- When the client's quota or the record slots of an epoch are spent and no lease or
+  connection is open, the service drains, and the same guardian reclaims the epoch
+  and grants the next one. A spent epoch answers new opens with CAPACITY until then.
+- The service runs with a bounding set of only CAP_SETUID, CAP_SETGID and
+  CAP_SETPCAP, `SECBIT_NOROOT` locked, and no_new_privs, so a bug in it cannot regain
+  root.
+- Payload accounts and groups must differ from the guardian, the service, the client
+  and the socket group, and a service serves exactly one client account.
 
 ## Parts
 
@@ -39,8 +51,9 @@ lists what remains.
 
 ## Install (administrator)
 
-1. Create a service account and a payload account, both distinct from the client
-   accounts.
+1. Create a service account and a payload account, each with its own primary group,
+   and a socket group. Add the client account to the socket group as a supplementary
+   member; never add the payload account.
 2. Copy `config/owner_manifest.example.c` to `owner_manifest.c`, fill in every
    value marked `EDIT`, and review it.
 3. Run `build.sh owner_manifest.c build/`. Install `owner_guardian` and
@@ -48,8 +61,9 @@ lists what remains.
    manifest names.
 4. Create the cgroup subtree beneath the cgroup2 mount, root-owned and mode 0755, and
    the root-only state directory.
-5. Run `owner_guardian` as root under the host's supervisor. It creates the listener
-   and starts the service itself.
+5. Run `owner_guardian` as root under the host's supervisor (for example
+   `Restart=on-failure`). It creates the listener, starts the service and rolls over to
+   a fresh epoch itself; it exits 0 only when asked to stop.
 6. Write `/etc/je_auto_control/owner_service.json`. It must be root-owned and not
    writable by anyone else, and holds the listener path and the exact helper argv
    for each policy:

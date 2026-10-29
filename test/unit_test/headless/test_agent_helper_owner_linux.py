@@ -24,9 +24,10 @@ def _ticket(raw):
 
 
 def _reply_frame(opcode, nonce, status=wire.STATUS_OK, *, lease=(0, 0), ticket=((0, 0), (0, 0)), flags=0,
-                 data_length=0, data=b"", report=wire.REPORT_PENDING):
+                 data_length=0, data=b"", report=wire.REPORT_PENDING, deadline=0):
     pack_id = lambda value: struct.pack("<QQ", *value)  # noqa: E731  # reason: local two-line codec helper
-    return wire._REPLY.pack(wire.MAGIC, wire.VERSION, opcode, status, 0, 0, 0, pack_id(nonce), pack_id(lease), 0,
+    return wire._REPLY.pack(wire.MAGIC, wire.VERSION, opcode, status, 0, 0, 0, pack_id(nonce), pack_id(lease),
+                            deadline,
                             pack_id(ticket[0]) + pack_id(ticket[1]), flags, data_length, report, 0, 0, 0, data)
 
 
@@ -46,7 +47,12 @@ class FakeService:
         self.accept_limit = accept_limit
         self.start_status = start_status
         self.drop_once = set()
+        self.drop_always = set()
         self.stray_before = set()
+        self.lifetime_ns = 0  # 0: replies carry no lease deadline, so the channel never renews.
+        self.renew_status = wire.STATUS_OK
+        self.renew_extends = True
+        self.deadline = 0
         self.settled = True
         self.grant = NestedGrant(((142, 1), (0, 3)), bytes(range(32)))
         self.calls = []
@@ -61,7 +67,7 @@ class FakeService:
         with self.lock:
             self.calls.append(opcode)
             reply = self._handle(opcode, nonce, lease, request_id, ticket, data[:data_length])
-            if opcode in self.drop_once:
+            if opcode in self.drop_once or opcode in self.drop_always:
                 self.drop_once.discard(opcode)
                 return
             if opcode in self.stray_before:
@@ -89,7 +95,8 @@ class FakeService:
         if opcode == wire.OP_OPEN_TOP:
             status = wire.STATUS_EXISTING if nonce in self.leases else wire.STATUS_OK
             self.leases.setdefault(nonce, (len(self.leases) + 1, 7))
-            return _reply_frame(opcode, nonce, status, lease=self.leases[nonce])
+            self.deadline = time.monotonic_ns() + self.lifetime_ns if self.lifetime_ns else 0
+            return _reply_frame(opcode, nonce, status, lease=self.leases[nonce], deadline=self.deadline)
         if opcode == wire.OP_START:
             if self.start_status != wire.STATUS_OK:
                 return _reply_frame(opcode, nonce, self.start_status)
@@ -99,6 +106,13 @@ class FakeService:
         if opcode == wire.OP_CLOSE:
             self.closed.add(lease)
             return _reply_frame(opcode, nonce)
+        if opcode == wire.OP_RENEW:
+            if self.renew_status != wire.STATUS_OK:
+                self.closed.add(lease)  # The lease expired before this renewal arrived.
+                return _reply_frame(opcode, nonce, self.renew_status)
+            if self.renew_extends:
+                self.deadline = time.monotonic_ns() + self.lifetime_ns
+            return _reply_frame(opcode, nonce, lease=lease, deadline=self.deadline)
         if lease in self.closed:
             if opcode == wire.OP_OBSERVE:
                 return _reply_frame(opcode, nonce, report=wire.REPORT_RETIRED if self.settled
@@ -143,6 +157,16 @@ class FakeService:
 def short_calls(monkeypatch):
     monkeypatch.setattr(owner, "_CALL_SECONDS", 0.2)
     monkeypatch.setattr(owner, "_POLL_SECONDS", 0.005)
+    monkeypatch.setattr(owner, "_RENEW_FLOOR_SECONDS", 0.02)
+
+
+def _until(predicate, seconds=3.0):
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        if predicate():
+            return True
+        time.sleep(0.01)
+    return predicate()
 
 
 def test_wire_layout_matches_the_native_frames():
@@ -317,3 +341,52 @@ def test_nested_channel_with_a_copied_or_wrong_capability_is_refused_and_retired
     with pytest.raises(AgentTaskError, match="refused to open a lease"):
         channel.request("echo", 1, timeout=5)
     assert channel.retired and not service.leases
+
+
+def test_idle_channel_keeps_its_lease_renewed_until_closed():
+    service = FakeService()
+    service.lifetime_ns = 150_000_000
+    channel = OwnerServiceChannel(service, 1)
+    assert channel.request("echo", 1, timeout=5) == 1
+    # No request is in flight, yet the lease outlives several lifetimes.
+    assert _until(lambda: service.calls.count(wire.OP_RENEW) >= 3)
+    assert time.monotonic_ns() < service.deadline
+    assert channel.request("echo", 2, timeout=5) == 2
+    channel.close()
+    assert channel.retired and _until(lambda: not channel._renewer.is_alive())
+
+
+def test_refused_renewal_reports_an_expired_lease_and_retires():
+    service = FakeService()
+    service.lifetime_ns = 150_000_000
+    service.renew_status = wire.STATUS_CLOSED
+    channel = OwnerServiceChannel(service, 1)
+    assert channel.request("echo", 1, timeout=5) == 1
+    assert _until(lambda: wire.OP_RENEW in service.calls and not channel._renewer.is_alive())
+    with pytest.raises(AgentTaskError, match="lease expired"):
+        channel.request("echo", 2, timeout=5)
+    assert channel.retired
+
+
+def test_renewal_stops_at_the_maximum_age():
+    service = FakeService()
+    service.lifetime_ns = 150_000_000
+    service.renew_extends = False  # The service already capped the lease at its maximum age.
+    channel = OwnerServiceChannel(service, 1)
+    assert channel.request("echo", 1, timeout=5) == 1
+    assert _until(lambda: not channel._renewer.is_alive())
+    assert service.calls.count(wire.OP_RENEW) == 1
+    channel.close()
+    assert channel.retired
+
+
+def test_a_start_with_an_unknown_outcome_is_never_reported_retired():
+    service = FakeService()
+    service.drop_always = {wire.OP_START}
+    channel = OwnerServiceChannel(service, 1)
+    with pytest.raises(AgentTaskError, match="did not answer"):
+        channel.request("echo", 1, timeout=0.5)
+    assert not channel.retired and service.calls.count(wire.OP_CLOSE) >= 1
+    with pytest.raises(AgentTaskError, match="unknown start"):
+        channel.close()
+    assert not channel.retired

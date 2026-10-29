@@ -83,7 +83,9 @@ management, holding the endpoint and the exact helper argv each policy launches.
 root guardian, the manifest template, the build script and both acceptance runners live in
 [`native/owner_service/`](../native/owner_service/README.md). The guardian verifies each client's
 account and namespaces before handing the connection to the service. Each client account may use at
-most its manifest quota of an epoch's lease positions. Builds from that directory keep the protected
+most its manifest quota of an epoch's lease positions; a spent, idle epoch is drained and replaced by the
+same guardian. Channels renew their lease in the background up to the manifest's maximum age, and a
+channel whose lease expired reports that instead of a generic refusal. Builds from that directory keep the protected
 launch gate closed until a reviewed release opens it.
 
 ## Task contract

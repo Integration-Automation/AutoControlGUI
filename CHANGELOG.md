@@ -9,6 +9,11 @@ package builds, installs or starts it. Its builds refuse protected launches unti
 opens the gate. Each client account may use at most the manifest's `client_lease_quota` of an epoch's
 lease positions.
 
+The manifest format changed after review: `service_policy` adds `lease_max_age_ns` and `socket_gid`, the
+guardian's `listener_gid` must be a dedicated socket group, payload accounts need their own primary
+group, and a service accepts exactly one client account. Manifests written against the first template
+no longer build a valid service.
+
 ## Unreleased: helper containment in runtime status
 
 `agent_runtime_status()` (and `AC_agent_runtime_status`, `agent-task status`) adds a

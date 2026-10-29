@@ -161,12 +161,16 @@ guardian_result guardian_prepare(guardian_state *state, const guardian_manifest 
     if (result != GUARDIAN_READY) return result;
     result = guardian_recover(state);
     if (result != GUARDIAN_READY) return result;
+    return guardian_next_epoch(state);
+}
+
+guardian_result guardian_next_epoch(guardian_state *state) {
     gj_error planned = gj_plan(&state->journal);
     if (planned != GJ_ERROR_NONE) return refuse(state, 3, (int)planned, GUARDIAN_REFUSED);
     int created = create_branches(state);
     if (!created) return GUARDIAN_READY;
     /* The counter is consumed; whatever was created is reclaimed before refusing. */
-    result = guardian_recover(state);
+    guardian_result result = guardian_recover(state);
     return refuse(state, 4, created, result == GUARDIAN_READY ? GUARDIAN_REFUSED : GUARDIAN_UNRESOLVED);
 }
 

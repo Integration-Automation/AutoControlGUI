@@ -12,6 +12,8 @@
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
+#include <libgen.h>
+#include <linux/securebits.h>
 #include <sys/prctl.h>
 #include <sys/signalfd.h>
 #include <sys/socket.h>
@@ -31,10 +33,19 @@ static int report(const char *stage, const guardian_state *state, int code) {
     return code;
 }
 
+/* The listener's directory must be root's alone, or a race could redirect the chown. */
+static bool trusted_parent(const char *path) {
+    char copy[sizeof(((struct sockaddr_un *)0)->sun_path)];
+    strcpy(copy, path);
+    struct stat status;
+    return lstat(dirname(copy), &status) == 0 && S_ISDIR(status.st_mode) && status.st_uid == 0 &&
+        !(status.st_mode & (S_IWGRP | S_IWOTH));
+}
+
 /* Only a stale socket at exactly this path is replaced; anything else refuses. */
 static int open_listener(const char *path, uint32_t group) {
     struct sockaddr_un address = {.sun_family = AF_UNIX};
-    if (strlen(path) >= sizeof(address.sun_path)) return -1;
+    if (strlen(path) >= sizeof(address.sun_path) || !trusted_parent(path)) return -1;
     strcpy(address.sun_path, path);
     struct stat status;
     if (lstat(path, &status) == 0 && (!S_ISSOCK(status.st_mode) || unlink(path) != 0)) return -1;
@@ -43,8 +54,10 @@ static int open_listener(const char *path, uint32_t group) {
     no_error error;
     /* Accepted sockets inherit credential passing; a client frame queued before the
      * service adopts the connection would otherwise arrive without credentials. */
-    if (bind(number, (struct sockaddr *)&address, sizeof(address)) != 0 || chown(path, 0, group) != 0 ||
-        chmod(path, 0660) != 0 ||
+    mode_t previous = umask(0117); /* The socket is born 0660; no chmod by path afterwards. */
+    int bound = bind(number, (struct sockaddr *)&address, sizeof(address));
+    umask(previous);
+    if (bound != 0 || fchownat(AT_FDCWD, path, 0, group, AT_SYMLINK_NOFOLLOW) != 0 ||
         listen(number, 64) != 0 || !peer_enable_credentials(number, &error)) {
         close(number);
         return -1;
@@ -71,12 +84,28 @@ static bool keep_service_capabilities(void) {
     return true;
 }
 
+/* Even a code-execution bug in the service cannot regain root: its bounding set holds
+ * only its three capabilities, UID 0 confers nothing (NOROOT, locked), and exec can
+ * never raise privileges (no_new_privs). Done while still root, before the UID drop. */
+static bool confine_service(void) {
+    for (unsigned long capability = 0;; ++capability) {
+        int present = prctl(PR_CAPBSET_READ, capability, 0, 0, 0);
+        if (present < 0) break;
+        bool kept = capability == CAP_SETUID || capability == CAP_SETGID || capability == CAP_SETPCAP;
+        if (present && !kept && prctl(PR_CAPBSET_DROP, capability, 0, 0, 0) != 0) return false;
+    }
+    sigset_t none;
+    sigemptyset(&none);
+    return prctl(PR_SET_SECUREBITS, SECBIT_NOROOT | SECBIT_NOROOT_LOCKED | SECBIT_KEEP_CAPS, 0, 0, 0) == 0 &&
+        prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == 0 && sigprocmask(SIG_SETMASK, &none, NULL) == 0;
+}
+
 /* The child keeps only its endpoint on SERVICE_GUARDIAN_FD and becomes the service
  * account before exec, with an empty environment and only its three capabilities. */
 static void exec_service(const guardian_manifest *manifest, int channel) {
     if (dup2(channel, SERVICE_GUARDIAN_FD) == SERVICE_GUARDIAN_FD &&
         syscall(SYS_close_range, SERVICE_GUARDIAN_FD + 1U, ~0U, 0) == 0 && setgroups(0, NULL) == 0 &&
-        prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0) == 0 &&
+        confine_service() &&
         setresgid(manifest->service_gid, manifest->service_gid, manifest->service_gid) == 0 &&
         setresuid(manifest->service_uid, manifest->service_uid, manifest->service_uid) == 0 &&
         keep_service_capabilities()) {
@@ -149,43 +178,47 @@ static bool grant_epoch(guardian_state *state, int channel, const peer_identity 
         frame.epoch.high == epoch.high && frame.epoch.low == epoch.low && frame.generation == grant.generation;
 }
 
+typedef enum { SERVED_SERVICE_ENDED, SERVED_STOP_REQUESTED, SERVED_FAILED } served_result;
+
 /* Forwards verified clients until the service exits, the channel fails, or the
  * supervisor asks the guardian to stop. */
-static void supervise(const guardian_state *state, const peer_identity *service, int signals, int listener,
-                      int channel, const guardian_grant *grant) {
+static served_result supervise(const guardian_state *state, const peer_identity *service, int signals,
+                               int listener, int channel, const guardian_grant *grant) {
     struct pollfd events[3] = {{.fd = service->pidfd.number, .events = POLLIN}, {.fd = signals, .events = POLLIN},
                                {.fd = listener, .events = POLLIN}};
     for (;;) {
-        if (poll(events, 3, -1) < 0) { if (errno == EINTR) continue; return; }
-        if (events[0].revents || events[1].revents) return;
+        if (poll(events, 3, -1) < 0) { if (errno == EINTR) continue; return SERVED_FAILED; }
+        if (events[1].revents) return SERVED_STOP_REQUESTED;
+        if (events[0].revents) return SERVED_SERVICE_ENDED;
         if (events[2].revents & POLLIN &&
             guardian_forward(listener, channel, state->manifest, grant->epoch, grant->generation) ==
-            FORWARD_CHANNEL_FAILED) return;
+            FORWARD_CHANNEL_FAILED) return SERVED_SERVICE_ENDED;
     }
 }
 
-static int serve(guardian_state *state, int signals) {
+static served_result serve(guardian_state *state, int signals) {
     int listener = open_listener(state->manifest->listener_path, state->manifest->listener_gid);
     int pair[2] = {-1, -1};
     if (listener < 0 || socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, pair) != 0) {
         state->operation = 30; state->system_errno = errno;
         if (listener >= 0) close(listener);
-        return EXIT_REFUSED;
+        return SERVED_FAILED;
     }
     peer_identity service = {.pidfd = {FD_EMPTY, -1}};
     no_error error;
     int launch_error = launch_service(state, pair[1], &service);
     close(pair[1]);
     guardian_grant granted;
+    served_result result = SERVED_FAILED;
     if (!launch_error && peer_enable_credentials(pair[0], &error) && grant_epoch(state, pair[0], &service, &granted) &&
         gj_mark(&state->journal, GJ_ACTIVE) == GJ_ERROR_NONE)
-        supervise(state, &service, signals, listener, pair[0], &granted);
+        result = supervise(state, &service, signals, listener, pair[0], &granted);
     else { state->operation = 31; state->system_errno = launch_error; }
     close(pair[0]);
     close(listener);
     unlink(state->manifest->listener_path);
     service_close_fd(&service.pidfd);
-    return EXIT_STOPPED;
+    return result;
 }
 
 int main(void) {
@@ -202,10 +235,31 @@ int main(void) {
         guardian_close(&state);
         return report("prepare", &state, prepared == GUARDIAN_REFUSED ? EXIT_REFUSED : EXIT_UNRESOLVED);
     }
-    int served = signals < 0 ? EXIT_REFUSED : serve(&state, signals);
-    /* Whatever happened, the epoch is reclaimed before the guardian exits. */
-    guardian_result recovered = guardian_recover(&state);
+    if (signals < 0) {
+        guardian_recover(&state);
+        guardian_close(&state);
+        return EXIT_REFUSED;
+    }
+    /* A service that drained its spent epoch ends normally: reclaim it and grant the next.
+     * A stop request or a failure reclaims the epoch and leaves. */
+    for (;;) {
+        served_result served = serve(&state, signals);
+        guardian_result recovered = guardian_recover(&state);
+        if (recovered != GUARDIAN_READY) {
+            guardian_close(&state);
+            return report("recover", &state, EXIT_UNRESOLVED);
+        }
+        if (served == SERVED_STOP_REQUESTED) break;
+        if (served == SERVED_FAILED) {
+            guardian_close(&state);
+            return report("serve", &state, EXIT_REFUSED);
+        }
+        guardian_result next = guardian_next_epoch(&state);
+        if (next != GUARDIAN_READY) {
+            guardian_close(&state);
+            return report("rollover", &state, next == GUARDIAN_REFUSED ? EXIT_REFUSED : EXIT_UNRESOLVED);
+        }
+    }
     guardian_close(&state);
-    if (recovered != GUARDIAN_READY) return report("recover", &state, EXIT_UNRESOLVED);
-    return served == EXIT_STOPPED ? EXIT_STOPPED : report("serve", &state, served);
+    return EXIT_STOPPED;
 }

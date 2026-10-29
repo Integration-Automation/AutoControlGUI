@@ -30,20 +30,39 @@ static bool client_account(const service_policy *policy, uint32_t uid) {
     return false;
 }
 
+static bool client_group(const service_policy *policy, uint32_t gid) {
+    for (size_t i = 0; i < policy->client_count; ++i) if (policy->clients[i].gid == gid) return true;
+    return false;
+}
+
+/* A payload shares no account or group with the guardian, a client or this service:
+ * a shared group would give payloads the client's files, and the service's own account
+ * would let a payload write the epoch's cgroup.procs. */
+static bool payload_accounts_valid(const service_policy *policy, const service_launch_policy *entry) {
+    return entry->payload_uid != policy->guardian.uid && entry->payload_uid != geteuid() &&
+        !client_account(policy, entry->payload_uid) && entry->payload_gid != 0 &&
+        entry->payload_gid != policy->guardian.gid && entry->payload_gid != getegid() &&
+        !client_group(policy, entry->payload_gid) && entry->payload_gid != policy->socket_gid;
+}
+
 static bool launch_policy_valid(const service_policy *policy, const service_launch_policy *entry) {
     return entry->id < 32 && entry->executable && entry->executable[0] == '/' && entry->cwd &&
         entry->cwd[0] == '/' && entry->fixed_argc && entry->fixed_argv &&
         entry->fixed_argc + entry->max_client_arguments <= NO_ARGUMENT_LIMIT &&
         entry->envc <= NO_ARGUMENT_LIMIT && (!entry->envc || entry->env) &&
         (!entry->max_client_arguments || (entry->argument_alphabet && entry->argument_alphabet[0])) &&
-        !client_account(policy, entry->payload_uid) && entry->payload_uid != policy->guardian.uid;
+        payload_accounts_valid(policy, entry);
 }
 
 static bool policy_valid(const service_policy *policy) {
     if (!policy || !policy->policies || !policy->policy_count || !policy->lease_lifetime_ns ||
         !policy->record_capacity || policy->record_capacity > NO_RECORD_LIMIT ||
         policy->client_count > SERVICE_CLIENT_LIMIT || client_account(policy, policy->guardian.uid) ||
-        !policy->client_lease_quota || policy->client_lease_quota > SERVICE_LEASE_LIMIT) return false;
+        !policy->client_lease_quota || policy->client_lease_quota > SERVICE_LEASE_LIMIT ||
+        policy->lease_max_age_ns < policy->lease_lifetime_ns ||
+        /* Payload accounts are shared by policy, so one client per service until each client
+         * has its own payload accounts. */
+        policy->client_count != 1) return false;
     for (size_t i = 0; i < policy->policy_count; ++i) {
         if (!launch_policy_valid(policy, &policy->policies[i])) return false;
         for (size_t j = 0; j < i; ++j) if (policy->policies[j].id == policy->policies[i].id) return false;
@@ -225,7 +244,8 @@ static service_status issue_lease(service_state *service, size_t index, const se
         lease->reason = CLOSE_FAILED_ISSUE;
         return status_for(error->kind);
     }
-    lease->expires_ns = owner_now() + service->policy->lease_lifetime_ns;
+    lease->opened_ns = owner_now();
+    lease->expires_ns = lease->opened_ns + service->policy->lease_lifetime_ns;
     lease->scope.reference.slot = slot;
     atomic_store_explicit(&slot->borrowers, 1, memory_order_relaxed);
     atomic_store_explicit(&slot->issuance_closed, false, memory_order_release);
@@ -391,7 +411,8 @@ static void start(service_state *service, size_t index, const service_request *r
         error = (no_error){NO_ERROR_UNAVAILABLE, errno, 11};
     } else if (policy) {
         no_validated_spec spec = {policy->executable, policy->cwd, argv, policy->env, argc, policy->envc,
-            policy->payload_uid, policy->payload_gid, nested ? capability : NULL};
+            policy->payload_uid, policy->payload_gid, nested ? capability : NULL,
+            nested ? service->policy->socket_gid : 0};
         no_submit_result result = submit(service, lease, request, &spec, &ticket, &error);
         status = result == NO_ACCEPTED ? STATUS_OK : result == NO_EXISTING ? STATUS_EXISTING : status_for(error.kind);
         if (result == NO_ACCEPTED) issue_nested_grant(service, policy, ticket, nested ? capability : NULL);
@@ -457,6 +478,23 @@ static void observe(service_state *service, size_t index, const service_request 
     transmit(&service->connections[index], &reply);
 }
 
+/* Extends a held, open, unexpired lease by one lifetime, never past its maximum age. */
+static void renew(service_state *service, size_t index, const service_request *request) {
+    service_lease *lease = held_lease(service, index, request->lease);
+    uint64_t now = owner_now();
+    if (lease && lease->phase == LEASE_OPEN && now >= lease->expires_ns)
+        service_close_lease(service, lease, CLOSE_EXPIRED);
+    service_status status = !admitting(service) ? STATUS_UNAVAILABLE : !lease ? STATUS_REJECTED :
+        lease->phase != LEASE_OPEN ? STATUS_CLOSED : STATUS_OK;
+    if (status == STATUS_OK) {
+        uint64_t limit = lease->opened_ns + service->policy->lease_max_age_ns;
+        uint64_t wanted = now + service->policy->lease_lifetime_ns;
+        lease->expires_ns = wanted < limit ? wanted : limit;
+    }
+    if (!send_reply(&service->connections[index], request, status, (no_error){0}, lease, (no_ticket){0}) &&
+        lease && lease->phase == LEASE_OPEN) service_close_lease(service, lease, CLOSE_REPLY_LOST);
+}
+
 static void close_requested(service_state *service, size_t index, const service_request *request) {
     service_lease *lease = held_lease(service, index, request->lease);
     service_status status = !lease ? STATUS_REJECTED : lease->phase == LEASE_OPEN ? STATUS_OK : STATUS_CLOSED;
@@ -508,6 +546,7 @@ static void dispatch(service_state *service, size_t index) {
     else if (request.opcode == OP_OPEN_CHILD) open_child(service, index, &request);
     else if (request.opcode == OP_START) start(service, index, &request);
     else if (request.opcode == OP_CLOSE) close_requested(service, index, &request);
+    else if (request.opcode == OP_RENEW) renew(service, index, &request);
     else if (request.opcode == OP_WRITE || request.opcode == OP_READ) relay(service, index, &request);
     else if (request.opcode == OP_OBSERVE) observe(service, index, &request);
     else send_reply(connection, &request, STATUS_MALFORMED, (no_error){0}, NULL, (no_ticket){0});
@@ -577,11 +616,23 @@ static void accept_connection(service_state *service) {
 /* Admission ends when the core closed it, the guardian died, or every lease
  * position of the epoch is spent with none open. The caller then drains and the
  * guardian grants a fresh epoch to a fresh service. */
+/* No new START can succeed: every record slot is used, every lease position is spent,
+ * or the client has spent its quota. */
+static bool epoch_spent(service_state *service) {
+    if (service->lease_count == SERVICE_LEASE_LIMIT || (service->runtime && owner_records_full(service->runtime)))
+        return true;
+    return positions_used(service, service->policy->clients[0].uid) >= service->policy->client_lease_quota;
+}
+
 static bool admission_ended(service_state *service) {
     bool guardian_gone = service->guardian_peer.pidfd.state == FD_OWNED && !peer_alive(&service->guardian_peer);
     if (guardian_gone || (service->runtime && !owner_admission_open(service->runtime))) return true;
-    if (service->lease_count < SERVICE_LEASE_LIMIT) return false;
+    if (!epoch_spent(service)) return false;
+    /* Spent and idle: drain so the guardian grants a fresh epoch. An open lease keeps it, and
+     * so does an open connection, which may still be observing its helper settle. */
     for (size_t i = 0; i < service->lease_count; ++i) if (service->leases[i].phase == LEASE_OPEN) return false;
+    for (size_t i = 0; i < SERVICE_CONNECTION_LIMIT; ++i)
+        if (service->connections[i].phase == CONNECTION_OPEN) return false;
     return true;
 }
 

@@ -43,8 +43,9 @@ def test_request_and_reply_layouts_match_the_header():
 
 def test_opcodes_and_statuses_match_the_header():
     opcodes = _enum("OP_OPEN_TOP")
-    assert opcodes == ["OP_OPEN_TOP", "OP_OPEN_CHILD", "OP_START", "OP_CLOSE", "OP_WRITE", "OP_READ", "OP_OBSERVE"]
-    assert [getattr(wire, name) for name in opcodes] == list(range(1, 8))
+    assert opcodes == ["OP_OPEN_TOP", "OP_OPEN_CHILD", "OP_START", "OP_CLOSE", "OP_WRITE", "OP_READ", "OP_OBSERVE",
+                       "OP_RENEW"]
+    assert [getattr(wire, name) for name in opcodes] == list(range(1, 9))
     statuses = _enum("STATUS_OK")
     assert [getattr(wire, name) for name in statuses] == list(range(len(statuses)))
     assert f"#define SERVICE_DATA_BYTES {wire.DATA_BYTES}" in HEADER

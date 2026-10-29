@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-22；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-23；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -108,9 +108,19 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      not_configured。presence broker 目前只有 Windows 版本，nested grant 待 Linux presence 來源
      存在後接合。parent_watch、輸入 journal／lease 與本機 pipe 執行緒退場仍須接合。
      owner 服務原始碼依 2026-10-29 決定已進入 `native/owner_service/`（src、manifest 範本、build.sh、
-     tests 與兩個驗收執行器，不進 wheel），每個 client 帳號的 lease 配額已實作。仍缺：其他架構／
-     libc／核心的相容性驗證、安裝內容比對、實際已安裝主機的執行驗收，以及開啟正式閘門前的獨立審查；
-     不能匯入時下載或暗中部署服務。
+     tests 與兩個驗收執行器，不進 wheel），每個 client 帳號的 lease 配額已實作。
+     獨立審查（2026-10-29）的阻斷項已修（lease 續期、epoch 用盡後輪替、payload 專屬群組、服務
+     bounding set／NOROOT／no_new_privs），閘門仍關閉。審查剩餘項目（TODO）：
+     單一 epoch 內 lease／record 位置不能重用，長壽 helper 會讓已用盡的 epoch 拖延輪替並回 CAPACITY
+     （`native_service.c` `epoch_spent`，需世代計數的槽位重用）；payload 無 pids／memory 限制
+     （guardian 未啟用 controller，`guardian_epoch_linux.c`）；連線表 16 條為全機共用、無每 UID 上限，
+     nested 子 lease 計入共用的 payload 帳號配額；sticky 清理卡住時 drain 無期限（`service_main.c`、
+     `native_launch_linux.c` 的 scope_remove／scope_retire），guardian 端已改非阻塞轉交；START 回覆
+     遺失使 lease 以 REPLY_LOST 關閉時 client 無從得知 ticket，channel 正確維持未 retired 但無法收尾；
+     policy 未綁定 principal、nested 子 policy 的 payload 帳號未比對父 policy；綁定檔 stat 後依路徑開啟
+     （TOCTOU）且未檢查上層目錄與服務端 SO_PEERCRED；guardian 的 state／hierarchy 只檢查末端目錄。
+     另缺：其他架構／libc／核心的相容性驗證、安裝內容比對、實際已安裝主機的執行驗收，以及處理上列
+     項目後再一次獨立審查才能開啟正式閘門；不能匯入時下載或暗中部署服務。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、
      helper／半開交握回收與取消／停止生命週期，避免兩條實作各自接管相同原生資源。
    - 驗證相同實體桌面在不同 profile、資料庫、服務及 DAG 節點間仍只有一位輸入擁有者；
