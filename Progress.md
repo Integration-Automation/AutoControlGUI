@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-05；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-06；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -111,14 +111,12 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      tests 與兩個驗收執行器，不進 wheel），每個 client 帳號的 lease 配額已實作。
      獨立審查（2026-10-29）的阻斷項已修（lease 續期、epoch 用盡後輪替、payload 專屬群組、服務
      bounding set／NOROOT／no_new_privs），之後也補上每個 record 的 pids／memory 上限、每帳號連線上限、
-     綁定檔與端點的信任檢查、START 重送取回 ticket、nested 子 policy 帳號比對、guardian 路徑祖先檢查，
+     綁定檔與端點的信任檢查、START 重送取回 ticket、nested 子 policy 帳號比對、guardian 路徑祖先檢查、drain 期限，
      閘門仍關閉。
      審查剩餘項目（TODO）：
      單一 epoch 內 lease／record 位置不能重用，長壽 helper 會讓已用盡的 epoch 拖延輪替並回 CAPACITY
      （`native_service.c` `epoch_spent`，需世代計數的槽位重用）；nested 子 lease 計入 payload 帳號配額
-     （一個服務只服務一個 client，故只影響同一 client 的 nested 深度）；sticky 清理卡住時 drain 無期限
-     （`service_main.c`、`native_launch_linux.c` 的 scope_remove／scope_retire），guardian 端已改非阻塞
-     轉交。
+     （一個服務只服務一個 client，故只影響同一 client 的 nested 深度）。
      另缺：其他架構／libc／核心的相容性驗證、安裝內容比對、實際已安裝主機的執行驗收，以及處理上列
      項目後再一次獨立審查才能開啟正式閘門；不能匯入時下載或暗中部署服務。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、

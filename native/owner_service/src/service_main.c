@@ -18,6 +18,7 @@ enum {
 
 #define SERVICE_BOOTSTRAP_NS 5000000000ULL
 #define SERVICE_DRAIN_STEP_NS 1000000000ULL
+#define SERVICE_DRAIN_LIMIT_NS 30000000000ULL /* Records settle in milliseconds; 30 s is stuck. */
 
 extern const service_policy service_manifest;
 
@@ -28,13 +29,18 @@ static int report(const char *stage, no_error error, int code) {
     return code;
 }
 
-/* Drain retries while records still borrow scopes: pending keeps ownership, it
- * never abandons it. Only a proven-clean drain frees the service. */
+/* Drain retries while records still borrow scopes: pending keeps ownership in this
+ * process, it never frees what a worker still uses. Only a proven-clean drain frees the
+ * service. Past the limit the process exits without freeing: the kernel drops its
+ * descriptors, and the guardian, seeing it gone, kills and removes the whole epoch,
+ * stuck helpers included, then grants the next one. */
 static int drain(service_state *service) {
+    uint64_t limit = owner_now() + SERVICE_DRAIN_LIMIT_NS;
     for (;;) {
         service_result result = service_drain(service, (no_deadline){owner_now() + SERVICE_DRAIN_STEP_NS});
         if (result == SERVICE_CLEAN) return service_free(&service) ? EXIT_DRAINED : EXIT_STICKY;
         if (result == SERVICE_STICKY) return report("drain", service->first_error, EXIT_STICKY);
+        if (owner_now() >= limit) return report("drain deadline", service->first_error, EXIT_STICKY);
     }
 }
 

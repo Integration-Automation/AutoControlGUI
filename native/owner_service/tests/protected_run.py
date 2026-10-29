@@ -351,6 +351,32 @@ def scenario_rollover(steps):
     steps["epochs_after_stop"] = epochs()
 
 
+def scenario_service_crash(steps):
+    """The service dies mid-session, as a drain past its deadline exits: the live guardian
+    reclaims the whole epoch, helper and escaped descendant included, and serves the next."""
+    guardian = start_guardian()
+    epoch = epochs()[-1]
+    holder = client("hold")
+    steps["request"] = read_json(holder)
+    escaped = steps["request"].get("escaped")
+    processes = procs_under(f"{SUBTREE}/{epoch}")
+    payloads = [p for d, p in processes if os.path.basename(d) == "payload"]
+    service = [p for d, p in processes if os.path.basename(d).startswith("service-")]
+    os.kill(service[0], signal.SIGKILL)
+    limit = time.monotonic() + 20
+    while time.monotonic() < limit and (epoch in epochs() or not epochs()):
+        time.sleep(0.1)
+    steps["old_epoch_gone"] = epoch not in epochs()
+    steps["payload_gone"] = bool(payloads) and not any(pid_alive(p) for p in payloads)
+    steps["escaped_gone"] = isinstance(escaped, int) and escaped > 0 and not pid_alive(escaped)
+    holder.kill()
+    holder.wait()
+    steps["guardian_alive"] = guardian.poll() is None
+    steps["next_session"] = rollover_session()
+    steps["guardian_stop"] = stop_guardian(guardian)
+    steps["epochs_after_stop"] = epochs()
+
+
 def scenario_cold_recovery(steps):
     guardian = start_guardian()
     epoch = epochs()[-1]
@@ -473,6 +499,8 @@ def main():
         scenario_renewal(report["steps"]["renewal"])
         report["steps"]["rollover"] = {}
         scenario_rollover(report["steps"]["rollover"])
+        report["steps"]["service_crash"] = {}
+        scenario_service_crash(report["steps"]["service_crash"])
     except Exception as error:  # reason: cleanup must run and the failure must be reported, not lost
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
@@ -501,9 +529,10 @@ def expectations(result):
     race = result["steps"].get("race", {})
     renewal = result["steps"].get("renewal", {})
     rollover = result["steps"].get("rollover", {})
+    service_crash = result["steps"].get("service_crash", {})
     inspection = session.get("inspection", {})
     service, payload = inspection.get("service", [{}]), inspection.get("payload", [{}])
-    if "error" in result or not all((session, crash, siblings, nested, race, renewal, rollover)):
+    if "error" in result or not all((session, crash, siblings, nested, race, renewal, rollover, service_crash)):
         return {"completed": False}
     return {
         "protected_reply": session["request"].get("reply") == "pong",
@@ -549,6 +578,10 @@ def expectations(result):
         and all(s["retired"] for s in rollover["sessions"])
         and len({tuple(s["epochs"]) for s in rollover["sessions"]}) >= 2 and rollover["guardian_alive"]
         and rollover["guardian_stop"][0] == 0 and not rollover["epochs_after_stop"],
+        "service_crash_reclaimed": service_crash["old_epoch_gone"] and service_crash["payload_gone"]
+        and service_crash["escaped_gone"] and service_crash["guardian_alive"]
+        and service_crash["next_session"]["retired"] and service_crash["guardian_stop"][0] == 0
+        and not service_crash["epochs_after_stop"],
         "payload_group_private": result["accounts"]["PAYLOAD_GID"] not in (
             result["accounts"]["CLIENT_GID"], result["accounts"]["SOCKET_GID"]),
         "nothing_left": not result["cleanup"]["leftovers"] and not result["cleanup"]["subtree_exists"]
