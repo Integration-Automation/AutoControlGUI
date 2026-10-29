@@ -58,6 +58,8 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-18 | 2026-10-29 | Run the protected owner-service acceptance in WSL | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-17 | 2026-10-29 | Let the guardian verify client namespaces and hand over connections | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-16 | 2026-10-29 | Report helper containment in runtime status | #snapshot #agent #diagnostics | [2026-10-e](2026-10-e.md) |
 | U-20261029-15 | 2026-10-29 | Signal a POSIX helper group only while its leader still holds the ID | #snapshot #agent #reliability | [2026-10-e](2026-10-e.md) |
 | U-20261029-14 | 2026-10-29 | Let nested helpers open child leases with their delivered grant | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |

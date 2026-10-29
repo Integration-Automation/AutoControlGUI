@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-16；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-18；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -72,8 +72,10 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      須涵蓋建立執行緒回傳前 worker 已完成、建立失敗、記憶體配置失敗、失去通知及句柄重用。
      每個 nested helper 仍須獨立受保護子樹；關閉來源保留 broker 與 sibling，關閉父程序則等待
      所有後代啟動解決、子樹清空與精確目錄移除。mkdir 成功但 open 失敗仍須保有清理責任。
-     程序樹退場仍須核實 cgroup 權限隔離、禁止後代遷出、可信 peer 身分、native 啟動取消及
-     服務／guardian 崩潰復原；目前尚未建立可用 delegation，不能以 kill 成功或空樹讀值單獨結案。
+     stage150 已在 WSL distro 內以 root 佈建並執行受保護驗收（連續三次 13 項全過）：payload
+     帳號無能力且無法遷出、以 setsid／雙重 fork 逃離的後代仍被 cgroup 收回、guardian 與服務
+     崩潰後冷復原收回孤兒程序。仍須核實 native 啟動取消、受保護父程序下的 nested helper、
+     並行 session 與其他核心／發行版；單一 distro 的結果不代表所有部署。
      stage138 已於隔離 staging 實作 native_service（guardian 授權握手、逐封包 sender 驗證、
      lease 發行／關閉、scope owner 生命週期與 drain），但僅有 peer/lease 證據；正向 bootstrap
      未執行（此環境無服務擁有的 delegated cgroup2）。獨立審查的發現已全數回應（nested 授權、
@@ -81,18 +83,16 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      capability 經 worker 私有 bootstrap pipe（fd 4）只交付給該紀錄自己的子程序，並以 fixture
      驗證；受保護路徑「payload 發布後才交付」仍未實際執行。stage141 已加入 worker 擁有的應用程式中繼（fd 0／fd 1、各 64 KiB、
      OP_WRITE／OP_READ），以 fixture 子程序與閘門下的紀錄驗證；stage142 加入 OP_OBSERVE，並以
-     _Static_assert 固定 C 與 Python 兩側的封包配置。guardian 已有持久 journal（stage144）與
-     程序（stage145），但只驗證非特權下的拒絕與「未建立任何物件」的復原；委派建立、以服務帳號
-     啟動、授權交換、監看與已有內容 epoch 的冷復原都須 root 與已佈建的 cgroup 子樹才能執行，
-     尚未執行。正式入口維持不可用，
-     不能以本機契約斷言取代實際權限驗收。已決定（2026-10-29）：client namespace 改由 root guardian
-     擁有 listener、驗證後才把連線交給服務，服務不再自行比對；受保護驗收可在 WSL distro
-     `podman-webrunner-validation` 內佈建帳號與委派 cgroup 子樹執行，結束後移除。服務帳號以
-     guardian 給予的 ambient CAP_SETUID／SETGID／SETPCAP 執行核准的降權與 bounding set 移除。
-     TODO：上述 guardian 接管 listener 與 WSL 受保護驗收尚待實作與執行。DECIDE：每個 principal
-     的 lease 配額。
+     _Static_assert 固定 C 與 Python 兩側的封包配置。guardian 有持久 journal（stage144）與程序
+     （stage145）；stage149 改由 guardian 擁有 listener、驗證 client 的帳號與 namespace 後才把
+     連線交給服務（依 2026-10-29 決定）。stage150 依實測修正 cgroup 配置（委派者只能在共同祖先
+     的 cgroup.procs 可寫時搬移程序：epoch-N 為委派根、service-N 為 root 擁有的葉節點、records
+     為授權給服務的錨點），服務以 guardian 給予的 ambient CAP_SETUID／SETGID／SETPCAP 執行，並在
+     WSL 完成受保護端到端驗收（實際 client、受保護 payload、RETIRED 回報、未列帳號被拒、冷復原）。
+     正式入口在安裝版本仍維持關閉，開啟前仍須獨立審查；僅 `NO_PROTECTED_ACCEPTANCE` 驗收建置
+     開啟。DECIDE：每個 principal 的 lease 配額。
      位置：`.worktrees/agent-tools/stage138/`（todo.md、review.md）、`stage139/`、`stage141/`
-     至 `stage146/`。
+     至 `stage150/`。
      OwnedChannel 的 close 已不再等待 request 鎖，另一執行緒可中止等待中的請求，close 開始後
      不再交付任何回覆（含已排入佇列者）。`helper_owner_linux.py` 以相同介面經 owner 服務運作
      （每個 channel 一條連線與 lease、OPEN／START 以固定 nonce／request ID 重送、依 nonce
