@@ -234,6 +234,14 @@ def _gid_taken(value):
         return False
 
 
+def _closed_off(path):
+    try:
+        status = os.lstat(path)
+    except OSError:
+        return False
+    return status.st_uid == 0 and status.st_gid == 0 and (status.st_mode & 0o7777) == 0
+
+
 def _shm_exists(shmid):
     with open("/proc/sysvipc/shm") as handle:
         return any(line.split()[1] == str(shmid) for line in handle.readlines()[1:])
@@ -294,9 +302,11 @@ def scenario_session(steps):
     holder.stdin.write("leftovers\n")
     holder.stdin.flush()
     steps["leftovers"] = read_json(holder)
-    left = steps["leftovers"].get("reply") or ["", -1, ""]
+    left = steps["leftovers"].get("reply") or ["", -1, "", "", ""]
     steps["leftovers_present"] = os.path.exists(left[0]) and _shm_exists(left[1]) and os.path.exists(
-        left[2] + "/d" * 40 + "/bottom")
+        left[2] + "/d" * 40 + "/bottom") and os.path.isdir(left[3] + "/d" * 80)
+    if os.path.isdir(left[4]):
+        open(left[4] + "/foreign", "w").close()  # Another ID wrote into the helper's directory.
     pids = steps["inspection"]["payload_pids"]
     escaped = steps["request"].get("escaped")
     steps["escaped_in_payload_cgroup"] = escaped_in_payload(escaped, epoch)
@@ -309,12 +319,20 @@ def scenario_session(steps):
     steps["guardian_stop"] = stop_guardian(guardian)
     steps["epochs_after_stop"] = epochs()
     steps["endpoint_after_stop"] = os.path.exists(ENDPOINT)
-    steps["leftovers_after_stop"] = os.path.exists(left[0]) or _shm_exists(left[1]) or os.path.exists(left[2])
+    # A stop purges nothing: the next start purges every slice before it serves.
+    steps["left"] = left
 
 
-def scenario_siblings(steps):
-    """Two clients, two leases, two payloads: closing one leaves the other serving."""
+def scenario_siblings(steps, left=None):
+    """Two clients, two leases, two payloads: closing one leaves the other serving. Its start
+    purged what the session's helper left; what could not be removed is closed off: root's,
+    mode 0, unreachable to every payload ID."""
     guardian = start_guardian()
+    left = left or ["", -1, "", "", ""]
+    steps["leftovers_after_start"] = os.path.exists(left[0]) or _shm_exists(left[1]) or os.path.exists(left[2])
+    steps["neutralised"] = [_closed_off(left[3]), _closed_off(left[4])]
+    for path in (left[3], left[4]):
+        shutil.rmtree(path, ignore_errors=True)
     first, second = client("hold"), client("hold")
     steps["first"], steps["second"] = read_json(first), read_json(second)
     epoch = epochs()[-1]
@@ -396,22 +414,30 @@ def scenario_renewal(steps):
     steps["epochs_after_stop"] = epochs()
 
 
-def children_of(pid):
-    """Every service child of `pid`, zombies included: a zombie stays a child, and keeps its
-    name, until it is reaped. Purge children are short-lived forks of the guardian itself."""
+def _all_children(pid):
     kids = []
     for task in os.listdir(f"/proc/{pid}/task"):
         with open(f"/proc/{pid}/task/{task}/children") as handle:
             kids += [int(value) for value in handle.read().split()]
-    named = []
-    for kid in kids:
-        try:
-            with open(f"/proc/{kid}/comm") as handle:
-                if handle.read().strip() == "service_main":
-                    named.append(kid)
-        except OSError:
-            pass
-    return named
+    return kids
+
+
+def _comm(pid):
+    try:
+        with open(f"/proc/{pid}/comm") as handle:
+            return handle.read().strip()
+    except OSError:
+        return ""
+
+
+def children_of(pid):
+    """Every child of `pid`, zombies included: a zombie stays a child until it is reaped.
+    Purge children (forks of the guardian) are short-lived: waited out first, so any child
+    left over, purge or service, counts."""
+    limit = time.monotonic() + 30
+    while time.monotonic() < limit and any(_comm(kid) != "service_main" for kid in _all_children(pid)):
+        time.sleep(0.1)
+    return _all_children(pid)
 
 
 def rollover_session():
@@ -579,17 +605,24 @@ def scenario_triple_overlap(steps):
     steps["h2_uids"] = payload_uids(second)
     steps["fill_second"] = [rollover_session() for _ in range(7)]      # E2 spent around H2: retires.
     steps["third"] = rollover_session()                                # Lands in E3.
+    third = epochs()[-1]
+    h3 = client("hold")
+    steps["h3"] = read_json(h3)
+    steps["h3_uids"] = payload_uids(third)
+    steps["fill_third"] = [rollover_session() for _ in range(6)]       # E3 spent around H3: retires.
+    steps["fourth"] = rollover_session()                               # Lands in E4: all four slices.
     steps["epochs_held"] = epochs()
-    for holder in (h1, h2):
+    holders = (h1, h2, h3)
+    for holder in holders:
         holder.stdin.write("ping\n")
         holder.stdin.flush()
-    steps["pings"] = [read_json(h1), read_json(h2)]
-    for holder in (h1, h2):
+    steps["pings"] = [read_json(holder) for holder in holders]
+    for holder in holders:
         holder.stdin.write("close\n")
         holder.stdin.flush()
-    steps["closes"] = [read_json(h1), read_json(h2)]
-    h1.wait(timeout=30)
-    h2.wait(timeout=30)
+    steps["closes"] = [read_json(holder) for holder in holders]
+    for holder in holders:
+        holder.wait(timeout=30)
     limit = time.monotonic() + 20
     while len(epochs()) > 1 and time.monotonic() < limit:
         time.sleep(0.1)
@@ -757,7 +790,7 @@ def main():
         report["steps"]["session"] = {}
         scenario_session(report["steps"]["session"])
         report["steps"]["siblings"] = {}
-        scenario_siblings(report["steps"]["siblings"])
+        scenario_siblings(report["steps"]["siblings"], report["steps"]["session"].get("left"))
         report["steps"]["nested"] = {}
         scenario_nested(report["steps"]["nested"])
         report["steps"]["race"] = {}
@@ -853,7 +886,12 @@ def expectations(result):
         "payload_umask_private": session["umask"].get("reply") == 0o077,
         # A file in /tmp and a SysV segment a helper left exist while it runs and are gone
         # once its epoch is reclaimed, before its ID can be handed out again.
-        "payload_leftovers_purged": session["leftovers_present"] and not session["leftovers_after_stop"],
+        "payload_leftovers_purged": session["leftovers_present"] and not siblings["leftovers_after_start"],
+        # An unremovable leftover (another ID wrote into it; deeper than the walk) is closed
+        # off rather than tainting the slice: the guardian stops cleanly and the next
+        # scenario's guardian starts on a clean purge.
+        "unremovable_leftovers_neutralised": siblings["neutralised"] == [True, True]
+        and session["guardian_stop"][0] == 0 and siblings["guardian_stop"][0] == 0,
         "epoch_limits_set": session["epoch_limits"] == {"pids.max": str(32 * 8), "memory.max": str(8 * (128 << 20))},
         # The payload, its escaped descendant and the fork attempts share 32 pids.
         "fork_bounded": isinstance(session["spawn"].get("reply"), int) and 0 < session["spawn"]["reply"] < 32,
@@ -915,11 +953,13 @@ def expectations(result):
         and second["h1_close"].get("retired") is True and second["h3_close"].get("retired") is True
         and len(second["guardian_children"]) == 1 and second["guardian_stop"][0] == 0
         and not second["epochs_after_stop"],
-        # Three epochs at once: two retiring around their helpers, one serving, three slices.
-        "triple_overlap": len(triple["epochs_held"]) == 3
-        and len({slice_of(triple["h1_uids"]), slice_of(triple["h2_uids"]), slice_of(triple["third"].get("uids"))}
-                - {None}) == 3
-        and all(s["retired"] for s in triple["fill_first"] + triple["fill_second"]) and triple["third"]["retired"]
+        # Four epochs at once at the default limit: three retiring around their helpers, one
+        # serving, every slice in use.
+        "four_epochs_at_once": len(triple["epochs_held"]) == 4
+        and len({slice_of(triple["h1_uids"]), slice_of(triple["h2_uids"]), slice_of(triple["h3_uids"]),
+                 slice_of(triple["fourth"].get("uids"))} - {None}) == 4
+        and all(s["retired"] for s in triple["fill_first"] + triple["fill_second"] + triple["fill_third"])
+        and triple["third"]["retired"] and triple["fourth"]["retired"]
         and all(p.get("reply") == "pong" for p in triple["pings"])
         and all(c.get("retired") is True for c in triple["closes"])
         and len(triple["guardian_children"]) == 1 and triple["guardian_stop"][0] == 0

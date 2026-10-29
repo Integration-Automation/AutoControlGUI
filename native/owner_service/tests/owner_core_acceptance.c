@@ -499,7 +499,20 @@ static void leave_leftovers(char *result, size_t size) {
         level = next;
     }
     if (level >= 0) { close(openat(level, "bottom", O_CREAT | O_WRONLY, 0600)); close(level); }
-    snprintf(result, size, "[\"%s\", %d, \"%s\"]", file >= 0 ? path : "", segment, deep);
+    /* Deeper than the purge walks: it must close the chain off instead. */
+    char deeper[] = "/tmp/autocontrol-deeper-XXXXXX";
+    level = mkdtemp(deeper) ? open(deeper, O_RDONLY | O_DIRECTORY) : -1;
+    for (int i = 0; level >= 0 && i < 80; ++i) {
+        int next = mkdirat(level, "d", 0700) == 0 ? openat(level, "d", O_RDONLY | O_DIRECTORY) : -1;
+        close(level);
+        level = next;
+    }
+    if (level >= 0) close(level);
+    /* World-writable: another ID writes into it, so it cannot be removed. */
+    char shared[] = "/tmp/autocontrol-shared-XXXXXX";
+    if (mkdtemp(shared)) chmod(shared, 0777);
+    snprintf(result, size, "[\"%s\", %d, \"%s\", \"%s\", \"%s\"]", file >= 0 ? path : "", segment, deep,
+             deeper, shared);
 }
 
 /* Forks up to 64 idle children, counts how many the kernel allowed, then reaps them. */
@@ -532,7 +545,7 @@ static int rpc_lines(void) {
         if (!end || end - id > 64) return 50;
         if (strstr(line, "\"operation\": \"exit\"")) return 37;
         if (strstr(line, "\"operation\": \"hang\"")) continue;
-        char reply[192], result[96] = "\"pong\"";
+        char reply[320], result[224] = "\"pong\"";
         if (strstr(line, "\"operation\": \"escape\"")) snprintf(result, sizeof(result), "%d", (int)escape_descendant());
         if (strstr(line, "\"operation\": \"spawn\"")) snprintf(result, sizeof(result), "%d", spawn_children());
         if (strstr(line, "\"operation\": \"leftovers\"")) leave_leftovers(result, sizeof(result));

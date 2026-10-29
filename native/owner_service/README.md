@@ -66,8 +66,17 @@ the gate.
   itself, never one another running epoch uses, and sends it in the grant, so up to three
   spent epochs can retire beside the current one; a further retirement waits for a slot.
   Each slice is purged in a child process after its epoch ends and is not handed out
-  again until that purge finishes; a purge that leaves anything behind taints the slice
-  until the guardian restarts. Before building the filter, the guardian refuses a manifest the service would
+  again until that purge finishes; meanwhile, if no other slice is free, there is no
+  current epoch and new clients wait in the listener's backlog. A payload-owned object
+  the purge cannot remove (another ID wrote into it, or it lies deeper than the 64-level
+  walk) is closed off instead: owned by root with mode 0. Only an object that can be
+  neither removed nor closed off taints its slice, and startup purges each slice once,
+  after the previous run's epochs are dead, so one stubborn leftover never stops the
+  guardian. A stop kills every epoch and abandons running purges; the next start purges.
+  The manifest may list more world-writable roots (`purge_roots`, for example
+  /var/crash) and cap every running epoch together (`subtree_pids_max`,
+  `subtree_memory_max`); up to four epochs run at once, so either set those or cap the
+  subtree's parent. Before building the filter, the guardian refuses a manifest the service would
   refuse, or whose payload IDs are below 1000 or known to the host's user and group
   databases. Payloads cannot use kernel keyrings. With CAP_SETUID and CAP_SETGID the
   service can still forge the UID or GID in SCM_CREDENTIALS; this project authenticates by

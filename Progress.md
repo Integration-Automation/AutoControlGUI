@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-16；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-17；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -120,8 +120,12 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      第三次獨立審查（2026-10-30）的 MAJOR-A 與 B、C、D、E(1)(2)、F、H、J、K 已處理。
      清除已移到 purge 子程序，payload 範圍分 4 份、最多 3 個 epoch 同時退休，遠端 helper 已在服務下
      完成交握（與實體裝置的通訊仍屬暫緩的實體裝置驗收）。
-     TODO：其他架構／libc／核心的相容性驗證、安裝內容比對、實際已安裝主機的執行驗收，以及第四次
-     獨立審查才能開啟正式閘門；不能匯入時下載或暗中部署服務。
+     第四次獨立審查（2026-10-30）的 MAJOR-1 與 MINOR-2～6、NOTE-7～12 已處理。
+     TODO：完整受保護驗收中 revoke_racing_launch 偶有一輪回報 STICKY_UNKNOWN（start CHILD_CREATED、
+     wait 未觀察到；約每 5 次完整執行 1 次，單獨重跑 154 輪與加負載 70 輪皆未重現；診斷記錄在
+     `.worktrees/agent-tools/stage187-protected.json`），根因未明；其他架構／libc／核心的相容性驗證、
+     安裝內容比對、實際已安裝主機的執行驗收，以及第五次獨立審查才能開啟正式閘門；不能匯入時下載
+     或暗中部署服務。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、
      helper／半開交握回收與取消／停止生命週期，避免兩條實作各自接管相同原生資源。
    - 驗證相同實體桌面在不同 profile、資料庫、服務及 DAG 節點間仍只有一位輸入擁有者；

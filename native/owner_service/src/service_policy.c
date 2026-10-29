@@ -124,12 +124,12 @@ bool service_fresh_capability(const service_launch_policy *policy, uint8_t *capa
     return !*wanted || service_random(capability, SERVICE_CAPABILITY_BYTES);
 }
 
-/* Every ID of a payload range counts as one account: helpers run as many IDs, and
- * together they must not take more than one account's share from the client. */
+/* Every payload ID, of every range, counts as one account: helpers run as many IDs,
+ * and together they must not take more than one account's share from the client. */
 static uint32_t account_key(const service_state *service, uint32_t uid) {
     for (size_t i = 0; i < service->policy->policy_count; ++i) {
         uint32_t base = service->policy->policies[i].payload_uid;
-        if (uid >= base && uid - base < SERVICE_PAYLOAD_IDS) return base;
+        if (uid >= base && uid - base < SERVICE_PAYLOAD_IDS) return UINT32_MAX; /* Every range, one account. */
     }
     return uid;
 }

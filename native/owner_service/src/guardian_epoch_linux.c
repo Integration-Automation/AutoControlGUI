@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <signal.h>
+#include <sys/prctl.h>
 #include <sys/statfs.h>
 #include <sys/wait.h>
 #include <sys/syscall.h>
@@ -156,6 +158,28 @@ static void taint(guardian_state *state, int slice) {
     for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) if (slice < 0 || slice == s) state->tainted[s] = true;
 }
 
+void guardian_purge_abandon(guardian_state *state) {
+    for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) {
+        if (state->purging[s] < 0) continue;
+        syscall(SYS_pidfd_send_signal, state->purging[s], SIGKILL, NULL, 0);
+        siginfo_t info;
+        while (waitid(P_PIDFD, (id_t)state->purging[s], &info, WEXITED) < 0 && errno == EINTR) continue;
+        close(state->purging[s]);
+        state->purging[s] = -1;
+    }
+}
+
+/* The purge child holds nothing of the guardian's (no journal lock, listener or channel),
+ * dies with it, and answers signals again. */
+static void purge_child(const guardian_state *state, int slice) {
+    syscall(SYS_close_range, 3U, ~0U, 0);
+    prctl(PR_SET_PDEATHSIG, SIGKILL);
+    sigset_t none;
+    sigemptyset(&none);
+    sigprocmask(SIG_SETMASK, &none, NULL);
+    _exit(guardian_purge_payloads(state->manifest, slice) ? 0 : 1);
+}
+
 void guardian_purge_reap(guardian_state *state, int slice) {
     if (state->purging[slice] < 0) return;
     siginfo_t info;
@@ -175,7 +199,7 @@ static void purge(guardian_state *state, int slice) {
     if (slice >= 0 && state->purge_async) {
         guardian_purge_reap(state, slice);
         pid_t child = fork();
-        if (child == 0) _exit(guardian_purge_payloads(state->manifest->service, slice) ? 0 : 1);
+        if (child == 0) purge_child(state, slice);
         int pidfd = child > 0 ? (int)syscall(SYS_pidfd_open, child, 0) : -1;
         if (pidfd >= 0) { state->purging[slice] = pidfd; return; }
         if (child > 0) {
@@ -185,12 +209,12 @@ static void purge(guardian_state *state, int slice) {
             return;
         }
     }
-    if (!guardian_purge_payloads(state->manifest->service, slice)) taint(state, slice);
+    if (!guardian_purge_payloads(state->manifest, slice)) taint(state, slice);
 }
 
 guardian_result guardian_reclaim_retired(guardian_state *state, const char *epoch, int slice) {
     if (!reclaim_branch(state, epoch)) return refuse(state, 24, errno, GUARDIAN_UNRESOLVED);
-    purge(state, slice);
+    if (slice != GUARDIAN_PURGE_NONE) purge(state, slice);
     return GUARDIAN_READY;
 }
 
@@ -216,7 +240,6 @@ static guardian_result sweep_strays(guardian_state *state) {
                                                                                     GUARDIAN_UNRESOLVED); }
     }
     closedir(listing);
-    purge(state, -1);
     return GUARDIAN_READY;
 }
 
@@ -258,6 +281,8 @@ static const char LIMITED[] = "+pids +memory";
  * They hold every helper of the epoch together, so memory a killed helper left charged
  * (tmpfs pages) adds up against them rather than escaping every limit. */
 static int limit_records(int records, const service_policy *service) {
+    /* A compromised service could otherwise nest cgroups past what reclaim removes. */
+    if (!write_control(records, "cgroup.max.depth", "32")) return errno;
     if (!service) return 0;
     char value[24];
     snprintf(value, sizeof(value), "%llu", (unsigned long long)(service->record_pids_max * service->record_capacity));
@@ -273,6 +298,15 @@ static int create_branches(guardian_state *state) {
     const gj_record *current = &state->journal.current;
     /* ENOENT here means the subtree's parent has not enabled pids and memory. */
     if (!write_control(state->subtree, "cgroup.subtree_control", LIMITED)) return errno;
+    char cap[24];
+    if (state->manifest->subtree_pids_max) {
+        snprintf(cap, sizeof(cap), "%llu", (unsigned long long)state->manifest->subtree_pids_max);
+        if (!write_control(state->subtree, "pids.max", cap)) return errno;
+    }
+    if (state->manifest->subtree_memory_max) {
+        snprintf(cap, sizeof(cap), "%llu", (unsigned long long)state->manifest->subtree_memory_max);
+        if (!write_control(state->subtree, "memory.max", cap)) return errno;
+    }
     if (mkdirat(state->subtree, current->epoch, 0755) != 0) return errno;
     int epoch = openat(state->subtree, current->epoch, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
     if (epoch < 0) return errno;
@@ -304,7 +338,11 @@ guardian_result guardian_prepare(guardian_state *state, const guardian_manifest 
     if (result != GUARDIAN_READY) return result;
     result = sweep_strays(state);
     if (result != GUARDIAN_READY) return result;
-    result = guardian_recover(state, -1); /* Nothing of an earlier run is alive any more. */
+    result = guardian_recover(state, GUARDIAN_PURGE_NONE);
+    if (result != GUARDIAN_READY) return result;
+    /* Nothing of an earlier run is alive any more: each slice is purged once, here, and only
+     * a slice whose leftovers can be neither removed nor neutralised is tainted. */
+    for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) purge(state, s);
     if (result != GUARDIAN_READY) return result;
     return guardian_next_epoch(state);
 }

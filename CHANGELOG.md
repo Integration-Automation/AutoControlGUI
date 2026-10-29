@@ -60,6 +60,10 @@ owner-service endpoint now raises `AgentTaskError`; only a connection closed aft
 Payload ranges now hold four 32-ID slices (128 IDs): `guardian_grant.payload_half` becomes `payload_slice`,
 up to three spent epochs retire beside the current one, and each slice is purged in a child process
 before it is handed out again.
+`guardian_purge_payloads` takes the guardian manifest; `guardian_manifest` adds `purge_roots`,
+`subtree_pids_max` and `subtree_memory_max`. A leftover the purge cannot remove is closed off (root, mode 0)
+instead of tainting its slice, startup purges each slice once after the previous run's epochs are dead,
+and a stop abandons running purges instead of waiting for them. The example payload range moves to 50000.
 
 ## Unreleased: helper containment in runtime status
 

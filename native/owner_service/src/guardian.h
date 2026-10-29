@@ -30,6 +30,13 @@ typedef struct {
     /* The service compiled from the same manifest; its per-helper limits times its record
      * capacity bound the whole epoch. NULL sets no epoch-wide limit (tests). */
     const service_policy *service;
+    /* World-writable directories to purge besides /tmp, /var/tmp, /dev/shm, /dev/mqueue and
+     * /run/lock, for example /var/crash on Ubuntu; may be NULL. */
+    const char *const *purge_roots;
+    size_t purge_root_count;
+    /* Optional caps on the whole subtree, every running epoch together; 0 leaves it
+     * uncapped (then the administrator caps the subtree's parent instead). */
+    uint64_t subtree_pids_max, subtree_memory_max;
 } guardian_manifest;
 
 typedef enum { GUARDIAN_READY, GUARDIAN_REFUSED, GUARDIAN_UNRESOLVED } guardian_result;
@@ -57,7 +64,10 @@ bool guardian_confine_identities(const service_policy *policy, uint32_t service_
  * true when nothing they own remains. `slice` below SERVICE_PAYLOAD_SLICES is one epoch's
  * slice of every range, -1 all. Only once nothing runs as those IDs: after their epoch is
  * killed. */
-bool guardian_purge_payloads(const service_policy *service, int slice);
+bool guardian_purge_payloads(const guardian_manifest *manifest, int slice);
+/* Ends every running purge child without waiting for its work (shutdown: the next start
+ * purges everything before it serves). */
+void guardian_purge_abandon(guardian_state *state);
 /* Waits for `slice`'s purge child, taints the slice if it left anything, frees the slot. */
 void guardian_purge_reap(guardian_state *state, int slice);
 #define GUARDIAN_PURGE_NONE (-2) /* guardian_recover: the epoch never ran, nothing to purge. */

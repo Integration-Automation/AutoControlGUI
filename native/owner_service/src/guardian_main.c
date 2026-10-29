@@ -302,19 +302,19 @@ static bool slice_in_use(const running_set *set, uint32_t slice) {
     return false;
 }
 
-/* A slice no running epoch uses, not tainted and not being purged. When only purges stand
- * in the way, waits for one. False when every slice is in use or tainted. */
-static bool pick_slice(guardian_state *state, const running_set *set, uint32_t *slice) {
-    for (;;) {
-        int purging = -1;
-        for (uint32_t s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) {
-            if (state->tainted[s] || slice_in_use(set, s)) continue;
-            if (state->purging[s] < 0) { *slice = s; return true; }
-            purging = (int)s;
-        }
-        if (purging < 0) return false;
-        guardian_purge_reap(state, purging);
+typedef enum { SLICE_READY, SLICE_WAIT, SLICE_NONE } slice_choice;
+
+/* A slice no running epoch uses, not tainted and not being purged. Never waits: WAIT means
+ * a purge or a retiring epoch still holds the only usable ones, NONE that every slice not
+ * in use is tainted. */
+static slice_choice pick_slice(const guardian_state *state, const running_set *set, uint32_t *slice) {
+    bool usable = false;
+    for (uint32_t s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) {
+        if (state->tainted[s]) continue;
+        usable = true;
+        if (!slice_in_use(set, s) && state->purging[s] < 0) { *slice = s; return SLICE_READY; }
     }
+    return usable ? SLICE_WAIT : SLICE_NONE;
 }
 
 /* Launches the journal's current epoch: service, grant with its slice, then ACTIVE. */
@@ -371,7 +371,7 @@ static bool hand_over(guardian_state *state, running_set *set, bool *done) {
     *done = false;
     running_epoch *slot = free_retiring_slot(set);
     uint32_t slice;
-    if (!slot || !pick_slice(state, set, &slice)) return true;
+    if (!slot || pick_slice(state, set, &slice) != SLICE_READY) return true;
     *slot = set->current;
     running_init(&set->current);
     *done = true;
@@ -382,9 +382,20 @@ static bool hand_over(guardian_state *state, running_set *set, bool *done) {
 
 typedef enum { LOOP_STOPPED, LOOP_REFUSED, LOOP_UNRESOLVED } loop_result;
 
-/* The current epoch ended on its own: reap it, reclaim it and start the next, on a slice
- * no retiring epoch uses. */
-static loop_result replace_current(guardian_state *state, running_set *set, int signals, bool *stop) {
+/* Starts the planned epoch once a slice is free. While a purge or a retiring epoch holds
+ * the slices, there is no current epoch: clients wait in the listener's backlog. */
+static loop_result start_when_free(guardian_state *state, running_set *set, bool *waiting) {
+    uint32_t slice;
+    slice_choice choice = pick_slice(state, set, &slice);
+    *waiting = choice == SLICE_WAIT;
+    if (choice == SLICE_NONE) return LOOP_UNRESOLVED; /* Every slice not in use is tainted. */
+    if (choice == SLICE_WAIT) return LOOP_STOPPED;
+    return start_epoch(state, &set->current, slice) ? LOOP_STOPPED : LOOP_REFUSED;
+}
+
+/* The current epoch ended on its own: reap it, reclaim it, plan the next and start it as
+ * soon as a slice is free. */
+static loop_result replace_current(guardian_state *state, running_set *set, int signals, bool *stop, bool *waiting) {
     uint64_t started = set->current.started_ns;
     uint32_t ended = set->current.slice;
     running_close(&set->current);
@@ -394,9 +405,7 @@ static loop_result replace_current(guardian_state *state, running_set *set, int 
     if (quick_ends && back_off(signals, quick_ends)) { *stop = true; return LOOP_STOPPED; }
     guardian_result next = guardian_next_epoch(state);
     if (next != GUARDIAN_READY) return next == GUARDIAN_REFUSED ? LOOP_REFUSED : LOOP_UNRESOLVED;
-    uint32_t slice;
-    if (!pick_slice(state, set, &slice)) return LOOP_UNRESOLVED; /* Every free slice is tainted. */
-    return start_epoch(state, &set->current, slice) ? LOOP_STOPPED : LOOP_REFUSED;
+    return start_when_free(state, set, waiting);
 }
 
 enum { EVENT_SIGNALS, EVENT_LISTENER, EVENT_CURRENT, EVENT_CHANNEL, EVENT_RETIRING,
@@ -420,13 +429,16 @@ static bool settle_finished(guardian_state *state, running_set *set, const struc
  * when their services end and reaps purges, until asked to stop or something fails. */
 static loop_result supervise(guardian_state *state, int signals, int listener, running_set *set) {
     /* GRANT_RETIRING arrives once: while no retiring slot or clean slice is free it waits
-     * here, and is acted on as soon as one is. */
-    bool retire_pending = false;
+     * here, and is acted on as soon as one is. `waiting`: the next epoch is planned but no
+     * slice was free; it starts once a purge or a retiring epoch ends. */
+    bool retire_pending = false, waiting = false;
     for (;;) {
+        bool live = running_live(&set->current);
         struct pollfd events[EVENT_COUNT] = {
-            [EVENT_SIGNALS] = {.fd = signals, .events = POLLIN}, [EVENT_LISTENER] = {.fd = listener, .events = POLLIN},
-            [EVENT_CURRENT] = {.fd = set->current.service.pidfd.number, .events = POLLIN},
-            [EVENT_CHANNEL] = {.fd = set->current.channel, .events = POLLIN}};
+            [EVENT_SIGNALS] = {.fd = signals, .events = POLLIN},
+            [EVENT_LISTENER] = {.fd = live ? listener : -1, .events = POLLIN},
+            [EVENT_CURRENT] = {.fd = live ? set->current.service.pidfd.number : -1, .events = POLLIN},
+            [EVENT_CHANNEL] = {.fd = live ? set->current.channel : -1, .events = POLLIN}};
         for (size_t i = 0; i < GUARDIAN_RETIRING_LIMIT; ++i)
             events[EVENT_RETIRING + i] = (struct pollfd){
                 .fd = running_live(&set->retiring[i]) ? set->retiring[i].service.pidfd.number : -1, .events = POLLIN};
@@ -435,6 +447,11 @@ static loop_result supervise(guardian_state *state, int signals, int listener, r
         if (poll(events, EVENT_COUNT, -1) < 0) { if (errno == EINTR) continue; return LOOP_REFUSED; }
         if (events[EVENT_SIGNALS].revents) return LOOP_STOPPED;
         if (!settle_finished(state, set, events)) return LOOP_UNRESOLVED;
+        if (waiting) {
+            loop_result started = start_when_free(state, set, &waiting);
+            if (started != LOOP_STOPPED) return started;
+            continue;
+        }
         bool ended = events[EVENT_CURRENT].revents != 0;
         uint16_t kind = 0;
         if (!ended && events[EVENT_CHANNEL].revents) ended = !service_frame(&set->current, &kind);
@@ -450,24 +467,24 @@ static loop_result supervise(guardian_state *state, int signals, int listener, r
         if (ended) {
             bool stop = false;
             retire_pending = false;
-            loop_result replaced = replace_current(state, set, signals, &stop);
+            loop_result replaced = replace_current(state, set, signals, &stop, &waiting);
             if (stop || replaced != LOOP_STOPPED) return replaced;
         }
     }
 }
 
-/* Reclaims every running epoch and waits for every purge before the guardian exits. */
+/* Kills and reclaims every running epoch first, then ends any purge without waiting: the
+ * next start purges every slice before it serves. */
 static guardian_result shut_down(guardian_state *state, running_set *set) {
-    state->purge_async = false;
-    for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) guardian_purge_reap(state, s);
     running_close(&set->current);
-    guardian_result recovered = guardian_recover(state, (int)set->current.slice);
+    guardian_result recovered = guardian_recover(state, GUARDIAN_PURGE_NONE);
     for (size_t i = 0; i < GUARDIAN_RETIRING_LIMIT; ++i) {
         if (!running_live(&set->retiring[i])) continue;
         running_close(&set->retiring[i]);
-        if (guardian_reclaim_retired(state, set->retiring[i].epoch, (int)set->retiring[i].slice) != GUARDIAN_READY)
+        if (guardian_reclaim_retired(state, set->retiring[i].epoch, GUARDIAN_PURGE_NONE) != GUARDIAN_READY)
             recovered = GUARDIAN_UNRESOLVED;
     }
+    guardian_purge_abandon(state);
     return recovered;
 }
 
@@ -499,7 +516,7 @@ int main(void) {
     if (listener < 0) { state.operation = 30; state.system_errno = errno; }
     else {
         uint32_t slice;
-        if (!pick_slice(&state, &set, &slice)) result = LOOP_UNRESOLVED;
+        if (pick_slice(&state, &set, &slice) != SLICE_READY) result = LOOP_UNRESOLVED;
         else if (start_epoch(&state, &set.current, slice)) result = supervise(&state, signals, listener, &set);
     }
     if (listener >= 0) {

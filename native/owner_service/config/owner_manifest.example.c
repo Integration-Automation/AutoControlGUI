@@ -9,14 +9,15 @@
  * account may open top-level leases. Helpers run as IDs from a payload range: each helper
  * gets PAYLOAD_UID + k and PAYLOAD_GID + k, for k below 128, so no two live helpers share
  * an account, even across retiring epochs and the current one. The range needs no
- * accounts, only 128 user and 128 group IDs nothing else uses (systemd keeps 61184-65519
- * for its own dynamic IDs; pick a range outside it, too).
+ * accounts, only 128 user and 128 group IDs at 1000 or above that nothing else uses: not
+ * systemd-homed's 60001-60513 nor systemd's dynamic 61184-65519, nor any site allocation.
+ * The guardian refuses to start if the host's user or group database knows any of them.
  * The socket group owns the listener and the client account is a supplementary member
  * of it; no helper ever is. Every client below is also named in the listener's ACL. */
 #define SERVICE_UID 990u
 #define SERVICE_GID 990u
-#define PAYLOAD_UID 60000u
-#define PAYLOAD_GID 60000u
+#define PAYLOAD_UID 50000u
+#define PAYLOAD_GID 50000u
 #define SOCKET_GID 992u
 #define CLIENT_UID 1000u
 #define CLIENT_GID 1000u
@@ -87,4 +88,9 @@ const guardian_manifest guardian_compiled_manifest = {
     .clients = clients,
     .client_count = sizeof(clients) / sizeof(clients[0]),
     .service = &service_manifest,
+    /* EDIT: any other world-writable directory helpers could write, e.g. "/var/crash". */
+    .purge_roots = NULL, .purge_root_count = 0,
+    /* EDIT: caps on every running epoch together (up to four run at once); 0 leaves them to
+     * the subtree's parent, e.g. a systemd slice with TasksMax and MemoryMax. */
+    .subtree_pids_max = 0, .subtree_memory_max = 0,
 };

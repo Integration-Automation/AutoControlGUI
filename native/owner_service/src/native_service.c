@@ -485,14 +485,15 @@ static void dispatch(service_state *service, size_t index) {
         close_connection(service, index, CLOSE_DISCONNECT);
         return;
     }
-    service_lease *touched = held_lease(service, index, request.lease);
-    if (touched && touched->phase == LEASE_OPEN) connection->active_ns = owner_now();
     if (!packet_authenticated(&packet, &connection->connector, 0)) {
         send_reply(connection, &request, STATUS_UNAUTHENTICATED, (no_error){0}, NULL, (no_ticket){0});
         if (!packet_release(&packet)) service->close_uncertain = true;
         close_connection(service, index, CLOSE_SENDER_MISMATCH);
         return;
     }
+    /* Only an authenticated frame on an open lease of this connection's own keeps it active. */
+    service_lease *touched = held_lease(service, index, request.lease);
+    if (touched && touched->phase == LEASE_OPEN) connection->active_ns = owner_now();
     if (packet.bytes != (ssize_t)sizeof(request) || request.magic != SERVICE_MAGIC ||
         request.version != SERVICE_VERSION) {
         send_reply(connection, &request, STATUS_MALFORMED, (no_error){0}, NULL, (no_ticket){0});
