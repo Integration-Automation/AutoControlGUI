@@ -102,12 +102,13 @@ static int move_into_payload(owner_record *record, pid_t child) {
 static void release_protected(owner_record *record, pid_t child, int pidfd) {
     owner_close_slot(record, &record->release_read);
     int error = move_into_payload(record, child);
-    if (!error && atomic_load(&record->revoked)) error = ECANCELED;
-    if (!error && write(record->release_write.number, "g", 1) != 1) error = errno;
-    if (error) {
-        owner_set_error(record, NO_ERROR_NATIVE_CONTRACT, error);
-        syscall(SYS_pidfd_send_signal, pidfd, SIGKILL, NULL, 0); /* It may still sit outside its cgroup. */
-    }
+    /* A revoke that lands here is the ordinary cancellation a launch must absorb, not a
+     * failure: the child dies unreleased and the record settles as any killed child does.
+     * Only a move or release that itself failed is an error the record must report. */
+    bool revoked = !error && atomic_load(&record->revoked);
+    if (!error && !revoked && write(record->release_write.number, "g", 1) != 1) error = errno;
+    if (error) owner_set_error(record, NO_ERROR_NATIVE_CONTRACT, error);
+    if (error || revoked) syscall(SYS_pidfd_send_signal, pidfd, SIGKILL, NULL, 0); /* May sit outside its cgroup. */
     owner_close_slot(record, &record->release_write); /* Unreleased, the child reads EOF and stops. */
 }
 
