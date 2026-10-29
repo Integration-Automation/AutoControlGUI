@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-07 | 2026-10-29 | Deliver the nested capability through the worker bootstrap pipe | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-06 | 2026-10-29 | Answer the independent review of the native service issuer | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-05 | 2026-10-29 | Implement the isolated native service issuer with peer and lease evidence | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-04 | 2026-10-29 | Review isolated native ownership without enabling production | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
