@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import posixpath
 import stat
 import sys
 from dataclasses import dataclass
@@ -44,6 +45,25 @@ def _trusted(status: os.stat_result) -> bool:
     return stat.S_ISREG(status.st_mode) and status.st_uid == 0 and not status.st_mode & 0o022
 
 
+def _trusted_ancestors(path: str) -> bool:
+    """Every directory above the binding is a real, root-owned directory nobody else may write.
+
+    A writable ancestor, sticky or not, would let another account swap a parent in.
+    """
+    directory = posixpath.dirname(path)
+    while True:
+        try:
+            status = os.lstat(directory)
+        except OSError:
+            return False
+        if not stat.S_ISDIR(status.st_mode) or status.st_uid != 0 or status.st_mode & 0o022:
+            return False
+        parent = posixpath.dirname(directory)
+        if parent == directory:
+            return True
+        directory = parent
+
+
 def _argv(value: Any) -> tuple[str, ...]:
     if not isinstance(value, list) or not value or not all(isinstance(part, str) and part for part in value):
         raise AgentTaskError("owner service binding row needs a non-empty argv of strings")
@@ -80,25 +100,33 @@ def _endpoint(value: Any) -> str:
     return value
 
 
-def _binding_document(path: str, status: os.stat_result) -> Any:
-    if not _trusted(status) or status.st_size > _BINDING_BYTES:
-        raise AgentTaskError("owner service binding must be a small root-owned file nobody else can write")
-    try:
-        with open(path, "rb") as handle:
+# No symlink at the leaf, no blocking on a FIFO put in its place, no descriptor leaked to a child.
+_BINDING_FLAGS = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0) | getattr(
+    os, "O_CLOEXEC", 0) | getattr(os, "O_BINARY", 0)
+
+
+def _binding_document(path: str, number: int) -> Any:
+    """Judge and read the one file that was opened, never the path a second time."""
+    with os.fdopen(number, "rb") as handle:
+        status = os.fstat(handle.fileno())
+        if not _trusted(status) or status.st_size > _BINDING_BYTES or not _trusted_ancestors(path):
+            raise AgentTaskError("owner service binding must be a small root-owned file nobody else can write, "
+                                 "in root-owned directories")
+        try:
             return json.loads(handle.read(_BINDING_BYTES + 1))
-    except (OSError, ValueError) as error:
-        raise AgentTaskError("owner service binding is not readable JSON") from error
+        except (OSError, ValueError) as error:
+            raise AgentTaskError("owner service binding is not readable JSON") from error
 
 
 def load_binding(path: str = BINDING_PATH) -> OwnerServiceBinding | None:
     """Read the host's binding; absent means none, anything untrusted or malformed refuses."""
     try:
-        status = os.stat(path)
+        number = os.open(path, _BINDING_FLAGS)
     except FileNotFoundError:
         return None
     except OSError as error:
         raise AgentTaskError(f"owner service binding is unreadable: {type(error).__name__}") from error
-    data = _binding_document(path, status)
+    data = _binding_document(path, number)
     if not isinstance(data, dict) or set(data) != {"endpoint", "policies"}:
         raise AgentTaskError("owner service binding holds exactly endpoint and policies")
     return OwnerServiceBinding(_endpoint(data["endpoint"]), _policy_rows(data["policies"]))

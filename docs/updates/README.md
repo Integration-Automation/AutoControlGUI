@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261030-03 | 2026-10-30 | Trust the owner-service binding and endpoint only from root | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-02 | 2026-10-30 | Cap each account's share of owner-service connections | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-01 | 2026-10-30 | Bound each owner-service helper's processes and memory | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261029-23 | 2026-10-29 | Fix the owner service blockers from independent review | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |

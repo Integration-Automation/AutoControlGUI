@@ -4,6 +4,7 @@ Usage: python3 -I e2e_client.py <service_e2e> <owner_core_acceptance> <repositor
 Prints one JSON object; exits 0 only when every expectation held.
 """
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -31,7 +32,7 @@ def outcome(function):
 
 
 # 1. Two round trips through socket, lease, START, relay and the helper; then close.
-first = OwnerServiceChannel(SeqpacketTransport(endpoint), TOP)
+first = OwnerServiceChannel(SeqpacketTransport(endpoint, peer_uid=os.getuid()), TOP)
 checks["round_trip"] = [first.request("ping", {"n": 1}, timeout=10), first.request("ping", {"n": 2}, timeout=10)]
 closed = outcome(first.close)
 # A direct fixture is not protected and never reports retirement: the client must refuse to claim it.
@@ -39,7 +40,7 @@ checks["unprotected_close"] = closed
 checks["unprotected_retired"] = first.retired
 
 # 2. A request waiting for a reply that never comes is stopped by close from another thread.
-second = OwnerServiceChannel(SeqpacketTransport(endpoint), TOP)
+second = OwnerServiceChannel(SeqpacketTransport(endpoint, peer_uid=os.getuid()), TOP)
 second.request("ping", {}, timeout=10)
 waiting = {}
 
@@ -58,12 +59,12 @@ checks["close_seconds"] = round(time.monotonic() - started, 2)
 checks["waiting_request"] = waiting.get("result")
 
 # 3. The helper exits on its own: the client sees the end of its reply stream.
-third = OwnerServiceChannel(SeqpacketTransport(endpoint), TOP)
+third = OwnerServiceChannel(SeqpacketTransport(endpoint, peer_uid=os.getuid()), TOP)
 third.request("ping", {}, timeout=10)
 checks["helper_exit"] = outcome(lambda: third.request("exit", {}, timeout=10))
 
 # 4. A nested channel opens with OP_OPEN_CHILD; behind the closed gate no grant exists.
-nested = OwnerServiceChannel(SeqpacketTransport(endpoint), NESTED,
+nested = OwnerServiceChannel(SeqpacketTransport(endpoint, peer_uid=os.getuid()), NESTED,
                              parent=NestedGrant(((142, 1), (0, 1)), bytes(range(32))))
 checks["nested_open"] = outcome(lambda: nested.request("ping", {}, timeout=10))
 checks["nested_retired"] = nested.retired

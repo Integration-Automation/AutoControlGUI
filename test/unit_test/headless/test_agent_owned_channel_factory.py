@@ -1,5 +1,7 @@
 """Channel selection tests: no helper process, socket or service is ever started."""
 import json
+import os
+import stat
 from pathlib import Path
 
 import pytest
@@ -32,11 +34,12 @@ def local(monkeypatch):
     return recorder
 
 
-def bind(monkeypatch, tmp_path, content, *, trusted=True):
+def bind(monkeypatch, tmp_path, content, *, trusted=True, ancestors=True):
     path = tmp_path / "owner_service.json"
     path.write_text(content if isinstance(content, str) else json.dumps(content), encoding="utf-8")
     monkeypatch.setattr(factory, "BINDING_PATH", str(path))
     monkeypatch.setattr(factory, "_trusted", lambda _status: trusted)
+    monkeypatch.setattr(factory, "_trusted_ancestors", lambda _path: ancestors)
     monkeypatch.setattr(factory.load_binding, "__defaults__", (str(path),))
     return path
 
@@ -163,3 +166,44 @@ def test_runtime_status_carries_the_containment_section(monkeypatch, tmp_path):
     monkeypatch.setattr(api, "default_connection_path", lambda: tmp_path / "absent.json")
     status = api.agent_runtime_status()
     assert status["configured"] is False and status["helper_containment"]["native_evidence"] == "not_recorded"
+
+
+def test_binding_under_a_writable_directory_refuses(monkeypatch, tmp_path):
+    path = bind(monkeypatch, tmp_path, VALID, ancestors=False)
+    with pytest.raises(AgentTaskError, match="root-owned directories"):
+        factory.load_binding(str(path))
+
+
+class _Status:
+    def __init__(self, mode, uid=0):
+        self.st_mode, self.st_uid = mode, uid
+
+
+@pytest.mark.parametrize("change, trusted", [
+    ({}, True),
+    ({"/etc/je_auto_control": _Status(stat.S_IFDIR | 0o775)}, False),           # group-writable parent
+    ({"/etc": _Status(stat.S_IFDIR | 0o1777)}, False),                         # sticky but world-writable
+    ({"/etc/je_auto_control": _Status(stat.S_IFDIR | 0o755, uid=1000)}, False),  # owned by an account
+    ({"/etc/je_auto_control": _Status(stat.S_IFLNK | 0o777)}, False),           # a symlinked parent
+    ({"/": None}, False),                                                       # unreadable ancestor
+])
+def test_every_ancestor_of_the_binding_must_be_roots_alone(monkeypatch, change, trusted):
+    tree = {"/": _Status(stat.S_IFDIR | 0o755), "/etc": _Status(stat.S_IFDIR | 0o755),
+            "/etc/je_auto_control": _Status(stat.S_IFDIR | 0o755), **change}
+
+    def lstat(path):
+        if tree.get(path) is None:
+            raise PermissionError(path)
+        return tree[path]
+
+    monkeypatch.setattr(factory.os, "lstat", lstat)
+    assert factory._trusted_ancestors("/etc/je_auto_control/owner_service.json") is trusted
+
+
+@pytest.mark.skipif(not hasattr(os, "O_NOFOLLOW"), reason="O_NOFOLLOW is POSIX")
+def test_symlinked_binding_is_never_followed(monkeypatch, tmp_path):
+    target = bind(monkeypatch, tmp_path, VALID)
+    link = tmp_path / "linked.json"
+    link.symlink_to(target)
+    with pytest.raises(AgentTaskError, match="unreadable"):
+        factory.load_binding(str(link))

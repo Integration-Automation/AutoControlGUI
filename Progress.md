@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-02；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-03；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -117,8 +117,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      （一個服務只服務一個 client，故只影響同一 client 的 nested 深度）；sticky 清理卡住時 drain 無期限（`service_main.c`、
      `native_launch_linux.c` 的 scope_remove／scope_retire），guardian 端已改非阻塞轉交；START 回覆
      遺失使 lease 以 REPLY_LOST 關閉時 client 無從得知 ticket，channel 正確維持未 retired 但無法收尾；
-     policy 未綁定 principal、nested 子 policy 的 payload 帳號未比對父 policy；綁定檔 stat 後依路徑開啟
-     （TOCTOU）且未檢查上層目錄與服務端 SO_PEERCRED；guardian 的 state／hierarchy 只檢查末端目錄。
+     policy 未綁定 principal、nested 子 policy 的 payload 帳號未比對父 policy；guardian 的
+     state／hierarchy 只檢查末端目錄。
      另缺：其他架構／libc／核心的相容性驗證、安裝內容比對、實際已安裝主機的執行驗收，以及處理上列
      項目後再一次獨立審查才能開啟正式閘門；不能匯入時下載或暗中部署服務。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、

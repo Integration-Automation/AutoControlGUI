@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import struct
 import threading
 import time
 import uuid
@@ -38,10 +39,18 @@ class ServiceTransport(Protocol):
         """Release the connection; the service then closes every lease it carried."""
 
 
-class SeqpacketTransport:
-    """AF_UNIX SOCK_SEQPACKET connection; the kernel attaches sender credentials to every packet."""
+_UCRED = struct.Struct("=iII")  # struct ucred: pid, uid, gid
 
-    def __init__(self, endpoint: str) -> None:
+
+class SeqpacketTransport:
+    """AF_UNIX SOCK_SEQPACKET connection; the kernel attaches sender credentials to every packet.
+
+    The socket's peer is whoever listens on the endpoint: the root guardian, so anything
+    else listening there is refused before a frame is sent. ``peer_uid`` exists only for
+    the unprivileged acceptance harness.
+    """
+
+    def __init__(self, endpoint: str, *, peer_uid: int = 0) -> None:
         family = getattr(socket, "AF_UNIX", None)
         kind = getattr(socket, "SOCK_SEQPACKET", None)
         if family is None or kind is None:
@@ -54,6 +63,22 @@ class SeqpacketTransport:
         except OSError as error:
             self._socket.close()
             raise AgentTaskError(f"owner service is unreachable: {type(error).__name__}") from error
+        try:
+            self._require_peer(peer_uid)
+        except AgentTaskError:
+            self._socket.close()
+            raise
+
+    def _require_peer(self, peer_uid: int) -> None:
+        option = getattr(socket, "SO_PEERCRED", None)
+        if option is None:
+            raise AgentTaskError("cannot verify who listens on the owner service endpoint")
+        try:
+            _pid, uid, _gid = _UCRED.unpack(self._socket.getsockopt(socket.SOL_SOCKET, option, _UCRED.size))
+        except (OSError, struct.error) as error:
+            raise AgentTaskError("cannot verify who listens on the owner service endpoint") from error
+        if uid != peer_uid:
+            raise AgentTaskError(f"owner service endpoint is held by uid {uid}, not the guardian")
 
     def send(self, frame: bytes) -> None:
         """Send one frame; a short send is a broken connection."""

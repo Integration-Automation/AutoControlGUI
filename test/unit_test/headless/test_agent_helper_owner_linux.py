@@ -1,6 +1,8 @@
 """Owner-service channel tests against an in-process fake service; no socket, helper or desktop."""
 import json
+import os
 import queue
+import socket
 import struct
 import threading
 import time
@@ -390,3 +392,15 @@ def test_a_start_with_an_unknown_outcome_is_never_reported_retired():
     with pytest.raises(AgentTaskError, match="unknown start"):
         channel.close()
     assert not channel.retired
+
+
+@pytest.mark.skipif(not hasattr(socket, "SOCK_SEQPACKET") or not hasattr(socket, "SO_PEERCRED"),
+                    reason="AF_UNIX sequenced packets and SO_PEERCRED are Linux")
+def test_transport_refuses_an_endpoint_not_held_by_the_expected_account(tmp_path):
+    endpoint = str(tmp_path / "owner.sock")
+    with socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET) as listener:
+        listener.bind(endpoint)
+        listener.listen(4)
+        owner.SeqpacketTransport(endpoint, peer_uid=os.getuid()).close()
+        with pytest.raises(AgentTaskError, match="not the guardian"):
+            owner.SeqpacketTransport(endpoint, peer_uid=os.getuid() + 1)
