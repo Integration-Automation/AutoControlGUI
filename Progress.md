@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-05；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-06；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -75,10 +75,14 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      服務／guardian 崩潰復原；目前尚未建立可用 delegation，不能以 kill 成功或空樹讀值單獨結案。
      stage138 已於隔離 staging 實作 native_service（guardian 授權握手、逐封包 sender 驗證、
      lease 發行／關閉、scope owner 生命週期與 drain），但僅有 peer/lease 證據；正向 bootstrap
-     未執行（此環境無服務擁有的 delegated cgroup2）。尚缺：實作的獨立審查、nested capability
+     未執行（此環境無服務擁有的 delegated cgroup2）。獨立審查的發現已全數回應（nested 授權、
+     子程序 fd／訊號／能力設定、namespace、START 重驗、服務入口）。尚缺：nested capability
      經 worker bootstrap pipe 交付（目前 OPEN_CHILD 在正式環境只會拒絕）、guardian 執行檔／
      journal／冷復原、helper_owner_linux.py 與 5 類呼叫者接合；正式入口維持不可用，
-     不能以本機契約斷言取代實際權限驗收。位置：`.worktrees/agent-tools/stage138/`。
+     不能以本機契約斷言取代實際權限驗收。DECIDE：namespace 比對需對 peer 有 ptrace 讀取權
+     （實測跨使用者 EPERM，現為 fail closed，正式環境將拒絕所有 top-level client）；
+     bounding set 移除需服務具 CAP_SETPCAP；每個 principal 的 lease 配額。
+     位置：`.worktrees/agent-tools/stage138/`（todo.md、review.md）。
      Python Linux 接合層仍須讓 close 獨立於等待回覆的 request 鎖送出取消，核實關閉先於啟動、
      啟動確認遺失、延遲回覆及連線中斷；每個 channel 的 lease 不得連帶取消 sibling。
      原有 5 類呼叫者、parent_watch、輸入 journal／lease 與本機 pipe 執行緒退場均須一併接合。
