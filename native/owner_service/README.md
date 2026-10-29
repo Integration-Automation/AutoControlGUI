@@ -55,6 +55,9 @@ the gate.
   refuses any cgroup on the way (mount and subtree included) whose directory or
   `cgroup.procs`, `cgroup.threads` or `cgroup.subtree_control` belongs to another account
   or is writable by others: a delegated cgroup there could move helpers out of the epoch.
+- Helpers start with umask 077, and the guardian caps the epoch's `records` cgroup at
+  the per-helper process and memory limits times the record capacity, so tmpfs pages a
+  killed helper left behind still count against the epoch.
 
 ## Parts
 

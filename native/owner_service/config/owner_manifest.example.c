@@ -85,4 +85,5 @@ const guardian_manifest guardian_compiled_manifest = {
     .manifest_version = 1,
     .clients = clients,
     .client_count = sizeof(clients) / sizeof(clients[0]),
+    .service = &service_manifest,
 };

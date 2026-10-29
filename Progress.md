@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-09；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-10；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -117,8 +117,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      subtree 逐層檢查也已處理，閘門仍關閉。第二次審查剩餘項目（TODO）：範本的 native_worker policy
      從未在服務下實際執行，且無 DISPLAY／Wayland／Xauthority 時 GUI worker 多半無法運作（NOTE-11）；
      單一 epoch 內 lease／record 位置不能重用（`epoch_spent`，需世代計數的槽位重用），長壽 helper 會讓
-     已用盡的 epoch 回 CAPACITY 直到它關閉；共用 /tmp、/dev/shm 的 tmpfs 頁面在 helper 被殺後仍計在
-     父 cgroup，記憶體上限只約束單一 helper 的存活期間。
+     已用盡的 epoch 回 CAPACITY 直到它關閉；payload ID 跨 epoch 重複使用，後來的 helper 可讀到同 ID
+     前一個 helper 留在 /tmp 的檔案（umask 077 只擋其他 ID），被殺 helper 的 tmpfs 頁面跨 epoch 後轉記到
+     subtree，該層沒有上限。
      另缺：其他架構／libc／核心的相容性驗證、安裝內容比對、實際已安裝主機的執行驗收，以及處理上列
      項目後再一次獨立審查才能開啟正式閘門；不能匯入時下載或暗中部署服務。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、

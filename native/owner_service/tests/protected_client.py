@@ -71,7 +71,9 @@ if mode == "foreign":
     sys.exit(1)
 for command in sys.stdin:
     command = command.strip()
-    if command == "spawn":
+    if command == "umask":
+        emit({"stage": "umask", "reply": channel.request("umask", {}, timeout=20)})
+    elif command == "spawn":
         try:
             emit({"stage": "spawn", "reply": channel.request("spawn", {}, timeout=20)})
         except AgentTaskError as error:

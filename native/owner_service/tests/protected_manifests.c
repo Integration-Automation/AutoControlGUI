@@ -68,4 +68,5 @@ const guardian_manifest guardian_compiled_manifest = {
     .manifest_version = 1,
     .clients = protected_clients,
     .client_count = 2,
+    .service = &service_manifest,
 };

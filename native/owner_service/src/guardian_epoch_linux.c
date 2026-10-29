@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <linux/magic.h>
 #include <linux/openat2.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
@@ -181,6 +182,21 @@ static int delegate(int directory, const guardian_manifest *manifest) {
  * cgroups holds a process, so enabling them never meets the internal-process rule. */
 static const char LIMITED[] = "+pids +memory";
 
+/* Written by root to `records` before it is delegated: the service cannot change them.
+ * They hold every helper of the epoch together, so memory a killed helper left charged
+ * (tmpfs pages) adds up against them rather than escaping every limit. */
+static int limit_records(int records, const service_policy *service) {
+    if (!service) return 0;
+    char value[24];
+    snprintf(value, sizeof(value), "%llu", (unsigned long long)(service->record_pids_max * service->record_capacity));
+    if (!write_control(records, "pids.max", value)) return errno;
+    snprintf(value, sizeof(value), "%llu",
+             (unsigned long long)(service->record_memory_max * service->record_capacity));
+    if (!write_control(records, "memory.max", value)) return errno;
+    if (!write_control(records, "memory.swap.max", "0") && errno != ENOENT) return errno;
+    return 0;
+}
+
 static int create_branches(guardian_state *state) {
     const gj_record *current = &state->journal.current;
     /* ENOENT here means the subtree's parent has not enabled pids and memory. */
@@ -195,6 +211,7 @@ static int create_branches(guardian_state *state) {
     if (!error) {
         state->epoch = openat(epoch, "records", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
         error = state->epoch < 0 ? errno : write_control(state->epoch, "cgroup.subtree_control", LIMITED) ? 0 : errno;
+        if (!error) error = limit_records(state->epoch, state->manifest->service);
         if (!error) error = delegate(state->epoch, state->manifest);
     }
     close(epoch);

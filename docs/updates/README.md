@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261030-10 | 2026-10-30 | Cap the owner service's whole epoch and keep helper files private | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-09 | 2026-10-30 | Give each owner-service helper its own account and bound child leases and connection floods | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-08 | 2026-10-30 | Keep idle connections from holding the owner service's epoch | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261030-07 | 2026-10-30 | Confine the owner service's identity calls with seccomp | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |

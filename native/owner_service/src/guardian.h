@@ -27,6 +27,9 @@ typedef struct {
     uint32_t manifest_version;
     const guardian_client *clients;
     size_t client_count;
+    /* The service compiled from the same manifest; its per-helper limits times its record
+     * capacity bound the whole epoch. NULL sets no epoch-wide limit (tests). */
+    const service_policy *service;
 } guardian_manifest;
 
 typedef enum { GUARDIAN_READY, GUARDIAN_REFUSED, GUARDIAN_UNRESOLVED } guardian_result;

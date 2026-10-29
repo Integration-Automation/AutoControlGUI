@@ -515,6 +515,11 @@ static int rpc_lines(void) {
         char reply[128], result[32] = "\"pong\"";
         if (strstr(line, "\"operation\": \"escape\"")) snprintf(result, sizeof(result), "%d", (int)escape_descendant());
         if (strstr(line, "\"operation\": \"spawn\"")) snprintf(result, sizeof(result), "%d", spawn_children());
+        if (strstr(line, "\"operation\": \"umask\"")) {
+            mode_t mask = umask(0);
+            umask(mask);
+            snprintf(result, sizeof(result), "%d", (int)mask);
+        }
         int size = snprintf(reply, sizeof(reply), "{\"id\": \"%.*s\", \"result\": %s}\n", (int)(end - id), id, result);
         if (size <= 0 || write(1, reply, (size_t)size) != size) return 49;
     }

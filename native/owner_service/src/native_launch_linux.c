@@ -69,6 +69,8 @@ static int child_descriptors(owner_record *record, int *error_fd) {
 static int child_protected_credentials(owner_record *record) {
     struct __user_cap_header_struct header = {_LINUX_CAPABILITY_VERSION_3, 0};
     struct __user_cap_data_struct capabilities[2] = {{0}, {0}};
+    /* Whatever the helper creates is its own: another helper's ID cannot read it. */
+    syscall(SYS_umask, 077);
     /* No supplementary group: a nested-capable payload reaches the guardian through the
      * listener's ACL, and the identity filter allows only an empty list anyway. */
     if (syscall(SYS_setgroups, 0, NULL) == -1) return errno;

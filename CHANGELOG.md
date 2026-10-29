@@ -41,6 +41,8 @@ range must avoid every other account's IDs and equal or miss every other range, 
 `nested_lease_quota`, and `guardian_client` adds `id_count` so a nested-capable payload range can be listed.
 The guardian also refuses a cgroup subtree with a delegated or writable cgroup on the way, and limits each
 account to 32 handed-over connections per second.
+`guardian_manifest` adds `service` (the service policy from the same file): the guardian caps the epoch's
+`records` cgroup at the per-helper limits times the record capacity, and payloads start with umask 077.
 
 ## Unreleased: helper containment in runtime status
 

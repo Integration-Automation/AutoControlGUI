@@ -256,12 +256,17 @@ def scenario_session(steps):
     foreign = client("foreign", account="acother")
     steps["foreign_client"] = read_json(foreign)
     foreign.wait(timeout=30)
+    steps["epoch_limits"] = {name: open(f"{SUBTREE}/{epoch}/records/{name}").read().strip()
+                             for name in ("pids.max", "memory.max")}
     container = os.path.dirname(SUBTREE + steps["inspection"]["payload_cgroups"][0])
     steps["limits"] = {name: open(os.path.join(container, name)).read().strip()
                        for name in ("pids.max", "memory.max")}
     holder.stdin.write("spawn\n")
     holder.stdin.flush()
     steps["spawn"] = read_json(holder)
+    holder.stdin.write("umask\n")
+    holder.stdin.flush()
+    steps["umask"] = read_json(holder)
     pids = steps["inspection"]["payload_pids"]
     escaped = steps["request"].get("escaped")
     steps["escaped_in_payload_cgroup"] = escaped_in_payload(escaped, epoch)
@@ -632,6 +637,9 @@ def expectations(result):
         "payload_cannot_migrate": session["payload_cannot_join_epoch"] and session["payload_cannot_join_records"],
         "unlisted_client_refused": "error" in session["foreign_client"],
         "payload_limits_set": session["limits"] == {"pids.max": "32", "memory.max": str(128 << 20)},
+        # The whole epoch's helpers together: eight records at the per-helper limits.
+        "payload_umask_private": session["umask"].get("reply") == 0o077,
+        "epoch_limits_set": session["epoch_limits"] == {"pids.max": str(32 * 8), "memory.max": str(8 * (128 << 20))},
         # The payload, its escaped descendant and the fork attempts share 32 pids.
         "fork_bounded": isinstance(session["spawn"].get("reply"), int) and 0 < session["spawn"]["reply"] < 32,
         "escaped_descendant_contained": session["escaped_in_payload_cgroup"],
