@@ -19,6 +19,7 @@ const service_policy service_manifest = {
     .policy_count = 1,
     .lease_lifetime_ns = 30000000000ULL,
     .client_lease_quota = 8,
+    .nested_lease_quota = 4,
     .lease_max_age_ns = 300000000000ULL,
     .record_pids_max = 64,
     .connections_per_account = 8,

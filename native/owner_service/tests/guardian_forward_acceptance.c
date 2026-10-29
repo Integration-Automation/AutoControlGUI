@@ -145,6 +145,25 @@ int main(void) {
         client = saved;
     }
 
+    /* One account's burst: the first GUARDIAN_ACCEPT_BURST connections within a second are
+     * handed over, the next is dropped before it reaches the service. */
+    guardian_forward_reset_rates();
+    for (int i = 0; i <= GUARDIAN_ACCEPT_BURST; ++i) {
+        int raw = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
+        CHECK(raw >= 0 && connect(raw, (struct sockaddr *)&address, sizeof(address)) == 0);
+        CHECK(poll(&ready, 1, 3000) == 1);
+        guardian_forward_result result = forward(listener, pair[0]);
+        CHECK(result == (i < GUARDIAN_ACCEPT_BURST ? FORWARD_HANDED : FORWARD_REFUSED));
+        if (result == FORWARD_HANDED) {
+            guardian_grant frame;
+            received_packet packet;
+            CHECK(packet_receive(pair[1], &frame, sizeof(frame), 0, &packet, &error) && packet.right_count == 1);
+            CHECK(packet_release(&packet));
+        }
+        close(raw);
+    }
+    guardian_forward_reset_rates();
+
     /* The service end gone: forwarding reports the channel failure. */
     close(pair[1]);
     child = spawn_client(&report);

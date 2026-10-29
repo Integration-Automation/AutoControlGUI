@@ -9,7 +9,8 @@
 #include <sys/types.h>
 
 /* A client account and the namespaces its processes must live in. */
-typedef struct { uint32_t uid, gid; service_namespaces namespaces; } guardian_client;
+/* `id_count` > 1 lists a payload range: uid + k with gid + k, for k below it. */
+typedef struct { uint32_t uid, gid; service_namespaces namespaces; uint32_t id_count; } guardian_client;
 
 /* Compiled in from the provisioned manifest; never an argument or environment value. */
 typedef struct {
@@ -56,6 +57,10 @@ typedef enum { FORWARD_IDLE, FORWARD_HANDED, FORWARD_REFUSED, FORWARD_CHANNEL_FA
 /* guardian_forward_linux.c: principal and namespaces through the client's pidfd. */
 bool guardian_client_verified(const guardian_manifest *manifest, const peer_identity *peer);
 /* Accepts one pending client; hands it to the service only if verified. */
+#define GUARDIAN_CLIENT_LIMIT 16  /* Listed client accounts, payload accounts included. */
+#define GUARDIAN_ACCEPT_BURST 32  /* Connections one account may have handed over per second. */
+/* Forgets every account's connection count (tests). */
+void guardian_forward_reset_rates(void);
 guardian_forward_result guardian_forward(int listener, int channel, const guardian_manifest *manifest, no_id epoch,
                                          uint64_t generation);
 #endif

@@ -34,6 +34,53 @@ static void close_slot(int *slot) {
 
 /* The subtree is resolved beneath the mount without symlinks or other mounts, and must
  * belong to the hierarchy owner with no group or other write. */
+static bool trusted_entry(const struct stat *status, uid_t owner) {
+    return (status->st_uid == 0 || status->st_uid == owner) && !(status->st_mode & (S_IWGRP | S_IWOTH));
+}
+
+/* A cgroup is trusted when root or the hierarchy owner holds it and the files that move
+ * processes or enable controllers. A delegated cgroup anywhere on the way would let its
+ * owner move a payload out of its container and past the epoch's kill. */
+static bool trusted_cgroup(int directory, uid_t owner) {
+    static const char *const files[] = {"cgroup.procs", "cgroup.threads", "cgroup.subtree_control"};
+    struct stat status;
+    if (fstat(directory, &status) != 0 || !trusted_entry(&status, owner)) return false;
+    for (size_t i = 0; i < sizeof(files) / sizeof(files[0]); ++i)
+        if (fstatat(directory, files[i], &status, AT_SYMLINK_NOFOLLOW) != 0 || !trusted_entry(&status, owner))
+            return false;
+    return true;
+}
+
+/* Walks the subtree one component at a time beneath the mount, never through a link,
+ * and judges every cgroup on the way, the mount and the subtree included. */
+static guardian_result open_subtree(guardian_state *state) {
+    const guardian_manifest *manifest = state->manifest;
+    char path[256];
+    if (strlen(manifest->subtree) >= sizeof(path)) return refuse(state, 12, ENAMETOOLONG, GUARDIAN_REFUSED);
+    strcpy(path, manifest->subtree);
+    if (!trusted_cgroup(state->mount, manifest->hierarchy_owner)) return refuse(state, 14, EPERM, GUARDIAN_REFUSED);
+    struct open_how how = {.flags = O_RDONLY | O_DIRECTORY | O_CLOEXEC,
+        .resolve = RESOLVE_BENEATH | RESOLVE_NO_SYMLINKS | RESOLVE_NO_XDEV | RESOLVE_NO_MAGICLINKS};
+    int current = dup(state->mount);
+    if (current < 0) return refuse(state, 12, errno, GUARDIAN_REFUSED);
+    for (char *cursor = path, *end; cursor; cursor = end ? end + 1 : NULL) {
+        end = strchr(cursor, '/');
+        if (end) *end = 0;
+        if (!*cursor) continue;
+        long next = syscall(SYS_openat2, current, cursor, &how, sizeof(how));
+        int saved = errno;
+        close(current);
+        if (next < 0) return refuse(state, 12, saved, GUARDIAN_REFUSED);
+        current = (int)next;
+        if (!trusted_cgroup(current, manifest->hierarchy_owner)) {
+            close(current);
+            return refuse(state, 14, EPERM, GUARDIAN_REFUSED);
+        }
+    }
+    state->subtree = current;
+    return GUARDIAN_READY;
+}
+
 static guardian_result open_hierarchy(guardian_state *state) {
     const guardian_manifest *manifest = state->manifest;
     struct statfs filesystem;
@@ -42,11 +89,8 @@ static guardian_result open_hierarchy(guardian_state *state) {
     if (state->mount < 0) return refuse(state, 10, errno, GUARDIAN_REFUSED);
     if (fstatfs(state->mount, &filesystem) != 0 || filesystem.f_type != CGROUP2_SUPER_MAGIC)
         return refuse(state, 11, ENOTDIR, GUARDIAN_REFUSED);
-    struct open_how how = {.flags = O_RDONLY | O_DIRECTORY | O_CLOEXEC,
-        .resolve = RESOLVE_BENEATH | RESOLVE_NO_SYMLINKS | RESOLVE_NO_XDEV | RESOLVE_NO_MAGICLINKS};
-    long number = syscall(SYS_openat2, state->mount, manifest->subtree, &how, sizeof(how));
-    if (number < 0) return refuse(state, 12, errno, GUARDIAN_REFUSED);
-    state->subtree = (int)number;
+    guardian_result opened = open_subtree(state);
+    if (opened != GUARDIAN_READY) return opened;
     if (fstat(state->subtree, &status) != 0 || status.st_uid != manifest->hierarchy_owner ||
         (status.st_mode & (S_IWGRP | S_IWOTH)))
         return refuse(state, 13, EPERM, GUARDIAN_REFUSED);

@@ -53,22 +53,31 @@ enum { ACL_USER_OBJ = 1, ACL_USER = 2, ACL_GROUP_OBJ = 4, ACL_MASK = 0x10, ACL_O
 
 /* Every listed client account may connect by name, so a nested-capable payload reaches
  * the guardian without holding any supplementary group: the service gives payloads none. */
+#define ACL_USER_LIMIT (GUARDIAN_CLIENT_LIMIT * SERVICE_PAYLOAD_IDS)
+
+/* Entries must be sorted by ID: take the next larger client UID, ranges expanded, each time. */
+static bool next_client_uid(const guardian_manifest *manifest, bool first, uint32_t previous, uint32_t *next) {
+    bool found = false;
+    for (size_t i = 0; i < manifest->client_count; ++i) {
+        const guardian_client *client = &manifest->clients[i];
+        uint32_t span = client->id_count > 1 ? client->id_count : 1;
+        for (uint32_t k = 0; k < span; ++k) {
+            uint32_t uid = client->uid + k;
+            if ((first || uid > previous) && (!found || uid < *next)) { *next = uid; found = true; }
+        }
+    }
+    return found;
+}
+
 static bool grant_clients(const char *path, const guardian_manifest *manifest) {
-    struct { uint32_t version; acl_entry entries[SERVICE_CLIENT_LIMIT + 8]; } acl = {.version = 2};
+    static struct { uint32_t version; acl_entry entries[ACL_USER_LIMIT + 4]; } acl;
+    acl.version = 2;
     size_t count = 0;
     acl.entries[count++] = (acl_entry){ACL_USER_OBJ, 6, UINT32_MAX};
-    uint32_t previous = 0;
-    for (size_t placed = 0; placed < manifest->client_count; ++placed) {
-        /* Entries must be sorted by ID: take the next larger client UID each time. */
-        uint32_t next = UINT32_MAX;
-        for (size_t i = 0; i < manifest->client_count; ++i) {
-            uint32_t uid = manifest->clients[i].uid;
-            if ((placed == 0 || uid > previous) && uid < next) next = uid;
-        }
-        if (next == UINT32_MAX || (placed && next == previous)) break;
-        if (count >= sizeof(acl.entries) / sizeof(acl.entries[0]) - 3) return false;
-        acl.entries[count++] = (acl_entry){ACL_USER, 6, next};
-        previous = next;
+    uint32_t uid = 0;
+    for (bool first = true; next_client_uid(manifest, first, uid, &uid); first = false) {
+        if (count > ACL_USER_LIMIT) return false;
+        acl.entries[count++] = (acl_entry){ACL_USER, 6, uid};
     }
     acl.entries[count++] = (acl_entry){ACL_GROUP_OBJ, 6, UINT32_MAX};
     acl.entries[count++] = (acl_entry){ACL_MASK, 6, UINT32_MAX};

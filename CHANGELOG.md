@@ -35,6 +35,13 @@ connection refused, dropped or unreachable before a lease exists raises `AgentCo
 `ServiceConnectionLost`). The guardian reaps its service, logs how it ended and waits a second before the
 next epoch when a service ends within a second.
 
+Manifest format changes for the remaining review findings: `payload_uid`/`payload_gid` are now the base of
+a range of 32 IDs (each helper runs as base plus its lease position, with no account needed), a policy's
+range must avoid every other account's IDs and equal or miss every other range, `service_policy` adds
+`nested_lease_quota`, and `guardian_client` adds `id_count` so a nested-capable payload range can be listed.
+The guardian also refuses a cgroup subtree with a delegated or writable cgroup on the way, and limits each
+account to 32 handed-over connections per second.
+
 ## Unreleased: helper containment in runtime status
 
 `agent_runtime_status()` (and `AC_agent_runtime_status`, `agent-task status`) adds a

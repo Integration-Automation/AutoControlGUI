@@ -32,7 +32,7 @@ static void case_policy_validation(void) {
     struct { size_t entry; int field; } faults[] = {{1, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4}, {2, 5}, {0, 6},
                                                     {1, 7}, {0, 8}, {0, 9}, {0, 10}, {0, 11}, {0, 12},
                                                     {0, 13}, {0, 14}, {0, 15}, {1, 16}, {0, 17},
-                                                    {0, 18}};
+                                                    {0, 18}, {0, 19}, {0, 20}, {0, 21}, {2, 22}};
     for (size_t i = 0; i < sizeof(faults) / sizeof(faults[0]); ++i) {
         memcpy(entries, launch_policies, sizeof(entries));
         candidate = policy;
@@ -57,6 +57,10 @@ static void case_policy_validation(void) {
         if (faults[i].field == 16) entry->payload_uid = 65533;                 /* Child runs as another account. */
         if (faults[i].field == 17) entry->child_policies |= UINT32_C(1) << 9;  /* Child policy does not exist. */
         if (faults[i].field == 18) entry->child_policies |= UINT32_C(1) << OTHER_TOP; /* Child is top-level. */
+        if (faults[i].field == 19) candidate.nested_lease_quota = 0;
+        if (faults[i].field == 20) candidate.nested_lease_quota = SERVICE_LEASE_LIMIT + 1;
+        if (faults[i].field == 21) entry->payload_uid = policy.clients[0].uid - 5;  /* Range covers a client. */
+        if (faults[i].field == 22) entry->payload_uid += 1;  /* Overlaps another policy's range unequally. */
         CHECK(service_allocate(&candidate, &error) == NULL && error.kind == NO_ERROR_ARGUMENT);
     }
     memcpy(entries, launch_policies, sizeof(entries));
@@ -442,6 +446,8 @@ static void helper_client(int in, int out) {
     EXPECT(call(number, forged).status == STATUS_REJECTED);
     EXPECT(call(number, child_open(4, NESTED_OTHER, 0, 0)).status == STATUS_REJECTED);
     EXPECT(call(number, child_open(5, TOP, 0, 0)).status == STATUS_REJECTED);
+    EXPECT(call(number, child_open(9, NESTED, 0, 0)).status == STATUS_CAPACITY);    /* Parent 0's quota is 1. */
+    EXPECT(call(number, child_open(10, NESTED, 1, 1)).status == STATUS_OK);         /* Parent 1 has its own. */
     EXPECT(call(number, start_request(lease, 10)).status == STATUS_UNAVAILABLE);   /* Member; gate closed. */
     report_lease(out, lease); wait_byte(in);                                         /* Payload moved. */
     EXPECT(call(number, start_request(lease, 11)).status == STATUS_UNAUTHENTICATED);
@@ -503,6 +509,8 @@ static void fence_parent(void *unused) {
 }
 
 static void case_nested(void) {
+    size_t children = policy.nested_lease_quota;
+    policy.nested_lease_quota = 1;
     service_state *service = nested_service = peer_service((no_id){139, 1});
     nested_cgroup = own_cgroup();
     service->epoch_device = (uint64_t)nested_cgroup.st_dev;
@@ -546,6 +554,7 @@ static void case_nested(void) {
     int pipes[] = {to_holder[0], to_holder[1], from_holder[0], from_holder[1],
                    to_helper[0], to_helper[1], from_helper[0], from_helper[1]};
     for (size_t i = 0; i < sizeof(pipes) / sizeof(pipes[0]); ++i) close(pipes[i]);
+    policy.nested_lease_quota = children;
 }
 
 /* ---------- capability in the validated spec ---------- */

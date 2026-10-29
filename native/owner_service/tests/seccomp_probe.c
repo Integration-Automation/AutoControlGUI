@@ -23,11 +23,13 @@ static int clone_outcome(long rc) {
     return outcome(rc);
 }
 
-static int payload_switch(void) {
+/* 0 when a child can become `uid`/`gid`, else the errno it met. */
+static int payload_switch(uint32_t uid, uint32_t gid) {
     pid_t child = fork();
-    if (child == 0)
-        _exit(syscall(SYS_setresgid, PAYLOAD_GID, PAYLOAD_GID, PAYLOAD_GID) == 0 &&
-              syscall(SYS_setresuid, PAYLOAD_UID, PAYLOAD_UID, PAYLOAD_UID) == 0 ? 0 : 1);
+    if (child == 0) {
+        if (syscall(SYS_setresgid, gid, gid, gid) != 0 || syscall(SYS_setresuid, uid, uid, uid) != 0) _exit(errno);
+        _exit(0);
+    }
     int status = 0;
     return child > 0 && waitpid(child, &status, 0) == child && WIFEXITED(status) ? WEXITSTATUS(status) : -1;
 }
@@ -50,7 +52,10 @@ int main(void) {
     int clone3 = clone_outcome(syscall(SYS_clone3, &args, sizeof(args)));
     printf("{\"installed\": true, \"setresuid_root\": %d, \"setresgid_root\": %d, \"setuid_root\": %d, "
            "\"setgroups_root\": %d, \"setgroups_empty\": %d, \"unshare_user\": %d, \"clone_user\": %d, "
-           "\"clone3\": %d, \"payload_switch\": %d}\n", setresuid_root, setresgid_root, setuid_root,
-           setgroups_root, setgroups_empty, unshare_user, clone_user, clone3, payload_switch());
+           "\"clone3\": %d, \"payload_switch\": %d, \"payload_last\": %d, \"beyond_range\": %d}\n",
+           setresuid_root, setresgid_root, setuid_root, setgroups_root, setgroups_empty, unshare_user, clone_user,
+           clone3, payload_switch(PAYLOAD_UID, PAYLOAD_GID),
+           payload_switch(PAYLOAD_UID + SERVICE_PAYLOAD_IDS - 1, PAYLOAD_GID + SERVICE_PAYLOAD_IDS - 1),
+           payload_switch(PAYLOAD_UID + SERVICE_PAYLOAD_IDS, PAYLOAD_GID + SERVICE_PAYLOAD_IDS));
     return 0;
 }

@@ -20,9 +20,12 @@ SRC, TESTS = os.path.join(SOURCE, "src"), os.path.join(SOURCE, "tests")
 CC = os.environ.get("CC", "cc")
 OPT, STATE, RUN = "/opt/autocontrol-test", "/var/lib/autocontrol-test", "/run/autocontrol-test"
 SUBTREE = "/sys/fs/cgroup/autocontrol-test"
+OUTER, STATE2 = "/sys/fs/cgroup/autocontrol-outer", "/var/lib/autocontrol-test2"
 ENDPOINT = RUN + "/owner.sock"
 CLIENT = "user"
-ACCOUNTS = ("acsvc", "acpay", "acother")
+ACCOUNTS = ("acsvc", "acother")
+# Helpers run as IDs from this range, one per lease position; no account is created.
+PAYLOAD_BASE, PAYLOAD_IDS = 62000, 32
 SOCKET_GROUP = "acsock"
 ROLLOVER_SESSIONS = 10  # More than the manifest's quota of 8 leases per epoch.
 SERVICE_SOURCES = ["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_relay_linux.c",
@@ -60,13 +63,15 @@ def provision():
         if result.returncode:
             raise RuntimeError(f"groupadd: {result.stderr}")
         created_groups.append(SOCKET_GROUP)
+    taken = [i for i in range(PAYLOAD_BASE, PAYLOAD_BASE + PAYLOAD_IDS) if _uid_taken(i) or _gid_taken(i)]
+    if taken:
+        raise RuntimeError(f"payload range already in use: {taken[:4]}")
     for name in ACCOUNTS:
         try:
             pwd.getpwnam(name)
         except KeyError:
             # Every account has its own primary group. acother joins the socket group, so it
-            # reaches the socket and only the guardian's principal check can refuse it. acpay
-            # never does: the service hands the socket group to nested-capable payloads only.
+            # reaches the socket and only the guardian's principal check can refuse it.
             extra = ["--groups", SOCKET_GROUP] if name == "acother" else []
             result = run(["useradd", "--system", "--no-create-home", "--shell", "/usr/sbin/nologin",
                           "--user-group", *extra, name])
@@ -99,10 +104,10 @@ def namespaces():
 
 
 def build():
-    service, payload = pwd.getpwnam("acsvc"), pwd.getpwnam("acpay")
+    service = pwd.getpwnam("acsvc")
     client = pwd.getpwnam(CLIENT)
-    values = {"SERVICE_UID": service.pw_uid, "SERVICE_GID": service.pw_gid, "PAYLOAD_UID": payload.pw_uid,
-              "PAYLOAD_GID": payload.pw_gid, "CLIENT_UID": client.pw_uid, "CLIENT_GID": client.pw_gid,
+    values = {"SERVICE_UID": service.pw_uid, "SERVICE_GID": service.pw_gid, "PAYLOAD_UID": PAYLOAD_BASE,
+              "PAYLOAD_GID": PAYLOAD_BASE, "CLIENT_UID": client.pw_uid, "CLIENT_GID": client.pw_gid,
               "SOCKET_GID": grp.getgrnam(SOCKET_GROUP).gr_gid,
               **namespaces()}
     defines = [f"-D{key}={value}u" if not key.startswith("NS_") else f"-D{key}={value}ULL"
@@ -120,6 +125,10 @@ def build():
     gcc(["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_relay_linux.c",
          "owner_core_acceptance.c"], OPT + "/owner_core_acceptance", acceptance=True)
     gcc(["seccomp_probe.c", "guardian_seccomp_linux.c", "protected_manifests.c"], OPT + "/seccomp_probe", defines)
+    gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
+                           "guardian_forward_linux.c", "guardian_seccomp_linux.c", "protected_manifests.c"],
+        OPT + "/guardian_outer", defines + ['-DPROTECTED_SUBTREE="autocontrol-outer/inner"',
+                                            f'-DPROTECTED_STATE="{STATE2}"'])
     report["accounts"] = {k: v for k, v in values.items() if not k.startswith("NS_")}
 
 
@@ -190,8 +199,31 @@ def pid_alive(pid):
         return False
 
 
+def _uid_taken(value):
+    try:
+        pwd.getpwuid(value)
+        return True
+    except KeyError:
+        return False
+
+
+def _gid_taken(value):
+    try:
+        grp.getgrgid(value)
+        return True
+    except KeyError:
+        return False
+
+
+def _as_payload():
+    os.setgroups([])
+    os.setresgid(PAYLOAD_BASE, PAYLOAD_BASE, PAYLOAD_BASE)
+    os.setresuid(PAYLOAD_BASE, PAYLOAD_BASE, PAYLOAD_BASE)
+
+
 def migration_denied(target_dir):
-    result = run(["runuser", "-u", "acpay", "--", "/bin/sh", "-c", f"echo $$ > {target_dir}/cgroup.procs"])
+    result = subprocess.run(["/bin/sh", "-c", f"echo $$ > {target_dir}/cgroup.procs"], text=True,
+                            capture_output=True, timeout=30, preexec_fn=_as_payload)
     return result.returncode != 0 and "Permission denied" in result.stderr
 
 
@@ -249,6 +281,8 @@ def scenario_siblings(steps):
     guardian = start_guardian()
     first, second = client("hold"), client("hold")
     steps["first"], steps["second"] = read_json(first), read_json(second)
+    epoch = epochs()[-1]
+    steps["payload_uids"] = sorted({status["uid"] for status in session_inspection(epoch)["payload"]})
     first_escaped, second_escaped = steps["first"].get("escaped"), steps["second"].get("escaped")
     first.stdin.write("close\n")
     first.stdin.flush()
@@ -392,6 +426,28 @@ def scenario_service_crash(steps):
     steps["epochs_after_stop"] = epochs()
 
 
+def scenario_delegated_subtree(steps):
+    """A guardian whose subtree sits below a delegated cgroup refuses; once root owns that
+    cgroup again it starts."""
+    os.makedirs(OUTER + "/inner")
+    os.makedirs(STATE2, mode=0o700)
+    with open(OUTER + "/cgroup.subtree_control", "w") as handle:
+        handle.write("+pids +memory")
+    other = pwd.getpwnam("acother")
+    os.chown(OUTER + "/cgroup.procs", other.pw_uid, other.pw_gid)
+    refused = run([OPT + "/guardian_outer"], timeout=30)
+    steps["delegated_refused"] = [refused.returncode, refused.stderr.strip()[-200:]]
+    os.chown(OUTER + "/cgroup.procs", 0, 0)
+    guardian = subprocess.Popen([OPT + "/guardian_outer"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, text=True, env={})
+    limit = time.monotonic() + 15
+    while not os.path.exists(ENDPOINT) and time.monotonic() < limit and guardian.poll() is None:
+        time.sleep(0.05)
+    steps["trusted_started"] = os.path.exists(ENDPOINT)
+    steps["guardian_stop"] = stop_guardian(guardian)
+    steps["epochs_after_stop"] = [n for n in os.listdir(OUTER + "/inner") if n.startswith("epoch-")]
+
+
 def scenario_cold_recovery(steps):
     guardian = start_guardian()
     epoch = epochs()[-1]
@@ -448,7 +504,12 @@ def cleanup():
         remove_cgroups(SUBTREE)
     except OSError as error:
         leftovers["cgroup"] = str(error)
-    for path in (STATE, RUN, OPT):
+    if os.path.exists(OUTER):
+        try:
+            remove_cgroups(OUTER)
+        except OSError as error:
+            leftovers["outer_cgroup"] = str(error)
+    for path in (STATE, STATE2, RUN, OPT):
         shutil.rmtree(path, ignore_errors=True)
     for name in created_accounts:
         result = run(["userdel", name])
@@ -516,6 +577,8 @@ def main():
         scenario_rollover(report["steps"]["rollover"])
         report["steps"]["service_crash"] = {}
         scenario_service_crash(report["steps"]["service_crash"])
+        report["steps"]["delegated_subtree"] = {}
+        scenario_delegated_subtree(report["steps"]["delegated_subtree"])
     except Exception as error:  # reason: cleanup must run and the failure must be reported, not lost
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
@@ -523,6 +586,10 @@ def main():
     report["expectations"] = expectations(report)
     print(json.dumps(report))
     raise SystemExit(0 if report["expectations"] and all(report["expectations"].values()) else 1)
+
+
+def in_payload_range(value):
+    return isinstance(value, str) and value.isdigit() and 0 <= int(value) - PAYLOAD_BASE < PAYLOAD_IDS
 
 
 def child_inside_parent(nested):
@@ -545,9 +612,11 @@ def expectations(result):
     renewal = result["steps"].get("renewal", {})
     rollover = result["steps"].get("rollover", {})
     service_crash = result["steps"].get("service_crash", {})
+    delegated = result["steps"].get("delegated_subtree", {})
     inspection = session.get("inspection", {})
     service, payload = inspection.get("service", [{}]), inspection.get("payload", [{}])
-    if "error" in result or not all((session, crash, siblings, nested, race, renewal, rollover, service_crash)):
+    if "error" in result or not all((session, crash, siblings, nested, race, renewal, rollover, service_crash,
+                                     delegated)):
         return {"completed": False}
     return {
         "protected_reply": session["request"].get("reply") == "pong",
@@ -557,7 +626,7 @@ def expectations(result):
         # A code-execution bug in the service cannot regain more than those three.
         "service_bounding_set_and_no_new_privs": service[0].get("cap_bnd") == "00000000000001c0"
         and service[0].get("no_new_privs") == "1",
-        "payload_account_without_capabilities": payload[0].get("uid") == str(result["accounts"]["PAYLOAD_UID"])
+        "payload_account_without_capabilities": in_payload_range(payload[0].get("uid"))
         and payload[0].get("cap_eff") == "0000000000000000" and payload[0].get("cap_bnd") == "0000000000000000"
         and payload[0].get("no_new_privs") == "1",
         "payload_cannot_migrate": session["payload_cannot_join_epoch"] and session["payload_cannot_join_records"],
@@ -600,15 +669,24 @@ def expectations(result):
         and service_crash["next_session"]["retired"] and service_crash["guardian_stop"][0] == 0
         and not service_crash["epochs_after_stop"],
         # Read from the running payload, not the manifest: its own group and nothing else.
-        "payload_group_private": payload[0].get("gid") == str(result["accounts"]["PAYLOAD_GID"])
-        and payload[0].get("groups") == [] and result["accounts"]["PAYLOAD_GID"] not in (
-            result["accounts"]["CLIENT_GID"], result["accounts"]["SOCKET_GID"]),
+        "delegated_subtree_refused": delegated["delegated_refused"][0] != 0
+        and "prepare operation 14" in delegated["delegated_refused"][1] and delegated["trusted_started"]
+        and delegated["guardian_stop"][0] == 0 and not delegated["epochs_after_stop"],
+        # Read from the running payload: its own range ID as group, with the same offset as its
+        # user ID, and nothing else.
+        "payload_group_private": in_payload_range(payload[0].get("gid")) and payload[0].get("gid") == payload[0].get(
+            "uid") and payload[0].get("groups") == [],
+        # Two live helpers are two accounts: neither can ptrace or signal the other.
+        "siblings_distinct_accounts": len(siblings["payload_uids"]) == 2
+        and all(in_payload_range(uid) for uid in siblings["payload_uids"]),
         "service_identity_filter": service[0].get("seccomp") == "2" and payload[0].get("seccomp") == "2",
         # EPERM is 1, ENOSYS 38: no way back to root, another group or a user namespace.
         "identity_filter_refuses_root": session["seccomp_probe"] == {
             "installed": True, "setresuid_root": 1, "setresgid_root": 1, "setuid_root": 1, "setgroups_root": 1,
-            "setgroups_empty": 0, "unshare_user": 1, "clone_user": 1, "clone3": 38, "payload_switch": 0},
+            "setgroups_empty": 0, "unshare_user": 1, "clone_user": 1, "clone3": 38, "payload_switch": 0,
+            "payload_last": 0, "beyond_range": 1},
         "nothing_left": not result["cleanup"]["leftovers"] and not result["cleanup"]["subtree_exists"]
+        and not os.path.exists(OUTER) and not os.path.exists(STATE2)
         and not result["cleanup"]["accounts_present"] and not result["cleanup"]["groups_present"]
         and not result["cleanup"]["client_in_socket_group"],
     }

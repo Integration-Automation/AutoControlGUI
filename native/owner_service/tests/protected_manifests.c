@@ -4,6 +4,14 @@
  * time. Never linked into an installed service or guardian. */
 #include "guardian.h"
 
+/* The delegated-subtree scenario builds a second guardian with its own subtree and state. */
+#ifndef PROTECTED_SUBTREE
+#define PROTECTED_SUBTREE "autocontrol-test"
+#endif
+#ifndef PROTECTED_STATE
+#define PROTECTED_STATE "/var/lib/autocontrol-test"
+#endif
+
 static const char *const payload_argv[] = {PAYLOAD_EXECUTABLE, "--owned-child", "rpc"};
 static const char *const parent_argv[] = {"/usr/bin/python3", "-I", NESTED_PARENT, REPOSITORY, ENDPOINT};
 /* 1: a top-level rpc helper. 2: the same helper, nested only. 3: a top-level parent that
@@ -30,6 +38,7 @@ const service_policy service_manifest = {
     .lease_max_age_ns = 600000000000ULL,
     .socket_gid = SOCKET_GID,
     .client_lease_quota = 8,
+    .nested_lease_quota = 4,
     .record_capacity = 8,
     .record_pids_max = 32,
     .connections_per_account = 8,
@@ -40,15 +49,15 @@ const service_policy service_manifest = {
  * gives it the socket group), and the service admits it only for OPEN_CHILD inside its
  * own payload. */
 static const guardian_client protected_clients[] = {
-    {CLIENT_UID, CLIENT_GID, {NS_DEVICE, NS_USER, NS_PID, NS_MOUNT, NS_CGROUP}},
-    {PAYLOAD_UID, PAYLOAD_GID, {NS_DEVICE, NS_USER, NS_PID, NS_MOUNT, NS_CGROUP}},
+    {CLIENT_UID, CLIENT_GID, {NS_DEVICE, NS_USER, NS_PID, NS_MOUNT, NS_CGROUP}, 1},
+    {PAYLOAD_UID, PAYLOAD_GID, {NS_DEVICE, NS_USER, NS_PID, NS_MOUNT, NS_CGROUP}, SERVICE_PAYLOAD_IDS},
 };
 
 const guardian_manifest guardian_compiled_manifest = {
-    .state_directory = "/var/lib/autocontrol-test",
+    .state_directory = PROTECTED_STATE,
     .administrator = 0,
     .cgroup_mount = "/sys/fs/cgroup",
-    .subtree = "autocontrol-test",
+    .subtree = PROTECTED_SUBTREE,
     .hierarchy_owner = 0,
     .service_uid = SERVICE_UID,
     .service_gid = SERVICE_GID,

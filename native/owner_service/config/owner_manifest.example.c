@@ -5,15 +5,17 @@
  * environment value or a request at run time. Keep the compiled copy root-owned. */
 #include "guardian.h"
 
-/* EDIT: accounts. Guardian is root. The service account runs the service, and the
- * payload account runs helpers. One client account may open top-level leases. Every
- * account and primary group must be distinct. The socket group owns the listener and
- * the client account is a supplementary member of it; the payload never is. Every
- * client below is also named in the listener's ACL. */
+/* EDIT: accounts. Guardian is root. The service account runs the service. One client
+ * account may open top-level leases. Helpers run as IDs from a payload range: each helper
+ * gets PAYLOAD_UID + k and PAYLOAD_GID + k, for k below 32, so no two live helpers share
+ * an account. The range needs no accounts, only 32 user and 32 group IDs nothing else
+ * uses (systemd keeps 61184-65519 for such dynamic IDs; pick a range outside it, too).
+ * The socket group owns the listener and the client account is a supplementary member
+ * of it; no helper ever is. Every client below is also named in the listener's ACL. */
 #define SERVICE_UID 990u
 #define SERVICE_GID 990u
-#define PAYLOAD_UID 991u
-#define PAYLOAD_GID 991u
+#define PAYLOAD_UID 60000u
+#define PAYLOAD_GID 60000u
 #define SOCKET_GID 992u
 #define CLIENT_UID 1000u
 #define CLIENT_GID 1000u
@@ -50,6 +52,8 @@ const service_policy service_manifest = {
      * fresh epoch. Until then a spent epoch answers new opens with CAPACITY, so one
      * long-lived helper delays the rollover: keep both at the maximum, 32. */
     .client_lease_quota = 32,
+    /* Child leases one helper may open per epoch, if its policy may start nested children. */
+    .nested_lease_quota = 4,
     .record_capacity = 32,
     /* EDIT: per helper, including its nested children. The Python worker with OpenCV and
      * OCR loaded needs about 1 GiB; a fork bomb or leak stops here instead of the host. */
@@ -61,7 +65,7 @@ const service_policy service_manifest = {
 };
 
 static const guardian_client clients[] = {
-    {CLIENT_UID, CLIENT_GID, {NS_DEVICE, NS_USER, NS_PID, NS_MOUNT, NS_CGROUP}},
+    {CLIENT_UID, CLIENT_GID, {NS_DEVICE, NS_USER, NS_PID, NS_MOUNT, NS_CGROUP}, 1},
 };
 
 /* EDIT: paths and identity. The subtree must already exist beneath the cgroup2 mount,

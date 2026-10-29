@@ -30,19 +30,37 @@ static bool client_account(const service_policy *policy, uint32_t uid) {
     return false;
 }
 
-static bool client_group(const service_policy *policy, uint32_t gid) {
-    for (size_t i = 0; i < policy->client_count; ++i) if (policy->clients[i].gid == gid) return true;
-    return false;
+static bool in_range(uint32_t id, uint32_t base) { return id >= base && id - base < SERVICE_PAYLOAD_IDS; }
+
+/* No payload ID is the guardian's, a client's or this service's, and no payload group is
+ * root's, a client's, the socket's or this service's: a shared group would give payloads
+ * the client's files, and the service's own account would let a payload write the
+ * epoch's cgroup.procs. The ranges never wrap and never reach -1, "unchanged". */
+static bool payload_accounts_valid(const service_policy *policy, const service_launch_policy *entry) {
+    uint32_t uid = entry->payload_uid, gid = entry->payload_gid;
+    if (uid > UINT32_MAX - SERVICE_PAYLOAD_IDS || gid > UINT32_MAX - SERVICE_PAYLOAD_IDS || !uid || !gid) return false;
+    if (in_range(policy->guardian.uid, uid) || in_range((uint32_t)geteuid(), uid) || in_range(0, gid) ||
+        in_range(policy->guardian.gid, gid) || in_range((uint32_t)getegid(), gid) ||
+        (policy->socket_gid && in_range(policy->socket_gid, gid))) return false;
+    for (size_t i = 0; i < policy->client_count; ++i)
+        if (in_range(policy->clients[i].uid, uid) || in_range(policy->clients[i].gid, gid)) return false;
+    return true;
 }
 
-/* A payload shares no account or group with the guardian, a client or this service:
- * a shared group would give payloads the client's files, and the service's own account
- * would let a payload write the epoch's cgroup.procs. */
-static bool payload_accounts_valid(const service_policy *policy, const service_launch_policy *entry) {
-    return entry->payload_uid != policy->guardian.uid && entry->payload_uid != geteuid() &&
-        !client_account(policy, entry->payload_uid) && entry->payload_gid != 0 &&
-        entry->payload_gid != policy->guardian.gid && entry->payload_gid != getegid() &&
-        !client_group(policy, entry->payload_gid) && entry->payload_gid != policy->socket_gid;
+/* Two policies' payload ranges are the same range or share no ID, so one lease position
+ * never maps two live helpers to one account. */
+static bool ranges_valid(const service_policy *policy) {
+    for (size_t i = 0; i < policy->policy_count; ++i)
+        for (size_t j = 0; j < i; ++j) {
+            const service_launch_policy *a = &policy->policies[i], *b = &policy->policies[j];
+            bool same_uid = a->payload_uid == b->payload_uid, same_gid = a->payload_gid == b->payload_gid;
+            bool apart_uid = a->payload_uid >= b->payload_uid + SERVICE_PAYLOAD_IDS ||
+                b->payload_uid >= a->payload_uid + SERVICE_PAYLOAD_IDS;
+            bool apart_gid = a->payload_gid >= b->payload_gid + SERVICE_PAYLOAD_IDS ||
+                b->payload_gid >= a->payload_gid + SERVICE_PAYLOAD_IDS;
+            if (!(same_uid || apart_uid) || !(same_gid || apart_gid)) return false;
+        }
+    return true;
 }
 
 static bool launch_policy_valid(const service_policy *policy, const service_launch_policy *entry) {
@@ -59,8 +77,8 @@ static const service_launch_policy *policy_by_id(const service_policy *policy, u
     return NULL;
 }
 
-/* Every child a policy may start exists, is nested-only, and runs as the parent's own
- * payload account: a nested child never reaches an account its parent did not have. */
+/* Every child a policy may start exists, is nested-only, and draws from the parent's own
+ * payload range: a nested child never reaches a range its parent did not have. */
 static bool children_valid(const service_policy *policy, const service_launch_policy *parent) {
     for (uint32_t id = 0; id < 32; ++id) {
         if (!(parent->child_policies & (UINT32_C(1) << id))) continue;
@@ -76,6 +94,7 @@ static bool policy_valid(const service_policy *policy) {
         !policy->record_capacity || policy->record_capacity > NO_RECORD_LIMIT ||
         policy->client_count > SERVICE_CLIENT_LIMIT || client_account(policy, policy->guardian.uid) ||
         !policy->client_lease_quota || policy->client_lease_quota > SERVICE_LEASE_LIMIT ||
+        !policy->nested_lease_quota || policy->nested_lease_quota > SERVICE_LEASE_LIMIT ||
         policy->lease_max_age_ns < policy->lease_lifetime_ns ||
         policy->record_pids_max < SERVICE_MIN_PIDS || policy->record_memory_max < SERVICE_MIN_MEMORY ||
         !policy->connections_per_account || policy->connections_per_account > SERVICE_CONNECTION_LIMIT / 2 ||
@@ -88,7 +107,7 @@ static bool policy_valid(const service_policy *policy) {
     }
     for (size_t i = 0; i < policy->policy_count; ++i)
         if (!children_valid(policy, &policy->policies[i])) return false;
-    return true;
+    return ranges_valid(policy);
 }
 
 service_state *service_allocate(const service_policy *policy, no_error *error) {
@@ -218,9 +237,20 @@ static service_status status_for(no_error_kind kind) {
 
 /* Positions never return within an epoch, so the quota counts open and spent leases:
  * one account cannot exhaust the epoch for every other client. */
+/* Top-level positions one account used this epoch, open or spent. */
 static size_t positions_used(const service_state *service, uint32_t uid) {
     size_t used = 0;
-    for (size_t i = 0; i < service->lease_count; ++i) used += service->leases[i].holder_uid == uid;
+    for (size_t i = 0; i < service->lease_count; ++i)
+        used += service->leases[i].holder_uid == uid && !service->leases[i].nested;
+    return used;
+}
+
+/* Children one parent record opened this epoch, open or spent: a nested-capable payload
+ * is bounded by its own record, never by an account's share it could otherwise spend. */
+static size_t children_used(const service_state *service, no_ticket parent) {
+    size_t used = 0;
+    for (size_t i = 0; i < service->lease_count; ++i)
+        used += service->leases[i].nested && same_ticket(service->leases[i].parent, parent);
     return used;
 }
 
@@ -236,8 +266,9 @@ static service_status issue_lease(service_state *service, size_t index, const se
         *out = replay;
         return replay->phase == LEASE_OPEN ? STATUS_EXISTING : STATUS_CLOSED;
     }
-    if (service->lease_count == SERVICE_LEASE_LIMIT || positions_used(service, connection->connector.credentials.uid) >=
-        service->policy->client_lease_quota) {
+    bool over_quota = parent ? children_used(service, *parent) >= service->policy->nested_lease_quota :
+        positions_used(service, connection->connector.credentials.uid) >= service->policy->client_lease_quota;
+    if (service->lease_count == SERVICE_LEASE_LIMIT || over_quota) {
         error->kind = NO_ERROR_CAPACITY;
         return STATUS_CAPACITY;
     }
@@ -439,7 +470,8 @@ static void start(service_state *service, size_t index, const service_request *r
         error = (no_error){NO_ERROR_UNAVAILABLE, errno, 11};
     } else if (policy) {
         no_validated_spec spec = {policy->executable, policy->cwd, argv, policy->env, argc, policy->envc,
-            policy->payload_uid, policy->payload_gid, nested ? capability : NULL,
+            policy->payload_uid + (uint32_t)(lease - service->leases),
+            policy->payload_gid + (uint32_t)(lease - service->leases), nested ? capability : NULL,
             service->policy->record_pids_max,
             service->policy->record_memory_max};
         no_submit_result result = submit(service, lease, request, &spec, &ticket, &error);
@@ -627,13 +659,16 @@ static void adopt_connection(service_state *service, int number) {
 
 /* One frame from the guardian channel: a verified client connection, from the guardian
  * process itself, for this epoch. Anything else, EOF included, is guardian loss. */
-static bool guardian_message(service_state *service) {
+typedef enum { GUARDIAN_FRAME_LOST, GUARDIAN_FRAME_NONE, GUARDIAN_FRAME_ADOPTED } guardian_frame;
+
+static guardian_frame guardian_message(service_state *service) {
     guardian_grant frame;
     received_packet packet;
     no_error error = {0};
     memset(&frame, 0, sizeof(frame));
     if (!packet_receive(service->guardian.number, &frame, sizeof(frame), MSG_DONTWAIT, &packet, &error))
-        return error.system_errno == EAGAIN || error.system_errno == EWOULDBLOCK;
+        return error.system_errno == EAGAIN || error.system_errno == EWOULDBLOCK ? GUARDIAN_FRAME_NONE :
+            GUARDIAN_FRAME_LOST;
     bool authentic = packet.bytes == (ssize_t)sizeof(frame) && packet_authenticated(&packet, &service->guardian_peer, 1) &&
         frame.magic == SERVICE_MAGIC && frame.version == SERVICE_VERSION && frame.kind == GRANT_CONNECTION &&
         same_id(frame.epoch, service->epoch) && frame.generation == service->generation;
@@ -643,7 +678,17 @@ static bool guardian_message(service_state *service) {
         adopt_connection(service, number);
     }
     if (!packet_release(&packet)) service->close_uncertain = true;
-    return authentic;
+    return authentic ? GUARDIAN_FRAME_ADOPTED : GUARDIAN_FRAME_LOST;
+}
+
+/* Every pending handoff is taken in one turn, within a bound, so a burst of connections
+ * never fills the guardian's channel and makes it drop the ones behind it. */
+static bool guardian_messages(service_state *service) {
+    for (size_t i = 0; i < 4 * SERVICE_CONNECTION_LIMIT; ++i) {
+        guardian_frame frame = guardian_message(service);
+        if (frame != GUARDIAN_FRAME_ADOPTED) return frame == GUARDIAN_FRAME_NONE;
+    }
+    return true;
 }
 
 #ifdef NO_ACCEPTANCE_BUILD
@@ -720,7 +765,7 @@ service_result service_run_one(service_state *service, int timeout_ms) {
     int ready;
     do { ready = poll(events, count, timeout_ms); } while (ready < 0 && errno == EINTR);
     bool guardian_lost = ready > 0 && (events[2].revents ||
-        (events[1].revents & POLLIN ? !guardian_message(service) : events[1].revents != 0));
+        (events[1].revents & POLLIN ? !guardian_messages(service) : events[1].revents != 0));
     if (guardian_lost) {
         /* Guardian loss, by channel, by process exit or by a frame it did not send,
          * closes admission at once; the caller then drains. */

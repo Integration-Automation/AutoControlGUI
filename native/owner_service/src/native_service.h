@@ -8,6 +8,7 @@
 #include <sys/types.h>
 
 #define SERVICE_CONNECTION_LIMIT 16
+#define SERVICE_PAYLOAD_IDS SERVICE_LEASE_LIMIT /* IDs in each policy's payload range. */
 #define SERVICE_IDLE_GRACE_NS 5000000000ULL /* A spent epoch waits this long for a lease-less connection. */
 #define SERVICE_MIN_PIDS 8                     /* Below this a helper cannot start its threads. */
 #define SERVICE_MIN_MEMORY (16ULL << 20)      /* 16 MiB. */
@@ -101,6 +102,8 @@ typedef struct {
     const char *const *fixed_argv, *const *env;
     size_t fixed_argc, envc, max_client_arguments;
     const char *argument_alphabet; /* Every client argument byte; never empty, never a leading '-'. */
+    /* The first of SERVICE_PAYLOAD_IDS user and group IDs. A record runs as base + its lease
+     * position, so no two live helpers share an account; no account need exist for them. */
     uint32_t payload_uid, payload_gid;
     uint32_t child_policies; /* Bit i permits nested policy id i under a record of this policy. */
 } service_launch_policy;
@@ -116,6 +119,7 @@ typedef struct {
     uint64_t lease_max_age_ns;   /* OP_RENEW never extends a lease past this age. */
     uint32_t socket_gid;         /* The listener's group; no payload may hold it. */
     size_t client_lease_quota; /* Lease positions one account may use per epoch, open or spent. */
+    size_t nested_lease_quota; /* Child leases one parent record may open per epoch, open or spent. */
     size_t record_capacity;
     uint64_t record_pids_max;   /* Processes one helper and its nested children may hold. */
     size_t connections_per_account; /* At most half the table, so no account locks out another. */

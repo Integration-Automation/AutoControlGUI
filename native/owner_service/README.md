@@ -35,13 +35,26 @@ the gate.
   `setgroups` only an empty list, the other set*id calls fail, and no user namespace
   can be created (`clone3` answers ENOSYS, so payloads start with `clone` and are moved
   into their cgroup before they run). A code-execution bug in the service therefore
-  reaches the payload accounts, not root, the client or another group. The filter is
+  reaches the payload ranges, not root, the client or another group. The filter is
   built for x86-64 and arm64 only.
 - Payloads hold no supplementary group. A nested-capable payload reaches the guardian
   through an ACL on the listener that names every client account in the guardian's
   manifest, so `/run` must support POSIX ACLs (tmpfs does).
-- Payload accounts and groups must differ from the guardian, the service, the client
-  and the socket group, and a service serves exactly one client account.
+- Every helper runs as its own user and group ID: the policy's payload range base plus
+  its lease position, 32 IDs per range, with no account needed. No two live helpers share
+  an account, so none can ptrace, signal or take descriptors from another. Payload ranges
+  must not contain the guardian's, the service's, the client's or the socket group's IDs;
+  two policies' ranges are equal or disjoint; a nested child draws from its parent's
+  range. A service serves exactly one client account.
+- A helper whose policy may start nested children may open at most the manifest's
+  `nested_lease_quota` child leases per epoch; children no longer count against an
+  account's share. The guardian hands over at most 32 connections per account per
+  second, and the service takes every pending handoff each turn, so one account's
+  connection flood cannot crowd out another's.
+- The guardian walks the cgroup subtree from the mount one component at a time and
+  refuses any cgroup on the way (mount and subtree included) whose directory or
+  `cgroup.procs`, `cgroup.threads` or `cgroup.subtree_control` belongs to another account
+  or is writable by others: a delegated cgroup there could move helpers out of the epoch.
 
 ## Parts
 
@@ -64,9 +77,9 @@ the gate.
 
 ## Install (administrator)
 
-1. Create a service account and a payload account, each with its own primary group,
-   and a socket group. Add the client account to the socket group as a supplementary
-   member; never add the payload account.
+1. Create a service account with its own primary group, and a socket group. Add the
+   client account to the socket group as a supplementary member. Reserve 32 user IDs and
+   the same 32 group IDs that nothing else uses for helpers; they need no accounts.
 2. Copy `config/owner_manifest.example.c` to `owner_manifest.c`, fill in every
    value marked `EDIT`, and review it.
 3. Run `build.sh owner_manifest.c build/`. Install `owner_guardian` and

@@ -6,15 +6,39 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <unistd.h>
 
-bool guardian_client_verified(const guardian_manifest *manifest, const peer_identity *peer) {
+/* Index of the listed client `peer` proves to be, or -1. */
+static long verified_client(const guardian_manifest *manifest, const peer_identity *peer) {
     for (size_t i = 0; i < manifest->client_count; ++i) {
         const guardian_client *client = &manifest->clients[i];
-        if (client->uid == peer->credentials.uid && client->gid == peer->credentials.gid)
-            return peer_in_namespaces(peer, &client->namespaces);
+        uint32_t span = client->id_count > 1 ? client->id_count : 1;
+        uint32_t offset = peer->credentials.uid - client->uid;
+        if (peer->credentials.uid >= client->uid && offset < span && peer->credentials.gid >= client->gid &&
+            peer->credentials.gid - client->gid == offset)
+            return peer_in_namespaces(peer, &client->namespaces) ? (long)i : -1;
     }
-    return false;
+    return -1;
+}
+
+bool guardian_client_verified(const guardian_manifest *manifest, const peer_identity *peer) {
+    return verified_client(manifest, peer) >= 0;
+}
+
+/* Connections each listed account may have handed over per second. Past it the rest are
+ * dropped at once, so one account's flood cannot crowd another's out of the channel. */
+static struct { uint64_t window_ns; unsigned count; } rates[GUARDIAN_CLIENT_LIMIT];
+
+void guardian_forward_reset_rates(void) { memset(rates, 0, sizeof(rates)); }
+
+static bool within_rate(long client) {
+    if (client < 0 || client >= GUARDIAN_CLIENT_LIMIT) return false;
+    struct timespec value;
+    clock_gettime(CLOCK_MONOTONIC, &value);
+    uint64_t now = (uint64_t)value.tv_sec * 1000000000ULL + (uint64_t)value.tv_nsec;
+    if (now - rates[client].window_ns >= 1000000000ULL) { rates[client].window_ns = now; rates[client].count = 0; }
+    return ++rates[client].count <= GUARDIAN_ACCEPT_BURST;
 }
 
 static bool send_connection(int channel, int connection, no_id epoch, uint64_t generation) {
@@ -44,7 +68,7 @@ guardian_forward_result guardian_forward(int listener, int channel, const guardi
     peer_identity peer = {.pidfd = {FD_EMPTY, -1}};
     no_error error;
     guardian_forward_result result = FORWARD_REFUSED;
-    if (peer_identity_from_connection(&peer, connection, &error) && guardian_client_verified(manifest, &peer))
+    if (peer_identity_from_connection(&peer, connection, &error) && within_rate(verified_client(manifest, &peer)))
         result = send_connection(channel, connection, epoch, generation) ? FORWARD_HANDED : FORWARD_CHANNEL_FAILED;
     service_close_fd(&peer.pidfd);
     close(connection);
