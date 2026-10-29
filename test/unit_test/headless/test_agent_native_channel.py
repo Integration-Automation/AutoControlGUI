@@ -1,4 +1,6 @@
 """Owned subprocess protocol tests use pure echo helpers and never open a desktop."""
+import os
+import signal
 import sys
 import time
 from concurrent.futures import CancelledError
@@ -137,3 +139,27 @@ def test_closed_channel_refuses_new_requests():
     worker.close()
     with pytest.raises(AgentTaskError, match="retired"):
         worker.request("echo", {}, timeout=1)
+
+
+posix_only = pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups and SIGCHLD")
+
+
+@posix_only
+def test_ignored_sigchld_refuses_before_any_helper_starts():
+    previous = signal.signal(signal.SIGCHLD, signal.SIG_IGN)
+    try:
+        with pytest.raises(AgentTaskError, match="SIGCHLD"):
+            channel()
+    finally:
+        signal.signal(signal.SIGCHLD, previous)
+
+
+@posix_only
+def test_leader_reaped_elsewhere_is_never_signalled():
+    worker = channel()
+    pid = worker._process.pid
+    os.kill(pid, signal.SIGKILL)
+    os.waitpid(pid, 0)  # Another part of the process reaps it; the PID is free again.
+    with pytest.raises(AgentTaskError, match="reaped elsewhere"):
+        worker.close()
+    assert not worker.retired

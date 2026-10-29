@@ -54,6 +54,10 @@ class OwnedChannel:
         self._retired = False
         self._job: Any = None
         self._on_control = on_control
+        if sys.platform != "win32" and signal.getsignal(signal.SIGCHLD) == signal.SIG_IGN:
+            # The kernel would reap the leader at once, and its group ID could be reused
+            # before close signals it.
+            raise AgentTaskError("native helper cannot be owned while SIGCHLD is ignored")
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform == "win32" else 0
         self._process = subprocess.Popen(  # nosec B603  # reason: trusted host factory supplies explicit argv
             list(argv), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -201,14 +205,26 @@ class OwnedChannel:
             else:
                 self._process.kill()
         else:
-            try:
-                os.killpg(self._process.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            self._signal_owned_group()
         try:
             self._process.wait(timeout=max(0, deadline - time.monotonic()))
         except subprocess.TimeoutExpired as error:
             raise AgentTaskError("native helper has not retired") from error
+
+    def _signal_owned_group(self) -> None:
+        """Signal the helper's group only while its unreaped leader still holds the group ID."""
+        waitid = getattr(os, "waitid", None)
+        if waitid is not None:
+            try:
+                # Alive or a zombie, the leader keeps its PID, and with it the group ID.
+                waitid(os.P_PID, self._process.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
+            except ChildProcessError as error:
+                raise AgentTaskError("native helper was reaped elsewhere; its group cannot be signalled "
+                                     "safely") from error
+        try:
+            os.killpg(self._process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
 
     def close(self) -> None:
         """Stop and reap only this owned tree before returning control to another task.

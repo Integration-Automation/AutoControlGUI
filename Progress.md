@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-14；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-15；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -56,10 +56,11 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      核對實際 helper 世代、故障退場與完整應用接合，不能以獨立元件 IPC 取代這些證據。
      程序／逐訊息身分及受保護路徑不代表桌面權限，也不能隔離同 UID／特權敵對程序；
      使用者空間有界等待不能冒稱核心 syscall 的硬即時完成，未知清理仍不得移交控制權。
-     POSIX helper 尚須修正 native_channel 的程序身分與清理依據；SIGCHLD 自動回收時，
-     Popen.returncode 尚未設定不能證明 PID 仍被保留。須驗證啟動時取得的程序身分、
-     取消／早退／外部回收與原程序群組退場；送出訊號、主程序退出或單次錯誤碼均不足以
-     證明全部後代已退出。涵蓋既有環境探測、桌面／瀏覽器及遠端 helper 呼叫者。
+     POSIX 本機 channel 已在 SIGCHLD 被忽略時拒絕啟動，且只在未回收的 leader 仍保有群組 ID
+     時才送出 killpg；leader 已被他處回收時拒絕送訊號並保留未 retired（stage147，WSL 實測）。
+     仍缺：以 setsid 等方式離開群組的後代無法由本機 channel 觸及，送出訊號、主程序退出或單次
+     錯誤碼均不足以證明全部後代已退出，須靠 owner 服務的 cgroup 退場；涵蓋既有環境探測、
+     桌面／瀏覽器及遠端 helper 呼叫者的實際驗收亦仍待執行。
      正式繫結仍須核實取消發生於 native spawn 期間的所有權、失敗清理、群組與逸出後代退場，
      並補受支援版本／架構驗證；隔離原型與直接子程序驗收不等於正式 helper 已接合，安裝前仍須比對。
      不得把原始逾時改稱 registry 死鎖，也不得放寬原始 10 秒期限或改動跳過政策。
