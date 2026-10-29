@@ -164,11 +164,13 @@ def test_file_dialog_rebinds_only_to_confirmed_own_foreground_and_canonicalizes_
 
 def test_review_error_type_survives_the_native_channel_boundary():
     import queue
+    import threading
     import time
     from je_auto_control.utils.agent_runtime import AgentHumanReview
     from je_auto_control.utils.agent_runtime.native_channel import OwnedChannel
     channel = object.__new__(OwnedChannel)
     channel._replies = queue.Queue()
+    channel._stop = threading.Event()
     channel._replies.put({"id": "fixture", "error_type": "AgentHumanReview", "error": "unsaved content"})
     with pytest.raises(AgentHumanReview):
         channel._receive("fixture", time.monotonic() + 1, lambda: None, None)

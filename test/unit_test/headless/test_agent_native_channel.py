@@ -2,7 +2,7 @@
 import sys
 import time
 from concurrent.futures import CancelledError
-from threading import Event
+from threading import Event, Thread
 
 import pytest
 
@@ -79,4 +79,61 @@ def test_crashed_helper_is_reaped_and_never_reused():
         worker.request("exit", {}, timeout=5)
     assert worker.retired
     with pytest.raises(AgentTaskError):
+        worker.request("echo", {}, timeout=1)
+
+
+def test_close_from_another_thread_stops_a_waiting_request():
+    worker = channel()
+    outcome = {}
+
+    def wait_for_reply():
+        try:
+            outcome["result"] = worker.request("hang", {}, timeout=20)
+        except AgentTaskError as error:
+            outcome["error"] = error
+
+    waiter = Thread(target=wait_for_reply)
+    waiter.start()
+    time.sleep(0.3)
+    started = time.monotonic()
+    worker.close()
+    closed_after = time.monotonic() - started
+    waiter.join(timeout=5)
+    assert not waiter.is_alive()
+    assert closed_after < 5
+    assert "result" not in outcome and "closed" in str(outcome["error"])
+    assert worker.retired
+
+
+def test_reply_already_queued_is_not_delivered_after_close():
+    """The second check waits until the reply is queued; the third, which runs
+    after the reply was dequeued and right before delivery, closes the channel."""
+    worker = channel()
+    closers = []
+    state = {"calls": 0, "queued": False}
+
+    def close_once_reply_is_dequeued():
+        state["calls"] += 1
+        if state["calls"] == 2:
+            limit = time.monotonic() + 5
+            while not worker._replies.qsize() and time.monotonic() < limit:
+                time.sleep(0.01)
+        if worker._replies.qsize():
+            state["queued"] = True
+        elif state["queued"] and not closers:
+            closer = Thread(target=worker.close)
+            closers.append(closer)
+            closer.start()
+            closer.join(timeout=5)
+            assert not closer.is_alive()
+
+    with pytest.raises(AgentTaskError, match="closed"):
+        worker.request("echo", {"value": 1}, timeout=5, check=close_once_reply_is_dequeued)
+    assert closers and worker.retired
+
+
+def test_closed_channel_refuses_new_requests():
+    worker = channel()
+    worker.close()
+    with pytest.raises(AgentTaskError, match="retired"):
         worker.request("echo", {}, timeout=1)

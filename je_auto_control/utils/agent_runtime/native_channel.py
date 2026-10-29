@@ -17,13 +17,37 @@ from je_auto_control.utils.agent_runtime.wire_data import detached, positive
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
 
 _PACKET_LIMIT = 1_100_000
+_ERROR_TYPES = {"AgentControlBusy": AgentControlBusy, "AgentHumanReview": AgentHumanReview}
+
+
+def classify_reply(reply: Any, request_id: str) -> tuple[bool, Any]:
+    """Return ``(True, event)`` for an input announcement or ``(False, result)``; a helper error raises its type."""
+    if not isinstance(reply, dict) or reply.get("id") != request_id:
+        raise AgentTaskError("native helper returned an unexpected reply")
+    if "event" in reply:
+        return True, reply["event"]
+    if "error" in reply:
+        raise _ERROR_TYPES.get(str(reply.get("error_type")), AgentTaskError)(str(reply["error"]))
+    return False, detached(reply.get("result"))
+
+
+def require_event_owner(event: Any, callback: Callable[[dict], None] | None) -> None:
+    """Refuse an input announcement that is malformed or that no caller agreed to handle."""
+    if not isinstance(event, dict) or callback is None:
+        raise AgentTaskError("native helper announced unexpected input")
 
 
 class OwnedChannel:
-    """One serial native RPC owner; late replies and expired generations cannot be reused."""
+    """One serial native RPC owner; late replies and expired generations cannot be reused.
+
+    Request admission and retirement are separate: ``close`` never waits for the
+    request lock, so another thread can stop a request that is waiting for its
+    reply. The stop intent is monotone, and no reply is delivered once it is set.
+    """
 
     def __init__(self, argv: Sequence[str], *, on_control: Callable[[str], None] | None = None) -> None:
-        self._lock = threading.RLock()
+        self._request_lock = threading.Lock()
+        self._close_lock = threading.Lock()
         self._stop = threading.Event()
         self._replies: queue.Queue[Any] = queue.Queue(maxsize=32)
         self._outbound: queue.Queue[bytes] = queue.Queue(maxsize=2)
@@ -119,8 +143,8 @@ class OwnedChannel:
                 on_event: Callable[[dict], None] | None = None) -> Any:
         """Validate one proposal, wait within its deadline, and reap on every failed operation."""
         positive(timeout, "native deadline", 3600)
-        with self._lock:
-            if self._retired:
+        with self._request_lock:
+            if self._retired or self._stop.is_set():
                 raise AgentTaskError("native helper has retired")
             try:
                 check()
@@ -137,31 +161,34 @@ class OwnedChannel:
     def _receive(self, request_id: str, deadline: float, check: Callable[[], None],
                  on_event: Callable[[dict], None] | None, operation: str = "operation") -> Any:
         while time.monotonic() < deadline:
+            self._fenced()
             check()
             try:
                 reply = self._replies.get(timeout=0.05)
             except queue.Empty:
                 continue
+            self._fenced()
             if isinstance(reply, AgentTaskError):
                 raise reply
-            if not isinstance(reply, dict) or reply.get("id") != request_id:
-                raise AgentTaskError("native helper returned an unexpected reply")
-            if "event" in reply:
-                self._event(reply["event"], on_event, check)
+            is_event, value = classify_reply(reply, request_id)
+            if is_event:
+                self._event(value, on_event, check)
                 continue
-            if "error" in reply:
-                error_type = {"AgentControlBusy": AgentControlBusy, "AgentHumanReview": AgentHumanReview}.get(
-                    str(reply.get("error_type")), AgentTaskError)
-                raise error_type(str(reply["error"]))
             check()
-            return detached(reply.get("result"))
+            self._fenced()
+            return value
         raise AgentTaskError(f"native helper {operation} deadline exhausted")
 
+    def _fenced(self) -> None:
+        """Refuse delivery once close has begun, even for a reply already queued."""
+        if self._stop.is_set():
+            raise AgentTaskError("native helper was closed while a request was waiting")
+
     def _event(self, event: Any, callback: Callable[[dict], None] | None, check: Callable[[], None]) -> None:
-        if not isinstance(event, dict) or callback is None:
-            raise AgentTaskError("native helper announced unexpected input")
+        require_event_owner(event, callback)
         check()
         callback(detached(event))
+        self._fenced()
         self._send({"ack": True})
 
     def _stop_process(self) -> None:
@@ -184,11 +211,15 @@ class OwnedChannel:
             raise AgentTaskError("native helper has not retired") from error
 
     def close(self) -> None:
-        """Stop and reap only this owned tree before returning control to another task."""
-        with self._lock:
+        """Stop and reap only this owned tree before returning control to another task.
+
+        Safe from any thread, including while another thread waits in ``request``;
+        that request then fails instead of returning a reply.
+        """
+        self._stop.set()
+        with self._close_lock:
             if self._retired:
                 return
-            self._stop.set()
             self._stop_process()
             self._reader.join(timeout=1)
             self._writer.join(timeout=1)
