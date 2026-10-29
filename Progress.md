@@ -85,9 +85,12 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      程序（stage145），但只驗證非特權下的拒絕與「未建立任何物件」的復原；委派建立、以服務帳號
      啟動、授權交換、監看與已有內容 epoch 的冷復原都須 root 與已佈建的 cgroup 子樹才能執行，
      尚未執行。正式入口維持不可用，
-     不能以本機契約斷言取代實際權限驗收。DECIDE：namespace 比對需對 peer 有 ptrace 讀取權
-     （實測跨使用者 EPERM，現為 fail closed，正式環境將拒絕所有 top-level client）；
-     bounding set 移除需服務具 CAP_SETPCAP；每個 principal 的 lease 配額。
+     不能以本機契約斷言取代實際權限驗收。已決定（2026-10-29）：client namespace 改由 root guardian
+     擁有 listener、驗證後才把連線交給服務，服務不再自行比對；受保護驗收可在 WSL distro
+     `podman-webrunner-validation` 內佈建帳號與委派 cgroup 子樹執行，結束後移除。服務帳號以
+     guardian 給予的 ambient CAP_SETUID／SETGID／SETPCAP 執行核准的降權與 bounding set 移除。
+     TODO：上述 guardian 接管 listener 與 WSL 受保護驗收尚待實作與執行。DECIDE：每個 principal
+     的 lease 配額。
      位置：`.worktrees/agent-tools/stage138/`（todo.md、review.md）、`stage139/`、`stage141/`
      至 `stage146/`。
      OwnedChannel 的 close 已不再等待 request 鎖，另一執行緒可中止等待中的請求，close 開始後
@@ -99,8 +102,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      子 lease（stage146，對實際服務只觀察到閘門下的拒絕）；presence broker 的入口尚未呼叫讀取。
      5 類呼叫者已改經 `owned_channel` 取得 channel：
      Linux 若有主機安裝的 root 擁有綁定檔，只能經服務啟動清單中完全相符的 argv，不退回本機程序。
-     DECIDE：Linux 無綁定時仍沿用未受控的 Popen／killpg；改為拒絕會使所有 Linux helper 在服務
-     佈建前停用，須由部署決定。parent_watch、輸入 journal／lease 與本機 pipe 執行緒退場仍須接合。
+     已決定（2026-10-29）：Linux 無綁定時繼續以本機 channel 執行 helper，runtime status 回報
+     not_configured。presence broker 目前只有 Windows 版本，nested grant 待 Linux presence 來源
+     存在後接合。parent_watch、輸入 journal／lease 與本機 pipe 執行緒退場仍須接合。
      正式 owner 服務交付尚缺封裝、架構／libc 相容性、stable／dev 一致性、安裝內容比對及實際
      已安裝執行驗收；隔離編譯的 ELF 不得冒充通用 wheel，不能匯入時下載或暗中部署服務。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、
