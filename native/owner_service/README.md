@@ -23,7 +23,11 @@ the gate.
   `lease_max_age_ns`, so an idle helper is not killed when one lifetime ends.
 - When the client's quota or the record slots of an epoch are spent and no lease or
   connection is open, the service drains, and the same guardian reclaims the epoch
-  and grants the next one. A spent epoch answers new opens with CAPACITY until then.
+  and grants the next one. A spent epoch answers new opens with CAPACITY until then. A connection without an
+  open lease holds a spent epoch for at most 5 seconds, so an idle or abandoned client
+  cannot keep the host from rolling over; the Python channel connects only at its first
+  request, and reports a connection turned away before it has a lease as
+  `AgentControlBusy`.
 - The service runs with a bounding set of only CAP_SETUID, CAP_SETGID and
   CAP_SETPCAP, `SECBIT_NOROOT` locked, and no_new_privs. Those guard only exec, so a
   seccomp filter, inherited by every payload, also confines the calls themselves:
@@ -76,7 +80,11 @@ the gate.
    refuses to start without them (`prepare operation 4 errno 2`).
 5. Run `owner_guardian` as root under the host's supervisor (for example
    `Restart=on-failure`). It creates the listener, starts the service and rolls over to
-   a fresh epoch itself; it exits 0 only when asked to stop.
+   a fresh epoch itself; it exits 0 only when asked to stop. The listener's directory
+   (for example `/run/je_auto_control`, root-owned, mode 0755) and the cgroup subtree
+   with its enabled controllers live on filesystems that start empty at every boot:
+   recreate them before the guardian starts, for example with `tmpfiles.d` and an
+   `ExecStartPre=` step, or the guardian refuses to start.
 6. Write `/etc/je_auto_control/owner_service.json`. It must be root-owned and not
    writable by anyone else, and holds the listener path and the exact helper argv
    for each policy:

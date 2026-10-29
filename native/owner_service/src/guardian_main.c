@@ -21,6 +21,8 @@
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/un.h>
+#include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 enum { EXIT_STOPPED = 0, EXIT_REFUSED = 65, EXIT_UNRESOLVED = 70 };
@@ -233,6 +235,35 @@ static served_result supervise(const guardian_state *state, const peer_identity 
     }
 }
 
+/* Whatever ended the epoch, the service is killed if still alive, waited for and its
+ * exit logged: no zombie keeps a PID, its pids charge or a dying service cgroup. */
+static void reap_service(const peer_identity *service) {
+    if (service->pidfd.state != FD_OWNED) return;
+    syscall(SYS_pidfd_send_signal, service->pidfd.number, SIGKILL, NULL, 0);
+    siginfo_t info;
+    memset(&info, 0, sizeof(info));
+    int rc;
+    do { rc = waitid(P_PIDFD, (id_t)service->pidfd.number, &info, WEXITED); } while (rc < 0 && errno == EINTR);
+    if (rc == 0)
+        fprintf(stderr, "autocontrol-owner-guardian: service ended (%s %d)\n",
+                info.si_code == CLD_EXITED ? "exit" : "signal", info.si_status);
+}
+
+static uint64_t monotonic_ns(void) {
+    struct timespec value;
+    clock_gettime(CLOCK_MONOTONIC, &value);
+    return (uint64_t)value.tv_sec * 1000000000ULL + (uint64_t)value.tv_nsec;
+}
+
+/* A service that ends within a second of starting is crashing: wait a second before the
+ * next epoch, still answering a stop request at once. True when asked to stop. */
+static bool back_off(int signals) {
+    struct pollfd event = {.fd = signals, .events = POLLIN};
+    int rc;
+    do { rc = poll(&event, 1, 1000); } while (rc < 0 && errno == EINTR);
+    return rc > 0;
+}
+
 static served_result serve(guardian_state *state, int signals) {
     int listener = open_listener(state->manifest->listener_path, state->manifest->listener_gid, state->manifest);
     int pair[2] = {-1, -1};
@@ -254,6 +285,7 @@ static served_result serve(guardian_state *state, int signals) {
     close(pair[0]);
     close(listener);
     unlink(state->manifest->listener_path);
+    reap_service(&service);
     service_close_fd(&service.pidfd);
     return result;
 }
@@ -280,6 +312,7 @@ int main(void) {
     /* A service that drained its spent epoch ends normally: reclaim it and grant the next.
      * A stop request or a failure reclaims the epoch and leaves. */
     for (;;) {
+        uint64_t started = monotonic_ns();
         served_result served = serve(&state, signals);
         guardian_result recovered = guardian_recover(&state);
         if (recovered != GUARDIAN_READY) {
@@ -287,6 +320,7 @@ int main(void) {
             return report("recover", &state, EXIT_UNRESOLVED);
         }
         if (served == SERVED_STOP_REQUESTED) break;
+        if (served == SERVED_SERVICE_ENDED && monotonic_ns() - started < 1000000000ULL && back_off(signals)) break;
         if (served == SERVED_FAILED) {
             guardian_close(&state);
             return report("serve", &state, EXIT_REFUSED);

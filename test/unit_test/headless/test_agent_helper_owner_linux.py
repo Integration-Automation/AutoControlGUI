@@ -54,6 +54,8 @@ class FakeService:
         self.lifetime_ns = 0  # 0: replies carry no lease deadline, so the channel never renews.
         self.renew_status = wire.STATUS_OK
         self.renew_extends = True
+        self.renew_raises = False
+        self.refuse_connection = False
         self.deadline = 0
         self.settled = True
         self.grant = NestedGrant(((142, 1), (0, 3)), bytes(range(32)))
@@ -62,8 +64,12 @@ class FakeService:
 
     # ServiceTransport
     def send(self, frame):
+        if self.refuse_connection:
+            raise owner.ServiceConnectionLost("owner service closed the connection")
         fields = wire._REQUEST.unpack(frame)
         opcode, nonce, lease = fields[2], _id(fields[3]), _id(fields[4])
+        if opcode == wire.OP_RENEW and self.renew_raises:
+            raise AgentTaskError("owner service connection failed: ConnectionResetError")
         request_id, ticket, data_length, data = _id(fields[5]), _ticket(fields[11]), fields[12], fields[13]
         self.last_parent, self.last_capability = _ticket(fields[6]), fields[9]
         with self.lock:
@@ -396,11 +402,50 @@ def test_a_start_with_an_unknown_outcome_is_never_reported_retired():
 
 @pytest.mark.skipif(not hasattr(socket, "SOCK_SEQPACKET") or not hasattr(socket, "SO_PEERCRED"),
                     reason="AF_UNIX sequenced packets and SO_PEERCRED are Linux")
-def test_transport_refuses_an_endpoint_not_held_by_the_expected_account(tmp_path):
+def test_transport_connects_on_first_frame_and_refuses_a_foreign_listener(tmp_path):
     endpoint = str(tmp_path / "owner.sock")
+    absent = owner.SeqpacketTransport(endpoint)  # Construction never connects.
+    with pytest.raises(owner.ServiceConnectionLost, match="unreachable"):
+        absent.send(b"x")
     with socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET) as listener:
         listener.bind(endpoint)
         listener.listen(4)
-        owner.SeqpacketTransport(endpoint, peer_uid=os.getuid()).close()
+        own = owner.SeqpacketTransport(endpoint, peer_uid=os.getuid())
+        own.send(b"x")
+        own.close()
+        foreign = owner.SeqpacketTransport(endpoint, peer_uid=os.getuid() + 1)
         with pytest.raises(AgentTaskError, match="not the guardian"):
-            owner.SeqpacketTransport(endpoint, peer_uid=os.getuid() + 1)
+            foreign.send(b"x")
+
+
+def test_connection_turned_away_before_a_lease_is_busy_not_broken():
+    service = FakeService()
+    service.refuse_connection = True  # The account is at its share, or the service changes epoch.
+    channel = OwnerServiceChannel(service, 1)
+    with pytest.raises(AgentControlBusy, match="turned the connection away"):
+        channel.request("echo", 1, timeout=5)
+    assert channel.retired and not service.calls
+
+
+def test_renewer_survives_a_failed_connection_without_a_thread_error(monkeypatch):
+    raised = []
+    monkeypatch.setattr(threading, "excepthook", raised.append)
+    service = FakeService()
+    service.lifetime_ns = 150_000_000
+    service.renew_raises = True
+    channel = OwnerServiceChannel(service, 1)
+    assert channel.request("echo", 1, timeout=5) == 1
+    assert _until(lambda: not channel._renewer.is_alive())
+    assert not raised and channel._lease_lost
+
+
+def test_close_learns_a_lost_start_ticket_by_replay_and_retires():
+    service = FakeService()
+    service.drop_always = {wire.OP_START}
+    channel = OwnerServiceChannel(service, 1)
+    with pytest.raises(AgentTaskError, match="did not answer"):
+        channel.request("echo", 1, timeout=0.5)
+    assert not channel.retired
+    service.drop_always = set()  # The service answers again: the replay returns the kept ticket.
+    channel.close()
+    assert channel.retired and wire.OP_OBSERVE in service.calls

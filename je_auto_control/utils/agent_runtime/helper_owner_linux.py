@@ -42,12 +42,18 @@ class ServiceTransport(Protocol):
 _UCRED = struct.Struct("=iII")  # struct ucred: pid, uid, gid
 
 
+class ServiceConnectionLost(AgentTaskError):
+    """The owner service could not be reached, turned the connection away, or dropped it."""
+
+
 class SeqpacketTransport:
     """AF_UNIX SOCK_SEQPACKET connection; the kernel attaches sender credentials to every packet.
 
-    The socket's peer is whoever listens on the endpoint: the root guardian, so anything
-    else listening there is refused before a frame is sent. ``peer_uid`` exists only for
-    the unprivileged acceptance harness.
+    Connects on the first frame, not at construction: a channel built long before its
+    first request holds no connection the service would have to keep. The socket's peer
+    is whoever listens on the endpoint, the root guardian, so anything else listening
+    there is refused before a frame is sent. ``peer_uid`` exists only for the
+    unprivileged acceptance harness.
     """
 
     def __init__(self, endpoint: str, *, peer_uid: int = 0) -> None:
@@ -55,23 +61,33 @@ class SeqpacketTransport:
         kind = getattr(socket, "SOCK_SEQPACKET", None)
         if family is None or kind is None:
             raise AgentTaskError("the owner service needs AF_UNIX sequenced packets")
-        self._socket = socket.socket(family, kind | getattr(socket, "SOCK_CLOEXEC", 0))
+        self._endpoint = os.fspath(endpoint)
+        self._peer_uid = peer_uid
+        self._kind = kind | getattr(socket, "SOCK_CLOEXEC", 0)
+        self._socket: socket.socket | None = None
+
+    def _connected(self) -> socket.socket:
+        if self._socket is not None:
+            return self._socket
+        connection = socket.socket(socket.AF_UNIX, self._kind)
         try:
             # The service enables SO_PASSCRED/SO_PASSPIDFD on its end; the kernel then
             # attaches this process's credentials and pidfd to every packet it sends.
-            self._socket.connect(os.fspath(endpoint))
+            connection.connect(self._endpoint)
         except OSError as error:
-            self._socket.close()
-            raise AgentTaskError(f"owner service is unreachable: {type(error).__name__}") from error
+            connection.close()
+            raise ServiceConnectionLost(f"owner service is unreachable: {type(error).__name__}") from error
+        self._socket = connection
         try:
-            self._require_peer(peer_uid)
+            self._require_peer(self._peer_uid)
         except AgentTaskError:
-            self._socket.close()
+            self.close()
             raise
+        return connection
 
     def _require_peer(self, peer_uid: int) -> None:
         option = getattr(socket, "SO_PEERCRED", None)
-        if option is None:
+        if option is None or self._socket is None:
             raise AgentTaskError("cannot verify who listens on the owner service endpoint")
         try:
             _pid, uid, _gid = _UCRED.unpack(self._socket.getsockopt(socket.SOL_SOCKET, option, _UCRED.size))
@@ -81,30 +97,33 @@ class SeqpacketTransport:
             raise AgentTaskError(f"owner service endpoint is held by uid {uid}, not the guardian")
 
     def send(self, frame: bytes) -> None:
-        """Send one frame; a short send is a broken connection."""
+        """Send one frame, connecting first if needed; a short send is a broken connection."""
+        connection = self._connected()
         try:
-            sent = self._socket.send(frame)
+            sent = connection.send(frame)
         except OSError as error:
-            raise AgentTaskError(f"owner service connection failed: {type(error).__name__}") from error
+            raise ServiceConnectionLost(f"owner service connection failed: {type(error).__name__}") from error
         if sent != len(frame):
             raise AgentTaskError("owner service connection accepted a partial frame")
 
     def receive(self, timeout: float) -> bytes | None:
         """Receive one frame within ``timeout``; EOF is a closed connection."""
-        self._socket.settimeout(max(timeout, 0.001))
+        connection = self._connected()
+        connection.settimeout(max(timeout, 0.001))
         try:
-            frame = self._socket.recv(wire.REPLY_SIZE + 1)
+            frame = connection.recv(wire.REPLY_SIZE + 1)
         except TimeoutError:
             return None
         except OSError as error:
-            raise AgentTaskError(f"owner service connection failed: {type(error).__name__}") from error
+            raise ServiceConnectionLost(f"owner service connection failed: {type(error).__name__}") from error
         if not frame:
-            raise AgentTaskError("owner service closed the connection")
+            raise ServiceConnectionLost("owner service closed the connection")
         return frame
 
     def close(self) -> None:
-        """Close the socket; the service closes this channel's lease on EOF."""
-        self._socket.close()
+        """Close the socket, if one was opened; the service closes this channel's lease on EOF."""
+        if self._socket is not None:
+            self._socket.close()
 
 
 def _nonce() -> wire.Identifier:
@@ -195,9 +214,17 @@ class OwnerServiceChannel:
         return wire.ServiceRequest(wire.OP_OPEN_CHILD, self._open_nonce, policy=self._policy,
                                    parent=self._parent.parent, capability=self._parent.capability)
 
+    def _open_lease(self, deadline: float) -> wire.ServiceReply:
+        """Before a lease exists, a refused or dropped connection means try again later: the
+        account holds its share of the service's connections, or the service is changing epoch."""
+        try:
+            return self._retried(self._open_request(), deadline)
+        except ServiceConnectionLost as error:
+            raise AgentControlBusy(f"owner service turned the connection away; retry later ({error})") from error
+
     def _ensure_started(self, deadline: float) -> None:
         if self._lease is None:
-            reply = self._retried(self._open_request(), deadline)
+            reply = self._open_lease(deadline)
             if reply.status not in (wire.STATUS_OK, wire.STATUS_EXISTING):
                 raise _refusal(reply, "open a lease")
             self._lease = reply.lease
@@ -233,7 +260,8 @@ class OwnerServiceChannel:
                 reply = self._call(request, time.monotonic() + _CALL_SECONDS)
             except TimeoutError:
                 continue
-            except OSError:  # reason: the transport is gone; the next relay call reports it
+            except (OSError, AgentTaskError):  # reason: the connection is gone; the next call reports it
+                self._lease_lost = True
                 return
             if reply.status != wire.STATUS_OK:
                 self._lease_lost = True
@@ -380,10 +408,27 @@ class OwnerServiceChannel:
                 except TimeoutError:
                     raise AgentTaskError("owner service did not acknowledge the lease close") from None
             if self._ticket is None and self._start_state == "sent":
-                # START went out but its ticket is unknown: a helper may run, so nothing is
-                # claimed. The request thread learns the ticket or fails, and closes again.
-                raise AgentTaskError("owner service cannot prove a helper of unknown start retired")
+                self._learn_start(deadline)
             if self._ticket is not None and not self._observe_settled(deadline):
                 raise AgentTaskError("owner service has not retired the native helper")
+            renewer = self._renewer
+            if renewer is not None and renewer is not threading.current_thread():
+                renewer.join(timeout=_CALL_SECONDS + 1)  # It stops at the next wait; never mid-send.
             self._transport.close()
             self._retired = True
+
+    def _learn_start(self, deadline: float) -> None:
+        """START went out but its reply never arrived. The service answers a replay of an
+        admitted START with its ticket in any lease phase, so any other answer means no
+        helper was started; no answer leaves the outcome unknown and nothing is claimed."""
+        start = wire.ServiceRequest(wire.OP_START, self._start_id, lease=self._lease, request=self._start_id,
+                                    arguments=self._arguments)
+        try:
+            reply = self._call(start, deadline)
+        except TimeoutError:
+            raise AgentTaskError("owner service cannot prove a helper of unknown start retired") from None
+        if reply.status in (wire.STATUS_OK, wire.STATUS_EXISTING):
+            self._ticket = reply.ticket
+            self._start_state = "started"
+        else:
+            self._start_state = "refused"

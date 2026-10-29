@@ -29,6 +29,12 @@ user namespace can be created (`clone3` answers ENOSYS). Payloads therefore hold
 listener carries an ACL naming every client account in the guardian's manifest, so `/run` must support POSIX
 ACLs. The filter is built for x86-64 and arm64 only.
 
+A spent epoch no longer waits for every open connection: one without an open lease holds it for at most
+5 seconds. `SeqpacketTransport` now connects on its first frame instead of at construction, and a
+connection refused, dropped or unreachable before a lease exists raises `AgentControlBusy` (through the new
+`ServiceConnectionLost`). The guardian reaps its service, logs how it ended and waits a second before the
+next epoch when a service ends within a second.
+
 ## Unreleased: helper containment in runtime status
 
 `agent_runtime_status()` (and `AC_agent_runtime_status`, `agent-task status`) adds a

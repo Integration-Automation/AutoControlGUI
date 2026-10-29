@@ -239,6 +239,40 @@ static void case_account_connections(void) {
     policy.connections_per_account = limit;
 }
 
+/* Spends its quota of one, then holds the connection idle until the parent lets go. */
+static void idle_client(int in, int out) {
+    int number = client_connect();
+    no_id lease = open_top(number, 1);
+    EXPECT(call(number, lease_request(OP_CLOSE, lease)).status == STATUS_OK);
+    report_lease(out, lease);
+    wait_byte(in);
+}
+
+/* A spent epoch waits for a lease-less connection only through the grace: an idle or
+ * abandoned client cannot keep the host from its next epoch. */
+static void case_idle_connection(void) {
+    size_t quota = policy.client_lease_quota;
+    policy.client_lease_quota = 1;
+    int to_child[2], from_child[2];
+    CHECK(pipe(to_child) == 0 && pipe(from_child) == 0);
+    service_state *service = peer_service((no_id){162, 1});
+    pid_t child = spawn(idle_client, to_child[0], from_child[1]);
+    pump_lease(service, from_child[0]);
+    service_settle(service);
+    CHECK(service->phase == BOOT_PEER_EVIDENCE_ONLY); /* Within the grace the client may still observe. */
+    for (size_t i = 0; i < SERVICE_CONNECTION_LIMIT; ++i)
+        if (service->connections[i].phase == CONNECTION_OPEN)
+            service->connections[i].active_ns -= SERVICE_IDLE_GRACE_NS + 1;
+    service_settle(service);
+    CHECK(service->phase == BOOT_DRAINING);
+    CHECK(write(to_child[1], "g", 1) == 1);
+    int status = 0;
+    CHECK(waitpid(child, &status, 0) == child && WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    for (int i = 0; i < 2; ++i) { close(to_child[i]); close(from_child[i]); }
+    drain_and_free(service);
+    policy.client_lease_quota = quota;
+}
+
 static void case_quota(void) {
     size_t quota = policy.client_lease_quota;
     policy.client_lease_quota = 2;
@@ -702,6 +736,7 @@ int main(void) {
     case_quota();
     case_renew();
     case_account_connections();
+    case_idle_connection();
     service_state *service = peer_service((no_id){139, 5});
     case_top_level(service);
     drain_and_free(service);

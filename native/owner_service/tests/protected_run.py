@@ -326,6 +326,15 @@ def scenario_renewal(steps):
     steps["epochs_after_stop"] = epochs()
 
 
+def children_of(pid):
+    """Every child of `pid`, zombies included: a zombie stays a child until it is reaped."""
+    kids = []
+    for task in os.listdir(f"/proc/{pid}/task"):
+        with open(f"/proc/{pid}/task/{task}/children") as handle:
+            kids += [int(value) for value in handle.read().split()]
+    return kids
+
+
 def rollover_session():
     """One full session; retried while the guardian is between epochs."""
     for attempt in range(1, 41):
@@ -352,6 +361,7 @@ def scenario_rollover(steps):
     guardian = start_guardian()
     steps["sessions"] = [rollover_session() for _ in range(ROLLOVER_SESSIONS)]
     steps["guardian_alive"] = guardian.poll() is None
+    steps["guardian_children"] = children_of(guardian.pid)
     steps["guardian_stop"] = stop_guardian(guardian)
     steps["epochs_after_stop"] = epochs()
 
@@ -582,6 +592,8 @@ def expectations(result):
         "epoch_rollover": len(rollover["sessions"]) == ROLLOVER_SESSIONS
         and all(s["retired"] for s in rollover["sessions"])
         and len({tuple(s["epochs"]) for s in rollover["sessions"]}) >= 2 and rollover["guardian_alive"]
+        # Only the current service: every earlier one was reaped, none left as a zombie.
+        and len(rollover["guardian_children"]) == 1
         and rollover["guardian_stop"][0] == 0 and not rollover["epochs_after_stop"],
         "service_crash_reclaimed": service_crash["old_epoch_gone"] and service_crash["payload_gone"]
         and service_crash["escaped_gone"] and service_crash["guardian_alive"]

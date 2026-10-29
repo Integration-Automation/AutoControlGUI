@@ -419,9 +419,10 @@ static void start(service_state *service, size_t index, const service_request *r
     service_lease *lease = held_lease(service, index, request->lease);
     no_error error = {0};
     no_ticket ticket = {0};
-    if (lease && lease->phase != LEASE_OPEN && lease->started && same_id(lease->start_request, request->request)) {
-        /* The admitted START's reply may have been lost and the lease closed for it: the
-         * holder's replay still learns the ticket, so it can observe the record settle. */
+    if (lease && lease->started && same_id(lease->start_request, request->request)) {
+        /* An admitted START's replay is answered before expiry or eligibility can refuse it:
+         * its reply may have been lost, the lease closed or expired, or a nested parent left
+         * since. The holder still learns the ticket, so it can observe the record settle. */
         send_reply(&service->connections[index], request, STATUS_EXISTING, error, NULL, lease->ticket);
         return;
     }
@@ -563,6 +564,7 @@ static void dispatch(service_state *service, size_t index) {
         close_connection(service, index, CLOSE_DISCONNECT);
         return;
     }
+    connection->active_ns = owner_now();
     if (!packet_authenticated(&packet, &connection->connector, 0)) {
         send_reply(connection, &request, STATUS_UNAUTHENTICATED, (no_error){0}, NULL, (no_ticket){0});
         if (!packet_release(&packet)) service->close_uncertain = true;
@@ -614,7 +616,7 @@ static void adopt_connection(service_state *service, int number) {
     service_connection *connection = &service->connections[index];
     uint64_t generation = connection->generation + 1;
     *connection = (service_connection){.phase = CONNECTION_OPEN, .generation = generation,
-        .socket = {FD_OWNED, number}};
+        .socket = {FD_OWNED, number}, .active_ns = owner_now()};
     no_error error = {0};
     if (!peer_identity_from_connection(&connection->connector, number, &error) ||
         !peer_enable_credentials(number, &error)) close_connection(service, index, CLOSE_FAILED_ISSUE);
@@ -670,11 +672,14 @@ static bool admission_ended(service_state *service) {
     bool guardian_gone = service->guardian_peer.pidfd.state == FD_OWNED && !peer_alive(&service->guardian_peer);
     if (guardian_gone || (service->runtime && !owner_admission_open(service->runtime))) return true;
     if (!epoch_spent(service)) return false;
-    /* Spent and idle: drain so the guardian grants a fresh epoch. An open lease keeps it, and
-     * so does an open connection, which may still be observing its helper settle. */
+    /* Spent and idle: drain so the guardian grants a fresh epoch. An open lease keeps it. A
+     * connection without one keeps it only for a short grace, long enough to observe its
+     * helper settle: an idle, abandoned or unretirable client cannot hold the host's epoch. */
     for (size_t i = 0; i < service->lease_count; ++i) if (service->leases[i].phase == LEASE_OPEN) return false;
+    uint64_t now = owner_now();
     for (size_t i = 0; i < SERVICE_CONNECTION_LIMIT; ++i)
-        if (service->connections[i].phase == CONNECTION_OPEN) return false;
+        if (service->connections[i].phase == CONNECTION_OPEN &&
+            now - service->connections[i].active_ns < SERVICE_IDLE_GRACE_NS) return false;
     return true;
 }
 

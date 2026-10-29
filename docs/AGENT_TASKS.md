@@ -87,7 +87,9 @@ root guardian, the manifest template, the build script and both acceptance runne
 account and namespaces before handing the connection to the service. Each client account may use at
 most its manifest quota of an epoch's lease positions; a spent, idle epoch is drained and replaced by the
 same guardian. Channels renew their lease in the background up to the manifest's maximum age, and a
-channel whose lease expired reports that instead of a generic refusal. Each helper, with its nested children,
+channel whose lease expired reports that instead of a generic refusal. A channel connects at its first request,
+and a connection turned away before its lease exists (the account's connection share is used, or the
+service is changing epoch) raises `AgentControlBusy`. Each helper, with its nested children,
 is held to the manifest's process and memory limits. Builds from that directory keep the protected
 launch gate closed until a reviewed release opens it.
 

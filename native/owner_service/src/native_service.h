@@ -8,6 +8,7 @@
 #include <sys/types.h>
 
 #define SERVICE_CONNECTION_LIMIT 16
+#define SERVICE_IDLE_GRACE_NS 5000000000ULL /* A spent epoch waits this long for a lease-less connection. */
 #define SERVICE_MIN_PIDS 8                     /* Below this a helper cannot start its threads. */
 #define SERVICE_MIN_MEMORY (16ULL << 20)      /* 16 MiB. */
 #define SERVICE_LEASE_LIMIT NO_RECORD_LIMIT
@@ -130,6 +131,7 @@ typedef struct {
     uint64_t generation;
     owned_fd socket;
     peer_identity connector;
+    uint64_t active_ns; /* Last packet received, or adoption. */
 } service_connection;
 
 typedef enum { LEASE_UNUSED, LEASE_RESERVED, LEASE_OPEN, LEASE_CLOSED } lease_phase;
