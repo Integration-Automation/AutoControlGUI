@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261030-01 | 2026-10-30 | Bound each owner-service helper's processes and memory | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261029-23 | 2026-10-29 | Fix the owner service blockers from independent review | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261029-22 | 2026-10-29 | Move the Linux owner service sources into the repository | #snapshot #agent #linux #packaging | [2026-10-e](2026-10-e.md) |
 | U-20261029-21 | 2026-10-29 | Cap each client's share of an epoch's lease positions | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |

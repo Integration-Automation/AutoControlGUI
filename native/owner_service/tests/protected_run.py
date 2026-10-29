@@ -29,6 +29,8 @@ SERVICE_SOURCES = ["native_owner.c", "native_owner_lease.c", "native_launch_linu
                    "service_peer_linux.c"]
 created_accounts = []
 created_groups = []
+enabled_controllers = []
+ROOT_CONTROL = "/sys/fs/cgroup/cgroup.subtree_control"
 report = {"evidence": "protected acceptance in one WSL distro", "steps": {}}
 
 
@@ -71,6 +73,14 @@ def provision():
             if result.returncode:
                 raise RuntimeError(f"useradd {name}: {result.stderr}")
             created_accounts.append(name)
+    # The administrator's step: pids and memory enabled down to the subtree's parent.
+    with open(ROOT_CONTROL) as handle:
+        present = handle.read().split()
+    for controller in ("pids", "memory"):
+        if controller not in present:
+            with open(ROOT_CONTROL, "w") as handle:
+                handle.write("+" + controller)
+            enabled_controllers.append(controller)
     result = run(["usermod", "--append", "--groups", SOCKET_GROUP, CLIENT])
     if result.returncode:
         raise RuntimeError(f"usermod {CLIENT}: {result.stderr}")
@@ -209,6 +219,12 @@ def scenario_session(steps):
     foreign = client("foreign", account="acother")
     steps["foreign_client"] = read_json(foreign)
     foreign.wait(timeout=30)
+    container = os.path.dirname(SUBTREE + steps["inspection"]["payload_cgroups"][0])
+    steps["limits"] = {name: open(os.path.join(container, name)).read().strip()
+                       for name in ("pids.max", "memory.max")}
+    holder.stdin.write("spawn\n")
+    holder.stdin.flush()
+    steps["spawn"] = read_json(holder)
     pids = steps["inspection"]["payload_pids"]
     escaped = steps["request"].get("escaped")
     steps["escaped_in_payload_cgroup"] = escaped_in_payload(escaped, epoch)
@@ -398,6 +414,12 @@ def cleanup():
         if result.returncode:
             leftovers[name] = result.stderr
     run(["gpasswd", "--delete", CLIENT, SOCKET_GROUP])
+    for controller in enabled_controllers:
+        try:
+            with open(ROOT_CONTROL, "w") as handle:
+                handle.write("-" + controller)
+        except OSError as error:
+            leftovers["controller_" + controller] = str(error)
     for name in created_groups:
         result = run(["groupdel", name])
         if result.returncode:
@@ -496,6 +518,9 @@ def expectations(result):
         and payload[0].get("no_new_privs") == "1",
         "payload_cannot_migrate": session["payload_cannot_join_epoch"] and session["payload_cannot_join_records"],
         "unlisted_client_refused": "error" in session["foreign_client"],
+        "payload_limits_set": session["limits"] == {"pids.max": "32", "memory.max": str(128 << 20)},
+        # The payload, its escaped descendant and the fork attempts share 32 pids.
+        "fork_bounded": isinstance(session["spawn"].get("reply"), int) and 0 < session["spawn"]["reply"] < 32,
         "escaped_descendant_contained": session["escaped_in_payload_cgroup"],
         "retired_after_close": session["close"].get("retired") is True,
         "payload_and_descendant_gone": session["payload_gone_after_close"] and session["escaped_gone_after_close"],

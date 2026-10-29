@@ -482,6 +482,20 @@ static pid_t escape_descendant(void) {
     return escaped;
 }
 
+/* Forks up to 64 idle children, counts how many the kernel allowed, then reaps them. */
+static int spawn_children(void) {
+    pid_t children[64];
+    int count = 0;
+    for (; count < 64; ++count) {
+        pid_t child = fork();
+        if (child == 0) { pause(); _exit(0); }
+        if (child < 0) break;
+        children[count] = child;
+    }
+    for (int i = 0; i < count; ++i) { kill(children[i], SIGKILL); waitpid(children[i], NULL, 0); }
+    return count;
+}
+
 static int rpc_lines(void) {
     char line[4096];
     size_t length = 0;
@@ -500,6 +514,7 @@ static int rpc_lines(void) {
         if (strstr(line, "\"operation\": \"hang\"")) continue;
         char reply[128], result[32] = "\"pong\"";
         if (strstr(line, "\"operation\": \"escape\"")) snprintf(result, sizeof(result), "%d", (int)escape_descendant());
+        if (strstr(line, "\"operation\": \"spawn\"")) snprintf(result, sizeof(result), "%d", spawn_children());
         int size = snprintf(reply, sizeof(reply), "{\"id\": \"%.*s\", \"result\": %s}\n", (int)(end - id), id, result);
         if (size <= 0 || write(1, reply, (size_t)size) != size) return 49;
     }

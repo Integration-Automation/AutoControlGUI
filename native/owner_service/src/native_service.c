@@ -60,6 +60,7 @@ static bool policy_valid(const service_policy *policy) {
         policy->client_count > SERVICE_CLIENT_LIMIT || client_account(policy, policy->guardian.uid) ||
         !policy->client_lease_quota || policy->client_lease_quota > SERVICE_LEASE_LIMIT ||
         policy->lease_max_age_ns < policy->lease_lifetime_ns ||
+        policy->record_pids_max < SERVICE_MIN_PIDS || policy->record_memory_max < SERVICE_MIN_MEMORY ||
         /* Payload accounts are shared by policy, so one client per service until each client
          * has its own payload accounts. */
         policy->client_count != 1) return false;
@@ -412,7 +413,8 @@ static void start(service_state *service, size_t index, const service_request *r
     } else if (policy) {
         no_validated_spec spec = {policy->executable, policy->cwd, argv, policy->env, argc, policy->envc,
             policy->payload_uid, policy->payload_gid, nested ? capability : NULL,
-            nested ? service->policy->socket_gid : 0};
+            nested ? service->policy->socket_gid : 0, service->policy->record_pids_max,
+            service->policy->record_memory_max};
         no_submit_result result = submit(service, lease, request, &spec, &ticket, &error);
         status = result == NO_ACCEPTED ? STATUS_OK : result == NO_EXISTING ? STATUS_EXISTING : status_for(error.kind);
         if (result == NO_ACCEPTED) issue_nested_grant(service, policy, ticket, nested ? capability : NULL);

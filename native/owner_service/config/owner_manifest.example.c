@@ -51,6 +51,10 @@ const service_policy service_manifest = {
      * long-lived helper delays the rollover: keep both at the maximum, 32. */
     .client_lease_quota = 32,
     .record_capacity = 32,
+    /* EDIT: per helper, including its nested children. The Python worker with OpenCV and
+     * OCR loaded needs about 1 GiB; a fork bomb or leak stops here instead of the host. */
+    .record_pids_max = 256,
+    .record_memory_max = 2ULL << 30,
 };
 
 static const guardian_client clients[] = {

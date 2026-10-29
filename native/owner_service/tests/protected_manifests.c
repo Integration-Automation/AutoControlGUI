@@ -31,6 +31,8 @@ const service_policy service_manifest = {
     .socket_gid = SOCKET_GID,
     .client_lease_quota = 8,
     .record_capacity = 8,
+    .record_pids_max = 32,
+    .record_memory_max = 128ULL << 20,
 };
 
 /* The payload account is forwarded too: a nested parent connects as itself (the service

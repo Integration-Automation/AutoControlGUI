@@ -132,17 +132,26 @@ static int delegate(int directory, const guardian_manifest *manifest) {
  * is root's), so the service leaf and the helper anchor share this delegated parent.
  * The service leaf itself stays root's, so nothing can be moved into it; `records` is
  * the anchor the service is granted. Payload accounts own nothing here. */
+/* The service limits each helper's processes and memory; the controllers it needs are
+ * enabled here, root's decision, before anything below is delegated. None of these
+ * cgroups holds a process, so enabling them never meets the internal-process rule. */
+static const char LIMITED[] = "+pids +memory";
+
 static int create_branches(guardian_state *state) {
     const gj_record *current = &state->journal.current;
+    /* ENOENT here means the subtree's parent has not enabled pids and memory. */
+    if (!write_control(state->subtree, "cgroup.subtree_control", LIMITED)) return errno;
     if (mkdirat(state->subtree, current->epoch, 0755) != 0) return errno;
     int epoch = openat(state->subtree, current->epoch, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
     if (epoch < 0) return errno;
-    int error = delegate(epoch, state->manifest);
+    int error = write_control(epoch, "cgroup.subtree_control", LIMITED) ? 0 : errno;
+    if (!error) error = delegate(epoch, state->manifest);
     if (!error && mkdirat(epoch, current->service, 0755) != 0) error = errno;
     if (!error && mkdirat(epoch, "records", 0755) != 0) error = errno;
     if (!error) {
         state->epoch = openat(epoch, "records", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
-        error = state->epoch < 0 ? errno : delegate(state->epoch, state->manifest);
+        error = state->epoch < 0 ? errno : write_control(state->epoch, "cgroup.subtree_control", LIMITED) ? 0 : errno;
+        if (!error) error = delegate(state->epoch, state->manifest);
     }
     close(epoch);
     return error;

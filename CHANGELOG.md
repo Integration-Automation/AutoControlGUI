@@ -14,6 +14,10 @@ guardian's `listener_gid` must be a dedicated socket group, payload accounts nee
 group, and a service accepts exactly one client account. Manifests written against the first template
 no longer build a valid service.
 
+Each helper is now bounded by the manifest's `record_pids_max` and `record_memory_max`, written to its
+container cgroup; the `pids` and `memory` controllers must be enabled down to the subtree's parent, or
+the guardian refuses to start.
+
 ## Unreleased: helper containment in runtime status
 
 `agent_runtime_status()` (and `AC_agent_runtime_status`, `agent-task status`) adds a

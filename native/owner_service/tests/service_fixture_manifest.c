@@ -20,5 +20,7 @@ const service_policy service_manifest = {
     .lease_lifetime_ns = 30000000000ULL,
     .client_lease_quota = 8,
     .lease_max_age_ns = 300000000000ULL,
+    .record_pids_max = 64,
+    .record_memory_max = 256ULL << 20,
     .record_capacity = 4,
 };

@@ -8,6 +8,8 @@
 #include <sys/types.h>
 
 #define SERVICE_CONNECTION_LIMIT 16
+#define SERVICE_MIN_PIDS 8                     /* Below this a helper cannot start its threads. */
+#define SERVICE_MIN_MEMORY (16ULL << 20)      /* 16 MiB. */
 #define SERVICE_LEASE_LIMIT NO_RECORD_LIMIT
 #define SERVICE_CLIENT_LIMIT 4
 #define SERVICE_ARGUMENT_BYTES 1024
@@ -114,6 +116,8 @@ typedef struct {
     uint32_t socket_gid;         /* The listener's group, given to nested-capable payloads only. */
     size_t client_lease_quota; /* Lease positions one account may use per epoch, open or spent. */
     size_t record_capacity;
+    uint64_t record_pids_max;   /* Processes one helper and its nested children may hold. */
+    uint64_t record_memory_max; /* Bytes of memory for the same; swap is closed where accounted. */
 } service_policy;
 
 /* Kernel identity of a process: pidfs inode. Never a numeric PID or fd number. */

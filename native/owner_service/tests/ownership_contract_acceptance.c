@@ -9,7 +9,7 @@ static unsigned checks;
 static no_validated_spec example_spec(void) {
     static const char *argv[] = {"/bin/true", "alpha"};
     static const char *env[] = {"LANG=C"};
-    return (no_validated_spec){"/bin/true", "/", argv, env, 2, 1, 1000, 1000, NULL, 0};
+    return (no_validated_spec){"/bin/true", "/", argv, env, 2, 1, 1000, 1000, NULL, 0, 0, 0};
 }
 
 static no_submit_result prepare_admission(no_runtime *runtime, authenticated_scope_slot *slot,

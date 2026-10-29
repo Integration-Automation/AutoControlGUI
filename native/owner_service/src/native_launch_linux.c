@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <sys/syscall.h>
 #include <sys/wait.h>
+#include <stdio.h>
 #include <unistd.h>
 
 static void own(owner_record *record, owned_fd *slot, int number) {
@@ -357,6 +358,38 @@ static int scope_create_directory(owner_record *record, int parent, owned_direct
     return 0;
 }
 
+static bool scope_write(int directory, const char *name, const char *value) {
+    int number;
+    do { number = openat(directory, name, O_WRONLY | O_NOFOLLOW | O_CLOEXEC); } while (number < 0 && errno == EINTR);
+    if (number < 0) return false;
+    size_t length = strlen(value);
+    bool written = write(number, value, length) == (ssize_t)length;
+    int saved = errno;
+    close(number);
+    errno = saved;
+    return written;
+}
+
+/* Limits sit on the container, which only this service can write, so they bound the
+ * payload and every nested child inside it. Swap is closed where the host accounts it. */
+static int scope_limit(owner_record *record) {
+    const immutable_spec_arena *spec = record->spec;
+    int container = record->scope.container.descriptor.number;
+    char value[24];
+    if (spec->pids_max) {
+        snprintf(value, sizeof(value), "%llu", (unsigned long long)spec->pids_max);
+        if (!scope_write(container, "pids.max", value)) return errno;
+    }
+    if (spec->memory_max) {
+        snprintf(value, sizeof(value), "%llu", (unsigned long long)spec->memory_max);
+        if (!scope_write(container, "memory.max", value)) return errno;
+        if (!scope_write(container, "memory.swap.max", "0") && errno != ENOENT) return errno;
+    }
+    if ((spec->pids_max || spec->memory_max) && !scope_write(container, "cgroup.subtree_control", "+pids +memory"))
+        return errno;
+    return 0;
+}
+
 static int scope_prepare(owner_record *record) {
     no_runtime *runtime = record->runtime;
     pthread_mutex_lock(&runtime->registry);
@@ -378,6 +411,8 @@ static int scope_prepare(owner_record *record) {
     if (number < 0) return errno;
     own(record, &record->scope.parent_anchor, number);
     int error = scope_create_directory(record, number, &record->scope.container);
+    if (error) return error;
+    error = scope_limit(record);
     if (error) return error;
     pthread_mutex_lock(&runtime->registry);
     owner_publish_anchor_locked(record);

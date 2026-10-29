@@ -71,7 +71,12 @@ if mode == "foreign":
     sys.exit(1)
 for command in sys.stdin:
     command = command.strip()
-    if command == "ping":
+    if command == "spawn":
+        try:
+            emit({"stage": "spawn", "reply": channel.request("spawn", {}, timeout=20)})
+        except AgentTaskError as error:
+            emit({"stage": "spawn", "error": str(error)})
+    elif command == "ping":
         try:
             emit({"stage": "ping", "reply": channel.request("ping", {}, timeout=20)})
         except AgentTaskError as error:

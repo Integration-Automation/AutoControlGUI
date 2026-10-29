@@ -308,6 +308,7 @@ static immutable_spec_arena *copy_spec(const no_validated_spec *input, no_error 
     strcpy(copy->executable, input->executable); strcpy(copy->cwd, input->cwd);
     copy->argc = input->argc; copy->envc = input->envc;
     copy->uid = input->uid; copy->gid = input->gid; copy->socket_gid = input->socket_gid;
+    copy->pids_max = input->pids_max; copy->memory_max = input->memory_max;
     if (input->nested_capability) {
         copy->delivery.wanted = true;
         memcpy(copy->delivery.capability, input->nested_capability, NO_CAPABILITY_BYTES);
@@ -329,6 +330,7 @@ static immutable_spec_arena *copy_spec(const no_validated_spec *input, no_error 
 static bool same_spec(const immutable_spec_arena *a, const immutable_spec_arena *b) {
     if (!a || !b || a->argc != b->argc || a->envc != b->envc || a->bytes != b->bytes ||
         a->uid != b->uid || a->gid != b->gid || a->socket_gid != b->socket_gid ||
+        a->pids_max != b->pids_max || a->memory_max != b->memory_max ||
         a->delivery.wanted != b->delivery.wanted ||
         strcmp(a->executable, b->executable) ||
         strcmp(a->cwd, b->cwd)) return false;

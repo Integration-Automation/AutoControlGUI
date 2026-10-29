@@ -60,7 +60,10 @@ the gate.
    `owner_service` as root-owned files that nobody else can write, at the paths the
    manifest names.
 4. Create the cgroup subtree beneath the cgroup2 mount, root-owned and mode 0755, and
-   the root-only state directory.
+   the root-only state directory. Enable the `pids` and `memory` controllers in every
+   ancestor's `cgroup.subtree_control` down to the subtree's parent (systemd hosts
+   usually have them at the root already); the guardian enables them below that and
+   refuses to start without them (`prepare operation 4 errno 2`).
 5. Run `owner_guardian` as root under the host's supervisor (for example
    `Restart=on-failure`). It creates the listener, starts the service and rolls over to
    a fresh epoch itself; it exits 0 only when asked to stop.

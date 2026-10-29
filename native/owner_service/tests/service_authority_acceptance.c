@@ -30,7 +30,8 @@ static void case_policy_validation(void) {
     service_policy candidate = policy;
     candidate.policies = entries;
     struct { size_t entry; int field; } faults[] = {{1, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4}, {2, 5}, {0, 6},
-                                                    {1, 7}, {0, 8}, {0, 9}, {0, 10}, {0, 11}};
+                                                    {1, 7}, {0, 8}, {0, 9}, {0, 10}, {0, 11}, {0, 12},
+                                                    {0, 13}};
     for (size_t i = 0; i < sizeof(faults) / sizeof(faults[0]); ++i) {
         memcpy(entries, launch_policies, sizeof(entries));
         candidate = policy;
@@ -48,6 +49,8 @@ static void case_policy_validation(void) {
         if (faults[i].field == 9) candidate.client_count = 2; /* Payload accounts would be shared by clients. */
         if (faults[i].field == 10) candidate.lease_max_age_ns = candidate.lease_lifetime_ns - 1;
         if (faults[i].field == 11) entry->payload_gid = (uint32_t)getegid();
+        if (faults[i].field == 12) candidate.record_pids_max = SERVICE_MIN_PIDS - 1;
+        if (faults[i].field == 13) candidate.record_memory_max = SERVICE_MIN_MEMORY - 1;
         CHECK(service_allocate(&candidate, &error) == NULL && error.kind == NO_ERROR_ARGUMENT);
     }
     memcpy(entries, launch_policies, sizeof(entries));
