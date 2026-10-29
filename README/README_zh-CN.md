@@ -447,6 +447,13 @@ Python、AC、MCP、REST、CLI 与 Agent 任务面板共用后台服务，明确
 不读取或移动历史文件。任务 metadata 的 `artifact_cache_state` 为 `owned` 或 `historical`。
 保留清理只移除当前数据库可识别的自有缓存文件；历史文件保留，留存的私有根目录禁止成果导出。
 
+Linux 上的 helper 程序可改由可选的 [owner 服务](../native/owner_service/README.md) 运行：
+root guardian 把每个 helper 放进它自己的 cgroup v2 树，helper 帐号无法离开；关闭 channel 会
+结束整棵树（含逃离的后代），guardian 重启后会清理崩溃留下的程序。root 拥有的
+`/etc/je_auto_control/owner_service.json` 绑定档只让完全列出的 helper argv 经由服务启动；
+没有绑定档时 helper 仍以本机程序运行，`agent-task status` 在 `helper_containment` 回报模式。
+Python 包不会构建、安装或启动服务，且在审阅后的版本开启闸门前，构建出的服务拒绝受保护启动。
+
 部署或回退前须比对来源与制品哈希，不能只凭相同版本号判断私有缓存兼容性。
 不具此私有根目录保护的旧程序不得沿用新版数据库／缓存。经审核的回退须使用匹配的升级前状态
 及其原记录位置，先取得自有输入退出确证，并从所有旧版任务根目录排除留存的新版私有文件；

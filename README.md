@@ -577,6 +577,15 @@ the next action or report starts a new owned journal segment without reading or 
 Task metadata reports `artifact_cache_state` as `owned` or `historical`. Retention removes only the current
 database's recognized cache files; historical files remain, and retained private roots cannot be exported.
 
+On Linux, helper processes can run under the optional [owner service](native/owner_service/README.md).
+A root guardian runs each helper in its own cgroup v2 tree, which the helper's account cannot leave.
+Closing the channel kills the whole tree, escaped descendants included, and a restarted guardian
+recovers after a crash. A root-owned `/etc/je_auto_control/owner_service.json` binding routes
+exactly listed helper argv through it. Without that binding, helpers keep running as local
+processes, and `agent-task status` reports the mode under `helper_containment`. The Python
+package never builds, installs or starts the service, and its builds refuse protected launches
+until a reviewed release opens the gate.
+
 Before deployment or rollback, compare exact source and artifact hashes; the unchanged version number alone does
 not identify private-cache compatibility. A runtime without this private-root protection must not reuse the
 newer database/cache. A reviewed restore must use matching pre-upgrade state at its recorded locations, retire

@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-20；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-22；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -92,7 +92,7 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      為授權給服務的錨點），服務以 guardian 給予的 ambient CAP_SETUID／SETGID／SETPCAP 執行，並在
      WSL 完成受保護端到端驗收（實際 client、受保護 payload、RETIRED 回報、未列帳號被拒、冷復原）。
      正式入口在安裝版本仍維持關閉，開啟前仍須獨立審查；僅 `NO_PROTECTED_ACCEPTANCE` 驗收建置
-     開啟。DECIDE：每個 principal 的 lease 配額。
+     開啟。
      位置：`.worktrees/agent-tools/stage138/`（todo.md、review.md）、`stage139/`、`stage141/`
      至 `stage150/`。
      OwnedChannel 的 close 已不再等待 request 鎖，另一執行緒可中止等待中的請求，close 開始後
@@ -107,8 +107,10 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      已決定（2026-10-29）：Linux 無綁定時繼續以本機 channel 執行 helper，runtime status 回報
      not_configured。presence broker 目前只有 Windows 版本，nested grant 待 Linux presence 來源
      存在後接合。parent_watch、輸入 journal／lease 與本機 pipe 執行緒退場仍須接合。
-     正式 owner 服務交付尚缺封裝、架構／libc 相容性、stable／dev 一致性、安裝內容比對及實際
-     已安裝執行驗收；隔離編譯的 ELF 不得冒充通用 wheel，不能匯入時下載或暗中部署服務。
+     owner 服務原始碼依 2026-10-29 決定已進入 `native/owner_service/`（src、manifest 範本、build.sh、
+     tests 與兩個驗收執行器，不進 wheel），每個 client 帳號的 lease 配額已實作。仍缺：其他架構／
+     libc／核心的相容性驗證、安裝內容比對、實際已安裝主機的執行驗收，以及開啟正式閘門前的獨立審查；
+     不能匯入時下載或暗中部署服務。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、
      helper／半開交握回收與取消／停止生命週期，避免兩條實作各自接管相同原生資源。
    - 驗證相同實體桌面在不同 profile、資料庫、服務及 DAG 節點間仍只有一位輸入擁有者；

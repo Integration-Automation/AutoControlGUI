@@ -79,7 +79,12 @@ Status also reports `helper_containment`: how this host owns helper processes, w
   containment; only protected acceptance records that.
 
 The binding is a root-owned `/etc/je_auto_control/owner_service.json` installed by host
-management, holding the endpoint and the exact helper argv each policy launches.
+management, holding the endpoint and the exact helper argv each policy launches. The service, its
+root guardian, the manifest template, the build script and both acceptance runners live in
+[`native/owner_service/`](../native/owner_service/README.md). The guardian verifies each client's
+account and namespaces before handing the connection to the service. Each client account may use at
+most its manifest quota of an epoch's lease positions. Builds from that directory keep the protected
+launch gate closed until a reviewed release opens it.
 
 ## Task contract
 

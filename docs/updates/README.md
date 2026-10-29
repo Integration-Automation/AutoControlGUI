@@ -58,6 +58,8 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-22 | 2026-10-29 | Move the Linux owner service sources into the repository | #snapshot #agent #linux #packaging | [2026-10-e](2026-10-e.md) |
+| U-20261029-21 | 2026-10-29 | Cap each client's share of an epoch's lease positions | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261029-20 | 2026-10-29 | Stress revocation racing protected launches | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-19 | 2026-10-29 | Verify sibling sessions and a nested helper under a protected parent | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-18 | 2026-10-29 | Run the protected owner-service acceptance in WSL | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |

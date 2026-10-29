@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased: Linux owner service sources
+
+The optional Linux owner service now lives in `native/owner_service/`. It contains the C sources for
+the root guardian, the service and the owner core, a manifest template, `build.sh`, and the
+unprivileged and root acceptance runners. It is not part of the Python wheel, and nothing in the
+package builds, installs or starts it. Its builds refuse protected launches until a reviewed release
+opens the gate. Each client account may use at most the manifest's `client_lease_quota` of an epoch's
+lease positions.
+
 ## Unreleased: helper containment in runtime status
 
 `agent_runtime_status()` (and `AC_agent_runtime_status`, `agent-task status`) adds a
