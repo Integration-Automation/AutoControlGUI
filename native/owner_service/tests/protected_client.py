@@ -38,6 +38,22 @@ def nested():
     sys.exit(0)
 
 
+def observe_later(channel):
+    """After an unretired close: what the service reports for the record a moment later."""
+    import time
+    from je_auto_control.utils.agent_runtime import owner_service_wire as wire
+    from je_auto_control.utils.agent_runtime.helper_owner_linux import _nonce
+    if channel._ticket is None:
+        return {"ticket": None}
+    time.sleep(2)
+    try:
+        reply = channel._call(wire.ServiceRequest(wire.OP_OBSERVE, _nonce(), lease=channel._lease,
+                                                  ticket=channel._ticket), time.monotonic() + 5)
+        return {key: value for key, value in vars(reply).items() if key not in ("data",)}
+    except (AgentTaskError, TimeoutError) as error:
+        return {"failed": str(error)}
+
+
 def race():
     """Close each lease the moment START is acknowledged, while launch may still run."""
     import time
@@ -49,7 +65,7 @@ def race():
             channel.close()
             outcomes.append({"retired": channel.retired})
         except AgentTaskError as error:
-            outcomes.append({"error": str(error), "retired": channel.retired})
+            outcomes.append({"error": str(error), "retired": channel.retired, "later": observe_later(channel)})
     emit({"stage": "race", "outcomes": outcomes})
     sys.exit(0)
 

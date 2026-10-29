@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261030-15 | 2026-10-30 | Fix the third review's owner-service findings | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-14 | 2026-10-30 | Keep display helpers local and route only display-free helpers to the owner service | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261030-13 | 2026-10-30 | Let a spent owner-service epoch retire beside the next one | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261030-12 | 2026-10-30 | Run the package's native worker under the owner service | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |

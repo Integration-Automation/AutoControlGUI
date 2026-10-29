@@ -359,7 +359,7 @@ static void handoff_client(int in, int out) {
 }
 
 static bool hand_over(int channel, int connection, no_id epoch, uint64_t generation) {
-    guardian_grant frame = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_CONNECTION, epoch, generation};
+    guardian_grant frame = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_CONNECTION, epoch, generation, 0, 0};
     union { struct cmsghdr align; char buffer[CMSG_SPACE(sizeof(int))]; } control;
     memset(&control, 0, sizeof(control));
     struct iovec vector = {.iov_base = &frame, .iov_len = sizeof(frame)};

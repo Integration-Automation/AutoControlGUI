@@ -121,7 +121,7 @@ static bool adopt_grant(service_state *service, guardian_grant *grant, no_deadli
     if (!authentic) { *error = failure(EPERM, 25); return false; }
     if (packet.bytes != (ssize_t)sizeof(*grant) || grant->magic != SERVICE_MAGIC ||
         grant->version != SERVICE_VERSION || grant->kind != GRANT_EPOCH ||
-        (grant->epoch.high == 0 && grant->epoch.low == 0) || grant->generation == 0) {
+        (grant->epoch.high == 0 && grant->epoch.low == 0) || grant->generation == 0 || grant->payload_half > 1) {
         *error = failure(EPROTO, 26); return false;
     }
     return true;
@@ -153,7 +153,7 @@ bootstrap_result service_bootstrap(service_state *service, int inherited_channel
         return unwind(service, error, failure(EPERM, 22));
     if (!kernel_supported(&service->guardian_peer)) return unwind(service, error, failure(ENOSYS, 23));
     if (!peer_enable_credentials(inherited_channel, &step)) return unwind(service, error, step);
-    guardian_grant request = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_REQUESTED, {0, 0}, 0};
+    guardian_grant request = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_REQUESTED, {0, 0}, 0, 0, 0};
     if (!send_frame(inherited_channel, &request)) return unwind(service, error, failure(errno, 31));
     guardian_grant grant;
     if (!adopt_grant(service, &grant, deadline, &step)) return unwind(service, error, step);
@@ -163,10 +163,11 @@ bootstrap_result service_bootstrap(service_state *service, int inherited_channel
     service->runtime = no_runtime_create(&policy, &step);
     if (!service->runtime) return unwind(service, error, step);
     guardian_grant acknowledgement = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_ACKNOWLEDGED, grant.epoch,
-                                      grant.generation};
+                                      grant.generation, grant.payload_half, 0};
     if (!send_frame(inherited_channel, &acknowledgement)) return unwind(service, error, failure(errno, 30));
     service->epoch = grant.epoch;
     service->generation = grant.generation;
+    service->payload_half = grant.payload_half;
     service->phase = BOOT_ACTIVE;
     return BOOTSTRAP_READY;
 }

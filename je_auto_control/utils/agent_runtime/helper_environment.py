@@ -41,7 +41,8 @@ def probe_browser_helper(argv: Sequence[str], *, transfer: bool) -> dict[str, An
     if not _PROBES.acquire(blocking=False):
         raise AgentControlBusy("browser helper dependency probe capacity is busy")
     try:
-        with closing(owned_channel(argv)) as channel:
+        # It vets the environment of a helper that runs locally as the user, so it runs there too.
+        with closing(owned_channel(argv, display=True)) as channel:
             hello = channel.request("bootstrap", {}, timeout=15)
             if hello != {"protocol": 1}:
                 raise AgentTaskError("incompatible browser helper bootstrap")

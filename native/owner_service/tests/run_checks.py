@@ -54,7 +54,8 @@ def main():
     with tempfile.TemporaryDirectory(prefix="owner-service-checks-") as directory:
         work = Path(directory)
         for name in SERVICE + ["service_main.c", "guardian_main.c", "guardian_journal.c", "guardian_epoch_linux.c",
-                               "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c"]:
+                               "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
+                               "guardian_manifest_linux.c"]:
             results[f"object:{name}"] = compile_(work, [name], name + ".o", ["-c"])
             expected[f"object:{name}"] = 0
         results["entry"] = compile_(work, SERVICE + ["service_main.c", "service_fixture_manifest.c"], "service_main",

@@ -26,23 +26,32 @@ bool guardian_client_verified(const guardian_manifest *manifest, const peer_iden
     return verified_client(manifest, peer) >= 0;
 }
 
-/* Connections each listed account may have handed over per second. Past it the rest are
- * dropped at once, so one account's flood cannot crowd another's out of the channel. */
-static struct { uint64_t window_ns; unsigned count; } rates[GUARDIAN_CLIENT_LIMIT];
+/* Connections each user ID may have handed over per second. Past it the rest are dropped
+ * at once, so one ID's flood, a single helper's included, cannot crowd out another's. The
+ * table recycles the slot of the ID quiet longest. */
+#define RATE_SLOTS 64
+typedef struct { uint32_t uid; uint64_t window_ns; unsigned count; bool used; } rate_slot;
+static rate_slot rates[RATE_SLOTS];
 
 void guardian_forward_reset_rates(void) { memset(rates, 0, sizeof(rates)); }
 
-static bool within_rate(long client) {
-    if (client < 0 || client >= GUARDIAN_CLIENT_LIMIT) return false;
+static bool within_rate(long client, uint32_t uid) {
+    if (client < 0) return false;
     struct timespec value;
     clock_gettime(CLOCK_MONOTONIC, &value);
     uint64_t now = (uint64_t)value.tv_sec * 1000000000ULL + (uint64_t)value.tv_nsec;
-    if (now - rates[client].window_ns >= 1000000000ULL) { rates[client].window_ns = now; rates[client].count = 0; }
-    return ++rates[client].count <= GUARDIAN_ACCEPT_BURST;
+    size_t slot = 0;
+    for (size_t i = 0; i < RATE_SLOTS; ++i) {
+        if (rates[i].used && rates[i].uid == uid) { slot = i; break; }
+        if (!rates[i].used || rates[i].window_ns < rates[slot].window_ns) slot = i;
+    }
+    if (!rates[slot].used || rates[slot].uid != uid || now - rates[slot].window_ns >= 1000000000ULL)
+        rates[slot] = (rate_slot){uid, now, 0, true};
+    return ++rates[slot].count <= GUARDIAN_ACCEPT_BURST;
 }
 
 static bool send_connection(int channel, int connection, no_id epoch, uint64_t generation) {
-    guardian_grant frame = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_CONNECTION, epoch, generation};
+    guardian_grant frame = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_CONNECTION, epoch, generation, 0, 0};
     union { struct cmsghdr align; char buffer[CMSG_SPACE(sizeof(int))]; } control;
     memset(&control, 0, sizeof(control));
     struct iovec vector = {.iov_base = &frame, .iov_len = sizeof(frame)};
@@ -68,7 +77,8 @@ guardian_forward_result guardian_forward(int listener, int channel, const guardi
     peer_identity peer = {.pidfd = {FD_EMPTY, -1}};
     no_error error;
     guardian_forward_result result = FORWARD_REFUSED;
-    if (peer_identity_from_connection(&peer, connection, &error) && within_rate(verified_client(manifest, &peer)))
+    if (peer_identity_from_connection(&peer, connection, &error) &&
+        within_rate(verified_client(manifest, &peer), peer.credentials.uid))
         result = send_connection(channel, connection, epoch, generation) ? FORWARD_HANDED : FORWARD_CHANNEL_FAILED;
     service_close_fd(&peer.pidfd);
     close(connection);

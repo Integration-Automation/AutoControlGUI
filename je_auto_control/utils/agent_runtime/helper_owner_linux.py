@@ -43,7 +43,11 @@ _UCRED = struct.Struct("=iII")  # struct ucred: pid, uid, gid
 
 
 class ServiceConnectionLost(AgentTaskError):
-    """The owner service could not be reached, turned the connection away, or dropped it."""
+    """The owner service closed a connection it had accepted: its account's share is used, or it changes epoch.
+
+    An endpoint that cannot be reached at all is a plain ``AgentTaskError``: retrying a
+    missing guardian or a missing listener permission cannot help.
+    """
 
 
 class SeqpacketTransport:
@@ -76,7 +80,7 @@ class SeqpacketTransport:
             connection.connect(self._endpoint)
         except OSError as error:
             connection.close()
-            raise ServiceConnectionLost(f"owner service is unreachable: {type(error).__name__}") from error
+            raise AgentTaskError(f"owner service is unreachable: {type(error).__name__}") from error
         self._socket = connection
         try:
             self._require_peer(self._peer_uid)

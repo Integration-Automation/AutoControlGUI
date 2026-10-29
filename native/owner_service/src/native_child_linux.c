@@ -83,6 +83,9 @@ static int child_protected_credentials(owner_record *record) {
 static int child_await_release(owner_record *record) {
     char byte;
     long count;
+    /* clone copied the parent's write end too: closed here, a parent that never releases
+     * leaves this read at EOF instead of blocked forever. */
+    syscall(SYS_close, record->release_write.number);
     do { count = syscall(SYS_read, record->release_read.number, &byte, 1); } while (count < 0 && errno == EINTR);
     return count == 1 ? 0 : ECANCELED;
 }

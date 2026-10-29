@@ -89,7 +89,9 @@ most its manifest quota of an epoch's lease positions; a spent, idle epoch is dr
 same guardian. Channels renew their lease in the background up to the manifest's maximum age, and a
 channel whose lease expired reports that instead of a generic refusal. A channel connects at its first request,
 and a connection turned away before its lease exists (the account's connection share is used, or the
-service is changing epoch) raises `AgentControlBusy`. Helpers that drive the desktop or a browser
+service is changing epoch) raises `AgentControlBusy`; an endpoint that cannot be reached at all
+raises a plain `AgentTaskError`, since retrying a missing guardian cannot help. Browser dependency probes
+run locally too: they vet the environment of a helper that runs locally. Helpers that drive the desktop or a browser
 (`native_target`) always run as local processes, even with a binding: a protected helper runs as its own
 ID with an empty environment and cannot reach the X or Wayland session. Dependency probes and remote
 device helpers go through the service; `helper_containment` reports `display_helpers` as

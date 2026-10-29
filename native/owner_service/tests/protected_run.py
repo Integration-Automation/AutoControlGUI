@@ -123,12 +123,21 @@ def build():
         OPT + "/service_main", defines + ["-DNO_PROTECTED_ACCEPTANCE"])
     gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
                            "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
+                           "guardian_manifest_linux.c", "service_policy.c",
                            "protected_manifests.c"], OPT + "/guardian", defines)
     gcc(["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_child_linux.c",
          "native_relay_linux.c", "owner_core_acceptance.c"], OPT + "/owner_core_acceptance", acceptance=True)
     gcc(["seccomp_probe.c", "guardian_seccomp_linux.c", "protected_manifests.c"], OPT + "/seccomp_probe", defines)
+    taken = pwd.getpwnam("acother").pw_uid
     gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
                            "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
+                           "guardian_manifest_linux.c", "service_policy.c", "protected_manifests.c"],
+        OPT + "/guardian_taken_range",
+        [d for d in defines if not d.startswith(("-DPAYLOAD_UID=", "-DPAYLOAD_GID="))]
+        + [f"-DPAYLOAD_UID={taken}u", f"-DPAYLOAD_GID={PAYLOAD_BASE}u"])
+    gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
+                           "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
+                           "guardian_manifest_linux.c", "service_policy.c",
                            "protected_manifests.c"],
         OPT + "/guardian_outer", defines + ['-DPROTECTED_SUBTREE="autocontrol-outer/inner"',
                                             f'-DPROTECTED_STATE="{STATE2}"'])
@@ -279,8 +288,9 @@ def scenario_session(steps):
     holder.stdin.write("leftovers\n")
     holder.stdin.flush()
     steps["leftovers"] = read_json(holder)
-    left = steps["leftovers"].get("reply") or ["", -1]
-    steps["leftovers_present"] = os.path.exists(left[0]) and _shm_exists(left[1])
+    left = steps["leftovers"].get("reply") or ["", -1, ""]
+    steps["leftovers_present"] = os.path.exists(left[0]) and _shm_exists(left[1]) and os.path.exists(
+        left[2] + "/d" * 40 + "/bottom")
     pids = steps["inspection"]["payload_pids"]
     escaped = steps["request"].get("escaped")
     steps["escaped_in_payload_cgroup"] = escaped_in_payload(escaped, epoch)
@@ -293,7 +303,7 @@ def scenario_session(steps):
     steps["guardian_stop"] = stop_guardian(guardian)
     steps["epochs_after_stop"] = epochs()
     steps["endpoint_after_stop"] = os.path.exists(ENDPOINT)
-    steps["leftovers_after_stop"] = os.path.exists(left[0]) or _shm_exists(left[1])
+    steps["leftovers_after_stop"] = os.path.exists(left[0]) or _shm_exists(left[1]) or os.path.exists(left[2])
 
 
 def scenario_siblings(steps):
@@ -495,6 +505,56 @@ def scenario_worker(steps):
     steps["epochs_after_stop"] = epochs()
 
 
+def scenario_second_overlap(steps):
+    """Two overlaps in a row. E1 retires around H1; E2 drains on its own while E1 still
+    retires, and E3 must not take H1's half or purge H1's files. Then E3 retires around H3
+    while E1 still does: that handover waits, and happens once E1 is reclaimed."""
+    guardian = start_guardian()
+    first = epochs()[-1]
+    h1 = client("hold")
+    steps["h1"] = read_json(h1)
+    h1.stdin.write("leftovers\n")
+    h1.stdin.flush()
+    left = (read_json(h1).get("reply") or ["", -1, ""])
+    steps["h1_uids"] = payload_uids(first)
+    steps["fill_first"] = [rollover_session() for _ in range(7)]       # E1 spent around H1: retires.
+    steps["fill_second"] = [rollover_session() for _ in range(8)]      # E2 spent and idle: drains.
+    steps["third"] = rollover_session()                                # Lands in E3.
+    steps["h1_files_kept"] = os.path.exists(left[0]) and os.path.exists(left[2])
+    h3 = client("hold")
+    steps["h3"] = read_json(h3)
+    steps["fill_third"] = [rollover_session() for _ in range(6)]       # E3 spent around H3, E1 still retiring.
+    steps["epochs_pending"] = epochs()
+    h1.stdin.write("close\n")
+    h1.stdin.flush()
+    steps["h1_close"] = read_json(h1)
+    h1.wait(timeout=30)
+    # The guardian removes the epoch's branch, then purges its half: wait for both.
+    limit = time.monotonic() + 20
+    while (first in epochs() or os.path.exists(left[0]) or os.path.exists(left[2])) and time.monotonic() < limit:
+        time.sleep(0.1)
+    steps["h1_files_purged"] = not os.path.exists(left[0]) and not os.path.exists(left[2])
+    steps["fourth"] = rollover_session()                               # The pending handover: E4.
+    steps["epochs_after_handover"] = epochs()
+    h3.stdin.write("close\n")
+    h3.stdin.flush()
+    steps["h3_close"] = read_json(h3)
+    h3.wait(timeout=30)
+    limit = time.monotonic() + 20
+    while len(epochs()) > 1 and time.monotonic() < limit:
+        time.sleep(0.1)
+    steps["guardian_children"] = children_of(guardian.pid)
+    steps["guardian_stop"] = stop_guardian(guardian)
+    steps["epochs_after_stop"] = epochs()
+
+
+def scenario_taken_range(steps):
+    """A manifest whose payload range holds a real account is refused before anything starts."""
+    refused = run([OPT + "/guardian_taken_range"], timeout=30)
+    steps["refused"] = [refused.returncode, refused.stderr.strip()[-200:]]
+    steps["epochs"] = epochs()
+
+
 def scenario_delegated_subtree(steps):
     """A guardian whose subtree sits below a delegated cgroup refuses; once root owns that
     cgroup again it starts."""
@@ -652,6 +712,10 @@ def main():
         scenario_worker(report["steps"]["worker"])
         report["steps"]["long_lived"] = {}
         scenario_long_lived(report["steps"]["long_lived"])
+        report["steps"]["second_overlap"] = {}
+        scenario_second_overlap(report["steps"]["second_overlap"])
+        report["steps"]["taken_range"] = {}
+        scenario_taken_range(report["steps"]["taken_range"])
     except Exception as error:  # reason: cleanup must run and the failure must be reported, not lost
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
@@ -659,6 +723,12 @@ def main():
     report["expectations"] = expectations(report)
     print(json.dumps(report))
     raise SystemExit(0 if report["expectations"] and all(report["expectations"].values()) else 1)
+
+
+def half_of(uids):
+    """The payload half all of `uids` lie in, or None if empty or mixed."""
+    halves = {(int(u) - PAYLOAD_BASE) // EPOCH_IDS for u in uids or []}
+    return halves.pop() if len(halves) == 1 else None
 
 
 def in_payload_range(value):
@@ -688,10 +758,12 @@ def expectations(result):
     delegated = result["steps"].get("delegated_subtree", {})
     worker = result["steps"].get("worker", {})
     held = result["steps"].get("long_lived", {})
+    second = result["steps"].get("second_overlap", {})
+    taken = result["steps"].get("taken_range", {})
     inspection = session.get("inspection", {})
     service, payload = inspection.get("service", [{}]), inspection.get("payload", [{}])
     if "error" in result or not all((session, crash, siblings, nested, race, renewal, rollover, service_crash,
-                                     delegated, worker, held)):
+                                     delegated, worker, held, second, taken)):
         return {"completed": False}
     return {
         "protected_reply": session["request"].get("reply") == "pong",
@@ -761,6 +833,20 @@ def expectations(result):
         != {(int(u) - PAYLOAD_BASE) // EPOCH_IDS for u in held["successor_uids"]}
         and held["first_reclaimed"] and len(held["guardian_children"]) == 1
         and held["guardian_stop"][0] == 0 and not held["epochs_after_stop"],
+        # E3 started while E1 still retired around H1: it took the other half and left H1's
+        # files alone; E3's own handover waited for E1 and then happened.
+        "second_overlap_halves": half_of(second["third"].get("uids")) is not None
+        and half_of(second["third"].get("uids")) != half_of(second["h1_uids"]) and second["h1_files_kept"]
+        and all(s["retired"] for s in second["fill_first"] + second["fill_second"] + second["fill_third"])
+        and second["third"]["retired"],
+        "second_overlap_pending_handover": len(second["epochs_pending"]) == 2 and second["h1_files_purged"]
+        and second["fourth"]["retired"] and second["fourth"]["epochs"][-1] not in second["epochs_pending"]
+        and half_of(second["fourth"].get("uids")) == half_of(second["h1_uids"])
+        and second["h1_close"].get("retired") is True and second["h3_close"].get("retired") is True
+        and len(second["guardian_children"]) == 1 and second["guardian_stop"][0] == 0
+        and not second["epochs_after_stop"],
+        "taken_payload_range_refused": taken["refused"][0] != 0
+        and "manifest is invalid" in taken["refused"][1] and not taken["epochs"],
         "native_worker_runs": (worker["bootstrap"].get("result") or {}).get("protocol") == 1
         and bool(worker["inspection"]["payload"]) and in_payload_range(worker["inspection"]["payload"][0].get("uid"))
         and worker["inspection"]["payload"][0].get("seccomp") == "2"
@@ -780,7 +866,8 @@ def expectations(result):
         # EPERM is 1, ENOSYS 38: no way back to root, another group or a user namespace.
         "identity_filter_refuses_root": session["seccomp_probe"] == {
             "installed": True, "setresuid_root": 1, "setresgid_root": 1, "setuid_root": 1, "setgroups_root": 1,
-            "setgroups_empty": 0, "unshare_user": 1, "clone_user": 1, "clone3": 38, "payload_switch": 0,
+            "setgroups_empty": 0, "unshare_user": 1, "clone_user": 1, "clone3": 38, "keyring": 1,
+            "payload_switch": 0,
             "payload_last": 0, "beyond_range": 1},
         "nothing_left": not result["cleanup"]["leftovers"] and not result["cleanup"]["subtree_exists"]
         and not os.path.exists(OUTER) and not os.path.exists(STATE2)

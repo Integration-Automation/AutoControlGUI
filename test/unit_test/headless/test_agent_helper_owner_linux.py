@@ -405,8 +405,9 @@ def test_a_start_with_an_unknown_outcome_is_never_reported_retired():
 def test_transport_connects_on_first_frame_and_refuses_a_foreign_listener(tmp_path):
     endpoint = str(tmp_path / "owner.sock")
     absent = owner.SeqpacketTransport(endpoint)  # Construction never connects.
-    with pytest.raises(owner.ServiceConnectionLost, match="unreachable"):
+    with pytest.raises(AgentTaskError, match="unreachable") as refused:
         absent.send(b"x")
+    assert not isinstance(refused.value, owner.ServiceConnectionLost)  # Not "busy": retrying cannot help.
     with socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET) as listener:
         listener.bind(endpoint)
         listener.listen(4)

@@ -50,11 +50,13 @@ int main(void) {
     int unshare_user = outcome(syscall(SYS_unshare, CLONE_NEWUSER));
     int clone_user = clone_outcome(syscall(SYS_clone, CLONE_NEWUSER | SIGCHLD, 0, 0, 0, 0));
     int clone3 = clone_outcome(syscall(SYS_clone3, &args, sizeof(args)));
+    int keyring = outcome(syscall(SYS_keyctl, 0 /* KEYCTL_GET_KEYRING_ID */, -4 /* user keyring */, 0));
     printf("{\"installed\": true, \"setresuid_root\": %d, \"setresgid_root\": %d, \"setuid_root\": %d, "
            "\"setgroups_root\": %d, \"setgroups_empty\": %d, \"unshare_user\": %d, \"clone_user\": %d, "
-           "\"clone3\": %d, \"payload_switch\": %d, \"payload_last\": %d, \"beyond_range\": %d}\n",
+           "\"clone3\": %d, \"keyring\": %d, \"payload_switch\": %d, \"payload_last\": %d, "
+           "\"beyond_range\": %d}\n",
            setresuid_root, setresgid_root, setuid_root, setgroups_root, setgroups_empty, unshare_user, clone_user,
-           clone3, payload_switch(PAYLOAD_UID, PAYLOAD_GID),
+           clone3, keyring, payload_switch(PAYLOAD_UID, PAYLOAD_GID),
            payload_switch(PAYLOAD_UID + SERVICE_PAYLOAD_IDS - 1, PAYLOAD_GID + SERVICE_PAYLOAD_IDS - 1),
            payload_switch(PAYLOAD_UID + SERVICE_PAYLOAD_IDS, PAYLOAD_GID + SERVICE_PAYLOAD_IDS));
     return 0;

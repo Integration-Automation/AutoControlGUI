@@ -62,6 +62,15 @@ the gate.
   refuses any cgroup on the way (mount and subtree included) whose directory or
   `cgroup.procs`, `cgroup.threads` or `cgroup.subtree_control` belongs to another account
   or is writable by others: a delegated cgroup there could move helpers out of the epoch.
+- The guardian picks each epoch's payload half itself, never the half a retiring epoch
+  still uses, and sends it in the grant; a second retirement waits for the first epoch to
+  be reclaimed. A purge that leaves anything behind taints its half until the guardian
+  restarts. Before building the filter, the guardian refuses a manifest the service would
+  refuse, or whose payload IDs are below 1000 or known to the host's user and group
+  databases. Payloads cannot use kernel keyrings. With CAP_SETUID and CAP_SETGID the
+  service can still forge the UID or GID in SCM_CREDENTIALS; this project authenticates by
+  pidfd, but anything trusting SCM_CREDENTIALS alone (journald's `_UID`, for example)
+  should not take a service-sent value at face value.
 - Helpers start with umask 077, and the guardian caps the epoch's `records` cgroup at
   the per-helper process and memory limits times the record capacity, so tmpfs pages a
   killed helper left behind still count against the epoch.

@@ -20,7 +20,9 @@ static bool in_range(uint32_t id, uint32_t base) { return id >= base && id - bas
  * epoch's cgroup.procs. The ranges never wrap and never reach -1, "unchanged". */
 static bool payload_accounts_valid(const service_policy *policy, const service_launch_policy *entry) {
     uint32_t uid = entry->payload_uid, gid = entry->payload_gid;
-    if (uid > UINT32_MAX - SERVICE_PAYLOAD_IDS || gid > UINT32_MAX - SERVICE_PAYLOAD_IDS || !uid || !gid) return false;
+    /* Below 1000 lie system accounts and groups (disk is root-equivalent). */
+    if (uid > UINT32_MAX - SERVICE_PAYLOAD_IDS || gid > UINT32_MAX - SERVICE_PAYLOAD_IDS || uid < 1000 || gid < 1000)
+        return false;
     if (in_range(policy->guardian.uid, uid) || in_range((uint32_t)geteuid(), uid) || in_range(0, gid) ||
         in_range(policy->guardian.gid, gid) || in_range((uint32_t)getegid(), gid) ||
         (policy->socket_gid && in_range(policy->socket_gid, gid))) return false;
@@ -120,4 +122,23 @@ bool service_client_arguments(const service_request *request, const service_laun
 bool service_fresh_capability(const service_launch_policy *policy, uint8_t *capability, bool *wanted) {
     *wanted = policy->child_policies != 0;
     return !*wanted || service_random(capability, SERVICE_CAPABILITY_BYTES);
+}
+
+/* Every ID of a payload range counts as one account: helpers run as many IDs, and
+ * together they must not take more than one account's share from the client. */
+static uint32_t account_key(const service_state *service, uint32_t uid) {
+    for (size_t i = 0; i < service->policy->policy_count; ++i) {
+        uint32_t base = service->policy->policies[i].payload_uid;
+        if (uid >= base && uid - base < SERVICE_PAYLOAD_IDS) return base;
+    }
+    return uid;
+}
+
+size_t service_account_connections(const service_state *service, size_t except, uint32_t uid) {
+    uint32_t key = account_key(service, uid);
+    size_t count = 0;
+    for (size_t i = 0; i < SERVICE_CONNECTION_LIMIT; ++i)
+        if (i != except && service->connections[i].phase == CONNECTION_OPEN &&
+            account_key(service, service->connections[i].connector.credentials.uid) == key) ++count;
+    return count;
 }

@@ -404,7 +404,7 @@ static bool guardian_send(int channel, grant_case variant) {
     /* The grant carries the epoch directory only. */
     size_t count = variant == GRANT_NO_RIGHT ? 0 : variant == GRANT_TWO_RIGHTS ? 2 : 1;
     struct { guardian_grant grant; char extra[8]; } frame = {{SERVICE_MAGIC, SERVICE_VERSION, GRANT_EPOCH,
-        {138, 9}, 1}, {0}};
+        {138, 9}, 1, 0, 0}, {0}};
     if (variant == GRANT_BAD_FRAME) frame.grant.generation = 0;
     union { struct cmsghdr align; char buffer[CMSG_SPACE(sizeof(rights))]; } control;
     memset(&control, 0, sizeof(control));

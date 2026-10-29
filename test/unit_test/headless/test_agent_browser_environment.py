@@ -118,6 +118,7 @@ def test_probe_protocol_never_configures_or_reuses_an_input_channel(monkeypatch)
     factory = Mock(return_value=channel)
     monkeypatch.setattr(helper_environment, "owned_channel", factory)
     assert helper_environment.probe_browser_helper((sys.executable,), transfer=True) == report
+    factory.assert_called_once_with((sys.executable,), display=True)  # Probed where the helper will run.
     assert [call.args[0] for call in channel.request.call_args_list] == ["bootstrap", "probe_browser"]
     channel.close.assert_called_once()
 

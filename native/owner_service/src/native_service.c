@@ -329,10 +329,10 @@ static no_submit_result submit(service_state *service, service_lease *lease, con
     return no_submit(service->runtime, &lease->scope, key, spec, ticket, error);
 }
 
-/* The ID offset of a lease's helper within its policy's range: the epoch's half, then the
- * lease position, unique within the epoch. */
+/* The ID offset of a lease's helper within its policy's range: the half the guardian
+ * granted this epoch, then the lease position, unique within the epoch. */
 static uint32_t payload_offset(const service_state *service, const service_lease *lease) {
-    return (uint32_t)(service->epoch.low & 1) * SERVICE_EPOCH_IDS + (uint32_t)(lease - service->leases);
+    return service->payload_half * SERVICE_EPOCH_IDS + (uint32_t)(lease - service->leases);
 }
 
 static void start(service_state *service, size_t index, const service_request *request) {
@@ -485,7 +485,8 @@ static void dispatch(service_state *service, size_t index) {
         close_connection(service, index, CLOSE_DISCONNECT);
         return;
     }
-    connection->active_ns = owner_now();
+    service_lease *touched = held_lease(service, index, request.lease);
+    if (touched && touched->phase == LEASE_OPEN) connection->active_ns = owner_now();
     if (!packet_authenticated(&packet, &connection->connector, 0)) {
         send_reply(connection, &request, STATUS_UNAUTHENTICATED, (no_error){0}, NULL, (no_ticket){0});
         if (!packet_release(&packet)) service->close_uncertain = true;
@@ -504,14 +505,6 @@ static void dispatch(service_state *service, size_t index) {
     else if (request.opcode == OP_OBSERVE) observe(service, index, &request);
     else send_reply(connection, &request, STATUS_MALFORMED, (no_error){0}, NULL, (no_ticket){0});
     if (!packet_release(&packet)) service->close_uncertain = true;
-}
-
-static size_t account_connections(const service_state *service, size_t except, uint32_t uid) {
-    size_t count = 0;
-    for (size_t i = 0; i < SERVICE_CONNECTION_LIMIT; ++i)
-        if (i != except && service->connections[i].phase == CONNECTION_OPEN &&
-            service->connections[i].connector.credentials.uid == uid) ++count;
-    return count;
 }
 
 /* Owns `number` from here on: a full table, an account over its share, or a socket of
@@ -541,7 +534,7 @@ static void adopt_connection(service_state *service, int number) {
     no_error error = {0};
     if (!peer_identity_from_connection(&connection->connector, number, &error) ||
         !peer_enable_credentials(number, &error)) close_connection(service, index, CLOSE_FAILED_ISSUE);
-    else if (account_connections(service, index, connection->connector.credentials.uid) >=
+    else if (service_account_connections(service, index, connection->connector.credentials.uid) >=
              service->policy->connections_per_account)
         close_connection(service, index, CLOSE_ACCOUNT_LIMIT);
 }
@@ -609,7 +602,8 @@ static void announce_retiring(service_state *service) {
     bool open = false;
     for (size_t i = 0; i < service->lease_count && !open; ++i) open = service->leases[i].phase == LEASE_OPEN;
     if (!open) return;
-    guardian_grant frame = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_RETIRING, service->epoch, service->generation};
+    guardian_grant frame = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_RETIRING, service->epoch, service->generation,
+                            service->payload_half, 0};
     ssize_t sent;
     do {
         sent = send(service->guardian.number, &frame, sizeof(frame), MSG_NOSIGNAL | MSG_DONTWAIT);

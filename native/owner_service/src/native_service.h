@@ -93,6 +93,9 @@ typedef struct {
     uint16_t version, kind;
     no_id epoch;
     uint64_t generation;
+    /* GRANT_EPOCH: the half of every payload range this epoch uses, 0 or 1. The guardian
+     * picks it so a retiring epoch and whichever epoch runs beside it never share one. */
+    uint32_t payload_half, reserved;
 } guardian_grant;
 enum { GRANT_EPOCH_DIRECTORY, GRANT_RIGHTS };
 
@@ -202,6 +205,7 @@ typedef struct service_state {
     no_error first_error;
     bool close_uncertain;
     bool retiring; /* GRANT_RETIRING was sent: the guardian hands this epoch nothing more. */
+    uint32_t payload_half; /* From the grant. */
 #ifdef NO_ACCEPTANCE_BUILD
     const char *fixture_executable; /* Acceptance only: START admits a direct-fixture relay record. */
 #endif
@@ -210,6 +214,8 @@ typedef struct service_state {
 /* native_service.c: the single event owner for every resource above. */
 /* True when the compiled manifest is coherent (service_policy.c). */
 bool service_policy_valid(const service_policy *policy);
+/* Open connections of `uid`'s account other than `except`; a payload range is one account. */
+size_t service_account_connections(const service_state *service, size_t except, uint32_t uid);
 /* argv for a START: the policy's fixed words, then the client's, each a non-empty word
  * over the policy alphabet that cannot be read as an option (service_policy.c). */
 bool service_client_arguments(const service_request *request, const service_launch_policy *policy,

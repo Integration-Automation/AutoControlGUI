@@ -52,6 +52,11 @@ parity, so the two never share an ID; at most one epoch retires at a time. The g
 across epochs, and after a crash reclaims every epoch branch under the subtree, journaled or not.
 `owned_channel` gains `display=`: a helper that drives the user's display (`native_target`) always runs as
 a local process, even on a host with a binding, and `helper_containment` reports `display_helpers`.
+Browser dependency probes run locally as well. `guardian_grant` gains `payload_half`: the guardian, not the
+epoch counter, picks each epoch's half of the payload ranges. Payload ranges must start at 1000 or above, and
+the guardian refuses a manifest whose payload IDs the host's user or group databases know. An unreachable
+owner-service endpoint now raises `AgentTaskError`; only a connection closed after it was accepted raises
+`AgentControlBusy`.
 
 ## Unreleased: helper containment in runtime status
 

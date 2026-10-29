@@ -490,7 +490,16 @@ static void leave_leftovers(char *result, size_t size) {
     int file = mkstemp(path);
     if (file >= 0) close(file);
     int segment = shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0600);
-    snprintf(result, size, "[\"%s\", %d]", file >= 0 ? path : "", segment);
+    /* Deeper than any fixed walk limit: the purge must still reach the bottom. */
+    char deep[] = "/tmp/autocontrol-deep-XXXXXX";
+    int level = mkdtemp(deep) ? open(deep, O_RDONLY | O_DIRECTORY) : -1;
+    for (int i = 0; level >= 0 && i < 40; ++i) {
+        int next = mkdirat(level, "d", 0700) == 0 ? openat(level, "d", O_RDONLY | O_DIRECTORY) : -1;
+        close(level);
+        level = next;
+    }
+    if (level >= 0) { close(openat(level, "bottom", O_CREAT | O_WRONLY, 0600)); close(level); }
+    snprintf(result, size, "[\"%s\", %d, \"%s\"]", file >= 0 ? path : "", segment, deep);
 }
 
 /* Forks up to 64 idle children, counts how many the kernel allowed, then reaps them. */

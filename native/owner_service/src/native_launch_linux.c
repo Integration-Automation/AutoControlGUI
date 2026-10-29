@@ -99,12 +99,15 @@ static int move_into_payload(owner_record *record, pid_t child) {
 
 /* Moves, then checks revocation, then releases: a revoke before the check is seen here,
  * and one after it finds the child already inside the container its kill covers. */
-static void release_protected(owner_record *record, pid_t child) {
+static void release_protected(owner_record *record, pid_t child, int pidfd) {
     owner_close_slot(record, &record->release_read);
     int error = move_into_payload(record, child);
     if (!error && atomic_load(&record->revoked)) error = ECANCELED;
     if (!error && write(record->release_write.number, "g", 1) != 1) error = errno;
-    if (error) owner_set_error(record, NO_ERROR_NATIVE_CONTRACT, error);
+    if (error) {
+        owner_set_error(record, NO_ERROR_NATIVE_CONTRACT, error);
+        syscall(SYS_pidfd_send_signal, pidfd, SIGKILL, NULL, 0); /* It may still sit outside its cgroup. */
+    }
     owner_close_slot(record, &record->release_write); /* Unreleased, the child reads EOF and stops. */
 }
 
@@ -144,7 +147,8 @@ int owner_launch(owner_record *record) {
     long result = clone_child(record, &scratch.output);
     error = result < 0 ? errno : 0;
     if (result == 0) owner_child_exec(record);
-    if (result > 0 && record->release_write.state == FD_OWNED) release_protected(record, (pid_t)result);
+    if (result > 0 && record->release_write.state == FD_OWNED)
+        release_protected(record, (pid_t)result, scratch.output);
     if (result < 0) {
         owner_close_slot(record, &record->release_read);
         owner_close_slot(record, &record->release_write);
@@ -276,6 +280,9 @@ void *owner_worker(void *raw) {
     owner_close_slot(record, &record->pidfd);
     owner_close_slot(record, &record->output_sink);
     owner_close_slot(record, &record->bootstrap_read);
+    /* A launch that returned early, before or after clone, leaves these to cleanup. */
+    owner_close_slot(record, &record->release_read);
+    owner_close_slot(record, &record->release_write);
     deliver_nested(record, false);
     owner_relay_close(record);
     owner_close_slot(record, &record->reply_read);
@@ -594,6 +601,9 @@ void *owner_protected_worker(void *raw) {
     owner_close_slot(record, &record->pidfd);
     owner_close_slot(record, &record->output_sink);
     owner_close_slot(record, &record->bootstrap_read);
+    /* A launch that returned early, before or after clone, leaves these to cleanup. */
+    owner_close_slot(record, &record->release_read);
+    owner_close_slot(record, &record->release_write);
     deliver_nested(record, false);
     owner_relay_close(record);
     owner_close_slot(record, &record->reply_read);

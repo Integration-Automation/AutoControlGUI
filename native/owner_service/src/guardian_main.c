@@ -212,14 +212,16 @@ static bool send_grant(int channel, const guardian_grant *grant, int epoch) {
 }
 
 /* Request, grant, acknowledgment: each frame must come from the cloned service. */
-static bool grant_epoch(guardian_state *state, int channel, const peer_identity *service, guardian_grant *granted) {
+static bool grant_epoch(guardian_state *state, int channel, const peer_identity *service, uint32_t half,
+                        guardian_grant *granted) {
     uint64_t limit = owner_now() + GUARDIAN_GRANT_NS;
     guardian_grant frame;
     if (!wait_frame(channel, service, &frame, limit) || frame.kind != GRANT_REQUESTED) return false;
     no_id epoch;
     memcpy(&epoch.high, state->manifest->installation, sizeof(epoch.high));
     epoch.low = state->journal.current.counter;
-    guardian_grant grant = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_EPOCH, epoch, state->journal.current.sequence};
+    guardian_grant grant = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_EPOCH, epoch, state->journal.current.sequence,
+                            half, 0};
     if (!send_grant(channel, &grant, state->epoch)) return false;
     *granted = grant;
     return wait_frame(channel, service, &frame, limit) && frame.kind == GRANT_ACKNOWLEDGED &&
@@ -235,6 +237,7 @@ typedef struct {
     guardian_grant grant;
     char epoch[GJ_COMPONENT_BYTES];
     uint64_t counter, started_ns;
+    uint32_t half; /* Of every payload range; the other half belongs to the epoch beside it. */
 } running_epoch;
 
 static void running_init(running_epoch *run) {
@@ -268,18 +271,30 @@ static uint64_t monotonic_ns(void) {
     return (uint64_t)value.tv_sec * 1000000000ULL + (uint64_t)value.tv_nsec;
 }
 
-/* A service that ends within a second of starting is crashing: wait a second before the
- * next epoch, still answering a stop request at once. True when asked to stop. */
-static bool back_off(int signals) {
+/* A service that ends within a second of starting is crashing: wait 1, 2, 4 ... up to 30
+ * seconds before the next epoch, still answering a stop request at once. True when asked
+ * to stop. */
+static bool back_off(int signals, unsigned quick_ends) {
+    int wait_ms = quick_ends > 5 ? 30000 : 1000 << (quick_ends - 1);
     struct pollfd event = {.fd = signals, .events = POLLIN};
     int rc;
-    do { rc = poll(&event, 1, 1000); } while (rc < 0 && errno == EINTR);
+    do { rc = poll(&event, 1, wait_ms); } while (rc < 0 && errno == EINTR);
     return rc > 0;
 }
 
-/* Launches the journal's current epoch: service, grant, then ACTIVE. */
-static bool start_epoch(guardian_state *state, running_epoch *run) {
+/* A half an epoch may use: never one `busy` (a retiring epoch's, or the current's at a
+ * handover) still runs on, and never a tainted one. False when none is left. */
+static bool free_half(const guardian_state *state, const running_epoch *busy, uint32_t *half) {
+    bool occupied = busy && busy->service.pidfd.state == FD_OWNED;
+    for (uint32_t h = 0; h < 2; ++h)
+        if (!state->tainted[h] && !(occupied && busy->half == h)) { *half = h; return true; }
+    return false;
+}
+
+/* Launches the journal's current epoch: service, grant with its half, then ACTIVE. */
+static bool start_epoch(guardian_state *state, running_epoch *run, uint32_t half) {
     running_init(run);
+    run->half = half;
     int pair[2];
     if (socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, pair) != 0) {
         state->operation = 30; state->system_errno = errno;
@@ -293,7 +308,8 @@ static bool start_epoch(guardian_state *state, running_epoch *run) {
     run->counter = state->journal.current.counter;
     run->started_ns = monotonic_ns();
     if (!launch_error && peer_enable_credentials(pair[0], &error) &&
-        grant_epoch(state, pair[0], &run->service, &run->grant) && gj_mark(&state->journal, GJ_ACTIVE) == GJ_ERROR_NONE)
+        grant_epoch(state, pair[0], &run->service, half, &run->grant) &&
+        gj_mark(&state->journal, GJ_ACTIVE) == GJ_ERROR_NONE)
         return true;
     state->operation = 31; state->system_errno = launch_error;
     return false;
@@ -320,30 +336,41 @@ static bool service_frame(const running_epoch *run, uint16_t *kind) {
 /* The current epoch is spent but serves open leases: it keeps them as the retiring epoch,
  * no longer journaled (a crash sweeps it), and the next epoch starts beside it. */
 static bool hand_over(guardian_state *state, running_epoch *current, running_epoch *retiring) {
+    uint32_t half;
+    if (!free_half(state, current, &half)) return true; /* No clean half: the epoch stays as it is. */
     *retiring = *current;
     running_init(current);
     if (gj_mark(&state->journal, GJ_RECOVERING) != GJ_ERROR_NONE || gj_mark(&state->journal, GJ_CLEAN) != GJ_ERROR_NONE)
         return false;
-    return guardian_next_epoch(state) == GUARDIAN_READY && start_epoch(state, current);
+    return guardian_next_epoch(state) == GUARDIAN_READY && start_epoch(state, current, half);
 }
 
 typedef enum { LOOP_STOPPED, LOOP_REFUSED, LOOP_UNRESOLVED } loop_result;
 
-/* The current epoch ended on its own: reap it, reclaim it and start the next. */
-static loop_result replace_current(guardian_state *state, running_epoch *current, int signals, bool *stop) {
+/* The current epoch ended on its own: reap it, reclaim it and start the next, on the half
+ * a retiring epoch beside it does not use. */
+static loop_result replace_current(guardian_state *state, running_epoch *current, const running_epoch *retiring,
+                                   int signals, bool *stop) {
     uint64_t started = current->started_ns;
     running_close(current);
-    if (guardian_recover(state) != GUARDIAN_READY) return LOOP_UNRESOLVED;
-    if (monotonic_ns() - started < 1000000000ULL && back_off(signals)) { *stop = true; return LOOP_STOPPED; }
+    if (guardian_recover(state, (int)current->half) != GUARDIAN_READY) return LOOP_UNRESOLVED;
+    static unsigned quick_ends;
+    quick_ends = monotonic_ns() - started < 1000000000ULL ? quick_ends + 1 : 0;
+    if (quick_ends && back_off(signals, quick_ends)) { *stop = true; return LOOP_STOPPED; }
     guardian_result next = guardian_next_epoch(state);
     if (next != GUARDIAN_READY) return next == GUARDIAN_REFUSED ? LOOP_REFUSED : LOOP_UNRESOLVED;
-    return start_epoch(state, current) ? LOOP_STOPPED : LOOP_REFUSED;
+    uint32_t half;
+    if (!free_half(state, retiring, &half)) return LOOP_UNRESOLVED; /* Every free half is tainted. */
+    return start_epoch(state, current, half) ? LOOP_STOPPED : LOOP_REFUSED;
 }
 
 /* Forwards verified clients to the current epoch, rolls epochs over and reclaims a
  * retiring one when its service ends, until asked to stop or something fails. */
 static loop_result supervise(guardian_state *state, int signals, int listener, running_epoch *current,
                              running_epoch *retiring) {
+    /* GRANT_RETIRING from the current epoch while another still retires: acted on as soon
+     * as that one is reclaimed, since the service sends it only once. */
+    bool retire_pending = false;
     for (;;) {
         bool has_retiring = retiring->service.pidfd.state == FD_OWNED;
         struct pollfd events[5] = {
@@ -354,14 +381,17 @@ static loop_result supervise(guardian_state *state, int signals, int listener, r
         if (events[0].revents) return LOOP_STOPPED;
         if (events[4].revents) {
             running_close(retiring);
-            if (guardian_reclaim_retired(state, retiring->epoch, retiring->counter) != GUARDIAN_READY)
+            if (guardian_reclaim_retired(state, retiring->epoch, (int)retiring->half) != GUARDIAN_READY)
                 return LOOP_UNRESOLVED;
             running_init(retiring);
+            has_retiring = false;
         }
         bool ended = events[2].revents != 0;
         uint16_t kind = 0;
         if (!ended && events[3].revents) ended = !service_frame(current, &kind);
-        if (!ended && kind == GRANT_RETIRING && !has_retiring) {
+        if (!ended && kind == GRANT_RETIRING) retire_pending = true;
+        if (!ended && retire_pending && !has_retiring) {
+            retire_pending = false;
             if (!hand_over(state, current, retiring)) return LOOP_REFUSED;
             continue;
         }
@@ -370,7 +400,8 @@ static loop_result supervise(guardian_state *state, int signals, int listener, r
                                      current->grant.generation) == FORWARD_CHANNEL_FAILED;
         if (ended) {
             bool stop = false;
-            loop_result replaced = replace_current(state, current, signals, &stop);
+            retire_pending = false;
+            loop_result replaced = replace_current(state, current, retiring, signals, &stop);
             if (stop || replaced != LOOP_STOPPED) return replaced;
         }
     }
@@ -385,6 +416,10 @@ int main(void) {
     if (sigprocmask(SIG_BLOCK, &stopping, NULL) != 0) return EXIT_REFUSED;
     int signals = signalfd(-1, &stopping, SFD_CLOEXEC);
     guardian_state state;
+    if (!guardian_manifest_valid(&guardian_compiled_manifest)) {
+        fprintf(stderr, "autocontrol-owner-guardian: the compiled manifest is invalid\n");
+        return EXIT_REFUSED;
+    }
     guardian_result prepared = guardian_prepare(&state, &guardian_compiled_manifest);
     if (prepared != GUARDIAN_READY) {
         guardian_close(&state);
@@ -397,17 +432,21 @@ int main(void) {
     running_init(&retiring);
     loop_result result = LOOP_REFUSED;
     if (listener < 0) { state.operation = 30; state.system_errno = errno; }
-    else if (start_epoch(&state, &current)) result = supervise(&state, signals, listener, &current, &retiring);
+    else {
+        uint32_t half;
+        if (!free_half(&state, NULL, &half)) result = LOOP_UNRESOLVED;
+        else if (start_epoch(&state, &current, half)) result = supervise(&state, signals, listener, &current, &retiring);
+    }
     if (listener >= 0) {
         close(listener);
         unlink(state.manifest->listener_path);
     }
     /* Whatever happened, every running epoch is reclaimed before the guardian exits. */
     running_close(&current);
-    guardian_result recovered = guardian_recover(&state);
+    guardian_result recovered = guardian_recover(&state, (int)current.half);
     if (retiring.service.pidfd.state == FD_OWNED) {
         running_close(&retiring);
-        if (guardian_reclaim_retired(&state, retiring.epoch, retiring.counter) != GUARDIAN_READY)
+        if (guardian_reclaim_retired(&state, retiring.epoch, (int)retiring.half) != GUARDIAN_READY)
             recovered = GUARDIAN_UNRESOLVED;
     }
     guardian_close(&state);

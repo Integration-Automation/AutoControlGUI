@@ -5,6 +5,7 @@
  * filter guards the calls themselves, for the service and everything it starts:
  *  - setresuid / setresgid accept only the service's IDs and the manifest's payload ranges;
  *  - setgroups accepts only an empty list (the filter cannot read a list's contents);
+ *  - keyctl, add_key and request_key fail: per-user keyrings outlive the IDs' processes;
  *  - the other set*id calls fail;
  *  - no user namespace can be created (a mapping written with CAP_SETUID would reach any
  *    account), so unshare / clone with CLONE_NEWUSER fail and clone3, whose flags a
@@ -115,6 +116,11 @@ bool guardian_confine_identities(const service_policy *policy, uint32_t service_
     static const long refused[] = {SYS_setuid, SYS_setreuid, SYS_setfsuid, SYS_setgid, SYS_setregid, SYS_setfsgid};
     for (size_t i = 0; i < sizeof(refused) / sizeof(refused[0]); ++i) deny(&filter, refused[i], EPERM);
     deny(&filter, SYS_clone3, ENOSYS);
+    /* Per-user kernel keyrings outlive every process of an ID: a later helper with the same
+     * ID would find them. Nothing here needs a keyring. */
+    deny(&filter, SYS_keyctl, EPERM);
+    deny(&filter, SYS_add_key, EPERM);
+    deny(&filter, SYS_request_key, EPERM);
     deny_new_user(&filter, SYS_clone);
     deny_new_user(&filter, SYS_unshare);
     empty_groups_only(&filter);

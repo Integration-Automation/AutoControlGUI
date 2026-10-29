@@ -150,9 +150,16 @@ static bool reclaim_branch(guardian_state *state, const char *name) {
     return killed && empty && remove_tree(state->subtree, name, 0);
 }
 
-guardian_result guardian_reclaim_retired(guardian_state *state, const char *epoch, uint64_t counter) {
+/* An unclean purge taints its half (both for -1): the guardian never grants it again. */
+static void purge(guardian_state *state, int half) {
+    if (guardian_purge_payloads(state->manifest->service, half)) return;
+    fprintf(stderr, "autocontrol-owner-guardian: payload half %d left files it could not remove\n", half);
+    for (int h = 0; h < 2; ++h) if (half < 0 || half == h) state->tainted[h] = true;
+}
+
+guardian_result guardian_reclaim_retired(guardian_state *state, const char *epoch, int half) {
     if (!reclaim_branch(state, epoch)) return refuse(state, 24, errno, GUARDIAN_UNRESOLVED);
-    guardian_purge_payloads(state->manifest->service, (int)(counter & 1));
+    purge(state, half);
     return GUARDIAN_READY;
 }
 
@@ -162,20 +169,27 @@ static guardian_result sweep_strays(guardian_state *state) {
     int copy = dup(state->subtree);
     DIR *listing = copy < 0 ? NULL : fdopendir(copy);
     if (!listing) { if (copy >= 0) close(copy); return refuse(state, 25, errno, GUARDIAN_UNRESOLVED); }
-    char names[8][GJ_COMPONENT_BYTES];
-    size_t count = 0;
-    for (struct dirent *entry; (entry = readdir(listing)) && count < 8;)
-        if (!strncmp(entry->d_name, "epoch-", 6) && strlen(entry->d_name) < GJ_COMPONENT_BYTES &&
-            (state->journal.current.phase == GJ_CLEAN || strcmp(entry->d_name, state->journal.current.epoch)))
-            strcpy(names[count++], entry->d_name);
+    /* Up to eight per pass, and passes until none remain: nothing is purged while a stray
+     * epoch could still run. */
+    for (;;) {
+        char names[8][GJ_COMPONENT_BYTES];
+        size_t count = 0;
+        rewinddir(listing);
+        for (struct dirent *entry; (entry = readdir(listing)) && count < 8;)
+            if (!strncmp(entry->d_name, "epoch-", 6) && strlen(entry->d_name) < GJ_COMPONENT_BYTES &&
+                (state->journal.current.phase == GJ_CLEAN || strcmp(entry->d_name, state->journal.current.epoch)))
+                strcpy(names[count++], entry->d_name);
+        if (!count) break;
+        for (size_t i = 0; i < count; ++i)
+            if (!reclaim_branch(state, names[i])) { closedir(listing); return refuse(state, 25, errno,
+                                                                                    GUARDIAN_UNRESOLVED); }
+    }
     closedir(listing);
-    for (size_t i = 0; i < count; ++i)
-        if (!reclaim_branch(state, names[i])) return refuse(state, 25, errno, GUARDIAN_UNRESOLVED);
-    guardian_purge_payloads(state->manifest->service, -1);
+    purge(state, -1);
     return GUARDIAN_READY;
 }
 
-guardian_result guardian_recover(guardian_state *state) {
+guardian_result guardian_recover(guardian_state *state, int half) {
     gj_record *current = &state->journal.current;
     if (current->phase == GJ_CLEAN) return GUARDIAN_READY;
     if (current->phase != GJ_RECOVERING && gj_mark(&state->journal, GJ_RECOVERING) != GJ_ERROR_NONE)
@@ -185,7 +199,7 @@ guardian_result guardian_recover(guardian_state *state) {
      * together, and the kernel kills anything they fork while the kill runs. */
     if (!reclaim_branch(state, current->epoch)) return refuse(state, 22, errno, GUARDIAN_UNRESOLVED);
     /* Nothing runs as this epoch's payload IDs now: what they left is removed before reuse. */
-    guardian_purge_payloads(state->manifest->service, (int)(current->counter & 1));
+    if (half != 2) purge(state, half);
     if (gj_mark(&state->journal, GJ_CLEAN) != GJ_ERROR_NONE) return refuse(state, 23, EIO, GUARDIAN_UNRESOLVED);
     return GUARDIAN_READY;
 }
@@ -258,7 +272,7 @@ guardian_result guardian_prepare(guardian_state *state, const guardian_manifest 
     if (result != GUARDIAN_READY) return result;
     result = sweep_strays(state);
     if (result != GUARDIAN_READY) return result;
-    result = guardian_recover(state);
+    result = guardian_recover(state, -1); /* Nothing of an earlier run is alive any more. */
     if (result != GUARDIAN_READY) return result;
     return guardian_next_epoch(state);
 }
@@ -269,8 +283,9 @@ guardian_result guardian_next_epoch(guardian_state *state) {
     if (planned != GJ_ERROR_NONE) return refuse(state, 3, (int)planned, GUARDIAN_REFUSED);
     int created = create_branches(state);
     if (!created) return GUARDIAN_READY;
-    /* The counter is consumed; whatever was created is reclaimed before refusing. */
-    guardian_result result = guardian_recover(state);
+    /* The counter is consumed; whatever was created is reclaimed before refusing. It never
+     * ran, so no payload ID needs purging. */
+    guardian_result result = guardian_recover(state, 2);
     return refuse(state, 4, created, result == GUARDIAN_READY ? GUARDIAN_REFUSED : GUARDIAN_UNRESOLVED);
 }
 
