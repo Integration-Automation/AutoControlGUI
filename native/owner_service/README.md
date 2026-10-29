@@ -25,8 +25,17 @@ the gate.
   connection is open, the service drains, and the same guardian reclaims the epoch
   and grants the next one. A spent epoch answers new opens with CAPACITY until then.
 - The service runs with a bounding set of only CAP_SETUID, CAP_SETGID and
-  CAP_SETPCAP, `SECBIT_NOROOT` locked, and no_new_privs, so a bug in it cannot regain
-  root.
+  CAP_SETPCAP, `SECBIT_NOROOT` locked, and no_new_privs. Those guard only exec, so a
+  seccomp filter, inherited by every payload, also confines the calls themselves:
+  `setresuid`/`setresgid` may name only the service's and the manifest's payload IDs,
+  `setgroups` only an empty list, the other set*id calls fail, and no user namespace
+  can be created (`clone3` answers ENOSYS, so payloads start with `clone` and are moved
+  into their cgroup before they run). A code-execution bug in the service therefore
+  reaches the payload accounts, not root, the client or another group. The filter is
+  built for x86-64 and arm64 only.
+- Payloads hold no supplementary group. A nested-capable payload reaches the guardian
+  through an ACL on the listener that names every client account in the guardian's
+  manifest, so `/run` must support POSIX ACLs (tmpfs does).
 - Payload accounts and groups must differ from the guardian, the service, the client
   and the socket group, and a service serves exactly one client account.
 

@@ -69,11 +69,9 @@ static int child_descriptors(owner_record *record, int *error_fd) {
 static int child_protected_credentials(owner_record *record) {
     struct __user_cap_header_struct header = {_LINUX_CAPABILITY_VERSION_3, 0};
     struct __user_cap_data_struct capabilities[2] = {{0}, {0}};
-    /* A nested-capable payload keeps exactly one supplementary group, the listener's,
-     * so it can reach the guardian; every other payload keeps none. */
-    gid_t groups[1] = {(gid_t)record->spec->socket_gid};
-    if (syscall(SYS_setgroups, record->spec->socket_gid ? 1 : 0, record->spec->socket_gid ? groups : NULL) == -1)
-        return errno;
+    /* No supplementary group: a nested-capable payload reaches the guardian through the
+     * listener's ACL, and the identity filter allows only an empty list anyway. */
+    if (syscall(SYS_setgroups, 0, NULL) == -1) return errno;
     for (unsigned long capability = 0;; ++capability) {
         long present = syscall(SYS_prctl, PR_CAPBSET_READ, capability, 0, 0, 0);
         if (present < 0) { if (errno == EINVAL) break; return errno; }
@@ -123,8 +121,18 @@ static int make_relay_pipes(owner_record *record) {
     return error;
 }
 
+/* A protected child runs nothing of its own until the parent has moved it into its
+ * payload cgroup and released it; EOF instead of the release byte means stop. */
+static int child_await_release(owner_record *record) {
+    char byte;
+    long count;
+    do { count = syscall(SYS_read, record->release_read.number, &byte, 1); } while (count < 0 && errno == EINTR);
+    return count == 1 ? 0 : ECANCELED;
+}
+
 static void child_exec(owner_record *record) {
     int error = record->options.fail_child_setup ? EBADF : 0;
+    if (!error && record->profile == PROFILE_PROTECTED) error = child_await_release(record);
     int error_fd = record->exec_write.number;
     if (!error) error = child_descriptors(record, &error_fd);
     if (!error) error = child_reset_signals();
@@ -162,11 +170,57 @@ static void set_start(owner_record *record, no_start_kind kind, int error) {
     pthread_mutex_unlock(&record->report_lock);
 }
 
+/* The identity filter answers clone3 with ENOSYS, so a protected child is created with
+ * clone and then moved: a blocking pipe holds it until it sits in its payload cgroup. */
+static int make_release_pipe(owner_record *record) {
+    int pair[2];
+    if (pipe2(pair, O_CLOEXEC) == -1) return errno;
+    own(record, &record->release_read, pair[0]);
+    own(record, &record->release_write, pair[1]);
+    return 0;
+}
+
+static int move_into_payload(owner_record *record, pid_t child) {
+    int procs;
+    do {
+        procs = openat(record->scope.payload.descriptor.number, "cgroup.procs", O_WRONLY | O_CLOEXEC | O_NOFOLLOW);
+    } while (procs < 0 && errno == EINTR);
+    if (procs < 0) return errno;
+    char text[24];
+    int length = snprintf(text, sizeof(text), "%d", (int)child);
+    int error = write(procs, text, (size_t)length) == length ? 0 : errno;
+    close(procs);
+    return error;
+}
+
+/* Moves, then checks revocation, then releases: a revoke before the check is seen here,
+ * and one after it finds the child already inside the container its kill covers. */
+static void release_protected(owner_record *record, pid_t child) {
+    owner_close_slot(record, &record->release_read);
+    int error = move_into_payload(record, child);
+    if (!error && atomic_load(&record->revoked)) error = ECANCELED;
+    if (!error && write(record->release_write.number, "g", 1) != 1) error = errno;
+    if (error) owner_set_error(record, NO_ERROR_NATIVE_CONTRACT, error);
+    owner_close_slot(record, &record->release_write); /* Unreleased, the child reads EOF and stops. */
+}
+
+static long clone_child(owner_record *record, int *pidfd) {
+    if (record->profile == PROFILE_PROTECTED && !record->options.admission_probe)
+        return syscall(SYS_clone, CLONE_PIDFD | SIGCHLD, 0, pidfd, 0, 0);
+    struct clone_args args = {.flags = CLONE_PIDFD, .pidfd = (uintptr_t)pidfd, .exit_signal = SIGCHLD};
+    if (record->options.admission_probe) {
+        args.flags |= CLONE_INTO_CGROUP;
+        args.cgroup = (uint64_t)record->cgroup_probe.number;
+    }
+    return syscall(SYS_clone3, &args, sizeof(args));
+}
+
 int owner_launch(owner_record *record) {
     int error = make_pipe(record, &record->lifetime_read, &record->lifetime_write);
     if (!error) error = make_pipe(record, &record->exec_read, &record->exec_write);
     if (!error && record->delivery.wanted) error = make_bootstrap_pipe(record);
     if (!error && record->relay_enabled) error = make_relay_pipes(record);
+    if (!error && record->profile == PROFILE_PROTECTED) error = make_release_pipe(record);
     if (!error) {
         int sink = open("/dev/null", O_WRONLY | O_CLOEXEC);
         if (sink == -1) error = errno;
@@ -182,21 +236,14 @@ int owner_launch(owner_record *record) {
     fixture_hold(&record->release_before);
     if (atomic_load(&record->revoked)) { set_start(record, NO_START_FAILED_WITHOUT_CHILD, ECANCELED); return ECANCELED; }
     struct { int output; } scratch = {.output = -1};
-    struct clone_args args = {.flags = CLONE_PIDFD, .pidfd = (uintptr_t)&scratch.output,
-        .exit_signal = SIGCHLD};
-    if (record->profile == PROFILE_PROTECTED) {
-        args.flags |= CLONE_INTO_CGROUP;
-        args.cgroup = (uint64_t)record->scope.payload.descriptor.number;
-    }
-    if (record->options.admission_probe) {
-        args.flags |= CLONE_INTO_CGROUP;
-        args.cgroup = (uint64_t)record->cgroup_probe.number;
-    }
     atomic_fetch_add(&record->launch_attempts, 1);
-    long result = syscall(SYS_clone3, &args, sizeof(args));
+    long result = clone_child(record, &scratch.output);
     error = result < 0 ? errno : 0;
     if (result == 0) child_exec(record);
+    if (result > 0 && record->release_write.state == FD_OWNED) release_protected(record, (pid_t)result);
     if (result < 0) {
+        owner_close_slot(record, &record->release_read);
+        owner_close_slot(record, &record->release_write);
         atomic_store(&record->scratch_diagnostic, scratch.output);
         atomic_store(&record->failed_call, true);
         fixture_hold(&record->release_failure);

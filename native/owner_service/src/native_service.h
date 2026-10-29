@@ -113,7 +113,7 @@ typedef struct {
     size_t policy_count;
     uint64_t lease_lifetime_ns;
     uint64_t lease_max_age_ns;   /* OP_RENEW never extends a lease past this age. */
-    uint32_t socket_gid;         /* The listener's group, given to nested-capable payloads only. */
+    uint32_t socket_gid;         /* The listener's group; no payload may hold it. */
     size_t client_lease_quota; /* Lease positions one account may use per epoch, open or spent. */
     size_t record_capacity;
     uint64_t record_pids_max;   /* Processes one helper and its nested children may hold. */

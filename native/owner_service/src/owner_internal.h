@@ -86,7 +86,7 @@ typedef struct {
     size_t argc, envc, bytes;
     char *argv[NO_ARGUMENT_LIMIT + 1], *env[NO_ARGUMENT_LIMIT + 1];
     char executable[NO_PATH_LIMIT], cwd[NO_PATH_LIMIT];
-    uint32_t uid, gid, socket_gid;
+    uint32_t uid, gid;
     uint64_t pids_max, memory_max;
     /* Replay compares whether a capability exists, never its bytes: a retried START
      * carries a fresh one, and the record keeps the first. */
@@ -113,7 +113,6 @@ struct no_validated_spec {
     size_t argc, envc;
     uint32_t uid, gid;
     const uint8_t *nested_capability; /* NULL unless the policy permits child policies. */
-    uint32_t socket_gid; /* Only supplementary group of a nested-capable payload; 0 for none. */
     /* Written to the record's container before its payload exists; 0 inherits the parent's. */
     uint64_t pids_max, memory_max;
 };
@@ -157,6 +156,7 @@ typedef struct owner_record {
     start_state start;
     bool registered, thread_created, settled;
     owned_fd pidfd, lifetime_read, lifetime_write, exec_read, exec_write, cgroup_probe;
+    owned_fd release_read, release_write; /* Protected launch: the child waits here until moved. */
     owned_fd output_sink; /* /dev/null for the child's stdout/stderr; closed once a child exists. */
     owned_fd bootstrap_read, bootstrap_write; /* Present only while delivery.wanted. */
     owned_fd reply_read, reply_write;         /* Present only while relay_enabled. */

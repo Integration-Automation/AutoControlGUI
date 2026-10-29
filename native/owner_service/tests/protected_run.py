@@ -115,9 +115,11 @@ def build():
     gcc(SERVICE_SOURCES + ["native_service.c", "service_bootstrap_linux.c", "service_main.c", "protected_manifests.c"],
         OPT + "/service_main", defines + ["-DNO_PROTECTED_ACCEPTANCE"])
     gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
-                           "guardian_forward_linux.c", "protected_manifests.c"], OPT + "/guardian", defines)
+                           "guardian_forward_linux.c", "guardian_seccomp_linux.c", "protected_manifests.c"],
+        OPT + "/guardian", defines)
     gcc(["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_relay_linux.c",
          "owner_core_acceptance.c"], OPT + "/owner_core_acceptance", acceptance=True)
+    gcc(["seccomp_probe.c", "guardian_seccomp_linux.c", "protected_manifests.c"], OPT + "/seccomp_probe", defines)
     report["accounts"] = {k: v for k, v in values.items() if not k.startswith("NS_")}
 
 
@@ -176,7 +178,8 @@ def status_of(pid):
             key, _, value = line.partition(":")
             fields[key] = value.strip()
     return {"uid": fields["Uid"].split()[0], "cap_eff": fields["CapEff"], "cap_bnd": fields["CapBnd"],
-            "no_new_privs": fields.get("NoNewPrivs")}
+            "no_new_privs": fields.get("NoNewPrivs"), "seccomp": fields.get("Seccomp"),
+            "gid": fields["Gid"].split()[0], "groups": fields.get("Groups", "").split()}
 
 
 def pid_alive(pid):
@@ -214,6 +217,8 @@ def scenario_session(steps):
     holder = client("hold")
     steps["request"] = read_json(holder)
     steps["inspection"] = session_inspection(epoch)
+    probe = run([OPT + "/seccomp_probe"])
+    steps["seccomp_probe"] = json.loads(probe.stdout or "{}")
     steps["payload_cannot_join_epoch"] = migration_denied(f"{SUBTREE}/{epoch}")
     steps["payload_cannot_join_records"] = migration_denied(f"{SUBTREE}/{epoch}/records")
     foreign = client("foreign", account="acother")
@@ -582,8 +587,15 @@ def expectations(result):
         and service_crash["escaped_gone"] and service_crash["guardian_alive"]
         and service_crash["next_session"]["retired"] and service_crash["guardian_stop"][0] == 0
         and not service_crash["epochs_after_stop"],
-        "payload_group_private": result["accounts"]["PAYLOAD_GID"] not in (
+        # Read from the running payload, not the manifest: its own group and nothing else.
+        "payload_group_private": payload[0].get("gid") == str(result["accounts"]["PAYLOAD_GID"])
+        and payload[0].get("groups") == [] and result["accounts"]["PAYLOAD_GID"] not in (
             result["accounts"]["CLIENT_GID"], result["accounts"]["SOCKET_GID"]),
+        "service_identity_filter": service[0].get("seccomp") == "2" and payload[0].get("seccomp") == "2",
+        # EPERM is 1, ENOSYS 38: no way back to root, another group or a user namespace.
+        "identity_filter_refuses_root": session["seccomp_probe"] == {
+            "installed": True, "setresuid_root": 1, "setresgid_root": 1, "setuid_root": 1, "setgroups_root": 1,
+            "setgroups_empty": 0, "unshare_user": 1, "clone_user": 1, "clone3": 38, "payload_switch": 0},
         "nothing_left": not result["cleanup"]["leftovers"] and not result["cleanup"]["subtree_exists"]
         and not result["cleanup"]["accounts_present"] and not result["cleanup"]["groups_present"]
         and not result["cleanup"]["client_in_socket_group"],

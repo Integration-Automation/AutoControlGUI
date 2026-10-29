@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <libgen.h>
+#include <sys/xattr.h>
 #include <linux/securebits.h>
 #include <sys/prctl.h>
 #include <sys/signalfd.h>
@@ -33,17 +34,49 @@ static int report(const char *stage, const guardian_state *state, int code) {
     return code;
 }
 
-/* The listener's directory must be root's alone, or a race could redirect the chown. */
+/* Every directory above the listener is root's alone, or a race could redirect the bind
+ * or the chown that still go by path. */
 static bool trusted_parent(const char *path) {
     char copy[sizeof(((struct sockaddr_un *)0)->sun_path)];
     strcpy(copy, path);
-    struct stat status;
-    return lstat(dirname(copy), &status) == 0 && S_ISDIR(status.st_mode) && status.st_uid == 0 &&
-        !(status.st_mode & (S_IWGRP | S_IWOTH));
+    int directory = gj_open_trusted_directory(dirname(copy), 0);
+    if (directory < 0) return false;
+    close(directory);
+    return true;
+}
+
+/* POSIX ACL xattr layout (linux/posix_acl_xattr.h), which no libc header declares. */
+typedef struct { uint16_t tag, permission; uint32_t id; } acl_entry;
+enum { ACL_USER_OBJ = 1, ACL_USER = 2, ACL_GROUP_OBJ = 4, ACL_MASK = 0x10, ACL_OTHER = 0x20 };
+
+/* Every listed client account may connect by name, so a nested-capable payload reaches
+ * the guardian without holding any supplementary group: the service gives payloads none. */
+static bool grant_clients(const char *path, const guardian_manifest *manifest) {
+    struct { uint32_t version; acl_entry entries[SERVICE_CLIENT_LIMIT + 8]; } acl = {.version = 2};
+    size_t count = 0;
+    acl.entries[count++] = (acl_entry){ACL_USER_OBJ, 6, UINT32_MAX};
+    uint32_t previous = 0;
+    for (size_t placed = 0; placed < manifest->client_count; ++placed) {
+        /* Entries must be sorted by ID: take the next larger client UID each time. */
+        uint32_t next = UINT32_MAX;
+        for (size_t i = 0; i < manifest->client_count; ++i) {
+            uint32_t uid = manifest->clients[i].uid;
+            if ((placed == 0 || uid > previous) && uid < next) next = uid;
+        }
+        if (next == UINT32_MAX || (placed && next == previous)) break;
+        if (count >= sizeof(acl.entries) / sizeof(acl.entries[0]) - 3) return false;
+        acl.entries[count++] = (acl_entry){ACL_USER, 6, next};
+        previous = next;
+    }
+    acl.entries[count++] = (acl_entry){ACL_GROUP_OBJ, 6, UINT32_MAX};
+    acl.entries[count++] = (acl_entry){ACL_MASK, 6, UINT32_MAX};
+    acl.entries[count++] = (acl_entry){ACL_OTHER, 0, UINT32_MAX};
+    size_t size = sizeof(acl.version) + count * sizeof(acl_entry);
+    return lsetxattr(path, "system.posix_acl_access", &acl, size, 0) == 0;
 }
 
 /* Only a stale socket at exactly this path is replaced; anything else refuses. */
-static int open_listener(const char *path, uint32_t group) {
+static int open_listener(const char *path, uint32_t group, const guardian_manifest *manifest) {
     struct sockaddr_un address = {.sun_family = AF_UNIX};
     if (strlen(path) >= sizeof(address.sun_path) || !trusted_parent(path)) return -1;
     strcpy(address.sun_path, path);
@@ -58,6 +91,7 @@ static int open_listener(const char *path, uint32_t group) {
     int bound = bind(number, (struct sockaddr *)&address, sizeof(address));
     umask(previous);
     if (bound != 0 || fchownat(AT_FDCWD, path, 0, group, AT_SYMLINK_NOFOLLOW) != 0 ||
+        !grant_clients(path, manifest) ||
         listen(number, 64) != 0 || !peer_enable_credentials(number, &error)) {
         close(number);
         return -1;
@@ -84,10 +118,12 @@ static bool keep_service_capabilities(void) {
     return true;
 }
 
-/* Even a code-execution bug in the service cannot regain root: its bounding set holds
- * only its three capabilities, UID 0 confers nothing (NOROOT, locked), and exec can
- * never raise privileges (no_new_privs). Done while still root, before the UID drop. */
-static bool confine_service(void) {
+/* A code-execution bug in the service reaches no account beyond its payloads: its
+ * bounding set holds only its three capabilities, UID 0 confers nothing on exec (NOROOT,
+ * locked), exec never raises privileges (no_new_privs), and the identity filter lets the
+ * set*id calls name only the service's and the payloads' IDs and forbids user namespaces.
+ * Done while still root, before the UID drop, which the filter permits. */
+static bool confine_service(const guardian_manifest *manifest) {
     for (unsigned long capability = 0;; ++capability) {
         int present = prctl(PR_CAPBSET_READ, capability, 0, 0, 0);
         if (present < 0) break;
@@ -97,7 +133,8 @@ static bool confine_service(void) {
     sigset_t none;
     sigemptyset(&none);
     return prctl(PR_SET_SECUREBITS, SECBIT_NOROOT | SECBIT_NOROOT_LOCKED | SECBIT_KEEP_CAPS, 0, 0, 0) == 0 &&
-        prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == 0 && sigprocmask(SIG_SETMASK, &none, NULL) == 0;
+        prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == 0 && sigprocmask(SIG_SETMASK, &none, NULL) == 0 &&
+        guardian_confine_identities(&service_manifest, manifest->service_uid, manifest->service_gid);
 }
 
 /* The child keeps only its endpoint on SERVICE_GUARDIAN_FD and becomes the service
@@ -105,7 +142,7 @@ static bool confine_service(void) {
 static void exec_service(const guardian_manifest *manifest, int channel) {
     if (dup2(channel, SERVICE_GUARDIAN_FD) == SERVICE_GUARDIAN_FD &&
         syscall(SYS_close_range, SERVICE_GUARDIAN_FD + 1U, ~0U, 0) == 0 && setgroups(0, NULL) == 0 &&
-        confine_service() &&
+        confine_service(manifest) &&
         setresgid(manifest->service_gid, manifest->service_gid, manifest->service_gid) == 0 &&
         setresuid(manifest->service_uid, manifest->service_uid, manifest->service_uid) == 0 &&
         keep_service_capabilities()) {
@@ -197,7 +234,7 @@ static served_result supervise(const guardian_state *state, const peer_identity 
 }
 
 static served_result serve(guardian_state *state, int signals) {
-    int listener = open_listener(state->manifest->listener_path, state->manifest->listener_gid);
+    int listener = open_listener(state->manifest->listener_path, state->manifest->listener_gid, state->manifest);
     int pair[2] = {-1, -1};
     if (listener < 0 || socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, pair) != 0) {
         state->operation = 30; state->system_errno = errno;

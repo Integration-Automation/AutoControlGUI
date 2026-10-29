@@ -439,7 +439,7 @@ static void start(service_state *service, size_t index, const service_request *r
     } else if (policy) {
         no_validated_spec spec = {policy->executable, policy->cwd, argv, policy->env, argc, policy->envc,
             policy->payload_uid, policy->payload_gid, nested ? capability : NULL,
-            nested ? service->policy->socket_gid : 0, service->policy->record_pids_max,
+            service->policy->record_pids_max,
             service->policy->record_memory_max};
         no_submit_result result = submit(service, lease, request, &spec, &ticket, &error);
         status = result == NO_ACCEPTED ? STATUS_OK : result == NO_EXISTING ? STATUS_EXISTING : status_for(error.kind);

@@ -7,9 +7,9 @@
 
 /* EDIT: accounts. Guardian is root. The service account runs the service, and the
  * payload account runs helpers. One client account may open top-level leases. Every
- * account and primary group must be distinct. The socket group owns the listener: the
- * client account is a supplementary member of it, and the service gives it only to
- * helpers whose policy may start nested children. The payload is never a member. */
+ * account and primary group must be distinct. The socket group owns the listener and
+ * the client account is a supplementary member of it; the payload never is. Every
+ * client below is also named in the listener's ACL. */
 #define SERVICE_UID 990u
 #define SERVICE_GID 990u
 #define PAYLOAD_UID 991u

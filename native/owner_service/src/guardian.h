@@ -42,6 +42,10 @@ typedef struct {
  * its branches created and delegated. READY leaves the state holding the epoch
  * directory; REFUSED leaves the journal CLEAN; UNRESOLVED leaves it RECOVERING. */
 guardian_result guardian_prepare(guardian_state *state, const guardian_manifest *manifest);
+/* Both are compiled in from the one manifest file. */
+extern const service_policy service_manifest;
+/* Installs the service's identity filter (guardian_seccomp_linux.c); needs no_new_privs. */
+bool guardian_confine_identities(const service_policy *policy, uint32_t service_uid, uint32_t service_gid);
 /* Plans and creates the next epoch on a CLEAN journal (rollover after a drained one). */
 guardian_result guardian_next_epoch(guardian_state *state);
 /* Kills, waits for and removes the journaled branches, then marks CLEAN. */

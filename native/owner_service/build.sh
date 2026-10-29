@@ -23,5 +23,5 @@ $cc $flags $owner $peer "$src/native_service.c" "$src/service_bootstrap_linux.c"
     "$manifest" -o "$output/owner_service"
 # shellcheck disable=SC2086  # reason: flag and source lists are intentionally word-split
 $cc $flags $owner $peer "$src/guardian_main.c" "$src/guardian_epoch_linux.c" "$src/guardian_journal.c" \
-    "$src/guardian_forward_linux.c" "$manifest" -o "$output/owner_guardian"
+    "$src/guardian_forward_linux.c" "$src/guardian_seccomp_linux.c" "$manifest" -o "$output/owner_guardian"
 echo "built $output/owner_service and $output/owner_guardian (gate closed: no NO_PROTECTED_ACCEPTANCE)"

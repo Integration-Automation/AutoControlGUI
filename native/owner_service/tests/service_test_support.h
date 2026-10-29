@@ -237,7 +237,7 @@ static void without_thread(owner_record *record) {
 static no_submit_result seam_admit_with(no_runtime *runtime, service_lease *lease, uint64_t request,
                                         const uint8_t *capability, owner_record **record, no_error *error) {
     static const char *argv[] = {"/usr/bin/true", "alpha", NULL};
-    no_validated_spec input = {"/usr/bin/true", "/", argv, fixed_env, 2, 1, 65534, 65534, capability, 0, 0, 0};
+    no_validated_spec input = {"/usr/bin/true", "/", argv, fixed_env, 2, 1, 65534, 65534, capability, 0, 0};
     *error = (no_error){0};
     scope_reference prepared = {0};
     if (!scope_retain(lease->scope.reference, &prepared)) { error->kind = NO_ERROR_ARGUMENT; return NO_REJECTED; }

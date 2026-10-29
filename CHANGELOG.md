@@ -23,6 +23,11 @@ The binding file is now refused when it is a symlink or sits under a directory a
 write, and a client refuses an owner-service endpoint whose listener is not root (`SO_PEERCRED`).
 A manifest whose policy lists a child policy that is missing, not nested, or runs as another payload
 account is now invalid.
+The guardian now installs a seccomp filter on the service, inherited by every payload: `setresuid` and
+`setresgid` accept only the service's and the manifest's payload IDs, `setgroups` only an empty list, and no
+user namespace can be created (`clone3` answers ENOSYS). Payloads therefore hold no supplementary group; the
+listener carries an ACL naming every client account in the guardian's manifest, so `/run` must support POSIX
+ACLs. The filter is built for x86-64 and arm64 only.
 
 ## Unreleased: helper containment in runtime status
 
