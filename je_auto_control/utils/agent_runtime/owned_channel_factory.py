@@ -167,11 +167,11 @@ def helper_containment() -> dict[str, Any]:
         return {**result, "mode": "local", "intended_containment": "process_group", "status": "not_configured"}
     status = "reachable_unverified" if _endpoint_reachable(binding.endpoint) else "unreachable"
     return {**result, "mode": "owner_service", "intended_containment": "owner_service_cgroup", "status": status,
-            "policies": len(binding.policies)}
+            "policies": len(binding.policies), "display_helpers": "local_process_group"}
 
 
 def owned_channel(argv: Sequence[str], *, on_control: Callable[[str], None] | None = None,
-                  nested: Any = None) -> HelperChannel:
+                  nested: Any = None, display: bool = False) -> HelperChannel:
     """Return the channel that owns this helper.
 
     Linux with a host binding launches only through the owner service, and only an
@@ -179,8 +179,15 @@ def owned_channel(argv: Sequence[str], *, on_control: Callable[[str], None] | No
     started nested-capable passes the ``NestedGrant`` it read from fd 4, so its own
     helpers become child leases of its record. Every other case keeps the local
     ``OwnedChannel``, which has no nested form.
+
+    A helper that drives the user's display (``display=True``) is always local: the
+    service runs helpers as their own IDs with an empty environment, so they cannot
+    reach the user's X or Wayland session. That is a fixed routing rule, never a
+    fallback after the service failed.
     """
-    if sys.platform.startswith("linux"):
+    if display and nested is not None:
+        raise AgentTaskError("a display helper cannot be a nested owner-service helper")
+    if sys.platform.startswith("linux") and not display:
         binding = load_binding()
         if binding is not None:
             policy = binding.policies.get(tuple(argv))

@@ -581,7 +581,9 @@ On Linux, helper processes can run under the optional [owner service](native/own
 A root guardian runs each helper in its own cgroup v2 tree, which the helper's account cannot leave.
 Closing the channel kills the whole tree, escaped descendants included, and a restarted guardian
 recovers after a crash. A root-owned `/etc/je_auto_control/owner_service.json` binding routes
-exactly listed helper argv through it. Without that binding, helpers keep running as local
+exactly listed helper argv through it. Helpers that drive your desktop or browser always run as
+local processes, because a protected helper runs as its own ID with an empty environment and
+cannot reach your display. Without that binding, helpers keep running as local
 processes, and `agent-task status` reports the mode under `helper_containment`. The Python
 package never builds, installs or starts the service, and its builds refuse protected launches
 until a reviewed release opens the gate.

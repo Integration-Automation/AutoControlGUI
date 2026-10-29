@@ -7,7 +7,10 @@ including descendants that called `setsid()` or double-forked. A crash is cleane
 when the guardian restarts.
 
 The Python package never builds, installs or starts any of this. Without a binding
-file, Linux helpers keep running as local processes. `agent_runtime_status()`
+file, Linux helpers keep running as local processes. With one, helpers that drive the
+user's desktop or browser still run locally: a protected helper runs as its own ID with
+an empty environment and cannot reach the X or Wayland session. The service carries
+display-free helpers, such as dependency probes and remote device helpers. `agent_runtime_status()`
 reports which mode a host is in under `helper_containment`.
 
 ## Status

@@ -50,6 +50,8 @@ helpers until they close: the service sends `GRANT_RETIRING`, the guardian start
 reclaims the retiring one when its service ends. Payload ranges grow to 64 IDs, half per epoch by counter
 parity, so the two never share an ID; at most one epoch retires at a time. The guardian keeps one listener
 across epochs, and after a crash reclaims every epoch branch under the subtree, journaled or not.
+`owned_channel` gains `display=`: a helper that drives the user's display (`native_target`) always runs as
+a local process, even on a host with a binding, and `helper_containment` reports `display_helpers`.
 
 ## Unreleased: helper containment in runtime status
 

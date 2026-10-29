@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-13；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-14；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -115,10 +115,8 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      回收服務、renewer 錯誤處理、被拒連線回報為 AgentControlBusy、開機重建說明、每個 record 獨立的
      payload ID、每個父 record 的 nested 配額、guardian 每帳號連線速率與服務每輪讀完 handoff、cgroup
      subtree 逐層檢查、helper 檔案與 SysV IPC 回收、epoch 總上限、用盡 epoch 與下一個 epoch 重疊
-     （長壽 helper 不再擋住新 helper）也已處理，閘門仍關閉；套件的 native_worker 已在服務下實際啟動並回覆。
-     DECIDE（NOTE-11）：受保護 helper 以獨立的範圍 ID、空環境執行，無法存取使用者的 X／Wayland
-     socket，桌面操作無從進行。選項：桌面 helper 繼續以本機程序執行、owner 服務只承載不需顯示的
-     helper；或由 client 以 SCM_RIGHTS 把顯示 socket／portal 的描述符交給該 helper（需另行設計與審查）。
+     （長壽 helper 不再擋住新 helper）也已處理，閘門仍關閉；套件的 native_worker 已在服務下實際啟動並回覆；
+     驅動桌面／瀏覽器的 helper 一律以本機程序執行，owner 服務只承載不需顯示的 helper（探測、遠端裝置）。
      TODO：其他架構／libc／核心的相容性驗證、安裝內容比對、實際已安裝主機的執行驗收，以及第三次
      獨立審查才能開啟正式閘門；不能匯入時下載或暗中部署服務。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、

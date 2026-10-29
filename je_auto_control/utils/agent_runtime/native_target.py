@@ -133,7 +133,8 @@ class NativeDesktopTarget:
         return probe_browser_helper(self._argv, transfer=transfers)
 
     def _launch(self, check: Callable[[], None], control: Callable[[str], None] | None = None) -> HelperChannel:
-        self._channel = owned_channel(self._argv, on_control=control)
+        # It drives the user's desktop or browser session, which a protected helper cannot reach.
+        self._channel = owned_channel(self._argv, on_control=control, display=True)
         reply = self._channel.request("bootstrap", {}, timeout=15, check=check)
         if not isinstance(reply, dict) or type(reply.get("protocol")) is not int or reply["protocol"] != 1:
             self._channel.close()

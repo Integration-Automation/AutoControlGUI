@@ -451,6 +451,7 @@ Linux 上的 helper 程序可改由選用的 [owner 服務](../native/owner_serv
 root guardian 把每個 helper 放進它自己的 cgroup v2 樹，helper 帳號無法離開；關閉 channel 會
 結束整棵樹（含逃離的後代），guardian 重啟後會清理崩潰留下的程序。root 擁有的
 `/etc/je_auto_control/owner_service.json` 綁定檔只讓完全列出的 helper argv 經由服務啟動；
+驅動桌面或瀏覽器的 helper 一律以本機程序執行，因為受保護的 helper 以獨立 ID、空環境執行，無法存取顯示；
 沒有綁定檔時 helper 仍以本機程序執行，`agent-task status` 在 `helper_containment` 回報模式。
 Python 套件不會建置、安裝或啟動服務，且在審閱後的版本開啟閘門前，建置出的服務拒絕受保護啟動。
 

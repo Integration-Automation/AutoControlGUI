@@ -92,6 +92,7 @@ class Fixture:
 
     def helper(self, argv, **kwargs):
         assert tuple(argv[-2:]) == ('-m', 'je_auto_control.utils.agent_runtime.native_worker')
+        assert kwargs.pop('display') is True  # A desktop helper never goes to the owner service.
         channel = OwnedChannel([sys.executable, '-u', '-c', worker_script(self.namespace, self.tmp_path)], **kwargs)
         self.helpers.append(channel)
         return channel

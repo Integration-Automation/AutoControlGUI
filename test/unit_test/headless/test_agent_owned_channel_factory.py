@@ -207,3 +207,20 @@ def test_symlinked_binding_is_never_followed(monkeypatch, tmp_path):
     link.symlink_to(target)
     with pytest.raises(AgentTaskError, match="unreadable"):
         factory.load_binding(str(link))
+
+
+def test_display_helpers_stay_local_even_with_a_binding(monkeypatch, tmp_path, local):
+    bind(monkeypatch, tmp_path, VALID)
+    monkeypatch.setattr(factory.sys, "platform", "linux")
+    monkeypatch.setattr(helper_owner_linux, "SeqpacketTransport",
+                        lambda *_a, **_k: pytest.fail("a display helper reached the owner service"))
+    assert factory.owned_channel(ARGV, display=True)[0] == "local"
+    with pytest.raises(AgentTaskError, match="display helper cannot be a nested"):
+        factory.owned_channel(ARGV, display=True, nested=object())
+
+
+def test_containment_reports_display_helpers_as_local(monkeypatch, tmp_path):
+    bind(monkeypatch, tmp_path, VALID)
+    monkeypatch.setattr(factory.sys, "platform", "linux")
+    monkeypatch.setattr(factory, "_endpoint_reachable", lambda _endpoint: True)
+    assert factory.helper_containment()["display_helpers"] == "local_process_group"
