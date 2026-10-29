@@ -17,6 +17,8 @@ no longer build a valid service.
 Each helper is now bounded by the manifest's `record_pids_max` and `record_memory_max`, written to its
 container cgroup; the `pids` and `memory` controllers must be enabled down to the subtree's parent, or
 the guardian refuses to start.
+A service also closes a new connection once its account already holds the manifest's
+`connections_per_account` (1 to 8 of the 16), so neither the client nor a payload can lock the other out.
 
 ## Unreleased: helper containment in runtime status
 

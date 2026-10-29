@@ -117,6 +117,7 @@ typedef struct {
     size_t client_lease_quota; /* Lease positions one account may use per epoch, open or spent. */
     size_t record_capacity;
     uint64_t record_pids_max;   /* Processes one helper and its nested children may hold. */
+    size_t connections_per_account; /* At most half the table, so no account locks out another. */
     uint64_t record_memory_max; /* Bytes of memory for the same; swap is closed where accounted. */
 } service_policy;
 
@@ -134,7 +135,7 @@ typedef struct {
 typedef enum { LEASE_UNUSED, LEASE_RESERVED, LEASE_OPEN, LEASE_CLOSED } lease_phase;
 typedef enum {
     CLOSE_NONE, CLOSE_REQUESTED, CLOSE_DISCONNECT, CLOSE_PEER_DEATH, CLOSE_EXPIRED,
-    CLOSE_REPLY_LOST, CLOSE_SENDER_MISMATCH, CLOSE_SHUTDOWN, CLOSE_FAILED_ISSUE
+    CLOSE_REPLY_LOST, CLOSE_SENDER_MISMATCH, CLOSE_SHUTDOWN, CLOSE_FAILED_ISSUE, CLOSE_ACCOUNT_LIMIT
 } close_reason;
 typedef struct {
     lease_phase phase;

@@ -61,6 +61,7 @@ static bool policy_valid(const service_policy *policy) {
         !policy->client_lease_quota || policy->client_lease_quota > SERVICE_LEASE_LIMIT ||
         policy->lease_max_age_ns < policy->lease_lifetime_ns ||
         policy->record_pids_max < SERVICE_MIN_PIDS || policy->record_memory_max < SERVICE_MIN_MEMORY ||
+        !policy->connections_per_account || policy->connections_per_account > SERVICE_CONNECTION_LIMIT / 2 ||
         /* Payload accounts are shared by policy, so one client per service until each client
          * has its own payload accounts. */
         policy->client_count != 1) return false;
@@ -555,7 +556,16 @@ static void dispatch(service_state *service, size_t index) {
     if (!packet_release(&packet)) service->close_uncertain = true;
 }
 
-/* Owns `number` from here on: a full table or a socket of the wrong kind closes it. */
+static size_t account_connections(const service_state *service, size_t except, uint32_t uid) {
+    size_t count = 0;
+    for (size_t i = 0; i < SERVICE_CONNECTION_LIMIT; ++i)
+        if (i != except && service->connections[i].phase == CONNECTION_OPEN &&
+            service->connections[i].connector.credentials.uid == uid) ++count;
+    return count;
+}
+
+/* Owns `number` from here on: a full table, an account over its share, or a socket of
+ * the wrong kind closes it. */
 static void adopt_connection(service_state *service, int number) {
     int type = 0;
     socklen_t length = sizeof(type);
@@ -581,6 +591,9 @@ static void adopt_connection(service_state *service, int number) {
     no_error error = {0};
     if (!peer_identity_from_connection(&connection->connector, number, &error) ||
         !peer_enable_credentials(number, &error)) close_connection(service, index, CLOSE_FAILED_ISSUE);
+    else if (account_connections(service, index, connection->connector.credentials.uid) >=
+             service->policy->connections_per_account)
+        close_connection(service, index, CLOSE_ACCOUNT_LIMIT);
 }
 
 /* One frame from the guardian channel: a verified client connection, from the guardian

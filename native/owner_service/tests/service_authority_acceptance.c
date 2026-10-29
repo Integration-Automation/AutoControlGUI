@@ -31,7 +31,7 @@ static void case_policy_validation(void) {
     candidate.policies = entries;
     struct { size_t entry; int field; } faults[] = {{1, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4}, {2, 5}, {0, 6},
                                                     {1, 7}, {0, 8}, {0, 9}, {0, 10}, {0, 11}, {0, 12},
-                                                    {0, 13}};
+                                                    {0, 13}, {0, 14}, {0, 15}};
     for (size_t i = 0; i < sizeof(faults) / sizeof(faults[0]); ++i) {
         memcpy(entries, launch_policies, sizeof(entries));
         candidate = policy;
@@ -51,6 +51,8 @@ static void case_policy_validation(void) {
         if (faults[i].field == 11) entry->payload_gid = (uint32_t)getegid();
         if (faults[i].field == 12) candidate.record_pids_max = SERVICE_MIN_PIDS - 1;
         if (faults[i].field == 13) candidate.record_memory_max = SERVICE_MIN_MEMORY - 1;
+        if (faults[i].field == 14) candidate.connections_per_account = 0;
+        if (faults[i].field == 15) candidate.connections_per_account = SERVICE_CONNECTION_LIMIT / 2 + 1;
         CHECK(service_allocate(&candidate, &error) == NULL && error.kind == NO_ERROR_ARGUMENT);
     }
     memcpy(entries, launch_policies, sizeof(entries));
@@ -198,6 +200,39 @@ static void quota_client(int in, int out) {
     service_reply refused = call(number, make(OP_OPEN_TOP, 3, TOP));
     EXPECT(refused.status == STATUS_CAPACITY);
     EXPECT(call(number, start_request(second, 70)).status == STATUS_UNAVAILABLE);
+}
+
+/* Three connections serve; the fourth from the same account is closed unanswered,
+ * and closing one makes room again. */
+static void account_limit_client(int in, int out) {
+    (void)in; (void)out;
+    int held[3];
+    for (int i = 0; i < 3; ++i) {
+        held[i] = client_connect();
+        EXPECT(call(held[i], make(OP_OPEN_TOP, 10 + (uint64_t)i, TOP)).status == STATUS_OK);
+    }
+    int excess = client_connect();
+    service_reply refused = call(excess, make(OP_OPEN_TOP, 20, TOP));
+    EXPECT(refused.status == 0xffffffffu || refused.status == 0xfffffffeu);
+    close(excess);
+    close(held[0]);
+    struct timespec pause = {0, 100000000};
+    nanosleep(&pause, NULL); /* The service notices the closed connection on its next turn. */
+    int again = client_connect();
+    EXPECT(call(again, make(OP_OPEN_TOP, 21, TOP)).status == STATUS_OK);
+}
+
+static void case_account_connections(void) {
+    size_t limit = policy.connections_per_account;
+    policy.connections_per_account = 3;
+    service_state *service = peer_service((no_id){155, 1});
+    CHECK(pump_until_exit(service, spawn(account_limit_client, -1, -1)) == 0);
+    size_t refused = 0;
+    for (size_t i = 0; i < SERVICE_CONNECTION_LIMIT; ++i)
+        if (service->connections[i].phase != CONNECTION_OPEN && service->connections[i].generation) ++refused;
+    CHECK(service->lease_count == 4 && refused >= 1);
+    drain_and_free(service);
+    policy.connections_per_account = limit;
 }
 
 static void case_quota(void) {
@@ -662,6 +697,7 @@ int main(void) {
     case_failed_issue();
     case_quota();
     case_renew();
+    case_account_connections();
     service_state *service = peer_service((no_id){139, 5});
     case_top_level(service);
     drain_and_free(service);

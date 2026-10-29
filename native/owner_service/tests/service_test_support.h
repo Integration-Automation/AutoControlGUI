@@ -85,7 +85,7 @@ static void fixture_setup(const char *prefix) {
     policy = (service_policy){.guardian = {uid + 1, gid + 1}, .clients = {{uid, gid}},
         .client_count = 1, .policies = launch_policies, .policy_count = 4, .lease_lifetime_ns = 30000000000ULL,
         .client_lease_quota = SERVICE_LEASE_LIMIT, .lease_max_age_ns = 300000000000ULL,
-        .record_pids_max = 64, .record_memory_max = 256ULL << 20,
+        .record_pids_max = 64, .record_memory_max = 256ULL << 20, .connections_per_account = 8,
         .record_capacity = 8};
 }
 

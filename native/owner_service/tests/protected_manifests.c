@@ -32,6 +32,7 @@ const service_policy service_manifest = {
     .client_lease_quota = 8,
     .record_capacity = 8,
     .record_pids_max = 32,
+    .connections_per_account = 8,
     .record_memory_max = 128ULL << 20,
 };
 

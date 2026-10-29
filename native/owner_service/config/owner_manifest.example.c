@@ -54,6 +54,9 @@ const service_policy service_manifest = {
     /* EDIT: per helper, including its nested children. The Python worker with OpenCV and
      * OCR loaded needs about 1 GiB; a fork bomb or leak stops here instead of the host. */
     .record_pids_max = 256,
+    /* Connections one account may hold at once, at most 8: the client and the payload
+     * account each keep at least half of the service's 16. */
+    .connections_per_account = 8,
     .record_memory_max = 2ULL << 30,
 };
 
