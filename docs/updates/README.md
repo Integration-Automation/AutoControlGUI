@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-19 | 2026-10-29 | Verify sibling sessions and a nested helper under a protected parent | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-18 | 2026-10-29 | Run the protected owner-service acceptance in WSL | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-17 | 2026-10-29 | Let the guardian verify client namespaces and hand over connections | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-16 | 2026-10-29 | Report helper containment in runtime status | #snapshot #agent #diagnostics | [2026-10-e](2026-10-e.md) |

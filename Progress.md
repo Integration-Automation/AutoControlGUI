@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-18；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261029-19；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -74,8 +74,9 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      所有後代啟動解決、子樹清空與精確目錄移除。mkdir 成功但 open 失敗仍須保有清理責任。
      stage150 已在 WSL distro 內以 root 佈建並執行受保護驗收（連續三次 13 項全過）：payload
      帳號無能力且無法遷出、以 setsid／雙重 fork 逃離的後代仍被 cgroup 收回、guardian 與服務
-     崩潰後冷復原收回孤兒程序。仍須核實 native 啟動取消、受保護父程序下的 nested helper、
-     並行 session 與其他核心／發行版；單一 distro 的結果不代表所有部署。
+     崩潰後冷復原收回孤兒程序；並行 session 互不影響，受保護父程序也能以 fd 4 授權開啟子 lease
+     並在其容器內啟動子 helper（連續三次 17 項全過）。仍須核實 clone 期間的啟動取消、多層
+     nested 與其他核心／發行版；單一 distro 的結果不代表所有部署。
      stage138 已於隔離 staging 實作 native_service（guardian 授權握手、逐封包 sender 驗證、
      lease 發行／關閉、scope owner 生命週期與 drain），但僅有 peer/lease 證據；正向 bootstrap
      未執行（此環境無服務擁有的 delegated cgroup2）。獨立審查的發現已全數回應（nested 授權、
