@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <stdatomic.h>
 #include <string.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/sysmacros.h>
@@ -482,6 +484,15 @@ static pid_t escape_descendant(void) {
     return escaped;
 }
 
+/* Leaves a file in /tmp and a SysV shared memory segment behind; returns both. */
+static void leave_leftovers(char *result, size_t size) {
+    char path[] = "/tmp/autocontrol-leftover-XXXXXX";
+    int file = mkstemp(path);
+    if (file >= 0) close(file);
+    int segment = shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0600);
+    snprintf(result, size, "[\"%s\", %d]", file >= 0 ? path : "", segment);
+}
+
 /* Forks up to 64 idle children, counts how many the kernel allowed, then reaps them. */
 static int spawn_children(void) {
     pid_t children[64];
@@ -512,9 +523,10 @@ static int rpc_lines(void) {
         if (!end || end - id > 64) return 50;
         if (strstr(line, "\"operation\": \"exit\"")) return 37;
         if (strstr(line, "\"operation\": \"hang\"")) continue;
-        char reply[128], result[32] = "\"pong\"";
+        char reply[192], result[96] = "\"pong\"";
         if (strstr(line, "\"operation\": \"escape\"")) snprintf(result, sizeof(result), "%d", (int)escape_descendant());
         if (strstr(line, "\"operation\": \"spawn\"")) snprintf(result, sizeof(result), "%d", spawn_children());
+        if (strstr(line, "\"operation\": \"leftovers\"")) leave_leftovers(result, sizeof(result));
         if (strstr(line, "\"operation\": \"umask\"")) {
             mode_t mask = umask(0);
             umask(mask);

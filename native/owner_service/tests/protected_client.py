@@ -71,7 +71,9 @@ if mode == "foreign":
     sys.exit(1)
 for command in sys.stdin:
     command = command.strip()
-    if command == "umask":
+    if command == "leftovers":
+        emit({"stage": "leftovers", "reply": channel.request("leftovers", {}, timeout=20)})
+    elif command == "umask":
         emit({"stage": "umask", "reply": channel.request("umask", {}, timeout=20)})
     elif command == "spawn":
         try:

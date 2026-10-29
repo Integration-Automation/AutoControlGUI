@@ -51,7 +51,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="owner-service-checks-") as directory:
         work = Path(directory)
         for name in SERVICE + ["service_main.c", "guardian_main.c", "guardian_journal.c", "guardian_epoch_linux.c",
-                               "guardian_forward_linux.c", "guardian_seccomp_linux.c"]:
+                               "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c"]:
             results[f"object:{name}"] = compile_(work, [name], name + ".o", ["-c"])
             expected[f"object:{name}"] = 0
         results["entry"] = compile_(work, SERVICE + ["service_main.c", "service_fixture_manifest.c"], "service_main",
@@ -64,7 +64,8 @@ def main():
             "owner_core_acceptance": ([*OWNER, "owner_core_acceptance.c"], ["--suite=lifecycle"], 0),
             "service_e2e": (["service_e2e.c", *SHARED], None, None),
             "guardian_journal_acceptance": (["guardian_journal_acceptance.c", "guardian_journal.c"], [], 0),
-            "guardian_acceptance": (["guardian_acceptance.c", "guardian_epoch_linux.c", "guardian_journal.c"], [], 0),
+            "guardian_acceptance": (["guardian_acceptance.c", "guardian_epoch_linux.c", "guardian_journal.c",
+                                     "guardian_purge_linux.c"], [], 0),
             "guardian_forward_acceptance": (["guardian_forward_acceptance.c", "guardian_forward_linux.c",
                                              "service_peer_linux.c"], [], 0),
         }

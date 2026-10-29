@@ -43,6 +43,8 @@ The guardian also refuses a cgroup subtree with a delegated or writable cgroup o
 account to 32 handed-over connections per second.
 `guardian_manifest` adds `service` (the service policy from the same file): the guardian caps the epoch's
 `records` cgroup at the per-helper limits times the record capacity, and payloads start with umask 077.
+When it reclaims an epoch, the guardian removes every file under `/tmp`, `/var/tmp`, `/dev/shm` and
+`/dev/mqueue` and every SysV IPC object owned by a payload ID, before those IDs are handed out again.
 
 ## Unreleased: helper containment in runtime status
 

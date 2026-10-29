@@ -50,6 +50,9 @@ guardian_result guardian_prepare(guardian_state *state, const guardian_manifest 
 extern const service_policy service_manifest;
 /* Installs the service's identity filter (guardian_seccomp_linux.c); needs no_new_privs. */
 bool guardian_confine_identities(const service_policy *policy, uint32_t service_uid, uint32_t service_gid);
+/* Removes files and SysV IPC objects the payload ranges own (guardian_purge_linux.c);
+ * returns how many. Only after an epoch is killed: nothing may run as a payload ID. */
+size_t guardian_purge_payloads(const service_policy *service);
 /* Plans and creates the next epoch on a CLEAN journal (rollover after a drained one). */
 guardian_result guardian_next_epoch(guardian_state *state);
 /* Kills, waits for and removes the journaled branches, then marks CLEAN. */

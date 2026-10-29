@@ -159,6 +159,8 @@ guardian_result guardian_recover(guardian_state *state) {
     /* The epoch holds the service leaf and every helper: one cgroup.kill takes them
      * together, and the kernel kills anything they fork while the kill runs. */
     if (!reclaim_branch(state, current->epoch)) return refuse(state, 22, errno, GUARDIAN_UNRESOLVED);
+    /* Nothing runs as a payload ID now: what those IDs left is removed before they are reused. */
+    guardian_purge_payloads(state->manifest->service);
     if (gj_mark(&state->journal, GJ_CLEAN) != GJ_ERROR_NONE) return refuse(state, 23, EIO, GUARDIAN_UNRESOLVED);
     return GUARDIAN_READY;
 }

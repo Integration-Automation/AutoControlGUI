@@ -58,6 +58,10 @@ the gate.
 - Helpers start with umask 077, and the guardian caps the epoch's `records` cgroup at
   the per-helper process and memory limits times the record capacity, so tmpfs pages a
   killed helper left behind still count against the epoch.
+- When an epoch is reclaimed, the guardian removes the files under `/tmp`, `/var/tmp`,
+  `/dev/shm` and `/dev/mqueue` and the SysV IPC objects that payload IDs own (as
+  systemd's DynamicUser with RemoveIPC does), so a later helper with the same ID finds
+  nothing of an earlier one.
 
 ## Parts
 

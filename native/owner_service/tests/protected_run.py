@@ -120,13 +120,14 @@ def build():
     gcc(SERVICE_SOURCES + ["native_service.c", "service_bootstrap_linux.c", "service_main.c", "protected_manifests.c"],
         OPT + "/service_main", defines + ["-DNO_PROTECTED_ACCEPTANCE"])
     gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
-                           "guardian_forward_linux.c", "guardian_seccomp_linux.c", "protected_manifests.c"],
-        OPT + "/guardian", defines)
+                           "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
+                           "protected_manifests.c"], OPT + "/guardian", defines)
     gcc(["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_relay_linux.c",
          "owner_core_acceptance.c"], OPT + "/owner_core_acceptance", acceptance=True)
     gcc(["seccomp_probe.c", "guardian_seccomp_linux.c", "protected_manifests.c"], OPT + "/seccomp_probe", defines)
     gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
-                           "guardian_forward_linux.c", "guardian_seccomp_linux.c", "protected_manifests.c"],
+                           "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
+                           "protected_manifests.c"],
         OPT + "/guardian_outer", defines + ['-DPROTECTED_SUBTREE="autocontrol-outer/inner"',
                                             f'-DPROTECTED_STATE="{STATE2}"'])
     report["accounts"] = {k: v for k, v in values.items() if not k.startswith("NS_")}
@@ -215,6 +216,11 @@ def _gid_taken(value):
         return False
 
 
+def _shm_exists(shmid):
+    with open("/proc/sysvipc/shm") as handle:
+        return any(line.split()[1] == str(shmid) for line in handle.readlines()[1:])
+
+
 def _as_payload():
     os.setgroups([])
     os.setresgid(PAYLOAD_BASE, PAYLOAD_BASE, PAYLOAD_BASE)
@@ -267,6 +273,11 @@ def scenario_session(steps):
     holder.stdin.write("umask\n")
     holder.stdin.flush()
     steps["umask"] = read_json(holder)
+    holder.stdin.write("leftovers\n")
+    holder.stdin.flush()
+    steps["leftovers"] = read_json(holder)
+    left = steps["leftovers"].get("reply") or ["", -1]
+    steps["leftovers_present"] = os.path.exists(left[0]) and _shm_exists(left[1])
     pids = steps["inspection"]["payload_pids"]
     escaped = steps["request"].get("escaped")
     steps["escaped_in_payload_cgroup"] = escaped_in_payload(escaped, epoch)
@@ -279,6 +290,7 @@ def scenario_session(steps):
     steps["guardian_stop"] = stop_guardian(guardian)
     steps["epochs_after_stop"] = epochs()
     steps["endpoint_after_stop"] = os.path.exists(ENDPOINT)
+    steps["leftovers_after_stop"] = os.path.exists(left[0]) or _shm_exists(left[1])
 
 
 def scenario_siblings(steps):
@@ -639,6 +651,9 @@ def expectations(result):
         "payload_limits_set": session["limits"] == {"pids.max": "32", "memory.max": str(128 << 20)},
         # The whole epoch's helpers together: eight records at the per-helper limits.
         "payload_umask_private": session["umask"].get("reply") == 0o077,
+        # A file in /tmp and a SysV segment a helper left exist while it runs and are gone
+        # once its epoch is reclaimed, before its ID can be handed out again.
+        "payload_leftovers_purged": session["leftovers_present"] and not session["leftovers_after_stop"],
         "epoch_limits_set": session["epoch_limits"] == {"pids.max": str(32 * 8), "memory.max": str(8 * (128 << 20))},
         # The payload, its escaped descendant and the fork attempts share 32 pids.
         "fork_bounded": isinstance(session["spawn"].get("reply"), int) and 0 < session["spawn"]["reply"] < 32,
