@@ -58,6 +58,13 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-14 | 2026-10-29 | Let nested helpers open child leases with their delivered grant | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261029-13 | 2026-10-29 | Add the guardian process with refusal and recovery evidence | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-12 | 2026-10-29 | Add the guardian's durable epoch journal | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-11 | 2026-10-29 | Route the five helper consumers through one channel factory | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261029-10 | 2026-10-29 | Add the Linux owner-service client and observe it end to end | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-09 | 2026-10-29 | Relay helper application traffic through worker-owned pipes | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-08 | 2026-10-29 | Let a channel close stop a waiting request and fence late replies | #snapshot #agent #reliability | [2026-10-e](2026-10-e.md) |
 | U-20261029-07 | 2026-10-29 | Deliver the nested capability through the worker bootstrap pipe | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-06 | 2026-10-29 | Answer the independent review of the native service issuer | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
 | U-20261029-05 | 2026-10-29 | Implement the isolated native service issuer with peer and lease evidence | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
