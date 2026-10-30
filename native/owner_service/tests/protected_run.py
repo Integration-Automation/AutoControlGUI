@@ -345,7 +345,27 @@ def scenario_siblings(steps, left=None):
     """Two clients, two leases, two payloads: closing one leaves the other serving. Its start
     purged what the session's helper left; what could not be removed is closed off: root's,
     mode 0, unreachable to every payload ID."""
+    # Another user took quarantine-looking names first and a payload wrote into them: names
+    # mean nothing to the purge, so what the payload left there goes like anything else.
+    squats = []
+    for top in ("/var/tmp", "/dev/shm"):
+        for suffix in ("", "-0000000000000000"):
+            squat = f"{top}/.autocontrol-owner-quarantine{suffix}"
+            if os.path.lexists(squat):
+                continue
+            os.mkdir(squat)
+            os.chown(squat, 65534, 65534)
+            os.chmod(squat, 0o1777)
+            hidden = os.path.join(squat, "hidden")
+            with open(hidden, "w") as handle:
+                handle.write("payload")
+            os.chown(hidden, PAYLOAD_BASE, PAYLOAD_BASE)
+            squats.append(squat)
     guardian = start_guardian()
+    steps["squats"] = squats
+    steps["squatted_payload_files_left"] = [s for s in squats if os.path.lexists(os.path.join(s, "hidden"))]
+    for squat in squats:
+        shutil.rmtree(squat, ignore_errors=True)
     left = left or ["", -1, "", "", ""]
     steps["leftovers_after_start"] = os.path.exists(left[0]) or _shm_exists(left[1]) or os.path.exists(left[2])
     # The 80-level chain (8 MiB at its bottom) and the directory another ID wrote into: their
@@ -673,6 +693,61 @@ def scenario_retiring_nested(steps):
     steps["guardian_stop"] = stop_guardian(guardian)
 
 
+def _cpu_ticks(pid):
+    with open(f"/proc/{pid}/stat") as handle:
+        fields = handle.read().rsplit(")", 1)[1].split()
+    return int(fields[11]) + int(fields[12])
+
+
+def _block_new_cgroups(blocked):
+    """No new cgroup anywhere below the subtree; the ones there stay (the limit counts live ones)."""
+    with open(f"{SUBTREE}/cgroup.max.descendants", "w") as handle:
+        handle.write("0" if blocked else "max")
+
+
+def _kill_current_service():
+    epoch = epochs()[-1]
+    service = [p for d, p in procs_under(f"{SUBTREE}/{epoch}") if os.path.basename(d).startswith("service-")]
+    os.kill(service[0], signal.SIGKILL)
+    return epoch
+
+
+def scenario_restart_backoff(steps):
+    """A next epoch that cannot be created is retried from the main loop with a growing
+    backoff: the guardian stays idle, serves again once creation works, and answers SIGTERM
+    at once while it waits."""
+    guardian = start_guardian()
+    try:
+        time.sleep(1.2)                                        # A run of over a second: not a crash.
+        _block_new_cgroups(True)
+        ended = _kill_current_service()
+        time.sleep(1.5)
+        before = _cpu_ticks(guardian.pid)
+        time.sleep(3)
+        steps["cpu_ticks_while_blocked"] = _cpu_ticks(guardian.pid) - before
+        steps["epochs_while_blocked"] = epochs()
+        steps["old_epoch_gone"] = ended not in epochs()
+        steps["alive_while_blocked"] = guardian.poll() is None
+        _block_new_cgroups(False)
+        limit = time.monotonic() + 45
+        while time.monotonic() < limit and not epochs():
+            time.sleep(0.2)
+        steps["epochs_after_unblock"] = epochs()
+        steps["next_session"] = rollover_session()
+        time.sleep(1.2)
+        _block_new_cgroups(True)
+        _kill_current_service()
+        time.sleep(1.5)
+        started = time.monotonic()
+        steps["guardian_stop"] = stop_guardian(guardian)
+        steps["stop_seconds"] = round(time.monotonic() - started, 2)
+    finally:
+        _block_new_cgroups(False)
+        if guardian.poll() is None:
+            stop_guardian(guardian)
+    steps["epochs_after_stop"] = epochs()
+
+
 def scenario_taken_range(steps):
     """A manifest whose payload range holds a real account is refused before anything starts."""
     refused = run([OPT + "/guardian_taken_range"], timeout=30)
@@ -861,6 +936,8 @@ def main():
         scenario_remote(report["steps"]["remote"])
         report["steps"]["retiring_nested"] = {}
         scenario_retiring_nested(report["steps"]["retiring_nested"])
+        report["steps"]["restart_backoff"] = {}
+        scenario_restart_backoff(report["steps"]["restart_backoff"])
     except Exception as error:  # reason: cleanup must run and the failure must be reported, not lost
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
@@ -908,10 +985,12 @@ def expectations(result):
     triple = result["steps"].get("triple_overlap", {})
     remote = result["steps"].get("remote", {})
     retiring_nested = result["steps"].get("retiring_nested", {})
+    restart = result["steps"].get("restart_backoff", {})
     inspection = session.get("inspection", {})
     service, payload = inspection.get("service", [{}]), inspection.get("payload", [{}])
     if "error" in result or not all((session, crash, siblings, nested, race, renewal, rollover, service_crash,
-                                     delegated, worker, held, second, taken, triple, remote, retiring_nested)):
+                                     delegated, worker, held, second, taken, triple, remote, retiring_nested,
+                                     restart)):
         return {"completed": False}
     return {
         "protected_reply": session["request"].get("reply") == "pong",
@@ -938,6 +1017,7 @@ def expectations(result):
         # What could not be removed where it was is moved into the root-only quarantine and
         # taken apart there: names free, nothing payload-owned left, memory released.
         "unremovable_leftovers_released": siblings["names_freed"] and siblings["payload_owned_left"] == []
+        and bool(siblings["squats"]) and siblings["squatted_payload_files_left"] == []
         and session["guardian_stop"][0] == 0 and siblings["guardian_stop"][0] == 0,
         # epoch-N itself is bounded before it is delegated: nothing beside `records` escapes.
         "epoch_bounded": session["epoch_bounds"] == {"cgroup.max.depth": "40", "cgroup.max.descendants": "4096",
@@ -1028,6 +1108,12 @@ def expectations(result):
             retiring_nested["parent_uids"])
         and (retiring_nested["close_child"].get("result") or {}).get("retired") is True
         and retiring_nested["close"].get("retired") is True and retiring_nested["guardian_stop"][0] == 0,
+        # A refused epoch creation neither ends the guardian nor spins it: under a quarter of a
+        # second of CPU in three seconds, a fresh epoch once creation works, a prompt stop.
+        "failed_start_retried_with_backoff": restart["alive_while_blocked"] and restart["old_epoch_gone"]
+        and restart["epochs_while_blocked"] == [] and restart["cpu_ticks_while_blocked"] < 25
+        and len(restart["epochs_after_unblock"]) == 1 and restart["next_session"]["retired"]
+        and restart["guardian_stop"][0] == 0 and restart["stop_seconds"] < 5 and restart["epochs_after_stop"] == [],
         "taken_payload_range_refused": taken["refused"][0] != 0
         and "manifest is invalid" in taken["refused"][1] and not taken["epochs"],
         "native_worker_runs": (worker["bootstrap"].get("result") or {}).get("protocol") == 1

@@ -49,6 +49,7 @@ typedef struct {
     bool tainted[SERVICE_PAYLOAD_SLICES];  /* A slice whose purge left something: never handed out again. */
     int purging[SERVICE_PAYLOAD_SLICES];   /* pidfd of a slice's purge child, -1 when none runs. */
     bool purge_async;                      /* While serving: purges run in a child, the loop goes on. */
+    bool repurge[SERVICE_PAYLOAD_SLICES];  /* A slice whose last purge stopped short: run again first. */
     int system_errno;
 } guardian_state;
 
@@ -64,12 +65,15 @@ bool guardian_confine_identities(const service_policy *policy, uint32_t service_
  * true when nothing they own remains. `slice` below SERVICE_PAYLOAD_SLICES is one epoch's
  * slice of every range, -1 all. Only once nothing runs as those IDs: after their epoch is
  * killed. */
-bool guardian_purge_payloads(const guardian_manifest *manifest, int slice);
+typedef enum { PURGE_CLEAN = 0, PURGE_UNCLEAN = 1, PURGE_INCOMPLETE = 2 } guardian_purge_outcome;
+guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest, int slice);
 /* Ends every running purge child without waiting for its work (shutdown: the next start
  * purges everything before it serves). */
 void guardian_purge_abandon(guardian_state *state);
 /* Waits for `slice`'s purge child, taints the slice if it left anything, frees the slot. */
 void guardian_purge_reap(guardian_state *state, int slice);
+/* Starts the purge again of every slice whose last one stopped short and is not running. */
+void guardian_purge_resume(guardian_state *state);
 #define GUARDIAN_PURGE_NONE (-2) /* guardian_recover: the epoch never ran, nothing to purge. */
 /* Refuses a manifest the service would refuse, or whose payload IDs anyone else holds: below
  * 1000, or known to the host's user and group databases. Run before anything starts. */
@@ -84,7 +88,8 @@ guardian_result guardian_next_epoch(guardian_state *state);
 guardian_result guardian_recover(guardian_state *state, int slice);
 void guardian_close(guardian_state *state);
 
-typedef enum { FORWARD_IDLE, FORWARD_HANDED, FORWARD_REFUSED, FORWARD_CHANNEL_FAILED } guardian_forward_result;
+typedef enum { FORWARD_IDLE, FORWARD_HANDED, FORWARD_REFUSED, FORWARD_CHANNEL_FAILED, FORWARD_HELD }
+    guardian_forward_result;
 /* guardian_forward_linux.c: principal and namespaces through the client's pidfd. */
 bool guardian_client_verified(const guardian_manifest *manifest, const peer_identity *peer);
 /* Accepts one pending client; hands it to the service only if verified. */
@@ -94,12 +99,16 @@ bool guardian_client_verified(const guardian_manifest *manifest, const peer_iden
 void guardian_forward_reset_rates(void);
 /* Where a verified client's connection goes: its channel, epoch and generation. */
 typedef struct { int channel; no_id epoch; uint64_t generation; } guardian_target;
-/* Picks the target for a verified client by its user ID; false drops the connection. */
-typedef bool (*guardian_route)(void *context, uint32_t uid, guardian_target *target);
+/* Where a verified client goes: dropped, sent to `target`, or held by the caller until an
+ * epoch can take it. */
+typedef enum { ROUTE_DROP, ROUTE_SEND, ROUTE_HOLD } guardian_route_result;
+typedef guardian_route_result (*guardian_route)(void *context, uint32_t uid, guardian_target *target);
 /* As guardian_forward, but each client goes where `route` sends it; `*used` names the
- * channel that was tried. */
+ * channel that was tried, and a held connection is returned in `*held` (FORWARD_HELD). */
 guardian_forward_result guardian_forward_routed(int listener, const guardian_manifest *manifest,
-                                                guardian_route route, void *context, int *used);
+                                                guardian_route route, void *context, int *used, int *held);
+/* Hands one accepted connection to a service; never blocks. */
+bool guardian_send_connection(int channel, int connection, no_id epoch, uint64_t generation);
 guardian_forward_result guardian_forward(int listener, int channel, const guardian_manifest *manifest, no_id epoch,
                                          uint64_t generation);
 #endif

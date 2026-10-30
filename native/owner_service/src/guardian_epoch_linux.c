@@ -182,7 +182,17 @@ static void purge_child(const guardian_state *state, int slice, pid_t guardian) 
     sigset_t none;
     sigemptyset(&none);
     sigprocmask(SIG_SETMASK, &none, NULL);
-    _exit(guardian_purge_payloads(state->manifest, slice) ? 0 : 1);
+    guardian_purge_outcome outcome = guardian_purge_payloads(state->manifest, slice);
+    if (outcome == PURGE_INCOMPLETE) sleep(1); /* It runs again at once: never a busy loop. */
+    _exit((int)outcome);
+}
+
+/* Clean: nothing to do. Incomplete: run again before the slice is handed out. Anything
+ * else (unclean, killed, an unknown status) taints. */
+static void purge_settled(guardian_state *state, int slice, int outcome) {
+    if (outcome == PURGE_CLEAN) return;
+    if (outcome != PURGE_INCOMPLETE) { taint(state, slice); return; }
+    for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) if (slice < 0 || slice == s) state->repurge[s] = true;
 }
 
 void guardian_purge_reap(guardian_state *state, int slice) {
@@ -193,7 +203,8 @@ void guardian_purge_reap(guardian_state *state, int slice) {
     do { rc = waitid(P_PIDFD, (id_t)state->purging[slice], &info, WEXITED); } while (rc < 0 && errno == EINTR);
     close(state->purging[slice]);
     state->purging[slice] = -1;
-    if (rc != 0 || info.si_code != CLD_EXITED || info.si_status != 0) taint(state, slice);
+    if (rc != 0 || info.si_code != CLD_EXITED) taint(state, slice);
+    else purge_settled(state, slice, info.si_status);
 }
 
 /* While serving, one slice's purge runs in a child, so a large tree in a shared directory
@@ -201,6 +212,7 @@ void guardian_purge_reap(guardian_state *state, int slice) {
  * Otherwise (startup, shutdown, all slices, or no child possible) it runs here. An unclean
  * purge taints its slice: the guardian never grants it again. */
 static void purge(guardian_state *state, int slice) {
+    for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) if (slice < 0 || slice == s) state->repurge[s] = false;
     if (slice >= 0 && state->purge_async) {
         guardian_purge_reap(state, slice);
         pid_t guardian = getpid();
@@ -211,11 +223,17 @@ static void purge(guardian_state *state, int slice) {
         if (child > 0) {
             int status = 0;
             while (waitpid(child, &status, 0) < 0 && errno == EINTR) continue;
-            if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) taint(state, slice);
+            if (!WIFEXITED(status)) taint(state, slice);
+            else purge_settled(state, slice, WEXITSTATUS(status));
             return;
         }
     }
-    if (!guardian_purge_payloads(state->manifest, slice)) taint(state, slice);
+    purge_settled(state, slice, (int)guardian_purge_payloads(state->manifest, slice));
+}
+
+void guardian_purge_resume(guardian_state *state) {
+    for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s)
+        if (state->repurge[s] && state->purging[s] < 0 && !state->tainted[s]) purge(state, s);
 }
 
 guardian_result guardian_reclaim_retired(guardian_state *state, const char *epoch, int slice) {
@@ -336,7 +354,6 @@ static int create_branches(guardian_state *state) {
     if (epoch < 0) return errno;
     int error = write_control(epoch, "cgroup.subtree_control", LIMITED) ? 0 : errno;
     if (!error) error = limit_epoch(epoch, state->manifest->service);
-    if (!error) error = delegate(epoch, state->manifest);
     if (!error && mkdirat(epoch, current->service, 0755) != 0) error = errno;
     if (!error && mkdirat(epoch, "records", 0755) != 0) error = errno;
     if (!error) {
@@ -345,6 +362,7 @@ static int create_branches(guardian_state *state) {
         if (!error) error = limit_records(state->epoch, state->manifest->service);
         if (!error) error = delegate(state->epoch, state->manifest);
     }
+    if (!error) error = delegate(epoch, state->manifest);
     close(epoch);
     return error;
 }

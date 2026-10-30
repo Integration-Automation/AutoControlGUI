@@ -9,12 +9,19 @@
  * entries are removed relative to the directory that was opened. Ownership is judged by user
  * ID only. At most PURGE_DEPTH directories are open at once. A payload-owned directory that
  * cannot be removed where it is (deeper than the walk, or another ID wrote into it) is moved
- * whole into a quarantine directory only root can enter, on the same filesystem, after its
- * inode is checked; its name is free again at once. Quarantined directories are then walked
- * from their own top, again and again, so a chain of any depth is taken apart PURGE_DEPTH
- * levels at a time until only what other IDs own is left there, out of every payload's
- * reach. A name that vanished or changed meanwhile is never an error: another ID moved it,
- * and the next purge meets it wherever it went. */
+ * whole, after its identity is checked, into a quarantine: a directory only root can enter,
+ * created on the same filesystem under a random name when first needed and recognised by its
+ * inode, never by its name. Its name is free again at once. The quarantine is then walked
+ * from its own top, pass after pass, so a chain of any depth is taken apart PURGE_DEPTH
+ * levels at a time; what other IDs own is all that may stay there, out of every payload's
+ * reach, and an emptied quarantine is removed. A name that vanished or changed meanwhile is
+ * never an error: another ID moved it, and the next purge meets it wherever it went.
+ *
+ * One root's purge reads at most PURGE_BUDGET entries, so a live local user who keeps
+ * renaming names under the walk cannot hold it forever; a purge that stopped short, or had
+ * no quarantine when it needed one, reports itself incomplete and is run again before its
+ * slice is handed out. Only an object that can be neither removed, moved nor closed off
+ * makes it unclean. */
 #include "guardian.h"
 #include <dirent.h>
 #include <errno.h>
@@ -25,28 +32,33 @@
 #include <string.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/random.h>
 #include <sys/sem.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
-#include <time.h>
 #include <unistd.h>
 
 #ifndef SYS_fchmodat2
 #define SYS_fchmodat2 452 /* The same number on every architecture. */
 #endif
 #define PURGE_DEPTH 64
-#define QUARANTINE ".autocontrol-owner-quarantine"
-#define QUARANTINE_PASSES 65536 /* Each pass takes PURGE_DEPTH levels off the deepest chain. */
-#define DEFERRED_LIMIT 256      /* Other IDs' directories at the depth bound, walked from their own top. */
+#define QUARANTINE_PREFIX ".autocontrol-owner-quarantine"
+#define QUARANTINE_PASSES 4096   /* Each pass takes PURGE_DEPTH levels off the deepest chain. */
+#define DEFERRED_LIMIT 256       /* Other IDs' directories at the depth bound, walked from their own top. */
+#define PURGE_BUDGET (1UL << 22) /* Directory entries one root's purge reads before it stops. */
 
 typedef struct {
     const service_policy *service;
     int slice;
-    bool clean;
-    int quarantine;        /* Root-only directory on the walked filesystem, or -1. */
-    struct stat quarantined; /* Its identity: nothing already in it is moved again. */
-    unsigned long moved;   /* Directories moved into the quarantine this pass. */
+    bool clean, complete;
+    int root;                     /* The root being purged: the quarantine is made in it. */
+    bool quarantine_tried;
+    int quarantine;               /* Root-only directory on the walked filesystem, or -1. */
+    char quarantine_name[64];
+    struct stat quarantined;      /* Its identity: it is skipped, and nothing in it moves again. */
+    unsigned long moved;          /* Directories moved into the quarantine this pass. */
+    unsigned long budget;         /* Entries this root's purge may still read. */
     int deferred[DEFERRED_LIMIT]; /* Opened, not-owned directories at the depth bound. */
     size_t deferred_count;
 } purge_scope;
@@ -62,131 +74,194 @@ static bool payload_uid(const purge_scope *scope, uint32_t uid) {
     return false;
 }
 
-/* True when `name` in `directory` is still the object the walk saw. */
-static bool still_seen(int directory, const char *name, const struct stat *seen) {
-    struct stat now;
-    return fstatat(directory, name, &now, AT_SYMLINK_NOFOLLOW) == 0 && now.st_dev == seen->st_dev &&
-        now.st_ino == seen->st_ino;
+static bool same_inode(const struct stat *a, const struct stat *b) {
+    return a->st_dev == b->st_dev && a->st_ino == b->st_ino;
 }
 
-/* Moves the object the walk saw into the quarantine under a fresh name. A name that
- * changed meanwhile is left alone; one moved by mistake is moved back. */
+/* True when `name` in `directory` is still the object the walk saw, with the same owner. */
+static bool still_seen(int directory, const char *name, const struct stat *seen) {
+    struct stat now;
+    return fstatat(directory, name, &now, AT_SYMLINK_NOFOLLOW) == 0 && same_inode(&now, seen) &&
+        now.st_uid == seen->st_uid;
+}
+
+static bool is_quarantine(const purge_scope *scope, int directory) {
+    struct stat status;
+    return scope->quarantine >= 0 && fstat(directory, &status) == 0 && same_inode(&status, &scope->quarantined);
+}
+
+/* The quarantine, made on first need under a fresh random name: nobody can have taken it
+ * beforehand, and a name somebody else made is just another directory to walk. */
+static bool have_quarantine(purge_scope *scope) {
+    if (scope->quarantine >= 0) return true;
+    if (scope->quarantine_tried) return false;
+    scope->quarantine_tried = true;
+    for (int attempt = 0; attempt < 16; ++attempt) {
+        unsigned char bytes[8];
+        if (getrandom(bytes, sizeof(bytes), 0) != (ssize_t)sizeof(bytes)) return false;
+        char *name = scope->quarantine_name;
+        int at = snprintf(name, sizeof(scope->quarantine_name), "%s-", QUARANTINE_PREFIX);
+        for (size_t i = 0; i < sizeof(bytes); ++i) at += snprintf(name + at, 3, "%02x", bytes[i]);
+        if (mkdirat(scope->root, name, 0700) != 0) {
+            if (errno == EEXIST) continue;
+            return false;
+        }
+        int quarantine = openat(scope->root, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+        struct stat status;
+        if (quarantine >= 0 && fchmod(quarantine, 0700) == 0 && fstat(quarantine, &status) == 0 &&
+            status.st_uid == 0) {
+            scope->quarantine = quarantine;
+            scope->quarantined = status;
+            return true;
+        }
+        if (quarantine >= 0) close(quarantine);
+        return false;
+    }
+    return false;
+}
+
+/* Moves the object the walk saw into the quarantine under a fresh name. A name that changed
+ * meanwhile is left alone; one moved by mistake is moved back. */
 static bool quarantine(purge_scope *scope, int directory, const char *name, const struct stat *seen) {
-    struct stat parent;
-    if (scope->quarantine < 0 || !still_seen(directory, name, seen) || fstat(directory, &parent) != 0 ||
-        (parent.st_dev == scope->quarantined.st_dev && parent.st_ino == scope->quarantined.st_ino)) return false;
-    /* Quarantined leftovers outlive the guardian that moved them, and a later guardian may
-     * reuse its PID: names also carry the clock, and a taken one is simply skipped. */
+    if (is_quarantine(scope, directory) || !have_quarantine(scope) || !still_seen(directory, name, seen))
+        return false;
     static unsigned long serial;
-    char fresh[96];
+    char fresh[48];
     long moved = -1;
     for (int attempt = 0; attempt < 64 && moved != 0; ++attempt) {
-        struct timespec now;
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        snprintf(fresh, sizeof(fresh), "q-%ld-%lld%09ld-%lu", (long)getpid(), (long long)now.tv_sec, now.tv_nsec,
-                 ++serial);
+        snprintf(fresh, sizeof(fresh), "q-%lu", ++serial);
         moved = syscall(SYS_renameat2, directory, name, scope->quarantine, fresh, RENAME_NOREPLACE);
         if (moved != 0 && errno != EEXIST) return false;
     }
     if (moved != 0) return false;
     if (!still_seen(scope->quarantine, fresh, seen)) {
-        syscall(SYS_renameat2, scope->quarantine, fresh, directory, name, RENAME_NOREPLACE);
+        if (syscall(SYS_renameat2, scope->quarantine, fresh, directory, name, RENAME_NOREPLACE) != 0)
+            fprintf(stderr, "autocontrol-owner-guardian: an object swapped in during a move stays quarantined\n");
         return false;
     }
     ++scope->moved;
     return true;
 }
 
-/* Removes the payload-owned object the walk saw, or takes it out of every payload's reach.
- * Only an object that is still there and can be neither removed nor moved nor closed off
- * makes the purge unclean. */
+/* Removes the payload-owned object the walk saw, or takes it out of every payload's reach. */
 static void dispose(purge_scope *scope, int directory, const char *name, const struct stat *seen) {
     bool is_directory = S_ISDIR(seen->st_mode);
     if (!still_seen(directory, name, seen)) return; /* Moved or replaced by another ID. */
     if (unlinkat(directory, name, is_directory ? AT_REMOVEDIR : 0) == 0 || errno == ENOENT) return;
     if (quarantine(scope, directory, name, seen) || !still_seen(directory, name, seen)) return;
-    /* No quarantine here: close it off where it is, on the opened, checked object. */
+    /* Close it off where it is, on the opened, checked object: mode 0 first, so a failure
+     * never leaves a root-owned object others may write. */
     int opened = openat(directory, name, O_PATH | O_NOFOLLOW | O_CLOEXEC);
     struct stat now;
-    bool done = opened >= 0 && fstat(opened, &now) == 0 && now.st_dev == seen->st_dev &&
-        now.st_ino == seen->st_ino && fchownat(opened, "", 0, 0, AT_EMPTY_PATH) == 0 &&
-        syscall(SYS_fchmodat2, opened, "", 0, AT_EMPTY_PATH) == 0;
+    bool done = opened >= 0 && fstat(opened, &now) == 0 && same_inode(&now, seen) &&
+        syscall(SYS_fchmodat2, opened, "", 0, AT_EMPTY_PATH) == 0 && fchownat(opened, "", 0, 0, AT_EMPTY_PATH) == 0;
     if (opened >= 0) close(opened);
-    if (done) fprintf(stderr, "autocontrol-owner-guardian: closed off a payload leftover it could not move\n");
-    else if (still_seen(directory, name, seen)) scope->clean = false;
+    if (!done) {
+        if (still_seen(directory, name, seen)) scope->clean = false;
+        return;
+    }
+    if (is_quarantine(scope, directory)) return; /* Already out of reach: what another ID wrote stays. */
+    fprintf(stderr, "autocontrol-owner-guardian: closed off a payload leftover it could not move\n");
+    /* Without a quarantine its name stays taken and what lies below is not freed: run again. */
+    if (is_directory && scope->quarantine < 0) scope->complete = false;
 }
 
-typedef struct { DIR *listing; size_t parent; char *name; bool owned; struct stat seen; } level;
+/* `quarantined`: the level lies in a quarantine, this one or an earlier one, where nothing is
+ * any payload's and an emptied directory, whoever's, is removed. */
+typedef struct { DIR *listing; size_t parent; char *name; bool owned, quarantined; struct stat seen; } level;
 typedef struct { level levels[PURGE_DEPTH]; size_t depth; } walk;
 
 static void pop(purge_scope *scope, walk *state) {
     level done = state->levels[--state->depth];
     closedir(done.listing);
-    if (done.owned) dispose(scope, dirfd(state->levels[done.parent].listing), done.name, &done.seen);
+    int parent = dirfd(state->levels[done.parent].listing);
+    if (done.owned) dispose(scope, parent, done.name, &done.seen);
+    else if (done.quarantined && still_seen(parent, done.name, &done.seen)) unlinkat(parent, done.name, AT_REMOVEDIR);
     free(done.name);
 }
 
-static void visit(purge_scope *scope, walk *state, dev_t device, const char *name) {
+/* An earlier quarantine: root's, mode 0700, a directory at the root's top with the prefix.
+ * Walked like any other directory and removed once empty. */
+static bool earlier_quarantine(const struct stat *status, const char *name) {
+    return S_ISDIR(status->st_mode) && status->st_uid == 0 && (status->st_mode & 07777) == 0700 &&
+        !strncmp(name, QUARANTINE_PREFIX, strlen(QUARANTINE_PREFIX));
+}
+
+/* Deeper than the walk goes: an owned directory is moved whole and taken apart from its own
+ * top; another ID's stays where it is and is walked later from its own top. */
+static void at_depth_bound(purge_scope *scope, int directory, const char *name, const struct stat *status,
+                           bool owned) {
+    if (owned) { dispose(scope, directory, name, status); return; }
+    int deeper = openat(directory, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+    struct stat seen;
+    if (deeper >= 0 && fstat(deeper, &seen) == 0 && same_inode(&seen, status) && scope->deferred_count < DEFERRED_LIMIT) {
+        scope->deferred[scope->deferred_count++] = deeper;
+        return;
+    }
+    if (deeper >= 0) close(deeper);
+    /* Payload files there were put inside another ID's directory, with that ID's leave. */
+    fprintf(stderr, "autocontrol-owner-guardian: purge left another ID's directory deeper than %d unwalked\n",
+            PURGE_DEPTH);
+}
+
+static void visit(purge_scope *scope, walk *state, dev_t device, bool root_walk, const char *name) {
     size_t at = state->depth - 1;
     int directory = dirfd(state->levels[at].listing);
-    if (at == 0 && !strcmp(name, QUARANTINE)) return; /* Walked on its own, after the root. */
     struct stat status;
     if (fstatat(directory, name, &status, AT_SYMLINK_NOFOLLOW) != 0) return;
+    if (at == 0 && scope->quarantine >= 0 && same_inode(&status, &scope->quarantined)) return; /* Walked later. */
     bool owned = payload_uid(scope, status.st_uid);
     if (!S_ISDIR(status.st_mode) || status.st_dev != device) {
         if (owned) dispose(scope, directory, name, &status);
         return;
     }
-    if (state->depth == PURGE_DEPTH) {
-        /* Deeper than the walk goes. An owned directory is moved whole and taken apart from
-         * its own top; another ID's stays where it is and is walked later from its own top. */
-        if (owned) { dispose(scope, directory, name, &status); return; }
-        int deeper = openat(directory, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
-        struct stat seen;
-        if (deeper >= 0 && fstat(deeper, &seen) == 0 && seen.st_ino == status.st_ino &&
-            seen.st_dev == status.st_dev && scope->deferred_count < DEFERRED_LIMIT) {
-            scope->deferred[scope->deferred_count++] = deeper;
-        } else {
-            if (deeper >= 0) close(deeper);
-            fprintf(stderr, "autocontrol-owner-guardian: purge left a directory deeper than %d unwalked\n",
-                    PURGE_DEPTH);
-        }
-        return;
-    }
+    if (state->depth == PURGE_DEPTH) { at_depth_bound(scope, directory, name, &status, owned); return; }
     int child = openat(directory, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
     struct stat opened;
     DIR *listing = NULL;
-    if (child >= 0 && fstat(child, &opened) == 0 && opened.st_ino == status.st_ino && opened.st_dev == status.st_dev)
-        listing = fdopendir(child);
+    if (child >= 0 && fstat(child, &opened) == 0 && same_inode(&opened, &status)) listing = fdopendir(child);
     char *copy = listing ? strdup(name) : NULL;
     if (!listing || !copy) {
         if (listing) closedir(listing);
         else if (child >= 0) close(child);
         if (owned) dispose(scope, directory, name, &status);
-        else fprintf(stderr, "autocontrol-owner-guardian: purge could not open a directory\n");
+        else fprintf(stderr, "autocontrol-owner-guardian: purge could not open another ID's directory\n");
         return;
     }
-    state->levels[state->depth++] = (level){listing, at, copy, owned, status};
+    bool quarantined = state->levels[at].quarantined || (root_walk && at == 0 && earlier_quarantine(&status, name));
+    state->levels[state->depth++] = (level){listing, at, copy, owned, quarantined, status};
 }
 
-/* Walks one opened directory; `top` is closed when done. */
-static void walk_directory(purge_scope *scope, int top) {
+/* Walks one opened directory; `top` is closed when done. `root_walk`: `top` is a purge root;
+ * `in_quarantine`: `top` is the quarantine. */
+static void walk_directory(purge_scope *scope, int top, bool root_walk, bool in_quarantine) {
     struct stat status;
     DIR *listing = fstat(top, &status) == 0 ? fdopendir(top) : NULL;
     if (!listing) { close(top); return; }
     static walk state;
     state.depth = 0;
-    state.levels[state.depth++] = (level){listing, 0, NULL, false, status};
+    state.levels[state.depth++] = (level){listing, 0, NULL, false, in_quarantine, status};
     while (state.depth) {
-        struct dirent *entry = readdir(state.levels[state.depth - 1].listing);
+        struct dirent *entry = scope->budget ? readdir(state.levels[state.depth - 1].listing) : NULL;
         if (!entry) {
             if (state.depth == 1) { closedir(state.levels[0].listing); break; }
             pop(scope, &state);
             continue;
         }
+        if (--scope->budget == 0) {
+            fprintf(stderr, "autocontrol-owner-guardian: purge stopped after %lu entries; it runs again\n",
+                    PURGE_BUDGET);
+            scope->complete = false;
+        }
         if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
-            visit(scope, &state, status.st_dev, entry->d_name);
+            visit(scope, &state, status.st_dev, root_walk, entry->d_name);
     }
+}
+
+/* Walks `top`, then every directory deferred meanwhile, each from its own top. */
+static void walk_all(purge_scope *scope, int top, bool root_walk) {
+    walk_directory(scope, top, root_walk, !root_walk);
+    while (scope->deferred_count) walk_directory(scope, scope->deferred[--scope->deferred_count], false, false);
 }
 
 /* A root may be a link (/dev/shm -> /run/shm on older systems): resolved once, and used
@@ -204,39 +279,30 @@ static int open_root(const char *path) {
     return root;
 }
 
-/* The root's quarantine: root's, mode 0700, a real directory; created when missing. */
-static int open_quarantine(int root) {
-    if (mkdirat(root, QUARANTINE, 0700) != 0 && errno != EEXIST) return -1;
-    int quarantine = openat(root, QUARANTINE, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
-    struct stat status;
-    if (quarantine >= 0 && (fstat(quarantine, &status) != 0 || status.st_uid != 0 ||
-                            fchmod(quarantine, 0700) != 0)) {
-        close(quarantine);
-        return -1;
-    }
-    return quarantine;
-}
-
 static void purge_tree(purge_scope *scope, const char *path) {
     int root = open_root(path);
     if (root < 0) return; /* Absent, or not a directory this guardian may trust. */
-    scope->quarantine = open_quarantine(root);
-    if (scope->quarantine >= 0 && fstat(scope->quarantine, &scope->quarantined) != 0) {
-        close(scope->quarantine);
-        scope->quarantine = -1;
-    }
-    walk_directory(scope, dup(root));
-    /* Other IDs' deep directories, each from its own top; walking one may defer more. */
-    while (scope->deferred_count) walk_directory(scope, scope->deferred[--scope->deferred_count]);
+    scope->root = root;
+    scope->quarantine = -1;
+    scope->quarantine_tried = false;
+    scope->budget = PURGE_BUDGET;
+    int top = dup(root);
+    if (top < 0) scope->complete = false;
+    else walk_all(scope, top, true);
     /* Take quarantined chains apart until a pass moves nothing deeper out. */
-    for (unsigned pass = 0; scope->quarantine >= 0 && pass < QUARANTINE_PASSES; ++pass) {
+    unsigned pass = 0;
+    for (; scope->quarantine >= 0 && scope->budget && pass < QUARANTINE_PASSES; ++pass) {
         scope->moved = 0;
         int listing = dup(scope->quarantine);
-        if (listing < 0) break;
-        walk_directory(scope, listing);
+        if (listing < 0) { scope->complete = false; break; }
+        walk_all(scope, listing, false);
         if (!scope->moved) break;
     }
-    if (scope->quarantine >= 0) close(scope->quarantine);
+    if (pass == QUARANTINE_PASSES) scope->complete = false;
+    if (scope->quarantine >= 0) {
+        close(scope->quarantine);
+        unlinkat(root, scope->quarantine_name, AT_REMOVEDIR); /* Only an emptied one goes. */
+    }
     scope->quarantine = -1;
     close(root);
 }
@@ -263,14 +329,15 @@ static void purge_ipc(purge_scope *scope, const char *table, int kind) {
 
 static const char *const default_roots[] = {"/tmp", "/var/tmp", "/dev/shm", "/dev/mqueue", "/run/lock"};
 
-bool guardian_purge_payloads(const guardian_manifest *manifest, int slice) {
+guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest, int slice) {
     const service_policy *service = manifest->service;
-    if (!service) return true;
-    purge_scope scope = {.service = service, .slice = slice, .clean = true, .quarantine = -1};
+    if (!service) return PURGE_CLEAN;
+    purge_scope scope = {.service = service, .slice = slice, .clean = true, .complete = true, .root = -1,
+                         .quarantine = -1};
     for (size_t i = 0; i < sizeof(default_roots) / sizeof(default_roots[0]); ++i) purge_tree(&scope, default_roots[i]);
     for (size_t i = 0; i < manifest->purge_root_count; ++i) purge_tree(&scope, manifest->purge_roots[i]);
     purge_ipc(&scope, "/proc/sysvipc/shm", 0);
     purge_ipc(&scope, "/proc/sysvipc/msg", 1);
     purge_ipc(&scope, "/proc/sysvipc/sem", 2);
-    return scope.clean;
+    return !scope.clean ? PURGE_UNCLEAN : scope.complete ? PURGE_CLEAN : PURGE_INCOMPLETE;
 }

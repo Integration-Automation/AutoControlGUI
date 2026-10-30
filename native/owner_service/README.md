@@ -67,19 +67,33 @@ the gate.
   spent epochs can retire beside the current one; a further retirement waits for a slot.
   Each slice is purged in a child process after its epoch ends and is not handed out
   again until that purge finishes; meanwhile, if no other slice is free, there is no
-  current epoch and new clients wait in the listener's backlog. A payload-owned
-  directory the purge cannot remove where it is (another ID wrote into it, or it lies
-  deeper than the 64-level walk) is moved, inode-checked, into a root-only quarantine on
-  the same filesystem and taken apart there 64 levels at a time: its name is free at
-  once and every payload-owned file below it, tmpfs pages included, is released. Another
-  ID's directory at the depth bound stays put and is walked from its own top. Only an
-  object that can be neither removed, moved nor closed off taints its slice, and startup
-  purges each slice once, after the previous run's epochs are dead, so one stubborn
-  leftover never stops the guardian. A helper's own connection (a nested parent opening
-  children) goes to the epoch that runs its slice, retiring or not; a policy that may
-  start nested children needs `record_capacity` above `client_lease_quota`. `epoch-N`
-  itself is bounded before it is delegated (depth 40, 4096 descendants, the records'
-  limits plus room for the service). A stop kills every epoch and abandons running purges; the next start purges.
+  current epoch: helpers' own connections still reach their retiring epoch, and up to
+  32 other clients are held (the rest wait in the listener's backlog) until one starts.
+  A payload-owned directory the purge cannot remove where it is (another ID wrote into
+  it, or it lies deeper than the 64-level walk) is moved, inode-checked, into a root-only
+  quarantine on the same filesystem and taken apart there 64 levels at a time: its name
+  is free at once and every payload-owned file below it, tmpfs pages included, is
+  released. The quarantine is made when first needed under a random name and recognised
+  by its inode, so a name someone else took first hides nothing; an emptied one is
+  removed, and only what other IDs own (out of every payload's reach) stays in one.
+  Another ID's directory at the depth bound stays put and is walked from its own top.
+  One root's purge reads at most 4,194,304 entries: one that stopped short, or had no
+  quarantine when it needed one, runs again before its slice is handed out, so a local
+  user who keeps renaming names under the walk can delay a slice but never gets a
+  leftover handed on. Payload files a payload put inside another ID's directory beyond
+  that budget or past 256 deep directories are left, with that ID's cooperation only.
+  Only an object that can be neither removed, moved nor closed off taints its slice,
+  and startup purges each slice once, after the previous run's epochs are dead, so one
+  stubborn leftover never stops the guardian. A helper's own connection (a nested parent
+  opening children) goes to the epoch that runs its slice, retiring or not; a policy that
+  may start nested children needs `record_capacity` above `client_lease_quota`, which the
+  manifest check does not enforce (a lower capacity only answers CAPACITY sooner).
+  `epoch-N` itself is bounded (depth 40, 4096 descendants, the records' limits plus room
+  for the service) and delegated only after `records` and the service leaf exist. A next
+  epoch that cannot be planned or started is retried after 1, 2, 4 ... up to 30 seconds
+  from the main loop, which keeps answering a stop request, retiring epochs and purges;
+  so does a service that ends within a second of starting. A stop kills every epoch and
+  abandons running purges; the next start purges.
   The manifest may list more world-writable roots (`purge_roots`, for example
   /var/crash) and cap every running epoch together (`subtree_pids_max`,
   `subtree_memory_max`); up to four epochs run at once, so either set those or cap the

@@ -284,17 +284,6 @@ static uint64_t monotonic_ns(void) {
     return (uint64_t)value.tv_sec * 1000000000ULL + (uint64_t)value.tv_nsec;
 }
 
-/* A service that ends within a second of starting is crashing: wait 1, 2, 4 ... up to 30
- * seconds before the next epoch, still answering a stop request at once. True when asked
- * to stop. */
-static bool back_off(int signals, unsigned quick_ends) {
-    int wait_ms = quick_ends > 5 ? 30000 : 1000 << (quick_ends - 1);
-    struct pollfd event = {.fd = signals, .events = POLLIN};
-    int rc;
-    do { rc = poll(&event, 1, wait_ms); } while (rc < 0 && errno == EINTR);
-    return rc > 0;
-}
-
 static bool slice_in_use(const running_set *set, uint32_t slice) {
     if (running_live(&set->current) && set->current.slice == slice) return true;
     for (size_t i = 0; i < GUARDIAN_RETIRING_LIMIT; ++i)
@@ -312,7 +301,7 @@ static slice_choice pick_slice(const guardian_state *state, const running_set *s
     for (uint32_t s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) {
         if (state->tainted[s]) continue;
         usable = true;
-        if (!slice_in_use(set, s) && state->purging[s] < 0) { *slice = s; return SLICE_READY; }
+        if (!slice_in_use(set, s) && state->purging[s] < 0 && !state->repurge[s]) { *slice = s; return SLICE_READY; }
     }
     return usable ? SLICE_WAIT : SLICE_NONE;
 }
@@ -368,8 +357,9 @@ typedef enum { HANDOVER_WAIT, HANDOVER_DONE, HANDOVER_RESTART, HANDOVER_FAILED }
 
 /* The current epoch is spent but serves open leases: it keeps them as a retiring epoch, no
  * longer journaled (a crash sweeps it), and the next epoch starts beside it. WAIT when no
- * retiring slot or clean slice is free yet; RESTART when the next epoch did not start (it
- * is retried, the retiring ones keep running); FAILED only when the journal failed. */
+ * retiring slot or clean slice is free yet; RESTART when the next epoch could not be
+ * planned or started (it is retried, the retiring ones keep running); FAILED when the
+ * journal or a reclaim failed. */
 static handover_result hand_over(guardian_state *state, running_set *set) {
     running_epoch *slot = free_retiring_slot(set);
     uint32_t slice;
@@ -378,16 +368,15 @@ static handover_result hand_over(guardian_state *state, running_set *set) {
     running_init(&set->current);
     if (gj_mark(&state->journal, GJ_RECOVERING) != GJ_ERROR_NONE || gj_mark(&state->journal, GJ_CLEAN) != GJ_ERROR_NONE)
         return HANDOVER_FAILED;
-    set->current.slice = slice;
-    set->current.started_ns = monotonic_ns();
-    if (guardian_next_epoch(state) != GUARDIAN_READY) return HANDOVER_FAILED;
+    guardian_result next = guardian_next_epoch(state);
+    if (next != GUARDIAN_READY) return next == GUARDIAN_REFUSED ? HANDOVER_RESTART : HANDOVER_FAILED;
     return start_epoch(state, &set->current, slice) ? HANDOVER_DONE : HANDOVER_RESTART;
 }
 
 typedef enum { LOOP_STOPPED, LOOP_REFUSED, LOOP_UNRESOLVED } loop_result;
 
 /* Starts the planned epoch once a slice is free. While a purge or a retiring epoch holds
- * the slices, there is no current epoch: clients wait in the listener's backlog. */
+ * the slices, there is no current epoch: clients are held until one starts. */
 static loop_result start_when_free(guardian_state *state, running_set *set, bool *waiting) {
     uint32_t slice;
     slice_choice choice = pick_slice(state, set, &slice);
@@ -397,27 +386,69 @@ static loop_result start_when_free(guardian_state *state, running_set *set, bool
     return start_epoch(state, &set->current, slice) ? LOOP_STOPPED : LOOP_REFUSED;
 }
 
-/* The current epoch ended on its own: reap it, reclaim it, plan the next and start it as
- * soon as a slice is free. */
-static loop_result replace_current(guardian_state *state, running_set *set, int signals, bool *stop, bool *waiting) {
-    uint64_t started = set->current.started_ns;
-    uint32_t ended = set->current.slice;
+/* A start that failed, and a service that ends within a second of starting, are retried
+ * after 1, 2, 4 ... up to 30 seconds. The wait is the main poll's timeout, so a stop
+ * request, retiring epochs and purges are answered meanwhile. */
+typedef struct { unsigned failures; uint64_t retry_at; } restart_plan;
+
+static loop_result retry_later(restart_plan *plan) {
+    ++plan->failures;
+    uint64_t wait_ms = plan->failures > 5 ? 30000 : 1000ULL << (plan->failures - 1);
+    plan->retry_at = monotonic_ns() + wait_ms * 1000000ULL;
+    return LOOP_STOPPED;
+}
+
+static int poll_timeout(const restart_plan *plan) {
+    if (!plan->retry_at) return -1;
+    uint64_t now = monotonic_ns();
+    return now >= plan->retry_at ? 0 : (int)((plan->retry_at - now + 999999) / 1000000);
+}
+
+/* Kills and reclaims the current epoch, whatever ended it. Its slice is purged only when
+ * a service was launched for it. */
+static bool end_current(guardian_state *state, running_set *set) {
+    bool launched = set->current.started_ns != 0;
+    int slice = (int)set->current.slice;
     running_close(&set->current);
-    if (guardian_recover(state, (int)ended) != GUARDIAN_READY) return LOOP_UNRESOLVED;
-    static unsigned quick_ends;
-    quick_ends = monotonic_ns() - started < 1000000000ULL ? quick_ends + 1 : 0;
-    if (quick_ends && back_off(signals, quick_ends)) { *stop = true; return LOOP_STOPPED; }
+    running_init(&set->current);
+    return guardian_recover(state, launched ? slice : GUARDIAN_PURGE_NONE) == GUARDIAN_READY;
+}
+
+/* A refused start is reclaimed and retried later; anything else stands. */
+static loop_result settle_start(guardian_state *state, running_set *set, restart_plan *plan, loop_result started) {
+    if (started != LOOP_REFUSED) return started;
+    return end_current(state, set) ? retry_later(plan) : LOOP_UNRESOLVED;
+}
+
+/* Plans the next epoch and starts it as soon as a slice is free. */
+static loop_result begin_next(guardian_state *state, running_set *set, restart_plan *plan, bool *waiting) {
     guardian_result next = guardian_next_epoch(state);
-    if (next != GUARDIAN_READY) return next == GUARDIAN_REFUSED ? LOOP_REFUSED : LOOP_UNRESOLVED;
-    return start_when_free(state, set, waiting);
+    loop_result started = next == GUARDIAN_READY ? start_when_free(state, set, waiting) :
+        next == GUARDIAN_REFUSED ? LOOP_REFUSED : LOOP_UNRESOLVED;
+    return settle_start(state, set, plan, started);
+}
+
+/* The current epoch ended on its own: reclaim it and start the next, at once after a run
+ * of a second or more, after the backoff when it was crashing. */
+static loop_result current_ended(guardian_state *state, running_set *set, restart_plan *plan, bool *waiting) {
+    bool quick = monotonic_ns() - set->current.started_ns < 1000000000ULL;
+    if (!end_current(state, set)) return LOOP_UNRESOLVED;
+    if (quick) return retry_later(plan);
+    plan->failures = 0;
+    return begin_next(state, set, plan, waiting);
+}
+
+static bool any_retiring(const running_set *set) {
+    for (size_t i = 0; i < GUARDIAN_RETIRING_LIMIT; ++i) if (running_live(&set->retiring[i])) return true;
+    return false;
 }
 
 static const service_policy *const service_manifest_for_routing = &service_manifest;
 
 /* A helper's own connection (a nested parent opening children) goes to the epoch that runs
  * its slice, retiring or current: only that service knows the parent's record. Anyone else
- * goes to the current epoch. */
-static bool route_client(void *context, uint32_t uid, guardian_target *target) {
+ * goes to the current epoch, and is held while none runs. */
+static guardian_route_result route_client(void *context, uint32_t uid, guardian_target *target) {
     const running_set *set = context;
     const running_epoch *chosen = &set->current;
     const service_policy *service = service_manifest_for_routing;
@@ -429,9 +460,31 @@ static bool route_client(void *context, uint32_t uid, guardian_target *target) {
             if (running_live(&set->retiring[r]) && set->retiring[r].slice == slice) chosen = &set->retiring[r];
         break;
     }
-    if (!running_live(chosen)) return false;
+    if (!running_live(chosen)) return ROUTE_HOLD;
     *target = (guardian_target){chosen->channel, chosen->grant.epoch, chosen->grant.generation};
-    return true;
+    return ROUTE_SEND;
+}
+
+/* Clients accepted while no current epoch ran; the listener is not read while it is full. */
+#define GUARDIAN_HELD_LIMIT 32
+typedef struct { int connections[GUARDIAN_HELD_LIMIT]; size_t count; } held_clients;
+
+static void release_held(held_clients *held, const running_epoch *current) {
+    for (size_t i = 0; i < held->count; ++i) {
+        if (current) guardian_send_connection(current->channel, held->connections[i], current->grant.epoch,
+                                              current->grant.generation);
+        close(held->connections[i]);
+    }
+    held->count = 0;
+}
+
+/* Accepts one client. True when the current epoch's channel failed. */
+static bool forward_client(const guardian_state *state, int listener, running_set *set, held_clients *held) {
+    int used = -1, connection = -1;
+    guardian_forward_result forwarded = guardian_forward_routed(listener, state->manifest, route_client, set, &used,
+                                                                &connection);
+    if (forwarded == FORWARD_HELD) held->connections[held->count++] = connection;
+    return forwarded == FORWARD_CHANNEL_FAILED && running_live(&set->current) && used == set->current.channel;
 }
 
 enum { EVENT_SIGNALS, EVENT_LISTENER, EVENT_CURRENT, EVENT_CHANNEL, EVENT_RETIRING,
@@ -448,32 +501,44 @@ static bool settle_finished(guardian_state *state, running_set *set, const struc
     }
     for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s)
         if (events[EVENT_PURGE + s].revents) guardian_purge_reap(state, s);
+    guardian_purge_resume(state);
     return true;
 }
 
-/* Forwards verified clients to the current epoch, rolls epochs over, reclaims retiring ones
- * when their services end and reaps purges, until asked to stop or something fails. */
-static loop_result supervise(guardian_state *state, int signals, int listener, running_set *set) {
-    /* GRANT_RETIRING arrives once: while no retiring slot or clean slice is free it waits
-     * here, and is acted on as soon as one is. `waiting`: the next epoch is planned but no
-     * slice was free; it starts once a purge or a retiring epoch ends. */
-    bool retire_pending = false, waiting = false, restart = false;
+/* The supervisor's state between polls. GRANT_RETIRING arrives once: while no retiring slot
+ * or clean slice is free it stays pending and is acted on as soon as one is. `waiting`: the
+ * next epoch is planned but no slice was free; it starts once a purge or a retiring epoch
+ * ends. */
+typedef struct { bool retire_pending, waiting; restart_plan plan; held_clients held; } supervision;
+
+/* What the current epoch's events ask for: its end, or its handover once it is spent. */
+static loop_result serve_current(guardian_state *state, running_set *set, const struct pollfd *events,
+                                 supervision *run) {
+    bool ended = events[EVENT_CURRENT].revents != 0;
+    uint16_t kind = 0;
+    if (!ended && events[EVENT_CHANNEL].revents) ended = !service_frame(&set->current, &kind);
+    if (ended) {
+        run->retire_pending = false;
+        return current_ended(state, set, &run->plan, &run->waiting);
+    }
+    if (kind == GRANT_RETIRING) run->retire_pending = true;
+    if (!run->retire_pending) return LOOP_STOPPED;
+    handover_result handed = hand_over(state, set);
+    if (handed == HANDOVER_WAIT) return LOOP_STOPPED;
+    run->retire_pending = false;
+    if (handed == HANDOVER_FAILED) return LOOP_UNRESOLVED;
+    return handed == HANDOVER_RESTART ? settle_start(state, set, &run->plan, LOOP_REFUSED) : LOOP_STOPPED;
+}
+
+static loop_result supervise_loop(guardian_state *state, int signals, int listener, running_set *set,
+                                  supervision *run) {
     for (;;) {
-        if (restart) {
-            /* A start failed: reclaim it and try a fresh epoch after the crash backoff, while
-             * every retiring epoch keeps serving. */
-            bool stop = false;
-            restart = false;
-            loop_result replaced = replace_current(state, set, signals, &stop, &waiting);
-            if (stop) return replaced;
-            if (replaced == LOOP_REFUSED) restart = true;
-            else if (replaced != LOOP_STOPPED) return replaced;
-            continue;
-        }
         bool live = running_live(&set->current);
+        if (live && run->held.count) release_held(&run->held, &set->current);
+        bool accepting = live || (any_retiring(set) && run->held.count < GUARDIAN_HELD_LIMIT);
         struct pollfd events[EVENT_COUNT] = {
             [EVENT_SIGNALS] = {.fd = signals, .events = POLLIN},
-            [EVENT_LISTENER] = {.fd = live ? listener : -1, .events = POLLIN},
+            [EVENT_LISTENER] = {.fd = accepting ? listener : -1, .events = POLLIN},
             [EVENT_CURRENT] = {.fd = live ? set->current.service.pidfd.number : -1, .events = POLLIN},
             [EVENT_CHANNEL] = {.fd = live ? set->current.channel : -1, .events = POLLIN}};
         for (size_t i = 0; i < GUARDIAN_RETIRING_LIMIT; ++i)
@@ -481,41 +546,35 @@ static loop_result supervise(guardian_state *state, int signals, int listener, r
                 .fd = running_live(&set->retiring[i]) ? set->retiring[i].service.pidfd.number : -1, .events = POLLIN};
         for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s)
             events[EVENT_PURGE + s] = (struct pollfd){.fd = state->purging[s], .events = POLLIN};
-        if (poll(events, EVENT_COUNT, -1) < 0) { if (errno == EINTR) continue; return LOOP_REFUSED; }
+        if (poll(events, EVENT_COUNT, poll_timeout(&run->plan)) < 0) {
+            if (errno == EINTR) continue;
+            return LOOP_REFUSED;
+        }
         if (events[EVENT_SIGNALS].revents) return LOOP_STOPPED;
         if (!settle_finished(state, set, events)) return LOOP_UNRESOLVED;
-        if (waiting) {
-            loop_result started = start_when_free(state, set, &waiting);
-            if (started == LOOP_REFUSED) restart = true;
-            else if (started != LOOP_STOPPED) return started;
-            continue;
+        loop_result step = LOOP_STOPPED;
+        if (run->plan.retry_at && monotonic_ns() >= run->plan.retry_at) {
+            run->plan.retry_at = 0;
+            step = begin_next(state, set, &run->plan, &run->waiting);
+        } else if (run->waiting) {
+            step = settle_start(state, set, &run->plan, start_when_free(state, set, &run->waiting));
+        } else if (live) {
+            step = serve_current(state, set, events, run);
         }
-        bool ended = events[EVENT_CURRENT].revents != 0;
-        uint16_t kind = 0;
-        if (!ended && events[EVENT_CHANNEL].revents) ended = !service_frame(&set->current, &kind);
-        if (!ended && kind == GRANT_RETIRING) retire_pending = true;
-        if (!ended && retire_pending) {
-            handover_result handed = hand_over(state, set);
-            if (handed == HANDOVER_FAILED) return LOOP_UNRESOLVED;
-            if (handed != HANDOVER_WAIT) retire_pending = false;
-            if (handed == HANDOVER_RESTART) restart = true;
-            if (handed != HANDOVER_WAIT) continue;
-        }
-        if (!ended && events[EVENT_LISTENER].revents & POLLIN) {
-            int used = -1;
-            guardian_forward_result forwarded = guardian_forward_routed(listener, state->manifest, route_client, set,
-                                                                        &used);
-            ended = forwarded == FORWARD_CHANNEL_FAILED && used == set->current.channel;
-        }
-        if (ended) {
-            bool stop = false;
-            retire_pending = false;
-            loop_result replaced = replace_current(state, set, signals, &stop, &waiting);
-            if (stop) return replaced;
-            if (replaced == LOOP_REFUSED) restart = true;
-            else if (replaced != LOOP_STOPPED) return replaced;
-        }
+        if (step == LOOP_STOPPED && events[EVENT_LISTENER].revents & POLLIN &&
+            forward_client(state, listener, set, &run->held))
+            step = current_ended(state, set, &run->plan, &run->waiting);
+        if (step != LOOP_STOPPED) return step;
     }
+}
+
+/* Forwards verified clients, rolls epochs over, reclaims retiring ones when their services
+ * end and reaps purges, until asked to stop or something fails. */
+static loop_result supervise(guardian_state *state, int signals, int listener, running_set *set, bool waiting) {
+    supervision run = {.retire_pending = false, .waiting = waiting};
+    loop_result result = supervise_loop(state, signals, listener, set, &run);
+    release_held(&run.held, NULL);
+    return result;
 }
 
 /* Kills and reclaims every running epoch first, then ends any purge without waiting: the
@@ -558,11 +617,14 @@ int main(void) {
     for (size_t i = 0; i < GUARDIAN_RETIRING_LIMIT; ++i) running_init(&set.retiring[i]);
     loop_result result = LOOP_REFUSED;
     state.purge_async = true;
+    guardian_purge_resume(&state); /* A startup purge that stopped short runs again, in a child. */
     if (listener < 0) { state.operation = 30; state.system_errno = errno; }
     else {
         uint32_t slice;
-        if (pick_slice(&state, &set, &slice) != SLICE_READY) result = LOOP_UNRESOLVED;
-        else if (start_epoch(&state, &set.current, slice)) result = supervise(&state, signals, listener, &set);
+        slice_choice choice = pick_slice(&state, &set, &slice);
+        if (choice == SLICE_NONE) result = LOOP_UNRESOLVED;
+        else if (choice == SLICE_WAIT) result = supervise(&state, signals, listener, &set, true);
+        else if (start_epoch(&state, &set.current, slice)) result = supervise(&state, signals, listener, &set, false);
     }
     if (listener >= 0) {
         close(listener);

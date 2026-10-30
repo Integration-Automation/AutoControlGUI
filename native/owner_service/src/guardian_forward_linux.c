@@ -42,7 +42,7 @@ static bool within_rate(long client) {
     return ++rates[client].count <= GUARDIAN_ACCEPT_BURST;
 }
 
-static bool send_connection(int channel, int connection, no_id epoch, uint64_t generation) {
+bool guardian_send_connection(int channel, int connection, no_id epoch, uint64_t generation) {
     guardian_grant frame = {SERVICE_MAGIC, SERVICE_VERSION, GRANT_CONNECTION, epoch, generation, 0, 0};
     union { struct cmsghdr align; char buffer[CMSG_SPACE(sizeof(int))]; } control;
     memset(&control, 0, sizeof(control));
@@ -62,8 +62,9 @@ static bool send_connection(int channel, int connection, no_id epoch, uint64_t g
 /* One pending client. The guardian's copy of the connection is always closed here: the
  * service owns the handed-over one, and a refused one is simply dropped. */
 guardian_forward_result guardian_forward_routed(int listener, const guardian_manifest *manifest,
-                                                guardian_route route, void *context, int *used) {
+                                                guardian_route route, void *context, int *used, int *held) {
     *used = -1;
+    *held = -1;
     int connection;
     do { connection = accept4(listener, NULL, NULL, SOCK_CLOEXEC); } while (connection < 0 && errno == EINTR);
     if (connection < 0) return errno == EAGAIN || errno == EWOULDBLOCK ? FORWARD_IDLE : FORWARD_REFUSED;
@@ -71,26 +72,32 @@ guardian_forward_result guardian_forward_routed(int listener, const guardian_man
     no_error error;
     guardian_target target;
     guardian_forward_result result = FORWARD_REFUSED;
-    if (peer_identity_from_connection(&peer, connection, &error) && within_rate(verified_client(manifest, &peer)) &&
-        route(context, peer.credentials.uid, &target)) {
+    guardian_route_result routed = ROUTE_DROP;
+    if (peer_identity_from_connection(&peer, connection, &error) && within_rate(verified_client(manifest, &peer)))
+        routed = route(context, peer.credentials.uid, &target);
+    if (routed == ROUTE_SEND) {
         *used = target.channel;
-        result = send_connection(target.channel, connection, target.epoch, target.generation) ? FORWARD_HANDED :
-            FORWARD_CHANNEL_FAILED;
+        result = guardian_send_connection(target.channel, connection, target.epoch, target.generation) ?
+            FORWARD_HANDED : FORWARD_CHANNEL_FAILED;
+    } else if (routed == ROUTE_HOLD) {
+        *held = connection;
+        connection = -1;
+        result = FORWARD_HELD;
     }
     service_close_fd(&peer.pidfd);
-    close(connection);
+    if (connection >= 0) close(connection);
     return result;
 }
 
-static bool fixed_route(void *context, uint32_t uid, guardian_target *target) {
+static guardian_route_result fixed_route(void *context, uint32_t uid, guardian_target *target) {
     (void)uid;
     *target = *(const guardian_target *)context;
-    return true;
+    return ROUTE_SEND;
 }
 
 guardian_forward_result guardian_forward(int listener, int channel, const guardian_manifest *manifest, no_id epoch,
                                          uint64_t generation) {
     guardian_target target = {channel, epoch, generation};
-    int used;
-    return guardian_forward_routed(listener, manifest, fixed_route, &target, &used);
+    int used, held;
+    return guardian_forward_routed(listener, manifest, fixed_route, &target, &used, &held);
 }

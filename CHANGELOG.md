@@ -68,6 +68,8 @@ Leftovers the purge cannot remove in place are now moved into a root-only quaran
 taken apart there, instead of being closed off where they stand; `epoch-N` gets its own depth, descendant, process
 and memory limits before delegation; a helper's own connection is routed to the epoch running its slice; and a
 failed epoch start is retried with backoff instead of stopping the guardian.
+The quarantine is now made under a random name and recognised by inode, a purge that stops short is run again
+before its slice is reused, and retries back off from the main loop, which keeps answering a stop request.
 
 ## Unreleased: helper containment in runtime status
 

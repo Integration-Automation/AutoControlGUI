@@ -81,6 +81,7 @@ bool service_policy_valid(const service_policy *policy) {
         !policy->nested_lease_quota || policy->nested_lease_quota > SERVICE_LEASE_LIMIT ||
         policy->lease_max_age_ns < policy->lease_lifetime_ns ||
         policy->record_pids_max < SERVICE_MIN_PIDS || policy->record_memory_max < SERVICE_MIN_MEMORY ||
+        policy->record_pids_max > SERVICE_MAX_PIDS || policy->record_memory_max > SERVICE_MAX_MEMORY ||
         !policy->connections_per_account || policy->connections_per_account > SERVICE_CONNECTION_LIMIT / 2 ||
         /* Payload accounts are shared by policy, so one client per service until each client
          * has its own payload accounts. */

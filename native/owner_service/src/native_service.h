@@ -17,6 +17,8 @@
 #define SERVICE_IDLE_GRACE_NS 5000000000ULL /* A spent epoch waits this long for a lease-less connection. */
 #define SERVICE_MIN_PIDS 8                     /* Below this a helper cannot start its threads. */
 #define SERVICE_MIN_MEMORY (16ULL << 20)      /* 16 MiB. */
+#define SERVICE_MAX_PIDS (1ULL << 22)         /* The kernel's own pid_max ceiling. */
+#define SERVICE_MAX_MEMORY (1ULL << 46)       /* 64 TiB: times the record capacity, never wraps. */
 #define SERVICE_LEASE_LIMIT NO_RECORD_LIMIT
 #define SERVICE_CLIENT_LIMIT 4
 #define SERVICE_ARGUMENT_BYTES 1024
