@@ -128,6 +128,8 @@ the gate.
   from the main loop, which keeps answering a stop request, retiring epochs and purges;
   so does a service that ends within a second of starting. A stop kills every epoch and
   abandons running purges; the next start purges.
+  A manifest purge root must sit under directories that are root's and not writable by
+  others unless sticky; the guardian refuses the manifest otherwise.
   Every directory payload IDs can write must be a purge root: the defaults are `/tmp`,
   `/var/tmp`, `/dev/shm`, `/run/lock` and `/var/crash`, and the manifest lists any other
   (`purge_roots`, any other world-writable directory) and caps every running epoch together (`subtree_pids_max`,

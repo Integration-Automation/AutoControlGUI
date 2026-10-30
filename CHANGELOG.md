@@ -102,7 +102,8 @@ crashing UID), the guardian warns at startup about a pipe core_pattern to an unk
 requires every directory payload IDs can write to be a purge root.
 The core_pattern warning now judges the handler by the base name of its path and also covers sockets and an
 unreadable pattern; a purge root that exists but is not trusted is logged, and one that exists but cannot be
-opened makes the purge run again.
+opened makes the purge run again. A manifest purge root must now sit under directories only root can change,
+or the guardian refuses the manifest.
 
 ## Unreleased: helper containment in runtime status
 

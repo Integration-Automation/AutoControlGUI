@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261030-34 | 2026-10-30 | Anchor manifest purge roots, and keep the purge's trust verdict out of errno | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261030-33 | 2026-10-30 | Run the purge again for roots that exist but cannot be opened, and keep Progress.md to open items | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261030-32 | 2026-10-30 | Close the eighteenth review's notes on crash handlers, roots and line lengths | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-31 | 2026-10-30 | Purge /var/crash by default, and warn about unknown core_pattern handlers | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |

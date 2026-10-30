@@ -271,7 +271,9 @@ def stop_guardian(guardian, sig=signal.SIGTERM):
     if drainer is None:  # Started elsewhere, without a drainer.
         return guardian.returncode, guardian.stderr.read()[-60000:]
     drainer.join(timeout=10)
-    return guardian.returncode, "".join(guardian.log)[-60000:]
+    text = "".join(guardian.log)
+    # Startup lines (the core_pattern warning) come first: the head is kept with the tail.
+    return guardian.returncode, text if len(text) <= 64000 else text[:4000] + text[-60000:]
 
 
 def client(mode, account=CLIENT):
@@ -565,7 +567,7 @@ def scenario_siblings(steps, left=None):
     steps["epochs_after_stop"] = epochs()
     steps["static_tree_logged"] = "unwalked" in steps["guardian_stop"][1]
     with open("/proc/sys/kernel/core_pattern") as handle:
-        pattern = handle.read().strip()
+        pattern = handle.read().rstrip("\n")
     handler = os.path.basename(pattern[1:].split()[0]) if pattern.startswith("|") and pattern[1:].split() else ""
     steps["core_pattern_warning_expected"] = pattern.startswith("@") or (
         pattern.startswith("|") and handler not in ("systemd-coredump", "apport"))

@@ -545,15 +545,16 @@ bool guardian_purge_unshare(void) {
 
 /* A root may be a link (/dev/shm -> /run/shm on older systems): resolved once, and used
  * only when the directory it names is root's and others may write it only if sticky. */
-static int open_root(const char *path) {
+static int open_root(const char *path, bool *untrusted) {
     char resolved[4096];
+    *untrusted = false;
     if (!realpath(path, resolved)) return -1;
     int root = open(resolved, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
     struct stat status;
     if (root >= 0 && (fstat(root, &status) != 0 || status.st_uid != 0 ||
                       ((status.st_mode & (S_IWGRP | S_IWOTH)) && !(status.st_mode & S_ISVTX)))) {
         close(root);
-        errno = EPERM; /* Not root's, or writable without the sticky bit: not trusted. */
+        *untrusted = true; /* Not root's, or writable without the sticky bit. */
         return -1;
     }
     return root;
@@ -654,7 +655,8 @@ static int open_mqueue(purge_scope *scope) {
     if (context < 0 && errno == ENODEV) return -1; /* No POSIX message queues in this kernel: none to purge. */
     int mounted = -1;
     if (context < 0) { /* The mount API is filtered for this guardian: the host's mount, if it is mqueue. */
-        mounted = open_root(MQUEUE_ROOT);
+        bool untrusted;
+        mounted = open_root(MQUEUE_ROOT, &untrusted);
         struct statfs host;
         if (mounted >= 0 && fstatfs(mounted, &host) == 0 && host.f_type == 0x19800202 /* MQUEUE_MAGIC */)
             return mounted;
@@ -709,15 +711,17 @@ guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest
     for (size_t i = 0; i < count; ++i) {
         names[i] = i < defaults ? default_roots[i] : manifest->purge_roots[i - defaults];
         /* -1: absent, or not a directory this guardian may trust. */
-        roots[i] = strcmp(names[i], MQUEUE_ROOT) ? open_root(names[i]) : open_mqueue(&scope);
+        bool untrusted = false;
+        roots[i] = strcmp(names[i], MQUEUE_ROOT) ? open_root(names[i], &untrusted) : open_mqueue(&scope);
         int error = errno;
         struct stat exists;
-        if (roots[i] < 0 && strcmp(names[i], MQUEUE_ROOT) && lstat(names[i], &exists) == 0) {
-            /* There but not trusted: skipped, said. There but not opened: run again. */
-            fprintf(stderr, "autocontrol-owner-guardian: purge skipped %s: %s\n", names[i],
-                    error == EPERM ? "not root's, or writable without the sticky bit" : strerror(error));
-            if (error != EPERM) scope.complete = false;
-        }
+        if (roots[i] >= 0 || !strcmp(names[i], MQUEUE_ROOT)) continue;
+        /* Absent: nothing to purge. Not trusted: skipped, said. Anything else: run again. */
+        bool absent = lstat(names[i], &exists) != 0 && (errno == ENOENT || errno == ENOTDIR);
+        if (absent) continue;
+        fprintf(stderr, "autocontrol-owner-guardian: purge skipped %s: %s\n", names[i],
+                untrusted ? "not root's, or writable without the sticky bit" : strerror(error));
+        if (!untrusted) scope.complete = false;
     }
     static const char *const tables[] = {"/proc/sysvipc/shm", "/proc/sysvipc/msg", "/proc/sysvipc/sem"};
     FILE *opened[3];

@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-33；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-34；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -109,7 +109,7 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      存在後接合。parent_watch、輸入 journal／lease 與本機 pipe 執行緒退場仍須接合。
      owner 服務原始碼依 2026-10-29 決定已進入 `native/owner_service/`（src、manifest 範本、build.sh、
      tests 與兩個驗收執行器，不進 wheel），每個 client 帳號的 lease 配額已實作。
-     現況：經十九輪獨立審查（處理紀錄見 docs/updates/2026-10-e.md，U-20261029-21 起），最近兩輪未發現
+     現況：經二十輪獨立審查（處理紀錄見 docs/updates/2026-10-e.md，U-20261029-23 起），最近三輪未發現
      MAJOR 或 MINOR，判定 owner 服務本身不阻擋開閘；正式閘門仍因下列項目關閉。驅動桌面／瀏覽器的
      helper 一律以本機程序執行，owner 服務只承載不需顯示的 helper（探測、遠端裝置）；遠端 helper
      與實體裝置的通訊屬暫緩的實體裝置驗收。
@@ -122,8 +122,11 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      systemd-coredump／apport、mount API 未被擋或 /dev/mqueue 為本 IPC namespace 的 mqueue、所有 payload
      可寫目錄皆為清除根目錄。guardian 只對未知的 pipe／socket 或讀不到的 core_pattern 警告，並記錄存在
      但打不開或不受信任的清除根目錄，其餘不檢查。
-     TODO：native/owner_service/tests 有超過 120 字元的行，service_authority_acceptance.c 為 790 行（超過
-     750 行上限），待拆分。
+     TODO：native/owner_service 的 src 以外（tests、build.sh）有超過 120 字元的行，
+     service_authority_acceptance.c 為 790 行（超過 750 行上限），待拆分。
+     已知限制（未寫進服務 README）：清除只依使用者 ID 判斷，隔離區保留其他 ID 擁有的內容；NSS 服務中斷
+     而回報 ENOENT 時，manifest 的 payload ID 會被當成「未配置」；同一檔案系統上的 bind mount 只在清除
+     自己的 namespace 中卸下。
      TODO：其他架構／libc／核心的相容性驗證、
      安裝內容比對、實際已安裝主機的執行驗收才能開啟正式閘門；不能匯入時下載
      或暗中部署服務。
