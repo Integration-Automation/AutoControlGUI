@@ -9,7 +9,8 @@
 #include <time.h>
 #include <unistd.h>
 
-/* Index of the listed client `peer` proves to be, or -1. */
+/* Index of the listed client `peer` proves to be, or -1. A payload range's mount namespace
+ * is its epoch's own: it is checked against that epoch's service when the client is routed. */
 static long verified_client(const guardian_manifest *manifest, const peer_identity *peer) {
     for (size_t i = 0; i < manifest->client_count; ++i) {
         const guardian_client *client = &manifest->clients[i];
@@ -17,7 +18,8 @@ static long verified_client(const guardian_manifest *manifest, const peer_identi
         uint32_t offset = peer->credentials.uid - client->uid;
         if (peer->credentials.uid >= client->uid && offset < span && peer->credentials.gid >= client->gid &&
             peer->credentials.gid - client->gid == offset)
-            return peer_in_namespaces(peer, &client->namespaces) ? (long)i : -1;
+            return (span > 1 ? peer_in_namespaces_beside_mount(peer, &client->namespaces) :
+                    peer_in_namespaces(peer, &client->namespaces)) ? (long)i : -1;
     }
     return -1;
 }
@@ -74,7 +76,7 @@ guardian_forward_result guardian_forward_routed(int listener, const guardian_man
     guardian_forward_result result = FORWARD_REFUSED;
     guardian_route_result routed = ROUTE_DROP;
     if (peer_identity_from_connection(&peer, connection, &error) && within_rate(verified_client(manifest, &peer)))
-        routed = route(context, peer.credentials.uid, &target);
+        routed = route(context, &peer, &target);
     if (routed == ROUTE_SEND) {
         *used = target.channel;
         result = guardian_send_connection(target.channel, connection, target.epoch, target.generation) ?
@@ -89,8 +91,8 @@ guardian_forward_result guardian_forward_routed(int listener, const guardian_man
     return result;
 }
 
-static guardian_route_result fixed_route(void *context, uint32_t uid, guardian_target *target) {
-    (void)uid;
+static guardian_route_result fixed_route(void *context, const peer_identity *peer, guardian_target *target) {
+    (void)peer;
     *target = *(const guardian_target *)context;
     return ROUTE_SEND;
 }

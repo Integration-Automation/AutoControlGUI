@@ -148,10 +148,11 @@ static bool confine_service(const guardian_manifest *manifest) {
         guardian_confine_identities(&service_manifest, manifest->service_uid, manifest->service_gid);
 }
 
-/* The child keeps only its endpoint on SERVICE_GUARDIAN_FD and becomes the service
- * account before exec, with an empty environment and only its three capabilities. */
+/* The child makes its epoch's private roots, keeps only its endpoint on SERVICE_GUARDIAN_FD
+ * and becomes the service account before exec, with an empty environment and only its three
+ * capabilities. */
 static void exec_service(const guardian_manifest *manifest, int channel) {
-    if (dup2(channel, SERVICE_GUARDIAN_FD) == SERVICE_GUARDIAN_FD &&
+    if (guardian_private_epoch(manifest) && dup2(channel, SERVICE_GUARDIAN_FD) == SERVICE_GUARDIAN_FD &&
         syscall(SYS_close_range, SERVICE_GUARDIAN_FD + 1U, ~0U, 0) == 0 && setgroups(0, NULL) == 0 &&
         confine_service(manifest) &&
         setresgid(manifest->service_gid, manifest->service_gid, manifest->service_gid) == 0 &&
@@ -171,7 +172,9 @@ static int launch_service(guardian_state *state, int channel, peer_identity *ser
     if (epoch >= 0) close(epoch);
     if (branch < 0) return opened;
     int pidfd = -1;
-    struct clone_args args = {.flags = CLONE_PIDFD | CLONE_INTO_CGROUP, .pidfd = (uintptr_t)&pidfd,
+    /* New mount and IPC namespaces: the epoch's own temporary roots, queues and IPC objects. */
+    struct clone_args args = {.flags = CLONE_PIDFD | CLONE_INTO_CGROUP | CLONE_NEWNS | CLONE_NEWIPC,
+        .pidfd = (uintptr_t)&pidfd,
         .exit_signal = SIGCHLD, .cgroup = (uint64_t)branch};
     long child = syscall(SYS_clone3, &args, sizeof(args));
     if (child == 0) exec_service(state->manifest, channel);
@@ -457,22 +460,28 @@ typedef struct { int connections[GUARDIAN_HELD_LIMIT]; size_t count; } held_clie
 typedef struct { const running_set *set; const held_clients *held; } routing;
 
 /* A helper's own connection (a nested parent opening children) goes to the epoch that runs
- * its slice, retiring or current: only that service knows the parent's record. Anyone else
- * goes to the current epoch, is held while none runs, and is dropped once the held clients
- * are full: the listener stays read for helpers of retiring epochs. */
-static guardian_route_result route_client(void *context, uint32_t uid, guardian_target *target) {
+ * its slice, retiring or current: only that service knows the parent's record, and the
+ * helper must live in that epoch's own mount namespace. Anyone else goes to the current
+ * epoch, is held while none runs, and is dropped once the held clients are full: the
+ * listener stays read for helpers of retiring epochs. */
+static guardian_route_result route_client(void *context, const peer_identity *peer, guardian_target *target) {
     const routing *route = context;
     const running_set *set = route->set;
     const running_epoch *chosen = &set->current;
     const service_policy *service = service_manifest_for_routing;
+    uint32_t uid = peer->credentials.uid;
+    bool payload = false;
     for (size_t i = 0; service && i < service->policy_count; ++i) {
         uint32_t base = service->policies[i].payload_uid;
         if (uid < base || uid - base >= SERVICE_PAYLOAD_IDS) continue;
         uint32_t slice = (uid - base) / SERVICE_EPOCH_IDS;
+        payload = true;
         for (size_t r = 0; r < GUARDIAN_RETIRING_LIMIT; ++r)
             if (running_live(&set->retiring[r]) && set->retiring[r].slice == slice) chosen = &set->retiring[r];
         break;
     }
+    if (payload && (!running_live(chosen) || !peer_shares_mount_namespace(peer, &chosen->service)))
+        return ROUTE_DROP;
     if (!running_live(chosen)) return route->held->count < GUARDIAN_HELD_LIMIT ? ROUTE_HOLD : ROUTE_DROP;
     *target = (guardian_target){chosen->channel, chosen->grant.epoch, chosen->grant.generation};
     return ROUTE_SEND;

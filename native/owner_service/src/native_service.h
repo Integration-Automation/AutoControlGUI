@@ -255,6 +255,10 @@ bool peer_alive(const peer_identity *identity);
 bool peer_same_process(const peer_identity *a, const peer_identity *b);
 bool peer_in_cgroup(const peer_identity *peer, uint64_t cgroup_inode);
 bool peer_in_namespaces(const peer_identity *peer, const service_namespaces *expected);
+/* As peer_in_namespaces, leaving the mount namespace to peer_shares_mount_namespace. */
+bool peer_in_namespaces_beside_mount(const peer_identity *peer, const service_namespaces *expected);
+/* True when `peer` lives in `other`'s mount namespace (both read through their pidfds). */
+bool peer_shares_mount_namespace(const peer_identity *peer, const peer_identity *other);
 bool peer_enable_credentials(int socket, no_error *error);
 bool packet_receive(int socket, void *frame, size_t size, int flags, received_packet *packet, no_error *error);
 bool packet_authenticated(const received_packet *packet, const peer_identity *connector, size_t expected_rights);

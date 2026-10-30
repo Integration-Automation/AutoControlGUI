@@ -130,7 +130,7 @@ def build():
         OPT + "/service_main", defines + ["-DNO_PROTECTED_ACCEPTANCE"])
     gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
                            "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
-                           "guardian_manifest_linux.c", "service_policy.c",
+                           "guardian_manifest_linux.c", "guardian_private_linux.c", "service_policy.c",
                            "protected_manifests.c"], OPT + "/guardian", defines)
     gcc(["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_child_linux.c",
          "native_relay_linux.c", "owner_core_acceptance.c"], OPT + "/owner_core_acceptance", acceptance=True)
@@ -139,18 +139,20 @@ def build():
     gcc(["purge_roots_check.c", "guardian_manifest_linux.c", "service_policy.c"], OPT + "/purge_roots_check")
     gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
                            "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
-                           "guardian_manifest_linux.c", "service_policy.c", "protected_manifests.c"],
+                           "guardian_manifest_linux.c", "guardian_private_linux.c", "service_policy.c",
+                           "protected_manifests.c"],
         OPT + "/guardian_one_retiring", defines + ["-DGUARDIAN_RETIRING_LIMIT=1"])
     taken = pwd.getpwnam("acother").pw_uid
     gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
                            "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
-                           "guardian_manifest_linux.c", "service_policy.c", "protected_manifests.c"],
+                           "guardian_manifest_linux.c", "guardian_private_linux.c", "service_policy.c",
+                           "protected_manifests.c"],
         OPT + "/guardian_taken_range",
         [d for d in defines if not d.startswith(("-DPAYLOAD_UID=", "-DPAYLOAD_GID="))]
         + [f"-DPAYLOAD_UID={taken}u", f"-DPAYLOAD_GID={PAYLOAD_BASE}u"])
     gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
                            "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
-                           "guardian_manifest_linux.c", "service_policy.c",
+                           "guardian_manifest_linux.c", "guardian_private_linux.c", "service_policy.c",
                            "protected_manifests.c"],
         OPT + "/guardian_outer", defines + ['-DPROTECTED_SUBTREE="autocontrol-outer/inner"',
                                             f'-DPROTECTED_STATE="{STATE2}"'])
@@ -367,6 +369,70 @@ def _closed_off(path):
     return status.st_uid == 0 and status.st_gid == 0 and (status.st_mode & 0o7777) == 0
 
 
+def _in_payload(pid, path):
+    """`path` as the payload process `pid` sees it: through its root, in its mount namespace."""
+    return f"/proc/{pid}/root{path}"
+
+
+def _shm_in_payload(pid, shmid):
+    listing = run(["nsenter", "-t", str(pid), "-i", "cat", "/proc/sysvipc/shm"]).stdout
+    return any(line.split()[1] == str(shmid) for line in listing.splitlines()[1:] if line.split())
+
+
+def _namespaces_private(pid, left):
+    """The epoch's own mount and IPC namespaces: its /tmp is another filesystem, and what the
+    helper left there, file and SysV segment, is not on the host."""
+    def namespace(of, kind):
+        return os.readlink(f"/proc/{of}/ns/{kind}")
+    try:
+        return {"mount": namespace(pid, "mnt") != namespace("self", "mnt"),
+                "ipc": namespace(pid, "ipc") != namespace("self", "ipc"),
+                "tmp_is_its_own": os.stat(_in_payload(pid, "/tmp")).st_dev != os.stat("/tmp").st_dev,
+                "file_not_on_host": os.path.exists(_in_payload(pid, left[0])) and not os.path.exists(left[0]),
+                "segment_not_on_host": _shm_in_payload(pid, left[1]) and not _shm_exists(left[1])}
+    except OSError as error:
+        return {"error": str(error)}
+
+
+def _payload_segment(uid):
+    """A SysV shared memory segment made by `uid`, as a helper would leave one; its ID."""
+    reader, writer = os.pipe()
+    libc = ctypes.CDLL(None, use_errno=True)
+    child = os.fork()
+    if child == 0:
+        try:
+            os.close(reader)
+            os.setgid(uid)
+            os.setuid(uid)
+            segment = libc.shmget(0, 4096, 0o1600)  # IPC_PRIVATE, IPC_CREAT | 0600
+            os.write(writer, str(segment).encode())
+            os._exit(0)
+        except BaseException:  # reason: a forked child must never return into the harness
+            os._exit(2)
+    os.close(writer)
+    data = os.read(reader, 32)
+    os.close(reader)
+    os.waitpid(child, 0)
+    return int(data or b"-1")
+
+
+def _staged_chain(top_dir, levels, uid):
+    """A chain of `levels` directories owned by `uid` with 8 MiB at its bottom, under a fresh
+    directory in `top_dir`; its top."""
+    top = tempfile.mkdtemp(prefix="autocontrol-staged-deep-", dir=top_dir)
+    path = top
+    for _ in range(levels):
+        path = os.path.join(path, "d")
+        os.mkdir(path)
+    with open(os.path.join(path, "pinned"), "wb") as handle:
+        handle.write(bytes(8 << 20))
+    for directory, subdirs, files in os.walk(top):
+        for name in subdirs + files:
+            os.lchown(os.path.join(directory, name), uid, uid)
+    os.lchown(top, uid, uid)
+    return top
+
+
 def _shm_exists(shmid):
     with open("/proc/sysvipc/shm") as handle:
         return any(line.split()[1] == str(shmid) for line in handle.readlines()[1:])
@@ -440,11 +506,13 @@ def scenario_session(steps):
     holder.stdin.flush()
     steps["leftovers"] = read_json(holder)
     left = steps["leftovers"].get("reply") or ["", -1, "", "", ""]
-    steps["leftovers_present"] = os.path.exists(left[0]) and _shm_exists(left[1]) and os.path.exists(
-        left[2] + "/d" * 40 + "/bottom") and os.path.isfile(left[3] + "/d" * 300 + "/pinned")
-    if os.path.isdir(left[4]):
-        open(left[4] + "/foreign", "w").close()  # Another ID wrote into the helper's directory.
     pids = steps["inspection"]["payload_pids"]
+    seen = pids[0] if pids else 0
+    # What the helper left lies in its epoch's private roots: seen through its own root.
+    steps["leftovers_present"] = bool(seen) and os.path.exists(_in_payload(seen, left[0])) and _shm_in_payload(
+        seen, left[1]) and os.path.exists(_in_payload(seen, left[2] + "/d" * 40 + "/bottom")) and os.path.isfile(
+        _in_payload(seen, left[3] + "/d" * 300 + "/pinned"))
+    steps["namespaces"] = _namespaces_private(seen, left) if seen else {}
     escaped = steps["request"].get("escaped")
     steps["escaped_in_payload_cgroup"] = escaped_in_payload(escaped, epoch)
     holder.stdin.write("close\n")
@@ -539,17 +607,30 @@ def scenario_siblings(steps, left=None):
     steps["queue_made"] = _payload_queue(PAYLOAD_BASE)
     # And one of another ID's, which stays.
     steps["foreign_queue_made"] = _payload_queue(65534, b"/autocontrol-foreign-queue")
+    # What a helper could leave on the host, staged here: a file, a SysV segment, a 300-level
+    # chain with 8 MiB at its bottom, and a directory another ID wrote into.
+    staged_file = os.path.join(tempfile.mkdtemp(prefix="autocontrol-staged-", dir="/tmp"), "left")
+    open(staged_file, "w").close()
+    os.chown(staged_file, PAYLOAD_BASE, PAYLOAD_BASE)
+    staged_segment = _payload_segment(PAYLOAD_BASE)
+    staged_chain = _staged_chain("/dev/shm", 300, PAYLOAD_BASE)
+    staged_shared = tempfile.mkdtemp(prefix="autocontrol-staged-shared-", dir="/tmp")
+    os.chmod(staged_shared, 0o777)
+    os.chown(staged_shared, PAYLOAD_BASE, PAYLOAD_BASE)
+    open(os.path.join(staged_shared, "foreign"), "w").close()  # Another ID's file inside it.
+    steps["staged"] = {"segment": staged_segment, "present": os.path.exists(staged_file) and _shm_exists(
+        staged_segment) and os.path.isfile(staged_chain + "/d" * 300 + "/pinned")}
     guardian = start_guardian()
     steps["squats"] = squats
     steps["squatted_payload_files_left"] = [s for s in squats if os.path.lexists(os.path.join(s, "hidden"))]
     steps["crash_report_left"] = os.path.lexists(crash_report)  # Right after the startup purge.
     for squat in squats:
         shutil.rmtree(squat, ignore_errors=True)
-    left = left or ["", -1, "", "", ""]
-    steps["leftovers_after_start"] = os.path.exists(left[0]) or _shm_exists(left[1]) or os.path.exists(left[2])
+    steps["leftovers_after_start"] = os.path.exists(staged_file) or _shm_exists(staged_segment)
     # The 300-level chain (8 MiB at its bottom) and the directory another ID wrote into: their
     # names are free and nothing a payload ID owns is left anywhere under the purge roots.
-    steps["names_freed"] = not os.path.lexists(left[3]) and not os.path.lexists(left[4])
+    steps["names_freed"] = not os.path.lexists(staged_chain) and not os.path.lexists(staged_shared)
+    shutil.rmtree(os.path.dirname(staged_file), ignore_errors=True)
     # The window shows a directory outside every root: what is there is not the purge's.
     steps["payload_owned_left"] = [p for p in payload_owned_anywhere() if not p.startswith(window + "/")]
     first, second = client("hold"), client("hold")
@@ -820,10 +901,13 @@ def scenario_second_overlap(steps):
     h1.stdin.flush()
     left = (read_json(h1).get("reply") or ["", -1, ""])
     steps["h1_uids"] = payload_uids(first)
+    h1_pids = session_inspection(first)["payload_pids"]
+    h1_seen = h1_pids[0] if h1_pids else 0
     steps["fill_first"] = [rollover_session() for _ in range(7)]       # E1 spent around H1: retires.
     steps["fill_second"] = [rollover_session() for _ in range(8)]      # E2 spent and idle: drains.
     steps["third"] = rollover_session()                                # Lands in E3.
-    steps["h1_files_kept"] = os.path.exists(left[0]) and os.path.exists(left[2])
+    steps["h1_files_kept"] = bool(h1_seen) and os.path.exists(_in_payload(h1_seen, left[0])) and os.path.exists(
+        _in_payload(h1_seen, left[2]))
     h3 = client("hold")
     steps["h3"] = read_json(h3)
     steps["fill_third"] = [rollover_session() for _ in range(6)]       # E3 spent around H3, E1 still retiring.
@@ -834,9 +918,10 @@ def scenario_second_overlap(steps):
     h1.wait(timeout=30)
     # The guardian removes the epoch's branch, then purges its half: wait for both.
     limit = time.monotonic() + 20
-    while (first in epochs() or os.path.exists(left[0]) or os.path.exists(left[2])) and time.monotonic() < limit:
+    while first in epochs() and time.monotonic() < limit:
         time.sleep(0.1)
-    steps["h1_files_purged"] = not os.path.exists(left[0]) and not os.path.exists(left[2])
+    # Its namespace went with it: the files were never on the host and no process holds them.
+    steps["h1_files_purged"] = first not in epochs() and not pid_alive(h1_seen) and not os.path.exists(left[0])
     steps["fourth"] = rollover_session()                               # The pending handover: E4.
     steps["epochs_after_handover"] = epochs()
     h3.stdin.write("close\n")
@@ -980,6 +1065,33 @@ def scenario_purge_faults(steps):
     roots = run([OPT + "/purge_roots_check"])
     steps["roots"] = json.loads(roots.stdout or "{}")
     steps["roots_exit"] = roots.returncode
+
+
+_OUTSIDE_EPOCH = """
+import socket, sys
+peer = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+peer.settimeout(10)
+try:
+    peer.connect(sys.argv[1])
+except OSError as error:
+    print("connect:" + type(error).__name__)
+    sys.exit(0)
+try:
+    peer.send(b"x" * 64)
+    print("reply:" + str(len(peer.recv(4096))))
+except OSError as error:
+    print("closed:" + type(error).__name__)
+"""
+
+
+def scenario_outside_epoch(steps):
+    """A process with a payload ID that is not in any epoch's own mount namespace (here: on
+    the host) is turned away by the guardian before any service sees it."""
+    guardian = start_guardian()
+    probe = subprocess.run(["/usr/bin/python3", "-I", "-c", _OUTSIDE_EPOCH, ENDPOINT], preexec_fn=_as_payload,
+                           capture_output=True, text=True, timeout=30)
+    steps["outcome"] = probe.stdout.strip()
+    steps["guardian_stop"] = stop_guardian(guardian)
 
 
 def scenario_taken_range(steps):
@@ -1191,6 +1303,8 @@ def main():
         scenario_restart_backoff(report["steps"]["restart_backoff"])
         report["steps"]["purge_faults"] = {}
         scenario_purge_faults(report["steps"]["purge_faults"])
+        report["steps"]["outside_epoch"] = {}
+        scenario_outside_epoch(report["steps"]["outside_epoch"])
     except Exception as error:  # reason: cleanup must run and the failure must be reported, not lost
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
@@ -1240,11 +1354,12 @@ def expectations(result):
     retiring_nested = result["steps"].get("retiring_nested", {})
     restart = result["steps"].get("restart_backoff", {})
     faults = result["steps"].get("purge_faults", {})
+    outside = result["steps"].get("outside_epoch", {})
     inspection = session.get("inspection", {})
     service, payload = inspection.get("service", [{}]), inspection.get("payload", [{}])
     if "error" in result or not all((session, crash, siblings, nested, race, renewal, rollover, service_crash,
                                      delegated, worker, held, second, taken, triple, remote, retiring_nested,
-                                     restart, faults)):
+                                     restart, faults, outside)):
         return {"completed": False}
     return {
         "protected_reply": session["request"].get("reply") == "pong",
@@ -1265,9 +1380,14 @@ def expectations(result):
         # No core dump: soft and hard limit 0, so a crash leaves no image of the helper.
         "payload_dumps_no_core": bool(session["payload_core_limits"])
         and all(limit == ["0", "0"] for limit in session["payload_core_limits"]),
-        # A file in /tmp and a SysV segment a helper left exist while it runs and are gone
-        # once its epoch is reclaimed, before its ID can be handed out again.
-        "payload_leftovers_purged": session["leftovers_present"] and not siblings["leftovers_after_start"],
+        # A helper's file and SysV segment exist, in its epoch's own namespaces, while it runs;
+        # host leftovers of a payload ID are gone once a purge has run, before the ID is reused.
+        "payload_leftovers_purged": session["leftovers_present"] and siblings["staged"]["present"]
+        and not siblings["leftovers_after_start"],
+        # The epoch's own mount and IPC namespaces: its /tmp is another filesystem, and the
+        # helper's file and segment are not on the host for anyone to reach.
+        "payload_roots_private": session["namespaces"] == {"mount": True, "ipc": True, "tmp_is_its_own": True,
+                                                            "file_not_on_host": True, "segment_not_on_host": True},
         # An unremovable leftover (another ID wrote into it; deeper than the walk) is closed
         # off rather than tainting the slice: the guardian stops cleanly and the next
         # scenario's guardian starts on a clean purge.
@@ -1385,6 +1505,11 @@ def expectations(result):
         # Each fault path ends as designed: a failed listing and a directory met again run
         # the purge again, a mount placed mid-walk is laid bare, and the mount API refused
         # means no queues (ENODEV), a rerun (no /dev/mqueue) or a purge through /dev/mqueue.
+        # A payload ID outside every epoch's own mount namespace reaches no service: the
+        # connection is closed without a reply (or never accepted).
+        "outside_epoch_refused": outside["outcome"] in ("reply:0", "closed:ConnectionResetError",
+                                                         "closed:BrokenPipeError", "connect:PermissionError")
+        and outside["guardian_stop"][0] == 0,
         "purge_fault_paths": faults["faults_exit"] == 0 and len(faults["faults"]) == 6
         and all(faults["faults"].values()),
         # The manifest refuses a root linking into a user's directory, a user's own directory

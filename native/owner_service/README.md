@@ -99,10 +99,11 @@ the gate.
   path, and removes what lies beneath; removing a payload mountpoint detaches the host's
   mount too, and whatever that mount held is gone with it. A mount it cannot detach makes
   the purge run again.
-  Payload files can escape a purge only with another local user's help: inside another
-  ID's directories past the deferral limit (for as long as those directories stay), inside
-  another ID's btrfs subvolume (not entered, so a read-only snapshot cannot taint a
-  slice), or renamed behind the walk by that user while it runs. Entries are opened only
+  On the host's own roots, which helpers reach only where the epoch's private mounts do
+  not stand (a world-writable directory not listed as a purge root), payload files can
+  escape a purge only with another local user's help: inside another ID's directories past
+  the deferral limit, inside another ID's btrfs subvolume, or renamed behind the walk by
+  that user while it runs. Entries are opened only
   without crossing a mount (RESOLVE_NO_XDEV) and judged by those descriptors; removal and
   moves by name stop at a mount point (EBUSY) without reaching what it shows. So another
   user's FUSE mount (an sshfs or AppImage mount, live, dead, or with a root inode the
@@ -151,7 +152,15 @@ the gate.
 - Helpers start with umask 077, and the guardian caps the epoch's `records` cgroup at
   the per-helper process and memory limits times the record capacity, so tmpfs pages a
   killed helper left behind still count against the epoch.
-- When an epoch is reclaimed, the guardian removes the files under `/tmp`, `/var/tmp`,
+- Each epoch's service and every helper it starts run in a mount namespace and an IPC
+  namespace of their own, which the guardian makes when it starts the service: a fresh
+  tmpfs stands over `/tmp`, `/var/tmp`, `/dev/shm`, `/run/lock`, `/var/crash` and every
+  manifest purge root, and SysV IPC objects and POSIX message queues belong to the epoch
+  alone. What a helper leaves there is out of every other user's sight and reach, and goes
+  with the epoch when its last process is killed, so nothing of it can wait for the next
+  helper with the same ID. The guardian accepts a payload ID's connection only from the
+  mount namespace of the epoch that runs its slice.
+- When an epoch is reclaimed, the guardian also removes the files under `/tmp`, `/var/tmp`,
   `/dev/shm`, `/run/lock` and `/var/crash` (and any manifest `purge_roots`), the POSIX message queues
   and the SysV IPC objects that payload IDs own (as systemd's DynamicUser with RemoveIPC
   does), so a later helper with the same ID finds none of an earlier one's, beyond the
@@ -193,6 +202,15 @@ the gate.
   the guardian logs a warning for one, or for a pattern it cannot read, at startup.
 - Where the mount API is refused, `/dev/mqueue` must show the guardian's own IPC
   namespace: the purge checks only that it is the mqueue filesystem.
+- Every directory a helper can reach and write is a purge root: `/tmp`, `/var/tmp`,
+  `/dev/shm`, `/run/lock` and `/var/crash` are, any other goes into the manifest's
+  `purge_roots`. A filesystem that does not keep its writers' IDs cannot be one; keep
+  helpers out of it instead. Under WSL the drive automounts (`/mnt/c` and the others) are
+  writable by every account, and what a helper writes there shows up owned by the
+  distribution's default user: mount them with `umask=022` or tighter (the `[automount]`
+  `options` in `/etc/wsl.conf`) or turn automount off. `/mnt/wsl` and `/mnt/wslg` are
+  writable by everyone too. WSL also pipes `kernel.core_pattern` to
+  `/wsl-capture-crash`, a handler the guardian does not know.
 
 ## Install (administrator)
 
@@ -233,6 +251,16 @@ the gate.
 ```sh
 python3 tests/run_checks.py              # unprivileged suites, any Linux build host
 sudo python3 -I tests/protected_run.py "$PWD" <repository root>   # disposable host only
+```
+
+`installed_host_acceptance.py` (root, disposable host) follows the install steps above
+with the example manifest's values filled in, compares the installed files against the
+build, starts the guardian, checks the listener, the epoch's private roots and that the
+closed gate refuses a lease, reports which host requirements the host meets, and removes
+everything again:
+
+```sh
+sudo python3 -I tests/installed_host_acceptance.py "$PWD" <repository root> <client account>
 ```
 
 `protected_run.py` creates system accounts, `/sys/fs/cgroup/autocontrol-test`,

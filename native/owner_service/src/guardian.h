@@ -95,6 +95,9 @@ bool guardian_manifest_valid(const guardian_manifest *manifest);
 /* The manifest's purge roots alone (part of guardian_manifest_valid): each under directories
  * only root can change and, when it exists, a directory the purge would trust. */
 bool guardian_purge_roots_valid(const guardian_manifest *manifest);
+/* In the service's child, before it drops root: the epoch's own mount and IPC namespaces get
+ * fresh tmpfs mounts over every purge root (guardian_private_linux.c). False: do not start. */
+bool guardian_private_epoch(const guardian_manifest *manifest);
 /* After a retiring epoch's service ended: kills and removes its branch, then removes what
  * its half of the payload IDs left. The journal does not track a retiring epoch. */
 guardian_result guardian_reclaim_retired(guardian_state *state, const char *epoch, int slice);
@@ -139,7 +142,7 @@ typedef struct { int channel; no_id epoch; uint64_t generation; } guardian_targe
 /* Where a verified client goes: dropped, sent to `target`, or held by the caller until an
  * epoch can take it. */
 typedef enum { ROUTE_DROP, ROUTE_SEND, ROUTE_HOLD } guardian_route_result;
-typedef guardian_route_result (*guardian_route)(void *context, uint32_t uid, guardian_target *target);
+typedef guardian_route_result (*guardian_route)(void *context, const peer_identity *peer, guardian_target *target);
 /* As guardian_forward, but each client goes where `route` sends it; `*used` names the
  * channel that was tried, and a held connection is returned in `*held` (FORWARD_HELD). */
 guardian_forward_result guardian_forward_routed(int listener, const guardian_manifest *manifest,

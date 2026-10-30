@@ -91,12 +91,30 @@ static bool namespace_is(const peer_identity *peer, unsigned long request, uint6
 }
 
 /* An unreadable namespace (EPERM without ptrace read access) is a mismatch. */
-bool peer_in_namespaces(const peer_identity *peer, const service_namespaces *expected) {
+static bool in_namespaces(const peer_identity *peer, const service_namespaces *expected, bool mount) {
     return peer_alive(peer) &&
         namespace_is(peer, PIDFD_GET_USER_NAMESPACE, expected->device, expected->user) &&
         namespace_is(peer, PIDFD_GET_PID_NAMESPACE, expected->device, expected->pid) &&
-        namespace_is(peer, PIDFD_GET_MNT_NAMESPACE, expected->device, expected->mount) &&
+        (!mount || namespace_is(peer, PIDFD_GET_MNT_NAMESPACE, expected->device, expected->mount)) &&
         namespace_is(peer, PIDFD_GET_CGROUP_NAMESPACE, expected->device, expected->cgroup) && peer_alive(peer);
+}
+
+bool peer_in_namespaces(const peer_identity *peer, const service_namespaces *expected) {
+    return in_namespaces(peer, expected, true);
+}
+
+bool peer_in_namespaces_beside_mount(const peer_identity *peer, const service_namespaces *expected) {
+    return in_namespaces(peer, expected, false);
+}
+
+bool peer_shares_mount_namespace(const peer_identity *peer, const peer_identity *other) {
+    int number = ioctl(other->pidfd.number, PIDFD_GET_MNT_NAMESPACE, 0);
+    if (number < 0) return false;
+    owned_fd namespace = {FD_OWNED, number};
+    struct stat status;
+    bool known = fstat(number, &status) == 0;
+    return service_close_fd(&namespace) && known && peer_alive(other) &&
+        namespace_is(peer, PIDFD_GET_MNT_NAMESPACE, (uint64_t)status.st_dev, (uint64_t)status.st_ino);
 }
 
 bool peer_enable_credentials(int socket, no_error *error) {

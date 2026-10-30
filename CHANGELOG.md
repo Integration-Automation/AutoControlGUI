@@ -112,6 +112,11 @@ pidfd can be had) is watched by its pid when there is no pidfd (its slice is tai
 end it) and on a longer, still doubling allowance when the shared heartbeat could not be mapped.
 A purge child the guardian could not wait for now taints its slice, the guardian resets SIGCHLD to its
 default at startup, and a pidfd that cannot be polled falls back to the pid watch.
+Each epoch's service and helpers now run in a mount and an IPC namespace of their own, with fresh tmpfs mounts
+over every purge root, so what a helper leaves goes with its epoch; the guardian accepts a payload ID's
+connection only from the mount namespace of the epoch that runs its slice. A new root script,
+`tests/installed_host_acceptance.py`, installs the service per its README on a disposable host, checks it and
+removes it; the README now requires every helper-writable directory to be a purge root and says how under WSL.
 
 ## Unreleased: helper containment in runtime status
 
