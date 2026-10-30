@@ -67,21 +67,27 @@ the gate.
   spent epochs can retire beside the current one; a further retirement waits for a slot.
   Each slice is purged in a child process after its epoch ends and is not handed out
   again until that purge finishes; meanwhile, if no other slice is free, there is no
-  current epoch: helpers' own connections still reach their retiring epoch, and up to
-  32 other clients are held (the rest wait in the listener's backlog) until one starts.
+  current epoch: helpers' own connections still reach their retiring epoch, up to 32
+  other clients are held until one starts, and further ones are dropped.
   A payload-owned directory the purge cannot remove where it is (another ID wrote into
   it, or it lies deeper than the 64-level walk) is moved, inode-checked, into a root-only
   quarantine on the same filesystem and taken apart there 64 levels at a time: its name
   is free at once and every payload-owned file below it, tmpfs pages included, is
   released. The quarantine is made when first needed under a random name and recognised
-  by its inode, so a name someone else took first hides nothing; an emptied one is
+  by its inode, so a name someone else took first hides nothing; it is locked while its
+  purge runs, so purges of two slices leave each other's alone. An emptied one is
   removed, and only what other IDs own (out of every payload's reach) stays in one.
-  Another ID's directory at the depth bound stays put and is walked from its own top.
-  One root's purge reads at most 4,194,304 entries: one that stopped short, or had no
-  quarantine when it needed one, runs again before its slice is handed out, so a local
-  user who keeps renaming names under the walk can delay a slice but never gets a
-  leftover handed on. Payload files a payload put inside another ID's directory beyond
-  that budget or past 256 deep directories are left, with that ID's cooperation only.
+  Another ID's directory at the depth bound stays put and is walked from its own top,
+  up to 4096 of them (or what the descriptor limit leaves room for), with a log line
+  beyond. The size of what others keep under a root only makes a purge slower. Churn
+  that only a live user causes (a directory entered twice in one walk, a listing growing
+  far past its size) stops it, and it runs again, as does one that could not move a
+  payload directory into the quarantine, before its slice is handed out. A live local
+  user can therefore delay a slice. A live local user who renames another ID's
+  directory behind the walk, and a payload file inside another ID's directories past
+  that limit, can escape one purge: both need a directory that ID let the payload write
+  into, and no payload file can carry a set-user- or set-group-ID bit, so what escapes
+  is data, not an identity.
   Only an object that can be neither removed, moved nor closed off taints its slice,
   and startup purges each slice once, after the previous run's epochs are dead, so one
   stubborn leftover never stops the guardian. A helper's own connection (a nested parent
@@ -99,7 +105,8 @@ the gate.
   `subtree_memory_max`); up to four epochs run at once, so either set those or cap the
   subtree's parent. Before building the filter, the guardian refuses a manifest the service would
   refuse, or whose payload IDs are below 1000 or known to the host's user and group
-  databases. Payloads cannot use kernel keyrings. With CAP_SETUID and CAP_SETGID the
+  databases. Payloads cannot use kernel keyrings, nor set a set-user- or set-group-ID
+  bit on any file (chmod family, a creating open, mknod; openat2 answers ENOSYS). With CAP_SETUID and CAP_SETGID the
   service can still forge the UID or GID in SCM_CREDENTIALS; this project authenticates by
   pidfd, but anything trusting SCM_CREDENTIALS alone (journald's `_UID`, for example)
   should not take a service-sent value at face value.

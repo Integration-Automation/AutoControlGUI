@@ -5,6 +5,9 @@
  * Prints one JSON object of errno values (0 = the call succeeded). */
 #include "guardian.h"
 #include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <sys/stat.h>
 #include <linux/sched.h>
 #include <sched.h>
 #include <signal.h>
@@ -51,13 +54,31 @@ int main(void) {
     int clone_user = clone_outcome(syscall(SYS_clone, CLONE_NEWUSER | SIGCHLD, 0, 0, 0, 0));
     int clone3 = clone_outcome(syscall(SYS_clone3, &args, sizeof(args)));
     int keyring = outcome(syscall(SYS_keyctl, 0 /* KEYCTL_GET_KEYRING_ID */, -4 /* user keyring */, 0));
+    /* No set-ID bit by any call; ordinary modes still work. */
+    char directory[] = "/tmp/autocontrol-setid-XXXXXX";
+    if (!mkdtemp(directory)) return 1;
+    int dir = open(directory, O_RDONLY | O_DIRECTORY);
+    int plain = openat(dir, "plain", O_CREAT | O_WRONLY, 0600);
+    int chmod_plain = outcome(fchmod(plain, 0755));
+    int fchmod_setuid = outcome(fchmod(plain, 04755));
+    int fchmodat_setgid = outcome(fchmodat(dir, "plain", 02755, 0));
+    int open_setuid = outcome(openat(dir, "created", O_CREAT | O_WRONLY, 04700));
+    int mknod_setuid = outcome(mknodat(dir, "node", S_IFREG | 04700, 0));
+    close(plain);
+    unlinkat(dir, "plain", 0);
+    unlinkat(dir, "created", 0);
+    unlinkat(dir, "node", 0);
+    close(dir);
+    rmdir(directory);
     printf("{\"installed\": true, \"setresuid_root\": %d, \"setresgid_root\": %d, \"setuid_root\": %d, "
            "\"setgroups_root\": %d, \"setgroups_empty\": %d, \"unshare_user\": %d, \"clone_user\": %d, "
            "\"clone3\": %d, \"keyring\": %d, \"payload_switch\": %d, \"payload_last\": %d, "
-           "\"beyond_range\": %d}\n",
+           "\"beyond_range\": %d, \"chmod_plain\": %d, \"fchmod_setuid\": %d, \"fchmodat_setgid\": %d, "
+           "\"open_setuid\": %d, \"mknod_setuid\": %d}\n",
            setresuid_root, setresgid_root, setuid_root, setgroups_root, setgroups_empty, unshare_user, clone_user,
            clone3, keyring, payload_switch(PAYLOAD_UID, PAYLOAD_GID),
            payload_switch(PAYLOAD_UID + SERVICE_PAYLOAD_IDS - 1, PAYLOAD_GID + SERVICE_PAYLOAD_IDS - 1),
-           payload_switch(PAYLOAD_UID + SERVICE_PAYLOAD_IDS, PAYLOAD_GID + SERVICE_PAYLOAD_IDS));
+           payload_switch(PAYLOAD_UID + SERVICE_PAYLOAD_IDS, PAYLOAD_GID + SERVICE_PAYLOAD_IDS), chmod_plain,
+           fchmod_setuid, fchmodat_setgid, open_setuid, mknod_setuid);
     return 0;
 }

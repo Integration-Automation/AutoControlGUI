@@ -398,10 +398,16 @@ static loop_result retry_later(restart_plan *plan) {
     return LOOP_STOPPED;
 }
 
-static int poll_timeout(const restart_plan *plan) {
-    if (!plan->retry_at) return -1;
+/* The retry's deadline; and while a slice waits for a purge to run again with no purge child
+ * to wake the loop (one ran here, a fork having failed), a second. */
+static int poll_timeout(const guardian_state *state, const restart_plan *plan) {
+    int timeout = -1;
+    for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s)
+        if (state->repurge[s] && state->purging[s] < 0 && !state->tainted[s]) timeout = 1000;
+    if (!plan->retry_at) return timeout;
     uint64_t now = monotonic_ns();
-    return now >= plan->retry_at ? 0 : (int)((plan->retry_at - now + 999999) / 1000000);
+    int retry = now >= plan->retry_at ? 0 : (int)((plan->retry_at - now + 999999) / 1000000);
+    return timeout >= 0 && timeout < retry ? timeout : retry;
 }
 
 /* Kills and reclaims the current epoch, whatever ended it. Its slice is purged only when
@@ -445,11 +451,18 @@ static bool any_retiring(const running_set *set) {
 
 static const service_policy *const service_manifest_for_routing = &service_manifest;
 
+/* Clients accepted while no current epoch ran. */
+#define GUARDIAN_HELD_LIMIT 32
+typedef struct { int connections[GUARDIAN_HELD_LIMIT]; size_t count; } held_clients;
+typedef struct { const running_set *set; const held_clients *held; } routing;
+
 /* A helper's own connection (a nested parent opening children) goes to the epoch that runs
  * its slice, retiring or current: only that service knows the parent's record. Anyone else
- * goes to the current epoch, and is held while none runs. */
+ * goes to the current epoch, is held while none runs, and is dropped once the held clients
+ * are full: the listener stays read for helpers of retiring epochs. */
 static guardian_route_result route_client(void *context, uint32_t uid, guardian_target *target) {
-    const running_set *set = context;
+    const routing *route = context;
+    const running_set *set = route->set;
     const running_epoch *chosen = &set->current;
     const service_policy *service = service_manifest_for_routing;
     for (size_t i = 0; service && i < service->policy_count; ++i) {
@@ -460,14 +473,10 @@ static guardian_route_result route_client(void *context, uint32_t uid, guardian_
             if (running_live(&set->retiring[r]) && set->retiring[r].slice == slice) chosen = &set->retiring[r];
         break;
     }
-    if (!running_live(chosen)) return ROUTE_HOLD;
+    if (!running_live(chosen)) return route->held->count < GUARDIAN_HELD_LIMIT ? ROUTE_HOLD : ROUTE_DROP;
     *target = (guardian_target){chosen->channel, chosen->grant.epoch, chosen->grant.generation};
     return ROUTE_SEND;
 }
-
-/* Clients accepted while no current epoch ran; the listener is not read while it is full. */
-#define GUARDIAN_HELD_LIMIT 32
-typedef struct { int connections[GUARDIAN_HELD_LIMIT]; size_t count; } held_clients;
 
 static void release_held(held_clients *held, const running_epoch *current) {
     for (size_t i = 0; i < held->count; ++i) {
@@ -481,8 +490,9 @@ static void release_held(held_clients *held, const running_epoch *current) {
 /* Accepts one client. True when the current epoch's channel failed. */
 static bool forward_client(const guardian_state *state, int listener, running_set *set, held_clients *held) {
     int used = -1, connection = -1;
-    guardian_forward_result forwarded = guardian_forward_routed(listener, state->manifest, route_client, set, &used,
-                                                                &connection);
+    routing route = {set, held};
+    guardian_forward_result forwarded = guardian_forward_routed(listener, state->manifest, route_client, &route,
+                                                                &used, &connection);
     if (forwarded == FORWARD_HELD) held->connections[held->count++] = connection;
     return forwarded == FORWARD_CHANNEL_FAILED && running_live(&set->current) && used == set->current.channel;
 }
@@ -535,7 +545,7 @@ static loop_result supervise_loop(guardian_state *state, int signals, int listen
     for (;;) {
         bool live = running_live(&set->current);
         if (live && run->held.count) release_held(&run->held, &set->current);
-        bool accepting = live || (any_retiring(set) && run->held.count < GUARDIAN_HELD_LIMIT);
+        bool accepting = live || any_retiring(set);
         struct pollfd events[EVENT_COUNT] = {
             [EVENT_SIGNALS] = {.fd = signals, .events = POLLIN},
             [EVENT_LISTENER] = {.fd = accepting ? listener : -1, .events = POLLIN},
@@ -546,7 +556,7 @@ static loop_result supervise_loop(guardian_state *state, int signals, int listen
                 .fd = running_live(&set->retiring[i]) ? set->retiring[i].service.pidfd.number : -1, .events = POLLIN};
         for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s)
             events[EVENT_PURGE + s] = (struct pollfd){.fd = state->purging[s], .events = POLLIN};
-        if (poll(events, EVENT_COUNT, poll_timeout(&run->plan)) < 0) {
+        if (poll(events, EVENT_COUNT, poll_timeout(state, &run->plan)) < 0) {
             if (errno == EINTR) continue;
             return LOOP_REFUSED;
         }

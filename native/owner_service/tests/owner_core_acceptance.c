@@ -502,13 +502,14 @@ static void leave_leftovers(char *result, size_t size) {
     /* Deeper than the purge walks: it must close the chain off instead. */
     char deeper[] = "/dev/shm/autocontrol-deeper-XXXXXX";
     level = mkdtemp(deeper) ? open(deeper, O_RDONLY | O_DIRECTORY) : -1;
-    for (int i = 0; level >= 0 && i < 80; ++i) {
+    for (int i = 0; level >= 0 && i < 300; ++i) {
         int next = mkdirat(level, "d", 0700) == 0 ? openat(level, "d", O_RDONLY | O_DIRECTORY) : -1;
         close(level);
         level = next;
     }
     if (level >= 0) {
-        /* Eight MiB of tmpfs at the bottom: freed only if the purge reaches it. */
+        /* Eight MiB of tmpfs 300 levels down: freed only if the purge takes the whole chain
+         * apart, which needs several quarantine passes. */
         int big = openat(level, "pinned", O_CREAT | O_WRONLY, 0600);
         static char block[1 << 16];
         for (int i = 0; big >= 0 && i < 128; ++i) if (write(big, block, sizeof(block)) < 0) break;

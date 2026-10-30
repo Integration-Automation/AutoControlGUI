@@ -6,12 +6,16 @@
  *  - setresuid / setresgid accept only the service's IDs and the manifest's payload ranges;
  *  - setgroups accepts only an empty list (the filter cannot read a list's contents);
  *  - keyctl, add_key and request_key fail: per-user keyrings outlive the IDs' processes;
+ *  - no file gets a set-user-ID or set-group-ID bit (chmod family, a creating open, mknod):
+ *    a payload file the purge missed could otherwise hand a payload ID to anyone who runs
+ *    it, and openat2, whose mode a filter cannot read, answers ENOSYS;
  *  - the other set*id calls fail;
  *  - no user namespace can be created (a mapping written with CAP_SETUID would reach any
  *    account), so unshare / clone with CLONE_NEWUSER fail and clone3, whose flags a
  *    filter cannot read, answers ENOSYS, which glibc meets by falling back to clone. */
 #include "guardian.h"
 #include <errno.h>
+#include <fcntl.h>
 #include <linux/audit.h>
 #include <linux/filter.h>
 #include <linux/seccomp.h>
@@ -52,6 +56,41 @@ static void deny(program *filter, long number, int error) {
 }
 
 /* Fails `number` when its first argument carries CLONE_NEWUSER. */
+#ifndef SYS_fchmodat2
+#define SYS_fchmodat2 452
+#endif
+#define SET_ID_BITS 06000u
+#define CREATING ((uint32_t)(O_CREAT | (O_TMPFILE & ~O_DIRECTORY)))
+
+/* Fails `number` with EPERM when argument `mode` carries a set-ID bit; with `flags` at 0 or
+ * above, only while that argument asks to create a file. */
+static void deny_set_id_mode(program *filter, long number, int mode, int flags) {
+    emit(filter, (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, (uint32_t)number, 0, flags < 0 ? 4 : 6));
+    if (flags >= 0) {
+        emit(filter, (struct sock_filter)BPF_STMT(BPF_LD | BPF_W | BPF_ABS, ARGUMENT(flags)));
+        emit(filter, (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, CREATING, 0, 3));
+    }
+    emit(filter, (struct sock_filter)BPF_STMT(BPF_LD | BPF_W | BPF_ABS, ARGUMENT(mode)));
+    emit(filter, (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, SET_ID_BITS, 0, 1));
+    emit(filter, (struct sock_filter)BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM));
+    emit(filter, (struct sock_filter)BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+}
+
+static void deny_set_id_files(program *filter) {
+#ifdef SYS_chmod
+    deny_set_id_mode(filter, SYS_chmod, 1, -1);
+    deny_set_id_mode(filter, SYS_creat, 1, -1);
+    deny_set_id_mode(filter, SYS_open, 2, 1);
+    deny_set_id_mode(filter, SYS_mknod, 1, -1);
+#endif
+    deny_set_id_mode(filter, SYS_fchmod, 1, -1);
+    deny_set_id_mode(filter, SYS_fchmodat, 2, -1);
+    deny_set_id_mode(filter, SYS_fchmodat2, 2, -1);
+    deny_set_id_mode(filter, SYS_openat, 3, 2);
+    deny_set_id_mode(filter, SYS_mknodat, 2, -1);
+    deny(filter, SYS_openat2, ENOSYS);
+}
+
 static void deny_new_user(program *filter, long number) {
     emit(filter, (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, (uint32_t)number, 0, 4));
     emit(filter, (struct sock_filter)BPF_STMT(BPF_LD | BPF_W | BPF_ABS, ARGUMENT(0)));
@@ -121,6 +160,7 @@ bool guardian_confine_identities(const service_policy *policy, uint32_t service_
     deny(&filter, SYS_keyctl, EPERM);
     deny(&filter, SYS_add_key, EPERM);
     deny(&filter, SYS_request_key, EPERM);
+    deny_set_id_files(&filter);
     deny_new_user(&filter, SYS_clone);
     deny_new_user(&filter, SYS_unshare);
     empty_groups_only(&filter);

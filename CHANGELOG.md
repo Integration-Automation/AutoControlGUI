@@ -70,6 +70,9 @@ and memory limits before delegation; a helper's own connection is routed to the 
 failed epoch start is retried with backoff instead of stopping the guardian.
 The quarantine is now made under a random name and recognised by inode, a purge that stops short is run again
 before its slice is reused, and retries back off from the main loop, which keeps answering a stop request.
+A purge now stops short only on churn a live user causes, never on the size of what others keep; every
+quarantine pass reads from the start; quarantines are locked while their purge runs; and the service filter,
+which payloads inherit, refuses set-user- and set-group-ID bits on files.
 
 ## Unreleased: helper containment in runtime status
 

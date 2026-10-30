@@ -13,6 +13,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 
 SOURCE, REPOSITORY = sys.argv[1], sys.argv[2]
@@ -322,7 +323,7 @@ def scenario_session(steps):
     steps["leftovers"] = read_json(holder)
     left = steps["leftovers"].get("reply") or ["", -1, "", "", ""]
     steps["leftovers_present"] = os.path.exists(left[0]) and _shm_exists(left[1]) and os.path.exists(
-        left[2] + "/d" * 40 + "/bottom") and os.path.isdir(left[3] + "/d" * 80)
+        left[2] + "/d" * 40 + "/bottom") and os.path.isfile(left[3] + "/d" * 300 + "/pinned")
     if os.path.isdir(left[4]):
         open(left[4] + "/foreign", "w").close()  # Another ID wrote into the helper's directory.
     pids = steps["inspection"]["payload_pids"]
@@ -361,6 +362,15 @@ def scenario_siblings(steps, left=None):
                 handle.write("payload")
             os.chown(hidden, PAYLOAD_BASE, PAYLOAD_BASE)
             squats.append(squat)
+    # Another user's static tree, larger than the deferral room at the depth bound: it makes
+    # the purge slower and log, never incomplete, so every slice is still handed out.
+    static = tempfile.mkdtemp(prefix="autocontrol-static-", dir="/var/tmp")
+    chain = os.path.join(static, *(["s"] * 62))  # Its 5000 children sit at the depth bound.
+    os.makedirs(chain)
+    for index in range(5000):
+        os.mkdir(os.path.join(chain, f"w{index}"))
+    for directory, subdirs, files in os.walk(static):
+        os.chown(directory, 65534, 65534)
     guardian = start_guardian()
     steps["squats"] = squats
     steps["squatted_payload_files_left"] = [s for s in squats if os.path.lexists(os.path.join(s, "hidden"))]
@@ -368,7 +378,7 @@ def scenario_siblings(steps, left=None):
         shutil.rmtree(squat, ignore_errors=True)
     left = left or ["", -1, "", "", ""]
     steps["leftovers_after_start"] = os.path.exists(left[0]) or _shm_exists(left[1]) or os.path.exists(left[2])
-    # The 80-level chain (8 MiB at its bottom) and the directory another ID wrote into: their
+    # The 300-level chain (8 MiB at its bottom) and the directory another ID wrote into: their
     # names are free and nothing a payload ID owns is left anywhere under the purge roots.
     steps["names_freed"] = not os.path.lexists(left[3]) and not os.path.lexists(left[4])
     steps["payload_owned_left"] = payload_owned_anywhere()
@@ -393,6 +403,8 @@ def scenario_siblings(steps, left=None):
     steps["second_escaped_gone"] = isinstance(second_escaped, int) and not pid_alive(second_escaped)
     steps["guardian_stop"] = stop_guardian(guardian)
     steps["epochs_after_stop"] = epochs()
+    steps["static_tree_logged"] = "unwalked" in steps["guardian_stop"][1]
+    shutil.rmtree(static, ignore_errors=True)
 
 
 def scenario_nested(steps):
@@ -1018,6 +1030,7 @@ def expectations(result):
         # taken apart there: names free, nothing payload-owned left, memory released.
         "unremovable_leftovers_released": siblings["names_freed"] and siblings["payload_owned_left"] == []
         and bool(siblings["squats"]) and siblings["squatted_payload_files_left"] == []
+        and siblings["static_tree_logged"]
         and session["guardian_stop"][0] == 0 and siblings["guardian_stop"][0] == 0,
         # epoch-N itself is bounded before it is delegated: nothing beside `records` escapes.
         "epoch_bounded": session["epoch_bounds"] == {"cgroup.max.depth": "40", "cgroup.max.descendants": "4096",
@@ -1137,7 +1150,8 @@ def expectations(result):
             "installed": True, "setresuid_root": 1, "setresgid_root": 1, "setuid_root": 1, "setgroups_root": 1,
             "setgroups_empty": 0, "unshare_user": 1, "clone_user": 1, "clone3": 38, "keyring": 1,
             "payload_switch": 0,
-            "payload_last": 0, "beyond_range": 1},
+            "payload_last": 0, "beyond_range": 1, "chmod_plain": 0, "fchmod_setuid": 1, "fchmodat_setgid": 1,
+            "open_setuid": 1, "mknod_setuid": 1},
         "nothing_left": not result["cleanup"]["leftovers"] and not result["cleanup"]["subtree_exists"]
         and not os.path.exists(OUTER) and not os.path.exists(STATE2)
         and not result["cleanup"]["accounts_present"] and not result["cleanup"]["groups_present"]

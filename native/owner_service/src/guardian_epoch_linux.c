@@ -304,13 +304,20 @@ static const char LIMITED[] = "+pids +memory";
 /* Written by root to `records` before it is delegated: the service cannot change them.
  * They hold every helper of the epoch together, so memory a killed helper left charged
  * (tmpfs pages) adds up against them rather than escaping every limit. */
+/* pids.max takes at most the kernel's PID_MAX_LIMIT; above it, "max" means the same. */
+static bool write_pids(int directory, unsigned long long value) {
+    char text[24];
+    if (value > (1ULL << 22)) snprintf(text, sizeof(text), "max");
+    else snprintf(text, sizeof(text), "%llu", value);
+    return write_control(directory, "pids.max", text);
+}
+
 static int limit_records(int records, const service_policy *service) {
     /* A compromised service could otherwise nest cgroups past what reclaim removes. */
     if (!write_control(records, "cgroup.max.depth", "32")) return errno;
     if (!service) return 0;
     char value[24];
-    snprintf(value, sizeof(value), "%llu", (unsigned long long)(service->record_pids_max * service->record_capacity));
-    if (!write_control(records, "pids.max", value)) return errno;
+    if (!write_pids(records, (unsigned long long)(service->record_pids_max * service->record_capacity))) return errno;
     snprintf(value, sizeof(value), "%llu",
              (unsigned long long)(service->record_memory_max * service->record_capacity));
     if (!write_control(records, "memory.max", value)) return errno;
@@ -326,9 +333,8 @@ static int limit_epoch(int epoch, const service_policy *service) {
         return errno;
     if (!service) return 0;
     char value[24];
-    snprintf(value, sizeof(value), "%llu",
-             (unsigned long long)(service->record_pids_max * service->record_capacity + 256));
-    if (!write_control(epoch, "pids.max", value)) return errno;
+    if (!write_pids(epoch, (unsigned long long)(service->record_pids_max * service->record_capacity + 256)))
+        return errno;
     snprintf(value, sizeof(value), "%llu",
              (unsigned long long)(service->record_memory_max * service->record_capacity + (512ULL << 20)));
     if (!write_control(epoch, "memory.max", value)) return errno;
@@ -341,10 +347,8 @@ static int create_branches(guardian_state *state) {
     /* ENOENT here means the subtree's parent has not enabled pids and memory. */
     if (!write_control(state->subtree, "cgroup.subtree_control", LIMITED)) return errno;
     char cap[24];
-    if (state->manifest->subtree_pids_max) {
-        snprintf(cap, sizeof(cap), "%llu", (unsigned long long)state->manifest->subtree_pids_max);
-        if (!write_control(state->subtree, "pids.max", cap)) return errno;
-    }
+    if (state->manifest->subtree_pids_max &&
+        !write_pids(state->subtree, (unsigned long long)state->manifest->subtree_pids_max)) return errno;
     if (state->manifest->subtree_memory_max) {
         snprintf(cap, sizeof(cap), "%llu", (unsigned long long)state->manifest->subtree_memory_max);
         if (!write_control(state->subtree, "memory.max", cap)) return errno;
