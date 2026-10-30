@@ -103,8 +103,8 @@ requires every directory payload IDs can write to be a purge root.
 The core_pattern warning now judges the handler by the base name of its path and also covers sockets and an
 unreadable pattern; a purge root that exists but is not trusted is logged, and one that exists but cannot be
 opened makes the purge run again. A manifest purge root must now sit under real directories only root can
-write (sticky ones excluded), or the guardian refuses the manifest; what every root resolves to is checked
-the same way at each purge, and a dangling-link root counts as absent.
+write, sticky or not, or the guardian refuses the manifest; what every root resolves to is checked the same
+way, at load and at each purge, and a dangling-link root counts as absent.
 
 ## Unreleased: helper containment in runtime status
 

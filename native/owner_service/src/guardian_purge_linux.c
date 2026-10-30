@@ -719,8 +719,8 @@ guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest
         struct stat exists;
         if (roots[i] >= 0 || !strcmp(names[i], MQUEUE_ROOT)) continue;
         /* Absent: nothing to purge. Not trusted: skipped, said. Anything else: run again. */
-        bool absent = lstat(names[i], &exists) != 0 ? errno == ENOENT || errno == ENOTDIR :
-            S_ISLNK(exists.st_mode) && (error == ENOENT || error == ENOTDIR); /* A dangling link. */
+        bool absent = !untrusted && (lstat(names[i], &exists) != 0 ? errno == ENOENT || errno == ENOTDIR :
+            S_ISLNK(exists.st_mode) && (error == ENOENT || error == ENOTDIR)); /* A dangling link. */
         if (absent) continue;
         fprintf(stderr, "autocontrol-owner-guardian: purge skipped %s: %s\n", names[i],
                 untrusted ? "not root's, writable without the sticky bit, or under others' directories" :

@@ -69,6 +69,7 @@ def main():
             "service_e2e": (["service_e2e.c", *SHARED], None, None),
             "guardian_journal_acceptance": (["guardian_journal_acceptance.c", "guardian_journal.c"], [], 0),
             "purge_siphash_check": (["purge_siphash_check.c"], [], 0),
+            "path_anchored_check": (["path_anchored_check.c"], [], 0),
             "guardian_acceptance": (["guardian_acceptance.c", "guardian_epoch_linux.c", "guardian_journal.c",
                                      "guardian_purge_linux.c"], [], 0),
             "guardian_forward_acceptance": (["guardian_forward_acceptance.c", "guardian_forward_linux.c",

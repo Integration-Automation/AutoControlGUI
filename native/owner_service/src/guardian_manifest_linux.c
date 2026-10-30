@@ -5,6 +5,7 @@
 #include "guardian.h"
 #include <sys/stat.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <grp.h>
@@ -59,13 +60,18 @@ bool guardian_manifest_valid(const guardian_manifest *manifest) {
         in_any_range(service, manifest->service_uid, manifest->service_gid)) return false;
     for (size_t i = 0; i < manifest->client_count; ++i)
         if (!client_valid(service, &manifest->clients[i])) return false;
-    for (size_t i = 0; i < manifest->purge_root_count; ++i)
-        if (!manifest->purge_roots[i] || manifest->purge_roots[i][0] != '/') return false;
-        else if (!guardian_path_anchored(manifest->purge_roots[i])) {
+    for (size_t i = 0; i < manifest->purge_root_count; ++i) {
+        const char *path = manifest->purge_roots[i];
+        if (!path || path[0] != '/') return false;
+        /* The path as written, and what an existing one resolves to (a link into a user's
+         * directory would be skipped at every purge). */
+        char resolved[4096];
+        if (!guardian_path_anchored(path) || (realpath(path, resolved) && !guardian_path_anchored(resolved))) {
             fprintf(stderr, "autocontrol-owner-guardian: purge root %s is not under directories only root can "
-                            "change (real, root's, writable by no one else)\n", manifest->purge_roots[i]);
+                            "change (real, root's, writable by no one else)\n", path);
             return false;
         }
+    }
     for (size_t i = 0; i < service->policy_count; ++i)
         if (!unallocated(service->policies[i].payload_uid, service->policies[i].payload_gid)) return false;
     return true;

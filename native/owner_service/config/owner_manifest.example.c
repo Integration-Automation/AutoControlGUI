@@ -2,7 +2,8 @@
 /* Owner service manifest template. Copy to owner_manifest.c, replace every value
  * marked EDIT, review it, and build with build.sh. The service and the guardian are
  * compiled against this file: nothing in it can be changed by an argument, an
- * environment value or a request at run time. Keep the compiled copy root-owned. */
+ * environment value or a request at run time. Keep the compiled copy root-owned. Keep the
+ * _GNU_SOURCE line above first: guardian.h uses POSIX calls it declares. */
 #include "guardian.h"
 
 /* EDIT: accounts. Guardian is root. The service account runs the service. One client

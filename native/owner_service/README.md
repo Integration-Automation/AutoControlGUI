@@ -131,7 +131,9 @@ the gate.
   A manifest purge root must sit under real directories that exist when the guardian
   starts, are root's and are writable by no one else (sticky ones included: others may
   create a missing name there); the guardian refuses the manifest otherwise, naming the
-  root, and checks again what each root resolves to at every purge.
+  root, and checks again what each root resolves to at every purge. A world-writable
+  mount below a sticky directory (a 1777 mount at `/tmp/foo`, say) is therefore
+  unsupported: the `/tmp` walk does not enter it and it cannot be listed.
   Every directory payload IDs can write must be a purge root: the defaults are `/tmp`,
   `/var/tmp`, `/dev/shm`, `/run/lock` and `/var/crash`, and the manifest lists any other
   (`purge_roots`, any other world-writable directory) and caps every running epoch together (`subtree_pids_max`,
