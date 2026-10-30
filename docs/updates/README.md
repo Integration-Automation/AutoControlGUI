@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261030-22 | 2026-10-30 | Know directories by file handle, skip ones met again, and refuse io_uring | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-21 | 2026-10-30 | Read every quarantine pass from the start, stop purges only on churn, and refuse set-ID bits | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-20 | 2026-10-30 | Recognise the quarantine by inode, rerun short purges, and retry starts from the main loop | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-19 | 2026-10-30 | Quarantine stubborn leftovers, bound epoch-N, and route helpers to their own epoch | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |

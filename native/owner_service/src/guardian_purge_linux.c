@@ -17,12 +17,15 @@
  * PURGE_DEPTH levels at a time; what other IDs own is all that may stay there, out of every
  * payload's reach, and an emptied quarantine is removed.
  *
- * The size of what others keep under a root only makes a purge slower. What stops one short
- * is churn that only a live user renaming or creating under the walk causes: a directory
- * entered twice in one walk, or a listing growing far past its size when opened. A purge that
- * met churn, or could not move a payload directory into the quarantine, reports itself
- * incomplete and runs again before its slice is handed out. Only an object that can be
- * neither removed, moved nor closed off makes it unclean. */
+ * Each walk enters a directory once: one met again (renamed behind the walk, a bind mount, a
+ * directory this purge just moved into the quarantine) is skipped, its identity being the
+ * inode number together with its file handle, which carries the inode generation, so a
+ * reused inode number is never mistaken for it. The size of what others keep under a root
+ * only makes a purge slower. What stops one short is churn only a live user causes, a listing
+ * growing far past its size when opened; a purge that met it, or could not move a payload
+ * directory into the quarantine, reports itself incomplete and runs again before its slice
+ * is handed out. Only an object that can be neither removed, moved nor closed off makes it
+ * unclean. */
 #include "guardian.h"
 #include <dirent.h>
 #include <errno.h>
@@ -49,11 +52,12 @@
 #define QUARANTINE_PREFIX ".autocontrol-owner-quarantine"
 #define QUARANTINE_PASSES 4096      /* Each pass takes PURGE_DEPTH levels off the deepest chain. */
 #define DEFERRED_LIMIT 4096         /* Other IDs' directories at the depth bound, walked from their own top. */
-#define SEEN_SLOTS_MAX (1UL << 22)  /* Directories one walk remembers, to notice one coming round again. */
+#define SEEN_SLOTS_MAX (1UL << 21)  /* Directories one walk remembers, to enter each once. */
 #define LISTING_SLACK (1UL << 20)   /* Entries a listing may grow by while it is read. */
 
-/* Directories entered in the current walk. A slot is empty while its generation is 0. */
-typedef struct { dev_t device; ino_t inode; unsigned generation; } seen_slot;
+/* Directories entered in the current walk, by a 64-bit digest of their identity. A slot is
+ * empty while its generation is 0. */
+typedef struct { uint64_t key; unsigned generation; } seen_slot;
 typedef struct { seen_slot *slots; size_t capacity, used; unsigned generation; bool untracked; } seen_set;
 typedef enum { SEEN_NEW, SEEN_AGAIN, SEEN_UNTRACKED } seen_result;
 
@@ -71,6 +75,7 @@ typedef struct {
     size_t deferred_count, deferred_limit;
     bool overflow_logged;
     seen_set seen;
+    unsigned long revisits;       /* Directories met again and skipped. */
 } purge_scope;
 
 /* `slice` below SERVICE_PAYLOAD_SLICES is one epoch's slice of every user-ID range; -1 all. */
@@ -101,9 +106,29 @@ static void churn(purge_scope *scope, const char *what) {
     scope->complete = false;
 }
 
-static size_t seen_index(const seen_set *set, const struct stat *status) {
-    uint64_t mixed = ((uint64_t)status->st_ino * 0x9E3779B97F4A7C15ULL) ^ (uint64_t)status->st_dev;
-    return (size_t)(mixed ^ (mixed >> 29)) & (set->capacity - 1);
+static uint64_t mix(uint64_t hash, const void *bytes, size_t length) {
+    const unsigned char *byte = bytes;
+    for (size_t i = 0; i < length; ++i) hash = (hash ^ byte[i]) * 0x100000001B3ULL;
+    return hash;
+}
+
+/* The opened directory's identity: device, inode number and, where the filesystem has one,
+ * its file handle (inode generation included). Never 0. */
+static uint64_t identity_of(int directory, const struct stat *status) {
+    uint64_t hash = mix(0xCBF29CE484222325ULL, &status->st_dev, sizeof(status->st_dev));
+    hash = mix(hash, &status->st_ino, sizeof(status->st_ino));
+    struct { struct file_handle header; unsigned char bytes[MAX_HANDLE_SZ]; } handle;
+    handle.header.handle_bytes = MAX_HANDLE_SZ;
+    int mount;
+    if (name_to_handle_at(directory, "", &handle.header, &mount, AT_EMPTY_PATH) == 0) {
+        hash = mix(hash, &handle.header.handle_type, sizeof(handle.header.handle_type));
+        hash = mix(hash, handle.header.f_handle, handle.header.handle_bytes);
+    }
+    return hash ? hash : 1;
+}
+
+static size_t seen_index(const seen_set *set, uint64_t key) {
+    return (size_t)(key ^ (key >> 29)) & (set->capacity - 1);
 }
 
 /* Grows the table, keeping this walk's entries only. False when it cannot grow. */
@@ -114,8 +139,7 @@ static bool seen_grow(seen_set *set) {
     if (!grown.slots) return false;
     for (size_t i = 0; i < set->capacity; ++i) {
         if (set->slots[i].generation != set->generation) continue;
-        struct stat key = {.st_dev = set->slots[i].device, .st_ino = set->slots[i].inode};
-        size_t at = seen_index(&grown, &key);
+        size_t at = seen_index(&grown, set->slots[i].key);
         while (grown.slots[at].generation) at = (at + 1) & (capacity - 1);
         grown.slots[at] = set->slots[i];
         ++grown.used;
@@ -126,21 +150,21 @@ static bool seen_grow(seen_set *set) {
 }
 
 /* Remembers a directory entered in this walk; AGAIN when it was entered before. */
-static seen_result remember(seen_set *set, const struct stat *status) {
+static seen_result remember(seen_set *set, uint64_t key) {
     if (set->untracked) return SEEN_UNTRACKED;
     if ((set->used + 1) * 2 > set->capacity && !seen_grow(set) && (set->used + 1) * 10 > set->capacity * 9) {
         fprintf(stderr, "autocontrol-owner-guardian: purge walks on without noticing repeats\n");
         set->untracked = true;
         return SEEN_UNTRACKED;
     }
-    size_t at = seen_index(set, status);
+    size_t at = seen_index(set, key);
     for (; set->slots[at].generation; at = (at + 1) & (set->capacity - 1)) {
-        if (set->slots[at].device != status->st_dev || set->slots[at].inode != status->st_ino) continue;
+        if (set->slots[at].key != key) continue;
         if (set->slots[at].generation == set->generation) return SEEN_AGAIN;
         set->slots[at].generation = set->generation;
         return SEEN_NEW;
     }
-    set->slots[at] = (seen_slot){status->st_dev, status->st_ino, set->generation};
+    set->slots[at] = (seen_slot){key, set->generation};
     ++set->used;
     return SEEN_NEW;
 }
@@ -279,6 +303,8 @@ static void at_depth_bound(purge_scope *scope, int directory, const char *name, 
         scope->deferred[scope->deferred_count++] = opened;
         return;
     }
+    /* With a stable listing order the same ones overflow every time: what a payload put in
+     * them stays as long as they do. */
     close(opened);
     /* Payload files there were put inside another ID's directory, with that ID's leave. */
     if (!scope->overflow_logged)
@@ -310,9 +336,9 @@ static void visit(purge_scope *scope, walk *state, dev_t device, bool root_walk,
     bool owned = payload_uid(scope, status.st_uid);
     bool earlier = root_walk && at == 0 && earlier_quarantine(&status, name);
     if (earlier && flock(child, LOCK_EX | LOCK_NB) != 0) { close(child); return; } /* A running purge's. */
-    if (remember(&scope->seen, &status) == SEEN_AGAIN) {
-        close(child);
-        churn(scope, "a directory came round again");
+    if (remember(&scope->seen, identity_of(child, &status)) == SEEN_AGAIN) {
+        close(child); /* Walked already in this walk; one moved here by this purge, next pass. */
+        ++scope->revisits;
         return;
     }
     if (state->depth == PURGE_DEPTH) { at_depth_bound(scope, directory, name, &status, owned, child); return; }
@@ -425,9 +451,10 @@ static void purge_ipc(purge_scope *scope, const char *table, int kind) {
 
 /* Deferred directories each hold a descriptor: as many as the descriptor limit leaves room
  * for, after raising it as far as allowed. */
-static size_t deferred_room(void) {
+static size_t deferred_room(struct rlimit *before) {
     struct rlimit files;
     if (getrlimit(RLIMIT_NOFILE, &files) != 0) return 0;
+    *before = files;
     if (files.rlim_cur < files.rlim_max) {
         files.rlim_cur = files.rlim_max;
         if (setrlimit(RLIMIT_NOFILE, &files) != 0) getrlimit(RLIMIT_NOFILE, &files);
@@ -443,7 +470,8 @@ guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest
     if (!service) return PURGE_CLEAN;
     purge_scope scope = {.service = service, .slice = slice, .clean = true, .complete = true, .root = -1,
                          .quarantine = -1};
-    scope.deferred_limit = deferred_room();
+    struct rlimit before = {0, 0};
+    scope.deferred_limit = deferred_room(&before);
     scope.deferred = scope.deferred_limit ? calloc(scope.deferred_limit, sizeof(int)) : NULL;
     if (!scope.deferred) scope.deferred_limit = 0;
     for (size_t i = 0; i < sizeof(default_roots) / sizeof(default_roots[0]); ++i) purge_tree(&scope, default_roots[i]);
@@ -453,5 +481,7 @@ guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest
     purge_ipc(&scope, "/proc/sysvipc/sem", 2);
     free(scope.deferred);
     free(scope.seen.slots);
+    /* The startup purge runs in the guardian: what it launches later keeps the usual limit. */
+    if (before.rlim_max) setrlimit(RLIMIT_NOFILE, &before);
     return !scope.clean ? PURGE_UNCLEAN : scope.complete ? PURGE_CLEAN : PURGE_INCOMPLETE;
 }

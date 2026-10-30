@@ -8,7 +8,8 @@
  *  - keyctl, add_key and request_key fail: per-user keyrings outlive the IDs' processes;
  *  - no file gets a set-user-ID or set-group-ID bit (chmod family, a creating open, mknod):
  *    a payload file the purge missed could otherwise hand a payload ID to anyone who runs
- *    it, and openat2, whose mode a filter cannot read, answers ENOSYS;
+ *    it; openat2, whose mode a filter cannot read, and io_uring, whose operations never pass
+ *    a filter, answer ENOSYS;
  *  - the other set*id calls fail;
  *  - no user namespace can be created (a mapping written with CAP_SETUID would reach any
  *    account), so unshare / clone with CLONE_NEWUSER fail and clone3, whose flags a
@@ -59,6 +60,12 @@ static void deny(program *filter, long number, int error) {
 #ifndef SYS_fchmodat2
 #define SYS_fchmodat2 452
 #endif
+#ifndef SYS_openat2
+#define SYS_openat2 437
+#endif
+#ifndef SYS_io_uring_setup
+#define SYS_io_uring_setup 425
+#endif
 #define SET_ID_BITS 06000u
 #define CREATING ((uint32_t)(O_CREAT | (O_TMPFILE & ~O_DIRECTORY)))
 
@@ -89,6 +96,7 @@ static void deny_set_id_files(program *filter) {
     deny_set_id_mode(filter, SYS_openat, 3, 2);
     deny_set_id_mode(filter, SYS_mknodat, 2, -1);
     deny(filter, SYS_openat2, ENOSYS);
+    deny(filter, SYS_io_uring_setup, ENOSYS);
 }
 
 static void deny_new_user(program *filter, long number) {

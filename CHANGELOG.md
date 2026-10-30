@@ -73,6 +73,8 @@ before its slice is reused, and retries back off from the main loop, which keeps
 A purge now stops short only on churn a live user causes, never on the size of what others keep; every
 quarantine pass reads from the start; quarantines are locked while their purge runs; and the service filter,
 which payloads inherit, refuses set-user- and set-group-ID bits on files.
+Directories are now known by inode number and file handle and a directory met again is skipped rather than
+stopping the purge; the filter also refuses io_uring.
 
 ## Unreleased: helper containment in runtime status
 

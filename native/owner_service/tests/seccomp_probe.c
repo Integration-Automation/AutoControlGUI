@@ -64,6 +64,14 @@ int main(void) {
     int fchmodat_setgid = outcome(fchmodat(dir, "plain", 02755, 0));
     int open_setuid = outcome(openat(dir, "created", O_CREAT | O_WRONLY, 04700));
     int mknod_setuid = outcome(mknodat(dir, "node", S_IFREG | 04700, 0));
+    int fchmodat2_setuid = outcome(syscall(452 /* fchmodat2 */, dir, "plain", 04755, 0));
+    int tmpfile_setuid = outcome(openat(dir, ".", O_TMPFILE | O_WRONLY, 04700));
+    struct { unsigned long long flags, mode, resolve; } how = {O_CREAT | O_WRONLY, 0600, 0};
+    int openat2_any = outcome(syscall(437 /* openat2 */, dir, "other", &how, sizeof(how)));
+    unsigned char params[120] = {0};
+    long ring = syscall(425 /* io_uring_setup */, 1, params);
+    int io_uring = outcome(ring);
+    if (ring >= 0) close((int)ring);
     close(plain);
     unlinkat(dir, "plain", 0);
     unlinkat(dir, "created", 0);
@@ -74,11 +82,13 @@ int main(void) {
            "\"setgroups_root\": %d, \"setgroups_empty\": %d, \"unshare_user\": %d, \"clone_user\": %d, "
            "\"clone3\": %d, \"keyring\": %d, \"payload_switch\": %d, \"payload_last\": %d, "
            "\"beyond_range\": %d, \"chmod_plain\": %d, \"fchmod_setuid\": %d, \"fchmodat_setgid\": %d, "
-           "\"open_setuid\": %d, \"mknod_setuid\": %d}\n",
+           "\"open_setuid\": %d, \"mknod_setuid\": %d, \"fchmodat2_setuid\": %d, \"tmpfile_setuid\": %d, "
+           "\"openat2\": %d, \"io_uring\": %d}\n",
            setresuid_root, setresgid_root, setuid_root, setgroups_root, setgroups_empty, unshare_user, clone_user,
            clone3, keyring, payload_switch(PAYLOAD_UID, PAYLOAD_GID),
            payload_switch(PAYLOAD_UID + SERVICE_PAYLOAD_IDS - 1, PAYLOAD_GID + SERVICE_PAYLOAD_IDS - 1),
            payload_switch(PAYLOAD_UID + SERVICE_PAYLOAD_IDS, PAYLOAD_GID + SERVICE_PAYLOAD_IDS), chmod_plain,
-           fchmod_setuid, fchmodat_setgid, open_setuid, mknod_setuid);
+           fchmod_setuid, fchmodat_setgid, open_setuid, mknod_setuid, fchmodat2_setuid, tmpfile_setuid, openat2_any,
+           io_uring);
     return 0;
 }

@@ -371,6 +371,9 @@ def scenario_siblings(steps, left=None):
         os.mkdir(os.path.join(chain, f"w{index}"))
     for directory, subdirs, files in os.walk(static):
         os.chown(directory, 65534, 65534)
+    looped = tempfile.mkdtemp(prefix="autocontrol-loop-", dir="/var/tmp")
+    os.mkdir(os.path.join(looped, "inner"))
+    steps["loop_mounted"] = run(["mount", "--bind", looped, os.path.join(looped, "inner")]).returncode == 0
     guardian = start_guardian()
     steps["squats"] = squats
     steps["squatted_payload_files_left"] = [s for s in squats if os.path.lexists(os.path.join(s, "hidden"))]
@@ -404,7 +407,11 @@ def scenario_siblings(steps, left=None):
     steps["guardian_stop"] = stop_guardian(guardian)
     steps["epochs_after_stop"] = epochs()
     steps["static_tree_logged"] = "unwalked" in steps["guardian_stop"][1]
+    # The 300-level chain went in the startup purge without meeting churn.
+    steps["churn_logged"] = "met churn" in steps["guardian_stop"][1]
     shutil.rmtree(static, ignore_errors=True)
+    run(["umount", "-l", os.path.join(looped, "inner")])
+    shutil.rmtree(looped, ignore_errors=True)
 
 
 def scenario_nested(steps):
@@ -1030,7 +1037,7 @@ def expectations(result):
         # taken apart there: names free, nothing payload-owned left, memory released.
         "unremovable_leftovers_released": siblings["names_freed"] and siblings["payload_owned_left"] == []
         and bool(siblings["squats"]) and siblings["squatted_payload_files_left"] == []
-        and siblings["static_tree_logged"]
+        and siblings["static_tree_logged"] and siblings["loop_mounted"] and not siblings["churn_logged"]
         and session["guardian_stop"][0] == 0 and siblings["guardian_stop"][0] == 0,
         # epoch-N itself is bounded before it is delegated: nothing beside `records` escapes.
         "epoch_bounded": session["epoch_bounds"] == {"cgroup.max.depth": "40", "cgroup.max.descendants": "4096",
@@ -1151,7 +1158,8 @@ def expectations(result):
             "setgroups_empty": 0, "unshare_user": 1, "clone_user": 1, "clone3": 38, "keyring": 1,
             "payload_switch": 0,
             "payload_last": 0, "beyond_range": 1, "chmod_plain": 0, "fchmod_setuid": 1, "fchmodat_setgid": 1,
-            "open_setuid": 1, "mknod_setuid": 1},
+            "open_setuid": 1, "mknod_setuid": 1, "fchmodat2_setuid": 1, "tmpfile_setuid": 1, "openat2": 38,
+            "io_uring": 38},
         "nothing_left": not result["cleanup"]["leftovers"] and not result["cleanup"]["subtree_exists"]
         and not os.path.exists(OUTER) and not os.path.exists(STATE2)
         and not result["cleanup"]["accounts_present"] and not result["cleanup"]["groups_present"]

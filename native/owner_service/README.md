@@ -79,15 +79,18 @@ the gate.
   removed, and only what other IDs own (out of every payload's reach) stays in one.
   Another ID's directory at the depth bound stays put and is walked from its own top,
   up to 4096 of them (or what the descriptor limit leaves room for), with a log line
-  beyond. The size of what others keep under a root only makes a purge slower. Churn
-  that only a live user causes (a directory entered twice in one walk, a listing growing
-  far past its size) stops it, and it runs again, as does one that could not move a
-  payload directory into the quarantine, before its slice is handed out. A live local
-  user can therefore delay a slice. A live local user who renames another ID's
-  directory behind the walk, and a payload file inside another ID's directories past
-  that limit, can escape one purge: both need a directory that ID let the payload write
-  into, and no payload file can carry a set-user- or set-group-ID bit, so what escapes
-  is data, not an identity.
+  beyond. Each walk enters a directory once, by its inode number and file handle (inode
+  generation included, so a reused inode number is never taken for it): one met again,
+  renamed behind the walk or through a bind mount, is skipped. The size of what others
+  keep under a root only makes a purge slower. A listing growing far past its size while
+  it is read, which only a live user causes, stops it, and it runs again, as does one
+  that could not move a payload directory into the quarantine, before its slice is
+  handed out; a live local user can therefore delay a slice. Payload files can escape a
+  purge only from inside another ID's directories: renamed behind the walk by a live
+  user, past the deferral limit (for as long as those directories stay), or under a
+  mount another user placed on a payload directory. Each needs a directory that ID let
+  the payload write into, and no payload file can carry a set-user- or set-group-ID bit,
+  so what escapes is data, not an identity.
   Only an object that can be neither removed, moved nor closed off taints its slice,
   and startup purges each slice once, after the previous run's epochs are dead, so one
   stubborn leftover never stops the guardian. A helper's own connection (a nested parent
@@ -106,7 +109,8 @@ the gate.
   subtree's parent. Before building the filter, the guardian refuses a manifest the service would
   refuse, or whose payload IDs are below 1000 or known to the host's user and group
   databases. Payloads cannot use kernel keyrings, nor set a set-user- or set-group-ID
-  bit on any file (chmod family, a creating open, mknod; openat2 answers ENOSYS). With CAP_SETUID and CAP_SETGID the
+  bit on any file (chmod family, a creating open, mknod; openat2 and io_uring answer
+  ENOSYS), so copying a set-group-ID directory's mode fails in a payload. With CAP_SETUID and CAP_SETGID the
   service can still forge the UID or GID in SCM_CREDENTIALS; this project authenticates by
   pidfd, but anything trusting SCM_CREDENTIALS alone (journald's `_UID`, for example)
   should not take a service-sent value at face value.
