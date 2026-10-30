@@ -469,18 +469,19 @@ static guardian_route_result route_client(void *context, const peer_identity *pe
     const running_set *set = route->set;
     const running_epoch *chosen = &set->current;
     const service_policy *service = service_manifest_for_routing;
-    uint32_t uid = peer->credentials.uid;
+    uint32_t uid = peer->credentials.uid, slice = 0;
     bool payload = false;
     for (size_t i = 0; service && i < service->policy_count; ++i) {
         uint32_t base = service->policies[i].payload_uid;
         if (uid < base || uid - base >= SERVICE_PAYLOAD_IDS) continue;
-        uint32_t slice = (uid - base) / SERVICE_EPOCH_IDS;
+        slice = (uid - base) / SERVICE_EPOCH_IDS;
         payload = true;
         for (size_t r = 0; r < GUARDIAN_RETIRING_LIMIT; ++r)
             if (running_live(&set->retiring[r]) && set->retiring[r].slice == slice) chosen = &set->retiring[r];
         break;
     }
-    if (payload && (!running_live(chosen) || !peer_shares_mount_namespace(peer, &chosen->service)))
+    if (payload && (!running_live(chosen) || chosen->slice != slice ||
+                    !peer_shares_mount_namespace(peer, &chosen->service)))
         return ROUTE_DROP;
     if (!running_live(chosen)) return route->held->count < GUARDIAN_HELD_LIMIT ? ROUTE_HOLD : ROUTE_DROP;
     *target = (guardian_target){chosen->channel, chosen->grant.epoch, chosen->grant.generation};

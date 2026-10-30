@@ -33,11 +33,18 @@ LIBEXEC, ETC = "/usr/libexec/je_auto_control", "/etc/je_auto_control"
 STATE_PARENT, STATE = "/var/lib/je_auto_control", "/var/lib/je_auto_control/owner"
 RUN, ENDPOINT = "/run/je_auto_control", "/run/je_auto_control/owner.sock"
 SUBTREE = "/sys/fs/cgroup/je_auto_control.owner"
+ROOT_CONTROL = "/sys/fs/cgroup/cgroup.subtree_control"
 BINDING = {"endpoint": ENDPOINT,
            "policies": [{"argv": ["/usr/bin/python3", "-I", "-u", "-m",
                                   "je_auto_control.utils.agent_runtime.native_worker"], "policy": 1}]}
-report = {"evidence": "installed-host acceptance in one WSL distro", "steps": {}}
-undo = []
+report = {"evidence": "installed-host acceptance on a disposable host", "steps": {}}
+undo = []     # Commands that reverse what this run did, in the order it did them.
+created = []  # Paths this run created, in the order it created them; only these are removed.
+
+
+def _make_directory(path, mode):
+    os.mkdir(path, mode)
+    created.append(path)
 
 
 def run(argv, **kwargs):
@@ -77,10 +84,16 @@ def provision():
     undo.append(["userdel", SERVICE])
     must(["usermod", "--append", "--groups", SOCKET_GROUP, CLIENT])
     undo.append(["gpasswd", "--delete", CLIENT, SOCKET_GROUP])
-    with open("/sys/fs/cgroup/cgroup.subtree_control") as handle:
+    # README step 4: pids and memory enabled down to the subtree's parent, here the root.
+    with open(ROOT_CONTROL) as handle:
         report["steps"]["root_controllers"] = handle.read().split()
+    for controller in ("pids", "memory"):
+        if controller not in report["steps"]["root_controllers"]:
+            with open(ROOT_CONTROL, "w") as handle:
+                handle.write("+" + controller)
+            undo.append(["sh", "-c", f"echo -{controller} > {ROOT_CONTROL}"])
     for path, mode in ((STATE_PARENT, 0o755), (STATE, 0o700), (RUN, 0o755), (SUBTREE, 0o755)):
-        os.mkdir(path)
+        _make_directory(path, mode)
         if not path.startswith("/sys/"):
             os.chmod(path, mode)
 
@@ -128,10 +141,15 @@ def _owned_by_root_unwritable(path):
     return status.st_uid == 0 and status.st_gid == 0 and not status.st_mode & 0o022
 
 
+def _read_json(path):
+    with open(path) as handle:
+        return json.load(handle)
+
+
 def install(build):
     """README steps 3 and 6; then compare what is installed against what was built."""
-    os.mkdir(LIBEXEC, 0o755)
-    os.mkdir(ETC, 0o755)
+    _make_directory(LIBEXEC, 0o755)
+    _make_directory(ETC, 0o755)
     for name in ("owner_guardian", "owner_service"):
         must(["install", "-o", "root", "-g", "root", "-m", "0755", os.path.join(build, name),
               os.path.join(LIBEXEC, name)])
@@ -152,7 +170,7 @@ def install(build):
                                         and not os.lstat(os.path.join(LIBEXEC, n)).st_mode & 0o7000
                                         for n in ("owner_guardian", "owner_service")),
         "ancestors_root_unwritable": all(_owned_by_root_unwritable(p) for p in ancestors),
-        "binding_matches": json.load(open(binding)) == BINDING and _owned_by_root_unwritable(binding),
+        "binding_matches": _read_json(binding) == BINDING and _owned_by_root_unwritable(binding),
         "state_root_only": stat.S_IMODE(os.lstat(STATE).st_mode) == 0o700 and os.lstat(STATE).st_uid == 0,
     }
 
@@ -189,8 +207,7 @@ def host_requirements():
     # not failed: the installation is checked either way, and the gate stays closed.
     report["steps"]["host_requirements"] = {
         "journal_not_kept": not journald,
-        "core_pattern_file_or_known": not core_pattern.startswith("|") or os.path.basename(
-            core_pattern[1:].split()[0]) in ("systemd-coredump", "apport"),
+        "core_pattern_file_or_known": not _core_pattern_warned_for(core_pattern),
         "mount_api_or_mqueue": mount_api == "ok" or mounts.get("/dev/mqueue") == "mqueue",
         # World-writable directories a helper can reach that no private root covers.
         "writable_outside_roots": outside,
@@ -198,6 +215,14 @@ def host_requirements():
 
 
 PRIVATE = ("/tmp", "/var/tmp", "/dev/shm", "/run/lock", "/var/crash")
+
+
+def _core_pattern_warned_for(pattern):
+    """The guardian's rule: a socket, or a pipe to a handler other than systemd-coredump or
+    apport, may keep crashed helpers' memory and is warned about."""
+    words = pattern[1:].split() if pattern.startswith("|") else []
+    handler = os.path.basename(words[0]) if words else ""
+    return pattern.startswith("@") or (pattern.startswith("|") and handler not in ("systemd-coredump", "apport"))
 
 
 def _reachable(path):
@@ -305,29 +330,31 @@ def stop(guardian):
 
 
 def uninstall():
+    """Removes what this run created and nothing else: a path that was there before it is
+    never in `created`, so a host that already has the service keeps it."""
     leftovers = {}
-    for path in (LIBEXEC, ETC, STATE_PARENT, RUN):
-        shutil.rmtree(path, ignore_errors=True)
-    if os.path.isdir(SUBTREE):
-        for directory, _subdirs, _files in sorted(os.walk(SUBTREE), key=lambda e: -len(e[0])):
-            try:
-                os.rmdir(directory)
-            except OSError as error:
-                leftovers[directory] = str(error)
+    for path in reversed(created):
+        if path == SUBTREE:
+            for directory, _subdirs, _files in sorted(os.walk(SUBTREE), key=lambda e: -len(e[0])):
+                try:
+                    os.rmdir(directory)
+                except OSError as error:
+                    leftovers[directory] = str(error)
+        else:
+            shutil.rmtree(path, ignore_errors=True)
     for argv in reversed(undo):
         result = run(argv)
         if result.returncode:
             leftovers[argv[-1]] = result.stderr.strip()
-    report["uninstalled"] = {"leftovers": leftovers,
-                             "paths_left": [p for p in (LIBEXEC, ETC, STATE_PARENT, RUN, SUBTREE)
-                                            if os.path.lexists(p)]}
+    report["uninstalled"] = {"leftovers": leftovers, "paths_left": [p for p in created if os.path.lexists(p)]}
 
 
 def main():
     guardian = None
+    # Root-only: the manifest it holds carries the installation's secret bytes.
+    work = tempfile.mkdtemp(prefix="autocontrol-installed-")
     try:
         provision()
-        work = tempfile.mkdtemp(prefix="autocontrol-installed-")
         manifest(os.path.join(work, "owner_manifest.c"))
         build = os.path.join(work, "build")
         report["steps"]["build"] = must(["sh", os.path.join(SOURCE, "build.sh"),
@@ -339,9 +366,10 @@ def main():
         running_checks(guardian)
         stop(guardian)
         guardian = None
-    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+    except (OSError, RuntimeError, subprocess.SubprocessError, KeyError, IndexError, ValueError) as error:
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
+        shutil.rmtree(work, ignore_errors=True)
         if guardian is not None and guardian.poll() is None:
             guardian.kill()
             guardian.wait()
@@ -360,11 +388,14 @@ def main():
         "epoch_running": len(running.get("epochs", [])) == 1 and bool(running.get("service_pid")),
         "epoch_roots_private": private.get("mount") is True and private.get("ipc") is True
         and {"/tmp", "/var/tmp", "/dev/shm"} <= set(private.get("epoch_tmpfs", [])),
-        # The installed build keeps the gate closed: the client's lease is refused, not served.
-        "installed_gate_closed": running.get("client", [None])[0] == "error",
-        "stranger_refused": running.get("stranger", [None])[0] == "error",
-        "core_pattern_warned": ("core_pattern" in stopped.get("log", "")) == host.get("core_pattern", "").startswith(
-            "|"),
+        # The installed build keeps the gate closed: the service answers the client's lease
+        # with UNAVAILABLE. Another account cannot connect to the listener at all.
+        "installed_gate_closed": running.get("client", [None])[:2] == ["error", "AgentTaskError"]
+        and running["client"][2].startswith("owner service is unavailable and cannot"),
+        "stranger_refused": running.get("stranger", [None])[:2] == ["error", "AgentTaskError"]
+        and running["stranger"][2] == "owner service is unreachable: PermissionError",
+        "core_pattern_warned": ("core_pattern" in stopped.get("log", ""))
+        == _core_pattern_warned_for(host.get("core_pattern", "")),
         "clean_stop": stopped.get("exit") == 0 and stopped.get("epochs_after") == []
         and stopped.get("endpoint_after") is False,
         "uninstalled": report.get("uninstalled", {}) == {"leftovers": {}, "paths_left": []},

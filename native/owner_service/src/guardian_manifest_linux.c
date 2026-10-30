@@ -81,12 +81,40 @@ bool guardian_purge_roots_valid(const guardian_manifest *manifest) {
     return true;
 }
 
+static bool under(const char *path, const char *root) {
+    size_t length = strlen(root);
+    return strncmp(path, root, length) == 0 && (path[length] == '/' || path[length] == '\0');
+}
+
+/* The listener must not lie under a root each epoch covers with its own tmpfs: helpers in the
+ * epoch would not see it. Checked as written and, when its directory exists, as resolved. */
+bool guardian_listener_outside_private_roots(const guardian_manifest *manifest) {
+    const char *path = manifest->listener_path;
+    char directory[4096], resolved[4096];
+    if (!path || snprintf(directory, sizeof(directory), "%s", path) >= (int)sizeof(directory)) return false;
+    char *slash = strrchr(directory, '/');
+    if (slash) *(slash == directory ? slash + 1 : slash) = '\0';
+    bool known = realpath(directory, resolved) != NULL;
+    for (size_t i = 0; guardian_private_root(i); ++i)
+        if (under(path, guardian_private_root(i)) || (known && under(resolved, guardian_private_root(i))))
+            return false;
+    for (size_t i = 0; i < manifest->purge_root_count; ++i)
+        if (manifest->purge_roots[i] && (under(path, manifest->purge_roots[i]) ||
+                                         (known && under(resolved, manifest->purge_roots[i])))) return false;
+    return true;
+}
+
 bool guardian_manifest_valid(const guardian_manifest *manifest) {
     const service_policy *service = manifest->service;
     if (!service || !service_policy_valid(service) || manifest->client_count > GUARDIAN_CLIENT_LIMIT ||
         manifest->listener_gid == 0 || (service->socket_gid && manifest->listener_gid != service->socket_gid) ||
         !guardian_purge_roots_valid(manifest) || in_any_range(service, manifest->service_uid, manifest->service_gid))
         return false;
+    if (!guardian_listener_outside_private_roots(manifest)) {
+        fprintf(stderr, "autocontrol-owner-guardian: listener %s is refused: it lies under a root each epoch "
+                        "covers with its own tmpfs\n", manifest->listener_path ? manifest->listener_path : "(none)");
+        return false;
+    }
     for (size_t i = 0; i < manifest->client_count; ++i)
         if (!client_valid(service, &manifest->clients[i])) return false;
     for (size_t i = 0; i < service->policy_count; ++i)

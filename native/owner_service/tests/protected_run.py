@@ -13,15 +13,18 @@ import shutil
 import signal
 import subprocess
 import sys
-import ctypes
-import errno
-import struct
 import tempfile
 import threading
 import time
 
 SOURCE, REPOSITORY = sys.argv[1], sys.argv[2]
 SRC, TESTS = os.path.join(SOURCE, "src"), os.path.join(SOURCE, "tests")
+sys.path.insert(0, TESTS)  # Run with -I: the script's directory is not on the path.
+from protected_objects import (  # noqa: E402
+    NESTED_PROBE, bad_fuse_mount as _bad_fuse_mount, dead_fuse_mount as _dead_fuse_mount,
+    in_payload as _in_payload, marker_holders, namespaces_private as _namespaces_private,
+    payload_queue as _payload_queue, payload_segment as _payload_segment, queue_exists as _queue_exists,
+    shm_exists as _shm_exists, shm_in_payload as _shm_in_payload, staged_chain as _staged_chain)
 CC = os.environ.get("CC", "cc")
 OPT, STATE, RUN = "/opt/autocontrol-test", "/var/lib/autocontrol-test", "/run/autocontrol-test"
 SUBTREE = "/sys/fs/cgroup/autocontrol-test"
@@ -159,87 +162,6 @@ def build():
     report["accounts"] = {k: v for k, v in values.items() if not k.startswith("NS_")}
 
 
-def _dead_fuse_mount(path, owner):
-    """A FUSE mount at `path` belonging to `owner`, without allow_other, whose daemon is gone:
-    root is refused a getattr on it, as on any user's sshfs or AppImage mount."""
-    libc = ctypes.CDLL(None, use_errno=True)
-    device = os.open("/dev/fuse", os.O_RDWR)
-    options = f"fd={device},rootmode=40000,user_id={owner},group_id={owner}".encode()
-    mounted = libc.mount(b"cover", path.encode(), b"fuse", 0, options) == 0
-    os.close(device)  # The daemon is gone; the mount stays, dead.
-    return mounted
-
-
-def _bad_fuse_mount(path, owner):
-    """A FUSE mount at `path` belonging to `owner`, without allow_other, whose root inode the
-    kernel marked bad: its daemon answered the owner's stat with a size past LLONG_MAX, then
-    went away. A getattr on it fails with EIO for everyone, even with an empty mask."""
-    libc = ctypes.CDLL(None, use_errno=True)
-    device = os.open("/dev/fuse", os.O_RDWR)
-    options = f"fd={device},rootmode=40000,user_id={owner},group_id={owner}".encode()
-    if libc.mount(b"cover", path.encode(), b"fuse", 0, options) != 0:
-        os.close(device)
-        return False
-
-    def serve():
-        for _ in range(8):
-            try:
-                request = os.read(device, 1 << 20)
-            except OSError:
-                return
-            length, opcode, unique = struct.unpack_from("<IIQ", request)
-            if opcode == 26:  # INIT: protocol 7.31, nothing optional.
-                body = struct.pack("<IIIIHHIIHHI", 7, 31, 65536, 0, 16, 12, 4096, 1, 32, 0, 0) + bytes(28)  # 64
-            elif opcode == 3:  # GETATTR: a directory whose size no kernel accepts.
-                attr = struct.pack("<QQQQQQIIIIIIIIII", 1, 1 << 63, 0, 0, 0, 0, 0, 0, 0, 0o40755, 2,
-                                   owner, owner, 0, 4096, 0)
-                body = struct.pack("<QII", 0, 0, 0) + attr
-            else:
-                os.write(device, struct.pack("<IiQ", 16, -38, unique))
-                continue
-            os.write(device, struct.pack("<IiQ", 16 + len(body), 0, unique) + body)
-            if opcode == 3:
-                return
-
-    server = threading.Thread(target=serve, daemon=True)
-    server.start()
-    stat = subprocess.run(["runuser", "-u", pwd.getpwuid(owner).pw_name, "--", "stat", path],
-                          capture_output=True, text=True, timeout=20,
-                          env={"LC_ALL": "C", "PATH": "/usr/sbin:/usr/bin:/sbin:/bin"})
-    server.join(timeout=10)
-    os.close(device)  # The daemon is gone; the mount stays, its root inode bad.
-    return "Input/output error" in stat.stderr
-
-
-QUEUE_NAME = b"/autocontrol-left-queue"
-
-
-def _payload_queue(uid, name=QUEUE_NAME):
-    """A POSIX message queue `uid` made and left, holding one message."""
-    libc = ctypes.CDLL(None, use_errno=True)  # Before the fork: no loader lock taken in the child.
-    child = os.fork()
-    if child == 0:
-        try:
-            os.setgid(uid)
-            os.setuid(uid)
-            queue = libc.mq_open(name, os.O_CREAT | os.O_RDWR, 0o600, None)
-            os._exit(0 if queue >= 0 and libc.mq_send(queue, b"left", 4, 0) == 0 else 1)
-        except BaseException:  # reason: a forked child must never return into the harness
-            os._exit(2)
-    return os.waitpid(child, 0)[1] == 0
-
-
-def _queue_exists(name=QUEUE_NAME):
-    """True when the queue is there (it is then removed); None when that cannot be told."""
-    libc = ctypes.CDLL(None, use_errno=True)
-    queue = libc.mq_open(name, os.O_RDONLY)
-    if queue >= 0:
-        libc.mq_close(queue)
-        libc.mq_unlink(name)
-        return True
-    return False if ctypes.get_errno() == errno.ENOENT else None
-
-
 def _drain(stream, sink):
     for line in iter(stream.readline, ""):
         sink.append(line)
@@ -369,75 +291,6 @@ def _closed_off(path):
     return status.st_uid == 0 and status.st_gid == 0 and (status.st_mode & 0o7777) == 0
 
 
-def _in_payload(pid, path):
-    """`path` as the payload process `pid` sees it: through its root, in its mount namespace."""
-    return f"/proc/{pid}/root{path}"
-
-
-def _shm_in_payload(pid, shmid):
-    listing = run(["nsenter", "-t", str(pid), "-i", "cat", "/proc/sysvipc/shm"]).stdout
-    return any(line.split()[1] == str(shmid) for line in listing.splitlines()[1:] if line.split())
-
-
-def _namespaces_private(pid, left):
-    """The epoch's own mount and IPC namespaces: its /tmp is another filesystem, and what the
-    helper left there, file and SysV segment, is not on the host."""
-    def namespace(of, kind):
-        return os.readlink(f"/proc/{of}/ns/{kind}")
-    try:
-        return {"mount": namespace(pid, "mnt") != namespace("self", "mnt"),
-                "ipc": namespace(pid, "ipc") != namespace("self", "ipc"),
-                "tmp_is_its_own": os.stat(_in_payload(pid, "/tmp")).st_dev != os.stat("/tmp").st_dev,
-                "file_not_on_host": os.path.exists(_in_payload(pid, left[0])) and not os.path.exists(left[0]),
-                "segment_not_on_host": _shm_in_payload(pid, left[1]) and not _shm_exists(left[1])}
-    except OSError as error:
-        return {"error": str(error)}
-
-
-def _payload_segment(uid):
-    """A SysV shared memory segment made by `uid`, as a helper would leave one; its ID."""
-    reader, writer = os.pipe()
-    libc = ctypes.CDLL(None, use_errno=True)
-    child = os.fork()
-    if child == 0:
-        try:
-            os.close(reader)
-            os.setgid(uid)
-            os.setuid(uid)
-            segment = libc.shmget(0, 4096, 0o1600)  # IPC_PRIVATE, IPC_CREAT | 0600
-            os.write(writer, str(segment).encode())
-            os._exit(0)
-        except BaseException:  # reason: a forked child must never return into the harness
-            os._exit(2)
-    os.close(writer)
-    data = os.read(reader, 32)
-    os.close(reader)
-    os.waitpid(child, 0)
-    return int(data or b"-1")
-
-
-def _staged_chain(top_dir, levels, uid):
-    """A chain of `levels` directories owned by `uid` with 8 MiB at its bottom, under a fresh
-    directory in `top_dir`; its top."""
-    top = tempfile.mkdtemp(prefix="autocontrol-staged-deep-", dir=top_dir)
-    path = top
-    for _ in range(levels):
-        path = os.path.join(path, "d")
-        os.mkdir(path)
-    with open(os.path.join(path, "pinned"), "wb") as handle:
-        handle.write(bytes(8 << 20))
-    for directory, subdirs, files in os.walk(top):
-        for name in subdirs + files:
-            os.lchown(os.path.join(directory, name), uid, uid)
-    os.lchown(top, uid, uid)
-    return top
-
-
-def _shm_exists(shmid):
-    with open("/proc/sysvipc/shm") as handle:
-        return any(line.split()[1] == str(shmid) for line in handle.readlines()[1:])
-
-
 def _as_payload():
     os.setgroups([])
     os.setresgid(PAYLOAD_BASE, PAYLOAD_BASE, PAYLOAD_BASE)
@@ -512,7 +365,8 @@ def scenario_session(steps):
     steps["leftovers_present"] = bool(seen) and os.path.exists(_in_payload(seen, left[0])) and _shm_in_payload(
         seen, left[1]) and os.path.exists(_in_payload(seen, left[2] + "/d" * 40 + "/bottom")) and os.path.isfile(
         _in_payload(seen, left[3] + "/d" * 300 + "/pinned"))
-    steps["namespaces"] = _namespaces_private(seen, left) if seen else {}
+    payload_ids = range(PAYLOAD_BASE, PAYLOAD_BASE + PAYLOAD_IDS)
+    steps["namespaces"] = _namespaces_private(seen, left, payload_ids) if seen else {}
     escaped = steps["request"].get("escaped")
     steps["escaped_in_payload_cgroup"] = escaped_in_payload(escaped, epoch)
     holder.stdin.write("close\n")
@@ -528,10 +382,11 @@ def scenario_session(steps):
     steps["left"] = left
 
 
-def scenario_siblings(steps, left=None):
+def scenario_siblings(steps):
     """Two clients, two leases, two payloads: closing one leaves the other serving. Its start
-    purged what the session's helper left; what could not be removed is closed off: root's,
-    mode 0, unreachable to every payload ID."""
+    purges what a payload ID left on the host (staged here; a helper's own leftovers stay in
+    its epoch's private roots); what could not be removed is closed off: root's, mode 0,
+    unreachable to every payload ID."""
     # Another user took quarantine-looking names first and a payload wrote into them: names
     # mean nothing to the purge, so what the payload left there goes like anything else.
     squats = []
@@ -903,6 +758,12 @@ def scenario_second_overlap(steps):
     steps["h1_uids"] = payload_uids(first)
     h1_pids = session_inspection(first)["payload_pids"]
     h1_seen = h1_pids[0] if h1_pids else 0
+    h1_marker = f"/tmp/autocontrol-h1-{os.urandom(8).hex()}"  # In E1's private /tmp only.
+    if h1_seen:
+        open(_in_payload(h1_seen, h1_marker), "w").close()
+    # Seen by H1's helper and not by the host: the check below can fail.
+    steps["h1_marker_seen"] = bool(h1_seen) and h1_seen in marker_holders(h1_marker) and not os.path.lexists(
+        h1_marker)
     steps["fill_first"] = [rollover_session() for _ in range(7)]       # E1 spent around H1: retires.
     steps["fill_second"] = [rollover_session() for _ in range(8)]      # E2 spent and idle: drains.
     steps["third"] = rollover_session()                                # Lands in E3.
@@ -920,8 +781,10 @@ def scenario_second_overlap(steps):
     limit = time.monotonic() + 20
     while first in epochs() and time.monotonic() < limit:
         time.sleep(0.1)
-    # Its namespace went with it: the files were never on the host and no process holds them.
-    steps["h1_files_purged"] = first not in epochs() and not pid_alive(h1_seen) and not os.path.exists(left[0])
+    # Its private /tmp went with it: no process still sees the marker written into that tmpfs.
+    steps["h1_tmp_holders"] = marker_holders(h1_marker) if h1_seen else None
+    steps["h1_roots_released"] = (steps["h1_marker_seen"] and first not in epochs() and not pid_alive(h1_seen)
+                                  and steps["h1_tmp_holders"] == [])
     steps["fourth"] = rollover_session()                               # The pending handover: E4.
     steps["epochs_after_handover"] = epochs()
     h3.stdin.write("close\n")
@@ -1067,30 +930,39 @@ def scenario_purge_faults(steps):
     steps["roots_exit"] = roots.returncode
 
 
-_OUTSIDE_EPOCH = """
-import socket, sys
-peer = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
-peer.settimeout(10)
-try:
-    peer.connect(sys.argv[1])
-except OSError as error:
-    print("connect:" + type(error).__name__)
-    sys.exit(0)
-try:
-    peer.send(b"x" * 64)
-    print("reply:" + str(len(peer.recv(4096))))
-except OSError as error:
-    print("closed:" + type(error).__name__)
-"""
+def _probe_as(uid, prefix):
+    """NESTED_PROBE as payload ID `uid`, started through `prefix` (nsenter into a namespace,
+    or nothing for the host's); the client's outcome as [class, message]."""
+    def drop():
+        os.setgroups([])
+        os.setresgid(uid, uid, uid)
+        os.setresuid(uid, uid, uid)
+    probe = subprocess.run([*prefix, "/usr/bin/python3", "-I", "-c", NESTED_PROBE, ENDPOINT, REPOSITORY],
+                           preexec_fn=None if prefix else drop, capture_output=True, text=True, timeout=60)
+    try:
+        return json.loads(probe.stdout.strip().splitlines()[-1])
+    except (IndexError, ValueError):
+        return ["unreadable", probe.returncode, probe.stderr[-400:]]
 
 
 def scenario_outside_epoch(steps):
-    """A process with a payload ID that is not in any epoch's own mount namespace (here: on
-    the host) is turned away by the guardian before any service sees it."""
+    """A payload ID's well-formed nested open reaches the service from its epoch's own mount
+    namespace, which answers it, and is dropped by the guardian from the host's."""
     guardian = start_guardian()
-    probe = subprocess.run(["/usr/bin/python3", "-I", "-c", _OUTSIDE_EPOCH, ENDPOINT], preexec_fn=_as_payload,
-                           capture_output=True, text=True, timeout=30)
-    steps["outcome"] = probe.stdout.strip()
+    epoch = epochs()[-1]
+    holder = client("hold")
+    steps["holder"] = read_json(holder)
+    inspection = session_inspection(epoch)
+    pid = inspection["payload_pids"][0] if inspection["payload_pids"] else 0
+    uid = int(inspection["payload"][0]["uid"]) if inspection["payload"] else PAYLOAD_BASE
+    steps["uid"] = uid
+    inside = ["nsenter", "-t", str(pid), "-m", "-S", str(uid), "-G", str(uid), "--"]
+    steps["inside"] = _probe_as(uid, inside) if pid else ["no helper"]
+    steps["outside"] = _probe_as(uid, [])
+    holder.stdin.write("close\n")
+    holder.stdin.flush()
+    steps["close"] = read_json(holder)
+    holder.wait(timeout=30)
     steps["guardian_stop"] = stop_guardian(guardian)
 
 
@@ -1270,7 +1142,7 @@ def main():
         report["steps"]["session"] = {}
         scenario_session(report["steps"]["session"])
         report["steps"]["siblings"] = {}
-        scenario_siblings(report["steps"]["siblings"], report["steps"]["session"].get("left"))
+        scenario_siblings(report["steps"]["siblings"])
         report["steps"]["nested"] = {}
         scenario_nested(report["steps"]["nested"])
         report["steps"]["race"] = {}
@@ -1467,7 +1339,7 @@ def expectations(result):
         and slice_of(second["third"].get("uids")) != slice_of(second["h1_uids"]) and second["h1_files_kept"]
         and all(s["retired"] for s in second["fill_first"] + second["fill_second"] + second["fill_third"])
         and second["third"]["retired"],
-        "second_overlap_pending_handover": len(second["epochs_pending"]) == 2 and second["h1_files_purged"]
+        "second_overlap_pending_handover": len(second["epochs_pending"]) == 2 and second["h1_roots_released"]
         and second["fourth"]["retired"] and second["fourth"]["epochs"][-1] not in second["epochs_pending"]
         and slice_of(second["fourth"].get("uids")) not in (None, slice_of(second["third"].get("uids")))
         and second["h1_close"].get("retired") is True and second["h3_close"].get("retired") is True
@@ -1505,10 +1377,12 @@ def expectations(result):
         # Each fault path ends as designed: a failed listing and a directory met again run
         # the purge again, a mount placed mid-walk is laid bare, and the mount API refused
         # means no queues (ENODEV), a rerun (no /dev/mqueue) or a purge through /dev/mqueue.
-        # A payload ID outside every epoch's own mount namespace reaches no service: the
-        # connection is closed without a reply (or never accepted).
-        "outside_epoch_refused": outside["outcome"] in ("reply:0", "closed:ConnectionResetError",
-                                                         "closed:BrokenPipeError", "connect:PermissionError")
+        # The same nested open, as the same payload ID: from the epoch's own mount namespace
+        # the service answers it (a refusal: no such parent record); from the host's the
+        # guardian drops the connection before any service sees it.
+        "outside_epoch_refused": outside["inside"][0] == "AgentTaskError"
+        and outside["inside"][1].startswith("owner service refused to open a lease")
+        and outside["outside"][0] == "AgentControlBusy" and "turned the connection away" in outside["outside"][1]
         and outside["guardian_stop"][0] == 0,
         "purge_fault_paths": faults["faults_exit"] == 0 and len(faults["faults"]) == 6
         and all(faults["faults"].values()),

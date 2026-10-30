@@ -154,11 +154,15 @@ the gate.
   killed helper left behind still count against the epoch.
 - Each epoch's service and every helper it starts run in a mount namespace and an IPC
   namespace of their own, which the guardian makes when it starts the service: a fresh
-  tmpfs stands over `/tmp`, `/var/tmp`, `/dev/shm`, `/run/lock`, `/var/crash` and every
-  manifest purge root, and SysV IPC objects and POSIX message queues belong to the epoch
-  alone. What a helper leaves there is out of every other user's sight and reach, and goes
-  with the epoch when its last process is killed, so nothing of it can wait for the next
-  helper with the same ID. The guardian accepts a payload ID's connection only from the
+  tmpfs, with the mode and owner of the host's directory, stands over `/tmp`, `/var/tmp`,
+  `/dev/shm`, `/run/lock`, `/var/crash` and every manifest purge root, and SysV IPC objects
+  and POSIX message queues belong to the epoch alone. What a helper leaves there is out of
+  every other user's sight and reach, and is gone once the epoch's last process is, unless
+  a helper itself handed a descriptor into it to a process outside the epoch. Lock files in
+  the epoch's `/run/lock` exclude only processes of the same epoch. A root that does not
+  exist when an epoch starts is covered from the next epoch on; until then the purge walks
+  it on the host as before. A listener path under any of these roots is refused, since
+  helpers would not see it. The guardian accepts a payload ID's connection only from the
   mount namespace of the epoch that runs its slice.
 - When an epoch is reclaimed, the guardian also removes the files under `/tmp`, `/var/tmp`,
   `/dev/shm`, `/run/lock` and `/var/crash` (and any manifest `purge_roots`), the POSIX message queues

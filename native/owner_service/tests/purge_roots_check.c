@@ -26,7 +26,23 @@ static void expect(const char *path, bool valid) {
     }
 }
 
+static void expect_listener(const char *listener, const char *purge_root, bool valid) {
+    const char *roots[] = {purge_root};
+    guardian_manifest manifest = {.listener_path = listener, .purge_roots = roots,
+                                  .purge_root_count = purge_root ? 1 : 0};
+    if (guardian_listener_outside_private_roots(&manifest) != valid) {
+        fprintf(stderr, "listener %s: expected %s\n", listener, valid ? "valid" : "refused");
+        ++failures;
+    }
+}
+
 int main(void) {
+    expect_listener("/run/je_auto_control/owner.sock", NULL, true);
+    expect_listener("/tmpfoo/owner.sock", NULL, true);         /* Shares a prefix, not a root. */
+    expect_listener("/tmp/owner.sock", NULL, false);           /* Under an epoch's own /tmp. */
+    expect_listener("/run/lock/owner.sock", NULL, false);
+    expect_listener("/usr/share/owner.sock", "/usr/share", false);  /* Under a manifest root. */
+    expect_listener(NULL, NULL, false);
     expect("/usr/share", true);                          /* A root's directory under root's. */
     expect("/usr/share/autocontrol-absent-root", true);  /* Not there yet: fine. */
     expect("/tmp/app", false);                           /* /tmp: others may create the name. */

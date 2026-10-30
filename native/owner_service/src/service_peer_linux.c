@@ -112,9 +112,10 @@ bool peer_shares_mount_namespace(const peer_identity *peer, const peer_identity 
     if (number < 0) return false;
     owned_fd namespace = {FD_OWNED, number};
     struct stat status;
-    bool known = fstat(number, &status) == 0;
-    return service_close_fd(&namespace) && known && peer_alive(other) &&
+    /* Held open until the peer is compared, so its inode cannot be reused meanwhile. */
+    bool same = fstat(number, &status) == 0 && peer_alive(other) &&
         namespace_is(peer, PIDFD_GET_MNT_NAMESPACE, (uint64_t)status.st_dev, (uint64_t)status.st_ino);
+    return service_close_fd(&namespace) && same;
 }
 
 bool peer_enable_credentials(int socket, no_error *error) {

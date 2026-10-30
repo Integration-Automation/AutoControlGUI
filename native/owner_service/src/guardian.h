@@ -95,9 +95,16 @@ bool guardian_manifest_valid(const guardian_manifest *manifest);
 /* The manifest's purge roots alone (part of guardian_manifest_valid): each under directories
  * only root can change and, when it exists, a directory the purge would trust. */
 bool guardian_purge_roots_valid(const guardian_manifest *manifest);
+/* The listener lies under no root an epoch covers with its own tmpfs, so helpers see it. */
+bool guardian_listener_outside_private_roots(const guardian_manifest *manifest);
 /* In the service's child, before it drops root: the epoch's own mount and IPC namespaces get
  * fresh tmpfs mounts over every purge root (guardian_private_linux.c). False: do not start. */
 bool guardian_private_epoch(const guardian_manifest *manifest);
+/* The default roots each epoch gets a private tmpfs over, in order; NULL past the last. */
+static inline const char *guardian_private_root(size_t index) {
+    static const char *const roots[] = {"/tmp", "/var/tmp", "/dev/shm", "/run/lock", "/var/crash"};
+    return index < sizeof(roots) / sizeof(roots[0]) ? roots[index] : NULL;
+}
 /* After a retiring epoch's service ended: kills and removes its branch, then removes what
  * its half of the payload IDs left. The journal does not track a retiring epoch. */
 guardian_result guardian_reclaim_retired(guardian_state *state, const char *epoch, int slice);
@@ -149,6 +156,8 @@ guardian_forward_result guardian_forward_routed(int listener, const guardian_man
                                                 guardian_route route, void *context, int *used, int *held);
 /* Hands one accepted connection to a service; never blocks. */
 bool guardian_send_connection(int channel, int connection, no_id epoch, uint64_t generation);
+/* Every verified client to one channel. It does not check a payload range's mount namespace
+ * against an epoch (guardian_forward_routed's route does): for tests only. */
 guardian_forward_result guardian_forward(int listener, int channel, const guardian_manifest *manifest, no_id epoch,
                                          uint64_t generation);
 #endif

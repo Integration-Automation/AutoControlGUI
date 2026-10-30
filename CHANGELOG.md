@@ -117,6 +117,8 @@ over every purge root, so what a helper leaves goes with its epoch; the guardian
 connection only from the mount namespace of the epoch that runs its slice. A new root script,
 `tests/installed_host_acceptance.py`, installs the service per its README on a disposable host, checks it and
 removes it; the README now requires every helper-writable directory to be a purge root and says how under WSL.
+Each epoch's private roots now keep the mode and owner of the host's directory, and a manifest whose listener
+lies under a private root is refused.
 
 ## Unreleased: helper containment in runtime status
 
