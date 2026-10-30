@@ -101,11 +101,20 @@ static bool in_root(char forms[][4096], int count, const char *name, bool strict
     return false;
 }
 
+/* True when `rest` holds a ".." component: below a name not made yet, where it leads depends
+ * on what is made there later. */
+static bool climbs(const char *rest) {
+    for (const char *at = rest; (at = strstr(at, "..")) != NULL; at += 2)
+        if ((at == rest || at[-1] == '/') && (at[2] == '/' || at[2] == '\0')) return true;
+    return false;
+}
+
 /* Resolves `path` component by component, as the kernel does, following at most 40 links, and
  * is true as soon as any name it visits lies in the root: each directory on the way, each link,
  * each name a link leads through, and, once a name is not there yet, what lies below it as
- * written. Only the final name of a directory the epoch enters is compared strictly. What it
- * cannot resolve (too long, too many links, not readable) counts as hidden. */
+ * written (a ".." there is refused). Only the final name of a directory the epoch enters is
+ * compared strictly. What it cannot resolve (too long, too many links, not readable) counts as
+ * hidden. */
 static bool walk_hides(char forms[][4096], int count, const char *path, bool directory_path) {
     char current[4096] = "", rest[8192], next[8192], target[4096], candidate[4096];
     if (snprintf(rest, sizeof(rest), "%s", path) >= (int)sizeof(rest)) return true;
@@ -128,14 +137,16 @@ static bool walk_hides(char forms[][4096], int count, const char *path, bool dir
         struct stat entry;
         if (lstat(candidate, &entry) != 0) {
             if (errno != ENOENT) return true;
-            /* Not there yet: the rest of the path lies below it as written. */
-            if (snprintf(next, sizeof(next), "%s/%s", candidate, after) >= (int)sizeof(next)) return true;
+            /* Not there yet: the rest of the path lies below it as written, unless it climbs back
+             * out with "..", which leads wherever what is made there later leads. */
+            if (climbs(after) || snprintf(next, sizeof(next), "%s/%s", candidate, after) >= (int)sizeof(next))
+                return true;
             drop_trailing_slashes(next);
             return in_root(forms, count, next, directory_path);
         }
         if (S_ISLNK(entry.st_mode)) {
             ssize_t size = ++links > 40 ? -1 : readlink(candidate, target, sizeof(target) - 1);
-            if (size <= 0) return true;
+            if (size <= 0 || size >= (ssize_t)sizeof(target) - 1) return true;  /* Empty, or perhaps cut. */
             target[size] = '\0';
             if (target[0] == '/') current[0] = '\0';  /* Otherwise it goes on from the link's directory. */
             if (snprintf(next, sizeof(next), "%s/%s", target, after) >= (int)sizeof(next)) return true;

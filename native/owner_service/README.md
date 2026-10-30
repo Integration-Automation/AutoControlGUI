@@ -166,12 +166,13 @@ the gate.
   pages count against the epoch's memory limit. A manifest is refused, since the epoch
   would not see the path, when its listener, service executable or a policy executable
   lies under any of these roots, or a policy working directory lies below one. Each path
-  is compared as written and resolved component by component, as the kernel would: every
-  directory on the way, every link and every name a link leads through is checked, and what
-  is not made yet is judged by where it would be. What cannot be resolved (a link loop, an
-  unreadable directory) is refused too. Each epoch start checks the listener and the service executable again, and
-  does not start if a root made since hides one. The guardian accepts a payload ID's
-  connection only from the mount namespace of the epoch that runs its slice.
+  is compared as written and resolved component by component: every directory on the way,
+  every link and every name a link leads through is checked, and what is not made yet is
+  judged by where it would be. What cannot be resolved (a link loop, an unreadable
+  directory, a `..` below a name not made yet) is refused too. Each epoch start checks the
+  listener and the service executable again, and does not start if a root made since hides
+  one. The guardian accepts a payload ID's connection only from the mount namespace of the
+  epoch that runs its slice.
 - When an epoch is reclaimed, the guardian also removes the files under `/tmp`, `/var/tmp`,
   `/dev/shm`, `/run/lock` and `/var/crash` (and any manifest `purge_roots`), the POSIX message queues
   and the SysV IPC objects that payload IDs own (as systemd's DynamicUser with RemoveIPC

@@ -48,8 +48,8 @@ static bool private_root(const char *path) {
 
 bool guardian_private_epoch(const guardian_manifest *manifest) {
     if (!guardian_private_roots_hide_nothing(manifest, false)) {
-        fprintf(stderr, "autocontrol-owner-guardian: a private root now hides a path the epoch needs; "
-                        "the epoch does not start\n");
+        fprintf(stderr, "autocontrol-owner-guardian: a private root now hides a path the epoch needs, or "
+                        "the path cannot be resolved; the epoch does not start\n");
         return false;
     }
     /* A slave of the host's mounts: none of these reach the host, the host's unmounts reach in. */
