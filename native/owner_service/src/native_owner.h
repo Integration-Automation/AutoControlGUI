@@ -166,9 +166,10 @@ void no_revoke_lease(no_runtime *runtime, no_id lease);
 no_report no_observe(no_runtime *runtime, no_ticket ticket,
                      no_deadline deadline);
 
-/* Service maintenance performs bounded registry work and nonblocking joins of
- * workers that announced completion. A per-record join claim prevents double join. It never performs cleanup syscalls or
- * blocking joins. Call even when client IPC is quiet or notifications failed. */
+/* Service maintenance performs bounded registry work and nonblocking joins of workers that
+ * announced completion. A per-record join claim prevents double join. It never performs
+ * cleanup syscalls or blocking joins. Call even when client IPC is quiet or notifications
+ * failed. */
 void no_runtime_maintain(no_runtime *runtime, no_deadline deadline);
 
 /* Requests global revoke. Returns false while any worker/bootstrap cleanup is

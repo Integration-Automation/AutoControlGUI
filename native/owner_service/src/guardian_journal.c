@@ -134,7 +134,8 @@ gj_error gj_open(gj_journal *journal, const char *path, uid_t administrator,
     if (!error) {
         journal->lock = openat(journal->directory, "lock", O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0600);
         if (journal->lock < 0) error = GJ_ERROR_IO;
-        else if (flock(journal->lock, LOCK_EX | LOCK_NB) != 0) error = errno == EWOULDBLOCK ? GJ_ERROR_LOCKED : GJ_ERROR_IO;
+        else if (flock(journal->lock, LOCK_EX | LOCK_NB) != 0)
+            error = errno == EWOULDBLOCK ? GJ_ERROR_LOCKED : GJ_ERROR_IO;
     }
     gj_record records[2];
     slot_state states[2] = {SLOT_ABSENT, SLOT_ABSENT};

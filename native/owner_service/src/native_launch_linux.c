@@ -142,7 +142,10 @@ int owner_launch(owner_record *record) {
     if (error) { set_start(record, NO_START_FAILED_WITHOUT_CHILD, error); return error; }
     atomic_store(&record->before_call, true);
     fixture_hold(&record->release_before);
-    if (atomic_load(&record->revoked)) { set_start(record, NO_START_FAILED_WITHOUT_CHILD, ECANCELED); return ECANCELED; }
+    if (atomic_load(&record->revoked)) {
+        set_start(record, NO_START_FAILED_WITHOUT_CHILD, ECANCELED);
+        return ECANCELED;
+    }
     struct { int output; } scratch = {.output = -1};
     atomic_fetch_add(&record->launch_attempts, 1);
     long result = clone_child(record, &scratch.output);

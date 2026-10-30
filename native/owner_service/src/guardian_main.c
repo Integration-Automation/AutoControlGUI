@@ -611,13 +611,17 @@ static guardian_result shut_down(guardian_state *state, running_set *set) {
 static void warn_core_pattern(void) {
     FILE *pattern = fopen("/proc/sys/kernel/core_pattern", "re");
     char line[256] = "";
-    if (pattern) {
-        if (!fgets(line, sizeof(line), pattern)) line[0] = 0;
-        fclose(pattern);
-    }
-    if (line[0] == '|' && !strstr(line, "systemd-coredump") && !strstr(line, "apport"))
-        fprintf(stderr, "autocontrol-owner-guardian: core_pattern pipes to a handler this guardian does not know; "
-                        "it may keep crashed helpers' memory\n");
+    bool read = pattern && fgets(line, sizeof(line), pattern);
+    if (pattern) fclose(pattern);
+    char handler[256] = "";
+    if (line[0] == '|') sscanf(line + 1, "%255s", handler);
+    const char *base = strrchr(handler, '/') ? strrchr(handler, '/') + 1 : handler;
+    bool known = line[0] != '|' && line[0] != '@' ? true :
+        line[0] == '|' && (!strcmp(base, "systemd-coredump") || !strcmp(base, "apport"));
+    if (!read || !known)
+        fprintf(stderr, "autocontrol-owner-guardian: core_pattern %s; it may keep crashed helpers' memory\n",
+                !read ? "could not be read" : line[0] == '@' ? "sends cores to a socket" :
+                "pipes to a handler this guardian does not know");
 }
 
 int main(void) {

@@ -100,6 +100,8 @@ keeps purges from completing, and the README lists the mount-API and journald ho
 `/var/crash` is now a default purge root (apport writes crash reports, core image included, owned by the
 crashing UID), the guardian warns at startup about a pipe core_pattern to an unknown handler, and the README
 requires every directory payload IDs can write to be a purge root.
+The core_pattern warning now judges the handler by its path and also covers sockets and an unreadable pattern,
+and a default purge root that exists but is not trusted is logged.
 
 ## Unreleased: helper containment in runtime status
 

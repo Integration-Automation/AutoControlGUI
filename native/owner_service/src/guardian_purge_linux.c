@@ -709,6 +709,10 @@ guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest
         names[i] = i < defaults ? default_roots[i] : manifest->purge_roots[i - defaults];
         /* -1: absent, or not a directory this guardian may trust. */
         roots[i] = strcmp(names[i], MQUEUE_ROOT) ? open_root(names[i]) : open_mqueue(&scope);
+        struct stat exists;
+        if (roots[i] < 0 && strcmp(names[i], MQUEUE_ROOT) && lstat(names[i], &exists) == 0)
+            fprintf(stderr, "autocontrol-owner-guardian: purge skipped %s: not root's, or writable unsticky\n",
+                    names[i]);
     }
     static const char *const tables[] = {"/proc/sysvipc/shm", "/proc/sysvipc/msg", "/proc/sysvipc/sem"};
     FILE *opened[3];

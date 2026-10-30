@@ -337,7 +337,7 @@ def _gid_taken(value):
 def payload_owned_anywhere():
     """Every path under the purge roots that a payload ID still owns, quarantines included."""
     found = []
-    for top in ("/tmp", "/var/tmp", "/dev/shm", "/run/lock"):
+    for top in ("/tmp", "/var/tmp", "/dev/shm", "/run/lock", "/var/crash"):
         for directory, subdirs, files in os.walk(top, followlinks=False):
             for name in subdirs + files:
                 path = os.path.join(directory, name)
@@ -532,6 +532,7 @@ def scenario_siblings(steps, left=None):
     guardian = start_guardian()
     steps["squats"] = squats
     steps["squatted_payload_files_left"] = [s for s in squats if os.path.lexists(os.path.join(s, "hidden"))]
+    steps["crash_report_left"] = os.path.lexists(crash_report)  # Right after the startup purge.
     for squat in squats:
         shutil.rmtree(squat, ignore_errors=True)
     left = left or ["", -1, "", "", ""]
@@ -577,7 +578,10 @@ def scenario_siblings(steps, left=None):
     run(["umount", "-l", fuse_static])
     steps["fuse_covered_payload_left"] = os.path.lexists(os.path.join(fuse_covered, "hidden"))
     steps["queue_left"] = _queue_exists()
-    steps["crash_report_left"] = os.path.lexists(crash_report)
+    try:
+        os.unlink(crash_report)
+    except FileNotFoundError:
+        pass
     if crash_made:
         shutil.rmtree("/var/crash", ignore_errors=True)
     steps["foreign_queue_kept"] = _queue_exists(b"/autocontrol-foreign-queue")

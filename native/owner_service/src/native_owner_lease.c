@@ -28,7 +28,8 @@ bool owner_register_lease(no_runtime *runtime, no_id lease, const no_ticket *par
     pthread_mutex_lock(&runtime->registry);
     owner_record *eligible = NULL;
     if (runtime->admission_closed) error->kind = NO_ERROR_ADMISSION_CLOSED;
-    else if (owner_lease_registered(runtime, lease) || owner_lease_closed(runtime, lease)) error->kind = NO_ERROR_KEY_CONFLICT;
+    else if (owner_lease_registered(runtime, lease) || owner_lease_closed(runtime, lease))
+        error->kind = NO_ERROR_KEY_CONFLICT;
     else if (runtime->registered_lease_count == NO_RECORD_LIMIT) error->kind = NO_ERROR_CAPACITY;
     else if (parent && !parent_eligible_locked(runtime, *parent, &eligible)) error->kind = NO_ERROR_ADMISSION_CLOSED;
     if (!error->kind) runtime->registered_leases[runtime->registered_lease_count++] = lease;

@@ -249,7 +249,8 @@ no_submit_result owner_fixture_submit(no_runtime *runtime, no_request_key key, c
     pthread_mutex_lock(&runtime->registry);
     no_submit_result result = existing(runtime, key, executable, ticket, error);
     if (result != NO_ACCEPTED) { pthread_mutex_unlock(&runtime->registry); return result; }
-    if (runtime->admission_closed || !owner_lease_registered(runtime, key.lease) || owner_lease_closed(runtime, key.lease))
+    if (runtime->admission_closed || !owner_lease_registered(runtime, key.lease) ||
+        owner_lease_closed(runtime, key.lease))
         error->kind = NO_ERROR_ADMISSION_CLOSED;
     else if (runtime->count == runtime->capacity) error->kind = NO_ERROR_CAPACITY;
     if (error->kind) { pthread_mutex_unlock(&runtime->registry); return NO_REJECTED; }

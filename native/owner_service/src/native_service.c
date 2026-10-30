@@ -552,7 +552,8 @@ static guardian_frame guardian_message(service_state *service) {
     if (!packet_receive(service->guardian.number, &frame, sizeof(frame), MSG_DONTWAIT, &packet, &error))
         return error.system_errno == EAGAIN || error.system_errno == EWOULDBLOCK ? GUARDIAN_FRAME_NONE :
             GUARDIAN_FRAME_LOST;
-    bool authentic = packet.bytes == (ssize_t)sizeof(frame) && packet_authenticated(&packet, &service->guardian_peer, 1) &&
+    bool authentic = packet.bytes == (ssize_t)sizeof(frame) &&
+        packet_authenticated(&packet, &service->guardian_peer, 1) &&
         frame.magic == SERVICE_MAGIC && frame.version == SERVICE_VERSION && frame.kind == GRANT_CONNECTION &&
         same_id(frame.epoch, service->epoch) && frame.generation == service->generation;
     if (authentic) {
