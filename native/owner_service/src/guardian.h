@@ -32,7 +32,7 @@ typedef struct {
     const service_policy *service;
     /* World-writable directories to purge besides /tmp, /var/tmp, /dev/shm, /dev/mqueue and
      * /run/lock, for example /var/crash on Ubuntu; may be NULL. */
-    const char *const *purge_roots;
+    const char *const *purge_roots; /* At most GUARDIAN_PURGE_ROOT_LIMIT. */
     size_t purge_root_count;
     /* Optional caps on the whole subtree, every running epoch together; 0 leaves it
      * uncapped (then the administrator caps the subtree's parent instead). */
@@ -96,7 +96,8 @@ typedef enum { FORWARD_IDLE, FORWARD_HANDED, FORWARD_REFUSED, FORWARD_CHANNEL_FA
 /* guardian_forward_linux.c: principal and namespaces through the client's pidfd. */
 bool guardian_client_verified(const guardian_manifest *manifest, const peer_identity *peer);
 /* Accepts one pending client; hands it to the service only if verified. */
-#define GUARDIAN_CLIENT_LIMIT 16  /* Listed client accounts, payload accounts included. */
+#define GUARDIAN_CLIENT_LIMIT 16
+#define GUARDIAN_PURGE_ROOT_LIMIT 16  /* Listed client accounts, payload accounts included. */
 #define GUARDIAN_ACCEPT_BURST 32  /* Connections one account may have handed over per second. */
 /* Forgets every account's connection count (tests). */
 void guardian_forward_reset_rates(void);

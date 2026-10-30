@@ -81,6 +81,9 @@ The key now also holds the device, so directories on another device of the same 
 walked, and an unknown mount ID makes the purge run again instead of skipping the entry. Every purge, the
 startup ones included, runs in a child with a private mount namespace and detaches the mounts below each root
 first, so a payload directory covered by another user's mount is removed too.
+Mounts are now detached during the walk, by the descriptor of each mount's root, never by a mountinfo path; all
+roots and IPC tables are opened first; the namespace is a slave of the host's; another ID's subvolume is not
+entered; and the filter refuses btrfs subvolume and snapshot creation and subvolume flags.
 
 ## Unreleased: helper containment in runtime status
 

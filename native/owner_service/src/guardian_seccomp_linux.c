@@ -8,7 +8,9 @@
  *  - keyctl, add_key and request_key fail: per-user keyrings outlive the IDs' processes;
  *  - no file gets a set-user-ID or set-group-ID bit (chmod family, a creating open, mknod):
  *    a payload file the purge missed could otherwise hand a payload ID to anyone who runs
- *    it; openat2, whose mode a filter cannot read, and io_uring, whose operations never pass
+ *    it; btrfs subvolume and snapshot creation and subvolume flags fail (a payload's own
+ *    subvolume cannot be moved into the purge's quarantine, and a read-only one cannot be
+ *    purged); openat2, whose mode a filter cannot read, and io_uring, whose operations never pass
  *    a filter, answer ENOSYS: setting a ring up, and entering or registering one another
  *    process made and passed over a socket;
  *  - the other set*id calls fail;
@@ -18,6 +20,7 @@
 #include "guardian.h"
 #include <errno.h>
 #include <fcntl.h>
+#include <linux/btrfs.h>
 #include <linux/audit.h>
 #include <linux/filter.h>
 #include <linux/seccomp.h>
@@ -84,6 +87,24 @@ static void deny_set_id_mode(program *filter, long number, int mode, int flags) 
     emit(filter, (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, SET_ID_BITS, 0, 1));
     emit(filter, (struct sock_filter)BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM));
     emit(filter, (struct sock_filter)BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+}
+
+/* Fails ioctl with EPERM for each request in `requests` (argument 1, a 32-bit command). */
+static void deny_ioctls(program *filter, const uint32_t *requests, size_t count) {
+    emit(filter, (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, (uint32_t)SYS_ioctl, 0,
+                                              (unsigned char)(count + 3))); /* Past both returns. */
+    emit(filter, (struct sock_filter)BPF_STMT(BPF_LD | BPF_W | BPF_ABS, ARGUMENT(1)));
+    for (size_t i = 0; i < count; ++i)
+        emit(filter, (struct sock_filter)BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, requests[i],
+                                                  (unsigned char)(count - i), 0));
+    emit(filter, (struct sock_filter)BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW));
+    emit(filter, (struct sock_filter)BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM));
+}
+
+static void deny_subvolumes(program *filter) {
+    static const uint32_t requests[] = {BTRFS_IOC_SNAP_CREATE, BTRFS_IOC_SUBVOL_CREATE, BTRFS_IOC_SNAP_CREATE_V2,
+                                        BTRFS_IOC_SUBVOL_CREATE_V2, BTRFS_IOC_SUBVOL_SETFLAGS};
+    deny_ioctls(filter, requests, sizeof(requests) / sizeof(requests[0]));
 }
 
 static void deny_set_id_files(program *filter) {
@@ -174,6 +195,7 @@ bool guardian_confine_identities(const service_policy *policy, uint32_t service_
     deny(&filter, SYS_add_key, EPERM);
     deny(&filter, SYS_request_key, EPERM);
     deny_set_id_files(&filter);
+    deny_subvolumes(&filter);
     deny_new_user(&filter, SYS_clone);
     deny_new_user(&filter, SYS_unshare);
     empty_groups_only(&filter);

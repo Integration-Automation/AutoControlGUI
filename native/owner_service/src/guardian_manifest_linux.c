@@ -52,6 +52,7 @@ bool guardian_manifest_valid(const guardian_manifest *manifest) {
     if (!service || !service_policy_valid(service) || manifest->client_count > GUARDIAN_CLIENT_LIMIT ||
         manifest->listener_gid == 0 || (service->socket_gid && manifest->listener_gid != service->socket_gid) ||
         (manifest->purge_root_count && !manifest->purge_roots) ||
+        manifest->purge_root_count > GUARDIAN_PURGE_ROOT_LIMIT ||
         in_any_range(service, manifest->service_uid, manifest->service_gid)) return false;
     for (size_t i = 0; i < manifest->client_count; ++i)
         if (!client_valid(service, &manifest->clients[i])) return false;

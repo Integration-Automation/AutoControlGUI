@@ -442,9 +442,13 @@ def scenario_siblings(steps, left=None):
     steps["static_tree_logged"] = "unwalked" in steps["guardian_stop"][1]
     # The 300-level chain went in the startup purge without meeting churn.
     steps["churn_logged"] = "met churn" in steps["guardian_stop"][1]
-    # The bind loop was stopped by the mount check, not met again as a directory.
+    # The bind loop was detached in the purge's own namespace, not met again as a directory.
     steps["revisit_logged"] = "met a directory again" in steps["guardian_stop"][1]
     steps["outside_file_kept"] = os.path.exists(kept)
+    # The purge detached mounts only in its own namespace: the host still has both.
+    with open("/proc/self/mountinfo") as handle:
+        points = {line.split()[4] for line in handle}
+    steps["host_mounts_kept"] = window in points and os.path.join(looped, "inner") in points
     run(["umount", "-l", covered])
     steps["covered_payload_left"] = os.path.lexists(covered)
     shutil.rmtree(covered, ignore_errors=True)
@@ -1081,7 +1085,7 @@ def expectations(result):
         and bool(siblings["squats"]) and siblings["squatted_payload_files_left"] == []
         and siblings["static_tree_logged"] and siblings["loop_mounted"] and not siblings["churn_logged"]
         and not siblings["revisit_logged"] and siblings["outside_mounted"] and siblings["outside_file_kept"]
-        and siblings["cover_mounted"] and not siblings["covered_payload_left"]
+        and siblings["cover_mounted"] and not siblings["covered_payload_left"] and siblings["host_mounts_kept"]
         and session["guardian_stop"][0] == 0 and siblings["guardian_stop"][0] == 0,
         # epoch-N itself is bounded before it is delegated: nothing beside `records` escapes.
         "epoch_bounded": session["epoch_bounds"] == {"cgroup.max.depth": "40", "cgroup.max.descendants": "4096",
@@ -1203,7 +1207,8 @@ def expectations(result):
             "payload_switch": 0,
             "payload_last": 0, "beyond_range": 1, "chmod_plain": 0, "fchmod_setuid": 1, "fchmodat_setgid": 1,
             "open_setuid": 1, "mknod_setuid": 1, "fchmodat2_setuid": 1, "tmpfile_setuid": 1, "openat2": 38,
-            "io_uring": 38, "openat2_control": 0, "io_uring_control": 0, "ring_enter": 38, "ring_register": 38},
+            "io_uring": 38, "openat2_control": 0, "io_uring_control": 0, "ring_enter": 38, "ring_register": 38,
+            "subvolume_control": 25, "subvolume": 1, "setflags": 1, "ordinary_ioctl": 0},
         "nothing_left": not result["cleanup"]["leftovers"] and not result["cleanup"]["subtree_exists"]
         and not os.path.exists(OUTER) and not os.path.exists(STATE2)
         and not result["cleanup"]["accounts_present"] and not result["cleanup"]["groups_present"]

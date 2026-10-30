@@ -185,7 +185,8 @@ static void purge_child(const guardian_state *state, int slice, pid_t guardian) 
     if (!guardian_purge_unshare())
         fprintf(stderr, "autocontrol-owner-guardian: purge keeps the host's mounts; it skips them\n");
     guardian_purge_outcome outcome = guardian_purge_payloads(state->manifest, slice);
-    if (outcome == PURGE_INCOMPLETE) sleep(1); /* It runs again at once: never a busy loop. */
+    /* While serving it runs again at once: never a busy loop. At startup the rerun comes later. */
+    if (outcome == PURGE_INCOMPLETE && state->purge_async) sleep(1);
     _exit((int)outcome);
 }
 
@@ -242,6 +243,7 @@ static void purge(guardian_state *state, int slice) {
             return;
         }
     }
+    fprintf(stderr, "autocontrol-owner-guardian: purge runs in the guardian: mounts are skipped\n");
     purge_settled(state, slice, (int)guardian_purge_payloads(state->manifest, slice));
 }
 

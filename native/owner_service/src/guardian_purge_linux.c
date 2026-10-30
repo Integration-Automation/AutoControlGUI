@@ -17,18 +17,21 @@
  * PURGE_DEPTH levels at a time; what other IDs own is all that may stay there, out of every
  * payload's reach, and an emptied quarantine is removed.
  *
- * A purge runs in a child with a mount namespace of its own, made private so nothing it does
- * reaches the host's, and first detaches there every mount below each root: a payload
- * directory another user covered with a mount of their own is laid bare, and removing it
- * detaches the host's mount too. A walk never enters a mount that is left (one that could
- * not be detached, or one made meanwhile), nor decides anything about an object on one: what
- * a mount shows is its owner's to report. Each walk enters a directory once: one met again
+ * A purge runs in a child with a mount namespace of its own, a slave of the host's so nothing
+ * it does propagates out. Every root and SysV IPC table is opened before anything is
+ * detached. A walk that meets an entry on another mount (a payload directory another user
+ * covered with a mount of their own) detaches that mount there, by the descriptor of the
+ * mount's root opened relative to the directory being walked, never by a path, and goes on
+ * with what lies beneath; removing a payload mountpoint detaches the host's mount too. A
+ * mount it cannot detach is never entered nor judged, and makes the purge run again.
+ * Directories on another device of the same mount (btrfs subvolumes) are entered only when
+ * a payload owns them. Each walk enters a directory once: one met again
  * (renamed behind the walk, or a directory this purge just moved into the quarantine) is
  * skipped. Its identity is its exact inode number together with a keyed digest of its file
  * handle, which carries the inode generation, so neither a reused inode number nor a
  * computed digest is taken for an earlier directory; a payload directory met again outside
- * the quarantine makes the purge run again rather than be skipped for good. The size of what others keep under a root
- * only makes a purge slower. What stops one short is churn only a live user causes, a listing
+ * the quarantine makes the purge run again rather than be skipped for good. The size of what
+ * others keep under a root only makes a purge slower. What stops one short is churn only a live user causes, a listing
  * growing far past its size when opened; a purge that met it, or could not move a payload
  * directory into the quarantine, reports itself incomplete and runs again before its slice
  * is handed out. Only an object that can be neither removed, moved nor closed off makes it
@@ -90,8 +93,12 @@ typedef struct {
     seen_set seen;
     uint64_t key[2];              /* Random, per purge: nobody can compute the digests. */
     uint64_t mount;               /* The root's mount: nothing on another is entered or judged. */
+    bool mount_logged, subvolume_logged;
     bool revisit_logged;
 } purge_scope;
+
+/* Set once the purge's own mount namespace is a slave: only then are mounts detached. */
+static bool private_mounts;
 
 /* `slice` below SERVICE_PAYLOAD_SLICES is one epoch's slice of every user-ID range; -1 all. */
 static bool payload_uid(const purge_scope *scope, uint32_t uid) {
@@ -358,15 +365,50 @@ static void at_depth_bound(purge_scope *scope, int directory, const char *name, 
     scope->overflow_logged = true;
 }
 
+/* Detaches, in the purge's own namespace, the mount whose root `name` in `directory` shows:
+ * opened relative to the walked directory, without following a link, and unmounted by that
+ * descriptor, so no path anyone else wrote is ever resolved. */
+static bool detach_entry(int directory, const char *name) {
+    int opened = openat(directory, name, O_PATH | O_NOFOLLOW | O_CLOEXEC);
+    if (opened < 0) return false;
+    char path[32];
+    snprintf(path, sizeof(path), "/proc/self/fd/%d", opened);
+    bool detached = umount2(path, MNT_DETACH) == 0;
+    close(opened);
+    return detached;
+}
+
+static void left_mount(purge_scope *scope) {
+    if (!scope->mount_logged) fprintf(stderr, "autocontrol-owner-guardian: purge left a mount in place\n");
+    scope->mount_logged = true;
+    /* In its own namespace a mount it could not detach is a race with a live user: run again.
+     * Without one (no namespace could be made) mounts stay, skipped, as they always do. */
+    if (private_mounts) scope->complete = false;
+}
+
+/* The mount `name` shows once every mount stacked on it is detached; 0 when gone or unknown. */
+static uint64_t bare_mount(purge_scope *scope, int directory, const char *name) {
+    uint64_t mount = mount_of(directory, name, AT_SYMLINK_NOFOLLOW);
+    for (int layer = 0; mount && mount != scope->mount && private_mounts && layer < 16; ++layer) {
+        if (!detach_entry(directory, name)) break;
+        mount = mount_of(directory, name, AT_SYMLINK_NOFOLLOW);
+    }
+    if (!mount && errno != ENOENT) {
+        fprintf(stderr, "autocontrol-owner-guardian: purge could not tell an entry's mount; it runs again\n");
+        scope->complete = false;
+    } else if (mount && mount != scope->mount) {
+        left_mount(scope);
+    }
+    return mount;
+}
+
 static void visit(purge_scope *scope, walk *state, bool root_walk, const char *name) {
     size_t at = state->depth - 1;
     int directory = dirfd(state->levels[at].listing);
+    if (bare_mount(scope, directory, name) != scope->mount) return; /* Another mount's, or gone. */
     struct stat status;
     if (fstatat(directory, name, &status, AT_SYMLINK_NOFOLLOW) != 0) return;
     if (at == 0 && scope->quarantine >= 0 && same_inode(&status, &scope->quarantined)) return; /* Walked later. */
-    uint64_t mount = mount_of(directory, name, AT_SYMLINK_NOFOLLOW);
-    if (!mount && errno != ENOENT) scope->complete = false; /* Unknown: run again rather than guess. */
-    if (mount != scope->mount) return; /* Another mount's, or gone. */
     if (!S_ISDIR(status.st_mode)) {
         if (payload_uid(scope, status.st_uid)) dispose(scope, directory, name, &status);
         return;
@@ -376,7 +418,8 @@ static void visit(purge_scope *scope, walk *state, bool root_walk, const char *n
     int error = child < 0 ? errno : 0;
     if (child >= 0 && (fstat(child, &status) != 0 || mount_of(child, "", AT_EMPTY_PATH) != scope->mount)) {
         close(child);
-        return; /* Mounted or swapped meanwhile: not this walk's to judge. */
+        left_mount(scope); /* Mounted or swapped meanwhile: not this walk's to judge. */
+        return;
     }
     if (child < 0) {
         if (payload_uid(scope, status.st_uid)) dispose(scope, directory, name, &status);
@@ -385,6 +428,15 @@ static void visit(purge_scope *scope, walk *state, bool root_walk, const char *n
         return;
     }
     bool owned = payload_uid(scope, status.st_uid);
+    if (child >= 0 && status.st_dev != state->levels[at].seen.st_dev && !owned) {
+        /* Another ID's subvolume (a read-only snapshot, say): not entered. Payload files in it
+         * were put there with that ID's leave. */
+        if (!scope->subvolume_logged)
+            fprintf(stderr, "autocontrol-owner-guardian: purge left another ID's subvolume unwalked\n");
+        scope->subvolume_logged = true;
+        close(child);
+        return;
+    }
     bool earlier = root_walk && at == 0 && earlier_quarantine(&status, name);
     if (earlier && flock(child, LOCK_EX | LOCK_NB) != 0) { close(child); return; } /* A running purge's. */
     if (remember(&scope->seen, identity_of(scope, child, &status)) == SEEN_AGAIN) {
@@ -446,50 +498,13 @@ static void walk_all(purge_scope *scope, int top, bool root_walk) {
     }
 }
 
-/* Set once the purge's own mount namespace is private: only then are mounts detached. */
-static bool private_mounts;
-
 bool guardian_purge_unshare(void) {
     if (unshare(CLONE_NEWNS) != 0) return false;
-    /* Shared propagation would carry every detach back to the host: none without this. */
-    if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0) return false;
+    /* Shared propagation would carry every detach back to the host: none without this. A
+     * slave still receives the host's unmounts, so it pins no filesystem the host lets go. */
+    if (mount(NULL, "/", NULL, MS_REC | MS_SLAVE, NULL) != 0) return false;
     private_mounts = true;
     return true;
-}
-
-/* A mountinfo path with its octal escapes (space, tab, newline, backslash) undone. */
-static void unescape(char *path) {
-    char *out = path;
-    for (char *in = path; *in; ++in) {
-        if (in[0] == '\\' && in[1] >= '0' && in[1] <= '3' && in[2] >= '0' && in[2] <= '7' && in[3] >= '0' &&
-            in[3] <= '7') {
-            *out++ = (char)((in[1] - '0') * 64 + (in[2] - '0') * 8 + (in[3] - '0'));
-            in += 3;
-        } else {
-            *out++ = *in;
-        }
-    }
-    *out = 0;
-}
-
-/* Detaches, in the purge's private namespace, every mount strictly below `resolved`, deepest
- * first, until none is left or a round detaches nothing. */
-static void detach_under(const char *resolved) {
-    size_t prefix = strlen(resolved);
-    for (int round = 0; round < 64; ++round) {
-        FILE *table = fopen("/proc/self/mountinfo", "re");
-        if (!table) return;
-        char line[8192], best[4096] = "";
-        while (fgets(line, sizeof(line), table)) {
-            char point[4096];
-            if (sscanf(line, "%*s %*s %*s %*s %4095s", point) != 1) continue;
-            unescape(point);
-            if (strncmp(point, resolved, prefix) || point[prefix] != '/' || strlen(point) <= strlen(best)) continue;
-            snprintf(best, sizeof(best), "%s", point);
-        }
-        fclose(table);
-        if (!best[0] || umount2(best, MNT_DETACH | UMOUNT_NOFOLLOW) != 0) return;
-    }
 }
 
 /* A root may be a link (/dev/shm -> /run/shm on older systems): resolved once, and used
@@ -497,7 +512,6 @@ static void detach_under(const char *resolved) {
 static int open_root(const char *path) {
     char resolved[4096];
     if (!realpath(path, resolved)) return -1;
-    if (private_mounts) detach_under(resolved);
     int root = open(resolved, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
     struct stat status;
     if (root >= 0 && (fstat(root, &status) != 0 || status.st_uid != 0 ||
@@ -508,9 +522,8 @@ static int open_root(const char *path) {
     return root;
 }
 
-static void purge_tree(purge_scope *scope, const char *path) {
-    int root = open_root(path);
-    if (root < 0) return; /* Absent, or not a directory this guardian may trust. */
+/* `root` is the root opened beforehand; it is closed here. */
+static void purge_tree(purge_scope *scope, int root, const char *path) {
     scope->root = root;
     scope->mount = mount_of(root, "", AT_EMPTY_PATH);
     if (!scope->mount) {
@@ -523,8 +536,12 @@ static void purge_tree(purge_scope *scope, const char *path) {
     scope->quarantine_tried = false;
     scope->churned = false;
     int top = dup(root);
-    if (top < 0) scope->complete = false;
-    else walk_all(scope, top, true);
+    if (top < 0) {
+        fprintf(stderr, "autocontrol-owner-guardian: purge could not walk %s; it runs again\n", path);
+        scope->complete = false;
+    } else {
+        walk_all(scope, top, true);
+    }
     /* Take quarantined chains apart until a pass moves nothing deeper out. Each pass opens
      * the quarantine afresh, so it reads from the first entry. */
     unsigned pass = 0;
@@ -539,7 +556,10 @@ static void purge_tree(purge_scope *scope, const char *path) {
         walk_all(scope, listing, false);
         if (!scope->moved) break;
     }
-    if (pass == QUARANTINE_PASSES) scope->complete = false;
+    if (pass == QUARANTINE_PASSES) {
+        fprintf(stderr, "autocontrol-owner-guardian: purge used every quarantine pass; it runs again\n");
+        scope->complete = false;
+    }
     if (scope->quarantine >= 0) {
         unlinkat(root, scope->quarantine_name, AT_REMOVEDIR); /* Only an emptied one goes. */
         close(scope->quarantine);
@@ -548,9 +568,9 @@ static void purge_tree(purge_scope *scope, const char *path) {
     close(root);
 }
 
-/* Each /proc/sysvipc table: the ID column and the owner and creator user ID columns. */
-static void purge_ipc(purge_scope *scope, const char *table, int kind) {
-    FILE *file = fopen(table, "re");
+/* Each /proc/sysvipc table, opened beforehand and closed here: the ID column and the owner
+ * and creator user ID columns. */
+static void purge_ipc(purge_scope *scope, FILE *file, int kind) {
     if (!file) return;
     char line[512];
     if (!fgets(line, sizeof(line), file)) { fclose(file); return; }
@@ -597,11 +617,29 @@ guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest
     scope.deferred_limit = deferred_room(&before);
     scope.deferred = scope.deferred_limit ? calloc(scope.deferred_limit, sizeof(deferred_directory)) : NULL;
     if (!scope.deferred) scope.deferred_limit = 0;
-    for (size_t i = 0; i < sizeof(default_roots) / sizeof(default_roots[0]); ++i) purge_tree(&scope, default_roots[i]);
-    for (size_t i = 0; i < manifest->purge_root_count; ++i) purge_tree(&scope, manifest->purge_roots[i]);
-    purge_ipc(&scope, "/proc/sysvipc/shm", 0);
-    purge_ipc(&scope, "/proc/sysvipc/msg", 1);
-    purge_ipc(&scope, "/proc/sysvipc/sem", 2);
+    /* Everything is opened before any mount is detached: nothing detached later can hide a
+     * root or a table. */
+    size_t defaults = sizeof(default_roots) / sizeof(default_roots[0]);
+    size_t count = defaults + manifest->purge_root_count;
+    int roots[sizeof(default_roots) / sizeof(default_roots[0]) + GUARDIAN_PURGE_ROOT_LIMIT];
+    const char *names[sizeof(roots) / sizeof(roots[0])];
+    if (count > sizeof(roots) / sizeof(roots[0])) count = sizeof(roots) / sizeof(roots[0]);
+    for (size_t i = 0; i < count; ++i) {
+        names[i] = i < defaults ? default_roots[i] : manifest->purge_roots[i - defaults];
+        roots[i] = open_root(names[i]); /* -1: absent, or not a directory this guardian may trust. */
+    }
+    static const char *const tables[] = {"/proc/sysvipc/shm", "/proc/sysvipc/msg", "/proc/sysvipc/sem"};
+    FILE *opened[3];
+    for (int kind = 0; kind < 3; ++kind) {
+        opened[kind] = fopen(tables[kind], "re");
+        /* Absent only where the kernel has no SysV IPC; any other failure is run again. */
+        if (!opened[kind] && errno != ENOENT) {
+            fprintf(stderr, "autocontrol-owner-guardian: purge could not read %s; it runs again\n", tables[kind]);
+            scope.complete = false;
+        }
+    }
+    for (size_t i = 0; i < count; ++i) if (roots[i] >= 0) purge_tree(&scope, roots[i], names[i]);
+    for (int kind = 0; kind < 3; ++kind) purge_ipc(&scope, opened[kind], kind);
     free(scope.deferred);
     free(scope.seen.slots);
     /* The startup purge runs in the guardian: what it launches later keeps the usual limit. */

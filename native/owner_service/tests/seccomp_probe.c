@@ -5,8 +5,11 @@
  * Prints one JSON object of errno values (0 = the call succeeded). */
 #include "guardian.h"
 #include <errno.h>
+#include <linux/btrfs.h>
+#include <sys/ioctl.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <linux/sched.h>
 #include <sched.h>
@@ -50,6 +53,12 @@ int main(void) {
     unlinkat(control, "control", 0);
     close(control);
     rmdir(control_dir);
+    /* Off btrfs a subvolume request is ENOTTY: the filter's EPERM shows it never got there. */
+    struct btrfs_ioctl_vol_args volume;
+    memset(&volume, 0, sizeof(volume));
+    snprintf(volume.name, sizeof(volume.name), "sub");
+    int tmp = open("/tmp", O_RDONLY | O_DIRECTORY);
+    int subvolume_control = outcome(ioctl(tmp, BTRFS_IOC_SUBVOL_CREATE, &volume));
     unsigned char control_params[120] = {0};
     long passed_ring = syscall(425 /* io_uring_setup */, 1, control_params);
     int io_uring_control = outcome(passed_ring);
@@ -87,6 +96,11 @@ int main(void) {
     long ring = syscall(425 /* io_uring_setup */, 1, params);
     int io_uring = outcome(ring);
     if (ring >= 0) close((int)ring);
+    int subvolume = outcome(ioctl(tmp, BTRFS_IOC_SUBVOL_CREATE, &volume));
+    int setflags = outcome(ioctl(tmp, BTRFS_IOC_SUBVOL_SETFLAGS, &(unsigned long long){0}));
+    int pipe_ends[2];
+    int ordinary_ioctl = pipe(pipe_ends) == 0 ? outcome(ioctl(pipe_ends[0], FIONREAD, &(int){0})) : -1;
+    close(tmp);
     int ring_enter = passed_ring >= 0 ? outcome(syscall(426 /* io_uring_enter */, (int)passed_ring, 0, 0, 0, NULL, 0)) : -1;
     int ring_register = passed_ring >= 0 ? outcome(syscall(427 /* io_uring_register */, (int)passed_ring,
                                                            9 /* IORING_REGISTER_PROBE */, NULL, 0)) : -1;
@@ -102,12 +116,14 @@ int main(void) {
            "\"beyond_range\": %d, \"chmod_plain\": %d, \"fchmod_setuid\": %d, \"fchmodat_setgid\": %d, "
            "\"open_setuid\": %d, \"mknod_setuid\": %d, \"fchmodat2_setuid\": %d, \"tmpfile_setuid\": %d, "
            "\"openat2\": %d, \"io_uring\": %d, \"openat2_control\": %d, \"io_uring_control\": %d, "
-           "\"ring_enter\": %d, \"ring_register\": %d}\n",
+           "\"ring_enter\": %d, \"ring_register\": %d, \"subvolume_control\": %d, \"subvolume\": %d, "
+           "\"setflags\": %d, \"ordinary_ioctl\": %d}\n",
            setresuid_root, setresgid_root, setuid_root, setgroups_root, setgroups_empty, unshare_user, clone_user,
            clone3, keyring, payload_switch(PAYLOAD_UID, PAYLOAD_GID),
            payload_switch(PAYLOAD_UID + SERVICE_PAYLOAD_IDS - 1, PAYLOAD_GID + SERVICE_PAYLOAD_IDS - 1),
            payload_switch(PAYLOAD_UID + SERVICE_PAYLOAD_IDS, PAYLOAD_GID + SERVICE_PAYLOAD_IDS), chmod_plain,
            fchmod_setuid, fchmodat_setgid, open_setuid, mknod_setuid, fchmodat2_setuid, tmpfile_setuid, openat2_any,
-           io_uring, openat2_control, io_uring_control, ring_enter, ring_register);
+           io_uring, openat2_control, io_uring_control, ring_enter, ring_register, subvolume_control, subvolume,
+           setflags, ordinary_ioctl);
     return 0;
 }

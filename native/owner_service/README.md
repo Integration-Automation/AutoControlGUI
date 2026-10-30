@@ -89,11 +89,16 @@ the gate.
   it is read, which only a live user causes, stops it, and it runs again, as does one
   that could not move a payload directory into the quarantine, before its slice is
   handed out; a live local user can therefore delay a slice. Directories on another
-  device of the same mount (btrfs subvolumes a payload created) are walked like any
-  other. Each purge runs in a child with a private mount namespace of its own and first
-  detaches there every mount below each root, so a payload directory another user
-  covered with a mount of their own (a FUSE mount, say) is laid bare and removed, which
-  detaches that mount on the host too; mounts that cannot be detached are skipped.
+  device of the same mount (btrfs subvolumes) are entered only when a payload owns them,
+  and payloads cannot create subvolumes or snapshots or make one read-only. Each purge
+  runs in a child with a mount namespace of its own, a slave of the host's so nothing it
+  does propagates out; every root and SysV IPC table is opened before anything is
+  detached. A walk that meets an entry on another mount (a payload directory another user
+  covered with a FUSE mount, say) detaches that mount in its own namespace, by the
+  descriptor of the mount's root opened relative to the walked directory, never by a
+  path, and removes what lies beneath; removing a payload mountpoint detaches the host's
+  mount too, and whatever that mount held is gone with it. A mount it cannot detach makes
+  the purge run again.
   Payload files can escape a purge only with another local user's help: inside another
   ID's directories past the deferral limit (for as long as those directories stay), or
   renamed behind the walk by that user while it runs. No payload file can carry a
