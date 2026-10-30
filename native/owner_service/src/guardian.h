@@ -92,6 +92,14 @@ bool guardian_client_verified(const guardian_manifest *manifest, const peer_iden
 #define GUARDIAN_ACCEPT_BURST 32  /* Connections one account may have handed over per second. */
 /* Forgets every account's connection count (tests). */
 void guardian_forward_reset_rates(void);
+/* Where a verified client's connection goes: its channel, epoch and generation. */
+typedef struct { int channel; no_id epoch; uint64_t generation; } guardian_target;
+/* Picks the target for a verified client by its user ID; false drops the connection. */
+typedef bool (*guardian_route)(void *context, uint32_t uid, guardian_target *target);
+/* As guardian_forward, but each client goes where `route` sends it; `*used` names the
+ * channel that was tried. */
+guardian_forward_result guardian_forward_routed(int listener, const guardian_manifest *manifest,
+                                                guardian_route route, void *context, int *used);
 guardian_forward_result guardian_forward(int listener, int channel, const guardian_manifest *manifest, no_id epoch,
                                          uint64_t generation);
 #endif

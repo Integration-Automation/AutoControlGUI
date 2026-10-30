@@ -234,6 +234,21 @@ def _gid_taken(value):
         return False
 
 
+def payload_owned_anywhere():
+    """Every path under the purge roots that a payload ID still owns, quarantines included."""
+    found = []
+    for top in ("/tmp", "/var/tmp", "/dev/shm", "/run/lock"):
+        for directory, subdirs, files in os.walk(top, followlinks=False):
+            for name in subdirs + files:
+                path = os.path.join(directory, name)
+                try:
+                    if 0 <= os.lstat(path).st_uid - PAYLOAD_BASE < PAYLOAD_IDS:
+                        found.append(path)
+                except OSError:
+                    pass
+    return found[:10]
+
+
 def _closed_off(path):
     try:
         status = os.lstat(path)
@@ -290,6 +305,9 @@ def scenario_session(steps):
     foreign.wait(timeout=30)
     steps["epoch_limits"] = {name: open(f"{SUBTREE}/{epoch}/records/{name}").read().strip()
                              for name in ("pids.max", "memory.max")}
+    steps["epoch_bounds"] = {name: open(f"{SUBTREE}/{epoch}/{name}").read().strip()
+                             for name in ("cgroup.max.depth", "cgroup.max.descendants", "pids.max", "memory.max")}
+    steps["subtree_caps"] = {name: open(f"{SUBTREE}/{name}").read().strip() for name in ("pids.max", "memory.max")}
     container = os.path.dirname(SUBTREE + steps["inspection"]["payload_cgroups"][0])
     steps["limits"] = {name: open(os.path.join(container, name)).read().strip()
                        for name in ("pids.max", "memory.max")}
@@ -330,9 +348,10 @@ def scenario_siblings(steps, left=None):
     guardian = start_guardian()
     left = left or ["", -1, "", "", ""]
     steps["leftovers_after_start"] = os.path.exists(left[0]) or _shm_exists(left[1]) or os.path.exists(left[2])
-    steps["neutralised"] = [_closed_off(left[3]), _closed_off(left[4])]
-    for path in (left[3], left[4]):
-        shutil.rmtree(path, ignore_errors=True)
+    # The 80-level chain (8 MiB at its bottom) and the directory another ID wrote into: their
+    # names are free and nothing a payload ID owns is left anywhere under the purge roots.
+    steps["names_freed"] = not os.path.lexists(left[3]) and not os.path.lexists(left[4])
+    steps["payload_owned_left"] = payload_owned_anywhere()
     first, second = client("hold"), client("hold")
     steps["first"], steps["second"] = read_json(first), read_json(second)
     epoch = epochs()[-1]
@@ -631,6 +650,29 @@ def scenario_triple_overlap(steps):
     steps["epochs_after_stop"] = epochs()
 
 
+def scenario_retiring_nested(steps):
+    """A nested parent whose epoch retired still opens a child: its connection goes to the
+    epoch running its slice, not to the current one."""
+    guardian = start_guardian()
+    first = epochs()[-1]
+    driver = client("nested_later")
+    steps["started"] = read_json(driver)
+    steps["parent_uids"] = payload_uids(first)
+    steps["fill"] = [rollover_session() for _ in range(7)]             # The parent's epoch retires.
+    steps["epochs_before_nest"] = epochs()
+    driver.stdin.write("\n")
+    driver.stdin.flush()
+    steps["nest"] = read_json(driver)
+    escaped = (steps["nest"].get("result") or {}).get("escaped")
+    steps["child_uid"] = status_of(escaped)["uid"] if isinstance(escaped, int) and pid_alive(escaped) else None
+    for stage in ("close_child", "close"):
+        driver.stdin.write("\n")
+        driver.stdin.flush()
+        steps[stage] = read_json(driver)
+    driver.wait(timeout=60)
+    steps["guardian_stop"] = stop_guardian(guardian)
+
+
 def scenario_taken_range(steps):
     """A manifest whose payload range holds a real account is refused before anything starts."""
     refused = run([OPT + "/guardian_taken_range"], timeout=30)
@@ -817,6 +859,8 @@ def main():
         scenario_triple_overlap(report["steps"]["triple_overlap"])
         report["steps"]["remote"] = {}
         scenario_remote(report["steps"]["remote"])
+        report["steps"]["retiring_nested"] = {}
+        scenario_retiring_nested(report["steps"]["retiring_nested"])
     except Exception as error:  # reason: cleanup must run and the failure must be reported, not lost
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
@@ -863,10 +907,11 @@ def expectations(result):
     taken = result["steps"].get("taken_range", {})
     triple = result["steps"].get("triple_overlap", {})
     remote = result["steps"].get("remote", {})
+    retiring_nested = result["steps"].get("retiring_nested", {})
     inspection = session.get("inspection", {})
     service, payload = inspection.get("service", [{}]), inspection.get("payload", [{}])
     if "error" in result or not all((session, crash, siblings, nested, race, renewal, rollover, service_crash,
-                                     delegated, worker, held, second, taken, triple, remote)):
+                                     delegated, worker, held, second, taken, triple, remote, retiring_nested)):
         return {"completed": False}
     return {
         "protected_reply": session["request"].get("reply") == "pong",
@@ -882,7 +927,7 @@ def expectations(result):
         "payload_cannot_migrate": session["payload_cannot_join_epoch"] and session["payload_cannot_join_records"],
         "unlisted_client_refused": "error" in session["foreign_client"],
         "payload_limits_set": session["limits"] == {"pids.max": "32", "memory.max": str(128 << 20)},
-        # The whole epoch's helpers together: eight records at the per-helper limits.
+        # The whole epoch's helpers together: sixteen records at the per-helper limits.
         "payload_umask_private": session["umask"].get("reply") == 0o077,
         # A file in /tmp and a SysV segment a helper left exist while it runs and are gone
         # once its epoch is reclaimed, before its ID can be handed out again.
@@ -890,9 +935,16 @@ def expectations(result):
         # An unremovable leftover (another ID wrote into it; deeper than the walk) is closed
         # off rather than tainting the slice: the guardian stops cleanly and the next
         # scenario's guardian starts on a clean purge.
-        "unremovable_leftovers_neutralised": siblings["neutralised"] == [True, True]
+        # What could not be removed where it was is moved into the root-only quarantine and
+        # taken apart there: names free, nothing payload-owned left, memory released.
+        "unremovable_leftovers_released": siblings["names_freed"] and siblings["payload_owned_left"] == []
         and session["guardian_stop"][0] == 0 and siblings["guardian_stop"][0] == 0,
-        "epoch_limits_set": session["epoch_limits"] == {"pids.max": str(32 * 8), "memory.max": str(8 * (128 << 20))},
+        # epoch-N itself is bounded before it is delegated: nothing beside `records` escapes.
+        "epoch_bounded": session["epoch_bounds"] == {"cgroup.max.depth": "40", "cgroup.max.descendants": "4096",
+                                                    "pids.max": str(32 * 16 + 256),
+                                                    "memory.max": str(16 * (128 << 20) + (512 << 20))}
+        and session["subtree_caps"] == {"pids.max": "4096", "memory.max": str(8 << 30)},
+        "epoch_limits_set": session["epoch_limits"] == {"pids.max": str(32 * 16), "memory.max": str(16 * (128 << 20))},
         # The payload, its escaped descendant and the fork attempts share 32 pids.
         "fork_bounded": isinstance(session["spawn"].get("reply"), int) and 0 < session["spawn"]["reply"] < 32,
         "escaped_descendant_contained": session["escaped_in_payload_cgroup"],
@@ -970,6 +1022,12 @@ def expectations(result):
         and bool(remote["inspection"]["payload"]) and in_payload_range(remote["inspection"]["payload"][0].get("uid"))
         and remote["inspection"]["payload"][0].get("seccomp") == "2"
         and remote["close"].get("retired") is True and remote["guardian_stop"][0] == 0,
+        "nested_in_retiring_epoch": len(retiring_nested["epochs_before_nest"]) == 2
+        and (retiring_nested["nest"].get("result") or {}).get("ping") == "pong"
+        and slice_of([retiring_nested["child_uid"]] if retiring_nested["child_uid"] else []) == slice_of(
+            retiring_nested["parent_uids"])
+        and (retiring_nested["close_child"].get("result") or {}).get("retired") is True
+        and retiring_nested["close"].get("retired") is True and retiring_nested["guardian_stop"][0] == 0,
         "taken_payload_range_refused": taken["refused"][0] != 0
         and "manifest is invalid" in taken["refused"][1] and not taken["epochs"],
         "native_worker_runs": (worker["bootstrap"].get("result") or {}).get("protocol") == 1

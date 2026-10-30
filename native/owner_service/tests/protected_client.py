@@ -103,6 +103,27 @@ def remote():
     sys.exit(0)
 
 
+def nested_later():
+    """Policy 3 parent started now and asked to nest only later, after its epoch retired."""
+    parent = OwnerServiceChannel(SeqpacketTransport(endpoint), 3)
+    emit({"stage": "started", "reply": parent.request("ping", {}, timeout=40)})
+    for step, operation in (("nest", "nest"), ("close_child", "close")):
+        sys.stdin.readline()
+        try:
+            emit({"stage": step, "result": parent.request(operation, {}, timeout=40)})
+        except AgentTaskError as error:
+            emit({"stage": step, "error": str(error)})
+    sys.stdin.readline()
+    try:
+        parent.close()
+        emit({"stage": "close", "retired": parent.retired})
+    except AgentTaskError as error:
+        emit({"stage": "close", "error": str(error), "retired": parent.retired})
+    sys.exit(0)
+
+
+if mode == "nested_later":
+    nested_later()
 if mode == "remote":
     remote()
 if mode == "worker":

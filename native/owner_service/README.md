@@ -67,12 +67,19 @@ the gate.
   spent epochs can retire beside the current one; a further retirement waits for a slot.
   Each slice is purged in a child process after its epoch ends and is not handed out
   again until that purge finishes; meanwhile, if no other slice is free, there is no
-  current epoch and new clients wait in the listener's backlog. A payload-owned object
-  the purge cannot remove (another ID wrote into it, or it lies deeper than the 64-level
-  walk) is closed off instead: owned by root with mode 0. Only an object that can be
-  neither removed nor closed off taints its slice, and startup purges each slice once,
-  after the previous run's epochs are dead, so one stubborn leftover never stops the
-  guardian. A stop kills every epoch and abandons running purges; the next start purges.
+  current epoch and new clients wait in the listener's backlog. A payload-owned
+  directory the purge cannot remove where it is (another ID wrote into it, or it lies
+  deeper than the 64-level walk) is moved, inode-checked, into a root-only quarantine on
+  the same filesystem and taken apart there 64 levels at a time: its name is free at
+  once and every payload-owned file below it, tmpfs pages included, is released. Another
+  ID's directory at the depth bound stays put and is walked from its own top. Only an
+  object that can be neither removed, moved nor closed off taints its slice, and startup
+  purges each slice once, after the previous run's epochs are dead, so one stubborn
+  leftover never stops the guardian. A helper's own connection (a nested parent opening
+  children) goes to the epoch that runs its slice, retiring or not; a policy that may
+  start nested children needs `record_capacity` above `client_lease_quota`. `epoch-N`
+  itself is bounded before it is delegated (depth 40, 4096 descendants, the records'
+  limits plus room for the service). A stop kills every epoch and abandons running purges; the next start purges.
   The manifest may list more world-writable roots (`purge_roots`, for example
   /var/crash) and cap every running epoch together (`subtree_pids_max`,
   `subtree_memory_max`); up to four epochs run at once, so either set those or cap the

@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-18；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-19；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -120,9 +120,10 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      第三次獨立審查（2026-10-30）的 MAJOR-A 與 B、C、D、E(1)(2)、F、H、J、K 已處理。
      清除已移到 purge 子程序，payload 範圍分 4 份、最多 3 個 epoch 同時退休，遠端 helper 已在服務下
      完成交握（與實體裝置的通訊仍屬暫緩的實體裝置驗收）。
-     第四次獨立審查（2026-10-30）的 MAJOR-1 與 MINOR-2～6、NOTE-7～12 已處理。
+     第四次獨立審查（2026-10-30）的 MAJOR-1 與 MINOR-2～6、NOTE-7～10、12 已處理，NOTE-11 於第五次
+     審查後處理；第五次獨立審查的 MAJOR-A、MINOR-B、MINOR-C 與 NOTE-D～G 已處理。
      TODO：其他架構／libc／核心的相容性驗證、
-     安裝內容比對、實際已安裝主機的執行驗收，以及第五次獨立審查才能開啟正式閘門；不能匯入時下載
+     安裝內容比對、實際已安裝主機的執行驗收，以及第六次獨立審查才能開啟正式閘門；不能匯入時下載
      或暗中部署服務。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、
      helper／半開交握回收與取消／停止生命週期，避免兩條實作各自接管相同原生資源。

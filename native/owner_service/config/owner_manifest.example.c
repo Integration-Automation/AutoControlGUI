@@ -52,7 +52,9 @@ const service_policy service_manifest = {
     /* Leases one client may use per epoch. When they are spent, or every record is used,
      * and no lease or connection is open, the service drains and the guardian grants a
      * fresh epoch. Until then a spent epoch answers new opens with CAPACITY, so one
-     * long-lived helper delays the rollover: keep both at the maximum, 32. */
+     * long-lived helper delays the rollover: keep both at the maximum, 32. A policy that
+     * may start nested children needs record_capacity above client_lease_quota, so a
+     * spent epoch still has record slots for its helpers' children. */
     .client_lease_quota = 32,
     /* Child leases one helper may open per epoch, if its policy may start nested children. */
     .nested_lease_quota = 4,

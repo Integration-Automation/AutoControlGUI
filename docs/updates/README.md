@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261030-19 | 2026-10-30 | Quarantine stubborn leftovers, bound epoch-N, and route helpers to their own epoch | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-18 | 2026-10-30 | Treat a revoke during a protected launch as cancellation, not an error | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261030-17 | 2026-10-30 | Keep a stubborn leftover from stopping the owner service, and never wait on a purge | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-16 | 2026-10-30 | Purge off the guardian's loop, four payload slices, and a remote helper under the owner service | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |

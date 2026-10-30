@@ -61,18 +61,36 @@ static bool send_connection(int channel, int connection, no_id epoch, uint64_t g
 
 /* One pending client. The guardian's copy of the connection is always closed here: the
  * service owns the handed-over one, and a refused one is simply dropped. */
-guardian_forward_result guardian_forward(int listener, int channel, const guardian_manifest *manifest, no_id epoch,
-                                         uint64_t generation) {
+guardian_forward_result guardian_forward_routed(int listener, const guardian_manifest *manifest,
+                                                guardian_route route, void *context, int *used) {
+    *used = -1;
     int connection;
     do { connection = accept4(listener, NULL, NULL, SOCK_CLOEXEC); } while (connection < 0 && errno == EINTR);
     if (connection < 0) return errno == EAGAIN || errno == EWOULDBLOCK ? FORWARD_IDLE : FORWARD_REFUSED;
     peer_identity peer = {.pidfd = {FD_EMPTY, -1}};
     no_error error;
+    guardian_target target;
     guardian_forward_result result = FORWARD_REFUSED;
-    if (peer_identity_from_connection(&peer, connection, &error) &&
-        within_rate(verified_client(manifest, &peer)))
-        result = send_connection(channel, connection, epoch, generation) ? FORWARD_HANDED : FORWARD_CHANNEL_FAILED;
+    if (peer_identity_from_connection(&peer, connection, &error) && within_rate(verified_client(manifest, &peer)) &&
+        route(context, peer.credentials.uid, &target)) {
+        *used = target.channel;
+        result = send_connection(target.channel, connection, target.epoch, target.generation) ? FORWARD_HANDED :
+            FORWARD_CHANNEL_FAILED;
+    }
     service_close_fd(&peer.pidfd);
     close(connection);
     return result;
+}
+
+static bool fixed_route(void *context, uint32_t uid, guardian_target *target) {
+    (void)uid;
+    *target = *(const guardian_target *)context;
+    return true;
+}
+
+guardian_forward_result guardian_forward(int listener, int channel, const guardian_manifest *manifest, no_id epoch,
+                                         uint64_t generation) {
+    guardian_target target = {channel, epoch, generation};
+    int used;
+    return guardian_forward_routed(listener, manifest, fixed_route, &target, &used);
 }

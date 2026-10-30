@@ -52,7 +52,8 @@ const service_policy service_manifest = {
     .socket_gid = SOCKET_GID,
     .client_lease_quota = 8,
     .nested_lease_quota = 4,
-    .record_capacity = 8,
+    /* Above the client quota: a spent epoch keeps record slots for nested children. */
+    .record_capacity = 16,
     .record_pids_max = 32,
     .connections_per_account = 8,
     .record_memory_max = 128ULL << 20,
@@ -82,4 +83,6 @@ const guardian_manifest guardian_compiled_manifest = {
     .clients = protected_clients,
     .client_count = 2,
     .service = &service_manifest,
+    .subtree_pids_max = 4096,
+    .subtree_memory_max = 8ULL << 30,
 };

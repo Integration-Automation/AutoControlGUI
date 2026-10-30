@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <poll.h>
 #include <signal.h>
 #include <sys/prctl.h>
 #include <sys/statfs.h>
@@ -162,18 +163,22 @@ void guardian_purge_abandon(guardian_state *state) {
     for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) {
         if (state->purging[s] < 0) continue;
         syscall(SYS_pidfd_send_signal, state->purging[s], SIGKILL, NULL, 0);
+        struct pollfd ended = {.fd = state->purging[s], .events = POLLIN};
+        int rc;
+        do { rc = poll(&ended, 1, 5000); } while (rc < 0 && errno == EINTR);
         siginfo_t info;
-        while (waitid(P_PIDFD, (id_t)state->purging[s], &info, WEXITED) < 0 && errno == EINTR) continue;
-        close(state->purging[s]);
+        if (rc > 0) while (waitid(P_PIDFD, (id_t)state->purging[s], &info, WEXITED) < 0 && errno == EINTR) continue;
+        close(state->purging[s]); /* One stuck in D state is left to init once the guardian exits. */
         state->purging[s] = -1;
     }
 }
 
 /* The purge child holds nothing of the guardian's (no journal lock, listener or channel),
  * dies with it, and answers signals again. */
-static void purge_child(const guardian_state *state, int slice) {
+static void purge_child(const guardian_state *state, int slice, pid_t guardian) {
     syscall(SYS_close_range, 3U, ~0U, 0);
     prctl(PR_SET_PDEATHSIG, SIGKILL);
+    if (getppid() != guardian) _exit(1); /* It died before the signal was armed. */
     sigset_t none;
     sigemptyset(&none);
     sigprocmask(SIG_SETMASK, &none, NULL);
@@ -198,8 +203,9 @@ void guardian_purge_reap(guardian_state *state, int slice) {
 static void purge(guardian_state *state, int slice) {
     if (slice >= 0 && state->purge_async) {
         guardian_purge_reap(state, slice);
+        pid_t guardian = getpid();
         pid_t child = fork();
-        if (child == 0) purge_child(state, slice);
+        if (child == 0) purge_child(state, slice, guardian);
         int pidfd = child > 0 ? (int)syscall(SYS_pidfd_open, child, 0) : -1;
         if (pidfd >= 0) { state->purging[slice] = pidfd; return; }
         if (child > 0) {
@@ -294,6 +300,24 @@ static int limit_records(int records, const service_policy *service) {
     return 0;
 }
 
+/* epoch-N is delegated too, so its own limits, root's files, bound everything the service
+ * may create or move beside `records`: depth below what reclaim removes, a descendant count,
+ * and the records' limits plus room for the service itself. */
+static int limit_epoch(int epoch, const service_policy *service) {
+    if (!write_control(epoch, "cgroup.max.depth", "40") || !write_control(epoch, "cgroup.max.descendants", "4096"))
+        return errno;
+    if (!service) return 0;
+    char value[24];
+    snprintf(value, sizeof(value), "%llu",
+             (unsigned long long)(service->record_pids_max * service->record_capacity + 256));
+    if (!write_control(epoch, "pids.max", value)) return errno;
+    snprintf(value, sizeof(value), "%llu",
+             (unsigned long long)(service->record_memory_max * service->record_capacity + (512ULL << 20)));
+    if (!write_control(epoch, "memory.max", value)) return errno;
+    if (!write_control(epoch, "memory.swap.max", "0") && errno != ENOENT) return errno;
+    return 0;
+}
+
 static int create_branches(guardian_state *state) {
     const gj_record *current = &state->journal.current;
     /* ENOENT here means the subtree's parent has not enabled pids and memory. */
@@ -311,6 +335,7 @@ static int create_branches(guardian_state *state) {
     int epoch = openat(state->subtree, current->epoch, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
     if (epoch < 0) return errno;
     int error = write_control(epoch, "cgroup.subtree_control", LIMITED) ? 0 : errno;
+    if (!error) error = limit_epoch(epoch, state->manifest->service);
     if (!error) error = delegate(epoch, state->manifest);
     if (!error && mkdirat(epoch, current->service, 0755) != 0) error = errno;
     if (!error && mkdirat(epoch, "records", 0755) != 0) error = errno;

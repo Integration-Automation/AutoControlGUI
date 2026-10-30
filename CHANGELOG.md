@@ -64,6 +64,10 @@ before it is handed out again.
 `subtree_pids_max` and `subtree_memory_max`. A leftover the purge cannot remove is closed off (root, mode 0)
 instead of tainting its slice, startup purges each slice once after the previous run's epochs are dead,
 and a stop abandons running purges instead of waiting for them. The example payload range moves to 50000.
+Leftovers the purge cannot remove in place are now moved into a root-only quarantine on the same filesystem and
+taken apart there, instead of being closed off where they stand; `epoch-N` gets its own depth, descendant, process
+and memory limits before delegation; a helper's own connection is routed to the epoch running its slice; and a
+failed epoch start is retried with backoff instead of stopping the guardian.
 
 ## Unreleased: helper containment in runtime status
 
