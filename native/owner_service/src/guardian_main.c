@@ -630,6 +630,7 @@ int main(void) {
     sigaddset(&stopping, SIGTERM);
     sigaddset(&stopping, SIGINT);
     signal(SIGPIPE, SIG_IGN);
+    signal(SIGCHLD, SIG_DFL); /* Inherited SIG_IGN would reap children before the guardian learns how they ended. */
     if (sigprocmask(SIG_BLOCK, &stopping, NULL) != 0) return EXIT_REFUSED;
     int signals = signalfd(-1, &stopping, SFD_CLOEXEC);
     guardian_state state;

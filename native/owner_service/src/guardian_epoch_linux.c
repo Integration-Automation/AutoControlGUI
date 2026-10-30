@@ -274,7 +274,8 @@ static void await_purge(guardian_state *state, int slice, pid_t child) {
         if (pidfd >= 0) {
             struct pollfd ended = {.fd = pidfd, .events = POLLIN};
             int rc = poll(&ended, 1, PURGE_CHECK_MS);
-            if (rc > 0 || (rc < 0 && errno != EINTR)) break;
+            if (rc > 0) break;
+            if (rc < 0 && errno != EINTR) { close(pidfd); pidfd = -1; continue; } /* Watched by pid now. */
         } else {
             pid_t done = waitpid(child, &status, WNOHANG);
             if (done == child) { reaped = true; break; }

@@ -110,6 +110,8 @@ A manifest purge root that resolves into a link loop or to a directory the purge
 refused at load, and a purge child the guardian waits for in place (at startup, or while serving when no
 pidfd can be had) is watched by its pid when there is no pidfd (its slice is tainted when even a kill cannot
 end it) and on a longer, still doubling allowance when the shared heartbeat could not be mapped.
+A purge child the guardian could not wait for now taints its slice, the guardian resets SIGCHLD to its
+default at startup, and a pidfd that cannot be polled falls back to the pid watch.
 
 ## Unreleased: helper containment in runtime status
 

@@ -104,6 +104,26 @@ int main(void) {
     purge(&state, 3);
     CHECK("unwatched", state.repurge[3] && !state.tainted[3] && seconds(started) >= 1.9);
 
+    /* The same after one stall in a row: twice as long. */
+    unsigned round = state.stall_round[3];
+    fresh(&state, false);
+    state.stall_round[3] = round;
+    fake_beats = 0;
+    started = now_ns();
+    purge(&state, 3);
+    CHECK("unwatched_doubles", round == 1 && state.repurge[3] && seconds(started) >= 3.9);
+
+    /* A child the guardian cannot wait for (SIGCHLD ignored: reaped behind its back) is not
+     * taken for a clean purge: its slice is tainted. */
+    fresh(&state, true);
+    fake_beats = 3;
+    pidfd_open_disabled = true;
+    signal(SIGCHLD, SIG_IGN);
+    purge(&state, 2);
+    signal(SIGCHLD, SIG_DFL);
+    pidfd_open_disabled = false;
+    CHECK("unknown_end_taints", state.tainted[2] && !state.repurge[2]);
+
     /* No pidfd: watched by its pid, killed by its pid. */
     fresh(&state, true);
     fake_beats = 0;
