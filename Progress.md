@@ -9,7 +9,11 @@
 目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-58；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
-正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
+WIP（整合，2026-10-30 起）：將 AutoControlGUI `dev` 快轉至 `feat/agent-task-runtime`，WebRunner `dev`
+合入 `feat/managed-browser-sessions`。順序：完整 headless 套件與文件計數測試在分支上通過 → 確認
+Jeffrey_RPA 未執行、通知同儕 session → 主工作樹舊的 Progress 鏡像備份後由分支版本取代 → 快轉並跑
+Jeffrey_RPA 的 test_je_facade → 推送 `dev`（會觸發 je_auto_control_dev 發布）前先經使用者確認。
+整合不等於部署：正式服務、受管 Chromium 與 Jeffrey_RPA 批次的部署／回復仍依下列 P4。
 接續第 5 組 browser／remote reader、第 3 組非 Windows helper 與第 6 組跨主機剩餘驗證，
 並核對第 4 組裝置來源及第 8 組正式交付。
 
