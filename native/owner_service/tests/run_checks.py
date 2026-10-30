@@ -70,6 +70,8 @@ def main():
             "guardian_journal_acceptance": (["guardian_journal_acceptance.c", "guardian_journal.c"], [], 0),
             "purge_siphash_check": (["purge_siphash_check.c"], [], 0),
             "path_anchored_check": (["path_anchored_check.c"], [], 0),
+            "purge_watch_acceptance": (["purge_watch_acceptance.c", "guardian_journal.c"], [], 0),
+            "purge_roots_check": (["purge_roots_check.c", "guardian_manifest_linux.c", "service_policy.c"], [], 0),
             "guardian_acceptance": (["guardian_acceptance.c", "guardian_epoch_linux.c", "guardian_journal.c",
                                      "guardian_purge_linux.c"], [], 0),
             "guardian_forward_acceptance": (["guardian_forward_acceptance.c", "guardian_forward_linux.c",

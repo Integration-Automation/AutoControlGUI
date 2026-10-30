@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-37；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-38；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -109,29 +109,21 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      存在後接合。parent_watch、輸入 journal／lease 與本機 pipe 執行緒退場仍須接合。
      owner 服務原始碼依 2026-10-29 決定已進入 `native/owner_service/`（src、manifest 範本、build.sh、
      tests 與兩個驗收執行器，不進 wheel），每個 client 帳號的 lease 配額已實作。
-     現況：經二十三輪獨立審查（處理紀錄見 docs/updates/2026-10-e.md，U-20261029-23 起）；第十九、二十輪
-     未發現 MAJOR 或 MINOR，第二十一輪的 MINOR 於 U-20261030-35、第二十二輪的文件 MINOR 於
-     U-20261030-36 修正，第二十三輪審查 U-20261030-36 未發現 MAJOR 或 MINOR：owner 服務本身不阻擋
-     開閘。正式閘門另因下列項目關閉。
+     現況：經二十三輪獨立審查（處理紀錄見 docs/updates/2026-10-e.md，U-20261029-23 起），第二十三輪
+     審查 U-20261030-36 未發現 MAJOR 或 MINOR；之後 U-20261030-38 補齊先前延後的測試與載入檢查，待其
+     獨立複審。正式閘門另因下列項目關閉。
      驅動桌面／瀏覽器的 helper 一律以本機程序執行，owner 服務只承載不需顯示的 helper（探測、遠端裝置）；
      遠端 helper 與實體裝置的通訊屬暫緩的實體裝置驗收。
-     TODO（尚無自動化測試）：清除子程序停滯後的交接（啟動寬限 30 秒）與 60 秒無進度監看；pidfd_open
-     或心跳共享記憶體建立失敗時仍會阻塞等待；走訪中途被掛載的項目；readdir 錯誤；訊息佇列三個退路
-     分支（fsopen 回 ENODEV、mount API 被擋改用 /dev/mqueue、兩者皆不可用）；隔離區外重遇的 fail-safe。
-     TODO：payload 目錄被配合的本機使用者在走訪中即時改名到走訪後方時，仍可能逃過一次清除（已記於
-     服務 README）；徹底消除需讓 payload 使用私有 /tmp、/var/tmp、/dev/shm。
+     已知限制（服務 README 已列）：payload 檔案只在別的本機使用者配合時可能逃過一次清除（放在該 ID 的
+     目錄裡且超過延後上限、或在走訪中被即時改名到走訪後方）；逃過的只是資料，不帶身分（不能設 set-ID）。
+     徹底消除需讓 payload 使用私有 /tmp、/var/tmp、/dev/shm，屬另一項設計。
+     已知限制（未寫進服務 README）：清除只依使用者 ID 判斷，隔離區保留其他 ID 擁有的內容；NSS 服務中斷
+     而回報 ENOENT 時，manifest 的 payload ID 會被當成「未配置」；同一檔案系統上的 bind mount 只在清除
+     自己的 namespace 中卸下。
      TODO：已安裝主機驗收須確認主機需求：journald SplitMode=none 或不保存、core_pattern 為檔案／
      systemd-coredump／apport、mount API 未被擋或 /dev/mqueue 為本 IPC namespace 的 mqueue、所有 payload
      可寫目錄皆為清除根目錄。guardian 只對未知的 pipe／socket 或讀不到的 core_pattern 警告，並記錄存在
      但打不開或不受信任的清除根目錄，其餘不檢查。
-     TODO：manifest 清除根目錄的載入檢查：realpath 以 ENOENT／ENOTDIR 以外的錯誤失敗（如 ELOOP）時
-     仍接受，之後每次清除都未完成；根目錄本身屬於使用者時只在清除時跳過，未在載入時拒絕。
-     guardian_manifest_valid 的清除根目錄分支（寫法拒絕與 realpath 分支）尚無測試夾具。
-     TODO：native/owner_service 的 src 以外（tests、build.sh）有超過 120 字元的行，
-     service_authority_acceptance.c 為 790 行（超過 750 行上限），待拆分。
-     已知限制（未寫進服務 README）：清除只依使用者 ID 判斷，隔離區保留其他 ID 擁有的內容；NSS 服務中斷
-     而回報 ENOENT 時，manifest 的 payload ID 會被當成「未配置」；同一檔案系統上的 bind mount 只在清除
-     自己的 namespace 中卸下。
      TODO：其他架構／libc／核心的相容性驗證、
      安裝內容比對、實際已安裝主機的執行驗收才能開啟正式閘門；不能匯入時下載
      或暗中部署服務。

@@ -51,27 +51,44 @@ static bool client_valid(const service_policy *service, const guardian_client *c
     return false;
 }
 
+/* What an existing purge root resolves to must be a directory the purge would trust: root's,
+ * and writable by others only if sticky. */
+static bool trusted_directory(const char *resolved) {
+    struct stat status;
+    return lstat(resolved, &status) == 0 && S_ISDIR(status.st_mode) && status.st_uid == 0 &&
+        (!(status.st_mode & (S_IWGRP | S_IWOTH)) || (status.st_mode & S_ISVTX));
+}
+
+bool guardian_purge_roots_valid(const guardian_manifest *manifest) {
+    if ((manifest->purge_root_count && !manifest->purge_roots) ||
+        manifest->purge_root_count > GUARDIAN_PURGE_ROOT_LIMIT) return false;
+    for (size_t i = 0; i < manifest->purge_root_count; ++i) {
+        const char *path = manifest->purge_roots[i];
+        if (!path || path[0] != '/') return false;
+        /* The path as written, and what an existing one resolves to: a link into a user's
+         * directory, a user's own directory, or a link loop would otherwise be skipped, or
+         * hold the purge incomplete, at every purge. A root that does not exist yet is fine. */
+        char resolved[4096];
+        bool exists = realpath(path, resolved) != NULL;
+        bool missing = !exists && (errno == ENOENT || errno == ENOTDIR);
+        if (!guardian_path_anchored(path) || (!exists && !missing) ||
+            (exists && (!guardian_path_anchored(resolved) || !trusted_directory(resolved)))) {
+            fprintf(stderr, "autocontrol-owner-guardian: purge root %s is refused: it must sit under directories "
+                            "only root can change and, if it exists, be a directory the purge trusts\n", path);
+            return false;
+        }
+    }
+    return true;
+}
+
 bool guardian_manifest_valid(const guardian_manifest *manifest) {
     const service_policy *service = manifest->service;
     if (!service || !service_policy_valid(service) || manifest->client_count > GUARDIAN_CLIENT_LIMIT ||
         manifest->listener_gid == 0 || (service->socket_gid && manifest->listener_gid != service->socket_gid) ||
-        (manifest->purge_root_count && !manifest->purge_roots) ||
-        manifest->purge_root_count > GUARDIAN_PURGE_ROOT_LIMIT ||
-        in_any_range(service, manifest->service_uid, manifest->service_gid)) return false;
+        !guardian_purge_roots_valid(manifest) || in_any_range(service, manifest->service_uid, manifest->service_gid))
+        return false;
     for (size_t i = 0; i < manifest->client_count; ++i)
         if (!client_valid(service, &manifest->clients[i])) return false;
-    for (size_t i = 0; i < manifest->purge_root_count; ++i) {
-        const char *path = manifest->purge_roots[i];
-        if (!path || path[0] != '/') return false;
-        /* The path as written, and what an existing one resolves to (a link into a user's
-         * directory would be skipped at every purge). */
-        char resolved[4096];
-        if (!guardian_path_anchored(path) || (realpath(path, resolved) && !guardian_path_anchored(resolved))) {
-            fprintf(stderr, "autocontrol-owner-guardian: purge root %s is not under directories only root can "
-                            "change (real, root's, writable by no one else)\n", path);
-            return false;
-        }
-    }
     for (size_t i = 0; i < service->policy_count; ++i)
         if (!unallocated(service->policies[i].payload_uid, service->policies[i].payload_gid)) return false;
     return true;

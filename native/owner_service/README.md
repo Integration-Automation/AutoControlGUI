@@ -172,6 +172,7 @@ the gate.
 | `config/owner_manifest.example.c` | The compiled-in manifest: accounts, client namespaces, helper programs, paths. |
 | `build.sh` | Builds `owner_service` and `owner_guardian` against a manifest. |
 | `tests/run_checks.py` | Unprivileged acceptance: compiles everything and runs the suites. |
+| `tests/purge_watch_acceptance.c`, `tests/purge_roots_check.c`, `tests/purge_fault_acceptance.c` | The purge stall watch, the manifest purge-root check and the purge's fault paths (the last, and the root cases of the second, run as root under `protected_run.py`). |
 | `tests/protected_run.py` | Root acceptance on a disposable host. It provisions accounts and a cgroup subtree, runs real sessions, crashes and recovery, then removes everything. |
 
 ## Requirements

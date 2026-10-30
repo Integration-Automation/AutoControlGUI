@@ -101,7 +101,8 @@ int main(void) {
     int pipe_ends[2];
     int ordinary_ioctl = pipe(pipe_ends) == 0 ? outcome(ioctl(pipe_ends[0], FIONREAD, &(int){0})) : -1;
     close(tmp);
-    int ring_enter = passed_ring >= 0 ? outcome(syscall(426 /* io_uring_enter */, (int)passed_ring, 0, 0, 0, NULL, 0)) : -1;
+    int ring_enter = passed_ring >= 0 ?
+        outcome(syscall(426 /* io_uring_enter */, (int)passed_ring, 0, 0, 0, NULL, 0)) : -1;
     int ring_register = passed_ring >= 0 ? outcome(syscall(427 /* io_uring_register */, (int)passed_ring,
                                                            9 /* IORING_REGISTER_PROBE */, NULL, 0)) : -1;
     close(plain);

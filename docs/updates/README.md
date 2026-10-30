@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261030-38 | 2026-10-30 | Test the purge's fault paths and stall watch, close the manifest load gaps, and split the long test file | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
 | U-20261030-37 | 2026-10-30 | Record the clean review of the owner service | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261030-36 | 2026-10-30 | Judge manifest roots by what they resolve to, and test the anchoring | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261030-35 | 2026-10-30 | Anchor purge roots without the sticky exception, and recheck what they resolve to | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |

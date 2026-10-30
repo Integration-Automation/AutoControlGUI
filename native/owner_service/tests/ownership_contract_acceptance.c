@@ -4,7 +4,11 @@
 #include <fcntl.h>
 
 static unsigned checks;
-#define CHECK(expression) do { if (!(expression)) { fprintf(stderr, "failed line %d: %s\n", __LINE__, #expression); abort(); } ++checks; } while (0)
+#define CHECK(expression) \
+    do { \
+        if (!(expression)) { fprintf(stderr, "failed line %d: %s\n", __LINE__, #expression); abort(); } \
+        ++checks; \
+    } while (0)
 
 static no_validated_spec example_spec(void) {
     static const char *argv[] = {"/bin/true", "alpha"};
@@ -238,6 +242,7 @@ int main(void) {
     CHECK(owner_io_contract_cases());
     admission_contract(); proof_contract(); immutable_and_reference_contract();
     malformed_child_retention_contract(); scope_owner_descriptor_contract();
-    printf("{\"suite\":\"memory_and_scope_owner_contracts\",\"checks\":%u,\"result\":\"pass\",\"protected_profile_executed\":false,\"authority_verified\":false}\n", checks);
+    printf("{\"suite\":\"memory_and_scope_owner_contracts\",\"checks\":%u,\"result\":\"pass\","
+           "\"protected_profile_executed\":false,\"authority_verified\":false}\n", checks);
     return 0;
 }

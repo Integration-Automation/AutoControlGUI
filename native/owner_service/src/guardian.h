@@ -92,6 +92,9 @@ bool guardian_purge_unshare(void);
 /* Refuses a manifest the service would refuse, or whose payload IDs anyone else holds: below
  * 1000, or known to the host's user and group databases. Run before anything starts. */
 bool guardian_manifest_valid(const guardian_manifest *manifest);
+/* The manifest's purge roots alone (part of guardian_manifest_valid): each under directories
+ * only root can change and, when it exists, a directory the purge would trust. */
+bool guardian_purge_roots_valid(const guardian_manifest *manifest);
 /* After a retiring epoch's service ended: kills and removes its branch, then removes what
  * its half of the payload IDs left. The journal does not track a retiring epoch. */
 guardian_result guardian_reclaim_retired(guardian_state *state, const char *epoch, int slice);

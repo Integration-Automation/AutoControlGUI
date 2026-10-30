@@ -135,6 +135,8 @@ def build():
     gcc(["native_owner.c", "native_owner_lease.c", "native_launch_linux.c", "native_child_linux.c",
          "native_relay_linux.c", "owner_core_acceptance.c"], OPT + "/owner_core_acceptance", acceptance=True)
     gcc(["seccomp_probe.c", "guardian_seccomp_linux.c", "protected_manifests.c"], OPT + "/seccomp_probe", defines)
+    gcc(["purge_fault_acceptance.c"], OPT + "/purge_fault")
+    gcc(["purge_roots_check.c", "guardian_manifest_linux.c", "service_policy.c"], OPT + "/purge_roots_check")
     gcc(SERVICE_SOURCES + ["guardian_main.c", "guardian_epoch_linux.c", "guardian_journal.c",
                            "guardian_forward_linux.c", "guardian_seccomp_linux.c", "guardian_purge_linux.c",
                            "guardian_manifest_linux.c", "service_policy.c", "protected_manifests.c"],
@@ -962,6 +964,18 @@ def scenario_restart_backoff(steps):
     steps["epochs_after_stop"] = epochs()
 
 
+def scenario_purge_faults(steps):
+    """The purge's fault paths (a failed listing, a mount placed during the walk, a directory
+    renamed behind it, the mount API refused three ways) and the manifest's purge-root checks
+    that only root can stage."""
+    faults = run([OPT + "/purge_fault"])
+    steps["faults"] = json.loads(faults.stdout or "{}")
+    steps["faults_exit"] = faults.returncode
+    roots = run([OPT + "/purge_roots_check"])
+    steps["roots"] = json.loads(roots.stdout or "{}")
+    steps["roots_exit"] = roots.returncode
+
+
 def scenario_taken_range(steps):
     """A manifest whose payload range holds a real account is refused before anything starts."""
     refused = run([OPT + "/guardian_taken_range"], timeout=30)
@@ -1169,6 +1183,8 @@ def main():
         scenario_retiring_nested(report["steps"]["retiring_nested"])
         report["steps"]["restart_backoff"] = {}
         scenario_restart_backoff(report["steps"]["restart_backoff"])
+        report["steps"]["purge_faults"] = {}
+        scenario_purge_faults(report["steps"]["purge_faults"])
     except Exception as error:  # reason: cleanup must run and the failure must be reported, not lost
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
@@ -1217,11 +1233,12 @@ def expectations(result):
     remote = result["steps"].get("remote", {})
     retiring_nested = result["steps"].get("retiring_nested", {})
     restart = result["steps"].get("restart_backoff", {})
+    faults = result["steps"].get("purge_faults", {})
     inspection = session.get("inspection", {})
     service, payload = inspection.get("service", [{}]), inspection.get("payload", [{}])
     if "error" in result or not all((session, crash, siblings, nested, race, renewal, rollover, service_crash,
                                      delegated, worker, held, second, taken, triple, remote, retiring_nested,
-                                     restart)):
+                                     restart, faults)):
         return {"completed": False}
     return {
         "protected_reply": session["request"].get("reply") == "pong",
@@ -1357,6 +1374,14 @@ def expectations(result):
         and restart["epochs_while_blocked"] == [] and restart["cpu_ticks_while_blocked"] < 25
         and len(restart["epochs_after_unblock"]) == 1 and restart["next_session"]["retired"]
         and restart["guardian_stop"][0] == 0 and restart["stop_seconds"] < 5 and restart["epochs_after_stop"] == [],
+        # Each fault path ends as designed: a failed listing and a directory met again run
+        # the purge again, a mount placed mid-walk is laid bare, and the mount API refused
+        # means no queues (ENODEV), a rerun (no /dev/mqueue) or a purge through /dev/mqueue.
+        "purge_fault_paths": faults["faults_exit"] == 0 and len(faults["faults"]) == 6
+        and all(faults["faults"].values()),
+        # The manifest refuses a root linking into a user's directory, a user's own directory
+        # and a link loop, and accepts root's own: staged under /run, as root.
+        "purge_roots_refused": faults["roots_exit"] == 0 and faults["roots"].get("root_cases") == 4,
         "taken_payload_range_refused": taken["refused"][0] != 0
         and "manifest is invalid" in taken["refused"][1] and not taken["epochs"],
         "native_worker_runs": (worker["bootstrap"].get("result") or {}).get("protocol") == 1

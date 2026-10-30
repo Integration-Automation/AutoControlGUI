@@ -219,7 +219,8 @@ static void start_publication_case(const char *path) {
 
 static void retry_case(const char *path) {
     no_runtime *runtime = fixture_runtime(2); no_ticket ticket, repeat; no_error error;
-    if (fixture_submit(runtime, 1, path, FIXTURE_HOLD_AFTER | FIXTURE_CHILD_HOLD, &ticket, &error) != NO_ACCEPTED) exit(94);
+    if (fixture_submit(runtime, 1, path, FIXTURE_HOLD_AFTER | FIXTURE_CHILD_HOLD, &ticket, &error) != NO_ACCEPTED)
+        exit(94);
     wait_state(runtime, ticket, 2);
     no_submit_result duplicate = fixture_submit(runtime, 1, path, 0, &repeat, &error);
     uint64_t revoked_at = now();
@@ -240,7 +241,8 @@ static void retry_case(const char *path) {
 
 static void sticky_case(const char *path) {
     no_runtime *runtime = fixture_runtime(1); no_ticket ticket; no_error error;
-    if (fixture_submit(runtime, 1, path, FIXTURE_FAIL_CLOSE | FIXTURE_CHILD_HOLD, &ticket, &error) != NO_ACCEPTED) exit(95);
+    if (fixture_submit(runtime, 1, path, FIXTURE_FAIL_CLOSE | FIXTURE_CHILD_HOLD, &ticket, &error) != NO_ACCEPTED)
+        exit(95);
     wait_state(runtime, ticket, 2); no_revoke(runtime, ticket);
     fixture_snapshot done = wait_state(runtime, ticket, 0); unsigned closed = done.close_attempts;
     int sentinels[32], sentinel = -1; size_t count = 0;
@@ -307,7 +309,8 @@ static void concurrent_maintenance_case(const char *path) {
     maintenance_args args = {.runtime = runtime}; atomic_init(&args.stop, false);
     pthread_t threads[4];
     for (size_t i = 0; i < 4; ++i) if (pthread_create(&threads[i], NULL, maintainer, &args)) exit(97);
-    if (fixture_submit(runtime, 1, path, FIXTURE_HOLD_AFTER | FIXTURE_CHILD_HOLD, &ticket, &error) != NO_ACCEPTED) exit(98);
+    if (fixture_submit(runtime, 1, path, FIXTURE_HOLD_AFTER | FIXTURE_CHILD_HOLD, &ticket, &error) != NO_ACCEPTED)
+        exit(98);
     wait_state(runtime, ticket, 2); no_revoke(runtime, ticket); fixture_release(runtime, ticket);
     fixture_snapshot done = wait_state(runtime, ticket, 0);
     atomic_store(&args.stop, true);
@@ -584,7 +587,8 @@ int main(int argc, char **argv) {
     if (argc == 3 && !strcmp(argv[1], "--owned-child")) return owned_child(argv[2]);
     if (argc != 2) return 64;
     if (!strcmp(argv[1], "--suite=contained")) {
-        puts("{\"suite\":\"contained\",\"status\":\"unavailable\",\"reason\":\"authenticated_protected_fixture_not_provisioned\",\"production_verified\":false}");
+        puts("{\"suite\":\"contained\",\"status\":\"unavailable\","
+             "\"reason\":\"authenticated_protected_fixture_not_provisioned\",\"production_verified\":false}");
         return 77;
     }
     signal(SIGPIPE, SIG_IGN);
