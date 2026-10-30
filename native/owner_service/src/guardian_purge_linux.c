@@ -173,16 +173,43 @@ static size_t seen_index(const seen_set *set, identity key) {
     return (size_t)(mixed ^ (mixed >> 29)) & (set->capacity - 1);
 }
 
+/* The mount an open descriptor lies on, from its fdinfo: the kernel's own record of the
+ * descriptor, read without any inode operation. 0 when unknown, with errno set. */
+static uint64_t mount_of_descriptor(int descriptor) {
+    char path[48];
+    snprintf(path, sizeof(path), "/proc/self/fdinfo/%d", descriptor);
+    FILE *info = fopen(path, "re");
+    if (!info) return 0;
+    char line[256];
+    unsigned long long mount = 0;
+    while (fgets(line, sizeof(line), info) && sscanf(line, "mnt_id: %llu", &mount) != 1) continue;
+    fclose(info);
+    if (!mount) errno = ENOSYS;
+    return (uint64_t)mount;
+}
+
 /* The mount `name` in `directory` lies on (the mounted one, for a mount point); 0 when
- * unknown, with errno set (ENOSYS when the kernel does not report mount IDs). Nothing is
- * asked of the filesystem: with an empty request mask and no sync, another user's FUSE mount
- * (which refuses root a getattr without allow_other) answers, and a daemon that never
- * replies cannot stall the purge; the kernel names the mount all the same. */
+ * unknown, with errno set. Nothing is asked of the filesystem: an O_PATH open neither opens
+ * nor stats the object, so another user's FUSE mount (which refuses root a getattr, or
+ * answers EIO once its root inode went bad) and a daemon that never replies are named all
+ * the same. With AT_EMPTY_PATH, `directory` itself. */
 static uint64_t mount_of(int directory, const char *name, int flags) {
-    struct statx status;
-    if (statx(directory, name, flags | AT_NO_AUTOMOUNT | AT_STATX_DONT_SYNC, 0, &status) != 0) return 0;
-    if (!(status.stx_mask & STATX_MNT_ID)) { errno = ENOSYS; return 0; }
-    return status.stx_mnt_id;
+    if (flags & AT_EMPTY_PATH) return mount_of_descriptor(directory);
+    int opened = openat(directory, name, O_PATH | O_NOFOLLOW | O_CLOEXEC);
+    if (opened < 0) return 0;
+    uint64_t mount = mount_of_descriptor(opened);
+    int error = errno;
+    close(opened);
+    errno = error;
+    return mount;
+}
+
+/* The purge's heartbeat, in memory the guardian reads: bumped as the purge goes on, so a
+ * purge stuck in one call (a FUSE daemon that never answers) is told from a long one. */
+uint64_t *guardian_purge_heartbeat;
+
+static void beat(void) {
+    if (guardian_purge_heartbeat) __atomic_fetch_add(guardian_purge_heartbeat, 1, __ATOMIC_RELAXED);
 }
 
 /* Grows the table, keeping this walk's entries only. False when it cannot grow. */
@@ -395,6 +422,7 @@ static void left_mount(purge_scope *scope) {
 static uint64_t bare_mount(purge_scope *scope, int directory, const char *name) {
     uint64_t mount = mount_of(directory, name, AT_SYMLINK_NOFOLLOW);
     for (long layer = 0; mount && mount != scope->mount && private_mounts && layer < 100000; ++layer) {
+        beat();
         if (!detach_entry(directory, name)) break;
         mount = mount_of(directory, name, AT_SYMLINK_NOFOLLOW);
     }
@@ -487,6 +515,7 @@ static void walk_directory(purge_scope *scope, int top, bool root_walk, bool in_
             pop(scope, &state);
             continue;
         }
+        beat();
         if (++current->read > current->limit) { churn(scope, "a listing kept growing"); continue; }
         if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
             visit(scope, &state, root_walk, entry->d_name);

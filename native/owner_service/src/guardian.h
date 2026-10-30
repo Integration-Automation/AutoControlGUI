@@ -50,6 +50,9 @@ typedef struct {
     int purging[SERVICE_PAYLOAD_SLICES];   /* pidfd of a slice's purge child, -1 when none runs. */
     bool purge_async;                      /* While serving: purges run in a child, the loop goes on. */
     bool repurge[SERVICE_PAYLOAD_SLICES];  /* A slice whose last purge stopped short: run again first. */
+    uint64_t *heartbeat;                   /* Shared with purge children: one counter per slice. */
+    uint64_t beat_seen[SERVICE_PAYLOAD_SLICES], beat_at[SERVICE_PAYLOAD_SLICES];
+    bool stalled[SERVICE_PAYLOAD_SLICES];  /* A purge child killed for making no progress. */
     int system_errno;
 } guardian_state;
 
@@ -74,6 +77,11 @@ void guardian_purge_abandon(guardian_state *state);
 void guardian_purge_reap(guardian_state *state, int slice);
 /* Starts the purge again of every slice whose last one stopped short and is not running. */
 void guardian_purge_resume(guardian_state *state);
+/* Kills every purge child that made no progress for a minute (it runs again); the poll
+ * timeout until the next look, -1 when no purge runs. */
+int guardian_purge_watch(guardian_state *state);
+/* Set in a purge child to its slice's counter; the purge bumps it as it goes. */
+extern uint64_t *guardian_purge_heartbeat;
 /* In a purge child: a private mount namespace of its own, so the purge may detach the mounts
  * below each root (guardian_purge_linux.c). False leaves mounts in place and skipped. */
 bool guardian_purge_unshare(void);

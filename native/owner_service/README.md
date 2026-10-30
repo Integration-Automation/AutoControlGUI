@@ -103,8 +103,11 @@ the gate.
   ID's directories past the deferral limit (for as long as those directories stay), inside
   another ID's btrfs subvolume (not entered, so a read-only snapshot cannot taint a
   slice), or renamed behind the walk by that user while it runs. A mount's ID is read
-  without asking its filesystem, so another user's FUSE mount (an sshfs or AppImage
-  mount, live or with its daemon gone) is detached like any other. No payload file can carry a
+  from the fdinfo of an O_PATH descriptor, with no inode operation, so another user's FUSE
+  mount (an sshfs or AppImage mount, live, with its daemon gone, or with a root inode the
+  kernel marked bad) is detached like any other. A purge child that makes no progress for
+  a minute (stuck in one call, say on a FUSE daemon that never answers) is killed and run
+  again; one that is merely long is never cut short. No payload file can carry a
   set-user- or set-group-ID bit, so what escapes is data, not an identity, but a later
   helper with the same ID may find it.
   Only an object that can be neither removed, moved nor closed off taints its slice,

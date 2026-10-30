@@ -86,6 +86,9 @@ roots and IPC tables are opened first; the namespace is a slave of the host's; a
 entered; and the filter refuses btrfs subvolume and snapshot creation and subvolume flags.
 A mount's ID is now read without asking its filesystem, so another user's FUSE mount (sshfs, an AppImage) is
 detached instead of making every purge run again, and stacked mounts are detached until none is left.
+The mount ID now comes from the fdinfo of an O_PATH descriptor, with no inode operation, so a FUSE root inode
+marked bad no longer blocks purges either; a purge child that makes no progress for a minute is killed and
+run again.
 
 ## Unreleased: helper containment in runtime status
 

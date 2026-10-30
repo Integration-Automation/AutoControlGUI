@@ -556,7 +556,9 @@ static loop_result supervise_loop(guardian_state *state, int signals, int listen
                 .fd = running_live(&set->retiring[i]) ? set->retiring[i].service.pidfd.number : -1, .events = POLLIN};
         for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s)
             events[EVENT_PURGE + s] = (struct pollfd){.fd = state->purging[s], .events = POLLIN};
-        if (poll(events, EVENT_COUNT, poll_timeout(state, &run->plan)) < 0) {
+        int timeout = poll_timeout(state, &run->plan), watch = guardian_purge_watch(state);
+        if (watch >= 0 && (timeout < 0 || watch < timeout)) timeout = watch;
+        if (poll(events, EVENT_COUNT, timeout) < 0) {
             if (errno == EINTR) continue;
             return LOOP_REFUSED;
         }

@@ -14,6 +14,7 @@ import signal
 import subprocess
 import sys
 import ctypes
+import struct
 import tempfile
 import threading
 import time
@@ -162,6 +163,46 @@ def _dead_fuse_mount(path, owner):
     mounted = libc.mount(b"cover", path.encode(), b"fuse", 0, options) == 0
     os.close(device)  # The daemon is gone; the mount stays, dead.
     return mounted
+
+
+def _bad_fuse_mount(path, owner):
+    """A FUSE mount at `path` belonging to `owner`, without allow_other, whose root inode the
+    kernel marked bad: its daemon answered the owner's stat with a size past LLONG_MAX, then
+    went away. A getattr on it fails with EIO for everyone, even with an empty mask."""
+    libc = ctypes.CDLL(None, use_errno=True)
+    device = os.open("/dev/fuse", os.O_RDWR)
+    options = f"fd={device},rootmode=40000,user_id={owner},group_id={owner}".encode()
+    if libc.mount(b"cover", path.encode(), b"fuse", 0, options) != 0:
+        os.close(device)
+        return False
+
+    def serve():
+        for _ in range(8):
+            try:
+                request = os.read(device, 1 << 20)
+            except OSError:
+                return
+            length, opcode, unique = struct.unpack_from("<IIQ", request)
+            if opcode == 26:  # INIT: protocol 7.31, nothing optional.
+                body = struct.pack("<IIIIHHIIHHI", 7, 31, 65536, 0, 16, 12, 4096, 1, 32, 0, 0) + bytes(28)  # 64
+            elif opcode == 3:  # GETATTR: a directory whose size no kernel accepts.
+                attr = struct.pack("<QQQQQQIIIIIIIIII", 1, 1 << 63, 0, 0, 0, 0, 0, 0, 0, 0o40755, 2,
+                                   owner, owner, 0, 4096, 0)
+                body = struct.pack("<QII", 0, 0, 0) + attr
+            else:
+                os.write(device, struct.pack("<IiQ", 16, -38, unique))
+                continue
+            os.write(device, struct.pack("<IiQ", 16 + len(body), 0, unique) + body)
+            if opcode == 3:
+                return
+
+    server = threading.Thread(target=serve, daemon=True)
+    server.start()
+    stat = subprocess.run(["runuser", "-u", pwd.getpwuid(owner).pw_name, "--", "stat", path],
+                          capture_output=True, text=True, timeout=20)
+    server.join(timeout=10)
+    os.close(device)  # The daemon is gone; the mount stays, its root inode bad.
+    return "Input/output error" in stat.stderr
 
 
 def _drain(stream, sink):
@@ -428,6 +469,13 @@ def scenario_siblings(steps, left=None):
     fuse_static = tempfile.mkdtemp(prefix="autocontrol-fuse-static-", dir="/tmp")
     os.chown(fuse_static, 65534, 65534)
     steps["fuse_mounted"] = _dead_fuse_mount(fuse_covered, 65534) and _dead_fuse_mount(fuse_static, 65534)
+    # And with a FUSE mount whose root inode went bad: every getattr on it fails with EIO.
+    fuse_bad = tempfile.mkdtemp(prefix="autocontrol-fuse-bad-", dir="/var/tmp")
+    with open(os.path.join(fuse_bad, "hidden"), "w") as handle:
+        handle.write("payload data")
+    os.chown(os.path.join(fuse_bad, "hidden"), PAYLOAD_BASE, PAYLOAD_BASE)
+    os.chown(fuse_bad, PAYLOAD_BASE, PAYLOAD_BASE)
+    steps["bad_fuse_mounted"] = _bad_fuse_mount(fuse_bad, 65534)
     guardian = start_guardian()
     steps["squats"] = squats
     steps["squatted_payload_files_left"] = [s for s in squats if os.path.lexists(os.path.join(s, "hidden"))]
@@ -475,6 +523,9 @@ def scenario_siblings(steps, left=None):
     run(["umount", "-l", fuse_covered])
     run(["umount", "-l", fuse_static])
     steps["fuse_covered_payload_left"] = os.path.lexists(os.path.join(fuse_covered, "hidden"))
+    run(["umount", "-l", fuse_bad])
+    steps["bad_fuse_payload_left"] = os.path.lexists(os.path.join(fuse_bad, "hidden"))
+    shutil.rmtree(fuse_bad, ignore_errors=True)
     shutil.rmtree(fuse_covered, ignore_errors=True)
     shutil.rmtree(fuse_static, ignore_errors=True)
     run(["umount", "-l", covered])
@@ -914,7 +965,7 @@ def scenario_cold_recovery(steps):
     for directory, pid in procs_under(f"{SUBTREE}/{epoch}"):
         if os.path.basename(directory).startswith("service-"):
             os.kill(pid, signal.SIGKILL)
-    _freeze(f"{SUBTREE}/{epoch}", False)
+    steps["epoch_thawed"] = _freeze(f"{SUBTREE}/{epoch}", False)
     time.sleep(0.5)
     steps["payload_alive_after_crash"] = any(pid_alive(p) for p in inspection["payload_pids"])
     steps["escaped_alive_after_crash"] = isinstance(escaped, int) and pid_alive(escaped)
@@ -1132,6 +1183,7 @@ def expectations(result):
         and not siblings["revisit_logged"] and siblings["outside_mounted"] and siblings["outside_file_kept"]
         and siblings["cover_mounted"] and not siblings["covered_payload_left"] and siblings["host_mounts_kept"]
         and siblings["fuse_mounted"] and not siblings["fuse_covered_payload_left"]
+        and siblings["bad_fuse_mounted"] and not siblings["bad_fuse_payload_left"]
         and session["guardian_stop"][0] == 0 and siblings["guardian_stop"][0] == 0,
         # epoch-N itself is bounded before it is delegated: nothing beside `records` escapes.
         "epoch_bounded": session["epoch_bounds"] == {"cgroup.max.depth": "40", "cgroup.max.descendants": "4096",
@@ -1159,7 +1211,7 @@ def expectations(result):
         and all(o.get("retired") is True for o in race["race"]["outcomes"])
         and not race["payloads_left"] and not race["containers_left"]
         and race["guardian_stop"][0] == 0 and not race["epochs_after_stop"],
-        "orphans_survive_crash": crash["epoch_frozen"] and crash["payload_alive_after_crash"]
+        "orphans_survive_crash": crash["epoch_frozen"] and crash["epoch_thawed"] and crash["payload_alive_after_crash"]
         and crash["escaped_alive_after_crash"],
         "cold_recovery_reclaims": crash["payload_gone_after_recovery"] and crash["escaped_gone_after_recovery"]
         and crash["epochs_after_restart"] == ["epoch-0000000000000006"],

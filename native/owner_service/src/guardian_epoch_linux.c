@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <poll.h>
 #include <signal.h>
+#include <sys/mman.h>
 #include <sys/prctl.h>
 #include <sys/statfs.h>
 #include <sys/wait.h>
@@ -182,6 +183,7 @@ static void purge_child(const guardian_state *state, int slice, pid_t guardian) 
     sigset_t none;
     sigemptyset(&none);
     sigprocmask(SIG_SETMASK, &none, NULL);
+    guardian_purge_heartbeat = state->heartbeat ? &state->heartbeat[slice] : NULL;
     if (!guardian_purge_unshare())
         fprintf(stderr, "autocontrol-owner-guardian: purge keeps the host's mounts; it skips them\n");
     guardian_purge_outcome outcome = guardian_purge_payloads(state->manifest, slice);
@@ -206,8 +208,60 @@ void guardian_purge_reap(guardian_state *state, int slice) {
     do { rc = waitid(P_PIDFD, (id_t)state->purging[slice], &info, WEXITED); } while (rc < 0 && errno == EINTR);
     close(state->purging[slice]);
     state->purging[slice] = -1;
-    if (rc != 0 || info.si_code != CLD_EXITED) taint(state, slice);
+    if (state->stalled[slice]) { state->stalled[slice] = false; state->repurge[slice] = true; }
+    else if (rc != 0 || info.si_code != CLD_EXITED) taint(state, slice);
     else purge_settled(state, slice, info.si_status);
+}
+
+#define PURGE_STALL_NS (60ULL * 1000000000ULL)
+#define PURGE_CHECK_MS 5000
+
+static void purge_start_watch(guardian_state *state, int slice) {
+    if (state->heartbeat) __atomic_store_n(&state->heartbeat[slice], 0, __ATOMIC_RELAXED);
+    state->beat_seen[slice] = 0;
+    state->beat_at[slice] = now_ns();
+    state->stalled[slice] = false;
+}
+
+/* Kills the purge child behind `pidfd` once its heartbeat stood still for a minute: a purge
+ * stuck in one call, never one that is merely long. */
+static void purge_check(guardian_state *state, int slice, int pidfd) {
+    if (!state->heartbeat || state->stalled[slice]) return;
+    uint64_t beat = __atomic_load_n(&state->heartbeat[slice], __ATOMIC_RELAXED), now = now_ns();
+    if (beat != state->beat_seen[slice]) { state->beat_seen[slice] = beat; state->beat_at[slice] = now; return; }
+    if (now - state->beat_at[slice] < PURGE_STALL_NS) return;
+    fprintf(stderr, "autocontrol-owner-guardian: purge of slice %d made no progress for a minute; it runs again\n",
+            slice);
+    syscall(SYS_pidfd_send_signal, pidfd, SIGKILL, NULL, 0);
+    state->stalled[slice] = true;
+}
+
+int guardian_purge_watch(guardian_state *state) {
+    int timeout = -1;
+    for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) {
+        if (state->purging[s] < 0) continue;
+        purge_check(state, s, state->purging[s]);
+        timeout = PURGE_CHECK_MS;
+    }
+    return timeout;
+}
+
+/* Waits here for a purge child (startup, or no pidfd to watch it from the loop), watching
+ * its heartbeat all the same. */
+static void await_purge(guardian_state *state, int slice, pid_t child) {
+    int pidfd = (int)syscall(SYS_pidfd_open, child, 0);
+    while (pidfd >= 0) {
+        struct pollfd ended = {.fd = pidfd, .events = POLLIN};
+        int rc = poll(&ended, 1, PURGE_CHECK_MS);
+        if (rc > 0 || (rc < 0 && errno != EINTR)) break;
+        purge_check(state, slice, pidfd);
+    }
+    if (pidfd >= 0) close(pidfd);
+    int status = 0;
+    while (waitpid(child, &status, 0) < 0 && errno == EINTR) continue;
+    if (state->stalled[slice]) { state->stalled[slice] = false; state->repurge[slice] = true; }
+    else if (!WIFEXITED(status)) taint(state, slice);
+    else purge_settled(state, slice, WEXITSTATUS(status));
 }
 
 /* A slice's purge runs in a child, with its own mount namespace. While serving, the loop goes
@@ -217,29 +271,16 @@ void guardian_purge_reap(guardian_state *state, int slice) {
  * its slice: the guardian never grants it again. */
 static void purge(guardian_state *state, int slice) {
     for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) if (slice < 0 || slice == s) state->repurge[s] = false;
-    if (slice >= 0 && state->purge_async) {
-        guardian_purge_reap(state, slice);
-        pid_t guardian = getpid();
-        pid_t child = fork();
-        if (child == 0) purge_child(state, slice, guardian);
-        int pidfd = child > 0 ? (int)syscall(SYS_pidfd_open, child, 0) : -1;
-        if (pidfd >= 0) { state->purging[slice] = pidfd; return; }
-        if (child > 0) {
-            int status = 0;
-            while (waitpid(child, &status, 0) < 0 && errno == EINTR) continue;
-            if (!WIFEXITED(status)) taint(state, slice);
-            else purge_settled(state, slice, WEXITSTATUS(status));
-            return;
-        }
-    } else if (slice >= 0) {
+    if (slice >= 0) {
+        if (state->purge_async) guardian_purge_reap(state, slice);
+        purge_start_watch(state, slice);
         pid_t guardian = getpid();
         pid_t child = fork();
         if (child == 0) purge_child(state, slice, guardian);
         if (child > 0) {
-            int status = 0;
-            while (waitpid(child, &status, 0) < 0 && errno == EINTR) continue;
-            if (!WIFEXITED(status)) taint(state, slice);
-            else purge_settled(state, slice, WEXITSTATUS(status));
+            int pidfd = state->purge_async ? (int)syscall(SYS_pidfd_open, child, 0) : -1;
+            if (pidfd >= 0) { state->purging[slice] = pidfd; return; }
+            await_purge(state, slice, child);
             return;
         }
     }
@@ -390,6 +431,10 @@ static int create_branches(guardian_state *state) {
 guardian_result guardian_prepare(guardian_state *state, const guardian_manifest *manifest) {
     *state = (guardian_state){.manifest = manifest, .mount = -1, .subtree = -1, .epoch = -1};
     for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) state->purging[s] = -1;
+    void *beats = mmap(NULL, sizeof(uint64_t) * SERVICE_PAYLOAD_SLICES, PROT_READ | PROT_WRITE,
+                       MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if (beats == MAP_FAILED) fprintf(stderr, "autocontrol-owner-guardian: purges run without a stall watch\n");
+    else state->heartbeat = beats;
     state->journal.directory = state->journal.lock = -1;
     gj_error opened = gj_open(&state->journal, manifest->state_directory, manifest->administrator,
                               manifest->installation);
@@ -423,6 +468,8 @@ guardian_result guardian_next_epoch(guardian_state *state) {
 }
 
 void guardian_close(guardian_state *state) {
+    if (state->heartbeat) munmap(state->heartbeat, sizeof(uint64_t) * SERVICE_PAYLOAD_SLICES);
+    state->heartbeat = NULL;
     close_slot(&state->epoch);
     close_slot(&state->subtree);
     close_slot(&state->mount);
