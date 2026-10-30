@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-57；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-58；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -122,12 +122,10 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      已知限制（未寫進服務 README）：清除只依使用者 ID 判斷，隔離區保留其他 ID 擁有的內容；NSS 服務中斷
      而回報 ENOENT 時，manifest 的 payload ID 會被當成「未配置」；同一檔案系統上的 bind mount 只在清除
      自己的 namespace 中卸下。
-     DECIDE：已安裝主機驗收（U-20261030-42，WSL 發行版 podman-webrunner-validation）通過，但該主機有兩項
-     主機需求未滿足：core_pattern 管線到 /wsl-capture-crash；/mnt/c、/mnt/d、/mnt/wsl、/mnt/wslg 對所有
-     帳號可寫且不是清除根目錄。是否調整該發行版的 /etc/wsl.conf 自動掛載選項與 core_pattern（為所有 WSL
-     發行版共用），在滿足全部主機需求的主機上重跑驗收。
-     TODO：其他架構／libc／核心的相容性驗證（需 WSL 以外的環境）才能開啟正式閘門；不能匯入時下載
-     或暗中部署服務。
+     WSL 主機的兩項未滿足需求（core_pattern、/mnt 可寫）經使用者決定維持為已記錄的主機發現，不調整發行版
+     設定（U-20261030-58）；正式部署主機須依服務 README 滿足全部主機需求。
+     TODO（使用者決定暫緩，與原生／真機驗收同列）：其他架構／libc／核心的相容性驗證（需 WSL 以外的
+     環境）才能開啟正式閘門；不能匯入時下載或暗中部署服務。
    - Wayland 接既有改版 D1／D2：portal session 關閉／恢復、compositor 重啟、觀察擁有者 context、
      helper／半開交握回收與取消／停止生命週期，避免兩條實作各自接管相同原生資源。
    - 驗證相同實體桌面在不同 profile、資料庫、服務及 DAG 節點間仍只有一位輸入擁有者；
