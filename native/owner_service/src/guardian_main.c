@@ -604,10 +604,10 @@ static guardian_result shut_down(guardian_state *state, running_set *set) {
     return recovered;
 }
 
-/* Helpers start with a core limit of 0, which a pipe core_pattern handler receives but the
- * kernel does not enforce: systemd-coredump honours it and apport's reports land in the
- * purged /var/crash; any other handler may keep a helper's memory where the next helper with
- * the same ID can read it. */
+/* Helpers start with a core limit of 0, which a pipe or socket core_pattern handler receives
+ * but the kernel does not enforce: systemd-coredump honours it and apport's reports land in
+ * the purged /var/crash; any other handler (judged by the base name of its path) may keep a
+ * helper's memory where the next helper with the same ID can read it. */
 static void warn_core_pattern(void) {
     FILE *pattern = fopen("/proc/sys/kernel/core_pattern", "re");
     char line[256] = "";

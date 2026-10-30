@@ -553,6 +553,7 @@ static int open_root(const char *path) {
     if (root >= 0 && (fstat(root, &status) != 0 || status.st_uid != 0 ||
                       ((status.st_mode & (S_IWGRP | S_IWOTH)) && !(status.st_mode & S_ISVTX)))) {
         close(root);
+        errno = EPERM; /* Not root's, or writable without the sticky bit: not trusted. */
         return -1;
     }
     return root;
@@ -709,10 +710,14 @@ guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest
         names[i] = i < defaults ? default_roots[i] : manifest->purge_roots[i - defaults];
         /* -1: absent, or not a directory this guardian may trust. */
         roots[i] = strcmp(names[i], MQUEUE_ROOT) ? open_root(names[i]) : open_mqueue(&scope);
+        int error = errno;
         struct stat exists;
-        if (roots[i] < 0 && strcmp(names[i], MQUEUE_ROOT) && lstat(names[i], &exists) == 0)
-            fprintf(stderr, "autocontrol-owner-guardian: purge skipped %s: not root's, or writable unsticky\n",
-                    names[i]);
+        if (roots[i] < 0 && strcmp(names[i], MQUEUE_ROOT) && lstat(names[i], &exists) == 0) {
+            /* There but not trusted: skipped, said. There but not opened: run again. */
+            fprintf(stderr, "autocontrol-owner-guardian: purge skipped %s: %s\n", names[i],
+                    error == EPERM ? "not root's, or writable without the sticky bit" : strerror(error));
+            if (error != EPERM) scope.complete = false;
+        }
     }
     static const char *const tables[] = {"/proc/sysvipc/shm", "/proc/sysvipc/msg", "/proc/sysvipc/sem"};
     FILE *opened[3];

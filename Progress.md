@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-32；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-33；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -109,52 +109,21 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      存在後接合。parent_watch、輸入 journal／lease 與本機 pipe 執行緒退場仍須接合。
      owner 服務原始碼依 2026-10-29 決定已進入 `native/owner_service/`（src、manifest 範本、build.sh、
      tests 與兩個驗收執行器，不進 wheel），每個 client 帳號的 lease 配額已實作。
-     第一次獨立審查（2026-10-29）的項目已處理；第二次審查（2026-10-30）指出服務仍可經 setresuid
-     回到 root，已以 seccomp 身分 filter 修正（set*id 只能用服務與 payload 的 ID、setgroups 只能為空、
-     禁止 user namespace、clone3 回 ENOSYS）；閒置連線擋住輪替（MAJOR-2）、START 重送、guardian
-     回收服務、renewer 錯誤處理、被拒連線回報為 AgentControlBusy、開機重建說明、每個 record 獨立的
-     payload ID、每個父 record 的 nested 配額、guardian 每帳號連線速率與服務每輪讀完 handoff、cgroup
-     subtree 逐層檢查、helper 檔案與 SysV IPC 回收、epoch 總上限、用盡 epoch 與下一個 epoch 重疊
-     （長壽 helper 不再擋住新 helper）也已處理，閘門仍關閉；套件的 native_worker 已在服務下實際啟動並回覆；
-     驅動桌面／瀏覽器的 helper 一律以本機程序執行，owner 服務只承載不需顯示的 helper（探測、遠端裝置）。
-     第三次獨立審查（2026-10-30）的 MAJOR-A 與 B、C、D、E(1)(2)、F、H、J、K 已處理。
-     清除已移到 purge 子程序，payload 範圍分 4 份、最多 3 個 epoch 同時退休，遠端 helper 已在服務下
-     完成交握（與實體裝置的通訊仍屬暫緩的實體裝置驗收）。
-     第四次獨立審查（2026-10-30）的 MAJOR-1 與 MINOR-2～6、NOTE-7～10、12 已處理，NOTE-11 於第五次
-     審查後處理；第五次獨立審查的 MAJOR-A、MINOR-B、MINOR-C 與 NOTE-D～G 已處理；第六次獨立審查的
-     M1、M2、m1～m4 與 N1、N2、N5、N6（溢位上限）已處理，N3、N4、N7 與 N6 的容量檢查記為已知限制；
-     第七次獨立審查的 MAJOR-1、MAJOR-2、m-A、m-C 與 N-a～N-c 已處理，m-B 改為不准 payload 設 set-ID
-     位元，並把「本機使用者配合時可逃過一次清除」記為已知限制；第八次獨立審查的 M1、m1、m2、m3 與
-     N1、N2 已處理，m4（別人目錄內、需該 ID 配合的逃脫）、N3～N6 記為已知限制；第九次獨立審查的
-     MAJOR-1、MINOR-1～4 與兩項 NOTE 已處理；第十次獨立審查未發現主要問題，認為此元件可開閘，
-     其 MINOR-A、MINOR-B（以掛載蓋住）、MINOR-C 與 NOTE 1～3、5、7 已處理；清除改在私有 mount
-     namespace 的子程序中執行；第十一次獨立審查的 MAJOR-1（以 mountinfo 路徑卸載可被引導）、
-     MINOR-1～5 與 NOTE 已處理：改為走訪時以掛載根的描述符卸載、先開啟所有根目錄與 IPC 表、
-     namespace 改為 slave、不進入他人的 subvolume、seccomp 拒絕 btrfs subvolume／快照 ioctl；
-     第十二次獨立審查的 MAJOR-1（他人 FUSE 掛載使每次清除未完成）、MINOR-1、MINOR-2 已處理；
-     第十三次獨立審查的 MAJOR-1（FUSE 根 inode 被標記壞掉時仍未完成）、MINOR-1（清除子程序無進度
-     即終止並重跑）、MINOR-2 已處理；第十四次獨立審查未發現主要問題，其 MINOR-A（改以
-     RESOLVE_NO_XDEV 解析、啟動時不再卡住）、MINOR-B（停滯門檻逐次加倍）與 NOTE-1、NOTE-3 已處理；
-     第十五次獨立審查未發現主要問題，其 MINOR-1（走訪中被掛載的項目先卸載再判斷）、MINOR-2（POSIX
-     訊息佇列改經未掛載的 mqueue 掛載清除）與 NOTE-1、NOTE-3 已處理。
-     TODO：清除子程序停滯後的交接（啟動時寬限 30 秒）與兩個邊界情況（pidfd_open 失敗、心跳共享記憶體
-     建立失敗時仍會阻塞等待）尚無自動化測試。
-     第十六次獨立審查判定清除程式本身已無主要問題；其 MAJOR-1（helper 的 core dump 可被同 ID 的下一個
-     helper 讀取，改為 RLIMIT_CORE 軟硬上限皆 0）、MINOR-A（核心無訊息佇列時不再永遠未完成）、
-     MINOR-B（journald 每 UID 日誌，記為主機需求）與 NOTE-A～C 已處理。
-     TODO：走訪中途被掛載的項目（MINOR-1 路徑）與 readdir 錯誤路徑尚無自動化測試。
-     第十七次獨立審查無主要問題，判定 MINOR-1 處理後此元件可開閘；MINOR-1（/var/crash 改為預設清除
-     根目錄、core_pattern 主機需求與啟動警告）與 NOTE 1、3、5、6 已處理，NOTE 2 記為主機需求。
-     TODO：訊息佇列的三個退路分支（fsopen 回 ENODEV、mount API 被擋而改用 /dev/mqueue、兩者皆不可用
-     而未完成）尚無自動化測試（需讓 fsopen 失敗的測試夾具）。
-     TODO：已安裝主機驗收須一併確認主機需求：journald SplitMode=none 或不保存、core_pattern 為檔案／
+     現況：經十九輪獨立審查（處理紀錄見 docs/updates/2026-10-e.md，U-20261029-21 起），最近兩輪未發現
+     MAJOR 或 MINOR，判定 owner 服務本身不阻擋開閘；正式閘門仍因下列項目關閉。驅動桌面／瀏覽器的
+     helper 一律以本機程序執行，owner 服務只承載不需顯示的 helper（探測、遠端裝置）；遠端 helper
+     與實體裝置的通訊屬暫緩的實體裝置驗收。
+     TODO（尚無自動化測試）：清除子程序停滯後的交接（啟動寬限 30 秒）與 60 秒無進度監看；pidfd_open
+     或心跳共享記憶體建立失敗時仍會阻塞等待；走訪中途被掛載的項目；readdir 錯誤；訊息佇列三個退路
+     分支（fsopen 回 ENODEV、mount API 被擋改用 /dev/mqueue、兩者皆不可用）；隔離區外重遇的 fail-safe。
+     TODO：payload 目錄被配合的本機使用者在走訪中即時改名到走訪後方時，仍可能逃過一次清除（已記於
+     服務 README）；徹底消除需讓 payload 使用私有 /tmp、/var/tmp、/dev/shm。
+     TODO：已安裝主機驗收須確認主機需求：journald SplitMode=none 或不保存、core_pattern 為檔案／
      systemd-coredump／apport、mount API 未被擋或 /dev/mqueue 為本 IPC namespace 的 mqueue、所有 payload
-     可寫目錄皆為清除根目錄；目前 guardian 只對未知的 pipe／socket core_pattern 發出警告，其餘不檢查。
-     第十八次獨立審查未發現 MAJOR 或 MINOR，判定此元件不阻擋開閘；其 NOTE-1～7 已處理。
-     TODO：清除子程序的無進度監看（60 秒）尚無自動化測試（需讓清除卡在單一呼叫的測試夾具）。
-     TODO：payload 目錄在走訪中被配合的本機使用者即時改名到走訪後方時，仍可能逃過一次清除
-     （已記於服務 README）；隔離區外重遇的 fail-safe 路徑尚無自動化測試（需在走訪中即時改名的
-     C 測試夾具）。徹底消除需讓 payload 使用私有 /tmp、/var/tmp、/dev/shm。
+     可寫目錄皆為清除根目錄。guardian 只對未知的 pipe／socket 或讀不到的 core_pattern 警告，並記錄存在
+     但打不開或不受信任的清除根目錄，其餘不檢查。
+     TODO：native/owner_service/tests 有超過 120 字元的行，service_authority_acceptance.c 為 790 行（超過
+     750 行上限），待拆分。
      TODO：其他架構／libc／核心的相容性驗證、
      安裝內容比對、實際已安裝主機的執行驗收才能開啟正式閘門；不能匯入時下載
      或暗中部署服務。

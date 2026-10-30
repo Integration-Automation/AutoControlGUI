@@ -564,6 +564,12 @@ def scenario_siblings(steps, left=None):
     steps["guardian_stop"] = stop_guardian(guardian)
     steps["epochs_after_stop"] = epochs()
     steps["static_tree_logged"] = "unwalked" in steps["guardian_stop"][1]
+    with open("/proc/sys/kernel/core_pattern") as handle:
+        pattern = handle.read().strip()
+    handler = os.path.basename(pattern[1:].split()[0]) if pattern.startswith("|") and pattern[1:].split() else ""
+    steps["core_pattern_warning_expected"] = pattern.startswith("@") or (
+        pattern.startswith("|") and handler not in ("systemd-coredump", "apport"))
+    steps["core_pattern_warned"] = "core_pattern" in steps["guardian_stop"][1]
     # The 300-level chain went in the startup purge without meeting churn.
     steps["churn_logged"] = "met churn" in steps["guardian_stop"][1]
     # The bind loop was detached in the purge's own namespace, not met again as a directory.
@@ -1245,6 +1251,7 @@ def expectations(result):
         "unremovable_leftovers_released": siblings["names_freed"] and siblings["payload_owned_left"] == []
         and bool(siblings["squats"]) and siblings["squatted_payload_files_left"] == []
         and siblings["static_tree_logged"] and siblings["loop_mounted"] and not siblings["churn_logged"]
+        and siblings["core_pattern_warned"] == siblings["core_pattern_warning_expected"]
         and not siblings["revisit_logged"] and siblings["outside_mounted"] and siblings["outside_file_kept"]
         and siblings["cover_mounted"] and not siblings["covered_payload_left"] and siblings["host_mounts_kept"]
         and siblings["fuse_mounted"] and not siblings["fuse_covered_payload_left"]
