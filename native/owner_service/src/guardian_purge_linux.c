@@ -544,17 +544,19 @@ bool guardian_purge_unshare(void) {
 }
 
 /* A root may be a link (/dev/shm -> /run/shm on older systems): resolved once, and used
- * only when the directory it names is root's and others may write it only if sticky. */
+ * only when what it names sits under directories only root can change, is root's, and others
+ * may write it only if sticky. `*untrusted` says the root failed those checks. */
 static int open_root(const char *path, bool *untrusted) {
     char resolved[4096];
     *untrusted = false;
     if (!realpath(path, resolved)) return -1;
+    if (!guardian_path_anchored(resolved)) { *untrusted = true; return -1; }
     int root = open(resolved, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
     struct stat status;
-    if (root >= 0 && (fstat(root, &status) != 0 || status.st_uid != 0 ||
-                      ((status.st_mode & (S_IWGRP | S_IWOTH)) && !(status.st_mode & S_ISVTX)))) {
+    if (root >= 0 && fstat(root, &status) != 0) { close(root); return -1; } /* errno: fstat's, close cannot fail. */
+    if (root >= 0 && (status.st_uid != 0 || ((status.st_mode & (S_IWGRP | S_IWOTH)) && !(status.st_mode & S_ISVTX)))) {
         close(root);
-        *untrusted = true; /* Not root's, or writable without the sticky bit. */
+        *untrusted = true;
         return -1;
     }
     return root;
@@ -717,10 +719,12 @@ guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest
         struct stat exists;
         if (roots[i] >= 0 || !strcmp(names[i], MQUEUE_ROOT)) continue;
         /* Absent: nothing to purge. Not trusted: skipped, said. Anything else: run again. */
-        bool absent = lstat(names[i], &exists) != 0 && (errno == ENOENT || errno == ENOTDIR);
+        bool absent = lstat(names[i], &exists) != 0 ? errno == ENOENT || errno == ENOTDIR :
+            S_ISLNK(exists.st_mode) && (error == ENOENT || error == ENOTDIR); /* A dangling link. */
         if (absent) continue;
         fprintf(stderr, "autocontrol-owner-guardian: purge skipped %s: %s\n", names[i],
-                untrusted ? "not root's, or writable without the sticky bit" : strerror(error));
+                untrusted ? "not root's, writable without the sticky bit, or under others' directories" :
+                strerror(error));
         if (!untrusted) scope.complete = false;
     }
     static const char *const tables[] = {"/proc/sysvipc/shm", "/proc/sysvipc/msg", "/proc/sysvipc/sem"};

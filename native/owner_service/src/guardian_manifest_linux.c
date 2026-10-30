@@ -4,6 +4,7 @@
  * built from it already runs. */
 #include "guardian.h"
 #include <sys/stat.h>
+#include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <grp.h>
@@ -49,24 +50,6 @@ static bool client_valid(const service_policy *service, const guardian_client *c
     return false;
 }
 
-/* Every directory above a manifest purge root is root's and not writable by others unless
- * sticky: nobody else can swap the root for a file, a link or their own directory. */
-static bool purge_root_anchored(const char *path) {
-    char ancestor[4096];
-    size_t length = strlen(path);
-    if (length >= sizeof(ancestor)) return false;
-    for (size_t end = 1; end < length; ++end) {
-        if (path[end] != '/') continue;
-        memcpy(ancestor, path, end);
-        ancestor[end] = 0;
-        struct stat status;
-        if (lstat(ancestor, &status) != 0 || !S_ISDIR(status.st_mode) || status.st_uid != 0 ||
-            ((status.st_mode & (S_IWGRP | S_IWOTH)) && !(status.st_mode & S_ISVTX))) return false;
-    }
-    struct stat top;
-    return lstat("/", &top) == 0 && top.st_uid == 0 && !(top.st_mode & (S_IWGRP | S_IWOTH));
-}
-
 bool guardian_manifest_valid(const guardian_manifest *manifest) {
     const service_policy *service = manifest->service;
     if (!service || !service_policy_valid(service) || manifest->client_count > GUARDIAN_CLIENT_LIMIT ||
@@ -77,8 +60,12 @@ bool guardian_manifest_valid(const guardian_manifest *manifest) {
     for (size_t i = 0; i < manifest->client_count; ++i)
         if (!client_valid(service, &manifest->clients[i])) return false;
     for (size_t i = 0; i < manifest->purge_root_count; ++i)
-        if (!manifest->purge_roots[i] || manifest->purge_roots[i][0] != '/' ||
-            !purge_root_anchored(manifest->purge_roots[i])) return false;
+        if (!manifest->purge_roots[i] || manifest->purge_roots[i][0] != '/') return false;
+        else if (!guardian_path_anchored(manifest->purge_roots[i])) {
+            fprintf(stderr, "autocontrol-owner-guardian: purge root %s is not under directories only root can "
+                            "change (real, root's, writable by no one else)\n", manifest->purge_roots[i]);
+            return false;
+        }
     for (size_t i = 0; i < service->policy_count; ++i)
         if (!unallocated(service->policies[i].payload_uid, service->policies[i].payload_gid)) return false;
     return true;

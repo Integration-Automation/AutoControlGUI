@@ -6,6 +6,8 @@
 #include "native_service.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 
 /* A client account and the namespaces its processes must live in. */
@@ -107,6 +109,25 @@ bool guardian_client_verified(const guardian_manifest *manifest, const peer_iden
 /* Accepts one pending client; hands it to the service only if verified. */
 #define GUARDIAN_CLIENT_LIMIT 16  /* Listed client accounts, payload accounts included. */
 #define GUARDIAN_PURGE_ROOT_LIMIT 16  /* Manifest purge roots beside the default ones. */
+
+/* True when "/" and every directory above `path` are real directories, root's and not
+ * writable by anyone else, sticky or not (in a sticky directory others may still create a
+ * missing name): nobody but root can change what `path` names. */
+static inline bool guardian_path_anchored(const char *path) {
+    char ancestor[4096];
+    size_t length = strlen(path);
+    struct stat status;
+    if (path[0] != '/' || length >= sizeof(ancestor) || lstat("/", &status) != 0 || status.st_uid != 0 ||
+        (status.st_mode & (S_IWGRP | S_IWOTH))) return false;
+    for (size_t end = 1; end < length; ++end) {
+        if (path[end] != '/') continue;
+        memcpy(ancestor, path, end);
+        ancestor[end] = 0;
+        if (lstat(ancestor, &status) != 0 || !S_ISDIR(status.st_mode) || status.st_uid != 0 ||
+            (status.st_mode & (S_IWGRP | S_IWOTH))) return false;
+    }
+    return true;
+}
 #define GUARDIAN_ACCEPT_BURST 32  /* Connections one account may have handed over per second. */
 /* Forgets every account's connection count (tests). */
 void guardian_forward_reset_rates(void);
