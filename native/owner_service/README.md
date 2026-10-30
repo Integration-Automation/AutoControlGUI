@@ -79,9 +79,12 @@ the gate.
   removed, and only what other IDs own (out of every payload's reach) stays in one.
   Another ID's directory at the depth bound stays put and is walked from its own top,
   up to 4096 of them (or what the descriptor limit leaves room for), with a log line
-  beyond. Each walk enters a directory once, by its inode number and file handle (inode
-  generation included, so a reused inode number is never taken for it): one met again,
-  renamed behind the walk or through a bind mount, is skipped. The size of what others
+  beyond. A walk never enters another mount nor judges an object on one. Each walk
+  enters a directory once, by its exact inode number and a digest of its file handle
+  (inode generation included) keyed afresh for every purge, so neither a reused inode
+  number nor a computed digest is taken for an earlier directory: one met again is
+  skipped, and a payload directory met again outside the quarantine makes the purge run
+  again. The size of what others
   keep under a root only makes a purge slower. A listing growing far past its size while
   it is read, which only a live user causes, stops it, and it runs again, as does one
   that could not move a payload directory into the quarantine, before its slice is
@@ -109,8 +112,9 @@ the gate.
   subtree's parent. Before building the filter, the guardian refuses a manifest the service would
   refuse, or whose payload IDs are below 1000 or known to the host's user and group
   databases. Payloads cannot use kernel keyrings, nor set a set-user- or set-group-ID
-  bit on any file (chmod family, a creating open, mknod; openat2 and io_uring answer
-  ENOSYS), so copying a set-group-ID directory's mode fails in a payload. With CAP_SETUID and CAP_SETGID the
+  bit on any file (chmod family, a creating open, mknod; openat2 and io_uring, including
+  entering or registering a ring another process passed in, answer ENOSYS), so copying a
+  set-group-ID directory's mode fails in a payload. With CAP_SETUID and CAP_SETGID the
   service can still forge the UID or GID in SCM_CREDENTIALS; this project authenticates by
   pidfd, but anything trusting SCM_CREDENTIALS alone (journald's `_UID`, for example)
   should not take a service-sent value at face value.

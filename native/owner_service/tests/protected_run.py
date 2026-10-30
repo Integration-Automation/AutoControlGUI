@@ -172,7 +172,7 @@ def stop_guardian(guardian, sig=signal.SIGTERM):
     except subprocess.TimeoutExpired:
         guardian.kill()
         guardian.wait()
-    return guardian.returncode, guardian.stderr.read()[-2000:]
+    return guardian.returncode, guardian.stderr.read()[-60000:]
 
 
 def client(mode, account=CLIENT):
@@ -1159,7 +1159,7 @@ def expectations(result):
             "payload_switch": 0,
             "payload_last": 0, "beyond_range": 1, "chmod_plain": 0, "fchmod_setuid": 1, "fchmodat_setgid": 1,
             "open_setuid": 1, "mknod_setuid": 1, "fchmodat2_setuid": 1, "tmpfile_setuid": 1, "openat2": 38,
-            "io_uring": 38},
+            "io_uring": 38, "openat2_control": 0, "io_uring_control": 0, "ring_enter": 38, "ring_register": 38},
         "nothing_left": not result["cleanup"]["leftovers"] and not result["cleanup"]["subtree_exists"]
         and not os.path.exists(OUTER) and not os.path.exists(STATE2)
         and not result["cleanup"]["accounts_present"] and not result["cleanup"]["groups_present"]

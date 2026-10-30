@@ -75,6 +75,8 @@ quarantine pass reads from the start; quarantines are locked while their purge r
 which payloads inherit, refuses set-user- and set-group-ID bits on files.
 Directories are now known by inode number and file handle and a directory met again is skipped rather than
 stopping the purge; the filter also refuses io_uring.
+The purge's directory identity is now the exact inode number plus a per-purge keyed SipHash of the file handle,
+walks never enter or judge another mount, and io_uring_enter and io_uring_register are refused as well.
 
 ## Unreleased: helper containment in runtime status
 
