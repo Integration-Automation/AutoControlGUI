@@ -8,8 +8,8 @@
  * last process is, unless a helper itself handed a descriptor into it to a process outside
  * the epoch. A root that does not exist when the epoch starts is
  * not covered until the next epoch; the guardian's purge walks the host's roots as before.
- * Each start checks again that no root, as the host now resolves it, hides a path the epoch
- * needs: a root made later as a link elsewhere stops the epoch rather than hiding it. */
+ * Each start checks again that no root, as the host now resolves it, hides the listener or the
+ * service executable: a root made later as a link over one stops the epoch rather than hiding it. */
 #include "guardian.h"
 #include <errno.h>
 #include <stdio.h>
@@ -19,13 +19,6 @@
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <unistd.h>
-
-#ifndef MS_NOSYMFOLLOW
-#define MS_NOSYMFOLLOW 256
-#endif
-#ifndef ST_NOSYMFOLLOW
-#define ST_NOSYMFOLLOW 8192
-#endif
 
 static bool refused(const char *path) {
     int error = errno;
@@ -46,8 +39,7 @@ static bool private_root(const char *path) {
     if (!guardian_path_anchored(resolved)) return refused(path);
     struct statvfs mounted;
     if (statvfs(resolved, &mounted) != 0) return refused(path);
-    unsigned long flags = MS_NOSUID | MS_NODEV | ((mounted.f_flag & ST_NOEXEC) ? MS_NOEXEC : 0) |
-        ((mounted.f_flag & ST_NOSYMFOLLOW) ? MS_NOSYMFOLLOW : 0) | ((mounted.f_flag & ST_RDONLY) ? MS_RDONLY : 0);
+    unsigned long flags = guardian_private_mount_flags(mounted.f_flag);
     char options[96];
     snprintf(options, sizeof(options), "mode=%o,uid=%u,gid=%u", (unsigned)(status.st_mode & 07777),
              (unsigned)status.st_uid, (unsigned)status.st_gid);
@@ -55,7 +47,7 @@ static bool private_root(const char *path) {
 }
 
 bool guardian_private_epoch(const guardian_manifest *manifest) {
-    if (!guardian_private_roots_hide_nothing(manifest)) {
+    if (!guardian_private_roots_hide_nothing(manifest, false)) {
         fprintf(stderr, "autocontrol-owner-guardian: a private root now hides a path the epoch needs; "
                         "the epoch does not start\n");
         return false;

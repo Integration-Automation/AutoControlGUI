@@ -81,16 +81,18 @@ bool guardian_purge_roots_valid(const guardian_manifest *manifest) {
     return true;
 }
 
-static bool under(const char *path, const char *root) {
+/* `path` is `root` or below it; with `strict`, only below it. */
+static bool under(const char *path, const char *root, bool strict) {
     size_t length = strlen(root);
-    if (length == 1 && root[0] == '/') return path[0] == '/';
-    return strncmp(path, root, length) == 0 && (path[length] == '/' || path[length] == '\0');
+    if (length == 1 && root[0] == '/') return path[0] == '/' && (!strict || path[1] != '\0');
+    return strncmp(path, root, length) == 0 && (path[length] == '/' || (!strict && path[length] == '\0'));
 }
 
 /* True when a tmpfs over `root` would stand over `path`: `path` as written, resolved (a link
  * is followed) or through its resolved directory (a path that does not exist yet), against
- * `root` as written (trailing slashes dropped) or resolved. */
-static bool hides(const char *root, const char *path) {
+ * `root` as written (trailing slashes dropped) or resolved. A `directory` the epoch enters may
+ * be the root itself: only what lies below it is hidden. */
+static bool hides(const char *root, const char *path, bool directory_path) {
     char forms[2][4096], directory[4096], resolved[4096], whole[4096];
     if (snprintf(forms[0], sizeof(forms[0]), "%s", root) >= (int)sizeof(forms[0]) ||
         snprintf(directory, sizeof(directory), "%s", path) >= (int)sizeof(directory)) return true;
@@ -102,28 +104,31 @@ static bool hides(const char *root, const char *path) {
     if (slash) *(slash == directory ? slash + 1 : slash) = '\0';
     bool known = realpath(directory, resolved) != NULL;
     for (int i = 0; i < count; ++i)
-        if (under(path, forms[i]) || (followed && under(whole, forms[i])) || (known && under(resolved, forms[i])))
+        if (under(path, forms[i], directory_path) || (followed && under(whole, forms[i], directory_path)) ||
+            (!directory_path && known && under(resolved, forms[i], false)))
             return true;
     return false;
 }
 
 /* True when any private root (default or the manifest's) would stand over `path`. */
-static bool hidden(const guardian_manifest *manifest, const char *path) {
+static bool hidden(const guardian_manifest *manifest, const char *path, bool directory_path) {
     if (!path || path[0] != '/') return true;
     for (size_t i = 0; guardian_private_root(i); ++i)
-        if (hides(guardian_private_root(i), path)) return true;
+        if (hides(guardian_private_root(i), path, directory_path)) return true;
     for (size_t i = 0; i < manifest->purge_root_count; ++i)
-        if (!manifest->purge_roots[i] || manifest->purge_roots[i][0] != '/' || hides(manifest->purge_roots[i], path))
+        if (!manifest->purge_roots[i] || manifest->purge_roots[i][0] != '/' ||
+            hides(manifest->purge_roots[i], path, directory_path))
             return true;
     return false;
 }
 
-bool guardian_private_roots_hide_nothing(const guardian_manifest *manifest) {
-    if (hidden(manifest, manifest->listener_path) || hidden(manifest, manifest->service_executable)) return false;
-    const service_policy *service = manifest->service;
+bool guardian_private_roots_hide_nothing(const guardian_manifest *manifest, bool policies) {
+    if (hidden(manifest, manifest->listener_path, false) || hidden(manifest, manifest->service_executable, false))
+        return false;
+    const service_policy *service = policies ? manifest->service : NULL;
     for (size_t i = 0; service && i < service->policy_count; ++i)
-        if (hidden(manifest, service->policies[i].executable) || hidden(manifest, service->policies[i].cwd))
-            return false;
+        if (hidden(manifest, service->policies[i].executable, false) ||
+            hidden(manifest, service->policies[i].cwd, true)) return false;
     return true;
 }
 
@@ -133,7 +138,7 @@ bool guardian_manifest_valid(const guardian_manifest *manifest) {
         manifest->listener_gid == 0 || (service->socket_gid && manifest->listener_gid != service->socket_gid) ||
         !guardian_purge_roots_valid(manifest) || in_any_range(service, manifest->service_uid, manifest->service_gid))
         return false;
-    if (!guardian_private_roots_hide_nothing(manifest)) {
+    if (!guardian_private_roots_hide_nothing(manifest, true)) {
         fprintf(stderr, "autocontrol-owner-guardian: the listener, the service executable or a policy's "
                         "executable or directory lies under a root each epoch covers with its own tmpfs; "
                         "the manifest is refused\n");

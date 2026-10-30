@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <sys/mount.h>
 #include <sys/types.h>
 
 /* A client account and the namespaces its processes must live in. */
@@ -95,10 +97,24 @@ bool guardian_manifest_valid(const guardian_manifest *manifest);
 /* The manifest's purge roots alone (part of guardian_manifest_valid): each under directories
  * only root can change and, when it exists, a directory the purge would trust. */
 bool guardian_purge_roots_valid(const guardian_manifest *manifest);
-/* No path the epoch needs (the listener, the service executable, each policy's executable and
- * working directory) lies under a root an epoch covers with its own tmpfs, each checked as
- * written and as resolved, roots too. At manifest validation and again at each epoch start. */
-bool guardian_private_roots_hide_nothing(const guardian_manifest *manifest);
+/* No path the epoch needs lies under a root an epoch covers with its own tmpfs, each checked as
+ * written and as resolved, roots too: the listener and the service executable, and with
+ * `policies` each policy's executable and working directory (a working directory may be a root
+ * itself, an empty one). Manifest validation checks all; each epoch start checks the first two
+ * again, so a policy path another user could reach never stops every epoch. */
+bool guardian_private_roots_hide_nothing(const guardian_manifest *manifest, bool policies);
+#ifndef MS_NOSYMFOLLOW
+#define MS_NOSYMFOLLOW 256
+#endif
+#ifndef ST_NOSYMFOLLOW
+#define ST_NOSYMFOLLOW 8192
+#endif
+/* The mount flags of an epoch's tmpfs over a root whose host mount reports `host` (statvfs's
+ * f_flag): never set-ID or devices, and noexec, nosymfollow and read-only as the host's. */
+static inline unsigned long guardian_private_mount_flags(unsigned long host) {
+    return MS_NOSUID | MS_NODEV | ((host & ST_NOEXEC) ? MS_NOEXEC : 0) |
+        ((host & ST_NOSYMFOLLOW) ? MS_NOSYMFOLLOW : 0) | ((host & ST_RDONLY) ? MS_RDONLY : 0);
+}
 /* In the service's child, before it drops root: the epoch's own mount and IPC namespaces get
  * fresh tmpfs mounts over every purge root (guardian_private_linux.c). False: do not start. */
 bool guardian_private_epoch(const guardian_manifest *manifest);

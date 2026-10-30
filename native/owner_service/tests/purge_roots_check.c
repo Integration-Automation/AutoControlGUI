@@ -32,9 +32,32 @@ static void expect_hidden(const char *listener, const char *executable, const ch
     const char *roots[] = {purge_root};
     guardian_manifest manifest = {.listener_path = listener, .service_executable = executable,
                                   .purge_roots = roots, .purge_root_count = purge_root ? 1 : 0};
-    if (guardian_private_roots_hide_nothing(&manifest) != valid) {
+    if (guardian_private_roots_hide_nothing(&manifest, true) != valid) {
         fprintf(stderr, "listener %s, executable %s, root %s: expected %s\n", listener ? listener : "-",
                 executable ? executable : "-", purge_root ? purge_root : "-", valid ? "valid" : "refused");
+        ++failures;
+    }
+}
+
+/* A policy's executable and working directory, under the default roots only. */
+static void expect_policy(const char *executable, const char *cwd, bool valid) {
+    service_launch_policy policy = {.executable = executable, .cwd = cwd};
+    service_policy service = {.policies = &policy, .policy_count = 1};
+    guardian_manifest manifest = {.listener_path = "/run/je_auto_control/owner.sock",
+                                  .service_executable = EXECUTABLE, .service = &service};
+    bool policies = guardian_private_roots_hide_nothing(&manifest, true);
+    bool start = guardian_private_roots_hide_nothing(&manifest, false);  /* Each epoch start: not policies. */
+    if (policies != valid || !start) {
+        fprintf(stderr, "policy %s in %s: expected %s\n", executable ? executable : "-", cwd ? cwd : "-",
+                valid ? "valid" : "refused");
+        ++failures;
+    }
+}
+
+/* The epoch's tmpfs takes noexec, nosymfollow and read-only from the host's mount, never more. */
+static void expect_flags(unsigned long host, unsigned long wanted) {
+    if (guardian_private_mount_flags(host) != (MS_NOSUID | MS_NODEV | wanted)) {
+        fprintf(stderr, "mount flags for host %#lx: got %#lx\n", host, guardian_private_mount_flags(host));
         ++failures;
     }
 }
@@ -54,6 +77,16 @@ int main(void) {
     /* Not there, so not resolved: only dropping the trailing slash finds it. */
     expect_listener("/usr/share/autocontrol-absent/owner.sock", "/usr/share/autocontrol-absent/", false);
     expect_listener("relative/owner.sock", NULL, false);
+    expect_policy("/usr/bin/python3", "/", true);
+    expect_policy("/usr/bin/python3", "/tmp", true);           /* A root itself: the epoch's empty tmpfs. */
+    expect_policy("/usr/bin/python3", "/tmp/work", false);     /* Below a root: hidden. */
+    expect_policy("/tmp/helper", "/", false);
+    expect_policy("relative/helper", "/", false);
+    expect_policy("/usr/bin/python3", NULL, false);
+    expect_flags(0, 0);
+    expect_flags(ST_NOEXEC, MS_NOEXEC);
+    expect_flags(ST_RDONLY | ST_NOSYMFOLLOW, MS_RDONLY | MS_NOSYMFOLLOW);
+    expect_flags(ST_NOSUID | ST_NODEV, 0);
     expect_listener("/run/je_auto_control/owner.sock", "/", false);    /* "/" covers everything. */
     expect_hidden("/run/je_auto_control/owner.sock", EXECUTABLE, "/usr/libexec", false);  /* Hides the service. */
     expect_hidden("/run/je_auto_control/owner.sock", NULL, NULL, false);
@@ -68,19 +101,28 @@ int main(void) {
         unlink("/run/autocontrol-link-root"); /* Left by a run that crashed: started afresh. */
         unlink("/run/autocontrol-hide-link");
         unlink("/run/autocontrol-exe-link");
+        unlink("/run/autocontrol-exe-dir/helper");
+        rmdir("/run/autocontrol-exe-dir");
         /* A root that is a link: only its resolved form covers the executable's directory. */
         if (symlink("/usr/libexec", "/run/autocontrol-hide-link") == 0) {
             expect_hidden("/run/je_auto_control/owner.sock", EXECUTABLE, "/run/autocontrol-hide-link", false);
             unlink("/run/autocontrol-hide-link");
             ++root_cases;
         }
-        /* An executable that is a link into a root: followed, it is hidden. */
-        if (symlink("/usr/bin/true", "/run/autocontrol-exe-link") == 0) {
-            expect_hidden("/run/je_auto_control/owner.sock", "/run/autocontrol-exe-link", "/usr/bin", false);
+        /* An executable that is a link into a root: followed, it is hidden. The target is made
+         * here, so the case does not depend on how the host packages its tools. */
+        FILE *helper = mkdir("/run/autocontrol-exe-dir", 0755) == 0 ? fopen("/run/autocontrol-exe-dir/helper", "w")
+                                                                    : NULL;
+        if (helper && fclose(helper) == 0 &&
+            symlink("/run/autocontrol-exe-dir/helper", "/run/autocontrol-exe-link") == 0) {
+            expect_hidden("/run/je_auto_control/owner.sock", "/run/autocontrol-exe-link", "/run/autocontrol-exe-dir",
+                          false);
             expect_hidden("/run/je_auto_control/owner.sock", "/run/autocontrol-exe-link", "/usr/share", true);
-            unlink("/run/autocontrol-exe-link");
             ++root_cases;
         }
+        unlink("/run/autocontrol-exe-link");
+        unlink("/run/autocontrol-exe-dir/helper");
+        rmdir("/run/autocontrol-exe-dir");
         unlink("/run/autocontrol-loop-root");
         rmdir("/run/autocontrol-user-root");
         rmdir("/run/autocontrol-good-root");

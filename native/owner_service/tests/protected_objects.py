@@ -119,7 +119,8 @@ def namespaces_private(pid, left, ids):
                 "file_not_on_host": os.path.exists(in_payload(pid, left[0])) and not os.path.exists(left[0]),
                 "segment_not_on_host": shm_in_payload(pid, left[1]) and not host_payload_segment(left[1], ids),
                 "flags_as_host": all(os.statvfs(in_payload(pid, r)).f_flag & flags == os.statvfs(r).f_flag & flags
-                                     for r in ("/tmp", "/var/tmp", "/dev/shm", "/run/lock") if os.path.isdir(r))}
+                                     for r in ("/tmp", "/var/tmp", "/dev/shm", "/run/lock", "/var/crash")
+                                     if os.path.isdir(r))}
     except OSError as error:
         return {"error": str(error)}
 
