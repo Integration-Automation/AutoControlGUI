@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-40；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-41；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -109,10 +109,10 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      存在後接合。parent_watch、輸入 journal／lease 與本機 pipe 執行緒退場仍須接合。
      owner 服務原始碼依 2026-10-29 決定已進入 `native/owner_service/`（src、manifest 範本、build.sh、
      tests 與兩個驗收執行器，不進 wheel），每個 client 帳號的 lease 配額已實作。
-     現況：經二十五輪獨立審查（處理紀錄見 docs/updates/2026-10-e.md，U-20261029-23 起），第二十三輪
+     現況：經二十六輪獨立審查（處理紀錄見 docs/updates/2026-10-e.md，U-20261029-23 起），第二十三輪
      審查 U-20261030-36 未發現 MAJOR 或 MINOR；第二十四輪審查 U-20261030-38（補齊先前延後的測試與
-     載入檢查）與第二十五輪審查 U-20261030-39 亦未發現 MAJOR 或 MINOR，其 NOTE 分別於 U-20261030-39、
-     U-20261030-40 處理。正式閘門另因下列項目關閉。
+     載入檢查）、第二十五輪（U-20261030-39）與第二十六輪（U-20261030-40）亦未發現 MAJOR 或 MINOR，其 NOTE
+     分別於 U-20261030-39、-40、-41 處理（-41 只動測試與文件）。正式閘門另因下列項目關閉。
      驅動桌面／瀏覽器的 helper 一律以本機程序執行，owner 服務只承載不需顯示的 helper（探測、遠端裝置）；
      遠端 helper 與實體裝置的通訊屬暫緩的實體裝置驗收。
      已知限制（服務 README 已列）：payload 檔案只在別的本機使用者配合時可能逃過一次清除（放在該 ID 的

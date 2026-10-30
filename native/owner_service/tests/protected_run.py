@@ -243,9 +243,15 @@ def _drain(stream, sink):
         sink.append(line)
 
 
-def start_guardian(binary="guardian"):
+def _ignore_sigchld():
+    signal.signal(signal.SIGCHLD, signal.SIG_IGN)
+
+
+def start_guardian(binary="guardian", ignore_sigchld=False):
+    # ignore_sigchld: started as a careless parent might start it, with SIGCHLD ignored.
     guardian = subprocess.Popen([OPT + "/" + binary], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                                stderr=subprocess.PIPE, text=True, env={})
+                                stderr=subprocess.PIPE, text=True, env={},
+                                preexec_fn=_ignore_sigchld if ignore_sigchld else None)
     # Read while it runs: a guardian that logs past the pipe's buffer must never block.
     guardian.log = []
     guardian.drainer = threading.Thread(target=_drain, args=(guardian.stderr, guardian.log), daemon=True)
@@ -1059,7 +1065,7 @@ def scenario_cold_recovery(steps):
     holder.wait()
     if os.path.exists(ENDPOINT):
         os.unlink(ENDPOINT)  # A crashed guardian leaves its socket; the next one replaces only a socket.
-    restarted = start_guardian()
+    restarted = start_guardian(ignore_sigchld=True)  # Its own reset must still let it wait for purges.
     steps["epochs_after_restart"] = epochs()
     steps["payload_gone_after_recovery"] = not any(pid_alive(p) for p in inspection["payload_pids"])
     steps["escaped_gone_after_recovery"] = isinstance(escaped, int) and not pid_alive(escaped)
@@ -1308,7 +1314,9 @@ def expectations(result):
         and crash["escaped_alive_after_crash"],
         "cold_recovery_reclaims": crash["payload_gone_after_recovery"] and crash["escaped_gone_after_recovery"]
         and crash["epochs_after_restart"] == ["epoch-0000000000000006"],
-        "recovered_stop": crash["guardian_stop"][0] == 0 and not crash["epochs_after_stop"],
+        # Started with SIGCHLD ignored, it reset it: its startup purges settled, no slice tainted.
+        "recovered_stop": crash["guardian_stop"][0] == 0 and not crash["epochs_after_stop"]
+        and "could not remove" not in crash["guardian_stop"][1],
         "idle_lease_renewed": renewal["ping_after_idle"].get("reply") == "pong"
         and renewal["close"].get("retired") is True and renewal["guardian_stop"][0] == 0,
         "epoch_rollover": len(rollover["sessions"]) == ROLLOVER_SESSIONS

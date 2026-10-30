@@ -144,7 +144,8 @@ static bool read_error(void) {
 
 static bool mounted_during_walk(void) {
     char top[] = "/tmp/autocontrol-fault-mount-XXXXXX";
-    if (!fixture_root(top) || !payload_directory(under(top, "victim")) || !payload_file(under(top, "victim/data"))) {
+    if (!fixture_root(top)) return false;
+    if (!payload_directory(under(top, "victim")) || !payload_file(under(top, "victim/data"))) {
         unlink(under(top, "victim/data"));
         rmdir(under(top, "victim"));
         rmdir(top);
@@ -166,7 +167,8 @@ static bool mounted_during_walk(void) {
 
 static bool renamed_behind(void) {
     char top[] = "/dev/shm/autocontrol-fault-rename-XXXXXX";
-    if (!fixture_root(top) || !payload_directory(under(top, "first")) || !payload_file(under(top, "first/data"))) {
+    if (!fixture_root(top)) return false;
+    if (!payload_directory(under(top, "first")) || !payload_file(under(top, "first/data"))) {
         unlink(under(top, "first/data"));
         rmdir(under(top, "first"));
         rmdir(top);

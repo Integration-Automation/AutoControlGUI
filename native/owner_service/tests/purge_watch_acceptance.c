@@ -7,15 +7,26 @@
 #define PURGE_STALL_NS (1ULL * 1000000000ULL)
 #define PURGE_CHECK_MS 100
 #define PURGE_UNWATCHED_NS (2ULL * 1000000000ULL)
+#include <poll.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <sys/syscall.h>
 
 static long test_syscall(long number, ...);
+static int test_poll(struct pollfd *events, nfds_t count, int timeout);
 #define syscall test_syscall
+#define poll test_poll
 #include "../src/guardian_epoch_linux.c"
 #undef syscall
+#undef poll
 long syscall(long number, ...);
+
+/* poll can be made to fail once (ENOMEM), as the guardian's pidfd watch might. */
+static bool poll_fails_once;
+static int test_poll(struct pollfd *events, nfds_t count, int timeout) {
+    if (poll_fails_once) { poll_fails_once = false; errno = ENOMEM; return -1; }
+    return poll(events, count, timeout);
+}
 
 static bool kill_disabled, pidfd_open_disabled;
 
@@ -112,6 +123,19 @@ int main(void) {
     started = now_ns();
     purge(&state, 3);
     CHECK("unwatched_doubles", round == 1 && state.repurge[3] && seconds(started) >= 3.9);
+
+    /* A pidfd that cannot be polled: the watch goes on by pid. A stalled child is still killed
+     * and purged again; a clean one still settles clean. */
+    fresh(&state, true);
+    fake_beats = 0;
+    poll_fails_once = true;
+    purge(&state, 1);
+    CHECK("poll_failed_stalled", !poll_fails_once && state.repurge[1] && !state.tainted[1] && state.purging[1] < 0);
+    fresh(&state, true);
+    fake_beats = 3;
+    poll_fails_once = true;
+    purge(&state, 1);
+    CHECK("poll_failed_clean", !poll_fails_once && !state.repurge[1] && !state.tainted[1]);
 
     /* A child the guardian cannot wait for (SIGCHLD ignored: reaped behind its back) is not
      * taken for a clean purge: its slice is tainted. */
