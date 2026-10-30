@@ -118,11 +118,11 @@ connection only from the mount namespace of the epoch that runs its slice. A new
 `tests/installed_host_acceptance.py`, installs the service per its README on a disposable host, checks it and
 removes it; the README now requires every helper-writable directory to be a purge root and says how under WSL.
 Each epoch's private roots now keep the host directory's mode and owner and its mount's `noexec`, `nosymfollow`
-and read-only flags. A manifest whose listener, service executable or policy executable lies under a private
-root, or whose policy working directory lies below one, as written or resolved, is refused; each epoch start
-checks the listener and the service executable again. Paths a policy's fixed arguments or environment values
-name, relative ones from its working directory, are judged the same way. Nothing a policy names may be a private
-root itself either, since every helper of the epoch can write there; only TMPDIR, TMP and TEMP may.
+and read-only flags. A manifest is refused when its listener or service executable lies under a private root, or
+when anything a policy names (its executable, working directory, and the paths its fixed arguments and
+environment values name, relative ones from that directory) is at or below one, as written or resolved: every
+helper of an epoch can write a root, so only TMPDIR, TMP and TEMP may name a root itself. Each epoch start checks
+the listener and the service executable again.
 
 ## Unreleased: helper containment in runtime status
 

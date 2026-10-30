@@ -137,6 +137,9 @@ int main(void) {
     expect_named("-m", "HOME=/tmp", false);                             /* or in any variable */
     expect_named("-m", "TMPDIR=/tmp", true);                            /* but scratch space, */
     expect_named("-m", "TMP=/tmp/x", false);                            /* and only the root itself. */
+    expect_named("-m", "TEMP=/var/tmp/", true);
+    expect_named("-m", "TMPDIR_X=/tmp", false);                         /* Exactly those names. */
+    expect_named("-m", "MYTMP=/tmp", false);
     expect_named("tmp/app/main.py", NULL, false);                       /* Relative to "/": /tmp/app. */
     expect_named("-m", "PYTHONPATH=var/tmp/lib", false);
     expect_named("-m", "PATH=:/usr/bin:", true);                        /* Empty parts: "/", not a root. */
@@ -200,6 +203,8 @@ int main(void) {
         if (lock_root && symlink("/run/lock", "/run/autocontrol-lock-link") == 0) {
             expect_policy("/usr/bin/python3", "/run/autocontrol-lock-link/autocontrol-absent-leaf", false);
             expect_policy("/usr/bin/python3", "/run/autocontrol-lock-link/autocontrol-absent-leaf/work", false);
+            expect_named("-m", "TMPDIR=/run/autocontrol-lock-link", true);      /* Scratch, through a link. */
+            expect_named("-m", "TMP=/run/autocontrol-lock-link/x", false);
             ++root_cases;
         }
         unlink("/run/autocontrol-lock-link");

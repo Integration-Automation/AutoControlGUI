@@ -232,6 +232,7 @@ static bool search_list(const char *entry) {
 static bool part_hidden(const guardian_manifest *manifest, const char *cwd, const char *part, bool search,
                         bool scratch) {
     if (part[0] == '/') return hidden(manifest, part, scratch);
+    /* Defence in depth: a working directory at or below a root is refused before any part. */
     if (search && (!part[0] || !strcmp(part, "."))) return hidden(manifest, cwd, false);
     if (!search && (!path_like(part) || !strchr(part, '/'))) return false;
     char joined[4096];
