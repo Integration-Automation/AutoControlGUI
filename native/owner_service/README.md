@@ -163,19 +163,23 @@ the gate.
   exist when an epoch starts is covered from the next epoch on; until then the purge walks
   it on the host as before. Each tmpfs is `noexec`, `nosymfollow` or read-only where the
   host's mount is (a read-only host root gives the epoch a read-only, empty one), and its
-  pages count against the epoch's memory limit. A manifest is refused, since the epoch
-  would not see the path, when its listener, service executable or a policy executable
-  lies under any of these roots, or a policy working directory, or a path a policy's fixed
-  arguments or environment values name, lies below one. An argument is judged whole and
-  after its first `=`, an environment value after its `=`, each part of a `:` list alone,
-  and a relative part only when it holds a `/` and reads as a path (no spaces, quotes or
-  brackets), from the policy's working directory. A variable whose name ends in `PATH` or
-  `LIB` is a search list: there a root itself is refused too, since every helper of the
-  epoch can write it, and an empty or `.` part or a bare name is judged from the working
-  directory. Not judged: bare words outside search lists, program text, a second `=`, `,`
-  lists, option values attached as in `-I/tmp/x`, and an interpreter a script names on its
-  `#!` line. Refused although it may name nothing local: an absolute part that only looks
-  like a path, such as the `/tmp/x` of a `host:/tmp/x` copy target. Each path
+  pages count against the epoch's memory limit. A manifest is refused when its listener or
+  service executable lies under any of these roots (the epoch would not see it), or when
+  anything a policy names is at or below one: its executable, its working directory, and
+  every path its fixed arguments and environment values name. A root itself is refused too,
+  because every helper of the epoch can write there and plant what another reads; only
+  `TMPDIR`, `TMP` and `TEMP` may name a root itself, as scratch space. An argument is
+  judged whole and after its first `=`, an environment value after its `=`, each part of a
+  `:` list alone. A variable whose name ends in `PATH` or `LIB` is a search list: each of
+  its parts is a directory, an empty or `.` part being the working directory, and relative
+  parts are judged from it. Elsewhere a relative part counts only when it holds a `/` and
+  reads as a path (no spaces, quotes or brackets). Not judged, and so the manifest
+  author's to get right: bare words outside search lists, program text, a second `=`, `,`
+  or space-separated lists, option values attached as in `-I/tmp/x`, what other variables
+  mean (a `HOME` below `/opt` holding code is fine; one at a root is refused), and an
+  interpreter a script names on its `#!` line. Refused although it may name nothing local:
+  an absolute part that only looks like a path, such as the `/tmp/x` of a `host:/tmp/x`
+  copy target. Each path
   is compared as written (its spelling tidied: repeated slashes and `.` dropped) and
   resolved component by component: every directory on the way, every link and every name a
   link leads through is checked, and what is not made yet is judged by where it would be.

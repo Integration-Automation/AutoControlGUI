@@ -129,10 +129,10 @@ static bool climbs(const char *rest) {
 /* Resolves `path` component by component, as the kernel does, following at most 40 links, and
  * is true as soon as any name it visits lies in the root: each directory on the way, each link,
  * each name a link leads through, and, once a name is not there yet, what lies below it as
- * written (a ".." there is refused). Only the final name of a directory the epoch enters is
- * compared strictly. What it cannot resolve (too long, too many links, not readable) counts as
+ * written (a ".." there is refused). With `root_itself`, the final name may be the root itself
+ * (only what lies below it counts). What it cannot resolve (too long, too many links, not readable) counts as
  * hidden. */
-static bool walk_hides(char forms[][4096], int count, const char *path, bool directory_path) {
+static bool walk_hides(char forms[][4096], int count, const char *path, bool root_itself) {
     char current[4096] = "", rest[8192], next[8192], target[4096], candidate[4096];
     if (snprintf(rest, sizeof(rest), "%s", path) >= (int)sizeof(rest)) return true;
     for (unsigned links = 0;;) {
@@ -150,7 +150,7 @@ static bool walk_hides(char forms[][4096], int count, const char *path, bool dir
             continue;
         }
         if (snprintf(candidate, sizeof(candidate), "%s/%.*s", current, (int)length, component) >=
-            (int)sizeof(candidate) || in_root(forms, count, candidate, final && directory_path)) return true;
+            (int)sizeof(candidate) || in_root(forms, count, candidate, final && root_itself)) return true;
         struct stat entry;
         if (lstat(candidate, &entry) != 0) {
             if (errno != ENOENT) return true;
@@ -159,7 +159,7 @@ static bool walk_hides(char forms[][4096], int count, const char *path, bool dir
             if (climbs(after) || snprintf(next, sizeof(next), "%s/%s", candidate, after) >= (int)sizeof(next))
                 return true;
             tidy(next);
-            return in_root(forms, count, next, directory_path);
+            return in_root(forms, count, next, root_itself);
         }
         if (S_ISLNK(entry.st_mode)) {
             ssize_t size = ++links > 40 ? -1 : readlink(candidate, target, sizeof(target) - 1);
@@ -176,10 +176,10 @@ static bool walk_hides(char forms[][4096], int count, const char *path, bool dir
 }
 
 /* True when a tmpfs over `root` would stand over `path`: `root` as written or resolved,
- * both tidied (repeated slashes and "." dropped), against `path` as written and every name its resolution
- * visits (walk_hides). A directory the epoch enters (`directory_path`) may be the root itself:
- * only what lies below it is hidden. */
-static bool hides(const char *root, const char *path, bool directory_path) {
+ * both tidied (repeated slashes and "." dropped), against `path` as written and every name its
+ * resolution visits (walk_hides). With `root_itself` (a scratch variable's directory) the path
+ * may be the root itself: only what lies below it is hidden. */
+static bool hides(const char *root, const char *path, bool root_itself) {
     char forms[2][4096], written[4096];
     if (snprintf(forms[0], sizeof(forms[0]), "%s", root) >= (int)sizeof(forms[0]) ||
         snprintf(written, sizeof(written), "%s", path) >= (int)sizeof(written)) return true;
@@ -187,17 +187,17 @@ static bool hides(const char *root, const char *path, bool directory_path) {
     tidy(written);
     if (climbs(forms[0])) return true;  /* A root written with "..": where it leads is not known. */
     int count = realpath(root, forms[1]) ? 2 : 1;
-    return in_root(forms, count, written, directory_path) || walk_hides(forms, count, written, directory_path);
+    return in_root(forms, count, written, root_itself) || walk_hides(forms, count, written, root_itself);
 }
 
 /* True when any private root (default or the manifest's) would stand over `path`. */
-static bool hidden(const guardian_manifest *manifest, const char *path, bool directory_path) {
+static bool hidden(const guardian_manifest *manifest, const char *path, bool root_itself) {
     if (!path || path[0] != '/') return true;
     for (size_t i = 0; guardian_private_root(i); ++i)
-        if (hides(guardian_private_root(i), path, directory_path)) return true;
+        if (hides(guardian_private_root(i), path, root_itself)) return true;
     for (size_t i = 0; i < manifest->purge_root_count; ++i)
         if (!manifest->purge_roots[i] || manifest->purge_roots[i][0] != '/' ||
-            hides(manifest->purge_roots[i], path, directory_path))
+            hides(manifest->purge_roots[i], path, root_itself))
             return true;
     return false;
 }
@@ -209,6 +209,11 @@ static bool path_like(const char *part) {
     return true;
 }
 
+static bool named(const char *entry, const char *name) {
+    size_t length = strlen(name);
+    return !strncmp(entry, name, length) && entry[length] == '=';
+}
+
 /* An environment entry whose name ends in PATH or LIB: a search list, read for programs or code. */
 static bool search_list(const char *entry) {
     const char *equals = strchr(entry, '=');
@@ -217,19 +222,21 @@ static bool search_list(const char *entry) {
         (length >= 3 && !strncmp(entry + length - 3, "LIB", 3));
 }
 
-/* True when one part of an argument or an environment value leads where the epoch's tmpfs would
- * hide it or let another helper of the epoch plant it. In a search list every part counts, a
- * root itself included (every helper of the epoch can write there): an empty or "." part is the
- * policy's working directory and a relative part is judged from it. Elsewhere a root itself is
- * the epoch's own tmpfs and only what lies below one is refused; a relative part counts only
- * when it holds a '/' and reads as a path. An absolute part is always judged. */
-static bool part_hidden(const guardian_manifest *manifest, const char *cwd, const char *part, bool search) {
-    if (part[0] == '/') return hidden(manifest, part, !search);
+/* True when one part of an argument or an environment value names something at or below a
+ * private root: hidden from the epoch, or, a root itself, shared by every helper of the epoch,
+ * which could plant what is read from there. Only a scratch variable (`scratch`: TMPDIR, TMP,
+ * TEMP) may name a root itself. An absolute part is always judged. In a search list every part
+ * is a directory: an empty or "." part is the policy's working directory and any other relative
+ * part is judged from it. Elsewhere a relative part counts only when it holds a '/' and reads as
+ * a path. */
+static bool part_hidden(const guardian_manifest *manifest, const char *cwd, const char *part, bool search,
+                        bool scratch) {
+    if (part[0] == '/') return hidden(manifest, part, scratch);
     if (search && (!part[0] || !strcmp(part, "."))) return hidden(manifest, cwd, false);
-    if (!path_like(part) || (!search && !strchr(part, '/'))) return false;
+    if (!search && (!path_like(part) || !strchr(part, '/'))) return false;
     char joined[4096];
     if (!cwd || snprintf(joined, sizeof(joined), "%s/%s", cwd, part) >= (int)sizeof(joined)) return true;
-    return hidden(manifest, joined, !search);
+    return hidden(manifest, joined, scratch);
 }
 
 /* True when a fixed argument (`environment` false: the whole text, and what follows its first
@@ -242,6 +249,7 @@ static bool names_hidden(const guardian_manifest *manifest, const char *cwd, con
     const char *starts[] = {environment ? (equals ? equals + 1 : text) : text,
                             !environment && equals ? equals + 1 : NULL};
     bool search = environment && search_list(text);
+    bool scratch = environment && (named(text, "TMPDIR") || named(text, "TMP") || named(text, "TEMP"));
     for (size_t s = 0; s < 2 && starts[s]; ++s) {
         char part[4096];
         for (const char *at = starts[s];;) {
@@ -249,7 +257,7 @@ static bool names_hidden(const guardian_manifest *manifest, const char *cwd, con
             if (length >= sizeof(part)) return true;
             memcpy(part, at, length);
             part[length] = '\0';
-            if (part_hidden(manifest, cwd, part, search)) return true;
+            if (part_hidden(manifest, cwd, part, search, scratch)) return true;
             if (at[length] != ':') break;
             at += length + 1;
         }
@@ -263,7 +271,7 @@ bool guardian_private_roots_hide_nothing(const guardian_manifest *manifest, bool
     const service_policy *service = policies ? manifest->service : NULL;
     for (size_t i = 0; service && i < service->policy_count; ++i) {
         const service_launch_policy *policy = &service->policies[i];
-        if (hidden(manifest, policy->executable, false) || hidden(manifest, policy->cwd, true)) return false;
+        if (hidden(manifest, policy->executable, false) || hidden(manifest, policy->cwd, false)) return false;
         for (size_t k = 0; k < policy->fixed_argc; ++k)
             if (!policy->fixed_argv || names_hidden(manifest, policy->cwd, policy->fixed_argv[k], false))
                 return false;

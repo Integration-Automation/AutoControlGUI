@@ -121,8 +121,8 @@ Each epoch's private roots now keep the host directory's mode and owner and its 
 and read-only flags. A manifest whose listener, service executable or policy executable lies under a private
 root, or whose policy working directory lies below one, as written or resolved, is refused; each epoch start
 checks the listener and the service executable again. Paths a policy's fixed arguments or environment values
-name, relative ones from its working directory, are judged the same way; in search lists (variables ending in
-PATH or LIB) a root itself is refused too.
+name, relative ones from its working directory, are judged the same way. Nothing a policy names may be a private
+root itself either, since every helper of the epoch can write there; only TMPDIR, TMP and TEMP may.
 
 ## Unreleased: helper containment in runtime status
 

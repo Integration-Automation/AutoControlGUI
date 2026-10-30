@@ -102,10 +102,11 @@ bool guardian_manifest_valid(const guardian_manifest *manifest);
 bool guardian_purge_roots_valid(const guardian_manifest *manifest);
 /* No path the epoch needs lies under a root an epoch covers with its own tmpfs, each checked as
  * written and as resolved, roots too: the listener and the service executable, and with
- * `policies` each policy's executable and working directory and every absolute path its fixed
- * arguments and environment name (a directory or such a path may be a root itself, an empty
- * one). Manifest validation checks all; each epoch start checks the first two
- * again, so a policy path another user could reach never stops every epoch. */
+ * `policies` each policy's executable, working directory and every path its fixed arguments
+ * and environment name, none of which may be a root itself either (every helper of the epoch
+ * can write there); only TMPDIR, TMP and TEMP may name a root itself. Manifest validation
+ * checks all; each epoch start checks the first two again, so a policy path another user could
+ * reach never stops every epoch. */
 bool guardian_private_roots_hide_nothing(const guardian_manifest *manifest, bool policies);
 #ifndef MS_NOSYMFOLLOW
 #define MS_NOSYMFOLLOW 256
