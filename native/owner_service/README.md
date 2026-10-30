@@ -163,10 +163,12 @@ the gate.
   exist when an epoch starts is covered from the next epoch on; until then the purge walks
   it on the host as before. Each tmpfs is `noexec`, `nosymfollow` or read-only where the
   host's mount is (a read-only host root gives the epoch a read-only, empty one), and its
-  pages count against the epoch's memory limit. A manifest whose listener, service
-  executable, or policy executable lies under any of these roots, or whose policy working
-  directory lies below one, each as written or resolved, is refused, since the epoch would
-  not see it. Each epoch start checks the listener and the service executable again, and
+  pages count against the epoch's memory limit. A manifest is refused, since the epoch
+  would not see the path, when its listener, service executable or a policy executable
+  lies under any of these roots, or a policy working directory lies below one. Each path
+  is compared as written and with every prefix resolved, so links and directories not made
+  yet are seen through; a prefix that exists but does not resolve, such as a dangling
+  link, is refused too. Each epoch start checks the listener and the service executable again, and
   does not start if a root made since hides one. The guardian accepts a payload ID's
   connection only from the mount namespace of the epoch that runs its slice.
 - When an epoch is reclaimed, the guardian also removes the files under `/tmp`, `/var/tmp`,

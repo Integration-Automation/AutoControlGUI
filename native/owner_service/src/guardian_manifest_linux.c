@@ -93,28 +93,35 @@ static void drop_trailing_slashes(char *path) {
     while (length > 1 && path[length - 1] == '/') path[--length] = '\0';
 }
 
-/* True when a tmpfs over `root` would stand over `path`: `path` as written, resolved (a link
- * is followed) or through its resolved directory (a path that does not exist yet), against
- * `root` as written or resolved; trailing slashes are dropped from both. A directory the
- * epoch enters (`directory_path`) may be the root itself: only what lies below it is hidden.
- * Its resolved directory standing in a root puts it below one, so that form is never strict. */
+/* True when a tmpfs over `root` would stand over `path`. `root` is taken as written and as
+ * resolved, trailing slashes dropped from both. `path` is taken as written and then each of
+ * its prefixes, itself first, as resolved: a resolved prefix in a root puts the path in it,
+ * whatever does not exist yet below that prefix and whatever links lie on the way. A prefix
+ * that is there but does not resolve (a dangling link, a loop) could resolve into a root later,
+ * so it is refused. A directory the epoch enters (`directory_path`) may be the root itself:
+ * only the path as a whole is compared strictly, every proper prefix as at or below. */
 static bool hides(const char *root, const char *path, bool directory_path) {
-    char forms[2][4096], written[4096], directory[4096], resolved[4096], whole[4096];
+    char forms[2][4096], written[4096], prefix[4096], resolved[4096];
     if (snprintf(forms[0], sizeof(forms[0]), "%s", root) >= (int)sizeof(forms[0]) ||
         snprintf(written, sizeof(written), "%s", path) >= (int)sizeof(written)) return true;
     drop_trailing_slashes(forms[0]);
     drop_trailing_slashes(written);
-    memcpy(directory, written, strlen(written) + 1);
-    bool followed = realpath(path, whole) != NULL;
     int count = realpath(root, forms[1]) ? 2 : 1;
-    char *slash = strrchr(directory, '/');
-    if (slash) *(slash == directory ? slash + 1 : slash) = '\0';
-    bool known = realpath(directory, resolved) != NULL;
     for (int i = 0; i < count; ++i)
-        if (under(written, forms[i], directory_path) || (followed && under(whole, forms[i], directory_path)) ||
-            (known && under(resolved, forms[i], false)))
+        if (under(written, forms[i], directory_path)) return true;
+    memcpy(prefix, written, strlen(written) + 1);
+    for (bool whole = true;; whole = false) {
+        struct stat entry;
+        if (realpath(prefix, resolved)) {
+            for (int i = 0; i < count; ++i)
+                if (under(resolved, forms[i], whole && directory_path)) return true;
+        } else if (lstat(prefix, &entry) == 0) {
             return true;
-    return false;
+        }
+        char *slash = strrchr(prefix, '/');
+        if (!slash || (slash == prefix && prefix[1] == '\0')) return false;
+        *(slash == prefix ? slash + 1 : slash) = '\0';
+    }
 }
 
 /* True when any private root (default or the manifest's) would stand over `path`. */

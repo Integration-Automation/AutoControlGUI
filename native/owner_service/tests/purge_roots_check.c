@@ -102,6 +102,7 @@ int main(void) {
         unlink("/run/autocontrol-link-root"); /* Left by a run that crashed: started afresh. */
         unlink("/run/autocontrol-hide-link");
         unlink("/run/autocontrol-lock-link");
+        unlink("/run/autocontrol-dangling-link");
         unlink("/run/autocontrol-exe-link");
         unlink("/run/autocontrol-exe-dir/helper");
         rmdir("/run/autocontrol-exe-dir");
@@ -111,13 +112,22 @@ int main(void) {
             unlink("/run/autocontrol-hide-link");
             ++root_cases;
         }
-        /* A working directory not made yet, below a link to a root (as /var/lock is to /run/lock
-         * on many hosts): only its resolved directory shows it lies below the root. */
-        if (symlink("/run/lock", "/run/autocontrol-lock-link") == 0) {
-            expect_policy("/usr/bin/python3", "/run/autocontrol-lock-link/app", false);
-            unlink("/run/autocontrol-lock-link");
+        /* A working directory not made yet, one or two levels below a link to a root (as
+         * /var/lock is to /run/lock on many hosts): only a resolved prefix shows it lies below
+         * the root. And a link to a place in the root not made yet: there but not resolving. */
+        char lock[4096];
+        bool lock_root = realpath("/run/lock", lock) != NULL;
+        if (lock_root && symlink("/run/lock", "/run/autocontrol-lock-link") == 0) {
+            expect_policy("/usr/bin/python3", "/run/autocontrol-lock-link/autocontrol-absent-leaf", false);
+            expect_policy("/usr/bin/python3", "/run/autocontrol-lock-link/autocontrol-absent-leaf/work", false);
             ++root_cases;
         }
+        unlink("/run/autocontrol-lock-link");
+        if (lock_root && symlink("/run/lock/autocontrol-absent-leaf", "/run/autocontrol-dangling-link") == 0) {
+            expect_policy("/usr/bin/python3", "/run/autocontrol-dangling-link", false);
+            ++root_cases;
+        }
+        unlink("/run/autocontrol-dangling-link");
         /* An executable that is a link into a root: followed, it is hidden. The target is made
          * here, so the case does not depend on how the host packages its tools. */
         FILE *helper = mkdir("/run/autocontrol-exe-dir", 0755) == 0 ? fopen("/run/autocontrol-exe-dir/helper", "w")
