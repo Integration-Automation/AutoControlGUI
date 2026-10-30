@@ -53,6 +53,7 @@ typedef struct {
     uint64_t *heartbeat;                   /* Shared with purge children: one counter per slice. */
     uint64_t beat_seen[SERVICE_PAYLOAD_SLICES], beat_at[SERVICE_PAYLOAD_SLICES];
     bool stalled[SERVICE_PAYLOAD_SLICES];  /* A purge child killed for making no progress. */
+    unsigned stall_round[SERVICE_PAYLOAD_SLICES]; /* Stalls in a row: each doubles the next allowance. */
     int system_errno;
 } guardian_state;
 

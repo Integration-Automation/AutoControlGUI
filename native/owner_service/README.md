@@ -102,12 +102,14 @@ the gate.
   Payload files can escape a purge only with another local user's help: inside another
   ID's directories past the deferral limit (for as long as those directories stay), inside
   another ID's btrfs subvolume (not entered, so a read-only snapshot cannot taint a
-  slice), or renamed behind the walk by that user while it runs. A mount's ID is read
-  from the fdinfo of an O_PATH descriptor, with no inode operation, so another user's FUSE
-  mount (an sshfs or AppImage mount, live, with its daemon gone, or with a root inode the
-  kernel marked bad) is detached like any other. A purge child that makes no progress for
-  a minute (stuck in one call, say on a FUSE daemon that never answers) is killed and run
-  again; one that is merely long is never cut short. No payload file can carry a
+  slice), or renamed behind the walk by that user while it runs. Each entry is opened
+  once without crossing any mount (RESOLVE_NO_XDEV) and handled through that descriptor,
+  so another user's FUSE mount (an sshfs or AppImage mount, live, dead, or with a root
+  inode the kernel marked bad) is never asked anything and is detached like any other. A
+  purge child whose progress stands still for a minute is killed and run again, the
+  allowance doubling after each stall of its slice in a row (up to an hour) so a slow but
+  finite call gets through. A child stuck where no signal reaches it keeps its slice until
+  it ends; the guardian goes on meanwhile, at startup too. No payload file can carry a
   set-user- or set-group-ID bit, so what escapes is data, not an identity, but a later
   helper with the same ID may find it.
   Only an object that can be neither removed, moved nor closed off taints its slice,

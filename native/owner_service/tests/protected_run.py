@@ -199,7 +199,8 @@ def _bad_fuse_mount(path, owner):
     server = threading.Thread(target=serve, daemon=True)
     server.start()
     stat = subprocess.run(["runuser", "-u", pwd.getpwuid(owner).pw_name, "--", "stat", path],
-                          capture_output=True, text=True, timeout=20)
+                          capture_output=True, text=True, timeout=20,
+                          env={"LC_ALL": "C", "PATH": "/usr/sbin:/usr/bin:/sbin:/bin"})
     server.join(timeout=10)
     os.close(device)  # The daemon is gone; the mount stays, its root inode bad.
     return "Input/output error" in stat.stderr

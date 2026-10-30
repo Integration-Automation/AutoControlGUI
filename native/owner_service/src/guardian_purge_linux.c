@@ -19,11 +19,13 @@
  *
  * A purge runs in a child with a mount namespace of its own, a slave of the host's so nothing
  * it does propagates out. Every root and SysV IPC table is opened before anything is
- * detached. A walk that meets an entry on another mount (a payload directory another user
- * covered with a mount of their own) detaches that mount there, by the descriptor of the
- * mount's root opened relative to the directory being walked, never by a path, and goes on
- * with what lies beneath; removing a payload mountpoint detaches the host's mount too. A
- * mount it cannot detach is never entered nor judged, and makes the purge run again.
+ * detached. Each entry is opened once, without crossing any mount (RESOLVE_NO_XDEV), and
+ * everything after that works on the descriptor, so no filesystem but the walked one is ever
+ * asked anything. An entry with a mount on it (a payload directory another user covered with
+ * a mount of their own) has that mount detached there, by the descriptor of the mount's root
+ * opened relative to the walked directory, never by a path, and the walk goes on with what
+ * lies beneath; removing a payload mountpoint detaches the host's mount too. A mount it
+ * cannot detach is never entered nor judged, and makes the purge run again.
  * Directories on another device of the same mount (btrfs subvolumes) are entered only when
  * a payload owns them. Each walk enters a directory once: one met again
  * (renamed behind the walk, or a directory this purge just moved into the quarantine) is
@@ -41,6 +43,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/fs.h>
+#include <linux/openat2.h>
 #include <stdio.h>
 #include <stdalign.h>
 #include <stdlib.h>
@@ -92,7 +95,6 @@ typedef struct {
     bool overflow_logged;
     seen_set seen;
     uint64_t key[2];              /* Random, per purge: nobody can compute the digests. */
-    uint64_t mount;               /* The root's mount: nothing on another is entered or judged. */
     bool mount_logged, subvolume_logged;
     bool revisit_logged;
 } purge_scope;
@@ -115,11 +117,25 @@ static bool same_inode(const struct stat *a, const struct stat *b) {
     return a->st_dev == b->st_dev && a->st_ino == b->st_ino;
 }
 
+#ifndef SYS_openat2
+#define SYS_openat2 437
+#endif
+
+/* `name` in `directory`, opened O_PATH without following a link or crossing any mount: the
+ * object itself, never what a mount placed on it shows, so nothing but the walked
+ * filesystem is ever asked anything. EXDEV when a mount sits on it. */
+static int open_here(int directory, const char *name) {
+    struct open_how how = {.flags = O_PATH | O_NOFOLLOW | O_CLOEXEC, .resolve = RESOLVE_NO_XDEV};
+    return (int)syscall(SYS_openat2, directory, name, &how, sizeof(how));
+}
+
 /* True when `name` in `directory` is still the object the walk saw, with the same owner. */
 static bool still_seen(int directory, const char *name, const struct stat *seen) {
+    int opened = open_here(directory, name);
     struct stat now;
-    return fstatat(directory, name, &now, AT_SYMLINK_NOFOLLOW) == 0 && same_inode(&now, seen) &&
-        now.st_uid == seen->st_uid;
+    bool same = opened >= 0 && fstat(opened, &now) == 0 && same_inode(&now, seen) && now.st_uid == seen->st_uid;
+    if (opened >= 0) close(opened);
+    return same;
 }
 
 static void churn(purge_scope *scope, const char *what) {
@@ -171,37 +187,6 @@ static identity identity_of(const purge_scope *scope, int directory, const struc
 static size_t seen_index(const seen_set *set, identity key) {
     uint64_t mixed = ((key.inode ^ (key.device << 32)) * 0x9E3779B97F4A7C15ULL) ^ key.handle;
     return (size_t)(mixed ^ (mixed >> 29)) & (set->capacity - 1);
-}
-
-/* The mount an open descriptor lies on, from its fdinfo: the kernel's own record of the
- * descriptor, read without any inode operation. 0 when unknown, with errno set. */
-static uint64_t mount_of_descriptor(int descriptor) {
-    char path[48];
-    snprintf(path, sizeof(path), "/proc/self/fdinfo/%d", descriptor);
-    FILE *info = fopen(path, "re");
-    if (!info) return 0;
-    char line[256];
-    unsigned long long mount = 0;
-    while (fgets(line, sizeof(line), info) && sscanf(line, "mnt_id: %llu", &mount) != 1) continue;
-    fclose(info);
-    if (!mount) errno = ENOSYS;
-    return (uint64_t)mount;
-}
-
-/* The mount `name` in `directory` lies on (the mounted one, for a mount point); 0 when
- * unknown, with errno set. Nothing is asked of the filesystem: an O_PATH open neither opens
- * nor stats the object, so another user's FUSE mount (which refuses root a getattr, or
- * answers EIO once its root inode went bad) and a daemon that never replies are named all
- * the same. With AT_EMPTY_PATH, `directory` itself. */
-static uint64_t mount_of(int directory, const char *name, int flags) {
-    if (flags & AT_EMPTY_PATH) return mount_of_descriptor(directory);
-    int opened = openat(directory, name, O_PATH | O_NOFOLLOW | O_CLOEXEC);
-    if (opened < 0) return 0;
-    uint64_t mount = mount_of_descriptor(opened);
-    int error = errno;
-    close(opened);
-    errno = error;
-    return mount;
 }
 
 /* The purge's heartbeat, in memory the guardian reads: bumped as the purge goes on, so a
@@ -327,7 +312,7 @@ static void dispose(purge_scope *scope, int directory, const char *name, const s
     if (quarantine(scope, directory, name, seen) || !still_seen(directory, name, seen)) return;
     /* Close it off where it is, on the opened, checked object: mode 0 first, so a failure
      * never leaves a root-owned object others may write. */
-    int opened = openat(directory, name, O_PATH | O_NOFOLLOW | O_CLOEXEC);
+    int opened = open_here(directory, name);
     struct stat now;
     bool done = opened >= 0 && fstat(opened, &now) == 0 && same_inode(&now, seen) &&
         syscall(SYS_fchmodat2, opened, "", 0, AT_EMPTY_PATH) == 0 && fchownat(opened, "", 0, 0, AT_EMPTY_PATH) == 0;
@@ -416,52 +401,55 @@ static void left_mount(purge_scope *scope) {
     if (private_mounts) scope->complete = false;
 }
 
-/* The mount `name` shows once every mount stacked on it is detached; 0 when gone or unknown.
- * Each detach removes one of a namespace's finite mounts, so only a user mounting anew while
- * it runs can keep it going; the bound is the kernel's own default for fs.mount-max. */
-static uint64_t bare_mount(purge_scope *scope, int directory, const char *name) {
-    uint64_t mount = mount_of(directory, name, AT_SYMLINK_NOFOLLOW);
-    for (long layer = 0; mount && mount != scope->mount && private_mounts && layer < 100000; ++layer) {
+/* `name` opened where it is (open_here), every mount stacked on it detached first in the
+ * purge's own namespace. Each detach removes one of the namespace's finite mounts, so only a
+ * user mounting anew while it runs can keep it going; the bound is the kernel's own default
+ * for fs.mount-max. -1 with errno set; EXDEV when a mount stays. */
+static int open_bare(purge_scope *scope, int directory, const char *name) {
+    for (long layer = 0; layer < 100000; ++layer) {
+        int opened = open_here(directory, name);
+        if (opened >= 0 || errno != EXDEV) return opened;
         beat();
-        if (!detach_entry(directory, name)) break;
-        mount = mount_of(directory, name, AT_SYMLINK_NOFOLLOW);
+        if (!private_mounts || !detach_entry(directory, name)) break;
     }
-    if (!mount && errno != ENOENT) {
-        fprintf(stderr, "autocontrol-owner-guardian: purge could not tell an entry's mount; it runs again\n");
-        scope->complete = false;
-    } else if (mount && mount != scope->mount) {
-        left_mount(scope);
-    }
-    return mount;
+    left_mount(scope);
+    errno = EXDEV;
+    return -1;
 }
 
 static void visit(purge_scope *scope, walk *state, bool root_walk, const char *name) {
     size_t at = state->depth - 1;
     int directory = dirfd(state->levels[at].listing);
-    if (bare_mount(scope, directory, name) != scope->mount) return; /* Another mount's, or gone. */
+    int entry = open_bare(scope, directory, name);
+    if (entry < 0) {
+        if (errno != ENOENT && errno != EXDEV) {
+            fprintf(stderr, "autocontrol-owner-guardian: purge could not open an entry; it runs again\n");
+            scope->complete = false;
+        }
+        return; /* Gone, or a mount left in place (left_mount decided). */
+    }
     struct stat status;
-    if (fstatat(directory, name, &status, AT_SYMLINK_NOFOLLOW) != 0) return;
-    if (at == 0 && scope->quarantine >= 0 && same_inode(&status, &scope->quarantined)) return; /* Walked later. */
-    if (!S_ISDIR(status.st_mode)) {
-        if (payload_uid(scope, status.st_uid)) dispose(scope, directory, name, &status);
-        return;
-    }
-    /* What is walked is the directory opened, whatever the name pointed at before. */
-    int child = openat(directory, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
-    int error = child < 0 ? errno : 0;
-    if (child >= 0 && (fstat(child, &status) != 0 || mount_of(child, "", AT_EMPTY_PATH) != scope->mount)) {
-        close(child);
-        left_mount(scope); /* Mounted or swapped meanwhile: not this walk's to judge. */
-        return;
-    }
-    if (child < 0) {
-        if (payload_uid(scope, status.st_uid)) dispose(scope, directory, name, &status);
-        else if (error != ENOENT && error != ENOTDIR && error != ELOOP)
-            fprintf(stderr, "autocontrol-owner-guardian: purge could not open another ID's directory\n");
+    if (fstat(entry, &status) != 0 ||
+        (at == 0 && scope->quarantine >= 0 && same_inode(&status, &scope->quarantined))) { /* Walked later. */
+        close(entry);
         return;
     }
     bool owned = payload_uid(scope, status.st_uid);
-    if (child >= 0 && status.st_dev != state->levels[at].seen.st_dev && !owned) {
+    if (!S_ISDIR(status.st_mode)) {
+        close(entry);
+        if (owned) dispose(scope, directory, name, &status);
+        return;
+    }
+    /* What is walked is the directory opened, reopened as "." from it: never across a mount
+     * placed on it meanwhile. */
+    int child = openat(entry, ".", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    close(entry);
+    if (child < 0) {
+        if (owned) dispose(scope, directory, name, &status);
+        else fprintf(stderr, "autocontrol-owner-guardian: purge could not open another ID's directory\n");
+        return;
+    }
+    if (status.st_dev != state->levels[at].seen.st_dev && !owned) {
         /* Another ID's subvolume (a read-only snapshot, say): not entered. Payload files in it
          * were put there with that ID's leave. */
         if (!scope->subvolume_logged)
@@ -559,13 +547,6 @@ static int open_root(const char *path) {
 /* `root` is the root opened beforehand; it is closed here. */
 static void purge_tree(purge_scope *scope, int root, const char *path) {
     scope->root = root;
-    scope->mount = mount_of(root, "", AT_EMPTY_PATH);
-    if (!scope->mount) {
-        fprintf(stderr, "autocontrol-owner-guardian: purge cannot tell mounts apart under %s; it runs again\n", path);
-        scope->complete = false;
-        close(root);
-        return;
-    }
     scope->quarantine = -1;
     scope->quarantine_tried = false;
     scope->churned = false;

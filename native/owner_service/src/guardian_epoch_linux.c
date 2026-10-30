@@ -195,6 +195,7 @@ static void purge_child(const guardian_state *state, int slice, pid_t guardian) 
 /* Clean: nothing to do. Incomplete: run again before the slice is handed out. Anything
  * else (unclean, killed, an unknown status) taints. */
 static void purge_settled(guardian_state *state, int slice, int outcome) {
+    if (slice >= 0) state->stall_round[slice] = 0; /* It ended by itself. */
     if (outcome == PURGE_CLEAN) return;
     if (outcome != PURGE_INCOMPLETE) { taint(state, slice); return; }
     for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) if (slice < 0 || slice == s) state->repurge[s] = true;
@@ -229,11 +230,13 @@ static void purge_check(guardian_state *state, int slice, int pidfd) {
     if (!state->heartbeat || state->stalled[slice]) return;
     uint64_t beat = __atomic_load_n(&state->heartbeat[slice], __ATOMIC_RELAXED), now = now_ns();
     if (beat != state->beat_seen[slice]) { state->beat_seen[slice] = beat; state->beat_at[slice] = now; return; }
-    if (now - state->beat_at[slice] < PURGE_STALL_NS) return;
-    fprintf(stderr, "autocontrol-owner-guardian: purge of slice %d made no progress for a minute; it runs again\n",
-            slice);
+    /* A minute, doubled after each stall of this slice in a row (up to an hour): one slow but
+     * finite call (getdents over a huge emptied directory) gets through on a later run. */
+    if (now - state->beat_at[slice] < PURGE_STALL_NS << state->stall_round[slice]) return;
+    fprintf(stderr, "autocontrol-owner-guardian: purge of slice %d made no progress; it runs again\n", slice);
     syscall(SYS_pidfd_send_signal, pidfd, SIGKILL, NULL, 0);
     state->stalled[slice] = true;
+    if (state->stall_round[slice] < 6) ++state->stall_round[slice];
 }
 
 int guardian_purge_watch(guardian_state *state) {
@@ -250,11 +253,18 @@ int guardian_purge_watch(guardian_state *state) {
  * its heartbeat all the same. */
 static void await_purge(guardian_state *state, int slice, pid_t child) {
     int pidfd = (int)syscall(SYS_pidfd_open, child, 0);
+    int grace = 0;
     while (pidfd >= 0) {
         struct pollfd ended = {.fd = pidfd, .events = POLLIN};
         int rc = poll(&ended, 1, PURGE_CHECK_MS);
         if (rc > 0 || (rc < 0 && errno != EINTR)) break;
         purge_check(state, slice, pidfd);
+        if (state->stalled[slice] && ++grace > 6) {
+            /* Killed, yet in a call no signal ends: the loop reaps it whenever it does end,
+             * and the slice waits for it, but the guardian goes on. */
+            state->purging[slice] = pidfd;
+            return;
+        }
     }
     if (pidfd >= 0) close(pidfd);
     int status = 0;

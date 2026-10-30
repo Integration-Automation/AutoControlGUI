@@ -89,6 +89,9 @@ detached instead of making every purge run again, and stacked mounts are detache
 The mount ID now comes from the fdinfo of an O_PATH descriptor, with no inode operation, so a FUSE root inode
 marked bad no longer blocks purges either; a purge child that makes no progress for a minute is killed and
 run again.
+Each purge entry is now opened once without crossing any mount (RESOLVE_NO_XDEV), so no other filesystem is
+ever asked anything; the stall allowance doubles after each stall of a slice in a row; and a startup purge
+stuck where no signal reaches it no longer holds the guardian.
 
 ## Unreleased: helper containment in runtime status
 
