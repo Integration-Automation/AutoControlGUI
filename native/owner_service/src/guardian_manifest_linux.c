@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <grp.h>
 #include <pwd.h>
+#include <unistd.h>
 
 #define PAYLOAD_ID_FLOOR 1000u /* Below it: system accounts and groups, such as disk or adm. */
 
@@ -93,35 +94,71 @@ static void drop_trailing_slashes(char *path) {
     while (length > 1 && path[length - 1] == '/') path[--length] = '\0';
 }
 
-/* True when a tmpfs over `root` would stand over `path`. `root` is taken as written and as
- * resolved, trailing slashes dropped from both. `path` is taken as written and then each of
- * its prefixes, itself first, as resolved: a resolved prefix in a root puts the path in it,
- * whatever does not exist yet below that prefix and whatever links lie on the way. A prefix
- * that is there but does not resolve (a dangling link, a loop) could resolve into a root later,
- * so it is refused. A directory the epoch enters (`directory_path`) may be the root itself:
- * only the path as a whole is compared strictly, every proper prefix as at or below. */
+/* `name` lies in either form of the root: at or below it, or with `strict` only below it. */
+static bool in_root(char forms[][4096], int count, const char *name, bool strict) {
+    for (int i = 0; i < count; ++i)
+        if (under(name, forms[i], strict)) return true;
+    return false;
+}
+
+/* Resolves `path` component by component, as the kernel does, following at most 40 links, and
+ * is true as soon as any name it visits lies in the root: each directory on the way, each link,
+ * each name a link leads through, and, once a name is not there yet, what lies below it as
+ * written. Only the final name of a directory the epoch enters is compared strictly. What it
+ * cannot resolve (too long, too many links, not readable) counts as hidden. */
+static bool walk_hides(char forms[][4096], int count, const char *path, bool directory_path) {
+    char current[4096] = "", rest[8192], next[8192], target[4096], candidate[4096];
+    if (snprintf(rest, sizeof(rest), "%s", path) >= (int)sizeof(rest)) return true;
+    for (unsigned links = 0;;) {
+        char *component = rest;
+        while (*component == '/') ++component;
+        if (!*component) return false;
+        size_t length = strcspn(component, "/");
+        char *after = component + length;
+        while (*after == '/') ++after;
+        bool final = *after == '\0';
+        if (length <= 2 && !strncmp(component, "..", length)) {  /* "." or "..": no name visited. */
+            char *slash = length == 2 ? strrchr(current, '/') : NULL;
+            if (slash) *slash = '\0';
+            memmove(rest, after, strlen(after) + 1);
+            continue;
+        }
+        if (snprintf(candidate, sizeof(candidate), "%s/%.*s", current, (int)length, component) >=
+            (int)sizeof(candidate) || in_root(forms, count, candidate, final && directory_path)) return true;
+        struct stat entry;
+        if (lstat(candidate, &entry) != 0) {
+            if (errno != ENOENT) return true;
+            /* Not there yet: the rest of the path lies below it as written. */
+            if (snprintf(next, sizeof(next), "%s/%s", candidate, after) >= (int)sizeof(next)) return true;
+            drop_trailing_slashes(next);
+            return in_root(forms, count, next, directory_path);
+        }
+        if (S_ISLNK(entry.st_mode)) {
+            ssize_t size = ++links > 40 ? -1 : readlink(candidate, target, sizeof(target) - 1);
+            if (size <= 0) return true;
+            target[size] = '\0';
+            if (target[0] == '/') current[0] = '\0';  /* Otherwise it goes on from the link's directory. */
+            if (snprintf(next, sizeof(next), "%s/%s", target, after) >= (int)sizeof(next)) return true;
+            memcpy(rest, next, strlen(next) + 1);
+            continue;
+        }
+        memcpy(current, candidate, strlen(candidate) + 1);
+        memmove(rest, after, strlen(after) + 1);
+    }
+}
+
+/* True when a tmpfs over `root` would stand over `path`: `root` as written or resolved,
+ * trailing slashes dropped from both, against `path` as written and every name its resolution
+ * visits (walk_hides). A directory the epoch enters (`directory_path`) may be the root itself:
+ * only what lies below it is hidden. */
 static bool hides(const char *root, const char *path, bool directory_path) {
-    char forms[2][4096], written[4096], prefix[4096], resolved[4096];
+    char forms[2][4096], written[4096];
     if (snprintf(forms[0], sizeof(forms[0]), "%s", root) >= (int)sizeof(forms[0]) ||
         snprintf(written, sizeof(written), "%s", path) >= (int)sizeof(written)) return true;
     drop_trailing_slashes(forms[0]);
     drop_trailing_slashes(written);
     int count = realpath(root, forms[1]) ? 2 : 1;
-    for (int i = 0; i < count; ++i)
-        if (under(written, forms[i], directory_path)) return true;
-    memcpy(prefix, written, strlen(written) + 1);
-    for (bool whole = true;; whole = false) {
-        struct stat entry;
-        if (realpath(prefix, resolved)) {
-            for (int i = 0; i < count; ++i)
-                if (under(resolved, forms[i], whole && directory_path)) return true;
-        } else if (lstat(prefix, &entry) == 0) {
-            return true;
-        }
-        char *slash = strrchr(prefix, '/');
-        if (!slash || (slash == prefix && prefix[1] == '\0')) return false;
-        *(slash == prefix ? slash + 1 : slash) = '\0';
-    }
+    return in_root(forms, count, written, directory_path) || walk_hides(forms, count, written, directory_path);
 }
 
 /* True when any private root (default or the manifest's) would stand over `path`. */
@@ -154,8 +191,8 @@ bool guardian_manifest_valid(const guardian_manifest *manifest) {
         return false;
     if (!guardian_private_roots_hide_nothing(manifest, true)) {
         fprintf(stderr, "autocontrol-owner-guardian: the listener, the service executable or a policy's "
-                        "executable or directory lies under a root each epoch covers with its own tmpfs; "
-                        "the manifest is refused\n");
+                        "executable or directory lies under a root each epoch covers with its own tmpfs, "
+                        "or cannot be resolved; the manifest is refused\n");
         return false;
     }
     for (size_t i = 0; i < manifest->client_count; ++i)

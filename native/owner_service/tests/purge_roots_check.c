@@ -80,6 +80,8 @@ int main(void) {
     expect_policy("/usr/bin/python3", "/", true);
     expect_policy("/usr/bin/python3", "/tmp", true);           /* A root itself: the epoch's empty tmpfs. */
     expect_policy("/usr/bin/python3", "/tmp/", true);          /* The same, written with a slash. */
+    expect_policy("/usr/bin/../bin/python3", "/./tmp", true);  /* "." and ".." resolve as the kernel does. */
+    expect_policy("/usr/bin/python3", "/tmp/../tmp/work", false);
     expect_policy("/usr/bin/python3", "/tmp/work", false);     /* Below a root: hidden. */
     expect_policy("/tmp/helper", "/", false);
     expect_policy("relative/helper", "/", false);
@@ -103,6 +105,7 @@ int main(void) {
         unlink("/run/autocontrol-hide-link");
         unlink("/run/autocontrol-lock-link");
         unlink("/run/autocontrol-dangling-link");
+        unlink("/run/autocontrol-chain");
         unlink("/run/autocontrol-exe-link");
         unlink("/run/autocontrol-exe-dir/helper");
         rmdir("/run/autocontrol-exe-dir");
@@ -128,6 +131,17 @@ int main(void) {
             ++root_cases;
         }
         unlink("/run/autocontrol-dangling-link");
+        /* A chain through a root and back out: it ends in /usr, but it passes through /run/lock,
+         * which each epoch covers with its own tmpfs, so the epoch would not reach /usr. */
+        unlink("/run/lock/autocontrol-hop");
+        if (lock_root && symlink("/usr", "/run/lock/autocontrol-hop") == 0 &&
+            symlink("/run/lock/autocontrol-hop", "/run/autocontrol-chain") == 0) {
+            expect_policy("/usr/bin/python3", "/run/autocontrol-chain", false);
+            expect_policy("/run/autocontrol-chain/bin/sh", "/", false);
+            ++root_cases;
+        }
+        unlink("/run/autocontrol-chain");
+        unlink("/run/lock/autocontrol-hop");
         /* An executable that is a link into a root: followed, it is hidden. The target is made
          * here, so the case does not depend on how the host packages its tools. */
         FILE *helper = mkdir("/run/autocontrol-exe-dir", 0755) == 0 ? fopen("/run/autocontrol-exe-dir/helper", "w")
