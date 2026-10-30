@@ -88,24 +88,31 @@ static bool under(const char *path, const char *root, bool strict) {
     return strncmp(path, root, length) == 0 && (path[length] == '/' || (!strict && path[length] == '\0'));
 }
 
+static void drop_trailing_slashes(char *path) {
+    size_t length = strlen(path);
+    while (length > 1 && path[length - 1] == '/') path[--length] = '\0';
+}
+
 /* True when a tmpfs over `root` would stand over `path`: `path` as written, resolved (a link
  * is followed) or through its resolved directory (a path that does not exist yet), against
- * `root` as written (trailing slashes dropped) or resolved. A `directory` the epoch enters may
- * be the root itself: only what lies below it is hidden. */
+ * `root` as written or resolved; trailing slashes are dropped from both. A directory the
+ * epoch enters (`directory_path`) may be the root itself: only what lies below it is hidden.
+ * Its resolved directory standing in a root puts it below one, so that form is never strict. */
 static bool hides(const char *root, const char *path, bool directory_path) {
-    char forms[2][4096], directory[4096], resolved[4096], whole[4096];
+    char forms[2][4096], written[4096], directory[4096], resolved[4096], whole[4096];
     if (snprintf(forms[0], sizeof(forms[0]), "%s", root) >= (int)sizeof(forms[0]) ||
-        snprintf(directory, sizeof(directory), "%s", path) >= (int)sizeof(directory)) return true;
+        snprintf(written, sizeof(written), "%s", path) >= (int)sizeof(written)) return true;
+    drop_trailing_slashes(forms[0]);
+    drop_trailing_slashes(written);
+    memcpy(directory, written, strlen(written) + 1);
     bool followed = realpath(path, whole) != NULL;
-    size_t length = strlen(forms[0]);
-    while (length > 1 && forms[0][length - 1] == '/') forms[0][--length] = '\0';
     int count = realpath(root, forms[1]) ? 2 : 1;
     char *slash = strrchr(directory, '/');
     if (slash) *(slash == directory ? slash + 1 : slash) = '\0';
     bool known = realpath(directory, resolved) != NULL;
     for (int i = 0; i < count; ++i)
-        if (under(path, forms[i], directory_path) || (followed && under(whole, forms[i], directory_path)) ||
-            (!directory_path && known && under(resolved, forms[i], false)))
+        if (under(written, forms[i], directory_path) || (followed && under(whole, forms[i], directory_path)) ||
+            (known && under(resolved, forms[i], false)))
             return true;
     return false;
 }

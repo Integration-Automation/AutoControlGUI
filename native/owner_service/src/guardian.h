@@ -1,5 +1,8 @@
 #ifndef AUTOCONTROL_GUARDIAN_H
 #define AUTOCONTROL_GUARDIAN_H
+#ifndef _GNU_SOURCE
+#error "define _GNU_SOURCE before any include: guardian.h uses GNU names (ST_NOEXEC, ST_NODEV, ...)"
+#endif
 /* The root guardian: the only party that creates, delegates, grants and reclaims a
  * service epoch. Private to the guardian executable. */
 #include "guardian_journal.h"

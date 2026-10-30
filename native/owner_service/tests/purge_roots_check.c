@@ -79,6 +79,7 @@ int main(void) {
     expect_listener("relative/owner.sock", NULL, false);
     expect_policy("/usr/bin/python3", "/", true);
     expect_policy("/usr/bin/python3", "/tmp", true);           /* A root itself: the epoch's empty tmpfs. */
+    expect_policy("/usr/bin/python3", "/tmp/", true);          /* The same, written with a slash. */
     expect_policy("/usr/bin/python3", "/tmp/work", false);     /* Below a root: hidden. */
     expect_policy("/tmp/helper", "/", false);
     expect_policy("relative/helper", "/", false);
@@ -100,6 +101,7 @@ int main(void) {
     if (geteuid() == 0) {
         unlink("/run/autocontrol-link-root"); /* Left by a run that crashed: started afresh. */
         unlink("/run/autocontrol-hide-link");
+        unlink("/run/autocontrol-lock-link");
         unlink("/run/autocontrol-exe-link");
         unlink("/run/autocontrol-exe-dir/helper");
         rmdir("/run/autocontrol-exe-dir");
@@ -107,6 +109,13 @@ int main(void) {
         if (symlink("/usr/libexec", "/run/autocontrol-hide-link") == 0) {
             expect_hidden("/run/je_auto_control/owner.sock", EXECUTABLE, "/run/autocontrol-hide-link", false);
             unlink("/run/autocontrol-hide-link");
+            ++root_cases;
+        }
+        /* A working directory not made yet, below a link to a root (as /var/lock is to /run/lock
+         * on many hosts): only its resolved directory shows it lies below the root. */
+        if (symlink("/run/lock", "/run/autocontrol-lock-link") == 0) {
+            expect_policy("/usr/bin/python3", "/run/autocontrol-lock-link/app", false);
+            unlink("/run/autocontrol-lock-link");
             ++root_cases;
         }
         /* An executable that is a link into a root: followed, it is hidden. The target is made

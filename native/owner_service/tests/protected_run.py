@@ -1377,7 +1377,7 @@ def expectations(result):
         and all(faults["faults"].values()),
         # The manifest refuses a root linking into a user's directory, a user's own directory
         # and a link loop, and accepts root's own: staged under /run, as root.
-        "purge_roots_refused": faults["roots_exit"] == 0 and faults["roots"].get("root_cases") == 6,
+        "purge_roots_refused": faults["roots_exit"] == 0 and faults["roots"].get("root_cases") == 7,
         "taken_payload_range_refused": taken["refused"][0] != 0
         and "manifest is invalid" in taken["refused"][1] and not taken["epochs"],
         "native_worker_runs": (worker["bootstrap"].get("result") or {}).get("protocol") == 1
