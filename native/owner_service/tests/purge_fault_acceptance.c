@@ -39,23 +39,25 @@ static long test_syscall(long number, ...) {
 /* One hook per scenario, on the listing of one directory (by inode). */
 enum { HOOK_NONE, HOOK_READ_ERROR, HOOK_MOUNT_ON_ENTRY, HOOK_RENAME_PARENT_ENTRY };
 static int hook;
+static dev_t hook_device;
 static ino_t hook_directory;
 static bool hook_done;
 static char hook_name[64], hook_path[256], hook_target[256];
-static ino_t parent_directory; /* HOOK_RENAME_PARENT_ENTRY: the listing that meets the new name. */
+static dev_t parent_device; /* HOOK_RENAME_PARENT_ENTRY: the listing that meets the new name. */
+static ino_t parent_directory;
 static bool replayed;
 
 static struct dirent *test_readdir(DIR *listing) {
     struct stat status;
     bool known = hook && fstat(dirfd(listing), &status) == 0;
-    bool watched = known && !hook_done && status.st_ino == hook_directory;
+    bool watched = known && !hook_done && status.st_ino == hook_directory && status.st_dev == hook_device;
     if (watched && hook == HOOK_READ_ERROR) { hook_done = true; errno = EIO; return NULL; }
     if (watched && hook == HOOK_RENAME_PARENT_ENTRY) { hook_done = true; rename(hook_path, hook_target); }
     struct dirent *entry = readdir(listing);
     /* A filesystem that lists a renamed entry again (ext4's hash order may; tmpfs since 6.13
      * stops at the end it saw on opening): the parent's listing yields the new name once. */
     if (!entry && hook_done && !replayed && hook == HOOK_RENAME_PARENT_ENTRY && known &&
-        status.st_ino == parent_directory) {
+        status.st_ino == parent_directory && status.st_dev == parent_device) {
         static struct dirent again;
         replayed = true;
         snprintf(again.d_name, sizeof(again.d_name), "%s", strrchr(hook_target, '/') + 1);
@@ -72,20 +74,29 @@ static service_launch_policy launch = {.payload_uid = BASE, .payload_gid = BASE}
 static service_policy policy = {.policies = &launch, .policy_count = 1};
 static guardian_manifest manifest = {.service = &policy};
 
-static ino_t inode_of(const char *path) {
+/* Where the hook watches: a directory's device and inode. */
+static void watch(const char *path, dev_t *device, ino_t *inode) {
     struct stat status;
-    return stat(path, &status) == 0 ? status.st_ino : 0;
+    if (stat(path, &status) != 0) { *device = 0; *inode = 0; return; }
+    *device = status.st_dev;
+    *inode = status.st_ino;
 }
 
-static void payload_file(const char *path) {
-    FILE *file = fopen(path, "w");
-    if (file) { fputs("payload", file); fclose(file); }
-    if (chown(path, BASE, BASE) != 0) perror(path);
+/* Fixtures live under a fresh directory only root can enter, made with mkdtemp: nobody can have
+ * planted a name or a link in them. Each step must succeed. */
+static bool fixture_root(char *path) {
+    return mkdtemp(path) != NULL;
 }
 
-static void payload_directory(const char *path) {
-    mkdir(path, 0700);
-    if (chown(path, BASE, BASE) != 0) perror(path);
+static bool payload_file(const char *path) {
+    int file = open(path, O_CREAT | O_EXCL | O_WRONLY | O_NOFOLLOW | O_CLOEXEC, 0600);
+    bool made = file >= 0 && write(file, "payload", 7) == 7 && fchown(file, BASE, BASE) == 0;
+    if (file >= 0) close(file);
+    return made;
+}
+
+static bool payload_directory(const char *path) {
+    return mkdir(path, 0700) == 0 && lchown(path, BASE, BASE) == 0;
 }
 
 static bool payload_queue(const char *name) {
@@ -113,52 +124,55 @@ static bool scenario(const char *name, bool (*body)(void)) {
     return held;
 }
 
+static char path_buffer[256];
+
+static const char *under(const char *top, const char *name) {
+    snprintf(path_buffer, sizeof(path_buffer), "%s/%s", top, name);
+    return path_buffer;
+}
+
 static bool read_error(void) {
-    const char *top = "/tmp/autocontrol-fault-read";
-    mkdir(top, 0755);
-    payload_file("/tmp/autocontrol-fault-read/left");
+    char top[] = "/tmp/autocontrol-fault-read-XXXXXX";
+    if (!fixture_root(top) || !payload_file(under(top, "left"))) return false;
     hook = HOOK_READ_ERROR;
-    hook_directory = inode_of(top);
+    watch(top, &hook_device, &hook_directory);
     guardian_purge_outcome outcome = guardian_purge_payloads(&manifest, -1);
-    unlink("/tmp/autocontrol-fault-read/left");
+    unlink(under(top, "left"));
     rmdir(top);
     return hook_done && outcome == PURGE_INCOMPLETE; /* Never a clean purge that read nothing. */
 }
 
 static bool mounted_during_walk(void) {
-    const char *top = "/tmp/autocontrol-fault-mount";
-    mkdir(top, 0755);
-    payload_directory("/tmp/autocontrol-fault-mount/victim");
-    payload_file("/tmp/autocontrol-fault-mount/victim/data");
+    char top[] = "/tmp/autocontrol-fault-mount-XXXXXX";
+    if (!fixture_root(top) || !payload_directory(under(top, "victim")) || !payload_file(under(top, "victim/data")))
+        return false;
     hook = HOOK_MOUNT_ON_ENTRY;
-    hook_directory = inode_of(top);
+    watch(top, &hook_device, &hook_directory);
     snprintf(hook_name, sizeof(hook_name), "victim");
     snprintf(hook_path, sizeof(hook_path), "%s/victim", top);
     guardian_purge_outcome outcome = guardian_purge_payloads(&manifest, -1);
     struct stat left;
     bool gone = lstat(hook_path, &left) != 0;
     umount2(hook_path, MNT_DETACH);
-    unlink("/tmp/autocontrol-fault-mount/victim/data");
+    unlink(under(top, "victim/data"));
     rmdir(hook_path);
     rmdir(top);
     return hook_done && outcome == PURGE_CLEAN && gone; /* Laid bare and removed. */
 }
 
 static bool renamed_behind(void) {
-    const char *top = "/dev/shm/autocontrol-fault-rename";
-    mkdir(top, 0755);
-    payload_directory("/dev/shm/autocontrol-fault-rename/first");
-    payload_file("/dev/shm/autocontrol-fault-rename/first/data");
+    char top[] = "/dev/shm/autocontrol-fault-rename-XXXXXX";
+    if (!fixture_root(top) || !payload_directory(under(top, "first")) || !payload_file(under(top, "first/data")))
+        return false;
     hook = HOOK_RENAME_PARENT_ENTRY;
-    hook_directory = inode_of("/dev/shm/autocontrol-fault-rename/first");
-    parent_directory = inode_of(top);
+    watch(under(top, "first"), &hook_device, &hook_directory);
+    watch(top, &parent_device, &parent_directory);
     snprintf(hook_path, sizeof(hook_path), "%s/first", top);
     snprintf(hook_target, sizeof(hook_target), "%s/zz-moved", top);
     guardian_purge_outcome outcome = guardian_purge_payloads(&manifest, -1);
-    fprintf(stderr, "renamed_behind: hook %d outcome %d\n", hook_done, outcome);
-    unlink("/dev/shm/autocontrol-fault-rename/zz-moved/data");
-    rmdir("/dev/shm/autocontrol-fault-rename/zz-moved");
-    unlink("/dev/shm/autocontrol-fault-rename/first/data");
+    unlink(under(top, "zz-moved/data"));
+    rmdir(under(top, "zz-moved"));
+    unlink(under(top, "first/data"));
     rmdir(hook_path);
     rmdir(top);
     return hook_done && outcome == PURGE_INCOMPLETE; /* Met again: the purge runs again. */
@@ -185,7 +199,6 @@ static bool mount_api_refused_with_mqueue(void) {
     mqd_t left = mq_open(queue, O_RDONLY);
     bool gone = left == (mqd_t)-1 && errno == ENOENT;
     if (!gone) { if (left != (mqd_t)-1) mq_close(left); mq_unlink(queue); }
-    fprintf(stderr, "with_mqueue: made %d outcome %d gone %d\n", made, outcome, gone);
     return made && outcome == PURGE_CLEAN && gone;
 }
 

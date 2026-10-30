@@ -128,7 +128,8 @@ int main(void) {
     int child;
     while (children && fscanf(children, "%d", &child) == 1) kill(child, SIGKILL);
     if (children) fclose(children);
-    while (waitpid(-1, NULL, 0) > 0) continue;
+    for (int round = 0; round < 50 && waitpid(-1, NULL, WNOHANG) >= 0; ++round) usleep(20000);
+    /* Anything still there has PR_SET_PDEATHSIG and ends with this process. */
 
     printf("{\"failures\": %d}\n", failures);
     return failures ? 1 : 0;

@@ -238,7 +238,7 @@ static void purge_start_watch(guardian_state *state, int slice) {
  * still for a minute: a purge stuck in one call, never one that is merely long. */
 static void purge_check(guardian_state *state, int slice, int pidfd, pid_t pid) {
     if (state->stalled[slice]) return;
-    uint64_t now = now_ns(), allowance = PURGE_UNWATCHED_NS;
+    uint64_t now = now_ns(), allowance = PURGE_UNWATCHED_NS << state->stall_round[slice];
     if (state->heartbeat) {
         uint64_t beat = __atomic_load_n(&state->heartbeat[slice], __ATOMIC_RELAXED);
         if (beat != state->beat_seen[slice]) { state->beat_seen[slice] = beat; state->beat_at[slice] = now; return; }
@@ -249,7 +249,7 @@ static void purge_check(guardian_state *state, int slice, int pidfd, pid_t pid) 
     if (now - state->beat_at[slice] < allowance) return;
     fprintf(stderr, "autocontrol-owner-guardian: purge of slice %d made no progress; it runs again\n", slice);
     if (pidfd >= 0) syscall(SYS_pidfd_send_signal, pidfd, SIGKILL, NULL, 0);
-    else syscall(SYS_kill, pid, SIGKILL);
+    else if (pid > 0) syscall(SYS_kill, pid, SIGKILL); /* Never 0 or -1: those name groups. */
     state->stalled[slice] = true;
     if (state->stall_round[slice] < 6) ++state->stall_round[slice];
 }
@@ -293,9 +293,10 @@ static void await_purge(guardian_state *state, int slice, pid_t child) {
         return;
     }
     if (pidfd >= 0) close(pidfd);
-    if (!reaped) while (waitpid(child, &status, 0) < 0 && errno == EINTR) continue;
+    pid_t waited = reaped ? child : -1;
+    while (!reaped && (waited = waitpid(child, &status, 0)) < 0 && errno == EINTR) continue;
     if (state->stalled[slice]) { state->stalled[slice] = false; state->repurge[slice] = true; }
-    else if (!WIFEXITED(status)) taint(state, slice);
+    else if (waited != child || !WIFEXITED(status)) taint(state, slice); /* Not waited for: nothing known. */
     else purge_settled(state, slice, WEXITSTATUS(status));
 }
 
@@ -468,7 +469,8 @@ guardian_result guardian_prepare(guardian_state *state, const guardian_manifest 
     for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) state->purging[s] = -1;
     void *beats = mmap(NULL, sizeof(uint64_t) * SERVICE_PAYLOAD_SLICES, PROT_READ | PROT_WRITE,
                        MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    if (beats == MAP_FAILED) fprintf(stderr, "autocontrol-owner-guardian: purges run without a stall watch\n");
+    if (beats == MAP_FAILED)
+        fprintf(stderr, "autocontrol-owner-guardian: purges run without a heartbeat: stalls are judged by time only\n");
     else state->heartbeat = beats;
     state->journal.directory = state->journal.lock = -1;
     gj_error opened = gj_open(&state->journal, manifest->state_directory, manifest->administrator,

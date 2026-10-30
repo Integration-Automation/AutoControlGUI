@@ -107,9 +107,9 @@ write, sticky or not, or the guardian refuses the manifest; what an existing man
 checked the same way at load, what every root resolves to at each purge, and a dangling-link root counts as
 absent.
 A manifest purge root that resolves into a link loop or to a directory the purge would not trust is now
-refused at load, and a purge child the guardian waits for at startup is watched by its pid when no pidfd
-can be had (its slice is tainted when even a kill cannot end it) and on a longer allowance when the shared
-heartbeat could not be mapped.
+refused at load, and a purge child the guardian waits for in place (at startup, or while serving when no
+pidfd can be had) is watched by its pid when there is no pidfd (its slice is tainted when even a kill cannot
+end it) and on a longer, still doubling allowance when the shared heartbeat could not be mapped.
 
 ## Unreleased: helper containment in runtime status
 

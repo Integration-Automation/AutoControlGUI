@@ -35,8 +35,13 @@ int main(void) {
     expect("/proc/self/root", false);                    /* Through a link. */
     int root_cases = 0;
     if (geteuid() == 0) {
+        unlink("/run/autocontrol-link-root"); /* Left by a run that crashed: started afresh. */
+        unlink("/run/autocontrol-loop-root");
+        rmdir("/run/autocontrol-user-root");
+        rmdir("/run/autocontrol-good-root");
         char user_dir[] = "/tmp/autocontrol-roots-XXXXXX";
-        if (mkdtemp(user_dir) && chown(user_dir, 65534, 65534) == 0) {
+        bool made = mkdtemp(user_dir) != NULL;
+        if (made && chown(user_dir, 65534, 65534) == 0) {
             /* Each is made, checked and removed before the next. */
             if (symlink(user_dir, "/run/autocontrol-link-root") == 0) {
                 expect("/run/autocontrol-link-root", false);    /* Resolves into a user's directory. */
@@ -59,8 +64,8 @@ int main(void) {
                 ++root_cases;
             }
             rmdir("/run/autocontrol-good-root");
-            rmdir(user_dir);
         }
+        if (made) rmdir(user_dir);
     }
     printf("{\"failures\": %d, \"root_cases\": %d}\n", failures, root_cases);
     return failures ? 1 : 0;
