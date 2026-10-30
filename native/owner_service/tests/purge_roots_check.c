@@ -51,6 +51,9 @@ int main(void) {
     expect_listener("/usr/share/owner.sock", "/usr/share", false);  /* Under a manifest root. */
     expect_listener(NULL, NULL, false);
     expect_listener("/usr/share/owner.sock", "/usr/share/", false);    /* A root written with a slash. */
+    /* Not there, so not resolved: only dropping the trailing slash finds it. */
+    expect_listener("/usr/share/autocontrol-absent/owner.sock", "/usr/share/autocontrol-absent/", false);
+    expect_listener("relative/owner.sock", NULL, false);
     expect_listener("/run/je_auto_control/owner.sock", "/", false);    /* "/" covers everything. */
     expect_hidden("/run/je_auto_control/owner.sock", EXECUTABLE, "/usr/libexec", false);  /* Hides the service. */
     expect_hidden("/run/je_auto_control/owner.sock", NULL, NULL, false);
@@ -63,6 +66,21 @@ int main(void) {
     int root_cases = 0;
     if (geteuid() == 0) {
         unlink("/run/autocontrol-link-root"); /* Left by a run that crashed: started afresh. */
+        unlink("/run/autocontrol-hide-link");
+        unlink("/run/autocontrol-exe-link");
+        /* A root that is a link: only its resolved form covers the executable's directory. */
+        if (symlink("/usr/libexec", "/run/autocontrol-hide-link") == 0) {
+            expect_hidden("/run/je_auto_control/owner.sock", EXECUTABLE, "/run/autocontrol-hide-link", false);
+            unlink("/run/autocontrol-hide-link");
+            ++root_cases;
+        }
+        /* An executable that is a link into a root: followed, it is hidden. */
+        if (symlink("/usr/bin/true", "/run/autocontrol-exe-link") == 0) {
+            expect_hidden("/run/je_auto_control/owner.sock", "/run/autocontrol-exe-link", "/usr/bin", false);
+            expect_hidden("/run/je_auto_control/owner.sock", "/run/autocontrol-exe-link", "/usr/share", true);
+            unlink("/run/autocontrol-exe-link");
+            ++root_cases;
+        }
         unlink("/run/autocontrol-loop-root");
         rmdir("/run/autocontrol-user-root");
         rmdir("/run/autocontrol-good-root");

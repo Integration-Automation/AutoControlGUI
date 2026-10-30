@@ -1247,7 +1247,8 @@ def expectations(result):
         # The epoch's own mount and IPC namespaces: its /tmp is another filesystem, and the
         # helper's file and segment are not on the host for anyone to reach.
         "payload_roots_private": session["namespaces"] == {"mount": True, "ipc": True, "tmp_is_its_own": True,
-                                                            "file_not_on_host": True, "segment_not_on_host": True},
+                                                            "file_not_on_host": True, "segment_not_on_host": True,
+                                                            "flags_as_host": True},
         # An unremovable leftover (another ID wrote into it; deeper than the walk) is closed
         # off rather than tainting the slice: the guardian stops cleanly and the next
         # scenario's guardian starts on a clean purge.
@@ -1376,7 +1377,7 @@ def expectations(result):
         and all(faults["faults"].values()),
         # The manifest refuses a root linking into a user's directory, a user's own directory
         # and a link loop, and accepts root's own: staged under /run, as root.
-        "purge_roots_refused": faults["roots_exit"] == 0 and faults["roots"].get("root_cases") == 4,
+        "purge_roots_refused": faults["roots_exit"] == 0 and faults["roots"].get("root_cases") == 6,
         "taken_payload_range_refused": taken["refused"][0] != 0
         and "manifest is invalid" in taken["refused"][1] and not taken["epochs"],
         "native_worker_runs": (worker["bootstrap"].get("result") or {}).get("protocol") == 1

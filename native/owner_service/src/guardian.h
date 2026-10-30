@@ -95,8 +95,9 @@ bool guardian_manifest_valid(const guardian_manifest *manifest);
 /* The manifest's purge roots alone (part of guardian_manifest_valid): each under directories
  * only root can change and, when it exists, a directory the purge would trust. */
 bool guardian_purge_roots_valid(const guardian_manifest *manifest);
-/* Neither the listener nor the service executable lies under a root an epoch covers with its
- * own tmpfs (checked as written and resolved, roots included), so the epoch sees both. */
+/* No path the epoch needs (the listener, the service executable, each policy's executable and
+ * working directory) lies under a root an epoch covers with its own tmpfs, each checked as
+ * written and as resolved, roots too. At manifest validation and again at each epoch start. */
 bool guardian_private_roots_hide_nothing(const guardian_manifest *manifest);
 /* In the service's child, before it drops root: the epoch's own mount and IPC namespaces get
  * fresh tmpfs mounts over every purge root (guardian_private_linux.c). False: do not start. */
@@ -106,8 +107,8 @@ bool guardian_private_epoch(const guardian_manifest *manifest);
  * the crashing UID there, whatever the core limit. */
 #define GUARDIAN_PRIVATE_ROOTS 5
 static inline const char *guardian_private_root(size_t index) {
-    static const char *const roots[GUARDIAN_PRIVATE_ROOTS] = {"/tmp", "/var/tmp", "/dev/shm", "/run/lock",
-                                                              "/var/crash"};
+    static const char *const roots[] = {"/tmp", "/var/tmp", "/dev/shm", "/run/lock", "/var/crash"};
+    _Static_assert(sizeof(roots) / sizeof(roots[0]) == GUARDIAN_PRIVATE_ROOTS, "one name per private root");
     return index < GUARDIAN_PRIVATE_ROOTS ? roots[index] : NULL;
 }
 /* After a retiring epoch's service ended: kills and removes its branch, then removes what

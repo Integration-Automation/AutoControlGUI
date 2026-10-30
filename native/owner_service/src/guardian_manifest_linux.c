@@ -87,12 +87,14 @@ static bool under(const char *path, const char *root) {
     return strncmp(path, root, length) == 0 && (path[length] == '/' || path[length] == '\0');
 }
 
-/* True when a tmpfs over `root` would stand over `path`: `path` as written or through its
- * resolved directory, against `root` as written (trailing slashes dropped) or resolved. */
+/* True when a tmpfs over `root` would stand over `path`: `path` as written, resolved (a link
+ * is followed) or through its resolved directory (a path that does not exist yet), against
+ * `root` as written (trailing slashes dropped) or resolved. */
 static bool hides(const char *root, const char *path) {
-    char forms[2][4096], directory[4096], resolved[4096];
+    char forms[2][4096], directory[4096], resolved[4096], whole[4096];
     if (snprintf(forms[0], sizeof(forms[0]), "%s", root) >= (int)sizeof(forms[0]) ||
         snprintf(directory, sizeof(directory), "%s", path) >= (int)sizeof(directory)) return true;
+    bool followed = realpath(path, whole) != NULL;
     size_t length = strlen(forms[0]);
     while (length > 1 && forms[0][length - 1] == '/') forms[0][--length] = '\0';
     int count = realpath(root, forms[1]) ? 2 : 1;
@@ -100,19 +102,28 @@ static bool hides(const char *root, const char *path) {
     if (slash) *(slash == directory ? slash + 1 : slash) = '\0';
     bool known = realpath(directory, resolved) != NULL;
     for (int i = 0; i < count; ++i)
-        if (under(path, forms[i]) || (known && under(resolved, forms[i]))) return true;
+        if (under(path, forms[i]) || (followed && under(whole, forms[i])) || (known && under(resolved, forms[i])))
+            return true;
+    return false;
+}
+
+/* True when any private root (default or the manifest's) would stand over `path`. */
+static bool hidden(const guardian_manifest *manifest, const char *path) {
+    if (!path || path[0] != '/') return true;
+    for (size_t i = 0; guardian_private_root(i); ++i)
+        if (hides(guardian_private_root(i), path)) return true;
+    for (size_t i = 0; i < manifest->purge_root_count; ++i)
+        if (!manifest->purge_roots[i] || manifest->purge_roots[i][0] != '/' || hides(manifest->purge_roots[i], path))
+            return true;
     return false;
 }
 
 bool guardian_private_roots_hide_nothing(const guardian_manifest *manifest) {
-    const char *paths[] = {manifest->listener_path, manifest->service_executable};
-    for (size_t p = 0; p < sizeof(paths) / sizeof(paths[0]); ++p) {
-        if (!paths[p]) return false;
-        for (size_t i = 0; guardian_private_root(i); ++i)
-            if (hides(guardian_private_root(i), paths[p])) return false;
-        for (size_t i = 0; i < manifest->purge_root_count; ++i)
-            if (!manifest->purge_roots[i] || hides(manifest->purge_roots[i], paths[p])) return false;
-    }
+    if (hidden(manifest, manifest->listener_path) || hidden(manifest, manifest->service_executable)) return false;
+    const service_policy *service = manifest->service;
+    for (size_t i = 0; service && i < service->policy_count; ++i)
+        if (hidden(manifest, service->policies[i].executable) || hidden(manifest, service->policies[i].cwd))
+            return false;
     return true;
 }
 
@@ -123,8 +134,9 @@ bool guardian_manifest_valid(const guardian_manifest *manifest) {
         !guardian_purge_roots_valid(manifest) || in_any_range(service, manifest->service_uid, manifest->service_gid))
         return false;
     if (!guardian_private_roots_hide_nothing(manifest)) {
-        fprintf(stderr, "autocontrol-owner-guardian: the listener or the service executable lies under a root "
-                        "each epoch covers with its own tmpfs; the manifest is refused\n");
+        fprintf(stderr, "autocontrol-owner-guardian: the listener, the service executable or a policy's "
+                        "executable or directory lies under a root each epoch covers with its own tmpfs; "
+                        "the manifest is refused\n");
         return false;
     }
     for (size_t i = 0; i < manifest->client_count; ++i)

@@ -107,7 +107,9 @@ def shm_in_payload(pid, shmid):
 
 def namespaces_private(pid, left, ids):
     """The epoch's own mount and IPC namespaces: its /tmp is another filesystem, and what the
-    helper left there, file and SysV segment, is not on the host. `ids`: the payload range."""
+    helper left there, file and SysV segment, is not on the host; each private root keeps the
+    host mount's noexec and read-only flags. `ids`: the payload range."""
+    flags = os.ST_NOEXEC | os.ST_RDONLY
     def namespace(of, kind):
         return os.readlink(f"/proc/{of}/ns/{kind}")
     try:
@@ -115,7 +117,9 @@ def namespaces_private(pid, left, ids):
                 "ipc": namespace(pid, "ipc") != namespace("self", "ipc"),
                 "tmp_is_its_own": os.stat(in_payload(pid, "/tmp")).st_dev != os.stat("/tmp").st_dev,
                 "file_not_on_host": os.path.exists(in_payload(pid, left[0])) and not os.path.exists(left[0]),
-                "segment_not_on_host": shm_in_payload(pid, left[1]) and not host_payload_segment(left[1], ids)}
+                "segment_not_on_host": shm_in_payload(pid, left[1]) and not host_payload_segment(left[1], ids),
+                "flags_as_host": all(os.statvfs(in_payload(pid, r)).f_flag & flags == os.statvfs(r).f_flag & flags
+                                     for r in ("/tmp", "/var/tmp", "/dev/shm", "/run/lock") if os.path.isdir(r))}
     except OSError as error:
         return {"error": str(error)}
 
