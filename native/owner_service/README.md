@@ -167,12 +167,15 @@ the gate.
   would not see the path, when its listener, service executable or a policy executable
   lies under any of these roots, or a policy working directory, or a path a policy's fixed
   arguments or environment values name, lies below one. An argument is judged whole and
-  after its first `=`, an environment value after its `=`, each part of a `:` list alone; a
-  relative part with a `/` is judged from the policy's working directory, and an empty or
-  `.` part of an environment value is that directory, refused when it is a root (a search
-  list there would read the epoch's shared tmpfs). Not judged: bare words, a second `=`,
-  `,` lists, option values attached as in `-I/tmp/x`, and an interpreter a script names on
-  its `#!` line. Each path
+  after its first `=`, an environment value after its `=`, each part of a `:` list alone,
+  and a relative part only when it holds a `/` and reads as a path (no spaces, quotes or
+  brackets), from the policy's working directory. A variable whose name ends in `PATH` or
+  `LIB` is a search list: there a root itself is refused too, since every helper of the
+  epoch can write it, and an empty or `.` part or a bare name is judged from the working
+  directory. Not judged: bare words outside search lists, program text, a second `=`, `,`
+  lists, option values attached as in `-I/tmp/x`, and an interpreter a script names on its
+  `#!` line. Refused although it may name nothing local: an absolute part that only looks
+  like a path, such as the `/tmp/x` of a `host:/tmp/x` copy target. Each path
   is compared as written (its spelling tidied: repeated slashes and `.` dropped) and
   resolved component by component: every directory on the way, every link and every name a
   link leads through is checked, and what is not made yet is judged by where it would be.

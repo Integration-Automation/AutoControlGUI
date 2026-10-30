@@ -142,6 +142,18 @@ int main(void) {
     expect_named_in("/tmp", "-m", "PATH=/usr/bin:/bin", true);
     expect_named_in("/tmp", "sub/main.py", NULL, false);                /* Joined: /tmp/sub/main.py. */
     expect_named_in("/tmp", "-m", NULL, true);                          /* A bare word is not judged. */
+    /* Search lists (names ending in PATH or LIB): a root itself is shared, so refused there. */
+    expect_named("-m", "PATH=/tmp:/usr/bin", false);
+    expect_named("-m", "PYTHONPATH=lib", true);                          /* /lib, from "/". */
+    expect_named_in("/tmp", "-m", "PYTHONPATH=lib", false);              /* /tmp/lib. */
+    expect_named_in("/tmp", "-m", "PATH=:/usr/bin", false);              /* A leading empty part. */
+    /* Other variables: an empty or "." part means nothing; a root itself is the epoch's own. */
+    expect_named_in("/tmp", "-m", "LANG=", true);
+    expect_named_in("/tmp", "-m", "DISPLAY=:0", true);
+    expect_named("-m", "PATH=/usr/bin", true);                           /* The value alone is judged. */
+    /* Program text is not a path, whatever slashes it holds. */
+    expect_named("import os; os.path.join(here, '/../lib')", NULL, true);
+    expect_named("print(open('x' * 300 + '/y').read())", NULL, true);
     expect_policy("/usr/bin/python3", "/tmp/work", false);     /* Below a root: hidden. */
     expect_policy("/tmp/helper", "/", false);
     expect_policy("relative/helper", "/", false);

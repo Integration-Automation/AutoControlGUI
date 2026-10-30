@@ -11,6 +11,7 @@
 #include <grp.h>
 #include <pwd.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #define PAYLOAD_ID_FLOOR 1000u /* Below it: system accounts and groups, such as disk or adm. */
 
@@ -201,19 +202,34 @@ static bool hidden(const guardian_manifest *manifest, const char *path, bool dir
     return false;
 }
 
-/* True when one part of an argument or an environment value leads below a private root. An
- * absolute part is judged like a working directory (a root itself is the epoch's own tmpfs).
- * A relative part with a '/' is judged joined to the policy's working directory. In an
- * environment value an empty or "." part means that directory itself (as in PATH), so it is
- * refused when that directory is a root or lies in one. A bare word (an option, a module) is
- * not judged. */
-static bool part_hidden(const guardian_manifest *manifest, const char *cwd, const char *part, bool environment) {
-    if (part[0] == '/') return hidden(manifest, part, true);
-    if (environment && (!part[0] || !strcmp(part, "."))) return hidden(manifest, cwd, false);
-    if (!strchr(part, '/')) return false;
+/* A relative part that reads as a path: no spaces, quotes, brackets or other program text. */
+static bool path_like(const char *part) {
+    for (const unsigned char *at = (const unsigned char *)part; *at; ++at)
+        if (!isalnum(*at) && !strchr("._-+@%,~=/", *at)) return false;
+    return true;
+}
+
+/* An environment entry whose name ends in PATH or LIB: a search list, read for programs or code. */
+static bool search_list(const char *entry) {
+    const char *equals = strchr(entry, '=');
+    size_t length = equals ? (size_t)(equals - entry) : strlen(entry);
+    return (length >= 4 && !strncmp(entry + length - 4, "PATH", 4)) ||
+        (length >= 3 && !strncmp(entry + length - 3, "LIB", 3));
+}
+
+/* True when one part of an argument or an environment value leads where the epoch's tmpfs would
+ * hide it or let another helper of the epoch plant it. In a search list every part counts, a
+ * root itself included (every helper of the epoch can write there): an empty or "." part is the
+ * policy's working directory and a relative part is judged from it. Elsewhere a root itself is
+ * the epoch's own tmpfs and only what lies below one is refused; a relative part counts only
+ * when it holds a '/' and reads as a path. An absolute part is always judged. */
+static bool part_hidden(const guardian_manifest *manifest, const char *cwd, const char *part, bool search) {
+    if (part[0] == '/') return hidden(manifest, part, !search);
+    if (search && (!part[0] || !strcmp(part, "."))) return hidden(manifest, cwd, false);
+    if (!path_like(part) || (!search && !strchr(part, '/'))) return false;
     char joined[4096];
     if (!cwd || snprintf(joined, sizeof(joined), "%s/%s", cwd, part) >= (int)sizeof(joined)) return true;
-    return hidden(manifest, joined, true);
+    return hidden(manifest, joined, !search);
 }
 
 /* True when a fixed argument (`environment` false: the whole text, and what follows its first
@@ -225,6 +241,7 @@ static bool names_hidden(const guardian_manifest *manifest, const char *cwd, con
     const char *equals = strchr(text, '=');
     const char *starts[] = {environment ? (equals ? equals + 1 : text) : text,
                             !environment && equals ? equals + 1 : NULL};
+    bool search = environment && search_list(text);
     for (size_t s = 0; s < 2 && starts[s]; ++s) {
         char part[4096];
         for (const char *at = starts[s];;) {
@@ -232,7 +249,7 @@ static bool names_hidden(const guardian_manifest *manifest, const char *cwd, con
             if (length >= sizeof(part)) return true;
             memcpy(part, at, length);
             part[length] = '\0';
-            if (part_hidden(manifest, cwd, part, environment)) return true;
+            if (part_hidden(manifest, cwd, part, search)) return true;
             if (at[length] != ':') break;
             at += length + 1;
         }
