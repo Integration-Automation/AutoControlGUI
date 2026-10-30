@@ -120,8 +120,8 @@ removes it; the README now requires every helper-writable directory to be a purg
 Each epoch's private roots now keep the host directory's mode and owner and its mount's `noexec`, `nosymfollow`
 and read-only flags. A manifest whose listener, service executable or policy executable lies under a private
 root, or whose policy working directory lies below one, as written or resolved, is refused; each epoch start
-checks the listener and the service executable again. Absolute paths a policy's fixed arguments or environment
-name are judged the same way.
+checks the listener and the service executable again. Paths a policy's fixed arguments or environment values
+name, relative ones from its working directory, are judged the same way.
 
 ## Unreleased: helper containment in runtime status
 

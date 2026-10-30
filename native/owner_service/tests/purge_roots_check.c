@@ -69,19 +69,23 @@ static void expect_cwd_under(const char *cwd, const char *purge_root, bool valid
 }
 
 /* A policy whose fixed arguments or environment name paths. */
-static void expect_named(const char *argument, const char *environment, bool valid) {
+static void expect_named_in(const char *cwd, const char *argument, const char *environment, bool valid) {
     const char *argv[] = {"/usr/bin/python3", "-I", argument};
     const char *env[] = {environment};
-    service_launch_policy policy = {.executable = "/usr/bin/python3", .cwd = "/", .fixed_argv = argv,
+    service_launch_policy policy = {.executable = "/usr/bin/python3", .cwd = cwd, .fixed_argv = argv,
                                     .fixed_argc = 3, .env = env, .envc = environment ? 1 : 0};
     service_policy service = {.policies = &policy, .policy_count = 1};
     guardian_manifest manifest = {.listener_path = "/run/je_auto_control/owner.sock",
                                   .service_executable = EXECUTABLE, .service = &service};
     if (guardian_private_roots_hide_nothing(&manifest, true) != valid) {
-        fprintf(stderr, "argument %s, environment %s: expected %s\n", argument,
+        fprintf(stderr, "in %s, argument %s, environment %s: expected %s\n", cwd, argument,
                 environment ? environment : "-", valid ? "valid" : "refused");
         ++failures;
     }
+}
+
+static void expect_named(const char *argument, const char *environment, bool valid) {
+    expect_named_in("/", argument, environment, valid);
 }
 
 /* The epoch's tmpfs takes noexec, nosymfollow and read-only from the host's mount, never more. */
@@ -128,6 +132,16 @@ int main(void) {
     expect_named("--cache=/tmp/cache", NULL, false);                    /* After '='. */
     expect_named("-m", "PYTHONPATH=/opt/lib:/tmp/lib", false);          /* One part of a list. */
     expect_named("/tmp", "TMPDIR=/tmp", true);                          /* A root itself: the epoch's own. */
+    expect_named("tmp/app/main.py", NULL, false);                       /* Relative to "/": /tmp/app. */
+    expect_named("-m", "PYTHONPATH=var/tmp/lib", false);
+    expect_named("-m", "PATH=:/usr/bin:", true);                        /* Empty parts: "/", not a root. */
+    expect_named("-m", "EMPTY=", true);
+    expect_named("-m", "NOEQUALS", true);
+    expect_named_in("/tmp", "-m", "PATH=/usr/bin:", false);             /* "Here" is a root: shared. */
+    expect_named_in("/tmp", "-m", "PATH=.:/usr/bin", false);
+    expect_named_in("/tmp", "-m", "PATH=/usr/bin:/bin", true);
+    expect_named_in("/tmp", "sub/main.py", NULL, false);                /* Joined: /tmp/sub/main.py. */
+    expect_named_in("/tmp", "-m", NULL, true);                          /* A bare word is not judged. */
     expect_policy("/usr/bin/python3", "/tmp/work", false);     /* Below a root: hidden. */
     expect_policy("/tmp/helper", "/", false);
     expect_policy("relative/helper", "/", false);

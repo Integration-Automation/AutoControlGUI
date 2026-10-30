@@ -201,22 +201,40 @@ static bool hidden(const guardian_manifest *manifest, const char *path, bool dir
     return false;
 }
 
-/* True when `text`, or what follows its first '=', names a path below a private root, alone or
- * in a ':'-separated list (an argument such as a script, a --dir=..., or PATH-like environment
- * values). A path is judged like a working directory: a root itself is the epoch's own tmpfs. */
-static bool names_hidden(const guardian_manifest *manifest, const char *text) {
+/* True when one part of an argument or an environment value leads below a private root. An
+ * absolute part is judged like a working directory (a root itself is the epoch's own tmpfs).
+ * A relative part with a '/' is judged joined to the policy's working directory. In an
+ * environment value an empty or "." part means that directory itself (as in PATH), so it is
+ * refused when that directory is a root or lies in one. A bare word (an option, a module) is
+ * not judged. */
+static bool part_hidden(const guardian_manifest *manifest, const char *cwd, const char *part, bool environment) {
+    if (part[0] == '/') return hidden(manifest, part, true);
+    if (environment && (!part[0] || !strcmp(part, "."))) return hidden(manifest, cwd, false);
+    if (!strchr(part, '/')) return false;
+    char joined[4096];
+    if (!cwd || snprintf(joined, sizeof(joined), "%s/%s", cwd, part) >= (int)sizeof(joined)) return true;
+    return hidden(manifest, joined, true);
+}
+
+/* True when a fixed argument (`environment` false: the whole text, and what follows its first
+ * '=') or an environment entry (its value) leads below a private root, alone or as one part of
+ * a ':' list. Other shapes (a second '=', ',' lists, an option's value attached as in
+ * -I/tmp/x) are not judged; the README says so. */
+static bool names_hidden(const guardian_manifest *manifest, const char *cwd, const char *text, bool environment) {
     if (!text) return true;
     const char *equals = strchr(text, '=');
-    const char *starts[] = {text, equals ? equals + 1 : NULL};
+    const char *starts[] = {environment ? (equals ? equals + 1 : text) : text,
+                            !environment && equals ? equals + 1 : NULL};
     for (size_t s = 0; s < 2 && starts[s]; ++s) {
         char part[4096];
-        for (const char *at = starts[s]; *at;) {
+        for (const char *at = starts[s];;) {
             size_t length = strcspn(at, ":");
             if (length >= sizeof(part)) return true;
             memcpy(part, at, length);
             part[length] = '\0';
-            if (part[0] == '/' && hidden(manifest, part, true)) return true;
-            at += length + (at[length] == ':');
+            if (part_hidden(manifest, cwd, part, environment)) return true;
+            if (at[length] != ':') break;
+            at += length + 1;
         }
     }
     return false;
@@ -230,9 +248,10 @@ bool guardian_private_roots_hide_nothing(const guardian_manifest *manifest, bool
         const service_launch_policy *policy = &service->policies[i];
         if (hidden(manifest, policy->executable, false) || hidden(manifest, policy->cwd, true)) return false;
         for (size_t k = 0; k < policy->fixed_argc; ++k)
-            if (!policy->fixed_argv || names_hidden(manifest, policy->fixed_argv[k])) return false;
+            if (!policy->fixed_argv || names_hidden(manifest, policy->cwd, policy->fixed_argv[k], false))
+                return false;
         for (size_t k = 0; k < policy->envc; ++k)
-            if (!policy->env || names_hidden(manifest, policy->env[k])) return false;
+            if (!policy->env || names_hidden(manifest, policy->cwd, policy->env[k], true)) return false;
     }
     return true;
 }
@@ -244,9 +263,9 @@ bool guardian_manifest_valid(const guardian_manifest *manifest) {
         !guardian_purge_roots_valid(manifest) || in_any_range(service, manifest->service_uid, manifest->service_gid))
         return false;
     if (!guardian_private_roots_hide_nothing(manifest, true)) {
-        fprintf(stderr, "autocontrol-owner-guardian: the listener, the service executable or a policy's "
-                        "executable or directory lies under a root each epoch covers with its own tmpfs, "
-                        "or cannot be resolved; the manifest is refused\n");
+        fprintf(stderr, "autocontrol-owner-guardian: the listener, the service executable, or a policy's "
+                        "executable, directory, fixed argument or environment value leads under a root each "
+                        "epoch covers with its own tmpfs, or cannot be resolved; the manifest is refused\n");
         return false;
     }
     for (size_t i = 0; i < manifest->client_count; ++i)
