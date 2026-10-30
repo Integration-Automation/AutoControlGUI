@@ -17,8 +17,12 @@
  * PURGE_DEPTH levels at a time; what other IDs own is all that may stay there, out of every
  * payload's reach, and an emptied quarantine is removed.
  *
- * A walk never enters another mount, nor decides anything about an object on one: what a
- * mount shows is its owner's to report. Each walk enters a directory once: one met again
+ * A purge runs in a child with a mount namespace of its own, made private so nothing it does
+ * reaches the host's, and first detaches there every mount below each root: a payload
+ * directory another user covered with a mount of their own is laid bare, and removing it
+ * detaches the host's mount too. A walk never enters a mount that is left (one that could
+ * not be detached, or one made meanwhile), nor decides anything about an object on one: what
+ * a mount shows is its owner's to report. Each walk enters a directory once: one met again
  * (renamed behind the walk, or a directory this purge just moved into the quarantine) is
  * skipped. Its identity is its exact inode number together with a keyed digest of its file
  * handle, which carries the inode generation, so neither a reused inode number nor a
@@ -38,7 +42,9 @@
 #include <stdalign.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sched.h>
 #include <sys/file.h>
+#include <sys/mount.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/random.h>
@@ -56,14 +62,15 @@
 #define QUARANTINE_PREFIX ".autocontrol-owner-quarantine"
 #define QUARANTINE_PASSES 4096      /* Each pass takes PURGE_DEPTH levels off the deepest chain. */
 #define DEFERRED_LIMIT 4096         /* Other IDs' directories at the depth bound, walked from their own top. */
-#define SEEN_SLOTS_MAX (1UL << 21)  /* Directories one walk remembers, to enter each once. */
+#define SEEN_SLOTS_MAX (1UL << 20)  /* Directories one walk remembers, to enter each once. */
 #define LISTING_SLACK (1UL << 20)   /* Entries a listing may grow by while it is read. */
 
-/* Directories entered in the current walk: the exact inode number and a keyed digest of the
- * file handle (a walk stays on one filesystem, so the device is the same for all). A slot is
+/* Directories entered in the current walk: the exact device and inode number and a keyed
+ * digest of the file handle (one mount may hold several devices, btrfs subvolumes). A slot is
  * empty while its generation is 0. */
-typedef struct { uint64_t inode, handle; unsigned generation; } seen_slot;
-typedef struct { uint64_t inode, handle; } identity;
+typedef struct { uint64_t device, inode, handle; unsigned generation; } seen_slot;
+typedef struct { uint64_t device, inode, handle; } identity;
+typedef struct { int fd; bool quarantined; } deferred_directory;
 typedef struct { seen_slot *slots; size_t capacity, used; unsigned generation; bool untracked; } seen_set;
 typedef enum { SEEN_NEW, SEEN_AGAIN, SEEN_UNTRACKED } seen_result;
 
@@ -77,11 +84,11 @@ typedef struct {
     char quarantine_name[64];
     struct stat quarantined;      /* Its identity: it is skipped, and nothing in it moves again. */
     unsigned long moved;          /* Directories moved into the quarantine this pass. */
-    int *deferred;                /* Opened, not-owned directories at the depth bound. */
+    deferred_directory *deferred; /* Opened, not-owned directories at the depth bound. */
     size_t deferred_count, deferred_limit;
     bool overflow_logged;
     seen_set seen;
-    uint64_t key;                 /* Random, per purge: nobody can compute the digests. */
+    uint64_t key[2];              /* Random, per purge: nobody can compute the digests. */
     uint64_t mount;               /* The root's mount: nothing on another is entered or judged. */
     bool revisit_logged;
 } purge_scope;
@@ -114,15 +121,14 @@ static void churn(purge_scope *scope, const char *what) {
     scope->complete = false;
 }
 
-/* SipHash-2-4 of `length` bytes under the 128-bit key (key, ~key): a digest nobody without
- * the key can compute, so a matching one cannot be searched for. */
+/* SipHash-2-4 of `length` bytes under the 128-bit key (k0, k1): a digest nobody without the
+ * key can compute, so a matching one cannot be searched for. */
 #define ROTATE(x, b) (uint64_t)(((x) << (b)) | ((x) >> (64 - (b))))
 #define SIPROUND(v0, v1, v2, v3) \
     do { v0 += v1; v1 = ROTATE(v1, 13); v1 ^= v0; v0 = ROTATE(v0, 32); v2 += v3; v3 = ROTATE(v3, 16); \
          v3 ^= v2; v0 += v3; v3 = ROTATE(v3, 21); v3 ^= v0; v2 += v1; v1 = ROTATE(v1, 17); v1 ^= v2; \
          v2 = ROTATE(v2, 32); } while (0)
-static uint64_t siphash(uint64_t key, const unsigned char *bytes, size_t length) {
-    uint64_t k0 = key, k1 = ~key;
+static uint64_t siphash(uint64_t k0, uint64_t k1, const unsigned char *bytes, size_t length) {
     uint64_t v0 = k0 ^ 0x736f6d6570736575ULL, v1 = k1 ^ 0x646f72616e646f6dULL;
     uint64_t v2 = k0 ^ 0x6c7967656e657261ULL, v3 = k1 ^ 0x7465646279746573ULL;
     for (size_t at = 0; at <= length; at += 8) {
@@ -144,26 +150,28 @@ static uint64_t siphash(uint64_t key, const unsigned char *bytes, size_t length)
 /* The opened directory's identity: its inode number and, where the filesystem has one, the
  * keyed digest of its file handle (inode generation included). */
 static identity identity_of(const purge_scope *scope, int directory, const struct stat *status) {
-    identity found = {(uint64_t)status->st_ino, 0};
+    identity found = {(uint64_t)status->st_dev, (uint64_t)status->st_ino, 0};
     union { struct file_handle header; alignas(struct file_handle) unsigned char bytes[sizeof(struct file_handle) +
                                                                                       MAX_HANDLE_SZ]; } handle;
     handle.header.handle_bytes = MAX_HANDLE_SZ;
     int mount;
     if (name_to_handle_at(directory, "", &handle.header, &mount, AT_EMPTY_PATH) == 0)
-        found.handle = siphash(scope->key, handle.bytes, sizeof(struct file_handle) + handle.header.handle_bytes);
+        found.handle = siphash(scope->key[0], scope->key[1], handle.bytes,
+                               sizeof(struct file_handle) + handle.header.handle_bytes);
     return found;
 }
 
 static size_t seen_index(const seen_set *set, identity key) {
-    uint64_t mixed = (key.inode * 0x9E3779B97F4A7C15ULL) ^ key.handle;
+    uint64_t mixed = ((key.inode ^ (key.device << 32)) * 0x9E3779B97F4A7C15ULL) ^ key.handle;
     return (size_t)(mixed ^ (mixed >> 29)) & (set->capacity - 1);
 }
 
-/* The mount `name` in `directory` lies on (the mounted one, for a mount point); 0 when unknown. */
+/* The mount `name` in `directory` lies on (the mounted one, for a mount point); 0 when
+ * unknown, with errno set (ENOSYS when the kernel does not report mount IDs). */
 static uint64_t mount_of(int directory, const char *name, int flags) {
     struct statx status;
-    if (statx(directory, name, flags | AT_NO_AUTOMOUNT, STATX_MNT_ID, &status) != 0 ||
-        !(status.stx_mask & STATX_MNT_ID)) return 0;
+    if (statx(directory, name, flags | AT_NO_AUTOMOUNT, STATX_MNT_ID, &status) != 0) return 0;
+    if (!(status.stx_mask & STATX_MNT_ID)) { errno = ENOSYS; return 0; }
     return status.stx_mnt_id;
 }
 
@@ -175,7 +183,7 @@ static bool seen_grow(seen_set *set) {
     if (!grown.slots) return false;
     for (size_t i = 0; i < set->capacity; ++i) {
         if (set->slots[i].generation != set->generation) continue;
-        size_t at = seen_index(&grown, (identity){set->slots[i].inode, set->slots[i].handle});
+        size_t at = seen_index(&grown, (identity){set->slots[i].device, set->slots[i].inode, set->slots[i].handle});
         while (grown.slots[at].generation) at = (at + 1) & (capacity - 1);
         grown.slots[at] = set->slots[i];
         ++grown.used;
@@ -195,12 +203,13 @@ static seen_result remember(seen_set *set, identity key) {
     }
     size_t at = seen_index(set, key);
     for (; set->slots[at].generation; at = (at + 1) & (set->capacity - 1)) {
-        if (set->slots[at].inode != key.inode || set->slots[at].handle != key.handle) continue;
+        if (set->slots[at].device != key.device || set->slots[at].inode != key.inode ||
+            set->slots[at].handle != key.handle) continue;
         if (set->slots[at].generation == set->generation) return SEEN_AGAIN;
         set->slots[at].generation = set->generation;
         return SEEN_NEW;
     }
-    set->slots[at] = (seen_slot){key.inode, key.handle, set->generation};
+    set->slots[at] = (seen_slot){key.device, key.inode, key.handle, set->generation};
     ++set->used;
     return SEEN_NEW;
 }
@@ -333,10 +342,10 @@ static bool earlier_quarantine(const struct stat *status, const char *name) {
 /* Deeper than the walk goes: an owned directory is moved whole and taken apart from its own
  * top; another ID's stays where it is and is walked later from its own top. */
 static void at_depth_bound(purge_scope *scope, int directory, const char *name, const struct stat *status,
-                           bool owned, int opened) {
+                           bool owned, int opened, bool quarantined) {
     if (owned) { close(opened); dispose(scope, directory, name, status); return; }
     if (scope->deferred_count < scope->deferred_limit) {
-        scope->deferred[scope->deferred_count++] = opened;
+        scope->deferred[scope->deferred_count++] = (deferred_directory){opened, quarantined};
         return;
     }
     /* With a stable listing order the same ones overflow every time: what a payload put in
@@ -349,22 +358,23 @@ static void at_depth_bound(purge_scope *scope, int directory, const char *name, 
     scope->overflow_logged = true;
 }
 
-static void visit(purge_scope *scope, walk *state, dev_t device, bool root_walk, const char *name) {
+static void visit(purge_scope *scope, walk *state, bool root_walk, const char *name) {
     size_t at = state->depth - 1;
     int directory = dirfd(state->levels[at].listing);
     struct stat status;
     if (fstatat(directory, name, &status, AT_SYMLINK_NOFOLLOW) != 0) return;
     if (at == 0 && scope->quarantine >= 0 && same_inode(&status, &scope->quarantined)) return; /* Walked later. */
-    if (mount_of(directory, name, AT_SYMLINK_NOFOLLOW) != scope->mount) return; /* Another mount's. */
-    if (!S_ISDIR(status.st_mode) || status.st_dev != device) {
+    uint64_t mount = mount_of(directory, name, AT_SYMLINK_NOFOLLOW);
+    if (!mount && errno != ENOENT) scope->complete = false; /* Unknown: run again rather than guess. */
+    if (mount != scope->mount) return; /* Another mount's, or gone. */
+    if (!S_ISDIR(status.st_mode)) {
         if (payload_uid(scope, status.st_uid)) dispose(scope, directory, name, &status);
         return;
     }
     /* What is walked is the directory opened, whatever the name pointed at before. */
     int child = openat(directory, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
     int error = child < 0 ? errno : 0;
-    if (child >= 0 && (fstat(child, &status) != 0 || status.st_dev != device ||
-                       mount_of(child, "", AT_EMPTY_PATH) != scope->mount)) {
+    if (child >= 0 && (fstat(child, &status) != 0 || mount_of(child, "", AT_EMPTY_PATH) != scope->mount)) {
         close(child);
         return; /* Mounted or swapped meanwhile: not this walk's to judge. */
     }
@@ -387,7 +397,11 @@ static void visit(purge_scope *scope, walk *state, dev_t device, bool root_walk,
         if (owned) scope->complete = false; /* A payload's, possibly not walked whole: run again. */
         return;
     }
-    if (state->depth == PURGE_DEPTH) { at_depth_bound(scope, directory, name, &status, owned, child); return; }
+    bool quarantined = state->levels[at].quarantined || earlier;
+    if (state->depth == PURGE_DEPTH) {
+        at_depth_bound(scope, directory, name, &status, owned, child, quarantined);
+        return;
+    }
     DIR *listing = fdopendir(child);
     char *copy = listing ? strdup(name) : NULL;
     if (!listing || !copy) {
@@ -396,7 +410,6 @@ static void visit(purge_scope *scope, walk *state, dev_t device, bool root_walk,
         if (owned) dispose(scope, directory, name, &status);
         return;
     }
-    bool quarantined = state->levels[at].quarantined || earlier;
     state->levels[state->depth++] = (level){listing, at, copy, owned, quarantined, status, 0, listing_limit(&status)};
 }
 
@@ -419,7 +432,7 @@ static void walk_directory(purge_scope *scope, int top, bool root_walk, bool in_
         }
         if (++current->read > current->limit) { churn(scope, "a listing kept growing"); continue; }
         if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
-            visit(scope, &state, status.st_dev, root_walk, entry->d_name);
+            visit(scope, &state, root_walk, entry->d_name);
     }
 }
 
@@ -427,8 +440,56 @@ static void walk_directory(purge_scope *scope, int top, bool root_walk, bool in_
 static void walk_all(purge_scope *scope, int top, bool root_walk) {
     seen_next_walk(&scope->seen);
     walk_directory(scope, top, root_walk, !root_walk);
-    while (scope->deferred_count)
-        walk_directory(scope, scope->deferred[--scope->deferred_count], false, !root_walk);
+    while (scope->deferred_count) {
+        deferred_directory next = scope->deferred[--scope->deferred_count];
+        walk_directory(scope, next.fd, false, next.quarantined);
+    }
+}
+
+/* Set once the purge's own mount namespace is private: only then are mounts detached. */
+static bool private_mounts;
+
+bool guardian_purge_unshare(void) {
+    if (unshare(CLONE_NEWNS) != 0) return false;
+    /* Shared propagation would carry every detach back to the host: none without this. */
+    if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0) return false;
+    private_mounts = true;
+    return true;
+}
+
+/* A mountinfo path with its octal escapes (space, tab, newline, backslash) undone. */
+static void unescape(char *path) {
+    char *out = path;
+    for (char *in = path; *in; ++in) {
+        if (in[0] == '\\' && in[1] >= '0' && in[1] <= '3' && in[2] >= '0' && in[2] <= '7' && in[3] >= '0' &&
+            in[3] <= '7') {
+            *out++ = (char)((in[1] - '0') * 64 + (in[2] - '0') * 8 + (in[3] - '0'));
+            in += 3;
+        } else {
+            *out++ = *in;
+        }
+    }
+    *out = 0;
+}
+
+/* Detaches, in the purge's private namespace, every mount strictly below `resolved`, deepest
+ * first, until none is left or a round detaches nothing. */
+static void detach_under(const char *resolved) {
+    size_t prefix = strlen(resolved);
+    for (int round = 0; round < 64; ++round) {
+        FILE *table = fopen("/proc/self/mountinfo", "re");
+        if (!table) return;
+        char line[8192], best[4096] = "";
+        while (fgets(line, sizeof(line), table)) {
+            char point[4096];
+            if (sscanf(line, "%*s %*s %*s %*s %4095s", point) != 1) continue;
+            unescape(point);
+            if (strncmp(point, resolved, prefix) || point[prefix] != '/' || strlen(point) <= strlen(best)) continue;
+            snprintf(best, sizeof(best), "%s", point);
+        }
+        fclose(table);
+        if (!best[0] || umount2(best, MNT_DETACH | UMOUNT_NOFOLLOW) != 0) return;
+    }
 }
 
 /* A root may be a link (/dev/shm -> /run/shm on older systems): resolved once, and used
@@ -436,6 +497,7 @@ static void walk_all(purge_scope *scope, int top, bool root_walk) {
 static int open_root(const char *path) {
     char resolved[4096];
     if (!realpath(path, resolved)) return -1;
+    if (private_mounts) detach_under(resolved);
     int root = open(resolved, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
     struct stat status;
     if (root >= 0 && (fstat(root, &status) != 0 || status.st_uid != 0 ||
@@ -451,7 +513,12 @@ static void purge_tree(purge_scope *scope, const char *path) {
     if (root < 0) return; /* Absent, or not a directory this guardian may trust. */
     scope->root = root;
     scope->mount = mount_of(root, "", AT_EMPTY_PATH);
-    if (!scope->mount) { scope->complete = false; close(root); return; } /* statx below 5.8: refuse to guess. */
+    if (!scope->mount) {
+        fprintf(stderr, "autocontrol-owner-guardian: purge cannot tell mounts apart under %s; it runs again\n", path);
+        scope->complete = false;
+        close(root);
+        return;
+    }
     scope->quarantine = -1;
     scope->quarantine_tried = false;
     scope->churned = false;
@@ -464,7 +531,11 @@ static void purge_tree(purge_scope *scope, const char *path) {
     for (; scope->quarantine >= 0 && !scope->churned && pass < QUARANTINE_PASSES; ++pass) {
         scope->moved = 0;
         int listing = openat(scope->quarantine, ".", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
-        if (listing < 0) { scope->complete = false; break; }
+        if (listing < 0) {
+            fprintf(stderr, "autocontrol-owner-guardian: purge could not reopen its quarantine; it runs again\n");
+            scope->complete = false;
+            break;
+        }
         walk_all(scope, listing, false);
         if (!scope->moved) break;
     }
@@ -518,10 +589,13 @@ guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest
     if (!service) return PURGE_CLEAN;
     purge_scope scope = {.service = service, .slice = slice, .clean = true, .complete = true, .root = -1,
                          .quarantine = -1};
-    if (getrandom(&scope.key, sizeof(scope.key), 0) != (ssize_t)sizeof(scope.key)) return PURGE_INCOMPLETE;
+    if (getrandom(scope.key, sizeof(scope.key), 0) != (ssize_t)sizeof(scope.key)) {
+        fprintf(stderr, "autocontrol-owner-guardian: purge has no random key; it runs again\n");
+        return PURGE_INCOMPLETE;
+    }
     struct rlimit before = {0, 0};
     scope.deferred_limit = deferred_room(&before);
-    scope.deferred = scope.deferred_limit ? calloc(scope.deferred_limit, sizeof(int)) : NULL;
+    scope.deferred = scope.deferred_limit ? calloc(scope.deferred_limit, sizeof(deferred_directory)) : NULL;
     if (!scope.deferred) scope.deferred_limit = 0;
     for (size_t i = 0; i < sizeof(default_roots) / sizeof(default_roots[0]); ++i) purge_tree(&scope, default_roots[i]);
     for (size_t i = 0; i < manifest->purge_root_count; ++i) purge_tree(&scope, manifest->purge_roots[i]);

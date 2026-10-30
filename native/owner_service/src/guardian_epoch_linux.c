@@ -182,6 +182,8 @@ static void purge_child(const guardian_state *state, int slice, pid_t guardian) 
     sigset_t none;
     sigemptyset(&none);
     sigprocmask(SIG_SETMASK, &none, NULL);
+    if (!guardian_purge_unshare())
+        fprintf(stderr, "autocontrol-owner-guardian: purge keeps the host's mounts; it skips them\n");
     guardian_purge_outcome outcome = guardian_purge_payloads(state->manifest, slice);
     if (outcome == PURGE_INCOMPLETE) sleep(1); /* It runs again at once: never a busy loop. */
     _exit((int)outcome);
@@ -207,10 +209,11 @@ void guardian_purge_reap(guardian_state *state, int slice) {
     else purge_settled(state, slice, info.si_status);
 }
 
-/* While serving, one slice's purge runs in a child, so a large tree in a shared directory
- * cannot stall accepts or supervision; the slice is not handed out until it is reaped.
- * Otherwise (startup, shutdown, all slices, or no child possible) it runs here. An unclean
- * purge taints its slice: the guardian never grants it again. */
+/* A slice's purge runs in a child, with its own mount namespace. While serving, the loop goes
+ * on and the slice is not handed out until the child is reaped, so a large tree in a shared
+ * directory cannot stall accepts or supervision; at startup the child is waited for here.
+ * Only when no child can be made does it run in the guardian itself. An unclean purge taints
+ * its slice: the guardian never grants it again. */
 static void purge(guardian_state *state, int slice) {
     for (int s = 0; s < SERVICE_PAYLOAD_SLICES; ++s) if (slice < 0 || slice == s) state->repurge[s] = false;
     if (slice >= 0 && state->purge_async) {
@@ -220,6 +223,17 @@ static void purge(guardian_state *state, int slice) {
         if (child == 0) purge_child(state, slice, guardian);
         int pidfd = child > 0 ? (int)syscall(SYS_pidfd_open, child, 0) : -1;
         if (pidfd >= 0) { state->purging[slice] = pidfd; return; }
+        if (child > 0) {
+            int status = 0;
+            while (waitpid(child, &status, 0) < 0 && errno == EINTR) continue;
+            if (!WIFEXITED(status)) taint(state, slice);
+            else purge_settled(state, slice, WEXITSTATUS(status));
+            return;
+        }
+    } else if (slice >= 0) {
+        pid_t guardian = getpid();
+        pid_t child = fork();
+        if (child == 0) purge_child(state, slice, guardian);
         if (child > 0) {
             int status = 0;
             while (waitpid(child, &status, 0) < 0 && errno == EINTR) continue;

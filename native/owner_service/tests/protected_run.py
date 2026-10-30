@@ -14,6 +14,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 SOURCE, REPOSITORY = sys.argv[1], sys.argv[2]
@@ -151,13 +152,23 @@ def build():
     report["accounts"] = {k: v for k, v in values.items() if not k.startswith("NS_")}
 
 
+def _drain(stream, sink):
+    for line in iter(stream.readline, ""):
+        sink.append(line)
+
+
 def start_guardian(binary="guardian"):
-    guardian = subprocess.Popen([OPT + "/" + binary], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+    guardian = subprocess.Popen([OPT + "/" + binary], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                 stderr=subprocess.PIPE, text=True, env={})
+    # Read while it runs: a guardian that logs past the pipe's buffer must never block.
+    guardian.log = []
+    guardian.drainer = threading.Thread(target=_drain, args=(guardian.stderr, guardian.log), daemon=True)
+    guardian.drainer.start()
     limit = time.monotonic() + 15
     while not os.path.exists(ENDPOINT) and time.monotonic() < limit:
         if guardian.poll() is not None:
-            raise RuntimeError(f"guardian exited {guardian.returncode}: {guardian.stderr.read()}")
+            guardian.drainer.join(timeout=5)
+            raise RuntimeError(f"guardian exited {guardian.returncode}: {''.join(guardian.log)}")
         time.sleep(0.05)
     if not os.path.exists(ENDPOINT):
         raise RuntimeError("guardian never published its listener")
@@ -172,7 +183,11 @@ def stop_guardian(guardian, sig=signal.SIGTERM):
     except subprocess.TimeoutExpired:
         guardian.kill()
         guardian.wait()
-    return guardian.returncode, guardian.stderr.read()[-60000:]
+    drainer = getattr(guardian, "drainer", None)
+    if drainer is None:  # Started elsewhere, without a drainer.
+        return guardian.returncode, guardian.stderr.read()[-60000:]
+    drainer.join(timeout=10)
+    return guardian.returncode, "".join(guardian.log)[-60000:]
 
 
 def client(mode, account=CLIENT):
@@ -374,6 +389,23 @@ def scenario_siblings(steps, left=None):
     looped = tempfile.mkdtemp(prefix="autocontrol-loop-", dir="/var/tmp")
     os.mkdir(os.path.join(looped, "inner"))
     steps["loop_mounted"] = run(["mount", "--bind", looped, os.path.join(looped, "inner")]).returncode == 0
+    # A directory from outside every root, holding a payload-owned file, mounted under a root:
+    # the purge must not reach through the mount and remove it.
+    outside = tempfile.mkdtemp(prefix="autocontrol-outside-", dir="/root")
+    kept = os.path.join(outside, "kept")
+    with open(kept, "w") as handle:
+        handle.write("outside the purge roots")
+    os.chown(kept, PAYLOAD_BASE, PAYLOAD_BASE)
+    window = tempfile.mkdtemp(prefix="autocontrol-window-", dir="/var/tmp")
+    steps["outside_mounted"] = run(["mount", "--bind", outside, window]).returncode == 0
+    # A payload directory holding a payload file, covered by another user's mount (a tmpfs
+    # here, as a FUSE mount would be): the purge lays it bare in its own namespace.
+    covered = tempfile.mkdtemp(prefix="autocontrol-covered-", dir="/var/tmp")
+    with open(os.path.join(covered, "hidden"), "w") as handle:
+        handle.write("payload data")
+    os.chown(os.path.join(covered, "hidden"), PAYLOAD_BASE, PAYLOAD_BASE)
+    os.chown(covered, PAYLOAD_BASE, PAYLOAD_BASE)
+    steps["cover_mounted"] = run(["mount", "-t", "tmpfs", "-o", "size=1m", "cover", covered]).returncode == 0
     guardian = start_guardian()
     steps["squats"] = squats
     steps["squatted_payload_files_left"] = [s for s in squats if os.path.lexists(os.path.join(s, "hidden"))]
@@ -384,7 +416,8 @@ def scenario_siblings(steps, left=None):
     # The 300-level chain (8 MiB at its bottom) and the directory another ID wrote into: their
     # names are free and nothing a payload ID owns is left anywhere under the purge roots.
     steps["names_freed"] = not os.path.lexists(left[3]) and not os.path.lexists(left[4])
-    steps["payload_owned_left"] = payload_owned_anywhere()
+    # The window shows a directory outside every root: what is there is not the purge's.
+    steps["payload_owned_left"] = [p for p in payload_owned_anywhere() if not p.startswith(window + "/")]
     first, second = client("hold"), client("hold")
     steps["first"], steps["second"] = read_json(first), read_json(second)
     epoch = epochs()[-1]
@@ -409,6 +442,15 @@ def scenario_siblings(steps, left=None):
     steps["static_tree_logged"] = "unwalked" in steps["guardian_stop"][1]
     # The 300-level chain went in the startup purge without meeting churn.
     steps["churn_logged"] = "met churn" in steps["guardian_stop"][1]
+    # The bind loop was stopped by the mount check, not met again as a directory.
+    steps["revisit_logged"] = "met a directory again" in steps["guardian_stop"][1]
+    steps["outside_file_kept"] = os.path.exists(kept)
+    run(["umount", "-l", covered])
+    steps["covered_payload_left"] = os.path.lexists(covered)
+    shutil.rmtree(covered, ignore_errors=True)
+    run(["umount", "-l", window])
+    shutil.rmtree(window, ignore_errors=True)
+    shutil.rmtree(outside, ignore_errors=True)
     shutil.rmtree(static, ignore_errors=True)
     run(["umount", "-l", os.path.join(looped, "inner")])
     shutil.rmtree(looped, ignore_errors=True)
@@ -1038,6 +1080,8 @@ def expectations(result):
         "unremovable_leftovers_released": siblings["names_freed"] and siblings["payload_owned_left"] == []
         and bool(siblings["squats"]) and siblings["squatted_payload_files_left"] == []
         and siblings["static_tree_logged"] and siblings["loop_mounted"] and not siblings["churn_logged"]
+        and not siblings["revisit_logged"] and siblings["outside_mounted"] and siblings["outside_file_kept"]
+        and siblings["cover_mounted"] and not siblings["covered_payload_left"]
         and session["guardian_stop"][0] == 0 and siblings["guardian_stop"][0] == 0,
         # epoch-N itself is bounded before it is delegated: nothing beside `records` escapes.
         "epoch_bounded": session["epoch_bounds"] == {"cgroup.max.depth": "40", "cgroup.max.descendants": "4096",

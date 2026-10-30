@@ -74,6 +74,9 @@ void guardian_purge_abandon(guardian_state *state);
 void guardian_purge_reap(guardian_state *state, int slice);
 /* Starts the purge again of every slice whose last one stopped short and is not running. */
 void guardian_purge_resume(guardian_state *state);
+/* In a purge child: a private mount namespace of its own, so the purge may detach the mounts
+ * below each root (guardian_purge_linux.c). False leaves mounts in place and skipped. */
+bool guardian_purge_unshare(void);
 #define GUARDIAN_PURGE_NONE (-2) /* guardian_recover: the epoch never ran, nothing to purge. */
 /* Refuses a manifest the service would refuse, or whose payload IDs anyone else holds: below
  * 1000, or known to the host's user and group databases. Run before anything starts. */

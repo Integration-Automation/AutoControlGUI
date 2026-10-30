@@ -77,6 +77,10 @@ Directories are now known by inode number and file handle and a directory met ag
 stopping the purge; the filter also refuses io_uring.
 The purge's directory identity is now the exact inode number plus a per-purge keyed SipHash of the file handle,
 walks never enter or judge another mount, and io_uring_enter and io_uring_register are refused as well.
+The key now also holds the device, so directories on another device of the same mount (btrfs subvolumes) are
+walked, and an unknown mount ID makes the purge run again instead of skipping the entry. Every purge, the
+startup ones included, runs in a child with a private mount namespace and detaches the mounts below each root
+first, so a payload directory covered by another user's mount is removed too.
 
 ## Unreleased: helper containment in runtime status
 

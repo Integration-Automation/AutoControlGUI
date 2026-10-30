@@ -88,12 +88,17 @@ the gate.
   keep under a root only makes a purge slower. A listing growing far past its size while
   it is read, which only a live user causes, stops it, and it runs again, as does one
   that could not move a payload directory into the quarantine, before its slice is
-  handed out; a live local user can therefore delay a slice. Payload files can escape a
-  purge only from inside another ID's directories: renamed behind the walk by a live
-  user, past the deferral limit (for as long as those directories stay), or under a
-  mount another user placed on a payload directory. Each needs a directory that ID let
-  the payload write into, and no payload file can carry a set-user- or set-group-ID bit,
-  so what escapes is data, not an identity.
+  handed out; a live local user can therefore delay a slice. Directories on another
+  device of the same mount (btrfs subvolumes a payload created) are walked like any
+  other. Each purge runs in a child with a private mount namespace of its own and first
+  detaches there every mount below each root, so a payload directory another user
+  covered with a mount of their own (a FUSE mount, say) is laid bare and removed, which
+  detaches that mount on the host too; mounts that cannot be detached are skipped.
+  Payload files can escape a purge only with another local user's help: inside another
+  ID's directories past the deferral limit (for as long as those directories stay), or
+  renamed behind the walk by that user while it runs. No payload file can carry a
+  set-user- or set-group-ID bit, so what escapes is data, not an identity, but a later
+  helper with the same ID may find it.
   Only an object that can be neither removed, moved nor closed off taints its slice,
   and startup purges each slice once, after the previous run's epochs are dead, so one
   stubborn leftover never stops the guardian. A helper's own connection (a nested parent
