@@ -69,6 +69,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261030-49 | 2026-10-30 | Close the thirty-third review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
 | U-20261030-50 | 2026-10-30 | Close the thirty-fourth review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
 | U-20261030-51 | 2026-10-30 | Close the thirty-fifth review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-52 | 2026-10-30 | Close the thirty-sixth review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
 | U-20261030-40 | 2026-10-30 | Reset SIGCHLD at guardian start, and fall back to the pid watch when a pidfd cannot be polled | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
 | U-20261030-39 | 2026-10-30 | Close the twenty-fourth review's notes on the stall watch and the fault fixtures | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
 | U-20261030-38 | 2026-10-30 | Test the purge's fault paths and stall watch, close the manifest load gaps, and split the long test file | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |

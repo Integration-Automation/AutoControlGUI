@@ -99,7 +99,7 @@ int main(void) {
     expect_policy("/usr/bin/python3", "/usr/autocontrol-absent/../../tmp/work", false);  /* ".." past a gap. */
     /* A root not made yet, and a directory below it spelled with "." or "//": only tidying finds it. */
     expect_cwd_under("/usr/share/autocontrol-absent/./cache/w", "/usr/share/autocontrol-absent/cache", false);
-    expect_cwd_under("/usr/share/autocontrol-absent//cache/w", "/usr/share/autocontrol-absent/cache", false);
+    expect_cwd_under("/usr/share/autocontrol-absent/sub//cache/w", "/usr/share/autocontrol-absent/sub/cache", false);
     expect_cwd_under("/usr/share/autocontrol-absent/cache/w", "/usr/share/./autocontrol-absent//cache", false);
     expect_cwd_under("/usr/share/autocontrol-absent/other", "/usr/share/autocontrol-absent/cache", true);
     expect_cwd_under("/usr/share/autocontrol-absent/other", "/usr/share/autocontrol-absent/../x", false);

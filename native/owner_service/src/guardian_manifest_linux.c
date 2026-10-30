@@ -90,8 +90,10 @@ static bool under(const char *path, const char *root, bool strict) {
 }
 
 /* The spelling of an absolute name, in place: repeated and trailing slashes collapsed, "."
- * components dropped. Where a name leads is not decided here, so ".." stays. */
+ * components dropped. Where a name leads is not decided here, so ".." stays. A relative name is
+ * left as it is (every caller refuses one): rewriting it in place could write past its end. */
 static void tidy(char *path) {
+    if (path[0] != '/') return;
     char *out = path;
     const char *in = path;
     while (*in) {
