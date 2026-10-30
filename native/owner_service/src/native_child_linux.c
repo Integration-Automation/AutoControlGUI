@@ -8,6 +8,7 @@
 #include <linux/sched.h>
 #include <linux/capability.h>
 #include <sys/prctl.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <string.h>
 #include <poll.h>
@@ -61,6 +62,11 @@ static int child_protected_credentials(owner_record *record) {
     struct __user_cap_data_struct capabilities[2] = {{0}, {0}};
     /* Whatever the helper creates is its own: another helper's ID cannot read it. */
     syscall(SYS_umask, 077);
+    /* No core dump, hard limit included so the helper cannot raise it: a crash's image is
+     * the helper's whole memory, and systemd-coredump grants the crashing UID a read ACL on
+     * it, where the next helper with the same ID would find it. */
+    struct rlimit no_core = {0, 0};
+    if (syscall(SYS_prlimit64, 0, RLIMIT_CORE, &no_core, NULL) == -1) return errno;
     /* No supplementary group: a nested-capable payload reaches the guardian through the
      * listener's ACL, and the identity filter allows only an empty list anyway. */
     if (syscall(SYS_setgroups, 0, NULL) == -1) return errno;

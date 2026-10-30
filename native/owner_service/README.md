@@ -144,9 +144,11 @@ the gate.
   the per-helper process and memory limits times the record capacity, so tmpfs pages a
   killed helper left behind still count against the epoch.
 - When an epoch is reclaimed, the guardian removes the files under `/tmp`, `/var/tmp`,
-  `/dev/shm` and `/dev/mqueue` and the SysV IPC objects that payload IDs own (as
-  systemd's DynamicUser with RemoveIPC does), so a later helper with the same ID finds
-  nothing of an earlier one.
+  `/dev/shm` and `/run/lock` (and any manifest `purge_roots`), the POSIX message queues
+  and the SysV IPC objects that payload IDs own (as systemd's DynamicUser with RemoveIPC
+  does), so a later helper with the same ID finds none of an earlier one's, beyond the
+  escapes listed above. Helpers never dump core (hard limit 0): a crash's image would
+  otherwise be readable by the next helper with that ID.
 
 ## Parts
 
@@ -166,6 +168,12 @@ the gate.
   `SO_PASSPIDFD` and `cgroup.kill`.
 - glibc headers that define `PIDFD_GET_INFO` (glibc 2.42 or later).
 - A C11 compiler.
+- POSIX message queues are reached through the mount API (`fsopen`), which the
+  guardian's own confinement must allow; if it does not, `/dev/mqueue` must be the mqueue
+  filesystem, or purges never complete.
+- journald without per-UID journal files (`SplitMode=none`, or volatile storage): with
+  the default `SplitMode=uid` and persistent storage, what one helper logs is kept in a
+  `user-<uid>.journal` the next helper with the same ID may read.
 
 ## Install (administrator)
 

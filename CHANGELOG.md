@@ -94,6 +94,9 @@ ever asked anything; the stall allowance doubles after each stall of a slice in 
 stuck where no signal reaches it no longer holds the guardian.
 A mount placed on an entry during the walk is detached before the entry is judged again, and POSIX message
 queues are purged through a detached mqueue mount, so they are reached on hosts without /dev/mqueue.
+Helpers now start with a core-dump limit of 0 (hard limit included), so a crashed helper's memory image no
+longer waits, readable by its UID, for the next helper with that ID; a kernel without message queues no longer
+keeps purges from completing, and the README lists the mount-API and journald host requirements.
 
 ## Unreleased: helper containment in runtime status
 

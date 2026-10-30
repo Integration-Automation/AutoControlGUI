@@ -2,8 +2,9 @@
 /* After an epoch is killed nothing runs as its payload IDs, so what those IDs left behind is
  * removed before the IDs are handed out again: files under the shared writable directories
  * and SysV IPC objects, as systemd does for DynamicUser with RemoveIPC. A later helper with
- * the same ID then finds nothing of an earlier one, and tmpfs pages a killed helper left
- * charged are released.
+ * the same ID then finds no file, IPC object or message queue of an earlier one (beyond the
+ * escapes the service README lists), and tmpfs pages a killed helper left charged are
+ * released.
  *
  * Directories are walked by descriptor, never through a link or into another filesystem, and
  * entries are removed relative to the directory that was opened; what a directory's owner
@@ -19,9 +20,9 @@
  *
  * A purge runs in a child with a mount namespace of its own, a slave of the host's so nothing
  * it does propagates out. Every root and SysV IPC table is opened before anything is
- * detached. Each entry is opened once, without crossing any mount (RESOLVE_NO_XDEV), and
- * everything after that works on the descriptor, so no filesystem but the walked one is ever
- * asked anything. An entry with a mount on it (a payload directory another user covered with
+ * detached. Entries are opened only without crossing any mount (RESOLVE_NO_XDEV) and judged
+ * by those descriptors; removal and moves by name stop at a mount point (EBUSY) without
+ * reaching what it shows, so no filesystem but the walked one is ever asked anything. An entry with a mount on it (a payload directory another user covered with
  * a mount of their own) has that mount detached there, by the descriptor of the mount's root
  * opened relative to the walked directory, never by a path, and the walk goes on with what
  * lies beneath; removing a payload mountpoint detaches the host's mount too. A mount it
@@ -643,7 +644,18 @@ static const char *const default_roots[] = {"/tmp", "/var/tmp", "/dev/shm", MQUE
  * nothing on the host and hides nothing); without one the purge runs again. */
 static int open_mqueue(purge_scope *scope) {
     int context = (int)syscall(SYS_fsopen, "mqueue", 1 /* FSOPEN_CLOEXEC */);
+    if (context < 0 && errno == ENODEV) return -1; /* No POSIX message queues in this kernel: none to purge. */
     int mounted = -1;
+    if (context < 0) { /* The mount API is filtered for this guardian: the host's mount, if it is mqueue. */
+        mounted = open_root(MQUEUE_ROOT);
+        struct statfs host;
+        if (mounted >= 0 && fstatfs(mounted, &host) == 0 && host.f_type == 0x19800202 /* MQUEUE_MAGIC */)
+            return mounted;
+        if (mounted >= 0) close(mounted);
+        fprintf(stderr, "autocontrol-owner-guardian: purge could not reach the message queues; it runs again\n");
+        scope->complete = false;
+        return -1;
+    }
     if (context >= 0 && syscall(SYS_fsconfig, context, 6 /* FSCONFIG_CMD_CREATE */, NULL, NULL, 0) == 0)
         mounted = (int)syscall(SYS_fsmount, context, 1 /* FSMOUNT_CLOEXEC */,
                                0x2 | 0x4 | 0x8 /* MOUNT_ATTR_NOSUID | NODEV | NOEXEC */);
