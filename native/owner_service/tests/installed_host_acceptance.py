@@ -366,7 +366,7 @@ def main():
         running_checks(guardian)
         stop(guardian)
         guardian = None
-    except (OSError, RuntimeError, subprocess.SubprocessError, KeyError, IndexError, ValueError) as error:
+    except Exception as error:  # reason: every failure is reported; finally removes what was installed
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
         shutil.rmtree(work, ignore_errors=True)

@@ -26,14 +26,21 @@ static void expect(const char *path, bool valid) {
     }
 }
 
-static void expect_listener(const char *listener, const char *purge_root, bool valid) {
+#define EXECUTABLE "/usr/libexec/je_auto_control/owner_service"
+
+static void expect_hidden(const char *listener, const char *executable, const char *purge_root, bool valid) {
     const char *roots[] = {purge_root};
-    guardian_manifest manifest = {.listener_path = listener, .purge_roots = roots,
-                                  .purge_root_count = purge_root ? 1 : 0};
-    if (guardian_listener_outside_private_roots(&manifest) != valid) {
-        fprintf(stderr, "listener %s: expected %s\n", listener, valid ? "valid" : "refused");
+    guardian_manifest manifest = {.listener_path = listener, .service_executable = executable,
+                                  .purge_roots = roots, .purge_root_count = purge_root ? 1 : 0};
+    if (guardian_private_roots_hide_nothing(&manifest) != valid) {
+        fprintf(stderr, "listener %s, executable %s, root %s: expected %s\n", listener ? listener : "-",
+                executable ? executable : "-", purge_root ? purge_root : "-", valid ? "valid" : "refused");
         ++failures;
     }
+}
+
+static void expect_listener(const char *listener, const char *purge_root, bool valid) {
+    expect_hidden(listener, EXECUTABLE, purge_root, valid);
 }
 
 int main(void) {
@@ -43,6 +50,10 @@ int main(void) {
     expect_listener("/run/lock/owner.sock", NULL, false);
     expect_listener("/usr/share/owner.sock", "/usr/share", false);  /* Under a manifest root. */
     expect_listener(NULL, NULL, false);
+    expect_listener("/usr/share/owner.sock", "/usr/share/", false);    /* A root written with a slash. */
+    expect_listener("/run/je_auto_control/owner.sock", "/", false);    /* "/" covers everything. */
+    expect_hidden("/run/je_auto_control/owner.sock", EXECUTABLE, "/usr/libexec", false);  /* Hides the service. */
+    expect_hidden("/run/je_auto_control/owner.sock", NULL, NULL, false);
     expect("/usr/share", true);                          /* A root's directory under root's. */
     expect("/usr/share/autocontrol-absent-root", true);  /* Not there yet: fine. */
     expect("/tmp/app", false);                           /* /tmp: others may create the name. */

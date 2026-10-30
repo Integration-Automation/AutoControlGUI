@@ -161,8 +161,10 @@ the gate.
   a helper itself handed a descriptor into it to a process outside the epoch. Lock files in
   the epoch's `/run/lock` exclude only processes of the same epoch. A root that does not
   exist when an epoch starts is covered from the next epoch on; until then the purge walks
-  it on the host as before. A listener path under any of these roots is refused, since
-  helpers would not see it. The guardian accepts a payload ID's connection only from the
+  it on the host as before. Each tmpfs is `noexec` where the host's mount is, and its pages
+  count against the epoch's memory limit. A manifest whose listener or service executable
+  lies under any of these roots (as written or resolved) is refused, since the epoch would
+  not see it. The guardian accepts a payload ID's connection only from the
   mount namespace of the epoch that runs its slice.
 - When an epoch is reclaimed, the guardian also removes the files under `/tmp`, `/var/tmp`,
   `/dev/shm`, `/run/lock` and `/var/crash` (and any manifest `purge_roots`), the POSIX message queues

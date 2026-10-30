@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <unistd.h>
 
 static bool refused(const char *path) {
@@ -24,7 +25,8 @@ static bool refused(const char *path) {
     return false;
 }
 
-/* A fresh tmpfs over `path`, as the host's directory is: same mode, same owner, empty. */
+/* A fresh tmpfs over `path`, as the host's directory is: same mode, same owner, no exec where
+ * the host's mount has none, empty. Its pages count against the epoch's memory limit. */
 static bool private_root(const char *path) {
     char resolved[4096];
     if (!realpath(path, resolved)) return errno == ENOENT || errno == ENOTDIR || refused(path);
@@ -32,10 +34,13 @@ static bool private_root(const char *path) {
     if (lstat(resolved, &status) != 0) return refused(path);
     if (!S_ISDIR(status.st_mode)) return true;
     if (!guardian_path_anchored(resolved)) return refused(path);
+    struct statvfs mounted;
+    if (statvfs(resolved, &mounted) != 0) return refused(path);
+    unsigned long flags = MS_NOSUID | MS_NODEV | ((mounted.f_flag & ST_NOEXEC) ? MS_NOEXEC : 0);
     char options[96];
     snprintf(options, sizeof(options), "mode=%o,uid=%u,gid=%u", (unsigned)(status.st_mode & 07777),
              (unsigned)status.st_uid, (unsigned)status.st_gid);
-    return mount("autocontrol-epoch", resolved, "tmpfs", MS_NOSUID | MS_NODEV, options) == 0 || refused(path);
+    return mount("autocontrol-epoch", resolved, "tmpfs", flags, options) == 0 || refused(path);
 }
 
 bool guardian_private_epoch(const guardian_manifest *manifest) {

@@ -636,9 +636,11 @@ static size_t deferred_room(struct rlimit *before) {
 }
 
 #define MQUEUE_ROOT "/dev/mqueue"
-/* /var/crash too: apport writes a crash report, core image included, owned by the crashing
- * UID there, whatever the core limit. */
-static const char *const default_roots[] = {"/tmp", "/var/tmp", "/dev/shm", MQUEUE_ROOT, "/run/lock", "/var/crash"};
+/* The epochs' private roots (guardian.h), then the message queues. */
+#define DEFAULT_ROOTS (GUARDIAN_PRIVATE_ROOTS + 1)
+static const char *default_root(size_t index) {
+    return index < GUARDIAN_PRIVATE_ROOTS ? guardian_private_root(index) : MQUEUE_ROOT;
+}
 
 #ifndef SYS_fsopen
 #define SYS_fsopen 430
@@ -702,16 +704,16 @@ guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest
     if (!scope.deferred) scope.deferred_limit = 0;
     /* Everything is opened before any mount is detached: nothing detached later can hide a
      * root or a table. */
-    size_t defaults = sizeof(default_roots) / sizeof(default_roots[0]);
+    size_t defaults = DEFAULT_ROOTS;
     size_t count = defaults + manifest->purge_root_count;
-    int roots[sizeof(default_roots) / sizeof(default_roots[0]) + GUARDIAN_PURGE_ROOT_LIMIT];
+    int roots[DEFAULT_ROOTS + GUARDIAN_PURGE_ROOT_LIMIT];
     const char *names[sizeof(roots) / sizeof(roots[0])];
     if (count > sizeof(roots) / sizeof(roots[0])) {
         count = sizeof(roots) / sizeof(roots[0]); /* Manifest validation refuses this already. */
         scope.complete = false;
     }
     for (size_t i = 0; i < count; ++i) {
-        names[i] = i < defaults ? default_roots[i] : manifest->purge_roots[i - defaults];
+        names[i] = i < defaults ? default_root(i) : manifest->purge_roots[i - defaults];
         /* -1: absent, or not a directory this guardian may trust. */
         bool untrusted = false;
         roots[i] = strcmp(names[i], MQUEUE_ROOT) ? open_root(names[i], &untrusted) : open_mqueue(&scope);

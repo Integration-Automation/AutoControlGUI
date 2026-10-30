@@ -21,7 +21,7 @@ SOURCE, REPOSITORY = sys.argv[1], sys.argv[2]
 SRC, TESTS = os.path.join(SOURCE, "src"), os.path.join(SOURCE, "tests")
 sys.path.insert(0, TESTS)  # Run with -I: the script's directory is not on the path.
 from protected_objects import (  # noqa: E402
-    NESTED_PROBE, bad_fuse_mount as _bad_fuse_mount, dead_fuse_mount as _dead_fuse_mount,
+    probe_as, bad_fuse_mount as _bad_fuse_mount, dead_fuse_mount as _dead_fuse_mount,
     in_payload as _in_payload, marker_holders, namespaces_private as _namespaces_private,
     payload_queue as _payload_queue, payload_segment as _payload_segment, queue_exists as _queue_exists,
     shm_exists as _shm_exists, shm_in_payload as _shm_in_payload, staged_chain as _staged_chain)
@@ -759,8 +759,11 @@ def scenario_second_overlap(steps):
     h1_pids = session_inspection(first)["payload_pids"]
     h1_seen = h1_pids[0] if h1_pids else 0
     h1_marker = f"/tmp/autocontrol-h1-{os.urandom(8).hex()}"  # In E1's private /tmp only.
-    if h1_seen:
-        open(_in_payload(h1_seen, h1_marker), "w").close()
+    try:
+        if h1_seen:
+            open(_in_payload(h1_seen, h1_marker), "w").close()
+    except OSError:  # H1's helper is gone: the marker check below then fails.
+        h1_seen = 0
     # Seen by H1's helper and not by the host: the check below can fail.
     steps["h1_marker_seen"] = bool(h1_seen) and h1_seen in marker_holders(h1_marker) and not os.path.lexists(
         h1_marker)
@@ -930,21 +933,6 @@ def scenario_purge_faults(steps):
     steps["roots_exit"] = roots.returncode
 
 
-def _probe_as(uid, prefix):
-    """NESTED_PROBE as payload ID `uid`, started through `prefix` (nsenter into a namespace,
-    or nothing for the host's); the client's outcome as [class, message]."""
-    def drop():
-        os.setgroups([])
-        os.setresgid(uid, uid, uid)
-        os.setresuid(uid, uid, uid)
-    probe = subprocess.run([*prefix, "/usr/bin/python3", "-I", "-c", NESTED_PROBE, ENDPOINT, REPOSITORY],
-                           preexec_fn=None if prefix else drop, capture_output=True, text=True, timeout=60)
-    try:
-        return json.loads(probe.stdout.strip().splitlines()[-1])
-    except (IndexError, ValueError):
-        return ["unreadable", probe.returncode, probe.stderr[-400:]]
-
-
 def scenario_outside_epoch(steps):
     """A payload ID's well-formed nested open reaches the service from its epoch's own mount
     namespace, which answers it, and is dropped by the guardian from the host's."""
@@ -957,8 +945,8 @@ def scenario_outside_epoch(steps):
     uid = int(inspection["payload"][0]["uid"]) if inspection["payload"] else PAYLOAD_BASE
     steps["uid"] = uid
     inside = ["nsenter", "-t", str(pid), "-m", "-S", str(uid), "-G", str(uid), "--"]
-    steps["inside"] = _probe_as(uid, inside) if pid else ["no helper"]
-    steps["outside"] = _probe_as(uid, [])
+    steps["inside"] = probe_as(uid, inside, ENDPOINT, REPOSITORY) if pid else ["no helper"]
+    steps["outside"] = probe_as(uid, [], ENDPOINT, REPOSITORY)
     holder.stdin.write("close\n")
     holder.stdin.flush()
     steps["close"] = read_json(holder)

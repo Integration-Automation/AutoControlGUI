@@ -83,24 +83,36 @@ bool guardian_purge_roots_valid(const guardian_manifest *manifest) {
 
 static bool under(const char *path, const char *root) {
     size_t length = strlen(root);
+    if (length == 1 && root[0] == '/') return path[0] == '/';
     return strncmp(path, root, length) == 0 && (path[length] == '/' || path[length] == '\0');
 }
 
-/* The listener must not lie under a root each epoch covers with its own tmpfs: helpers in the
- * epoch would not see it. Checked as written and, when its directory exists, as resolved. */
-bool guardian_listener_outside_private_roots(const guardian_manifest *manifest) {
-    const char *path = manifest->listener_path;
-    char directory[4096], resolved[4096];
-    if (!path || snprintf(directory, sizeof(directory), "%s", path) >= (int)sizeof(directory)) return false;
+/* True when a tmpfs over `root` would stand over `path`: `path` as written or through its
+ * resolved directory, against `root` as written (trailing slashes dropped) or resolved. */
+static bool hides(const char *root, const char *path) {
+    char forms[2][4096], directory[4096], resolved[4096];
+    if (snprintf(forms[0], sizeof(forms[0]), "%s", root) >= (int)sizeof(forms[0]) ||
+        snprintf(directory, sizeof(directory), "%s", path) >= (int)sizeof(directory)) return true;
+    size_t length = strlen(forms[0]);
+    while (length > 1 && forms[0][length - 1] == '/') forms[0][--length] = '\0';
+    int count = realpath(root, forms[1]) ? 2 : 1;
     char *slash = strrchr(directory, '/');
     if (slash) *(slash == directory ? slash + 1 : slash) = '\0';
     bool known = realpath(directory, resolved) != NULL;
-    for (size_t i = 0; guardian_private_root(i); ++i)
-        if (under(path, guardian_private_root(i)) || (known && under(resolved, guardian_private_root(i))))
-            return false;
-    for (size_t i = 0; i < manifest->purge_root_count; ++i)
-        if (manifest->purge_roots[i] && (under(path, manifest->purge_roots[i]) ||
-                                         (known && under(resolved, manifest->purge_roots[i])))) return false;
+    for (int i = 0; i < count; ++i)
+        if (under(path, forms[i]) || (known && under(resolved, forms[i]))) return true;
+    return false;
+}
+
+bool guardian_private_roots_hide_nothing(const guardian_manifest *manifest) {
+    const char *paths[] = {manifest->listener_path, manifest->service_executable};
+    for (size_t p = 0; p < sizeof(paths) / sizeof(paths[0]); ++p) {
+        if (!paths[p]) return false;
+        for (size_t i = 0; guardian_private_root(i); ++i)
+            if (hides(guardian_private_root(i), paths[p])) return false;
+        for (size_t i = 0; i < manifest->purge_root_count; ++i)
+            if (!manifest->purge_roots[i] || hides(manifest->purge_roots[i], paths[p])) return false;
+    }
     return true;
 }
 
@@ -110,9 +122,9 @@ bool guardian_manifest_valid(const guardian_manifest *manifest) {
         manifest->listener_gid == 0 || (service->socket_gid && manifest->listener_gid != service->socket_gid) ||
         !guardian_purge_roots_valid(manifest) || in_any_range(service, manifest->service_uid, manifest->service_gid))
         return false;
-    if (!guardian_listener_outside_private_roots(manifest)) {
-        fprintf(stderr, "autocontrol-owner-guardian: listener %s is refused: it lies under a root each epoch "
-                        "covers with its own tmpfs\n", manifest->listener_path ? manifest->listener_path : "(none)");
+    if (!guardian_private_roots_hide_nothing(manifest)) {
+        fprintf(stderr, "autocontrol-owner-guardian: the listener or the service executable lies under a root "
+                        "each epoch covers with its own tmpfs; the manifest is refused\n");
         return false;
     }
     for (size_t i = 0; i < manifest->client_count; ++i)

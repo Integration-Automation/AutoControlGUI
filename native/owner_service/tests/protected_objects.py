@@ -3,6 +3,7 @@ segments, staged trees, and an epoch's view of its own namespaces. Imported by
 protected_run.py; nothing here provisions or removes the harness's own fixtures."""
 import ctypes
 import errno
+import json
 import os
 import pwd
 import struct
@@ -197,3 +198,21 @@ try:
 except AgentTaskError as error:
     print(json.dumps([type(error).__name__, str(error)]))
 """
+
+
+def probe_as(uid, prefix, endpoint, repository):
+    """NESTED_PROBE as payload ID `uid`, started through `prefix` (nsenter into a namespace,
+    or nothing for the host's); the client's outcome as [class, message]."""
+    def drop():
+        os.setgroups([])
+        os.setresgid(uid, uid, uid)
+        os.setresuid(uid, uid, uid)
+    try:
+        probe = subprocess.run([*prefix, "/usr/bin/python3", "-I", "-c", NESTED_PROBE, endpoint, repository],
+                               preexec_fn=None if prefix else drop, capture_output=True, text=True, timeout=60)
+    except subprocess.SubprocessError as error:  # A timeout or a failed drop fails the expectation.
+        return [type(error).__name__, str(error)]
+    try:
+        return json.loads(probe.stdout.strip().splitlines()[-1])
+    except (IndexError, ValueError):
+        return ["unreadable", probe.returncode, probe.stderr[-400:]]
