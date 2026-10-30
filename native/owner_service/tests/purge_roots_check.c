@@ -54,6 +54,20 @@ static void expect_policy(const char *executable, const char *cwd, bool valid) {
     }
 }
 
+/* A policy's working directory against one manifest purge root as well as the defaults. */
+static void expect_cwd_under(const char *cwd, const char *purge_root, bool valid) {
+    const char *roots[] = {purge_root};
+    service_launch_policy policy = {.executable = "/usr/bin/python3", .cwd = cwd};
+    service_policy service = {.policies = &policy, .policy_count = 1};
+    guardian_manifest manifest = {.listener_path = "/run/je_auto_control/owner.sock",
+                                  .service_executable = EXECUTABLE, .service = &service,
+                                  .purge_roots = roots, .purge_root_count = 1};
+    if (guardian_private_roots_hide_nothing(&manifest, true) != valid) {
+        fprintf(stderr, "cwd %s, root %s: expected %s\n", cwd, purge_root, valid ? "valid" : "refused");
+        ++failures;
+    }
+}
+
 /* The epoch's tmpfs takes noexec, nosymfollow and read-only from the host's mount, never more. */
 static void expect_flags(unsigned long host, unsigned long wanted) {
     if (guardian_private_mount_flags(host) != (MS_NOSUID | MS_NODEV | wanted)) {
@@ -83,6 +97,12 @@ int main(void) {
     expect_policy("/usr/bin/../bin/python3", "/./tmp", true);  /* "." and ".." resolve as the kernel does. */
     expect_policy("/usr/bin/python3", "/usr/../tmp/work", false);   /* Only resolving ".." finds /tmp. */
     expect_policy("/usr/bin/python3", "/usr/autocontrol-absent/../../tmp/work", false);  /* ".." past a gap. */
+    /* A root not made yet, and a directory below it spelled with "." or "//": only tidying finds it. */
+    expect_cwd_under("/usr/share/autocontrol-absent/./cache/w", "/usr/share/autocontrol-absent/cache", false);
+    expect_cwd_under("/usr/share/autocontrol-absent//cache/w", "/usr/share/autocontrol-absent/cache", false);
+    expect_cwd_under("/usr/share/autocontrol-absent/cache/w", "/usr/share/./autocontrol-absent//cache", false);
+    expect_cwd_under("/usr/share/autocontrol-absent/other", "/usr/share/autocontrol-absent/cache", true);
+    expect_cwd_under("/usr/share/autocontrol-absent/other", "/usr/share/autocontrol-absent/../x", false);
     expect_policy("/usr/bin/python3", "/tmp/work", false);     /* Below a root: hidden. */
     expect_policy("/tmp/helper", "/", false);
     expect_policy("relative/helper", "/", false);
@@ -136,13 +156,14 @@ int main(void) {
          * which each epoch covers with its own tmpfs, so the epoch would not reach /usr. */
         char hop[64];  /* /run/lock is anyone's: a name of this run's own, never another user's. */
         snprintf(hop, sizeof(hop), "/run/lock/autocontrol-hop-%ld", (long)getpid());
-        if (lock_root && symlink("/usr", hop) == 0 && symlink(hop, "/run/autocontrol-chain") == 0) {
+        bool hop_made = lock_root && symlink("/usr", hop) == 0;  /* Only what this run made is removed. */
+        if (hop_made && symlink(hop, "/run/autocontrol-chain") == 0) {
             expect_policy("/usr/bin/python3", "/run/autocontrol-chain", false);
             expect_policy("/run/autocontrol-chain/bin/sh", "/", false);
             ++root_cases;
         }
         unlink("/run/autocontrol-chain");
-        unlink(hop);
+        if (hop_made) unlink(hop);
         /* An executable that is a link into a root: followed, it is hidden. The target is made
          * here, so the case does not depend on how the host packages its tools. */
         FILE *helper = mkdir("/run/autocontrol-exe-dir", 0755) == 0 ? fopen("/run/autocontrol-exe-dir/helper", "w")

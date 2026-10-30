@@ -89,9 +89,23 @@ static bool under(const char *path, const char *root, bool strict) {
     return strncmp(path, root, length) == 0 && (path[length] == '/' || (!strict && path[length] == '\0'));
 }
 
-static void drop_trailing_slashes(char *path) {
-    size_t length = strlen(path);
-    while (length > 1 && path[length - 1] == '/') path[--length] = '\0';
+/* The spelling of an absolute name, in place: repeated and trailing slashes collapsed, "."
+ * components dropped. Where a name leads is not decided here, so ".." stays. */
+static void tidy(char *path) {
+    char *out = path;
+    const char *in = path;
+    while (*in) {
+        while (*in == '/') ++in;
+        size_t length = strcspn(in, "/");
+        if (length && !(length == 1 && in[0] == '.')) {
+            *out++ = '/';
+            memmove(out, in, length);
+            out += length;
+        }
+        in += length;
+    }
+    if (out == path) *out++ = '/';
+    *out = '\0';
 }
 
 /* `name` lies in either form of the root: at or below it, or with `strict` only below it. */
@@ -141,7 +155,7 @@ static bool walk_hides(char forms[][4096], int count, const char *path, bool dir
              * out with "..", which leads wherever what is made there later leads. */
             if (climbs(after) || snprintf(next, sizeof(next), "%s/%s", candidate, after) >= (int)sizeof(next))
                 return true;
-            drop_trailing_slashes(next);
+            tidy(next);
             return in_root(forms, count, next, directory_path);
         }
         if (S_ISLNK(entry.st_mode)) {
@@ -159,15 +173,16 @@ static bool walk_hides(char forms[][4096], int count, const char *path, bool dir
 }
 
 /* True when a tmpfs over `root` would stand over `path`: `root` as written or resolved,
- * trailing slashes dropped from both, against `path` as written and every name its resolution
+ * both tidied (repeated slashes and "." dropped), against `path` as written and every name its resolution
  * visits (walk_hides). A directory the epoch enters (`directory_path`) may be the root itself:
  * only what lies below it is hidden. */
 static bool hides(const char *root, const char *path, bool directory_path) {
     char forms[2][4096], written[4096];
     if (snprintf(forms[0], sizeof(forms[0]), "%s", root) >= (int)sizeof(forms[0]) ||
         snprintf(written, sizeof(written), "%s", path) >= (int)sizeof(written)) return true;
-    drop_trailing_slashes(forms[0]);
-    drop_trailing_slashes(written);
+    tidy(forms[0]);
+    tidy(written);
+    if (climbs(forms[0])) return true;  /* A root written with "..": where it leads is not known. */
     int count = realpath(root, forms[1]) ? 2 : 1;
     return in_root(forms, count, written, directory_path) || walk_hides(forms, count, written, directory_path);
 }
