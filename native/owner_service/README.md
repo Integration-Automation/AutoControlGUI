@@ -128,8 +128,9 @@ the gate.
   from the main loop, which keeps answering a stop request, retiring epochs and purges;
   so does a service that ends within a second of starting. A stop kills every epoch and
   abandons running purges; the next start purges.
-  The manifest may list more world-writable roots (`purge_roots`, for example
-  /var/crash) and cap every running epoch together (`subtree_pids_max`,
+  Every directory payload IDs can write must be a purge root: the defaults are `/tmp`,
+  `/var/tmp`, `/dev/shm`, `/run/lock` and `/var/crash`, and the manifest lists any other
+  (`purge_roots`, for example /var/spool/something) and caps every running epoch together (`subtree_pids_max`,
   `subtree_memory_max`); up to four epochs run at once, so either set those or cap the
   subtree's parent. Before building the filter, the guardian refuses a manifest the service would
   refuse, or whose payload IDs are below 1000 or known to the host's user and group
@@ -147,8 +148,10 @@ the gate.
   `/dev/shm` and `/run/lock` (and any manifest `purge_roots`), the POSIX message queues
   and the SysV IPC objects that payload IDs own (as systemd's DynamicUser with RemoveIPC
   does), so a later helper with the same ID finds none of an earlier one's, beyond the
-  escapes listed above. Helpers never dump core (hard limit 0): a crash's image would
-  otherwise be readable by the next helper with that ID.
+  escapes listed above. Helpers start with a core limit of 0, hard limit included: no core
+  file is written, systemd-coredump stores none, and apport's crash reports land in
+  `/var/crash`, a default purge root. A pipe `core_pattern` to any other handler may keep a
+  crashed helper's memory (see Requirements).
 
 ## Parts
 
@@ -172,8 +175,14 @@ the gate.
   guardian's own confinement must allow; if it does not, `/dev/mqueue` must be the mqueue
   filesystem, or purges never complete.
 - journald without per-UID journal files (`SplitMode=none`, or volatile storage): with
-  the default `SplitMode=uid` and persistent storage, what one helper logs is kept in a
+  the default `SplitMode=uid` and persistent storage, what one helper logs (and possibly
+  a crashed helper's coredump metadata, its environment included) is kept in a
   `user-<uid>.journal` the next helper with the same ID may read.
+- `kernel.core_pattern` a file pattern, systemd-coredump or apport; a pipe to any other
+  handler (ABRT, say) may keep crashed helpers' memory, and the guardian logs a warning
+  for one at startup.
+- Where the mount API is refused, `/dev/mqueue` must show the guardian's own IPC
+  namespace: the purge checks only that it is the mqueue filesystem.
 
 ## Install (administrator)
 

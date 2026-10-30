@@ -604,6 +604,22 @@ static guardian_result shut_down(guardian_state *state, running_set *set) {
     return recovered;
 }
 
+/* Helpers start with a core limit of 0, which a pipe core_pattern handler receives but the
+ * kernel does not enforce: systemd-coredump honours it and apport's reports land in the
+ * purged /var/crash; any other handler may keep a helper's memory where the next helper with
+ * the same ID can read it. */
+static void warn_core_pattern(void) {
+    FILE *pattern = fopen("/proc/sys/kernel/core_pattern", "re");
+    char line[256] = "";
+    if (pattern) {
+        if (!fgets(line, sizeof(line), pattern)) line[0] = 0;
+        fclose(pattern);
+    }
+    if (line[0] == '|' && !strstr(line, "systemd-coredump") && !strstr(line, "apport"))
+        fprintf(stderr, "autocontrol-owner-guardian: core_pattern pipes to a handler this guardian does not know; "
+                        "it may keep crashed helpers' memory\n");
+}
+
 int main(void) {
     sigset_t stopping;
     sigemptyset(&stopping);
@@ -613,6 +629,7 @@ int main(void) {
     if (sigprocmask(SIG_BLOCK, &stopping, NULL) != 0) return EXIT_REFUSED;
     int signals = signalfd(-1, &stopping, SFD_CLOEXEC);
     guardian_state state;
+    warn_core_pattern();
     if (!guardian_manifest_valid(&guardian_compiled_manifest)) {
         fprintf(stderr, "autocontrol-owner-guardian: the compiled manifest is invalid\n");
         return EXIT_REFUSED;

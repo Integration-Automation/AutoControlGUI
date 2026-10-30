@@ -516,6 +516,15 @@ def scenario_siblings(steps, left=None):
     os.chown(os.path.join(fuse_bad, "hidden"), PAYLOAD_BASE, PAYLOAD_BASE)
     os.chown(fuse_bad, PAYLOAD_BASE, PAYLOAD_BASE)
     steps["bad_fuse_mounted"] = _bad_fuse_mount(fuse_bad, 65534)
+    # A crash report a payload left in /var/crash (apport writes them owned by the crashing UID).
+    crash_made = not os.path.isdir("/var/crash")
+    if crash_made:
+        os.mkdir("/var/crash", 0o3777)
+        os.chmod("/var/crash", 0o3777)
+    crash_report = "/var/crash/_usr_bin_python3.%d.crash" % PAYLOAD_BASE
+    with open(crash_report, "w") as handle:
+        handle.write("CoreDump: base64")
+    os.chown(crash_report, PAYLOAD_BASE, PAYLOAD_BASE)
     # A message queue the payload left: purged though this host has no /dev/mqueue mounted.
     steps["queue_made"] = _payload_queue(PAYLOAD_BASE)
     # And one of another ID's, which stays.
@@ -568,6 +577,9 @@ def scenario_siblings(steps, left=None):
     run(["umount", "-l", fuse_static])
     steps["fuse_covered_payload_left"] = os.path.lexists(os.path.join(fuse_covered, "hidden"))
     steps["queue_left"] = _queue_exists()
+    steps["crash_report_left"] = os.path.lexists(crash_report)
+    if crash_made:
+        shutil.rmtree("/var/crash", ignore_errors=True)
     steps["foreign_queue_kept"] = _queue_exists(b"/autocontrol-foreign-queue")
     run(["umount", "-l", fuse_bad])
     steps["bad_fuse_payload_left"] = os.path.lexists(os.path.join(fuse_bad, "hidden"))
@@ -1233,7 +1245,7 @@ def expectations(result):
         and siblings["cover_mounted"] and not siblings["covered_payload_left"] and siblings["host_mounts_kept"]
         and siblings["fuse_mounted"] and not siblings["fuse_covered_payload_left"]
         and siblings["bad_fuse_mounted"] and not siblings["bad_fuse_payload_left"]
-        and siblings["queue_made"] and siblings["queue_left"] is False
+        and siblings["queue_made"] and siblings["queue_left"] is False and not siblings["crash_report_left"]
         and siblings["foreign_queue_made"] and siblings["foreign_queue_kept"] is True
         and session["guardian_stop"][0] == 0 and siblings["guardian_stop"][0] == 0,
         # epoch-N itself is bounded before it is delegated: nothing beside `records` escapes.

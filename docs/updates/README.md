@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261030-31 | 2026-10-30 | Purge /var/crash by default, and warn about unknown core_pattern handlers | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-30 | 2026-10-30 | Start helpers with no core dump, and keep purges completing without message queues | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-29 | 2026-10-30 | Re-detach mounts placed during the purge walk, and purge message queues through a detached mqueue mount | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-28 | 2026-10-30 | Open purge entries without crossing mounts, and let stalled purges back off | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |

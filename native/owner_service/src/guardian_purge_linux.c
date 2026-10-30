@@ -22,7 +22,8 @@
  * it does propagates out. Every root and SysV IPC table is opened before anything is
  * detached. Entries are opened only without crossing any mount (RESOLVE_NO_XDEV) and judged
  * by those descriptors; removal and moves by name stop at a mount point (EBUSY) without
- * reaching what it shows, so no filesystem but the walked one is ever asked anything. An entry with a mount on it (a payload directory another user covered with
+ * reaching what it shows, so no filesystem but the walked one is ever asked anything. An
+ * entry with a mount on it (a payload directory another user covered with
  * a mount of their own) has that mount detached there, by the descriptor of the mount's root
  * opened relative to the walked directory, never by a path, and the walk goes on with what
  * lies beneath; removing a payload mountpoint detaches the host's mount too. A mount it
@@ -356,7 +357,8 @@ static void pop(purge_scope *scope, walk *state) {
     closedir(done.listing);
     int parent = dirfd(state->levels[done.parent].listing);
     if (done.owned) dispose(scope, parent, done.name, &done.seen);
-    else if (done.quarantined && still_seen(scope, parent, done.name, &done.seen)) unlinkat(parent, done.name, AT_REMOVEDIR);
+    else if (done.quarantined && still_seen(scope, parent, done.name, &done.seen))
+        unlinkat(parent, done.name, AT_REMOVEDIR);
     free(done.name);
 }
 
@@ -630,7 +632,9 @@ static size_t deferred_room(struct rlimit *before) {
 }
 
 #define MQUEUE_ROOT "/dev/mqueue"
-static const char *const default_roots[] = {"/tmp", "/var/tmp", "/dev/shm", MQUEUE_ROOT, "/run/lock"};
+/* /var/crash too: apport writes a crash report, core image included, owned by the crashing
+ * UID there, whatever the core limit. */
+static const char *const default_roots[] = {"/tmp", "/var/tmp", "/dev/shm", MQUEUE_ROOT, "/run/lock", "/var/crash"};
 
 #ifndef SYS_fsopen
 #define SYS_fsopen 430
@@ -641,7 +645,9 @@ static const char *const default_roots[] = {"/tmp", "/var/tmp", "/dev/shm", MQUE
 /* POSIX message queues live in the IPC namespace, not in a directory: a payload can make one
  * whether or not the host mounted mqueue anywhere. Their root is a fresh mqueue mount made
  * with the mount API and attached nowhere (it shows this IPC namespace's queues, leaves
- * nothing on the host and hides nothing); without one the purge runs again. */
+ * nothing on the host and hides nothing). A kernel without message queues has none to purge;
+ * where the mount API is refused, /dev/mqueue is used if it is the mqueue filesystem, and
+ * otherwise the purge runs again. */
 static int open_mqueue(purge_scope *scope) {
     int context = (int)syscall(SYS_fsopen, "mqueue", 1 /* FSOPEN_CLOEXEC */);
     if (context < 0 && errno == ENODEV) return -1; /* No POSIX message queues in this kernel: none to purge. */

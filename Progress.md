@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-30；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-31；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -143,6 +143,13 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      helper 讀取，改為 RLIMIT_CORE 軟硬上限皆 0）、MINOR-A（核心無訊息佇列時不再永遠未完成）、
      MINOR-B（journald 每 UID 日誌，記為主機需求）與 NOTE-A～C 已處理。
      TODO：走訪中途被掛載的項目（MINOR-1 路徑）與 readdir 錯誤路徑尚無自動化測試。
+     第十七次獨立審查無主要問題，判定 MINOR-1 處理後此元件可開閘；MINOR-1（/var/crash 改為預設清除
+     根目錄、core_pattern 主機需求與啟動警告）與 NOTE 1、3、5、6 已處理，NOTE 2 記為主機需求。
+     TODO：訊息佇列的三個退路分支（fsopen 回 ENODEV、mount API 被擋而改用 /dev/mqueue、兩者皆不可用
+     而未完成）尚無自動化測試（需讓 fsopen 失敗的測試夾具）。
+     TODO：已安裝主機驗收須一併確認主機需求：journald SplitMode=none 或不保存、core_pattern 為檔案／
+     systemd-coredump／apport、mount API 未被擋或 /dev/mqueue 為本 IPC namespace 的 mqueue、所有 payload
+     可寫目錄皆為清除根目錄；目前 guardian 只對未知的 pipe core_pattern 發出警告，其餘不檢查。
      TODO：清除子程序的無進度監看（60 秒）尚無自動化測試（需讓清除卡在單一呼叫的測試夾具）。
      TODO：payload 目錄在走訪中被配合的本機使用者即時改名到走訪後方時，仍可能逃過一次清除
      （已記於服務 README）；隔離區外重遇的 fail-safe 路徑尚無自動化測試（需在走訪中即時改名的

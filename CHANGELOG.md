@@ -97,6 +97,9 @@ queues are purged through a detached mqueue mount, so they are reached on hosts 
 Helpers now start with a core-dump limit of 0 (hard limit included), so a crashed helper's memory image no
 longer waits, readable by its UID, for the next helper with that ID; a kernel without message queues no longer
 keeps purges from completing, and the README lists the mount-API and journald host requirements.
+`/var/crash` is now a default purge root (apport writes crash reports, core image included, owned by the
+crashing UID), the guardian warns at startup about a pipe core_pattern to an unknown handler, and the README
+requires every directory payload IDs can write to be a purge root.
 
 ## Unreleased: helper containment in runtime status
 
