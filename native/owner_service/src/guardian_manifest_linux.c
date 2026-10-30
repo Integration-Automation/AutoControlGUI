@@ -201,13 +201,39 @@ static bool hidden(const guardian_manifest *manifest, const char *path, bool dir
     return false;
 }
 
+/* True when `text`, or what follows its first '=', names a path below a private root, alone or
+ * in a ':'-separated list (an argument such as a script, a --dir=..., or PATH-like environment
+ * values). A path is judged like a working directory: a root itself is the epoch's own tmpfs. */
+static bool names_hidden(const guardian_manifest *manifest, const char *text) {
+    if (!text) return true;
+    const char *equals = strchr(text, '=');
+    const char *starts[] = {text, equals ? equals + 1 : NULL};
+    for (size_t s = 0; s < 2 && starts[s]; ++s) {
+        char part[4096];
+        for (const char *at = starts[s]; *at;) {
+            size_t length = strcspn(at, ":");
+            if (length >= sizeof(part)) return true;
+            memcpy(part, at, length);
+            part[length] = '\0';
+            if (part[0] == '/' && hidden(manifest, part, true)) return true;
+            at += length + (at[length] == ':');
+        }
+    }
+    return false;
+}
+
 bool guardian_private_roots_hide_nothing(const guardian_manifest *manifest, bool policies) {
     if (hidden(manifest, manifest->listener_path, false) || hidden(manifest, manifest->service_executable, false))
         return false;
     const service_policy *service = policies ? manifest->service : NULL;
-    for (size_t i = 0; service && i < service->policy_count; ++i)
-        if (hidden(manifest, service->policies[i].executable, false) ||
-            hidden(manifest, service->policies[i].cwd, true)) return false;
+    for (size_t i = 0; service && i < service->policy_count; ++i) {
+        const service_launch_policy *policy = &service->policies[i];
+        if (hidden(manifest, policy->executable, false) || hidden(manifest, policy->cwd, true)) return false;
+        for (size_t k = 0; k < policy->fixed_argc; ++k)
+            if (!policy->fixed_argv || names_hidden(manifest, policy->fixed_argv[k])) return false;
+        for (size_t k = 0; k < policy->envc; ++k)
+            if (!policy->env || names_hidden(manifest, policy->env[k])) return false;
+    }
     return true;
 }
 

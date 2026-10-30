@@ -165,7 +165,9 @@ the gate.
   host's mount is (a read-only host root gives the epoch a read-only, empty one), and its
   pages count against the epoch's memory limit. A manifest is refused, since the epoch
   would not see the path, when its listener, service executable or a policy executable
-  lies under any of these roots, or a policy working directory lies below one. Each path
+  lies under any of these roots, or a policy working directory, or an absolute path a
+  policy's fixed arguments or environment name (alone, after `=`, or in a `:` list), lies
+  below one. An interpreter a script names on its `#!` line is not judged. Each path
   is compared as written (its spelling tidied: repeated slashes and `.` dropped) and
   resolved component by component: every directory on the way, every link and every name a
   link leads through is checked, and what is not made yet is judged by where it would be.

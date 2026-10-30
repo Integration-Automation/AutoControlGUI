@@ -68,6 +68,22 @@ static void expect_cwd_under(const char *cwd, const char *purge_root, bool valid
     }
 }
 
+/* A policy whose fixed arguments or environment name paths. */
+static void expect_named(const char *argument, const char *environment, bool valid) {
+    const char *argv[] = {"/usr/bin/python3", "-I", argument};
+    const char *env[] = {environment};
+    service_launch_policy policy = {.executable = "/usr/bin/python3", .cwd = "/", .fixed_argv = argv,
+                                    .fixed_argc = 3, .env = env, .envc = environment ? 1 : 0};
+    service_policy service = {.policies = &policy, .policy_count = 1};
+    guardian_manifest manifest = {.listener_path = "/run/je_auto_control/owner.sock",
+                                  .service_executable = EXECUTABLE, .service = &service};
+    if (guardian_private_roots_hide_nothing(&manifest, true) != valid) {
+        fprintf(stderr, "argument %s, environment %s: expected %s\n", argument,
+                environment ? environment : "-", valid ? "valid" : "refused");
+        ++failures;
+    }
+}
+
 /* The epoch's tmpfs takes noexec, nosymfollow and read-only from the host's mount, never more. */
 static void expect_flags(unsigned long host, unsigned long wanted) {
     if (guardian_private_mount_flags(host) != (MS_NOSUID | MS_NODEV | wanted)) {
@@ -103,6 +119,15 @@ int main(void) {
     expect_cwd_under("/usr/share/autocontrol-absent/cache/w", "/usr/share/./autocontrol-absent//cache", false);
     expect_cwd_under("/usr/share/autocontrol-absent/other", "/usr/share/autocontrol-absent/cache", true);
     expect_cwd_under("/usr/share/autocontrol-absent/other", "/usr/share/autocontrol-absent/../x", false);
+    /* A root validation accepts (anchored, not made yet) spelled with "//": only tidying finds it. */
+    expect("/usr//share/autocontrol-absent", true);
+    expect_cwd_under("/usr/share/autocontrol-absent/w", "/usr//share/autocontrol-absent", false);
+    expect_named("/opt/app/main.py", NULL, true);
+    expect_named("-m", "PATH=/usr/bin:/bin", true);
+    expect_named("/var/tmp/app/main.py", NULL, false);                  /* A script in a root. */
+    expect_named("--cache=/tmp/cache", NULL, false);                    /* After '='. */
+    expect_named("-m", "PYTHONPATH=/opt/lib:/tmp/lib", false);          /* One part of a list. */
+    expect_named("/tmp", "TMPDIR=/tmp", true);                          /* A root itself: the epoch's own. */
     expect_policy("/usr/bin/python3", "/tmp/work", false);     /* Below a root: hidden. */
     expect_policy("/tmp/helper", "/", false);
     expect_policy("relative/helper", "/", false);
