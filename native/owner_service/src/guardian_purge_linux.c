@@ -174,10 +174,13 @@ static size_t seen_index(const seen_set *set, identity key) {
 }
 
 /* The mount `name` in `directory` lies on (the mounted one, for a mount point); 0 when
- * unknown, with errno set (ENOSYS when the kernel does not report mount IDs). */
+ * unknown, with errno set (ENOSYS when the kernel does not report mount IDs). Nothing is
+ * asked of the filesystem: with an empty request mask and no sync, another user's FUSE mount
+ * (which refuses root a getattr without allow_other) answers, and a daemon that never
+ * replies cannot stall the purge; the kernel names the mount all the same. */
 static uint64_t mount_of(int directory, const char *name, int flags) {
     struct statx status;
-    if (statx(directory, name, flags | AT_NO_AUTOMOUNT, STATX_MNT_ID, &status) != 0) return 0;
+    if (statx(directory, name, flags | AT_NO_AUTOMOUNT | AT_STATX_DONT_SYNC, 0, &status) != 0) return 0;
     if (!(status.stx_mask & STATX_MNT_ID)) { errno = ENOSYS; return 0; }
     return status.stx_mnt_id;
 }
@@ -386,10 +389,12 @@ static void left_mount(purge_scope *scope) {
     if (private_mounts) scope->complete = false;
 }
 
-/* The mount `name` shows once every mount stacked on it is detached; 0 when gone or unknown. */
+/* The mount `name` shows once every mount stacked on it is detached; 0 when gone or unknown.
+ * Each detach removes one of a namespace's finite mounts, so only a user mounting anew while
+ * it runs can keep it going; the bound is the kernel's own default for fs.mount-max. */
 static uint64_t bare_mount(purge_scope *scope, int directory, const char *name) {
     uint64_t mount = mount_of(directory, name, AT_SYMLINK_NOFOLLOW);
-    for (int layer = 0; mount && mount != scope->mount && private_mounts && layer < 16; ++layer) {
+    for (long layer = 0; mount && mount != scope->mount && private_mounts && layer < 100000; ++layer) {
         if (!detach_entry(directory, name)) break;
         mount = mount_of(directory, name, AT_SYMLINK_NOFOLLOW);
     }
@@ -623,7 +628,10 @@ guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest
     size_t count = defaults + manifest->purge_root_count;
     int roots[sizeof(default_roots) / sizeof(default_roots[0]) + GUARDIAN_PURGE_ROOT_LIMIT];
     const char *names[sizeof(roots) / sizeof(roots[0])];
-    if (count > sizeof(roots) / sizeof(roots[0])) count = sizeof(roots) / sizeof(roots[0]);
+    if (count > sizeof(roots) / sizeof(roots[0])) {
+        count = sizeof(roots) / sizeof(roots[0]); /* Manifest validation refuses this already. */
+        scope.complete = false;
+    }
     for (size_t i = 0; i < count; ++i) {
         names[i] = i < defaults ? default_roots[i] : manifest->purge_roots[i - defaults];
         roots[i] = open_root(names[i]); /* -1: absent, or not a directory this guardian may trust. */

@@ -84,6 +84,8 @@ first, so a payload directory covered by another user's mount is removed too.
 Mounts are now detached during the walk, by the descriptor of each mount's root, never by a mountinfo path; all
 roots and IPC tables are opened first; the namespace is a slave of the host's; another ID's subvolume is not
 entered; and the filter refuses btrfs subvolume and snapshot creation and subvolume flags.
+A mount's ID is now read without asking its filesystem, so another user's FUSE mount (sshfs, an AppImage) is
+detached instead of making every purge run again, and stacked mounts are detached until none is left.
 
 ## Unreleased: helper containment in runtime status
 

@@ -13,6 +13,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import ctypes
 import tempfile
 import threading
 import time
@@ -150,6 +151,17 @@ def build():
         OPT + "/guardian_outer", defines + ['-DPROTECTED_SUBTREE="autocontrol-outer/inner"',
                                             f'-DPROTECTED_STATE="{STATE2}"'])
     report["accounts"] = {k: v for k, v in values.items() if not k.startswith("NS_")}
+
+
+def _dead_fuse_mount(path, owner):
+    """A FUSE mount at `path` belonging to `owner`, without allow_other, whose daemon is gone:
+    root is refused a getattr on it, as on any user's sshfs or AppImage mount."""
+    libc = ctypes.CDLL(None, use_errno=True)
+    device = os.open("/dev/fuse", os.O_RDWR)
+    options = f"fd={device},rootmode=40000,user_id={owner},group_id={owner}".encode()
+    mounted = libc.mount(b"cover", path.encode(), b"fuse", 0, options) == 0
+    os.close(device)  # The daemon is gone; the mount stays, dead.
+    return mounted
 
 
 def _drain(stream, sink):
@@ -406,6 +418,16 @@ def scenario_siblings(steps, left=None):
     os.chown(os.path.join(covered, "hidden"), PAYLOAD_BASE, PAYLOAD_BASE)
     os.chown(covered, PAYLOAD_BASE, PAYLOAD_BASE)
     steps["cover_mounted"] = run(["mount", "-t", "tmpfs", "-o", "size=1m", "cover", covered]).returncode == 0
+    # The same with another user's dead FUSE mount, which refuses root a getattr; and one such
+    # mount on that user's own directory, which every purge meets and must not stop at.
+    fuse_covered = tempfile.mkdtemp(prefix="autocontrol-fuse-covered-", dir="/var/tmp")
+    with open(os.path.join(fuse_covered, "hidden"), "w") as handle:
+        handle.write("payload data")
+    os.chown(os.path.join(fuse_covered, "hidden"), PAYLOAD_BASE, PAYLOAD_BASE)
+    os.chown(fuse_covered, PAYLOAD_BASE, PAYLOAD_BASE)
+    fuse_static = tempfile.mkdtemp(prefix="autocontrol-fuse-static-", dir="/tmp")
+    os.chown(fuse_static, 65534, 65534)
+    steps["fuse_mounted"] = _dead_fuse_mount(fuse_covered, 65534) and _dead_fuse_mount(fuse_static, 65534)
     guardian = start_guardian()
     steps["squats"] = squats
     steps["squatted_payload_files_left"] = [s for s in squats if os.path.lexists(os.path.join(s, "hidden"))]
@@ -448,7 +470,13 @@ def scenario_siblings(steps, left=None):
     # The purge detached mounts only in its own namespace: the host still has both.
     with open("/proc/self/mountinfo") as handle:
         points = {line.split()[4] for line in handle}
-    steps["host_mounts_kept"] = window in points and os.path.join(looped, "inner") in points
+    steps["host_mounts_kept"] = window in points and os.path.join(looped, "inner") in points \
+        and fuse_static in points
+    run(["umount", "-l", fuse_covered])
+    run(["umount", "-l", fuse_static])
+    steps["fuse_covered_payload_left"] = os.path.lexists(os.path.join(fuse_covered, "hidden"))
+    shutil.rmtree(fuse_covered, ignore_errors=True)
+    shutil.rmtree(fuse_static, ignore_errors=True)
     run(["umount", "-l", covered])
     steps["covered_payload_left"] = os.path.lexists(covered)
     shutil.rmtree(covered, ignore_errors=True)
@@ -856,6 +884,19 @@ def scenario_delegated_subtree(steps):
     steps["epochs_after_stop"] = [n for n in os.listdir(OUTER + "/inner") if n.startswith("epoch-")]
 
 
+def _freeze(cgroup, frozen):
+    """Freezes or thaws a cgroup and waits until the kernel says it is done."""
+    with open(f"{cgroup}/cgroup.freeze", "w") as handle:
+        handle.write("1" if frozen else "0")
+    limit = time.monotonic() + 10
+    while time.monotonic() < limit:
+        with open(f"{cgroup}/cgroup.events") as handle:
+            if f"frozen {int(frozen)}" in handle.read():
+                return True
+        time.sleep(0.05)
+    return False
+
+
 def scenario_cold_recovery(steps):
     guardian = start_guardian()
     epoch = epochs()[-1]
@@ -865,11 +906,15 @@ def scenario_cold_recovery(steps):
     steps["payload_pids"] = inspection["payload_pids"]
     escaped = steps["request"].get("escaped")
     steps["escaped_in_payload_cgroup"] = escaped_in_payload(escaped, epoch)
+    # Frozen first: a service that saw its guardian go would drain and kill its helpers before
+    # the crash below is complete. SIGKILL still reaches frozen tasks.
+    steps["epoch_frozen"] = _freeze(f"{SUBTREE}/{epoch}", True)
     os.kill(guardian.pid, signal.SIGKILL)
     guardian.wait()
     for directory, pid in procs_under(f"{SUBTREE}/{epoch}"):
         if os.path.basename(directory).startswith("service-"):
             os.kill(pid, signal.SIGKILL)
+    _freeze(f"{SUBTREE}/{epoch}", False)
     time.sleep(0.5)
     steps["payload_alive_after_crash"] = any(pid_alive(p) for p in inspection["payload_pids"])
     steps["escaped_alive_after_crash"] = isinstance(escaped, int) and pid_alive(escaped)
@@ -1086,6 +1131,7 @@ def expectations(result):
         and siblings["static_tree_logged"] and siblings["loop_mounted"] and not siblings["churn_logged"]
         and not siblings["revisit_logged"] and siblings["outside_mounted"] and siblings["outside_file_kept"]
         and siblings["cover_mounted"] and not siblings["covered_payload_left"] and siblings["host_mounts_kept"]
+        and siblings["fuse_mounted"] and not siblings["fuse_covered_payload_left"]
         and session["guardian_stop"][0] == 0 and siblings["guardian_stop"][0] == 0,
         # epoch-N itself is bounded before it is delegated: nothing beside `records` escapes.
         "epoch_bounded": session["epoch_bounds"] == {"cgroup.max.depth": "40", "cgroup.max.descendants": "4096",
@@ -1113,7 +1159,8 @@ def expectations(result):
         and all(o.get("retired") is True for o in race["race"]["outcomes"])
         and not race["payloads_left"] and not race["containers_left"]
         and race["guardian_stop"][0] == 0 and not race["epochs_after_stop"],
-        "orphans_survive_crash": crash["payload_alive_after_crash"] and crash["escaped_alive_after_crash"],
+        "orphans_survive_crash": crash["epoch_frozen"] and crash["payload_alive_after_crash"]
+        and crash["escaped_alive_after_crash"],
         "cold_recovery_reclaims": crash["payload_gone_after_recovery"] and crash["escaped_gone_after_recovery"]
         and crash["epochs_after_restart"] == ["epoch-0000000000000006"],
         "recovered_stop": crash["guardian_stop"][0] == 0 and not crash["epochs_after_stop"],

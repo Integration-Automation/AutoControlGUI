@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261030-26 | 2026-10-30 | Read mount IDs without asking the filesystem, so other users' FUSE mounts are detached | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-25 | 2026-10-30 | Detach mounts by descriptor during the purge walk, and refuse payload btrfs subvolumes | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-24 | 2026-10-30 | Test the purge's mount boundary, walk btrfs subvolumes, and check SipHash against the reference | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
 | U-20261030-23 | 2026-10-30 | Key the purge's directory identity, stay on the root's mount, and refuse passed-in io_uring rings | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |

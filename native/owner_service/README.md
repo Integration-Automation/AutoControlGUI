@@ -100,8 +100,11 @@ the gate.
   mount too, and whatever that mount held is gone with it. A mount it cannot detach makes
   the purge run again.
   Payload files can escape a purge only with another local user's help: inside another
-  ID's directories past the deferral limit (for as long as those directories stay), or
-  renamed behind the walk by that user while it runs. No payload file can carry a
+  ID's directories past the deferral limit (for as long as those directories stay), inside
+  another ID's btrfs subvolume (not entered, so a read-only snapshot cannot taint a
+  slice), or renamed behind the walk by that user while it runs. A mount's ID is read
+  without asking its filesystem, so another user's FUSE mount (an sshfs or AppImage
+  mount, live or with its daemon gone) is detached like any other. No payload file can carry a
   set-user- or set-group-ID bit, so what escapes is data, not an identity, but a later
   helper with the same ID may find it.
   Only an object that can be neither removed, moved nor closed off taints its slice,
