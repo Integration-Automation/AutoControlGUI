@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261030-37 | 2026-10-30 | Record the clean review of the owner service | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261030-36 | 2026-10-30 | Judge manifest roots by what they resolve to, and test the anchoring | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261030-35 | 2026-10-30 | Anchor purge roots without the sticky exception, and recheck what they resolve to | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
 | U-20261030-34 | 2026-10-30 | Anchor manifest purge roots, and keep the purge's trust verdict out of errno | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
