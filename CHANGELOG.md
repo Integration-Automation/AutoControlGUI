@@ -92,6 +92,8 @@ run again.
 Each purge entry is now opened once without crossing any mount (RESOLVE_NO_XDEV), so no other filesystem is
 ever asked anything; the stall allowance doubles after each stall of a slice in a row; and a startup purge
 stuck where no signal reaches it no longer holds the guardian.
+A mount placed on an entry during the walk is detached before the entry is judged again, and POSIX message
+queues are purged through a detached mqueue mount, so they are reached on hosts without /dev/mqueue.
 
 ## Unreleased: helper containment in runtime status
 

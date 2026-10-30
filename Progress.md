@@ -6,7 +6,7 @@
 個別原生／真機／24 小時驗收也維持暫緩，不能因恢復一般開發而一併啟動。
 完整交付契約：`docs/superpowers/plans/2026-10-23-agent-runtime.md`。
 以下僅列未完成的實作、設定與驗證步驟；本批收尾不代表 P0–P9 全部完成。
-目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-28；原40項與暫緩驗收仍未結案。
+目前驗證紀錄：docs/updates/2026-10-e.md #U-20261030-29；原40項與暫緩驗收仍未結案。
 功能開發位置：`D:\Codes\AutoControlGUI\.worktrees\agent-runtime`，分支 `feat/agent-task-runtime`；
 WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 `feat/managed-browser-sessions`。
 正式工作樹尚待整合；恢復時先核對兩個功能工作樹與本清單，勿直接在正式環境續跑。
@@ -134,7 +134,11 @@ WebRunner 對應位置：`D:\Codes\WebRunner\.worktrees\agent-managed`，分支 
      第十二次獨立審查的 MAJOR-1（他人 FUSE 掛載使每次清除未完成）、MINOR-1、MINOR-2 已處理；
      第十三次獨立審查的 MAJOR-1（FUSE 根 inode 被標記壞掉時仍未完成）、MINOR-1（清除子程序無進度
      即終止並重跑）、MINOR-2 已處理；第十四次獨立審查未發現主要問題，其 MINOR-A（改以
-     RESOLVE_NO_XDEV 解析、啟動時不再卡住）、MINOR-B（停滯門檻逐次加倍）與 NOTE-1、NOTE-3 已處理。
+     RESOLVE_NO_XDEV 解析、啟動時不再卡住）、MINOR-B（停滯門檻逐次加倍）與 NOTE-1、NOTE-3 已處理；
+     第十五次獨立審查未發現主要問題，其 MINOR-1（走訪中被掛載的項目先卸載再判斷）、MINOR-2（POSIX
+     訊息佇列改經未掛載的 mqueue 掛載清除）與 NOTE-1、NOTE-3 已處理。
+     TODO：清除子程序停滯後的交接（啟動時寬限 30 秒）與兩個邊界情況（pidfd_open 失敗、心跳共享記憶體
+     建立失敗時仍會阻塞等待）尚無自動化測試。
      TODO：清除子程序的無進度監看（60 秒）尚無自動化測試（需讓清除卡在單一呼叫的測試夾具）。
      TODO：payload 目錄在走訪中被配合的本機使用者即時改名到走訪後方時，仍可能逃過一次清除
      （已記於服務 README）；隔離區外重遇的 fail-safe 路徑尚無自動化測試（需在走訪中即時改名的

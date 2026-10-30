@@ -206,6 +206,34 @@ def _bad_fuse_mount(path, owner):
     return "Input/output error" in stat.stderr
 
 
+QUEUE_NAME = b"/autocontrol-left-queue"
+
+
+def _payload_queue(uid):
+    """A POSIX message queue a payload ID made and left, holding one message."""
+    child = os.fork()
+    if child == 0:
+        try:
+            os.setgid(uid)
+            os.setuid(uid)
+            libc = ctypes.CDLL(None, use_errno=True)
+            queue = libc.mq_open(QUEUE_NAME, os.O_CREAT | os.O_RDWR, 0o600, None)
+            os._exit(0 if queue >= 0 and libc.mq_send(queue, b"left", 4, 0) == 0 else 1)
+        except BaseException:  # reason: a forked child must never return into the harness
+            os._exit(2)
+    return os.waitpid(child, 0)[1] == 0
+
+
+def _queue_exists():
+    libc = ctypes.CDLL(None, use_errno=True)
+    queue = libc.mq_open(QUEUE_NAME, os.O_RDONLY)
+    if queue >= 0:
+        libc.mq_close(queue)
+        libc.mq_unlink(QUEUE_NAME)
+        return True
+    return False
+
+
 def _drain(stream, sink):
     for line in iter(stream.readline, ""):
         sink.append(line)
@@ -477,6 +505,8 @@ def scenario_siblings(steps, left=None):
     os.chown(os.path.join(fuse_bad, "hidden"), PAYLOAD_BASE, PAYLOAD_BASE)
     os.chown(fuse_bad, PAYLOAD_BASE, PAYLOAD_BASE)
     steps["bad_fuse_mounted"] = _bad_fuse_mount(fuse_bad, 65534)
+    # A message queue the payload left: purged though this host has no /dev/mqueue mounted.
+    steps["queue_made"] = _payload_queue(PAYLOAD_BASE)
     guardian = start_guardian()
     steps["squats"] = squats
     steps["squatted_payload_files_left"] = [s for s in squats if os.path.lexists(os.path.join(s, "hidden"))]
@@ -524,6 +554,7 @@ def scenario_siblings(steps, left=None):
     run(["umount", "-l", fuse_covered])
     run(["umount", "-l", fuse_static])
     steps["fuse_covered_payload_left"] = os.path.lexists(os.path.join(fuse_covered, "hidden"))
+    steps["queue_left"] = _queue_exists()
     run(["umount", "-l", fuse_bad])
     steps["bad_fuse_payload_left"] = os.path.lexists(os.path.join(fuse_bad, "hidden"))
     shutil.rmtree(fuse_bad, ignore_errors=True)
@@ -1185,6 +1216,7 @@ def expectations(result):
         and siblings["cover_mounted"] and not siblings["covered_payload_left"] and siblings["host_mounts_kept"]
         and siblings["fuse_mounted"] and not siblings["fuse_covered_payload_left"]
         and siblings["bad_fuse_mounted"] and not siblings["bad_fuse_payload_left"]
+        and siblings["queue_made"] and not siblings["queue_left"]
         and session["guardian_stop"][0] == 0 and siblings["guardian_stop"][0] == 0,
         # epoch-N itself is bounded before it is delegated: nothing beside `records` escapes.
         "epoch_bounded": session["epoch_bounds"] == {"cgroup.max.depth": "40", "cgroup.max.descendants": "4096",

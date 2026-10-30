@@ -58,6 +58,7 @@
 #include <sys/sem.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
+#include <sys/statfs.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -129,9 +130,12 @@ static int open_here(int directory, const char *name) {
     return (int)syscall(SYS_openat2, directory, name, &how, sizeof(how));
 }
 
-/* True when `name` in `directory` is still the object the walk saw, with the same owner. */
-static bool still_seen(int directory, const char *name, const struct stat *seen) {
-    int opened = open_here(directory, name);
+static int open_bare(purge_scope *scope, int directory, const char *name);
+
+/* True when `name` in `directory` is still the object the walk saw, with the same owner. A
+ * mount placed on it meanwhile is detached first, or the purge runs again (open_bare). */
+static bool still_seen(purge_scope *scope, int directory, const char *name, const struct stat *seen) {
+    int opened = open_bare(scope, directory, name);
     struct stat now;
     bool same = opened >= 0 && fstat(opened, &now) == 0 && same_inode(&now, seen) && now.st_uid == seen->st_uid;
     if (opened >= 0) close(opened);
@@ -268,7 +272,9 @@ static bool have_quarantine(purge_scope *scope) {
             if (errno == EEXIST) continue;
             return false;
         }
-        int quarantine = openat(scope->root, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+        int here = open_here(scope->root, name);
+        int quarantine = here >= 0 ? openat(here, ".", O_RDONLY | O_DIRECTORY | O_CLOEXEC) : -1;
+        if (here >= 0) close(here);
         struct stat status;
         if (quarantine >= 0 && flock(quarantine, LOCK_EX | LOCK_NB) == 0 && fchmod(quarantine, 0700) == 0 &&
             fstat(quarantine, &status) == 0 && status.st_uid == 0) {
@@ -284,7 +290,7 @@ static bool have_quarantine(purge_scope *scope) {
 /* Moves the object the walk saw into the quarantine under a fresh name. A name that changed
  * meanwhile is left alone; one moved by mistake is moved back. */
 static bool quarantine(purge_scope *scope, int directory, const char *name, const struct stat *seen) {
-    if (is_quarantine(scope, directory) || !have_quarantine(scope) || !still_seen(directory, name, seen))
+    if (is_quarantine(scope, directory) || !have_quarantine(scope) || !still_seen(scope, directory, name, seen))
         return false;
     static unsigned long serial;
     char fresh[48];
@@ -295,7 +301,7 @@ static bool quarantine(purge_scope *scope, int directory, const char *name, cons
         if (moved != 0 && errno != EEXIST) return false;
     }
     if (moved != 0) return false;
-    if (!still_seen(scope->quarantine, fresh, seen)) {
+    if (!still_seen(scope, scope->quarantine, fresh, seen)) {
         if (syscall(SYS_renameat2, scope->quarantine, fresh, directory, name, RENAME_NOREPLACE) != 0)
             fprintf(stderr, "autocontrol-owner-guardian: an object swapped in during a move stays quarantined\n");
         return false;
@@ -307,18 +313,18 @@ static bool quarantine(purge_scope *scope, int directory, const char *name, cons
 /* Removes the payload-owned object the walk saw, or takes it out of every payload's reach. */
 static void dispose(purge_scope *scope, int directory, const char *name, const struct stat *seen) {
     bool is_directory = S_ISDIR(seen->st_mode);
-    if (!still_seen(directory, name, seen)) return; /* Moved or replaced by another ID. */
+    if (!still_seen(scope, directory, name, seen)) return; /* Moved or replaced by another ID. */
     if (unlinkat(directory, name, is_directory ? AT_REMOVEDIR : 0) == 0 || errno == ENOENT) return;
-    if (quarantine(scope, directory, name, seen) || !still_seen(directory, name, seen)) return;
+    if (quarantine(scope, directory, name, seen) || !still_seen(scope, directory, name, seen)) return;
     /* Close it off where it is, on the opened, checked object: mode 0 first, so a failure
      * never leaves a root-owned object others may write. */
-    int opened = open_here(directory, name);
+    int opened = open_bare(scope, directory, name);
     struct stat now;
     bool done = opened >= 0 && fstat(opened, &now) == 0 && same_inode(&now, seen) &&
         syscall(SYS_fchmodat2, opened, "", 0, AT_EMPTY_PATH) == 0 && fchownat(opened, "", 0, 0, AT_EMPTY_PATH) == 0;
     if (opened >= 0) close(opened);
     if (!done) {
-        if (still_seen(directory, name, seen)) scope->clean = false;
+        if (still_seen(scope, directory, name, seen)) scope->clean = false;
         return;
     }
     if (is_quarantine(scope, directory)) return; /* Already out of reach: what another ID wrote stays. */
@@ -349,7 +355,7 @@ static void pop(purge_scope *scope, walk *state) {
     closedir(done.listing);
     int parent = dirfd(state->levels[done.parent].listing);
     if (done.owned) dispose(scope, parent, done.name, &done.seen);
-    else if (done.quarantined && still_seen(parent, done.name, &done.seen)) unlinkat(parent, done.name, AT_REMOVEDIR);
+    else if (done.quarantined && still_seen(scope, parent, done.name, &done.seen)) unlinkat(parent, done.name, AT_REMOVEDIR);
     free(done.name);
 }
 
@@ -497,7 +503,12 @@ static void walk_directory(purge_scope *scope, int top, bool root_walk, bool in_
     state.levels[state.depth++] = (level){listing, 0, NULL, false, in_quarantine, status, 0, listing_limit(&status)};
     while (state.depth) {
         level *current = &state.levels[state.depth - 1];
+        errno = 0;
         struct dirent *entry = scope->churned ? NULL : readdir(current->listing);
+        if (!entry && errno && !scope->churned) {
+            fprintf(stderr, "autocontrol-owner-guardian: purge could not read a directory; it runs again\n");
+            scope->complete = false;
+        }
         if (!entry) {
             if (state.depth == 1) { closedir(state.levels[0].listing); break; }
             pop(scope, &state);
@@ -617,7 +628,41 @@ static size_t deferred_room(struct rlimit *before) {
     return room < DEFERRED_LIMIT ? room : DEFERRED_LIMIT;
 }
 
-static const char *const default_roots[] = {"/tmp", "/var/tmp", "/dev/shm", "/dev/mqueue", "/run/lock"};
+#define MQUEUE_ROOT "/dev/mqueue"
+static const char *const default_roots[] = {"/tmp", "/var/tmp", "/dev/shm", MQUEUE_ROOT, "/run/lock"};
+
+#ifndef SYS_fsopen
+#define SYS_fsopen 430
+#define SYS_fsconfig 431
+#define SYS_fsmount 432
+#endif
+
+/* POSIX message queues live in the IPC namespace, not in a directory: a payload can make one
+ * whether or not the host mounted mqueue anywhere. Their root is a fresh mqueue mount made
+ * with the mount API and attached nowhere (it shows this IPC namespace's queues, leaves
+ * nothing on the host and hides nothing); without one the purge runs again. */
+static int open_mqueue(purge_scope *scope) {
+    int context = (int)syscall(SYS_fsopen, "mqueue", 1 /* FSOPEN_CLOEXEC */);
+    int mounted = -1;
+    if (context >= 0 && syscall(SYS_fsconfig, context, 6 /* FSCONFIG_CMD_CREATE */, NULL, NULL, 0) == 0)
+        mounted = (int)syscall(SYS_fsmount, context, 1 /* FSMOUNT_CLOEXEC */,
+                               0x2 | 0x4 | 0x8 /* MOUNT_ATTR_NOSUID | NODEV | NOEXEC */);
+    if (context >= 0) close(context);
+    /* The mount's descriptor only names it: the root is opened as a directory to be read. */
+    if (mounted >= 0) {
+        int listing = openat(mounted, ".", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+        close(mounted);
+        mounted = listing;
+    }
+    struct statfs kind;
+    if (mounted < 0 || fstatfs(mounted, &kind) != 0 || kind.f_type != 0x19800202 /* MQUEUE_MAGIC */) {
+        fprintf(stderr, "autocontrol-owner-guardian: purge could not reach the message queues; it runs again\n");
+        if (mounted >= 0) close(mounted);
+        scope->complete = false;
+        return -1;
+    }
+    return mounted;
+}
 
 guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest, int slice) {
     const service_policy *service = manifest->service;
@@ -644,7 +689,8 @@ guardian_purge_outcome guardian_purge_payloads(const guardian_manifest *manifest
     }
     for (size_t i = 0; i < count; ++i) {
         names[i] = i < defaults ? default_roots[i] : manifest->purge_roots[i - defaults];
-        roots[i] = open_root(names[i]); /* -1: absent, or not a directory this guardian may trust. */
+        /* -1: absent, or not a directory this guardian may trust. */
+        roots[i] = strcmp(names[i], MQUEUE_ROOT) ? open_root(names[i]) : open_mqueue(&scope);
     }
     static const char *const tables[] = {"/proc/sysvipc/shm", "/proc/sysvipc/msg", "/proc/sysvipc/sem"};
     FILE *opened[3];
