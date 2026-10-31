@@ -9,12 +9,13 @@ import re
 from typing import Any
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.path_identity import resolved
 
 _CONTAINER = '.agent-evidence-cache'
 
 
 def _directory(path: Path) -> None:
-    if path.is_symlink() or path.resolve() != path or (path.exists() and not path.is_dir()):
+    if path.is_symlink() or resolved(path) != path or (path.exists() and not path.is_dir()):
         raise AgentTaskError('task artifact directory escapes its owner cache')
 
 
@@ -62,7 +63,7 @@ class EvidenceCache:
                 '[0-9a-f]{32}\\.jpg', name) is None:
             raise AgentTaskError('invalid task artifact filename')
         path = self.directory(task_id) / name
-        if path.is_symlink() or path.resolve() != path:
+        if path.is_symlink() or resolved(path) != path:
             raise AgentTaskError('task artifact file escapes its owner cache')
         if path.exists() and (not path.is_file() or path.stat().st_nlink != 1):
             raise AgentTaskError('task artifact file ownership requires review')

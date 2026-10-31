@@ -17,7 +17,10 @@ from je_auto_control.utils.agent_runtime.dag_admission import bind_admission
 from je_auto_control.utils.agent_runtime.task_authority import RecoveryBinding, CompletionBinding, bind_recovery
 from je_auto_control.utils.sqlite_support import require_sqlite3
 
+# One transaction: connections are autocommit, so each statement would otherwise commit (and sync) on its own,
+# and a failure part-way through would leave a half-created schema behind.
 _SCHEMA = """
+BEGIN IMMEDIATE;
 CREATE TABLE IF NOT EXISTS agent_schema (version INTEGER PRIMARY KEY);
 INSERT OR IGNORE INTO agent_schema VALUES (1);
 CREATE TABLE IF NOT EXISTS agent_tasks (
@@ -147,6 +150,7 @@ CREATE TABLE IF NOT EXISTS agent_recovery_owners (
  task_id TEXT PRIMARY KEY REFERENCES agent_task_recoveries(task_id) ON DELETE CASCADE, details TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS agent_readonly_completions (
  task_id TEXT PRIMARY KEY REFERENCES agent_tasks(id) ON DELETE CASCADE, details TEXT NOT NULL);
+COMMIT;
 """
 
 

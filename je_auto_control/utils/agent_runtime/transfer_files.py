@@ -9,6 +9,7 @@ import stat
 from typing import Any, Callable
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.path_identity import resolved
 from je_auto_control.utils.agent_runtime.transfer_models import TransferFile, MAX_TRANSFER_BYTES
 from je_auto_control.utils.config_sync.blob_models import CHUNK_BYTES, SyncAssetBlob
 
@@ -39,7 +40,7 @@ def confined_file(policy: Any, value: str) -> Path:
         if part.is_symlink() or getattr(part.lstat(), 'st_file_attributes', 0) & 0x400:
             raise AgentTaskError('export source cannot contain linked path components')
     path = Path(policy.path(str(original)))
-    if path.resolve() != path:
+    if resolved(path) != path:
         raise AgentTaskError('export source path identity changed')
     return path
 

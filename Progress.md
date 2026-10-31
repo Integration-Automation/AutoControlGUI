@@ -489,3 +489,15 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 `TODO` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule`
 在 Python 3.10 的 Linux／macOS `coverage run -m pytest` 中仍有間歇 SIGSEGV（exit 139）紀錄。
 需在對應環境開啟 `faulthandler` 重跑並定位原生呼叫；單次重跑通過不足以證明已修復。
+
+---
+
+## Dev CI 的 Windows 方格跑不完 30 分鐘
+
+`DECIDE` — `.github/workflows/dev.yml` 的 `pytest-headless` 設 `timeout-minutes: 30`，
+`dev` 合入 agent runtime 後，兩個 Windows 方格都在套件約 27% 時被取消（run 41185824279）。
+以 Linux 逐檔時間推估，一個 Windows 方格約需 80 分鐘。`AgentTaskStore` 每次操作都開一個新的
+SQLite 連線，並各做一次 `mkdir`、`chmod`（單一測試檔 30 個測試就開了 8,206 次），Windows runner
+上的檔案系統呼叫特別慢。schema 已改為單一交易（U-20261031-01），但只省了約 4%。
+可選：放寬 Windows 方格的時限、把 Windows 方格切片平行，或讓 store 重用連線（改動並發語意，
+需另行審閱）。`quality.yml` 沒設時限，不受影響。

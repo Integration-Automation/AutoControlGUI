@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.path_identity import resolved
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached
 from je_auto_control.utils.path_guard.policy import PathPolicy
 from je_auto_control.utils.path_guard.path_guard import PathNotAllowedError
@@ -115,5 +116,5 @@ def validate_root_snapshot(roots: Any) -> None:
     """Refuse a changed canonical root without reconstructing an entire action plan."""
     for root in roots:
         path = Path(root)
-        if path.is_absolute() and path.resolve() != path:
+        if path.is_absolute() and resolved(path) != path:
             raise AgentTaskError("authorized task root changed; review its scope before continuing")

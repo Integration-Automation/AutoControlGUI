@@ -10,6 +10,7 @@ from typing import Any, BinaryIO, Callable, Iterator
 import uuid
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.path_identity import resolved
 from je_auto_control.utils.config_sync.asset_models import AssetManifest
 
 
@@ -18,7 +19,7 @@ def _identity(status: Any) -> list[int]:
 
 
 def _object(path: Path, identity: list[int], *, directory: bool) -> None:
-    if path.is_symlink() or path.resolve() != path:
+    if path.is_symlink() or resolved(path) != path:
         raise AgentTaskError('owned staging path changed through a filesystem link')
     status = path.stat()
     if _identity(status) != identity or (path.is_dir() if directory else path.is_file()) is not True:

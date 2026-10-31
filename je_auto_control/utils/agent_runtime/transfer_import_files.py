@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, BinaryIO, Callable
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.path_identity import resolved
 from je_auto_control.utils.agent_runtime.transfer_models import TransferManifest
 from je_auto_control.utils.config_sync.asset_models import AssetFile, AssetManifest, AssetSyncResult
 from je_auto_control.utils.config_sync.assets import _sync_assets, _verified_result
@@ -23,7 +24,7 @@ def publication_root(record: dict, publication: dict) -> Path:
     if publication.get('root') != str(root) or publication.get('phase') not in {'owned', 'verified'}:
         raise AgentTaskError('destination publication ownership requires review')
     identity = root.stat()
-    if root.resolve() != root or publication.get('identity') != [identity.st_dev, identity.st_ino]:
+    if resolved(root) != root or publication.get('identity') != [identity.st_dev, identity.st_ino]:
         raise AgentTaskError('destination publication directory identity changed')
     return root
 
@@ -108,7 +109,7 @@ def publish_import(record: dict, manifest: TransferManifest, cache: Any, check: 
     assets = _assets(manifest)
     def cancelled() -> bool:
         check()
-        if root.resolve() != root or [root.stat().st_dev, root.stat().st_ino] != publication['identity']:
+        if resolved(root) != root or [root.stat().st_dev, root.stat().st_ino] != publication['identity']:
             raise AgentTaskError('owned import publication directory changed')
         return False
     def staged(witness: dict) -> None:
