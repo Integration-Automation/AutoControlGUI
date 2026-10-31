@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261031-02 | 2026-10-31 | Give the Dev CI squares a 120-minute limit | #decision #ci #windows | [2026-10-f](2026-10-f.md) |
 | U-20261031-01 | 2026-10-31 | One-transaction agent schema; a racing resolve is no escape | #incident #agent #ci #windows | [2026-10-f](2026-10-f.md) |
 | U-20261030-41 | 2026-10-30 | Test the poll fallback and the SIGCHLD reset | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
 | U-20261030-42 | 2026-10-30 | Give each epoch private temporary roots, and accept the installed service on a WSL host | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
@@ -553,7 +554,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10-f.md](2026-10-f.md) | 2026-10 | 1 |
+| [2026-10-f.md](2026-10-f.md) | 2026-10 | 2 |
 | [2026-10-e.md](2026-10-e.md) | 2026-10 | 10 |
 | [2026-10-d.md](2026-10-d.md) | 2026-10 | 15 |
 | [2026-10-c.md](2026-10-c.md) | 2026-10 | 75 |
