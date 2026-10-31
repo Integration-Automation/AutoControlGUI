@@ -201,7 +201,9 @@ class OwnedChannel:
         # unreaped child reserves that PID, preventing a signal to a reused ID.
         if sys.platform == "win32":
             if self._job is not None:
-                self._job.close(timeout=max(0, deadline - time.monotonic()))
+                # Capped: where t + 3 crosses a power of two, (t + 3) - t rounds above 3 on an unchanged
+                # clock reading, and the Job refuses a deadline over 3 seconds.
+                self._job.close(timeout=min(3, max(0, deadline - time.monotonic())))
             else:
                 self._process.kill()
         else:

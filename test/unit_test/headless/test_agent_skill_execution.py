@@ -93,9 +93,11 @@ def execution(tmp_path, request):
         yield SimpleNamespace(runtime=runtime, target=target, candidate=candidate, task_id=trial['task_id'],
                               child_id=child['task_id'], users=users, owner=owner, reviewer=reviewer)
     finally:
-        with authorization_scope(None):
-            runtime.close()
-        scopes.close()
+        try:
+            with authorization_scope(None):
+                runtime.close()
+        finally:
+            scopes.close()  # a failed close must not leave the owner's scope on every later test
 
 
 def review_request(value):

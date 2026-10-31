@@ -23,7 +23,8 @@ jobs:
     # Windows runs both ends of the supported Python range. The full nine-way
     # matrix runs on the pull request that takes dev to main.
     runs-on: ${{ matrix.os }}
-    # Windows needs about 80 minutes since the agent runtime landed (U-20261031-02); Linux and macOS about 25.
+    # Since the agent runtime landed, Windows squares take 43-48 minutes and Linux and macOS about 25
+    # (U-20261031-03), against the old limit of 30.
     timeout-minutes: 120
     strategy:
       fail-fast: false

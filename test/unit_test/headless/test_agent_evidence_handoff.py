@@ -65,9 +65,11 @@ def handoff(tmp_path, request):
         yield SimpleNamespace(runtime=runtime, users=users, owner=owner, reviewer=reviewer, target=target,
                               batch_id=batch['batch_id'], source=source, child=child, definition=definition)
     finally:
-        with authorization_scope(None):
-            runtime.close()
-        scopes.close()
+        try:
+            with authorization_scope(None):
+                runtime.close()
+        finally:
+            scopes.close()  # a failed close must not leave the owner's scope on every later test
 
 
 def request_for(value):

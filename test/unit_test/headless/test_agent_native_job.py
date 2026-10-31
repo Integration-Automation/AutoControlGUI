@@ -141,6 +141,20 @@ def test_job_and_launcher_reaping_share_one_original_three_second_deadline(monke
     assert observed == [('job', 3), ('process', 1)]
 
 
+def test_a_rounded_remaining_time_never_exceeds_the_jobs_three_second_bound(monkeypatch):
+    from je_auto_control.utils.agent_runtime import native_channel
+    reading = 32765.838  # (reading + 3) - reading == 3.000000000003638
+    assert (reading + 3) - reading > 3
+    observed = []
+    instance = object.__new__(native_channel.OwnedChannel)
+    instance._job = SimpleNamespace(close=lambda *, timeout: observed.append(timeout))
+    instance._process = SimpleNamespace(wait=lambda *, timeout: None)
+    monkeypatch.setattr(native_channel, 'sys', SimpleNamespace(platform='win32'))
+    monkeypatch.setattr(native_channel, 'time', SimpleNamespace(monotonic=lambda: reading))
+    instance._stop_process()
+    assert observed == [3]
+
+
 def test_process_objects_must_signal_even_after_the_job_reports_no_active_processes(monkeypatch):
     job, kernel, _module = owned(monkeypatch)
     kernel.processes = [201, 202]

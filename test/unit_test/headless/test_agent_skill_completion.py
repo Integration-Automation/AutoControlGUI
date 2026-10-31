@@ -66,9 +66,11 @@ def trial(tmp_path, monkeypatch, request):
                               child_id=child['task_id'], manifest=manifest, output=output,
                               users=users, owner=owner, reviewer=reviewer)
     finally:
-        with authorization_scope(None):
-            runtime.close()
-        scopes.close()
+        try:
+            with authorization_scope(None):
+                runtime.close()
+        finally:
+            scopes.close()  # a failed close must not leave the owner's scope on every later test
 
 
 def acceptance(trial):

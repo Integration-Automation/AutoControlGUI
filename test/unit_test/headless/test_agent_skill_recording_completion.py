@@ -68,9 +68,11 @@ def recording(tmp_path, monkeypatch, request):
                               manifest=manifest, output=output, users=users, owner=owner, reviewer=reviewer,
                               origin=witness)
     finally:
-        with authorization_scope(None):
-            runtime.close()
-        scopes.close()
+        try:
+            with authorization_scope(None):
+                runtime.close()
+        finally:
+            scopes.close()  # a failed close must not leave the owner's scope on every later test
 
 
 def request_for(value, **changes):

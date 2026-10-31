@@ -10,11 +10,19 @@ from je_auto_control.utils.dag import run_dag
 from je_auto_control.utils.dag.batch_contract import bind_definition
 from je_auto_control.utils.rbac.authorization import AuthorizationContext, authorization_scope
 from je_auto_control.utils.work_queue.work_queue import WorkQueue
-from .test_agent_dag_batches import graph, runtime as runtime
+from .test_agent_dag_batches import graph as _graph, runtime as runtime
 from .test_agent_dag_batch_loopback import service as service
 
 
 EXPIRED = time.time() - 31 * 86400
+
+
+def graph():
+    """The shared graph, given time to finish: its two-second wait expired on Windows CI runners."""
+    definition = _graph()
+    for node in definition["nodes"]:
+        node["task"]["wait_seconds"] = 20
+    return definition
 
 
 def register(instance):

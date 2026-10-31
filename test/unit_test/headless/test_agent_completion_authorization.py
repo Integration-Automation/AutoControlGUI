@@ -67,9 +67,11 @@ def renewal(tmp_path, monkeypatch, request):
                               users=users, owner=owner, reviewer=reviewer, batch_id=batch, definition=definition,
                               remaining_action=spec['actions'][-1])
     finally:
-        with authorization_scope(None):
-            runtime.close()
-        scopes.close()
+        try:
+            with authorization_scope(None):
+                runtime.close()
+        finally:
+            scopes.close()  # a failed close must not leave the owner's scope on every later test
 
 
 def admitted(runtime, spec, kind, reviewer):

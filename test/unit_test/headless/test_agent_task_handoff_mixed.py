@@ -106,9 +106,11 @@ def renewed_execution(tmp_path):
                               candidate=candidate, task_id=trial['task_id'], child_id=tail['task_id'],
                               reader=reader['task_id'], manifests=manifests)
     finally:
-        with authorization_scope(None):
-            runtime.close()
-        scopes.close()
+        try:
+            with authorization_scope(None):
+                runtime.close()
+        finally:
+            scopes.close()  # a failed close must not leave the owner's scope on every later test
 
 
 def test_actual_renewed_mixed_file_chain_keeps_original_trial_and_old_witness_without_input(renewed_execution,

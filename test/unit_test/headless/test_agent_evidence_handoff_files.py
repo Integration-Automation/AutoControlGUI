@@ -56,9 +56,11 @@ def files(tmp_path):
                               child=child, batch_id=batch['batch_id'], definition=definition,
                               target=target, manifest=manifest)
     finally:
-        with authorization_scope(None):
-            runtime.close()
-        scopes.close()
+        try:
+            with authorization_scope(None):
+                runtime.close()
+        finally:
+            scopes.close()  # a failed close must not leave the owner's scope on every later test
 
 
 def test_real_file_handoff_runs_the_original_dag_without_replaying_or_transferring_task_ownership(files,
