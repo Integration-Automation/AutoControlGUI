@@ -21,6 +21,7 @@ from je_auto_control.utils.config_sync.contract import ConfigStoreError, ConfigS
 from je_auto_control.utils.rbac.authorization import AuthorizationError
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
 
+_OPERATION_SECONDS = 30  # the most a peer accepts as one request's timeout
 
 @dataclass
 class _Lifecycle:
@@ -101,7 +102,7 @@ class AgentTransfers:
                 if self._life.closed or self._life.busy:
                     raise AgentTaskError('transfer controller is closed or already active')
                 self._life.busy = True
-                self._life.deadline = time.monotonic() + 30
+                self._life.deadline = time.monotonic() + _OPERATION_SECONDS
             try:
                 self.source.host.check_open()
                 self._checkpoint()
@@ -143,7 +144,8 @@ class AgentTransfers:
 
     def _remaining(self) -> float:
         self._checkpoint()
-        return self._life.deadline - time.monotonic()
+        # Capped: on an unchanged clock reading, (t + 30) - t can round just above 30, which a peer refuses.
+        return min(_OPERATION_SECONDS, self._life.deadline - time.monotonic())
 
     def close(self) -> None:
         """Refuse premature runtime ownership release while a source operation is still in progress."""

@@ -106,6 +106,22 @@ def test_late_injected_wire_reply_is_discarded_even_when_its_manifest_is_well_fo
         peer(late).call('source', 'f' * 64, 'export', {'export_id': 'a' * 32}, 3)
 
 
+def test_a_rounded_remaining_time_never_exceeds_the_routes_thirty_second_bound(monkeypatch):
+    peer = peer_type()
+    module = importlib.import_module(peer.__module__)
+    reading = 32743.001  # (reading + 30) - reading == 30.000000000003638
+    assert (reading + 30) - reading > 30
+    monkeypatch.setattr(module, 'time', SimpleNamespace(monotonic=lambda: reading, time=time.time))
+    budgets = []
+
+    def adapter(*args):
+        budgets.append(args[-1])
+        return manifest_reply()
+
+    peer(adapter).call('source', 'f' * 64, 'export', {'export_id': 'a' * 32}, 30)
+    assert budgets == [30]
+
+
 def test_runtime_owned_peer_uses_its_actual_batch_host_adapter_over_real_http(tmp_path, monkeypatch):
     with registered_source(tmp_path, monkeypatch) as values:
         _server, exported, _body, _token, _book, _users = values

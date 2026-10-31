@@ -19,6 +19,7 @@ from je_auto_control.utils.config_sync.blob_models import CHUNK_BYTES
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
 from je_auto_control.utils.rbac.authorization import AuthorizationError
 
+_PEER_SECONDS = 30  # the longest timeout one peer request may carry
 
 @dataclass(frozen=True)
 class TransferPeer:
@@ -68,7 +69,8 @@ class TransferPeer:
     def _exchange(self, host: str, binding: str, path: str, body: dict, deadline: float, validate: Callable) -> dict:
         self._checkpoint(deadline)
         try:
-            reply = self.invoke(host, binding, path, body, deadline - time.monotonic())
+            # Capped: on an unchanged clock reading, (t + 30) - t can round just above 30, which the route refuses.
+            reply = self.invoke(host, binding, path, body, min(_PEER_SECONDS, deadline - time.monotonic()))
             self._checkpoint(deadline)
             if not isinstance(reply, dict) or len(_canonical(reply)) > MAX_MANIFEST_BYTES:
                 raise AgentTaskError('peer reply exceeds its closed one-mebibyte envelope')
@@ -107,7 +109,7 @@ class TransferPeer:
     def _timeout(value: Any) -> None:
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise AgentTaskError('peer timeout must be numeric')
-        if not 0 < value <= 30:
+        if not 0 < value <= _PEER_SECONDS:
             raise AgentTaskError('peer timeout must be finite, positive and at most thirty seconds')
 
     @staticmethod
