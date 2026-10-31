@@ -9,6 +9,7 @@ from je_auto_control.utils.agent_runtime.runner import run_task
 from je_auto_control.utils.dag import run_dag
 from je_auto_control.utils.rbac.authorization import AuthorizationError, authorization_scope
 from .test_agent_dag_local_tasks import owned as owned
+from .test_agent_dag_background import until
 from .test_agent_dag_batch_loopback import service as service
 from .test_agent_dag_batches import graph
 from .test_agent_dag_continuation import review, approval
@@ -122,8 +123,11 @@ def test_maintenance_retires_owned_successor_when_reviewer_loses_cross_owner_aut
     with authorization_scope(stopped[4]):
         stopped[1].runtime.observe(child)
     stopped[3].set_role("reviewer", "operator")
-    stopped[1].runtime.maintain()
-    result = stopped[1].runtime.get(child)
+    runtime = stopped[1].runtime
+    # The service's lease watch runs maintain() too; while it holds the task lock, a pass leaves the task
+    # cancelling and a later one settles it.
+    until(lambda: runtime.maintain() or runtime.get(child).state != "cancelling")
+    result = runtime.get(child)
     assert result.state == "cancelled" and result.metadata["input_released"] is True and stopped[2].count == 1
 
 

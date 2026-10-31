@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261031-04 | 2026-10-31 | Wait for the service's maintenance pass in two ownership tests | #incident #agent #ci #test | [2026-10-f](2026-10-f.md) |
 | U-20261031-03 | 2026-10-31 | Cap the helper's retirement deadline; contain a failed fixture | #incident #agent #ci #windows | [2026-10-f](2026-10-f.md) |
 | U-20261031-02 | 2026-10-31 | Give the Dev CI squares a 120-minute limit | #decision #ci #windows | [2026-10-f](2026-10-f.md) |
 | U-20261031-01 | 2026-10-31 | One-transaction agent schema; a racing resolve is no escape | #incident #agent #ci #windows | [2026-10-f](2026-10-f.md) |
@@ -555,7 +556,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10-f.md](2026-10-f.md) | 2026-10 | 3 |
+| [2026-10-f.md](2026-10-f.md) | 2026-10 | 4 |
 | [2026-10-e.md](2026-10-e.md) | 2026-10 | 10 |
 | [2026-10-d.md](2026-10-d.md) | 2026-10 | 15 |
 | [2026-10-c.md](2026-10-c.md) | 2026-10 | 75 |

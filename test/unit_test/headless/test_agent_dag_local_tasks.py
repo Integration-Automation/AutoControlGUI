@@ -165,8 +165,11 @@ def test_maintenance_retires_lease_when_admin_loses_cross_owner_authority(owned,
     with authorization_scope(owner):
         instance.runtime.observe(task["task_id"])
     users.set_role("reviewer", "operator")
-    instance.runtime.maintain()
-    result = instance.runtime.get(task["task_id"])
+    runtime = instance.runtime
+    # The service's lease watch runs maintain() too; while it holds the task lock, a pass leaves the task
+    # cancelling and a later one settles it.
+    until(lambda: runtime.maintain() or runtime.get(task["task_id"]).state != "cancelling")
+    result = runtime.get(task["task_id"])
     assert result.state == "cancelled" and result.metadata["input_released"] is True and target.count == 0
 
 
