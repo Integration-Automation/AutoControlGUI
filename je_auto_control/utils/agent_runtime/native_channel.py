@@ -213,18 +213,38 @@ class OwnedChannel:
 
     def _signal_owned_group(self) -> None:
         """Signal the helper's group only while its unreaped leader still holds the group ID."""
-        waitid = getattr(os, "waitid", None)
-        if waitid is not None:
-            try:
-                # Alive or a zombie, the leader keeps its PID, and with it the group ID.
-                waitid(os.P_PID, self._process.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
-            except ChildProcessError as error:
-                raise AgentTaskError("native helper was reaped elsewhere; its group cannot be signalled "
-                                     "safely") from error
+        reaped = self._leader_held()
         try:
             os.killpg(self._process.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
+        except PermissionError:
+            # macOS refuses a group whose only members are exited; nothing of it can still run.
+            if not reaped and sys.platform != "darwin":
+                raise
+
+    def _leader_held(self) -> bool:
+        """Raise unless the leader is still this process's unreaped child; True if it was reaped here.
+
+        Alive or a zombie, the leader keeps its PID, and with it the group ID, so
+        signalling the group cannot reach a reused ID. waitid looks without reaping.
+        Without it (macOS) waitpid has to reap an exited leader to find out; the
+        group's other members still hold the ID, and only an already empty group
+        could see it reused in the moment before the signal, which then finds nothing.
+        """
+        pid = self._process.pid
+        try:
+            if getattr(os, "waitid", None) is not None:
+                os.waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
+                return False
+            reaped_pid, status = os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError as error:
+            raise AgentTaskError("native helper was reaped elsewhere; its group cannot be signalled "
+                                 "safely") from error
+        if reaped_pid == 0:
+            return False
+        self._process.returncode = os.waitstatus_to_exitcode(status)
+        return True
 
     def close(self) -> None:
         """Stop and reap only this owned tree before returning control to another task.

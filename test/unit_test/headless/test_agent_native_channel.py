@@ -155,6 +155,30 @@ def test_ignored_sigchld_refuses_before_any_helper_starts():
 
 
 @posix_only
+@pytest.mark.parametrize("waitid", [True, False], ids=["waitid", "waitpid_only"])
+def test_crashed_helper_is_reaped_without_waitid_too(monkeypatch, waitid):
+    # macOS has no os.waitid: the leader must still be found unreaped (or reaped here) before the group signal.
+    if not waitid:
+        monkeypatch.delattr(os, "waitid", raising=False)
+    worker = channel()
+    with pytest.raises(AgentTaskError):
+        worker.request("exit", {}, timeout=5)
+    assert worker.retired
+
+
+@posix_only
+def test_leader_reaped_elsewhere_is_refused_without_waitid_too(monkeypatch):
+    monkeypatch.delattr(os, "waitid", raising=False)
+    worker = channel()
+    pid = worker._process.pid
+    os.kill(pid, signal.SIGKILL)
+    os.waitpid(pid, 0)
+    with pytest.raises(AgentTaskError, match="reaped elsewhere"):
+        worker.close()
+    assert not worker.retired
+
+
+@posix_only
 def test_leader_reaped_elsewhere_is_never_signalled():
     worker = channel()
     pid = worker._process.pid

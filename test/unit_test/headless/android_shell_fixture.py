@@ -65,8 +65,11 @@ class AndroidShellFixture:
                  'input_probe' if '__JE_ANDROID_INPUT_V1__' in script else 'identity')
         for tool in ('getprop', 'cat', 'dumpsys', 'input'):
             script = script.replace('/system/bin/' + tool, 'fixture_' + tool)
-        for tool in ('printf', 'sed', 'sha256sum', 'cut'):
+        for tool in ('printf', 'sed', 'cut'):
             script = script.replace('/system/bin/' + tool, tool)
+        # macOS ships shasum, not sha256sum; both print "<hex>  -".
+        digest = 'sha256sum' if shutil.which('sha256sum') or not shutil.which('shasum') else 'shasum -a 256'
+        script = script.replace('/system/bin/sha256sum', digest)
         flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0) if os.name == 'nt' else 0
         started = time.monotonic()
         event = {'phase': phase, 'started': started, 'outcome': 'running'}
