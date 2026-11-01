@@ -489,3 +489,13 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 `TODO` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule`
 在 Python 3.10 的 Linux／macOS `coverage run -m pytest` 中仍有間歇 SIGSEGV（exit 139）紀錄。
 需在對應環境開啟 `faulthandler` 重跑並定位原生呼叫；單次重跑通過不足以證明已修復。
+
+---
+
+## macos-15 上的 TCC 權限還沒被 gate 驗過
+
+`TODO` — 2026-11-01 把所有 macOS 方格從 `macos-14` 改成 `macos-15`（U-20261101-02），
+`test/verify/macos_verify.py` 的 `EXPECTED` 沿用 2026-08-19 在 macos-14 上的實測（螢幕錄製與輔助使用兩個
+TCC 權限都給）。`platform-smoke.yml` 的 `macos-capabilities` 只在推送到 `main` 與對 `main` 的 PR 上執行，所以下一個 dev→main
+PR 才會確認 macos-15 是否給一樣的權限；若不同，依 `--measure` 重新實測後更新 `EXPECTED` 與
+`docs/CAPABILITY_MATRIX.md`，不要直接放寬 gate。

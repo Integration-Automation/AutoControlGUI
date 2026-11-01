@@ -428,7 +428,7 @@ asked for button events for the wheel — which is what caught `mouse_scroll`
 matching a literal `["linux", "linux2"]` and therefore doing nothing at all,
 silently, on every BSD.
 
-**arm64.** `macos-14` was already arm64; `ubuntu-22.04-arm` joins the
+**arm64.** `macos-15` is arm64, as `macos-14` was before it; `ubuntu-22.04-arm` joins the
 smoke matrix and passes. `windows-11-arm` was tried and removed, on
 measurement rather than assumption, and **two** dependencies are why:
 **opencv-python publishes no `win_arm64` wheel** in any version, so pip falls

@@ -19,7 +19,8 @@ def task(**changes):
     spec = {"goal": "fixture", "target": "fixture", "mode": "skill", "allowed_tools": ["AC_increment"],
             "actions": [{"tool": "AC_increment"}],
             "success_criteria": [{"kind": "result_equals", "key": "value", "value": 1}]}
-    return {"spec": spec, "idempotency_key": "reviewed-one", "wait_seconds": 2, **changes}
+    # Twenty seconds: two expired on Windows CI runners before a healthy task finished (U-20261101-01).
+    return {"spec": spec, "idempotency_key": "reviewed-one", "wait_seconds": 20, **changes}
 
 
 def test_versioned_dag_exports_match_historical_facade():
