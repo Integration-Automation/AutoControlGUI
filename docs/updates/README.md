@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261101-07 | 2026-11-01 | Write the deployment and rollback plan for the agent runtime | #docs #agent #deployment | [2026-11](2026-11.md) |
 | U-20261101-06 | 2026-11-01 | Add macOS and X11 physical-activity sources | #snapshot #agent #presence #macos #x11 | [2026-11](2026-11.md) |
 | U-20261101-05 | 2026-11-01 | Report each managed-task area's readiness passively | #done #agent #diagnostics | [2026-11](2026-11.md) |
 | U-20261101-04 | 2026-11-01 | Widen the presence reader test's safety gate | #incident #agent #ci #test | [2026-11](2026-11.md) |
@@ -563,7 +564,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-11.md](2026-11.md) | 2026-11 | 6 |
+| [2026-11.md](2026-11.md) | 2026-11 | 7 |
 | [2026-10-f.md](2026-10-f.md) | 2026-10 | 5 |
 | [2026-10-e.md](2026-10-e.md) | 2026-10 | 10 |
 | [2026-10-d.md](2026-10-d.md) | 2026-10 | 15 |
