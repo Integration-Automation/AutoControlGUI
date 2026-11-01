@@ -41,7 +41,9 @@ class Harness:
         self.threads.add(threading.get_ident())
         if self.block == stage:
             self.entered.set()
-            if not self.allow.wait(2):
+            # A safety net only (cleanup always opens the gate). Two seconds sat 0.3 s above the sum of the
+            # bounds a blocked test measures, and a Windows runner overran it (U-20261101-04).
+            if not self.allow.wait(10):
                 raise AgentTaskError('test gate did not unblock')
 
     def connect(self):
