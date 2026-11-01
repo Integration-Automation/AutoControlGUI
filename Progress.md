@@ -52,11 +52,16 @@ Jeffrey_RPA 的 test_je_facade → 推送 `dev`（會觸發 je_auto_control_dev 
      歷史固定版本的 DAG 同目標提交 HTTP409 原因仍未明；後續完整執行沒有拒絕回應
      不構成該次原因已修復。保留 stage117 原始失敗及後續實際拒絕內容的追查，
      不放寬既有提交／等待／清理期限，也不重播已完成效果。
-   - macOS、X11、Wayland：實作可信真人活動來源，接合授權／鎖定／閒置判定、觀察目標身分、
-     視窗範圍輸入及自有 helper 隔離；補非 Windows 對話框／未儲存 gate。
+   - macOS、X11：真人活動來源已實作（`presence_quartz.py`、`presence_x11.py`，U-20261101-06），
+     由 `presence_platform.py` 依平台選用並由既有來源迴圈與 60 秒閒置狀態機執行；仍缺：
+     非 Windows 的 presence worker／通道接合（目前 worker 只有 Windows pipe）、觀察目標身分、
+     視窗範圍輸入、自有 helper 隔離與非 Windows 對話框／未儲存 gate，以及以真實實體輸入
+     驗證「實體／注入」判定的原生驗收（CI 只能證明注入事件不被誤計）。
+     Wayland：一般 client 看不到全域輸入，也無法區分 libei／uinput 注入與真人，目前沒有可信來源；
+     須另定可信來源（例如受權限保護的 evdev 讀取或 compositor 協定）後才能實作。
      目前不能解除不支援平台的共用桌面拒絕保護。
      Linux helper 仍須將 presence_channel_linux transport 接入自有 helper 啟動與可信 endpoint 傳遞，
-     補預期 helper 程序政策、既有 presence challenge／lease 與真正登入／seat／鎖定／真人活動來源；
+     補預期 helper 程序政策與既有 presence challenge／lease；
      核對實際 helper 世代、故障退場與完整應用接合，不能以獨立元件 IPC 取代這些證據。
      程序／逐訊息身分及受保護路徑不代表桌面權限，也不能隔離同 UID／特權敵對程序；
      使用者空間有界等待不能冒稱核心 syscall 的硬即時完成，未知清理仍不得移交控制權。

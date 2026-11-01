@@ -626,9 +626,14 @@ unfinished or failed cleanup stays unconfirmed. Unknown filesystem objects remai
 Pathname permissions do not isolate hostile processes sharing a UID. Bounded userspace waits
 do not promise hard realtime kernel syscall completion.
 
-Trusted helper launch and endpoint transfer, expected-helper policy, presence challenge and lease
-integration, and login, seat, lock and physical-activity sources remain pending. Non-Windows shared
-desktop tasks remain unavailable. This transport is not full Linux application or native input acceptance.
+Physical-activity sources now exist for X11 and macOS. X11 counts XInput2 raw events from real
+devices, never from XTEST slaves, and reads `Active`/`LockedHint` from logind: without logind or
+`XDG_SESSION_ID` the seat counts as locked. macOS uses a listen-only session event tap (it needs the
+Accessibility permission). An event counts as injected only when a process posted it from a non-HID
+source state, so a doubt keeps a task waiting rather than letting it take over. Wayland has no
+trusted source. Trusted helper launch and endpoint transfer, expected-helper policy, and presence
+challenge and lease integration remain pending, so non-Windows shared desktop tasks remain
+unavailable. This transport is not full Linux application or native input acceptance.
 
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)

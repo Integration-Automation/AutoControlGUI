@@ -47,13 +47,18 @@ def test_unimplemented_device_control_is_unsupported_even_when_its_tools_are_ins
     assert _area(report, 'ios_managed_control')['state'] == 'unsupported'
 
 
-@pytest.mark.parametrize('platform,environ,state', [
-    ('win32', {}, 'not_probed'),
-    ('darwin', {}, 'unsupported'),
-    ('linux', {'DISPLAY': ':0'}, 'unsupported'),
+@pytest.mark.parametrize('platform,environ,state,backend', [
+    ('win32', {}, 'not_probed', 'win32'),
+    ('darwin', {}, 'not_probed', 'quartz'),
+    ('linux', {'DISPLAY': ':0'}, 'not_probed', 'x11'),
+    ('linux', {'DISPLAY': ':0', 'WAYLAND_DISPLAY': 'wayland-0'}, 'unsupported', 'unsupported'),
+    ('freebsd14', {'DISPLAY': ':0'}, 'unsupported', 'unsupported'),
 ])
-def test_only_a_platform_with_a_presence_source_reports_one(platform, environ, state):
-    assert _area(_report(platform, environ), 'presence_source')['state'] == state
+def test_only_a_platform_with_a_presence_source_reports_one(platform, environ, state, backend):
+    area = _area(_report(platform, environ), 'presence_source')
+    assert (area['state'], area['backend']) == (state, backend)
+    if platform != 'win32':
+        assert 'shared-desktop input stays refused' in area['detail']
 
 
 @pytest.mark.parametrize('observed,state', [

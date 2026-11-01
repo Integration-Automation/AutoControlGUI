@@ -1,4 +1,8 @@
-"""A presence-only source actor; native observation stays on its dedicated helper thread."""
+"""A presence-only source actor; native observation stays on its dedicated helper thread.
+
+The actor is platform-neutral: it runs whichever trusted API ``presence_platform`` picks for the
+helper (Win32 raw input, a macOS listen-only tap or X11 XInput2 raw events).
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -11,7 +15,7 @@ from typing import Any, Callable, Iterator
 from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError
 from je_auto_control.utils.agent_runtime.models import positive
 from je_auto_control.utils.agent_runtime.presence_state import PresenceState
-from je_auto_control.utils.agent_runtime.presence_win32 import Win32PresenceAPI
+from je_auto_control.utils.agent_runtime.presence_platform import default_presence_api
 from je_auto_control.utils.agent_runtime.presence_frames import presence_body as _body
 
 
@@ -74,7 +78,7 @@ class WindowsPresenceSource:
     def _api(self) -> Any:
         if self._api_factory is not None:
             return self._api_factory()
-        return Win32PresenceAPI()
+        return default_presence_api()
 
     def _run(self) -> None:
         api = None

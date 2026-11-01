@@ -11,6 +11,7 @@ import importlib.util
 import shutil
 from typing import Any, Callable
 
+from je_auto_control.utils.agent_runtime.presence_platform import presence_backend
 from je_auto_control.wrapper.capabilities import BackendContext, CapabilityStatus, probe_capabilities
 
 STATES = ("unsupported", "missing_dependency", "unauthorized", "not_probed", "not_recorded", "measured")
@@ -33,13 +34,18 @@ def _capability(area: str, status: CapabilityStatus) -> dict[str, Any]:
                   backend=status.backend, recovery=status.recovery)
 
 
-def _presence(platform: str, display_server: str) -> dict[str, Any]:
-    if platform == "win32":
+def _presence(context: BackendContext, display_server: str) -> dict[str, Any]:
+    backend = presence_backend(context.platform, context.environ)
+    if backend == "win32":
         return _entry("presence_source", "not_probed",
-                      "a Windows session source exists; it is read only once a managed task binds it")
+                      "a Windows session source exists; it is read only once a managed task binds it", backend=backend)
+    if backend != "unsupported":
+        return _entry("presence_source", "not_probed",
+                      f"a {backend} source exists, but no non-Windows helper channel runs it yet; shared-desktop "
+                      "input stays refused", backend=backend)
     return _entry("presence_source", "unsupported",
-                  f"no trusted human-activity source for {platform}/{display_server}; shared-desktop input "
-                  "stays refused", display_server=display_server)
+                  f"no trusted human-activity source for {context.platform}/{display_server}; shared-desktop input "
+                  "stays refused", display_server=display_server, backend=backend)
 
 
 def _executable(area: str, name: str, purpose: str, which: Callable[[str], Any]) -> dict[str, Any]:
@@ -63,7 +69,7 @@ def agent_runtime_readiness(context: BackendContext | None = None, *,
     areas = [
         _capability("desktop_input", snapshot.input),
         _capability("desktop_capture", snapshot.capture),
-        _presence(context.platform, snapshot.display_server),
+        _presence(context, snapshot.display_server),
         _executable("android_transport", "adb", "Android targets need the platform tools", which),
         _entry("android_managed_control", "unsupported",
                "no device-side command provider is installed; managed Android input stays refused"),

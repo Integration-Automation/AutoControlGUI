@@ -486,8 +486,11 @@ Linux 內部 presence_peer_linux 以不可繼承的 pidfd 保留原始 Unix stre
 清理維持未確定。未知檔案系統物件保留不動。路徑權限不能隔離同 UID 的敵對程序，使用者空間的有界
 等待也不保證核心 syscall 的硬即時完成。
 
-可信 helper 啟動與 endpoint 傳遞、預期 helper 政策、presence challenge 與 lease 接合，以及登入、seat、
-鎖定與真人活動來源仍待完成。非 Windows 共用桌面仍不可用；此 transport 不是完整 Linux 應用或原生輸入驗收。
+X11 與 macOS 已有真人活動來源。X11 只計入真實裝置的 XInput2 raw 事件（XTEST 從屬裝置一律排除），
+並從 logind 讀 `Active`／`LockedHint`；沒有 logind 或 `XDG_SESSION_ID` 時視為鎖定。macOS 用唯讀的 session
+event tap（需要輔助使用權限）；只有程序從非 HID 來源狀態送出的事件才算注入，有疑義時讓任務等待而不是接手。
+Wayland 沒有可信來源。可信 helper 啟動與 endpoint 傳遞、預期 helper 政策、presence challenge 與 lease
+接合仍待完成，所以非 Windows 共用桌面仍不可用；此 transport 不是完整 Linux 應用或原生輸入驗收。
 
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)
