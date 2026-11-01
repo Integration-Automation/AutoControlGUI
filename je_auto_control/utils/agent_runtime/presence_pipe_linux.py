@@ -26,7 +26,9 @@ from je_auto_control.utils.agent_runtime.presence_frames import decode_frame, en
 _FRAME_LIMIT = 4096
 _WAIT = 0.25
 _FILE_FIELDS = ("device", "inode", "owner", "mode")
-_PEER_FIELDS = ("pid", "uid", "gid", "birth", "user_namespace")
+_PEER_NUMBERS = ("pid", "uid", "gid", "birth")
+_PEER_NAMESPACES = ("user_namespace", "pid_namespace")
+_PEER_FIELDS = _PEER_NUMBERS + _PEER_NAMESPACES
 _ENDPOINT_FIELDS = {"directory", "directory_identity", "socket_name", "socket_identity", "listener_process"}
 
 
@@ -76,9 +78,10 @@ def _listener(value: Any) -> Any:
     # pylint: disable-next=import-outside-toplevel  # reason: the Linux socket modules load only on Linux
     from je_auto_control.utils.agent_runtime.presence_peer_linux import LinuxPeerIdentity
     peer = _closed_object(value, _PEER_FIELDS, "listener_process")
-    if not isinstance(peer["user_namespace"], str) or not peer["user_namespace"]:
-        raise AgentTaskError("Linux presence endpoint user namespace is invalid")
-    return LinuxPeerIdentity(*(_whole(peer[field], field) for field in _PEER_FIELDS[:4]), peer["user_namespace"])
+    if any(not isinstance(peer[name], str) or not peer[name] for name in _PEER_NAMESPACES):
+        raise AgentTaskError("Linux presence endpoint namespaces are invalid")
+    return LinuxPeerIdentity(*(_whole(peer[name], name) for name in _PEER_NUMBERS),
+                             *(peer[name] for name in _PEER_NAMESPACES))
 
 
 def _wait_readable(descriptor: int, cancel: threading.Event) -> None:

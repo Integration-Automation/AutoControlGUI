@@ -20,7 +20,8 @@ def _wire(**changes):
     value = {"directory": "/run/user/1000/je-presence-abc", "socket_name": "presence.sock",
              "directory_identity": {"device": 1, "inode": 2, "owner": 1000, "mode": 0o40700},
              "socket_identity": {"device": 1, "inode": 3, "owner": 1000, "mode": 0o140600},
-             "listener_process": {"pid": 42, "uid": 1000, "gid": 1000, "birth": 99, "user_namespace": "4026531837"}}
+             "listener_process": {"pid": 42, "uid": 1000, "gid": 1000, "birth": 99,
+                                  "user_namespace": "user:[4026531837]", "pid_namespace": "pid:[4026531836]"}}
     value.update(changes)
     return value
 
@@ -38,12 +39,25 @@ def test_an_endpoint_round_trips_through_its_wire_form():
     {"socket_name": ""},
     {"directory_identity": {"device": 1, "inode": 2, "owner": 1000}},
     {"socket_identity": {"device": -1, "inode": 3, "owner": 1000, "mode": 1}},
-    {"listener_process": {"pid": True, "uid": 1000, "gid": 1000, "birth": 99, "user_namespace": "n"}},
-    {"listener_process": {"pid": 42, "uid": 1000, "gid": 1000, "birth": 99, "user_namespace": ""}},
+    {"listener_process": {"pid": True, "uid": 1000, "gid": 1000, "birth": 99, "user_namespace": "n",
+                          "pid_namespace": "p"}},
+    {"listener_process": {"pid": 42, "uid": 1000, "gid": 1000, "birth": 99, "user_namespace": "",
+                          "pid_namespace": "p"}},
+    {"listener_process": {"pid": 42, "uid": 1000, "gid": 1000, "birth": 99, "user_namespace": "n"}},
 ])
 def test_a_malformed_endpoint_is_refused_before_any_connection(change):
     with pytest.raises(AgentTaskError):
         endpoint_from_wire(_wire(**change))
+
+
+def test_the_wire_form_names_every_field_of_the_endpoint_types():
+    from dataclasses import fields
+    from je_auto_control.utils.agent_runtime import presence_pipe_linux as wire
+    from je_auto_control.utils.agent_runtime.presence_endpoint_linux import FileIdentity, LinuxEndpoint
+    from je_auto_control.utils.agent_runtime.presence_peer_linux import LinuxPeerIdentity
+    assert wire._PEER_FIELDS == tuple(item.name for item in fields(LinuxPeerIdentity))
+    assert wire._FILE_FIELDS == tuple(item.name for item in fields(FileIdentity))
+    assert wire._ENDPOINT_FIELDS == {item.name for item in fields(LinuxEndpoint)}
 
 
 def test_without_an_owned_launch_there_is_nothing_to_connect_to():
