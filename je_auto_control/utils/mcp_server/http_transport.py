@@ -34,11 +34,11 @@ import os
 import ssl
 import threading
 from urllib.parse import urlsplit
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 from typing import Any, Callable, Dict, Optional, Tuple
 
 from je_auto_control.utils.http_headers import (
-    bearer_challenge, log_safe, parse_content_length, wire_json_text,
+    LocalThreadingHTTPServer, bearer_challenge, log_safe, parse_content_length, wire_json_text,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server._authz import check_bearer
@@ -574,7 +574,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 
-class _MCPHttpServer(ThreadingHTTPServer):
+class _MCPHttpServer(LocalThreadingHTTPServer):
     """ThreadingHTTPServer extension that owns an :class:`MCPServer`."""
 
     def __init__(self, server_address: Tuple[str, int],

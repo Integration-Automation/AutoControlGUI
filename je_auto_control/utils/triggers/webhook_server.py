@@ -36,7 +36,7 @@ from urllib.parse import parse_qs, urlparse
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.http_headers import (
-    INVALID_CONTENT_LENGTH, ChunkedBodyError, is_chunked, log_safe,
+    INVALID_CONTENT_LENGTH, ChunkedBodyError, LocalThreadingHTTPServer, is_chunked, log_safe,
     parse_content_length, read_chunked_body,
 )
 from je_auto_control.utils.json.json_file import read_executable_action_json
@@ -418,7 +418,7 @@ class WebhookTriggerServer:
         with self._lock:
             if self._server is not None and self._bound is not None:
                 return self._bound
-            server = ThreadingHTTPServer((host, int(port)), _WebhookHandler)
+            server = LocalThreadingHTTPServer((host, int(port)), _WebhookHandler)
             server.webhook_owner = self  # type: ignore[attr-defined]
             self._server = server
             actual_host, actual_port = server.server_address[:2]

@@ -1,4 +1,4 @@
-"""Shared, defensive helpers for this package's servers: headers, bodies, replies, logs.
+"""Shared, defensive helpers for this package's servers: binding, headers, bodies, replies, logs.
 
 ``http.server`` does not validate header values, so a client is free to send
 ``Content-Length: abc``. Every server in this package read it with a bare
@@ -6,10 +6,30 @@
 died and the connection was closed with no response at all — the client saw a
 reset instead of the 400 each server already had code to send.
 """
+from http.server import ThreadingHTTPServer
 import json
+import socketserver
 from typing import Any, Callable, Optional, Protocol
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+
+
+class LocalThreadingHTTPServer(ThreadingHTTPServer):
+    """A ``ThreadingHTTPServer`` that never looks up its own name when it binds.
+
+    ``HTTPServer.server_bind`` sets ``server_name`` to ``socket.getfqdn(host)``,
+    a reverse DNS lookup of the bound address. Where that lookup has to time
+    out, every server start waits for it: on a macos-15 GitHub runner the first
+    ``getfqdn('127.0.0.1')`` of each process took 35 seconds (U-20261101-03).
+    Nothing in this package reads ``server_name``, so it is the bound host.
+    """
+
+    def server_bind(self) -> None:
+        """Bind and record the address without resolving it."""
+        socketserver.TCPServer.server_bind(self)
+        host, port = self.server_address[:2]
+        self.server_name = host.decode() if isinstance(host, (bytes, bytearray)) else str(host)
+        self.server_port = port
 
 # Sentinel for "the client did not give us a usable length". It is negative on
 # purpose: every caller already rejects non-positive lengths, so an

@@ -25,7 +25,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,428 |
-| 程式碼總行數 | 213,711 |
+| 程式碼總行數 | 213,734 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 856 |
 | 套件門面 `__all__` 公開名稱數 | 1445 |
@@ -171,7 +171,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `je_auto_control/api/core.py` | 71 | **穩定無頭 API 門面**：暴露 `execute_action`、`execute_action_with_vars`、`generate_code`、`run_diagnostics`、`create_failure_bundle`、`failure_bundle_on_error`、`FailureBundleOptions`，另提供 `BackendContext`／`CapabilityStatus`／`CapabilitySnapshot`／`probe_capabilities`，以及 `CancellationToken`／`TaskProgress`／`cancellation_scope`。mypy 型別契約以此為起點，現已擴到整包（見「設定基線」）。 |
 | `je_auto_control/utils/cli_output.py` | 44 | 本套件命令列工具與 stdio 伺服器的標準串流：不論碼頁一律 UTF-8。 |
 | `je_auto_control/utils/deprecation.py` | 35 | 公開 API 的一致性棄用警告。 |
-| `je_auto_control/utils/http_headers.py` | 189 | 本套件各伺服器共用的防禦式輔助：標頭、內文、回應與日誌。 |
+| `je_auto_control/utils/http_headers.py` | 209 | 本套件各伺服器共用的防禦式輔助：綁定、標頭、內文、回應與日誌。 |
 | `je_auto_control/utils/sqlite_support.py` | 113 | 選用標準函式庫 `sqlite3` 的取用點：`require_sqlite3()`／`sqlite3_available()`／`SQLITE_ERRORS`。十個以 SQLite 存放狀態的子系統都經由這裡，所以 FreeBSD 這種把 `sqlite3` 另外包成 `databases/py-sqlite3` 的 Python 仍然 import 得起門面。 |
 | `je_auto_control/utils/timeouts.py` | 33 | 把使用者給的逾時換成截止時間：`deadline_after()` 拒絕 NaN（`json` 接受它，而 `clock() >= NaN` 永遠不成立，輪詢迴圈會永遠跑下去），負值與無限大維持原意；`clamp_poll_interval()` 把背景迴圈的輪詢間隔夾在 0.05 秒到 1 小時之間（`Event.wait(inf)` 在 Windows 會丟 `OverflowError`）。 |
 
@@ -542,7 +542,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 7,262 行。
+> 24 個套件、約 7,264 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -567,13 +567,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/rest_api/` | 2,191 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
 | `utils/socket_server/` | 163 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
 | `utils/sse_client/` | 142 | Server-Sent Events 用戶端解析 |
-| `utils/tls_acme/` | 473 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
+| `utils/tls_acme/` | 475 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
 | `utils/url_canon/` | 194 | RFC 3986 URL 正規化與查詢字串工具 |
 | `utils/webrunner_bridge/` | 208 | 把 action JSON 橋接到 WebRunner（`je_web_runner`） |
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 7,966 行。
+> 34 個套件、約 7,967 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -590,7 +590,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/flakiness/` | 151 | 以執行歷史分析不穩定測試 |
 | `utils/generate_report/` | 336 | HTML／JSON／XML 三種報表產生器（Template Method） |
 | `utils/media_assert/` | 273 | 媒體斷言：音訊活動與影片動態檢查 |
-| `utils/observability/` | 710 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
+| `utils/observability/` | 711 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
 | `utils/otlp_export/` | 114 | OTLP/JSON span 匯出 |
 | `utils/percentiles/` | 119 | 可合併的串流延遲摘要與精確百分位數 |
 | `utils/process_doc/` | 108 | 由錄製的 action list 產生逐步 SOP 文件 |
@@ -1494,8 +1494,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 979 | 97,587 |
-| **總計** | **1,420** | **213,542** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 979 | 97,610 |
+| **總計** | **1,420** | **213,565** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

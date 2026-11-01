@@ -5,6 +5,7 @@ import http.server
 import threading
 from typing import Optional
 
+from je_auto_control.utils.http_headers import LocalThreadingHTTPServer
 from je_auto_control.utils.observability.metrics import (
     MetricRegistry, default_registry,
 )
@@ -68,7 +69,7 @@ class PrometheusExporter:
     def start(self) -> int:
         if self.is_running:
             return self._port
-        server = http.server.ThreadingHTTPServer(
+        server = LocalThreadingHTTPServer(
             (self._host, self._port), _MetricsHandler,
         )
         server._registry = self._registry  # type: ignore[attr-defined]

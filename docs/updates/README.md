@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261101-03 | 2026-11-01 | Bind the HTTP servers without a reverse lookup | #incident #ci #macos #server | [2026-11](2026-11.md) |
 | U-20261101-02 | 2026-11-01 | Move every macOS square from macos-14 to macos-15 | #decision #ci #macos | [2026-11](2026-11.md) |
 | U-20261101-01 | 2026-11-01 | Give the shared managed-task helper twenty seconds | #incident #agent #ci #test | [2026-11](2026-11.md) |
 | U-20261031-05 | 2026-10-31 | Cap the transfer peer's remaining time at its bound | #incident #agent #ci #windows | [2026-10-f](2026-10-f.md) |
@@ -559,7 +560,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-11.md](2026-11.md) | 2026-11 | 2 |
+| [2026-11.md](2026-11.md) | 2026-11 | 3 |
 | [2026-10-f.md](2026-10-f.md) | 2026-10 | 5 |
 | [2026-10-e.md](2026-10-e.md) | 2026-10 | 10 |
 | [2026-10-d.md](2026-10-d.md) | 2026-10 | 15 |

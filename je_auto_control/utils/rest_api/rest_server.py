@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.http_headers import (
-    bearer_challenge, log_safe, parse_content_length, wire_json_text,
+    LocalThreadingHTTPServer, bearer_challenge, log_safe, parse_content_length, wire_json_text,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.logging.secret_scope import secret_log_scope
@@ -607,7 +607,7 @@ class RestApiServer:
     def start(self) -> None:
         if self._server is not None:
             return
-        server = ThreadingHTTPServer(self._address, _RestRequestHandler)
+        server = LocalThreadingHTTPServer(self._address, _RestRequestHandler)
         server.auth_gate = self._auth  # type: ignore[attr-defined]
         setattr(server, "rbac_enabled", self._users is not None)
         server.audit_log = self._audit_log  # type: ignore[attr-defined]
