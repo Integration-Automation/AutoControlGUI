@@ -133,6 +133,18 @@ control transfers. Independent databases share a per-session input lock. Window/
 again at input dispatch; pointer geometry and redacted window vision currently require Windows.
 Additional platform activity adapters remain in Progress.
 
+## Role boundaries
+
+Planning, execution and verification are separate roles, and observed content is data for all three:
+an instruction printed on a page never widens any of them. Audited 2026-11-01 (U-20261101-10).
+
+| Boundary | Enforced in | Regression tests |
+| --- | --- | --- |
+| A planner (model, external agent, drafted workflow) only proposes | `runner._grounded_action` keeps `tool`, `arguments` and `reference` alone, so `allowed_tools`, `roots`, `spec` or `authorization` in a proposal never reach the runtime; the local model is offered only the spec's tools; `draft_agent_workflow` returns a draft and contacts nothing | `test_agent_role_boundaries.py`, `test_agent_runtime_runner.py::test_local_model_never_follows_redirects_and_only_receives_offered_tools` |
+| The executor admits a proposal only inside the reviewed spec and current authority | `AgentRuntime.act`: `TaskPolicy.check` (tools and roots), `require_executable_task`, the resume gate, `_ground` (a current, unchanged observation) and `check_task_authority` just before dispatch | `test_agent_role_boundaries.py`, `test_agent_runtime_runner.py::test_untrusted_model_cannot_expand_task_scope`, `test_agent_recovery_ownership.py::test_revocation_during_grounding_cannot_reach_successor_input` |
+| The verifier decides completion from fresh evidence | `AgentRuntime.finish` observes again and evaluates `success_criteria`; a planner's `stop` or "complete" message only asks for verification | `test_agent_role_boundaries.py::test_a_planner_claiming_completion_is_not_evidence`, `test_agent_runtime.py::test_model_completion_is_not_evidence` |
+| Another node never carries this host's authority | DAG batches forward reviewed work, not the local principal or origin policies; remote replies are validated before use | `test_agent_dag_batch_loopback.py::test_two_host_batch_tags_match_without_forwarding_local_principal_or_origins`, `test_agent_transfer_transport.py` |
+
 ## External agent lifecycle
 
 1. `submit_agent_task(spec)` returns task_id without taking input control.

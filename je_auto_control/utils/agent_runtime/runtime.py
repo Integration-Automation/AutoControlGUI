@@ -336,7 +336,7 @@ class AgentRuntime:
         except AgentHumanReview as error:
             state = self.store.get(task_id)["state"]
             if state not in TERMINAL and state not in {"pausing", "cancelling"}:
-                self.store.update(task_id, "waiting_user", reason=str(error))
+                self.store.update(task_id, "waiting_user", reason=str(error), verification=error.reports)
             raise
         finally:
             with self._mutex:

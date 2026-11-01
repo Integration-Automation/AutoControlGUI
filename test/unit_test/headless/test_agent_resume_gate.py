@@ -92,7 +92,8 @@ def test_the_first_action_waits_while_the_state_is_not_re_established(managed):
     assert target.calls == []
     current = runtime.get(task.task_id)
     assert current.state == "waiting_user"
-    assert current.metadata.get("verification") or current.reason
+    assert current.verification == ({"kind": "screen", "status": "failed"},)
+    assert "resume state is not re-established" in current.reason
 
 
 def test_a_passing_fresh_observation_admits_the_first_action_and_then_the_gate_is_spent(managed):

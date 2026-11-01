@@ -16,3 +16,6 @@ class AgentObservationStale(AgentTaskError):
 
 class AgentHumanReview(AgentTaskError):
     """A dialog or unsaved-content gate requires explicit human review before continuing."""
+
+    #: Verification reports the review was raised on, recorded with the waiting_user state.
+    reports: tuple = ()

@@ -22,6 +22,14 @@ RESUME_KINDS = frozenset({"screen", "browser", "file_exists", "file_sha256", "fi
 _REFUSED = "resume state is not re-established; observe again until every resume condition passes"
 
 
+class ResumeStateRequired(AgentHumanReview):
+    """A first action was refused; ``reports`` holds the resume-condition results it was refused on."""
+
+    def __init__(self, reports: list[dict[str, Any]]) -> None:
+        super().__init__(_REFUSED)
+        self.reports = tuple(reports)
+
+
 def validate_resume_conditions(conditions: Sequence[Mapping[str, Any]]) -> None:
     """Allow only clauses a fresh observation decides; receipts are history, never current state."""
     if len(conditions) > 32:
@@ -72,5 +80,5 @@ class ResumeGate:
             admitted = self._passed.get(row["id"]) == observation_id
             reports = list(self._reports.get(row["id"], []))
         if not admitted:
-            self._store.update(row["id"], "waiting_user", reason=_REFUSED, verification=reports)
-            raise AgentHumanReview(_REFUSED)
+            # The runtime's review handler records waiting_user together with these reports.
+            raise ResumeStateRequired(reports)
