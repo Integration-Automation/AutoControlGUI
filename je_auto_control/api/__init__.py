@@ -64,6 +64,7 @@ from je_auto_control.api.core import (
     manage_agent_trigger as manage_agent_trigger,
     list_agent_triggers as list_agent_triggers,
     act_agent_task as act_agent_task,
+    agent_runtime_readiness as agent_runtime_readiness,
     agent_runtime_status as agent_runtime_status,
     cancel_agent_task as cancel_agent_task,
     finish_agent_task as finish_agent_task,
