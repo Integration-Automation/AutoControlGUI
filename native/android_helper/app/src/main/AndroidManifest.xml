@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- No activity, service or permission: the helper only runs when the host starts it with
+     `am instrument -w je.autocontrol.helper/.HelperInstrumentation`. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="false"
+        android:label="AutoControl helper" />
+
+    <instrumentation
+        android:name=".HelperInstrumentation"
+        android:label="AutoControl helper"
+        android:targetPackage="je.autocontrol.helper" />
+</manifest>

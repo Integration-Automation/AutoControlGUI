@@ -7,10 +7,10 @@ request id, the device's boot and the epoch it ran under, with input released an
 left queued. A host-side lock, an `adb shell` return code or a local process exit proves none of
 that. This helper is the device side of that contract.
 
-Status: **stage 1 of 4.** Only the fence ledger (`core/`) exists, with JVM unit tests, built and
-tested in CI (`.github/workflows/android-helper.yml`). The instrumentation app, the host provider
-and emulator tests follow; nothing here is wired into the runtime yet, and real-device acceptance
-stays deferred.
+Status: **stage 2 of 4.** The fence ledger and protocol handler (`core/`, JVM unit tests) and the
+instrumentation app (`app/`, built into a debug APK) are built in CI
+(`.github/workflows/android-helper.yml`). The host provider and emulator tests follow; nothing here
+is wired into the runtime yet, and real-device acceptance stays deferred.
 
 ## Protocol (version 1)
 
@@ -35,4 +35,8 @@ there is no request that moves the epoch back.
   `ProtocolHandler`, which turns one decoded request into one reply and accepts only the closed,
   bounded `tap`, `swipe` and `key` command shapes; no Android dependency, so both are tested on the JVM.
   `queue_empty` is true only when nothing is queued **and** nothing is still injecting.
-- `settings.gradle.kts`, `build.gradle.kts` — Gradle build; CI provides Gradle and the JDK.
+- `app/` — the instrumentation: `HelperServer` serves the abstract socket to a shell or root peer only
+  (an abstract socket has no file permissions, so any app could otherwise connect) and bounds each line;
+  `Injector` is the only writer and, between events, releases what it pressed once a fence overtakes it.
+- `settings.gradle.kts`, `build.gradle.kts` — Gradle build; CI provides Gradle, the JDK and the
+  Android SDK (compileSdk 35, minSdk 26, AGP 8.7.3).
