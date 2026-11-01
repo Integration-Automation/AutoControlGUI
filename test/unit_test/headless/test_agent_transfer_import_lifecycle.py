@@ -1,6 +1,6 @@
 """Actual destination deliveries retain the original issuer and fence revoked or cancelled effects."""
 from pathlib import Path
-from threading import Event
+from threading import Event, get_ident
 import time
 
 import pytest
@@ -485,8 +485,10 @@ def test_current_receipt_maintenance_does_not_reserve_an_idle_database_writer(tm
         controller = host.runtime.transfers
         original = host.runtime.store.connection
         writes = []
+        caller = get_ident()
+        # Only this maintenance call is observed: the service's own lease watch keeps writing on its thread.
         def observed(*args, **kwargs):
-            if kwargs.get('write'):
+            if kwargs.get("write") and get_ident() == caller:
                 writes.append(True)
             return original(*args, **kwargs)
         # Keep other service maintenance outside this exact observation without bypassing any storage operation.
