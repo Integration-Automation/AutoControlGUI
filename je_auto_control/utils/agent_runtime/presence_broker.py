@@ -13,8 +13,9 @@ from je_auto_control.utils.agent_runtime.presence_frames import (
 )
 from je_auto_control.utils.agent_runtime.presence_handshake import client_handshake
 from je_auto_control.utils.agent_runtime.presence_owner import read_request, send_error, send_result
-from je_auto_control.utils.agent_runtime.presence_pipe_windows import WindowsPresencePipe
-from je_auto_control.utils.agent_runtime.presence_security_windows import WindowsPresenceSecurity
+from je_auto_control.utils.agent_runtime.presence_platform import (
+    default_presence_pipe, default_presence_security,
+)
 from je_auto_control.utils.agent_runtime.presence_worker import SourceProcess
 from je_auto_control.utils.agent_runtime.parent_watch import start_parent_watch
 
@@ -33,7 +34,8 @@ class _Binding:
 def _ready(value: Any) -> str | None:
     if value == {'ready': False, 'occupied': True} and value['ready'] is False and value['occupied'] is True:
         return None
-    if isinstance(value, dict) and set(value) == {'ready', 'generation'} and value['ready'] is True:
+    if (isinstance(value, dict) and set(value) in ({'ready', 'generation'}, {'ready', 'generation', 'endpoint'})
+            and value['ready'] is True):
         return identifier(value['generation'])
     raise AgentTaskError('physical presence source startup response is invalid')
 
@@ -51,8 +53,8 @@ class PresenceBroker:
 
     def __init__(self, *, pipe: Any = None, security: Any = None,
                  launch: Callable[[], Any] | None = None, namespace: str | None = None) -> None:
-        self._pipe = pipe if pipe is not None else WindowsPresencePipe(namespace=namespace)
-        self._security = security if security is not None else WindowsPresenceSecurity()
+        self._pipe = pipe if pipe is not None else default_presence_pipe(namespace)
+        self._security = security if security is not None else default_presence_security()
         self._launch = launch if launch is not None else self._default_launch
         self._namespace = namespace
         self._binding = _Binding()
@@ -68,7 +70,11 @@ class PresenceBroker:
         if self._binding.owner is not None:
             raise AgentTaskError('physical presence owned source endpoint disappeared')
         self._binding.owner = self._launch()
-        self._binding.expected = _ready(self._binding.owner.start())
+        started = self._binding.owner.start()
+        self._binding.expected = _ready(started)
+        if self._binding.expected is not None and 'endpoint' in started:
+            # Only this owned launch may name the endpoint; the channel then pins its listener.
+            self._pipe.use(started['endpoint'])
         if self._binding.expected is None:
             self._binding.owner.close()
             self._binding.owner = None

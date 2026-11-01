@@ -11,9 +11,10 @@ from typing import Any, Callable
 from je_auto_control.utils.agent_runtime.errors import AgentControlBusy, AgentTaskError
 from je_auto_control.utils.agent_runtime.presence_frames import decode_frame, encode_frame, identifier
 from je_auto_control.utils.agent_runtime.presence_handshake import server_handshake
-from je_auto_control.utils.agent_runtime.presence_pipe_windows import WindowsPresencePipe
 from je_auto_control.utils.agent_runtime.presence_protocol import PresenceProtocol
-from je_auto_control.utils.agent_runtime.presence_security_windows import WindowsPresenceSecurity
+from je_auto_control.utils.agent_runtime.presence_platform import (
+    default_presence_pipe, default_presence_security,
+)
 from je_auto_control.utils.agent_runtime.presence_windows import WindowsPresenceSource
 
 
@@ -34,8 +35,8 @@ class PresenceServer:
     def __init__(self, source_factory: Callable[[], Any] = WindowsPresenceSource, *,
                  pipe: Any = None, security: Any = None) -> None:
         self._factory = source_factory
-        self._pipe = pipe if pipe is not None else WindowsPresencePipe()
-        self._security = security if security is not None else WindowsPresenceSecurity()
+        self._pipe = pipe if pipe is not None else default_presence_pipe()
+        self._security = security if security is not None else default_presence_security()
         self._life = _Lifecycle()
         self._mutex = threading.RLock()
         self._attempted = False
@@ -58,7 +59,10 @@ class PresenceServer:
                 raise AgentTaskError('physical presence server stopped during startup')
             self._life.acceptor = threading.Thread(target=self._accept, name='PresenceAccept', daemon=True)
             self._life.acceptor.start()
-            return {'ready': True, 'generation': generation}
+            # A Linux listener has no well-known name: its endpoint travels in this owned reply.
+            endpoint = getattr(self._life.listener, 'endpoint_wire', None)
+            started = {'ready': True, 'generation': generation}
+            return started if endpoint is None else {**started, 'endpoint': endpoint}
         except BaseException:
             self.close()
             raise

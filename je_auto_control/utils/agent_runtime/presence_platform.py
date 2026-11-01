@@ -45,3 +45,23 @@ def default_presence_api(platform: str = sys.platform, environ: Mapping[str, str
         from je_auto_control.utils.agent_runtime.presence_x11 import X11PresenceAPI
         return X11PresenceAPI()
     raise AgentTaskError(f'no trusted physical presence source for {platform}')
+
+
+def default_presence_pipe(namespace: str | None = None) -> Any:
+    """The pipe factory a presence server or broker uses on this platform; nothing native opens yet."""
+    # pylint: disable=import-outside-toplevel  # reason: each transport loads only on its own platform
+    if sys.platform.startswith('linux'):
+        from je_auto_control.utils.agent_runtime.presence_pipe_linux import LinuxPresencePipe
+        return LinuxPresencePipe(namespace=namespace)
+    from je_auto_control.utils.agent_runtime.presence_pipe_windows import WindowsPresencePipe
+    return WindowsPresencePipe(namespace=namespace)
+
+
+def default_presence_security() -> Any:
+    """The peer-evidence provider the presence handshake uses on this platform."""
+    # pylint: disable=import-outside-toplevel  # reason: each transport loads only on its own platform
+    if sys.platform.startswith('linux'):
+        from je_auto_control.utils.agent_runtime.presence_pipe_linux import LinuxPresenceSecurity
+        return LinuxPresenceSecurity()
+    from je_auto_control.utils.agent_runtime.presence_security_windows import WindowsPresenceSecurity
+    return WindowsPresenceSecurity()

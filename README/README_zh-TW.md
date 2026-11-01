@@ -492,8 +492,10 @@ Linux 內部 presence_peer_linux 以不可繼承的 pidfd 保留原始 Unix stre
 X11 與 macOS 已有真人活動來源。X11 只計入真實裝置的 XInput2 raw 事件（XTEST 從屬裝置一律排除），
 並從 logind 讀 `Active`／`LockedHint`；沒有 logind 或 `XDG_SESSION_ID` 時視為鎖定。macOS 用唯讀的 session
 event tap（需要輔助使用權限）；只有程序從非 HID 來源狀態送出的事件才算注入，有疑義時讓任務等待而不是接手。
-Wayland 沒有可信來源。可信 helper 啟動與 endpoint 傳遞、預期 helper 政策、presence challenge 與 lease
-接合仍待完成，所以非 Windows 共用桌面仍不可用；此 transport 不是完整 Linux 應用或原生輸入驗收。
+Wayland 沒有可信來源。Linux 的 presence broker、worker 與 server 已改經此 transport：自有 worker 綁定
+全新的私有 endpoint 並在 bootstrap 回覆中回報，broker 只採用該 endpoint，連線時先核對 listener 即其所列
+程序，再做 presence challenge。macOS 尚無 presence transport；原生驗收前 runtime 仍拒絕非 Windows 共用
+桌面任務；此 transport 不是完整 Linux 應用或原生輸入驗收。
 
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)

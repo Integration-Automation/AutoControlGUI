@@ -313,6 +313,11 @@ class LinuxChannel:
                     if channel is not None:
                         channel.close()
 
+    def fileno(self) -> int:
+        """Return the connected descriptor for peer evidence and readiness waits; it never delivers data."""
+        with self._owner.operation(_deadline(1), None) as resources:
+            return resources.connection.fileno()
+
     def receive(self, *, timeout: float, cancel: threading.Event | None = None) -> dict:
         """Receive one finite JSON object from the still-live original writer."""
         deadline = _deadline(timeout)
@@ -392,6 +397,11 @@ class LinuxListener:
     def endpoint(self) -> LinuxEndpoint:
         """Return immutable metadata for a future trusted host-owned helper launch."""
         return self._endpoint
+
+    def fileno(self) -> int:
+        """Return the listening descriptor for readiness waits; accepting still goes through accept."""
+        with self._owner.operation(_deadline(1), None) as resources:
+            return resources.connection.fileno()
 
     def accept(self, *, timeout: float, cancel: threading.Event | None = None) -> LinuxChannel:
         """Accept one channel and bind its retained peer to that exact socket."""

@@ -24,8 +24,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,433 |
-| 程式碼總行數 | 214,347 |
+| Python 模組總數（含周邊子專案） | 1,434 |
+| 程式碼總行數 | 214,594 |
 | `je_auto_control/utils/` 子套件數 | 311 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 857 |
 | 套件門面 `__all__` 公開名稱數 | 1446 |
@@ -508,13 +508,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 14 個套件、約 51,114 行。
+> 14 個套件、約 51,361 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 2,142 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_runtime/` | 25,547 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
+| `utils/agent_runtime/` | 25,794 | 受管任務、服務、控制權世代、結果驗證與本機推論；所有入口共用執行層。 |
 | `utils/agent_memory/` | 166 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 67 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 172 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
@@ -999,7 +999,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/self_healing/frame_locators.py` | 142 | 純影像比對與明確 VLM backend；共用區域、原點與縮放換算。 |
 | `utils/self_healing/evaluation_io.py` | 188 | 有界且受路徑政策限制的本機資料集、原子 JSON／HTML 報告。 |
 
-#### `utils/agent_runtime/`（25,547 行／181 檔）
+#### `utils/agent_runtime/`（25,794 行／182 檔）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1085,25 +1085,26 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `readiness.py` | 83 | Passive readiness of the desktop, presence source, devices, browser and models; never a grant or evidence. |
 | `resume_gate.py` | 84 | A task's first action waits until a fresh observation passes every declared resume condition. |
 | `policy.py` | 120 | Explicit task scopes, rooted data paths and secret-safe durable payloads. |
-| `presence_channel_linux.py` | 424 | Own authenticated Linux packet channels, bounded leases and protected listeners. |
+| `presence_channel_linux.py` | 434 | Own authenticated Linux packet channels, bounded leases and protected listeners. |
 | `presence_endpoint_linux.py` | 226 | Own protected Linux socket paths without stale-path reuse or recursive cleanup. |
 | `presence_frames.py` | 137 | Closed finite JSON byte frames and exact presence request/result validation. |
-| `presence_broker.py` | 164 | Private broker with internally selected source ownership and normal busy/lease-lost results. |
+| `presence_broker.py` | 170 | Private broker with internally selected source ownership and normal busy/lease-lost results. |
 | `presence_handshake.py` | 77 | Fresh byte challenges bound to native peer identity, birth and process-object liveness. |
 | `presence_host.py` | 100 | Lazy host-owned source lifetimes and fixed per-helper capabilities, never task-selected authority. |
 | `presence_messages_linux.py` | 102 | Authenticate each Linux packet and retire every received descriptor before delivery. |
 | `presence_native_types.py` | 16 | Resource-free native structure size and pointer views for presence components. |
 | `presence_owner.py` | 38 | Closed bounded owner-only line envelopes for private presence helpers. |
 | `presence_peer_linux.py` | 218 | Retain Linux connected-process evidence only; no desktop session or input authority. |
+| `presence_pipe_linux.py` | 207 | Linux presence transport behind the Windows pipe's interface; its endpoint arrives only through the owned launch. |
 | `presence_pipe_windows.py` | 209 | Secured local byte pipes for owned helpers; no desktop observation or runtime binding. |
 | `presence_pool.py` | 380 | Host-only shared presence ownership; task cancellation never cancels another runtime's source. |
 | `presence_protocol.py` | 74 | Per-connection sequences and issued-token ownership; shared source lifetime remains separate. |
 | `presence_reader.py` | 219 | Fresh presence checks inside owned input helpers, with bounded callers and an independent watchdog. |
 | `presence_security_windows.py` | 220 | Query-only endpoint identity and noninheritable current-user/System security descriptors. |
 | `presence_session_windows.py` | 83 | Query-only current physical-console support checks; remote or unknown sessions fail closed. |
-| `presence_server.py` | 178 | One reserved session source with sixteen authenticated connections and token-only cleanup. |
+| `presence_server.py` | 182 | One reserved session source with sixteen authenticated connections and token-only cleanup. |
 | `presence_state.py` | 159 | Presence-only monotonic state; source leases never substitute for native input ownership. |
-| `presence_platform.py` | 47 | Pick the physical presence API for this helper's platform; a platform without a trusted source refuses. |
+| `presence_platform.py` | 67 | Pick the physical presence API for this helper's platform; a platform without a trusted source refuses. |
 | `presence_quartz.py` | 165 | macOS physical presence: a listen-only session event tap that counts hardware events, plus console lock state. |
 | `presence_win32.py` | 255 | Header-only Raw Input observation in the dedicated helper, with fresh supported-console checks. |
 | `presence_windows.py` | 252 | Fresh bounded source actor with retained native resources, independent of input-helper lifetimes. |
@@ -1499,8 +1500,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 981 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 861 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 984 | 98,211 |
-| **總計** | **1,425** | **214,178** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 985 | 98,458 |
+| **總計** | **1,426** | **214,425** |
 
 
 `gui/agent_observation_view.py` provides the bounded read-only agent element table and DPR-1 image selection preview. `gui/agent_tasks_tab.py` owns only request editing and Actions-menu translation; business validation remains in the headless runtime.

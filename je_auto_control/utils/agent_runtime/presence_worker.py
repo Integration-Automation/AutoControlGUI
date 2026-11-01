@@ -8,7 +8,7 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.owned_channel_factory import owned_channel
 from je_auto_control.utils.agent_runtime.presence_frames import identifier
 from je_auto_control.utils.agent_runtime.presence_owner import read_request, send_error, send_result
-from je_auto_control.utils.agent_runtime.presence_pipe_windows import WindowsPresencePipe
+from je_auto_control.utils.agent_runtime.presence_platform import default_presence_pipe
 from je_auto_control.utils.agent_runtime.presence_server import PresenceServer
 from je_auto_control.utils.agent_runtime.presence_windows import WindowsPresenceSource
 from je_auto_control.utils.agent_runtime.parent_watch import start_parent_watch
@@ -53,7 +53,7 @@ def _namespace(payload: dict) -> str | None:
 
 
 def run(source: Any, sink: Any, *, source_factory: Callable[[], Any] = WindowsPresenceSource,
-        pipe_factory: Callable[..., Any] = WindowsPresencePipe) -> None:
+        pipe_factory: Callable[..., Any] = default_presence_pipe) -> None:
     """Serve the single private source bootstrap; later owner EOF closes only this source."""
     server = None
     try:

@@ -1170,9 +1170,11 @@ devices, never from XTEST slaves, and reads `Active`/`LockedHint` from logind: w
 `XDG_SESSION_ID` the seat counts as locked. macOS uses a listen-only session event tap (it needs the
 Accessibility permission). An event counts as injected only when a process posted it from a non-HID
 source state, so a doubt keeps a task waiting rather than letting it take over. Wayland has no
-trusted source. Trusted helper launch and endpoint transfer, expected-helper policy, and presence
-challenge and lease integration remain pending, so non-Windows shared desktop tasks remain
-unavailable. This transport is not full Linux application or native input acceptance.
+trusted source. On Linux the presence broker, worker and server now run over this transport: the owned
+worker binds a fresh private endpoint and reports it in its bootstrap reply, the broker adopts only that
+endpoint, and connecting pins the listener to the process it names before the presence challenge. macOS has
+no presence transport yet, and the runtime still refuses non-Windows shared desktop tasks until native
+acceptance. This transport is not full Linux application or native input acceptance.
 
 Installed wheel and source distributions include the REST Dashboard and Swagger HTML, CSS and
 JavaScript resources. The same localhost REST routes and authentication rules apply to an
