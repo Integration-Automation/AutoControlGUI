@@ -58,7 +58,9 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
-| U-20261101-15 | 2026-11-01 | Patch the dependencies named in Dependabot security alerts | #bugfix #deps #security #ci | [2026-11](2026-11.md) |
+| U-20261101-17 | 2026-11-01 | Patch the dependencies named in Dependabot security alerts | #bugfix #deps #security #ci | [2026-11](2026-11.md) |
+| U-20261101-16 | 2026-11-01 | Accept either refusal when a revocation races the lease watch | #incident #ci #test | [2026-11](2026-11.md) |
+| U-20261101-15 | 2026-11-01 | Observe only the maintenance call's own writes in the receipt test | #incident #ci #test | [2026-11](2026-11.md) |
 | U-20261101-14 | 2026-11-01 | Carry the listener's pid namespace in the Linux endpoint | #incident #ci #linux | [2026-11](2026-11.md) |
 | U-20261101-13 | 2026-11-01 | Run the Linux presence chain over the owned Linux channel | #snapshot #agent #presence #linux | [2026-11](2026-11.md) |
 | U-20261101-12 | 2026-11-01 | Build the Android helper's protocol handler and app | #snapshot #agent #android | [2026-11](2026-11.md) |
@@ -572,7 +574,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-11.md](2026-11.md) | 2026-11 | 15 |
+| [2026-11.md](2026-11.md) | 2026-11 | 17 |
 | [2026-10-f.md](2026-10-f.md) | 2026-10 | 5 |
 | [2026-10-e.md](2026-10-e.md) | 2026-10 | 10 |
 | [2026-10-d.md](2026-10-d.md) | 2026-10 | 15 |

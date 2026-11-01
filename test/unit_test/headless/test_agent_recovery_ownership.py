@@ -1,4 +1,5 @@
 """Explicit source-owner recovery preserves evidence visibility and independently revocable review authority."""
+from concurrent.futures import CancelledError
 from unittest.mock import Mock
 import time
 
@@ -145,7 +146,9 @@ def test_revocation_during_grounding_cannot_reach_successor_input(stopped, monke
     with authorization_scope(owner):
         frame = instance.observe(child)
         monkeypatch.setattr(target, "observe", revoked)
-        with pytest.raises(AuthorizationError):
+        # The service's lease watch may see the revocation first and cancel the task; either way the
+        # successor's input is refused before dispatch, which is what the assertions below hold.
+        with pytest.raises((AuthorizationError, CancelledError)):
             instance.act(child, {"tool": "AC_increment", "observation_id": frame.observation_id})
     assert target.count == 1 and [item["status"] for item in instance.store.actions(child)] == ["failed"]
 
