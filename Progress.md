@@ -518,3 +518,13 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 TCC 權限都給）。`platform-smoke.yml` 的 `macos-capabilities` 只在推送到 `main` 與對 `main` 的 PR 上執行，所以下一個 dev→main
 PR 才會確認 macos-15 是否給一樣的權限；若不同，依 `--measure` 重新實測後更新 `EXPECTED` 與
 `docs/CAPABILITY_MATRIX.md`，不要直接放寬 gate。
+
+---
+
+## minimatch 11 在 VS Code 擴充套件
+
+`BLOCKED` — `autocontrol-lsp/vscode/package-lock.json` 的 `minimatch` 5.1.9 有 Dependabot 警示
+GHSA-g3hv-75wg-m249（moderate），只有 11.0.1 起修好（U-20261101-15）。它來自 `vscode-languageclient` 9.0.1，
+會被 esbuild 打包進擴充套件；到 11.0.0 為止的每一版都要求 `minimatch` ^5 或 ^10，並呼叫 minimatch 11 已移除的
+`Minimatch#makeRe()`，所以用 `overrides` 強制 11 會讓文件篩選在執行時壞掉。等 `vscode-languageclient`
+出支援 minimatch 11 的版本，再升級並重新產生 lock。
