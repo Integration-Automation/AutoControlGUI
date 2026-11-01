@@ -43,8 +43,15 @@ def verify(policy: TaskPolicy, receipts: Sequence[Mapping[str, Any]],
            observation: Mapping[str, Any], *,
            browser_read: Callable[[Mapping], Any] | None = None) -> list[dict[str, Any]]:
     """Evaluate all clauses against confirmed results and fresh target observations."""
+    return verify_clauses(policy.spec.success_criteria, policy, receipts, observation, browser_read=browser_read)
+
+
+def verify_clauses(clauses: Sequence[Mapping[str, Any]], policy: TaskPolicy, receipts: Sequence[Mapping[str, Any]],
+                   observation: Mapping[str, Any], *,
+                   browser_read: Callable[[Mapping], Any] | None = None) -> list[dict[str, Any]]:
+    """Evaluate the given clauses; a failure to decide one is ``unknown``, never ``passed``."""
     reports = []
-    for clause in policy.spec.success_criteria:
+    for clause in clauses:
         try:
             passed = _evaluate(clause, policy, receipts, observation, browser_read)
             status = "unknown" if passed is None else ("passed" if passed else "failed")

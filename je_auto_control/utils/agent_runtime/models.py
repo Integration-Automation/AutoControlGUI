@@ -69,6 +69,9 @@ class AgentTaskSpec:
     actions: tuple[Mapping[str, Any], ...] = ()
     options: Mapping[str, Any] = field(default_factory=dict)
     budget: AgentTaskBudget = field(default_factory=AgentTaskBudget)
+    # Fresh-state checks a first action waits for; see resume_gate. Empty stays out of to_dict, so
+    # every spec written before this field keeps its digest.
+    resume_conditions: tuple[Mapping[str, Any], ...] = ()
 
     def __post_init__(self) -> None:
         self._validate_identity()
@@ -95,13 +98,15 @@ class AgentTaskSpec:
             object.__setattr__(self, name, tuple(value))
 
     def _freeze_payload(self) -> None:
-        for name in ("success_criteria", "inputs", "actions", "options"):
+        for name in ("success_criteria", "inputs", "actions", "options", "resume_conditions"):
             object.__setattr__(self, name, freeze(detached(getattr(self, name))))
         if not isinstance(self.inputs, Mapping) or not isinstance(self.options, Mapping):
             raise AgentTaskError("inputs and options must be objects")
-        if not isinstance(self.success_criteria, tuple) or not isinstance(self.actions, tuple):
-            raise AgentTaskError("criteria and actions must be arrays")
-        if not all(isinstance(item, Mapping) for item in (*self.success_criteria, *self.actions)):
+        if not all(isinstance(getattr(self, name), tuple)
+                   for name in ("success_criteria", "actions", "resume_conditions")):
+            raise AgentTaskError("criteria, actions and resume conditions must be arrays")
+        if not all(isinstance(item, Mapping)
+                   for item in (*self.success_criteria, *self.actions, *self.resume_conditions)):
             raise AgentTaskError("criteria and actions must contain objects")
 
     @classmethod
@@ -119,7 +124,8 @@ class AgentTaskSpec:
 
     def to_dict(self) -> dict[str, Any]:
         """Return independent, JSON-compatible task fields."""
-        data = {item.name: thaw(getattr(self, item.name)) for item in fields(self) if item.name != "budget"}
+        data = {item.name: thaw(getattr(self, item.name)) for item in fields(self)
+                if item.name != "budget" and (item.name != "resume_conditions" or self.resume_conditions)}
         return {**data, "budget": self.budget.to_dict()}
 
 

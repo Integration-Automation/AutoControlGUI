@@ -463,7 +463,8 @@ def _check_transform(operation: Any) -> None:
 
 
 def _check_scope(template: dict, reviewed: dict) -> None:
-    fixed = set(template) - {"goal", "actions"}
+    # The reviewer may add fresh-state resume conditions; everything else must match the source.
+    fixed = set(template) - {"goal", "actions", "resume_conditions"}
     if any(request_spec_digest({"value": template[key]}) != request_spec_digest({"value": reviewed[key]})
            for key in fixed):
         raise AgentTaskError("recovery must preserve source scope, inputs, budgets and completion criteria")

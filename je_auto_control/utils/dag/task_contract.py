@@ -4,6 +4,7 @@ from typing import Any, Mapping
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, detached, freeze, positive
 from je_auto_control.utils.agent_runtime.verification import validate_criteria
+from je_auto_control.utils.agent_runtime.resume_gate import validate_resume_conditions
 
 
 def task_contract(value: Any) -> Mapping[str, Any]:
@@ -20,6 +21,7 @@ def task_contract(value: Any) -> Mapping[str, Any]:
     if spec.mode == "external":
         raise AgentTaskError("DAG task must use skill or explicitly configured local-model mode")
     validate_criteria(spec.success_criteria)
+    validate_resume_conditions(spec.resume_conditions)
     wait = data.get("wait_seconds", min(86_400, spec.budget.wall_seconds + 30))
     positive(wait, "DAG task wait_seconds", 86_400)
     return freeze({"spec": spec.to_dict(), "idempotency_key": key, "wait_seconds": wait})

@@ -39,8 +39,8 @@ class FakeDisplay:
     def xinput_query_version(self):
         return SimpleNamespace(major_version=self.version)
 
-    def get_extension_major(self, _name):
-        return OPCODE
+    def query_extension(self, name):
+        return SimpleNamespace(major_opcode=OPCODE) if name == 'XInputExtension' else None
 
     def xinput_query_device(self, _which):
         self.queries += 1

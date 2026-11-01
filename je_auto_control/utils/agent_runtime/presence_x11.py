@@ -106,7 +106,8 @@ class X11PresenceAPI:
                 raise AgentTaskError('X11 physical presence requires the XInput extension')
             if self._display.xinput_query_version().major_version < 2:
                 raise AgentTaskError('X11 physical presence requires XInput 2')
-            self._opcode = self._display.get_extension_major('XInputExtension')
+            # The public Display answers query_extension; get_extension_major lives on its protocol object.
+            self._opcode = self._display.query_extension('XInputExtension').major_opcode
             self._refresh_devices()
             self._display.screen().root.xinput_select_events([(0, _MASK)])
             self._display.flush()

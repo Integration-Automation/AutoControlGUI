@@ -365,6 +365,10 @@ what the desktop, presence source, Android, iOS, browser and local model still n
 ``unsupported``, ``missing_dependency``, ``unauthorized``, ``not_probed`` or ``not_recorded``; it
 contacts no device and asks for no permission, so it never reports ``measured``.
 
+A spec may declare ``resume_conditions`` (``screen``, ``browser`` or ``file_*`` clauses): the first
+action is admitted only on a fresh observation that passes all of them, otherwise the task waits
+for a person. Receipt-based clauses are refused there, because history cannot prove current state.
+
 Native calls use an owned helper process tree with cancellation/deadlines, a host input ledger
 and per-session exclusion across databases. Native platform acceptance remains deferred.
 

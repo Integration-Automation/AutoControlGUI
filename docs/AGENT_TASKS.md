@@ -107,7 +107,8 @@ launch gate closed until a reviewed release opens it.
 Submit a JSON file with `je_auto_control agent-task submit task.json`, or call
 `submit_agent_task(spec)` from Python. `AgentTaskSpec.from_dict` validates and freezes caller data.
 Required fields are `goal`, nonempty `allowed_tools` and nonempty `success_criteria`.
-Optional fields are `target`, `mode`, `roots`, `apps`, `inputs`, `actions`, `options` and `budget`.
+Optional fields are `target`, `mode`, `roots`, `apps`, `inputs`, `actions`, `options`, `budget` and
+`resume_conditions`.
 
 - `mode`: `external` (default), `skill` or `ollama`. Internal modes are delivered through WorkQueue.
 - `target`: a host-configured adapter identity; the default is `local-desktop`.
@@ -115,6 +116,11 @@ Optional fields are `target`, `mode`, `roots`, `apps`, `inputs`, `actions`, `opt
 - `roots`: canonical allowed data roots; file operations and file completion evidence require them.
 - `actions`: skill proposals with `tool` and optional `arguments`; every proposal still goes through observation.
 - `budget`: max_steps=25, wall_seconds=300, retries=2, action_seconds=30 and model_seconds=120.
+- `resume_conditions`: at most 32 `screen`, `browser` or `file_*` clauses that a fresh observation must
+  pass before the task's first action, e.g. that a session is still signed in. A failed or unknown clause
+  moves the task to `waiting_user` without acting. `result_equals` and `actions_complete` are refused here:
+  receipts are history and cannot prove current state. An empty list is omitted from the spec, so it
+  leaves existing digests unchanged.
 
 Criteria are `result_equals` (key/value in the last confirmed result), `file_exists` (path/min_bytes),
 `file_sha256` (path/value), `file_text` (path/value), and `screen` (nonempty existing postcondition spec).

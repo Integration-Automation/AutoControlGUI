@@ -50,7 +50,8 @@ from je_auto_control.utils.agent_runtime.completion_recovery import (
     check_completion_authority, completion_spec, completion_details,
     retainable_browser,
 )
-from je_auto_control.utils.agent_runtime.verification import validate_criteria, verify
+from je_auto_control.utils.agent_runtime.verification import verify
+from je_auto_control.utils.agent_runtime.resume_gate import ResumeGate, validate_task_conditions
 from je_auto_control.utils.exception.cancellation import CancellationToken, cancellation_scope
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.dispatch import command_guard
@@ -81,6 +82,7 @@ class AgentRuntime:
         self.broker = ControlBroker(self.store)
         self.clock = BudgetClock(self.store)
         self.evidence = TaskEvidence(self.store)
+        self._resume = ResumeGate(self.store)
         self.source_private_files: tuple[Path, ...] = ()
         self.triggers = AgentTriggers(self)
         self.skills = AgentSkills(self, completion_authority=check_completion_authority,
@@ -165,7 +167,7 @@ class AgentRuntime:
             raise AgentTaskError("task target has not been configured")
         spec = self.target_profiles.bind(spec)
         TaskPolicy(spec)
-        validate_criteria(spec.success_criteria)
+        validate_task_conditions(spec)
         return spec
 
     def submit(self, spec: AgentTaskSpec | Mapping[str, Any], *,
@@ -388,7 +390,8 @@ class AgentRuntime:
                     with self.broker.dispatch(self._leases[task_id]):
                         data = detached(self._target(row).observe())
                         self._token(task_id).checkpoint()
-                    observation = AgentObservation(uuid.uuid4().hex, task_id, time.time(), freeze(data))
+                        observation = AgentObservation(uuid.uuid4().hex, task_id, time.time(), freeze(data))
+                        self._resume.record(row, observation, self._target(row))
                     self._observations[task_id] = observation
                     self._observation_times[task_id] = time.monotonic()
                     if row["spec"]["options"].get("persist_images") and data.get("image"):
@@ -420,6 +423,7 @@ class AgentRuntime:
                 policy.check(request.tool, request.arguments)
                 if row["steps"] >= row["spec"]["budget"]["max_steps"]:
                     self._budget_failure(task_id, "task step budget exhausted", "failed")
+                self._resume.require(row, request.observation_id)
                 with self.broker.dispatch(self._leases[task_id]):
                     self._ground(row, request)
                     return self._perform(row, request)

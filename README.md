@@ -257,7 +257,10 @@ completion conditions stay fixed, and unknown effects require reconciliation. Ol
 coordinates and completed history are not transplanted. Use `AC_agent_task_recovery`, MCP/REST,
 `agent-task recovery preview|create request.json` or Agent tasks → Actions → Review remaining work /
 replan / Create reviewed successor task. Delegated sources cannot resume; continue from the successor.
-Login and window-state restoration still require review.
+Login and window-state restoration is declared, never inferred: a successor (or any task) may list
+`resume_conditions` — `screen`, `browser` or `file_*` clauses only, since receipts are history — and its
+first action is admitted only on a fresh observation that passes all of them. A failed or unknown
+condition puts the task in `waiting_user` instead of acting; once any action receipt exists the gate is spent.
 
 Built-in Android/iOS managed profiles remain unavailable. Their internal remote-effect guard records
 before/after acknowledgements against a physical-device identity and retains quarantine when a local

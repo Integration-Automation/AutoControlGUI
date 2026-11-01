@@ -241,6 +241,9 @@ Python、AC、MCP、REST、CLI 與 Agent 任務面板共用提交、觀察、動
 真人在場來源、Android、iOS、瀏覽器與本機模型尚缺的條件：``unsupported``、``missing_dependency``、
 ``unauthorized``、``not_probed`` 或 ``not_recorded``；不連線裝置、不要求權限，因此不會回報 ``measured``。
 
+規格可宣告 ``resume_conditions``（``screen``、``browser`` 或 ``file_*`` 條件）：第一個動作只在新觀察
+全部通過時才被接受，否則任務等待人工；依收據判定的條件在此被拒絕，因為歷史不能證明現況。
+
 原生操作使用專屬 helper 程序樹，支援取消、逾時、主服務輸入清理與跨資料庫桌面排他。
 原生平台驗收仍暫緩。
 
