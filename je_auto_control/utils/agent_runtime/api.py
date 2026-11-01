@@ -220,6 +220,12 @@ def agent_runtime_status() -> dict[str, Any]:
             "helper_containment": containment}
 
 
+def agent_runtime_readiness() -> dict[str, Any]:
+    """Report what each managed-task area still needs, passively; never a permission grant or native evidence."""
+    from je_auto_control.utils.agent_runtime.readiness import agent_runtime_readiness as readiness
+    return readiness()
+
+
 def stop_agent_runtime() -> dict[str, Any]:
     """Request service cancellation and retirement; an active input owner prevents shutdown."""
     return AgentRuntimeClient().call("shutdown", {})

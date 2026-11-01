@@ -177,6 +177,7 @@ TOOL_CAPABILITIES: Dict[str, str] = {
     "ac_agent_runtime_stop": _HOSTS,
     "ac_agent_runtime_start": _HOSTS,
     "ac_agent_runtime_status": _DRIVE,
+    "ac_agent_runtime_readiness": _DRIVE,
     "ac_agent_skill_list": _DRIVE,
     "ac_agent_task_get": _DRIVE,
     "ac_agent_task_lookup": _DRIVE,

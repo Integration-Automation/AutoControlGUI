@@ -211,10 +211,10 @@ Jeffrey_RPA 的 test_je_facade → 推送 `dev`（會觸發 je_auto_control_dev 
      獨立資源並行；未知清理不得讓下游成功或搶走遠端控制權。
 
 7. **P3／P6／P7：能力、模型及共用介面驗證**
-   - 補桌面權限、平台／裝置連線、來源／目標就緒與原生證據的診斷；區分未支援、缺依賴、
-     未授權、未探測、未記錄與實測成功，不把 Python 套件匯入成功當原生可用。
-     runtime status 已加入 helper 程序擁有方式（helper_containment，native_evidence 固定
-     not_recorded）；桌面權限、裝置連線與來源／目標就緒的診斷仍缺。
+   - 被動就緒診斷已交付（`agent_runtime_readiness`，U-20261101-05）：桌面輸入／擷取、真人在場來源、
+     Android／iOS 控制、瀏覽器與本機模型各自回報 unsupported／missing_dependency／unauthorized／
+     not_probed／not_recorded。仍缺「實測成功」（measured）：只能由受保護的原生驗收紀錄提供，
+     須待原生驗收解除暫緩後接入；在此之前診斷不得回報 measured，也不主動探測原生 API 或連線裝置。
    - 為自訂／外部 target 補經審閱的語義觀察與遮罩覆蓋契約；沒有能力旗標的舊 target 仍沿用
      既有判定，不能因此宣稱已證明完整畫面或遮罩內容的不存在。深化部分證據的計數／狀態／
      變動判定與受保護欄位比較，目前缺少充分證據時仍為未知。

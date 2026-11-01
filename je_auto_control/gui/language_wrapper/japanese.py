@@ -1672,6 +1672,7 @@ japanese_word_dict.update({
     'agent_target_request': '確認済みの対象設定',
     'agent_target_apply': '対象操作を適用',
     'agent_target_list': '対象の対応状況を表示',
+    'agent_readiness': '各領域に不足しているものを表示',
     'agent_target_register': '不変の対象を登録',
     'agent_target_get': '対象を確認',
     'agent_target_disable': '対象を無効化',

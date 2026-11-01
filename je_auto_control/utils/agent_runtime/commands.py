@@ -114,6 +114,7 @@ CATALOG: dict[str, tuple[Any, dict, tuple[str, ...], bool, bool]] = {
     "AC_agent_runtime_start": (api.start_agent_runtime, {"directory": {"type": "string", "format": "path"}},
                                (), False, True),
     "AC_agent_runtime_status": (api.agent_runtime_status, {}, (), True, False),
+    "AC_agent_runtime_readiness": (api.agent_runtime_readiness, {}, (), True, False),
     "AC_agent_task_submit": (api.submit_agent_task, {"spec": {"type": "object"},
                                                    "idempotency_key": {"type": "string", "maxLength": 256}},
                             ("spec",), False, False),

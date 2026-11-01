@@ -17,7 +17,7 @@ def register_parser(subparsers: Any, handler: Callable[..., int]) -> None:
     """Register additive task commands without changing legacy CLI flags."""
     parser = subparsers.add_parser("agent-task", help="Manage explicitly authorized agent tasks")
     operations = parser.add_subparsers(dest="agent_operation", required=True)
-    for operation in ("start", "stop", "status", "submit", "list", "get", "lookup", "inspect-dag",
+    for operation in ("start", "stop", "status", "readiness", "submit", "list", "get", "lookup", "inspect-dag",
                       "observe", "act", "finish",
                       "pause", "resume", "cancel", "draft", "stop-all", "receipts", "reconcile", "prune", "trigger",
                       "recover-target", "skill", "target", "targets", "recovery", "dag", "transfer"):
@@ -57,7 +57,7 @@ def _operation_arguments(item: Any, operation: str) -> None:
 
 
 def _task_arguments(item: Any, operation: str) -> None:
-    if operation in {"list", "status", "stop", "stop-all", "targets"}:
+    if operation in {"list", "status", "readiness", "stop", "stop-all", "targets"}:
         return
     item.add_argument("task_id")
     if operation in {"act", "reconcile"}:
@@ -88,7 +88,8 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
                                                         _read(arguments.request) if arguments.request else {}),
                   "target": lambda: api.manage_agent_target(arguments.target_operation,
                                                              _read(arguments.request) if arguments.request else {}),
-                  "status": api.agent_runtime_status, "stop": api.stop_agent_runtime,
+                  "status": api.agent_runtime_status, "readiness": api.agent_runtime_readiness,
+                  "stop": api.stop_agent_runtime,
                   "lookup": lambda: _lookup(arguments),
                   "inspect-dag": lambda: api.inspect_agent_dag(_read(arguments.definition), arguments.timeout_seconds),
                   "stop-all": api.stop_all_agent_tasks, "list": api.list_agent_tasks,

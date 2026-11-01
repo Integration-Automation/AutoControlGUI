@@ -133,6 +133,9 @@ def AC_agent_dag_inspect(definition: Mapping[str, Any], timeout_seconds: float =
 def AC_agent_runtime_start(directory: str | None = ...) -> dict[str, Any]:
     """Explicitly start a hidden, independent local service, or attach to the current one."""
 
+def AC_agent_runtime_readiness() -> dict[str, Any]:
+    """Report what each managed-task area still needs, passively; never a permission grant or native evidence."""
+
 def AC_agent_runtime_status() -> dict[str, Any]:
     """Return inert local connection metadata without reading or returning credentials."""
 

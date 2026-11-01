@@ -1634,6 +1634,7 @@ traditional_chinese_word_dict.update({
     'agent_target_request': '已審閱的目標設定',
     'agent_target_apply': '套用目標操作',
     'agent_target_list': '列出目標支援狀態',
+    'agent_readiness': '顯示各領域尚缺的條件',
     'agent_target_register': '註冊固定目標',
     'agent_target_get': '檢查目標',
     'agent_target_disable': '停用目標',

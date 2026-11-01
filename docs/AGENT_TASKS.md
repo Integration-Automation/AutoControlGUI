@@ -55,13 +55,16 @@ system permissions. Native target acceptance remains unverified; see `Progress.m
 ```powershell
 je_auto_control agent-task start
 je_auto_control agent-task status
+je_auto_control agent-task readiness
 je_auto_control agent-task list
 je_auto_control agent-task stop
 ```
 
 Importing the package does not start a service or operate a target. Explicit startup launches a
 hidden local process and publishes its ephemeral loopback address and bearer credential to the
-per-user `agent_runtime.json`. Status never returns that credential. Stop requests cancel owned
+per-user `agent_runtime.json`. Status never returns that credential. Readiness needs no service:
+it reports passively what each area (desktop, presence source, Android, iOS, browser, local model)
+still needs, never `measured`, with `native_evidence: not_recorded`. Stop requests cancel owned
 input first; active dispatch or cleanup prevents premature service retirement.
 
 Status also reports `helper_containment`: how this host owns helper processes, without launching one.

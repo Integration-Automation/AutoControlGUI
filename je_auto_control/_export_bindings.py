@@ -47,6 +47,7 @@ EXPORTS: dict[str, ExportBinding] = {
     'manage_agent_trigger': AttributeBinding('je_auto_control.utils.agent_runtime', 'manage_agent_trigger'),
     'list_agent_triggers': AttributeBinding('je_auto_control.utils.agent_runtime', 'list_agent_triggers'),
     'act_agent_task': AttributeBinding('je_auto_control.utils.agent_runtime', 'act_agent_task'),
+    'agent_runtime_readiness': AttributeBinding('je_auto_control.utils.agent_runtime', 'agent_runtime_readiness'),
     'agent_runtime_status': AttributeBinding('je_auto_control.utils.agent_runtime', 'agent_runtime_status'),
     'cancel_agent_task': AttributeBinding('je_auto_control.utils.agent_runtime', 'cancel_agent_task'),
     'finish_agent_task': AttributeBinding('je_auto_control.utils.agent_runtime', 'finish_agent_task'),

@@ -237,6 +237,10 @@ Python、AC、MCP、REST、CLI 與 Agent 任務面板共用提交、觀察、動
 關閉面板後已提交工作仍由服務擁有。原生平台驗收與其餘流程列在 ``Progress.md``；
 完整契約見 ``docs/AGENT_TASKS.md``。
 
+``agent-task readiness``（``agent_runtime_readiness``、``AC_agent_runtime_readiness``）被動回報桌面、
+真人在場來源、Android、iOS、瀏覽器與本機模型尚缺的條件：``unsupported``、``missing_dependency``、
+``unauthorized``、``not_probed`` 或 ``not_recorded``；不連線裝置、不要求權限，因此不會回報 ``measured``。
+
 原生操作使用專屬 helper 程序樹，支援取消、逾時、主服務輸入清理與跨資料庫桌面排他。
 原生平台驗收仍暫緩。
 

@@ -360,6 +360,11 @@ Ollama model without downloads, redirects or external fallback. Closing the view
 submitted work owned by the service. Native/platform acceptance and remaining workflows
 are tracked in ``Progress.md``; full contracts are in ``docs/AGENT_TASKS.md``.
 
+``agent-task readiness`` (``agent_runtime_readiness``, ``AC_agent_runtime_readiness``) reports passively
+what the desktop, presence source, Android, iOS, browser and local model still need, as
+``unsupported``, ``missing_dependency``, ``unauthorized``, ``not_probed`` or ``not_recorded``; it
+contacts no device and asks for no permission, so it never reports ``measured``.
+
 Native calls use an owned helper process tree with cancellation/deadlines, a host input ledger
 and per-session exclusion across databases. Native platform acceptance remains deferred.
 

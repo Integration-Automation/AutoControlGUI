@@ -1787,6 +1787,7 @@ english_word_dict.update({
     'agent_target_request': 'Reviewed target configuration',
     'agent_target_apply': 'Apply target operation',
     'agent_target_list': 'List target support',
+    'agent_readiness': 'Show what each area still needs',
     'agent_target_register': 'Register immutable target',
     'agent_target_get': 'Inspect target',
     'agent_target_disable': 'Disable target',

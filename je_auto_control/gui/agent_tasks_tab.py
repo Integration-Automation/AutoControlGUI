@@ -17,7 +17,9 @@ from je_auto_control.gui.task_controller import TaskController, TaskOutcome
 from je_auto_control.gui.agent_transfer_view import AgentTransferView
 from je_auto_control.gui.agent_observation_view import AgentObservationView
 from je_auto_control.utils.agent_runtime.client import AgentRuntimeClient
-from je_auto_control.utils.agent_runtime.api import start_agent_runtime, stop_agent_runtime
+from je_auto_control.utils.agent_runtime.api import (
+    agent_runtime_readiness, start_agent_runtime, stop_agent_runtime,
+)
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, AgentActionRequest
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.workflow_specs import draft_agent_workflow, WORKFLOWS
@@ -43,6 +45,8 @@ def _request(operation: str, payload: dict, token: CancellationToken) -> dict:
         return start_agent_runtime()
     if operation == "stop":
         return stop_agent_runtime()
+    if operation == "readiness":
+        return agent_runtime_readiness()
     if operation == "draft":
         return {"draft": draft_agent_workflow(payload["workflow"], payload["config"])}
     return AgentRuntimeClient().call(operation, payload or None)
@@ -227,6 +231,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 ("agent_browser_completion_example", self._browser_completion_example),
                 ("agent_browser_files_example", self._browser_files_example),
                 ("agent_target_list", partial(self._dispatch, "targets", {})),
+                ("agent_readiness", partial(self._dispatch, "readiness", {})),
                 ("agent_submit", self._submit), ("agent_refresh", partial(self._dispatch, "list")),
                 ("agent_lookup", self._lookup),
                 *[("agent_" + name, partial(self._dispatch, name)) for name in
@@ -484,7 +489,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 return
             self._handle.cancel()
         task_operation = operation not in {
-            "start", "stop", "list", "stop_all", "prune", "targets", "target", "lookup"}
+            "start", "stop", "list", "stop_all", "prune", "targets", "target", "lookup", "readiness"}
         default = {"task_id": self._task_id.text()} if task_operation else {}
         data = payload or default
         self._select_request_view(operation, data)
