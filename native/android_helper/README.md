@@ -31,6 +31,8 @@ there is no request that moves the epoch back.
 
 ## Layout
 
-- `core/` — `FenceLedger`, the pure Kotlin state machine every request goes through; no Android
-  dependency, so it is tested on the JVM.
+- `core/` — `FenceLedger`, the pure Kotlin state machine every request goes through, and
+  `ProtocolHandler`, which turns one decoded request into one reply and accepts only the closed,
+  bounded `tap`, `swipe` and `key` command shapes; no Android dependency, so both are tested on the JVM.
+  `queue_empty` is true only when nothing is queued **and** nothing is still injecting.
 - `settings.gradle.kts`, `build.gradle.kts` — Gradle build; CI provides Gradle and the JDK.

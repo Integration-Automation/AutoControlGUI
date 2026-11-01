@@ -78,7 +78,8 @@ class FenceLedger(private val bootId: String, initialEpoch: String, private val 
         val fenced = queue.filter { records.getValue(it).epoch != newEpoch }
         fenced.forEach { records.getValue(it).status = CommandStatus.FENCED }
         queue.removeAll(fenced.toSet())
-        FenceResult(newEpoch, fenced, injecting, queue.isEmpty())
+        // A command still injecting is a remote write in progress, so the queue is not empty yet.
+        FenceResult(newEpoch, fenced, injecting, queue.isEmpty() && injecting == null)
     }
 
     /** Hand the injector the next command, only if it was begun under the current epoch. */
