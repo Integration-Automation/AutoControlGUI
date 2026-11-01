@@ -1,0 +1,49 @@
+name: Android device-side helper
+
+# Builds and tests native/android_helper. Stage 1 is the fence ledger, a pure Kotlin
+# state machine tested on the JVM; later stages add the instrumentation app and an
+# emulator run. Nothing here holds a secret or publishes anything.
+
+on:
+  push:
+    branches: ["dev", "main"]
+    paths:
+      - "native/android_helper/**"
+      - ".github/workflows/android-helper.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "native/android_helper/**"
+      - ".github/workflows/android-helper.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-helper-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fence-ledger:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: gradle/actions/setup-gradle@v4  # NOSONAR githubactions:S7637
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Test the fence ledger on the JVM
+        run: gradle --no-daemon -p native/android_helper :core:test

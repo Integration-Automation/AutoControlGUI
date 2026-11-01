@@ -143,6 +143,10 @@ Jeffrey_RPA 的 test_je_facade → 推送 `dev`（會觸發 je_auto_control_dev 
      未知 worker／按住輸入／清理失敗時不得移交或竊取租約。
 
 4. **P7：Android／iOS 受管裝置**
+   - `WIP`：裝置端 helper 依使用者 2026-11-01 決定自建，於 CI 建置與測試（`native/android_helper/`，
+     U-20261101-11）。第 1 階段（epoch 柵欄與逐命令結算的 `FenceLedger`＋JVM 測試）已完成；
+     仍缺第 2 階段 instrumentation app（abstract socket 伺服器、UiAutomation 注入器）、第 3 階段主機端
+     provider 與 `getevent` 實體輸入來源、第 4 階段 CI 模擬器測試；真機驗收仍暫緩。
    - 為 `utils/agent_runtime/android_adapter.py` 實作並審閱真實 `AndroidControlProvider`／
      `AndroidCommandLease` 來源；須有裝置端執行機制，在真人接回、取消／逾時後阻止舊寫入，
      並提供逐命令 ID／boot／epoch 相符的輸入釋放、遠端佇列清空與舊 writer 退出證據。
