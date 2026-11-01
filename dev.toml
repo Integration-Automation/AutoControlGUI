@@ -22,7 +22,11 @@ license-files = ["LICENSE"]
 dependencies = [
     "je_open_cv==0.0.22; sys_platform != 'win32' or platform_machine != 'ARM64'",
     "opencv-python>=4.8,<6; sys_platform != 'win32' or platform_machine != 'ARM64'",
-    "pillow==12.3.0",
+    # Pillow 13.0.0 fixes the 12.x advisories (critical: GHSA-v9pv-5gc8-w2m6,
+    # GHSA-5x8w-8jj5-q52h) but needs Python >=3.11; 3.10 keeps 12.3.0, the
+    # newest release it can install.
+    "pillow==12.3.0; python_version < '3.11'",
+    "pillow==13.0.0; python_version >= '3.11'",
     "pyobjc-core==12.2.2;platform_system=='Darwin'",
     "pyobjc==12.2.2;platform_system=='Darwin'",
     "python-Xlib==0.33;platform_system=='Linux' or platform_system=='FreeBSD' or platform_system=='OpenBSD' or platform_system=='NetBSD'",
@@ -88,7 +92,7 @@ gui = ["PySide6==6.11.2"]
 webrtc = ["aiortc>=1.14.0", "av>=14.0.0"]
 signaling = ["fastapi>=0.115", "starlette>=1.0.1", "uvicorn>=0.32"]
 discovery = ["zeroconf>=0.149.16"]
-pdf = ["pypdf>=6.16.1"]
+pdf = ["pypdf>=6.21.4"]
 office = ["openpyxl>=3.1", "python-docx>=1.1", "python-pptx>=0.6"]
 fuzzy = ["rapidfuzz>=3.0"]
 s3 = ["boto3>=1.34"]

@@ -41,6 +41,9 @@ MARKED = ("je_open_cv", "opencv-python", "cryptography")
 # purpose: it was once named a blocker and never was one.
 UNMARKED = ("pillow", "mss", "defusedxml")
 
+# A marker that names the platform. A Python-version marker is not one.
+_PLATFORM_MARKER = re.compile(r"\b(sys_platform|platform_machine|platform_system|os_name)\b")
+
 ENVIRONMENTS: Dict[str, Dict[str, str]] = {
     "windows arm64": {
         "sys_platform": "win32", "platform_machine": "ARM64",
@@ -85,14 +88,19 @@ def _dependencies() -> List[str]:
     return found
 
 
-def _requirement(name: str) -> str:
-    """Return the single requirement string whose distribution is ``name``."""
+def _requirements(name: str) -> List[str]:
+    """Return every requirement string whose distribution is ``name``."""
     prefix = name.lower()
-    matches = [
+    return [
         text for text in _dependencies()
         if text.lower().split(";")[0].strip()
         .replace("_", "-").startswith(prefix.replace("_", "-"))
     ]
+
+
+def _requirement(name: str) -> str:
+    """Return the single requirement string whose distribution is ``name``."""
+    matches = _requirements(name)
     assert len(matches) == 1, f"{name}: expected one requirement, got {matches}"
     return matches[0]
 
@@ -115,13 +123,27 @@ def test_the_unavailable_wheels_are_marked_off_windows_arm64(name: str) -> None:
 
 @pytest.mark.parametrize("name", UNMARKED)
 def test_the_available_wheels_are_not_marked_off_anything(name: str) -> None:
-    """Pillow, mss and defusedxml ship for arm64 and must stay unconditional."""
-    requirement = _requirement(name)
-    assert ARM64_MARKER not in requirement, (
-        f"{name} was marked off Windows arm64, but it publishes a win_arm64 "
-        f"wheel and was never a blocker. Marking it costs that platform a "
-        f"working feature for nothing."
-    )
+    """Pillow, mss and defusedxml ship for arm64 and carry no platform marker.
+
+    A requirement may be split by Python version (Pillow 13 needs 3.11, so
+    3.10 keeps 12.3.0), but no line may depend on the platform.
+    """
+    requirements = _requirements(name)
+    assert requirements, f"{name} is missing from the dependencies"
+    for requirement in requirements:
+        marker = requirement.split(";", 1)[1] if ";" in requirement else ""
+        assert not _PLATFORM_MARKER.search(marker), (
+            f"{name} was marked off a platform ({requirement!r}), but it "
+            f"publishes a win_arm64 wheel and was never a blocker. Marking it "
+            f"costs that platform a working feature for nothing."
+        )
+
+
+def test_a_platform_marker_on_an_unmarked_package_is_caught() -> None:
+    """The check above sees platform names and lets Python versions through."""
+    assert _PLATFORM_MARKER.search(ARM64_MARKER)
+    assert _PLATFORM_MARKER.search("platform_system=='Darwin'")
+    assert not _PLATFORM_MARKER.search("python_version >= '3.11'")
 
 
 @pytest.mark.parametrize("label,environment", sorted(ENVIRONMENTS.items()))
