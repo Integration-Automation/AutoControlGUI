@@ -78,7 +78,8 @@ def test_restoring_duplicate_titles_moves_each_window_once(monkeypatch):
         {"title": "Editor", "x": 0, "y": 0, "width": 1, "height": 1},
         {"title": "Editor", "x": 5, "y": 5, "width": 1, "height": 1},
     ])
-    assert count == 2 and moved == [2, 3]
+    assert count == 2
+    assert moved == [2, 3]
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="the UIA query module loads on Windows only")
@@ -117,4 +118,5 @@ def test_unavailable_errors_are_in_the_framework_family():
     from je_auto_control.utils.accessibility.element import AccessibilityNotAvailableError
     from je_auto_control.utils.ocr.backends.base import OCRBackendNotAvailableError
     for error in (AccessibilityNotAvailableError, OCRBackendNotAvailableError):
-        assert issubclass(error, AutoControlException) and issubclass(error, RuntimeError)
+        assert issubclass(error, AutoControlException)
+        assert issubclass(error, RuntimeError)

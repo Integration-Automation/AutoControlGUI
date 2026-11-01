@@ -24,7 +24,7 @@ Layering: entry points (`cli.py`, `gui/`, socket / REST / MCP servers) → execu
 
 ```bash
 pip install -r dev_requirements.txt         # dev deps
-pip install -e .[gui,webrtc]                # + GUI and WebRTC extras
+pip install -e .[gui,webrtc,signaling]      # + GUI, WebRTC and signaling-server extras
 python -m pytest test/unit_test/headless    # headless unit tests
 python -m pytest test/integrated_test/      # cross-module workflows
 python -m coverage run -m pytest            # the suite WITH coverage (see below)
@@ -42,7 +42,9 @@ executed: measured, that was 11,962 statements and ~24 percentage points
 module `je_auto_control_pytest`, which imports only pytest
 (`test_pytest_entrypoint_light.py` keeps it so), but `coverage run` remains the
 rule: it does not depend on what a plugin imports or on which build is
-installed, and `pytest --cov` has not been re-measured since.
+installed. Re-measured on 2026-10-09 the two agreed (87.35% against 87.32%),
+and the maintainer decided the same day to keep `coverage run` as the only
+spelling.
 `test/unit_test/headless/test_coverage_measurement.py` holds CI to the
 correct spelling. After changing the entry point, reinstall (`pip install -e .`)
 for it to take effect.
@@ -133,7 +135,7 @@ Anything agreed but not done — deferred follow-ups, known gaps, half-delivered
 
 Cyclomatic complexity ≤ 10 · cognitive complexity ≤ 15 · function ≤ 75 lines · parameters ≤ 7 · nesting ≤ 4 · file ≤ 750 lines · line ≤ 120 chars · no duplicated block ≥ 10 lines.
 
-**What actually enforces these.** `quality.yml` has five jobs — `lint` (ruff), `security` (bandit), `pytest-headless` (the suite plus the coverage floor), `typing-stable-api` (mypy) and `dependency-review`. Of the limits in this section, line length is rejected by ruff (`[tool.ruff] line-length = 120` with `E501`; it exempts a line ending in a pragma, which cannot wrap), and the file-length limit by `test/unit_test/headless/test_file_length_budget.py`, which reads the exemption list in `Progress.md` and fails on a file over the limit that is not listed, on a listed file that grew past its recorded ceiling, and on a row whose file is now under the limit. Cyclomatic complexity is measured with the same `radon` the pre-commit list below names, by `test/unit_test/headless/test_complexity_budget.py`; the whole package was one function over the limit when that gate went in. Cognitive complexity, function length, parameter count and nesting depth are still review standards rather than gates.
+**What actually enforces these.** `quality.yml` has eight jobs — `lint` (ruff), `security` (bandit), `pytest-headless` (the suite plus the coverage floor), `typing-stable-api` (mypy), `typing-extras` (the same contract against the real PySide6 / aiortc types, with the shrink-only list in `test/verify/typing_extras_exempt.txt`), `docs` (the Sphinx build, warnings as errors), `free-threaded-scope` (the variable-scope tests on a free-threaded build) and `dependency-review`. Of the limits in this section, line length is rejected by ruff (`[tool.ruff] line-length = 120` with `E501`; it exempts a line ending in a pragma, which cannot wrap), and the file-length limit by `test/unit_test/headless/test_file_length_budget.py`, which reads the exemption list in `Progress.md` and fails on a file over the limit that is not listed, on a listed file that grew past its recorded ceiling, and on a row whose file is now under the limit. Cyclomatic complexity is measured with the same `radon` the pre-commit list below names, by `test/unit_test/headless/test_complexity_budget.py`; the whole package was one function over the limit when that gate went in. Cognitive complexity, function length, parameter count and nesting depth are still review standards rather than gates.
 
 **Scope of the file-length limit.** It applies to:
 
@@ -219,4 +221,4 @@ Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes
 - JSON action command names use the `AC_` prefix (e.g. `AC_click_mouse`); MCP tools use `ac_`.
 - Platform backends are named `{platform}_{function}.py` (e.g. `win32_ctype_mouse_control.py`).
 - Virtual key mappings live in `core/utils/*_vk.py` per platform.
-- Two PyPI packages, both published by CI: a push to `main` releases `je_auto_control` (the `publish` job of `stable.yml`), and a push to `dev` that passes the headless suite and changes what the package ships releases `je_auto_control_dev` (the `publish-dev` job of `dev.yml`, `scripts/dev_release.py`). Never bump a version by hand; the version in `dev.toml` is only a floor. `dev.toml` must declare what `pyproject.toml` declares, so a change to dependencies, extras, scripts, entry points or `[tool.setuptools]` goes into both files (`test/unit_test/headless/test_dev_toml_parity.py` fails otherwise). Both publish jobs hold the PyPI token, so they install only the hash-locked `.github/requirements/publish.txt` and build with `python -m build --no-isolation`: a new tool, or a higher floor in `build-system.requires`, needs the lock regenerated with the command at the top of `.github/requirements/publish.in` (`test/unit_test/headless/test_publish_tooling_lock.py` fails otherwise).
+- Two PyPI packages, both published by CI: a push to `main` releases `je_auto_control` (the `publish` job of `stable.yml`), and a push to `dev` that passes the headless suite and changes what the package ships releases `je_auto_control_dev` (the `publish-dev` job of `dev.yml`, `scripts/dev_release.py`). Never bump a patch version by hand: `scripts/stable_release.py` releases one patch above the version `pyproject.toml` declares whenever that version already has a `v*` tag. A minor or major release is the one exception — set the new version in `pyproject.toml` in the pull request that ships it, and the job releases that untagged version as written (`test/unit_test/headless/test_stable_release.py`). The version in `dev.toml` is only a floor. `dev.toml` must declare what `pyproject.toml` declares, so a change to dependencies, extras, scripts, entry points or `[tool.setuptools]` goes into both files (`test/unit_test/headless/test_dev_toml_parity.py` fails otherwise). Both publish jobs hold the PyPI token, so they install only the hash-locked `.github/requirements/publish.txt` and build with `python -m build --no-isolation`: a new tool, or a higher floor in `build-system.requires`, needs the lock regenerated with the command at the top of `.github/requirements/publish.in` (`test/unit_test/headless/test_publish_tooling_lock.py` fails otherwise).

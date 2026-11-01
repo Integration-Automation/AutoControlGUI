@@ -28,7 +28,8 @@ def test_find_shapes_returns_all_three():
     shapes = find_shapes(_scene(), min_area=300)
     assert len(shapes) == 3                       # button, outline, circle bbox
     biggest = shapes[0]                           # largest first
-    assert _near(biggest["width"], 100) and _near(biggest["height"], 50)
+    assert _near(biggest["width"], 100)
+    assert _near(biggest["height"], 50)
 
 
 def test_find_rectangles_excludes_the_circle():
@@ -41,8 +42,10 @@ def test_aspect_range_keeps_only_wide_button():
     wide = find_rectangles(_scene(), min_area=300, aspect_range=(1.5, 8.0))
     assert len(wide) == 1
     box = wide[0]
-    assert _near(box["x"], 20) and _near(box["y"], 20)
-    assert _near(box["center"][0], 70) and _near(box["center"][1], 45)
+    assert _near(box["x"], 20)
+    assert _near(box["y"], 20)
+    assert _near(box["center"][0], 70)
+    assert _near(box["center"][1], 45)
 
 
 def test_max_area_filters_large_shapes():
@@ -72,4 +75,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("find_shapes", "find_rectangles"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

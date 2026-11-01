@@ -46,8 +46,10 @@ def test_json_log_formatter_includes_extras():
         {"name": "x", "levelname": "INFO", "msg": "hi",
          "trace_id": "abc", "custom": 5})
     payload = json.loads(formatter.format(record))
-    assert payload["message"] == "hi" and payload["level"] == "INFO"
-    assert payload["trace_id"] == "abc" and payload["custom"] == 5
+    assert payload["message"] == "hi"
+    assert payload["level"] == "INFO"
+    assert payload["trace_id"] == "abc"
+    assert payload["custom"] == 5
 
 
 # --- wiring ---------------------------------------------------------------
@@ -70,4 +72,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("CanonicalLogLine", "JSONLogFormatter", "bind_trace_context"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

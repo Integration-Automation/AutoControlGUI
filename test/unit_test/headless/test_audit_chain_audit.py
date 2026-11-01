@@ -43,7 +43,8 @@ def _verify(path):
 def test_a_forged_row_with_its_hash_cleared_is_caught(db):
     _tamper(db, "UPDATE events SET detail='forged', row_hash=NULL WHERE id >= 2")
     result = _verify(db)
-    assert not result.ok and result.broken_at_id == 2
+    assert not result.ok
+    assert result.broken_at_id == 2
 
 
 def test_deleting_the_oldest_rows_is_caught(db):
@@ -71,7 +72,8 @@ def test_pruning_still_verifies(tmp_path, monkeypatch):
         for index in range(10):
             log.log("event", detail=str(index))
         result = log.verify_chain()
-        assert result.ok and result.total_rows <= 6
+        assert result.ok
+        assert result.total_rows <= 6
     finally:
         log.close()
 

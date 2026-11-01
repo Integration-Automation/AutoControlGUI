@@ -25,11 +25,12 @@ _CONJUNCTIONS: Dict[str, Dict[str, str]] = {
 _SERIAL_COMMA = {"en"}
 # CLDR unit-list ``two`` / ``end`` patterns (cldr-json listPatterns); start and
 # middle are "{0}, {1}" everywhere. Only English is comma-only.
+_PAIR = "{0}, {1}"
 _UNIT_PATTERNS: Dict[str, Dict[str, str]] = {
-    "en": {"two": "{0}, {1}", "end": "{0}, {1}"},
+    "en": {"two": _PAIR, "end": _PAIR},
     "es": {"two": "{0} y {1}", "end": "{0} y {1}"},
     "fr": {"two": "{0} et {1}", "end": "{0} et {1}"},
-    "de": {"two": "{0}, {1}", "end": "{0} und {1}"},
+    "de": {"two": _PAIR, "end": "{0} und {1}"},
     "pt": {"two": "{0} e {1}", "end": "{0} e {1}"},
 }
 _VALID_STYLES = ("and", "or", "unit")
@@ -37,17 +38,16 @@ _VALID_STYLES = ("and", "or", "unit")
 
 def _patterns(locale: str, style: str) -> Dict[str, str]:
     """Return the ``two``/``start``/``middle``/``end`` patterns for a locale."""
-    pair = "{0}, {1}"
     if locale not in _CONJUNCTIONS:   # unknown locale -> behave as English
         locale = "en"
     if style == "unit":
-        return {"start": pair, "middle": pair, **_UNIT_PATTERNS[locale]}
+        return {"start": _PAIR, "middle": _PAIR, **_UNIT_PATTERNS[locale]}
     word = _CONJUNCTIONS[locale][style]
     separator = ", " if locale in _SERIAL_COMMA else " "
     return {
         "two": f"{{0}} {word} {{1}}",
-        "start": pair,
-        "middle": pair,
+        "start": _PAIR,
+        "middle": _PAIR,
         "end": f"{{0}}{separator}{word} {{1}}",
     }
 

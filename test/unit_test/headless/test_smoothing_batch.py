@@ -64,4 +64,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("sma", "wma", "ewma", "rolling"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

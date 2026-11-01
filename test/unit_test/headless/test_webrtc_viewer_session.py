@@ -123,16 +123,18 @@ def test_a_fresh_viewer_reports_no_session():
 
 
 def test_asking_for_the_peer_connection_before_connecting_is_an_error():
+    viewer = _viewer()
     with pytest.raises(RuntimeError, match="connect first"):
-        _viewer()._require_pc()
+        viewer._require_pc()
 
 
 # --- processing the offer -----------------------------------------------------
 
 @pytest.mark.parametrize("offer", ["", "   "])
 def test_an_empty_offer_is_refused_before_it_reaches_aiortc(offer):
+    viewer = _viewer()
     with pytest.raises(ValueError, match="offer_sdp is empty"):
-        _viewer().process_offer(offer)
+        viewer.process_offer(offer)
 
 
 def test_processing_an_offer_returns_the_answer_sdp():
@@ -174,14 +176,16 @@ def test_a_pinned_fingerprint_that_does_not_match_stops_the_handshake():
     # The point of pinning is catching a hijacked signaling slot while the
     # offer is still text -- so nothing may be built before the check.
     sdp = "v=0\r\na=fingerprint:sha-256 AB:CD\r\n"
+    viewer = _viewer()
     with pytest.raises(FingerprintMismatchError):
-        _viewer().process_offer(sdp, "ffff")
+        viewer.process_offer(sdp, "ffff")
     assert not FakePeerConnection.instances
 
 
 def test_an_offer_with_no_fingerprint_at_all_is_refused_when_pinned():
+    viewer = _viewer()
     with pytest.raises(FingerprintMismatchError):
-        _viewer().process_offer("v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF\r\n", "ab")
+        viewer.process_offer("v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF\r\n", "ab")
 
 
 # --- peer connection events ---------------------------------------------------

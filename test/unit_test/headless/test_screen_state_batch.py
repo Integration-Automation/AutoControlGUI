@@ -26,7 +26,8 @@ def test_diff_reports_appeared_vanished_moved():
 def test_diff_no_change():
     snap = [{"role": "button", "name": "OK", "bbox": [0, 0, 10, 10]}]
     diff = diff_snapshots(snap, snap)
-    assert diff["changed_count"] == 0 and diff["summary"] == []
+    assert diff["changed_count"] == 0
+    assert diff["summary"] == []
 
 
 def test_describe_groups_and_lists_controls():
@@ -36,7 +37,8 @@ def test_describe_groups_and_lists_controls():
         {"role": "window", "name": "Dlg", "bbox": [0, 0, 10, 10]},
     ]
     out = describe_screen(elements=elements, app_name="MyApp")
-    assert out["app"] == "MyApp" and out["element_count"] == 3
+    assert out["app"] == "MyApp"
+    assert out["element_count"] == 3
     assert out["by_role"]["button"] == 2
     assert set(out["controls"]) == {"Save", "Cancel"}     # window not a control
 

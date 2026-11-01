@@ -35,7 +35,8 @@ def test_sharp_is_sharper_than_blurry():
 
 def test_quality_gate_pass_and_fail():
     good = quality_gate(_sharp())
-    assert good["passed"] is True and good["issues"] == []
+    assert good["passed"] is True
+    assert good["issues"] == []
     bad = quality_gate(_blurry())
     assert bad["passed"] is False
     assert "blurry" in bad["issues"]
@@ -52,7 +53,8 @@ def test_quality_gate_brightness_range_tunable():
     mid = np.full((40, 40), 130, "uint8")
     # a flat frame is blurry+low-contrast, but brightness must not be flagged
     issues = quality_gate(mid, brightness_range=(40.0, 220.0))["issues"]
-    assert "too_dark" not in issues and "too_bright" not in issues
+    assert "too_dark" not in issues
+    assert "too_bright" not in issues
 
 
 # --- wiring ---------------------------------------------------------------
@@ -60,7 +62,8 @@ def test_quality_gate_brightness_range_tunable():
 def test_executor_pure_path():
     from je_auto_control.utils.executor.action_executor import _quality_gate
     report = _quality_gate(_blurry())
-    assert report["passed"] is False and "blurry" in report["issues"]
+    assert report["passed"] is False
+    assert "blurry" in report["issues"]
 
 
 def test_wiring():
@@ -76,4 +79,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("image_quality", "is_blurry", "quality_gate"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

@@ -38,7 +38,8 @@ def test_parsing_stops_after_32_members_and_stays_linear():
     header = ",".join(f"k{i}=v" for i in range(20000))
     started = time.perf_counter()
     items = parse_tracestate(header)
-    assert len(items) == 32 and items[0] == ("k0", "v")
+    assert len(items) == 32
+    assert items[0] == ("k0", "v")
     assert time.perf_counter() - started < 1.0          # 16k members took 6.4 s
 
 
@@ -52,8 +53,9 @@ def test_a_duplicated_key_still_invalidates_the_header():
 def test_an_invalid_member_never_reaches_an_outgoing_header(items):
     with pytest.raises(TraceContextError):
         format_tracestate(items)
+    context = SpanContext(TRACE, SPAN, 1, items)
     with pytest.raises(TraceContextError):
-        inject_context({}, SpanContext(TRACE, SPAN, 1, items))
+        inject_context({}, context)
 
 
 @pytest.mark.parametrize("ctx", [

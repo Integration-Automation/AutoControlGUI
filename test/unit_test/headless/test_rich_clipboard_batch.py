@@ -73,4 +73,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("build_cf_html", "parse_cf_html", "get_clipboard_html",
                  "set_clipboard_html"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

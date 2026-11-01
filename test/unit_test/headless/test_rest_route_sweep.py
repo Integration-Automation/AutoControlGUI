@@ -103,11 +103,11 @@ def _body_for(operation: Dict[str, Any]) -> Optional[Any]:
 
 def _assert_answers_json(result: Any, label: str) -> None:
     """A handler's return value is what the dispatcher writes to the socket."""
-    assert isinstance(result, tuple) and len(result) == 2, (
-        f"{label} returned {result!r}, not (status, payload)")
+    assert isinstance(result, tuple), f"{label} returned {result!r}, not (status, payload)"
+    assert len(result) == 2, f"{label} returned {result!r}, not (status, payload)"
     status, payload = result
-    assert isinstance(status, int) and 100 <= status <= 599, (
-        f"{label} returned {status!r}, which is not an HTTP status")
+    assert isinstance(status, int), f"{label} returned {status!r}, which is not an HTTP status"
+    assert 100 <= status <= 599, f"{label} returned {status!r}, which is not an HTTP status"
     assert isinstance(payload, dict), (
         f"{label} returned a {type(payload).__name__} payload; the dispatcher "
         "writes a JSON object")

@@ -60,14 +60,12 @@ def test_screen_stable_returns_false_on_timeout(monkeypatch):
 
 
 def test_screen_stable_validates_arguments():
+    sampler = _frames_in_order(_frame_solid())
     with pytest.raises(ValueError):
-        wait_until_screen_stable(timeout_s=0.0, sampler=_frames_in_order(
-            _frame_solid(),
-        ))
+        wait_until_screen_stable(timeout_s=0.0, sampler=sampler)
+    sampler = _frames_in_order(_frame_solid())
     with pytest.raises(ValueError):
-        wait_until_screen_stable(poll_interval_s=0.0, sampler=_frames_in_order(
-            _frame_solid(),
-        ))
+        wait_until_screen_stable(poll_interval_s=0.0, sampler=sampler)
 
 
 def test_screen_stable_respects_max_pixel_diff(monkeypatch):
@@ -115,9 +113,9 @@ def test_pixel_changes_rejects_out_of_bounds():
 
 
 def test_pixel_changes_rejects_zero_timeout():
+    sampler = _frames_in_order(_frame_solid())
     with pytest.raises(ValueError):
-        wait_until_pixel_changes(x=0, y=0, timeout_s=0,
-                                   sampler=_frames_in_order(_frame_solid()))
+        wait_until_pixel_changes(x=0, y=0, timeout_s=0, sampler=sampler)
 
 
 # === wait_until_region_idle ==============================================

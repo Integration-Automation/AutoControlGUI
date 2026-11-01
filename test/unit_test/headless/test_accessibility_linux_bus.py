@@ -156,8 +156,9 @@ def test_an_address_that_is_not_a_string_is_an_error(bus, reply):
 def test_using_the_connection_unopened_says_which_mistake_it_was(bus):
     # The class is a context manager on purpose; forgetting the `with` is a
     # programming error worth naming rather than an AttributeError.
+    unopened = _AtspiConnection()
     with pytest.raises(DBusError, match="context manager"):
-        _AtspiConnection().children(ROOT)
+        unopened.children(ROOT)
 
 
 def test_the_root_is_the_registry(connection):

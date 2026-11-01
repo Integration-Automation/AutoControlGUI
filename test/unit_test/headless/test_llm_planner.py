@@ -3,6 +3,7 @@ from typing import Optional
 
 import pytest
 
+from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.llm.backends.base import LLMBackend
 from je_auto_control.utils.llm.planner import (
     LLMNotAvailableError, LLMPlanError, plan_actions, run_from_description,
@@ -58,7 +59,7 @@ def test_plan_actions_extracts_json_when_wrapped_in_prose():
 
 def test_plan_actions_rejects_unknown_command():
     backend = _StubBackend('[["AC_does_not_exist"]]')
-    with pytest.raises(Exception):
+    with pytest.raises(AutoControlActionException, match="unknown command"):
         plan_actions("x", known_commands=_KNOWN, backend=backend)
 
 

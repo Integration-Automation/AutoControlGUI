@@ -21,7 +21,8 @@ def test_context_manager_press_then_release():
     with hold_modifiers(["ctrl"], sink=events.append):
         events.append({"op": "body"})
     assert [e["op"] for e in events] == ["press", "body", "release"]
-    assert events[0]["key"] == "ctrl" and events[-1]["key"] == "ctrl"
+    assert events[0]["key"] == "ctrl"
+    assert events[-1]["key"] == "ctrl"
 
 
 def test_release_even_on_exception():
@@ -46,7 +47,8 @@ def test_executor_adapter_modifier_parsing():
     # the nested-action run is device-bound; verify the modifier-string parsing
     # the adapter does up front, using the pure plan as the oracle.
     plan = plan_with_modifiers([], ["ctrl", "shift"])
-    assert plan[0]["key"] == "ctrl" and plan[1]["key"] == "shift"
+    assert plan[0]["key"] == "ctrl"
+    assert plan[1]["key"] == "shift"
 
 
 def test_wiring():
@@ -62,4 +64,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("hold_modifiers", "plan_with_modifiers"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

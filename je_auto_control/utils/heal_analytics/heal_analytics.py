@@ -38,6 +38,18 @@ def _accumulate(events: List[Any]) -> Tuple[Dict[str, int], Dict[str, int],
     return by_method, brittle, durations, fallbacks
 
 
+def _verification(events: List[Any]) -> Dict[str, int]:
+    """Count the events that acted on a hit, by what a post-action check said."""
+    acted = [event for event in events if _attr(event, "action")]
+    verdicts = [_attr(event, "action_verified") for event in acted]
+    return {
+        "actions": len(acted),
+        "verified": sum(1 for verdict in verdicts if verdict is True),
+        "failed": sum(1 for verdict in verdicts if verdict is False),
+        "unchecked": sum(1 for verdict in verdicts if verdict is None),
+    }
+
+
 def heal_stats(events: List[Any]) -> Dict[str, Any]:
     """Aggregate self-heal events into a metrics dict.
 
@@ -46,6 +58,11 @@ def heal_stats(events: List[Any]) -> Dict[str, Any]:
     ``template_path`` / ``description``.
     Historical ``healed`` / ``heal_rate`` count located candidates, not verified
     operation recovery. Explicit operation verification has its own population.
+
+    ``healed`` / ``heal_rate`` count events where a strategy returned a
+    point. Whether the action that followed worked is reported apart, in
+    ``action_verification`` — ``verified`` over ``actions``, with the
+    ``unchecked`` ones never folded into either side.
     """
     events = list(events)
     total = len(events)
@@ -63,6 +80,7 @@ def heal_stats(events: List[Any]) -> Dict[str, Any]:
         **_operation_stats(events, healed),
         "top_brittle": [{"locator": key, "fallbacks": count}
                         for key, count in top_brittle],
+        "action_verification": _verification(events),
     }
 
 

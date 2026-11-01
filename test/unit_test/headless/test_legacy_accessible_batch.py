@@ -67,7 +67,8 @@ def test_executor_adapters(monkeypatch):
     from je_auto_control.utils.executor.action_executor import (
         _legacy_default_action, _legacy_info)
     out = _legacy_info(name="OK")
-    assert out["found"] is True and out["info"]["default_action"] == "Press"
+    assert out["found"] is True
+    assert out["info"]["default_action"] == "Press"
     assert _legacy_default_action(name="OK") is True
 
 
@@ -84,4 +85,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("legacy_info", "legacy_default_action"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

@@ -43,8 +43,10 @@ Behaviour:
 
 - Initial snapshot taken on ``start()`` *without* sending — pre-existing
   files are treated as already-synced.
-- Each tick scans the directory; files with a newer ``mtime`` than the
-  snapshot are sent.
+- Each tick scans the directory; files whose ``mtime`` or size differs from
+  the snapshot are sent. A file recorded within two seconds of its own last
+  write is also compared by content, so an edit in the same clock tick is
+  not missed.
 - A failing sender is retried on the next tick (the snapshot only
   records successful sends).
 - Local deletions stop being tracked but do not call the sender.
@@ -134,6 +136,10 @@ CLI::
 
    python -m je_auto_control.utils.rest_api --host 127.0.0.1 --port 9939
 
+``POST /execute_file`` answers ``403`` with the reason when
+``JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS`` is set and the file's signature is
+missing or does not verify; the file is not run.
+
 Roles (opt-in RBAC)
 -------------------
 
@@ -161,16 +167,68 @@ their own and a role instead:
   one user of the store; a store that is empty or unreadable admits nobody.
 - **Without it, nothing changes**: the single shared token, no roles, no 403.
 
-Create the users from Python; the plain token is shown once and only its
-hash is stored::
+Create the first admin on the host, from a terminal; the plain token is
+printed once and only its hash is stored::
 
-   import je_auto_control as ac
+   je_auto_control users --users /etc/autocontrol/users.json add alice --role admin
+   je_auto_control users list                 # store from JE_AUTOCONTROL_RBAC_USERS
+   je_auto_control users set-role bob operator   # roles: viewer / operator / admin
+   je_auto_control users rotate-token bob
+   je_auto_control users remove bob
 
-   store = ac.UserStore("/etc/autocontrol/users.json")
-   token = store.add_user(user_id="alice", display_name="Alice", role="operator")
-   store.set_role("alice", "viewer")      # roles: viewer / operator / admin
-   store.rotate_token("alice")
-   store.remove_user("alice")
+(``python -m je_auto_control.utils.rbac ...`` runs the same commands; ``--json``
+prints the result as JSON.) After that an admin can manage users through any
+surface, each of which needs the ``manage_users`` capability:
+
+- ``AC_user_add`` (``user_id``, ``role``, ``display_name``, ``tags``),
+  ``AC_user_remove``, ``AC_user_set_role``, ``AC_user_rotate_token`` and
+  ``AC_user_list`` in an action list -- so also through ``POST /execute``.
+  The Script Builder lists all five under **Security**; a run's result pane
+  shows ``AC_user_add`` / ``AC_user_rotate_token`` with the token masked and
+  says that a one-time value is available. **One-time values** on the
+  builder's toolbar then shows each token of that run once, labelled by its
+  step (``Step 1 · User: Add · alice · token``), with a Copy button per value.
+  Nothing opens by itself, so an unattended run is not interrupted. The
+  values are held in memory only: opening the dialog takes them from the
+  tab, closing it empties it, and starting the next run or closing the tab
+  drops what nobody read. They are never written to the result pane, the
+  log, the test record, the run history, the action journal, a saved script
+  or the GUI settings; the Copy button puts one on the clipboard. Once a
+  value was copied, **Close and clear clipboard** closes the dialog and
+  empties the clipboard -- only while the clipboard still holds a value
+  copied from that dialog; anything copied since is left alone. After the
+  dialog was opened the result pane says the values were shown. A token
+  issued inside a block (``AC_loop``, ``AC_try``, ``AC_if_*``...) is offered
+  too, although a block records only its own summary: the run reports each
+  command's result to the builder through the executor's result hook, and
+  the value is labelled by its path (``Step 2 › Loop run 3, step 1 · User:
+  Rotate Token · alice · token``). At most 200 values are kept for one run
+  -- the first ones; the result pane says when a run issued more. A run
+  that was stopped or failed still offers what it had issued by then. The
+  hook follows the run's own thread, so a command in an ``AC_parallel``
+  branch is offered from the block's result instead. The pane masks every
+  secret-named field (``token``, ``password``, ``api_key``...) of every
+  command's result at any depth -- a lease token from ``AC_lease_secret`` /
+  ``AC_lease_active``, the shared bearer token ``AC_rest_api_start`` /
+  ``AC_rest_api_status`` answer with -- by the rule the executor's result log
+  uses, and **One-time values** offers exactly the fields that were masked.
+  The one exemption is an identifier the person has to read:
+  ``AC_approval_request`` answers ``{token}``, the request id the maker hands
+  to the checker, which the pane shows (the log still masks it).
+  ``execute_action`` still returns every token to a script, as before;
+- the MCP tools ``ac_user_add`` / ``ac_user_remove`` / ``ac_user_set_role`` /
+  ``ac_user_rotate_token`` / ``ac_user_list``;
+- the **Users (RBAC)** group of the REST API tab (commands in the Actions
+  menu), which also lets the tab start the server against that user store;
+- Python: ``ac.rbac_add_user`` / ``rbac_remove_user`` / ``rbac_set_user_role`` /
+  ``rbac_rotate_user_token`` / ``rbac_list_users``, or ``UserStore`` directly.
+
+An authenticated caller always works on the store that authenticated it; the
+optional ``users_path`` argument is for scripts and the CLI. The last admin
+cannot be removed or demoted. ``add`` and ``rotate`` return the token once: it
+is in the reply, masked wherever the reply is logged, and never in an audit
+entry (which records ``rbac_user_added`` and the like, with the user and who
+did it).
 
 A running server re-reads the file when it changes, so a removed user, a
 rotated token or a changed role applies to the next request.
@@ -183,7 +241,16 @@ rotated token or a changed role applies to the next request.
      - Endpoints
    * - ``read_screen``
      - viewer, operator, admin
-     - every ``GET`` except the two below, ``/metrics`` included
+     - the ``GET`` routes that observe live state: ``/screenshot``,
+       ``/mouse_position``, ``/screen_size``, ``/windows``, ``/sessions``,
+       ``/commands``, ``/jobs``, ``/inspector/recent``, ``/inspector/summary``,
+       ``/usb/devices``, ``/usb/events``, ``/usb/passthrough/status``,
+       ``/usb/loopback/devices``, ``/usb/remote/devices``, ``/diagnose``,
+       ``/metrics``, ``/openapi.json``
+   * - ``read_data``
+     - operator, admin
+     - ``GET /history``, ``GET /usb/acl``; the MCP tools that return the
+       host's data rather than its screen (see the MCP chapter)
    * - ``drive_input``
      - operator, admin
      - ``POST /execute``, ``/execute_file``, ``/usb/loopback/open``,
@@ -199,11 +266,33 @@ rotated token or a changed role applies to the next request.
    * - ``sign_actions``
      - admin
      - the ``AC_sign_action_file`` command (see below)
+   * - ``manage_users``
+     - admin
+     - the ``AC_user_*`` commands (see above)
 
 A role that lacks the capability gets ``403``
 ``{"error": "forbidden", "required_capability": "...", "role": "..."}``.
 The same value is published per operation as ``x-required-capability`` in
 ``/openapi.json``.
+
+**Stored records need** ``read_data`` **on REST as on MCP.** A route that
+returns records or configuration the host keeps needs ``read_data``; a route
+that observes live state needs ``read_screen``. ``GET /history`` (the run
+history, as the MCP tool ``ac_list_run_history``) and ``GET /usb/acl`` (the
+stored USB ACL, as ``ac_usb_acl_list``) needed only ``read_screen`` before, so
+**a viewer token is now answered 403 on those two routes**; ``operator`` and
+``admin`` are unaffected, and so is a server without a user store (the shared
+token is not restricted by any role). Every other ``GET`` keeps its
+capability: each one that has an MCP counterpart (``/jobs`` and
+``ac_scheduler_list_jobs``, ``/sessions`` and ``ac_remote_host_status``,
+``/usb/passthrough/status``, the USB device lists...) already needed what its
+tool needs. A test pairs each route with the read-only MCP tools whose
+handler reads the same source and fails when the two disagree.
+
+The built-in dashboard calls neither route. With a token whose role lacks a
+panel's capability -- the audit panel needs ``read_audit`` -- that panel now
+says ``not available to role '<role>': needs the '<capability>' capability``
+instead of ``HTTP 403 on <path>``, and the other panels keep refreshing.
 
 Being allowed to ``POST /execute`` is being allowed to run actions, not every
 command. Signing an action file (``sign_actions``), reading the audit log
@@ -213,7 +302,8 @@ webhook servers, ``AC_usb_acl_*``, ``AC_usb_passthrough_enable``,
 ``AC_config_import`` / ``AC_config_export``, ``AC_egress_allow`` /
 ``AC_egress_reset``, ``AC_load_plugins``, ``AC_add_package_to_executor``,
 ``AC_secret_init`` / ``set`` / ``remove`` / ``lock`` / ``unlock``,
-``AC_audit_log_clear`` (all ``manage_hosts``) -- need their own capability
+``AC_audit_log_clear`` (all ``manage_hosts``) -- and ``AC_user_*``
+(``manage_users``) need their own capability
 wherever they appear in the action list, however deeply nested. The request
 is answered 403 with the ``command`` named before its first action runs, and
 the executor refuses the same commands when they come from an action file.

@@ -65,8 +65,10 @@ def test_two_quarantine_stores_on_one_file_keep_each_others_names(tmp_path):
     runner.add("flaky_upload")
     assert runner.is_quarantined("flaky_login")
     assert QuarantineStore(path).names() == {"flaky_login", "flaky_upload"}
-    assert cli.remove("flaky_upload") and runner.names() == {"flaky_login"}
-    assert runner.clear() == 1 and cli.names() == set()
+    assert cli.remove("flaky_upload")
+    assert runner.names() == {"flaky_login"}
+    assert runner.clear() == 1
+    assert cli.names() == set()
 
 
 @pytest.mark.parametrize("interval", [0, -5, float("nan"), float("inf")])

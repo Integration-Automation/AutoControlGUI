@@ -88,7 +88,8 @@ def test_a_ticket_backend_does_not_follow_a_redirect(servers):
     first.redirect_to = f"http://localhost:{second.server_port}/steal"
     result = _post_json("jira", f"http://127.0.0.1:{first.server_port}/redir/issue",
                         {}, headers={"Authorization": "Basic c2VjcmV0"}, id_key="key")
-    assert result.succeeded is False and "302" in result.error
+    assert result.succeeded is False
+    assert "302" in result.error
     assert second.seen == []
 
 
@@ -97,7 +98,8 @@ def test_a_ticket_backend_obeys_the_egress_policy(servers):
     set_egress_policy(deny=["127.0.0.1"])
     result = _post_json("jira", f"http://127.0.0.1:{server.server_port}/issue",
                         {}, headers={}, id_key="key")
-    assert result.succeeded is False and "egress" in result.error
+    assert result.succeeded is False
+    assert "egress" in result.error
     assert server.seen == []
 
 
@@ -105,7 +107,8 @@ def test_a_non_object_ticket_reply_is_a_failed_result(servers):
     server = servers(body=b"[]")
     result = _post_json("jira", f"http://127.0.0.1:{server.server_port}/issue",
                         {}, headers={}, id_key="key")
-    assert result.succeeded is False and "JSON object" in result.error
+    assert result.succeeded is False
+    assert "JSON object" in result.error
 
 
 def _bot():
@@ -115,8 +118,9 @@ def _bot():
 def test_the_slack_bot_obeys_the_egress_policy():
     set_egress_policy(deny=["slack.com"])
     try:
+        bot = _bot()
         with pytest.raises(slack_bot.SlackError, match="egress"):
-            _bot()._request("https://slack.com/api/auth.test", method="GET")
+            bot._request("https://slack.com/api/auth.test", method="GET")
     finally:
         set_egress_policy()
 

@@ -1,8 +1,8 @@
 JSON Web Token(JWT)
 ===================
 
-RPA 流程經常需要為其驅動的 API 簽發或驗證 bearer token,但框架過去只有 HMAC *檔案* 簽章
-( ``action_signing`` )以及綁定 ACME 的 RS256 JWS( ``acme_v2`` )—— 兩者都不會產生或驗證精簡的
+RPA 流程經常需要為其驅動的 API 簽發或驗證 bearer token,但框架過去只有 HMAC *檔案*\ 簽章
+(``action_signing``)以及綁定 ACME 的 RS256 JWS(``acme_v2``)—— 兩者都不會產生或驗證精簡的
 bearer JWT。本功能補上一個聚焦、純標準函式庫的 JWT 編解碼器(HMAC 家族)並含完整的宣告驗證,
 設計上可直接餵入 ``http_request`` 的 bearer 驗證。
 
@@ -16,8 +16,8 @@ bearer JWT。本功能補上一個聚焦、純標準函式庫的 JWT 編解碼�
 
 * **拒絕 ``alg: "none"``** 以及任何呼叫端未明確列入允許清單的演算法,藉此擊敗經典的演算法
   混淆 / 降級攻擊;
-* 以 ``hmac.compare_digest`` (常數時間)比較簽章;
-* RSA/EC 演算法(RS256/ES256)刻意 **不在範圍內** —— 它們需要第三方加密函式庫。
+* 以 ``hmac.compare_digest``\ (常數時間)比較簽章;
+* RSA/EC 演算法(RS256/ES256)刻意\ **不在範圍內** —— 它們需要第三方加密函式庫。
 
 無頭 API
 --------
@@ -59,4 +59,7 @@ token 可直接接上 HTTP 用戶端:
 ``{token}``。``AC_jwt_decode`` 接受 ``token``、``key`` 與選用的 ``algorithms`` /
 ``audience`` / ``leeway``,回傳 ``{ok, claims}``(或 ``{ok: false, error}``,讓流程可在不拋出
 例外的情況下分支)。兩者皆以 MCP 工具 ``ac_jwt_encode`` / ``ac_jwt_decode`` 以及 Script Builder
-中 **Security** 分類下的命令提供。
+中 **Security** 分類下的命令提供。Script Builder 的結果面板會遮蔽 ``AC_jwt_encode`` 回傳的
+token;執行後按 **一次性的值** 可看一次(腳本照舊收到 token),步驟位於 ``AC_loop`` 之類的區塊
+裡時也一樣。執行器的結果 log 會遮蔽每個命令結果中、任何深度、名稱屬於機密的欄位(``token``、
+``password``…),Script Builder 的結果面板對每個命令套用同一條規則。

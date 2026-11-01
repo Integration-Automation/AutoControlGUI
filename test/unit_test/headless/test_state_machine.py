@@ -153,8 +153,9 @@ def test_max_steps_exhausts_raises():
         },
         "max_steps": 3,
     }
+    machine = StateMachine(spec, execute_action=execute)
     with pytest.raises(StateMachineError, match="max_steps"):
-        StateMachine(spec, execute_action=execute).run()
+        machine.run()
 
 
 def test_global_timeout_exhausts_raises():
@@ -173,10 +174,11 @@ def test_global_timeout_exhausts_raises():
         "max_steps": 10_000,
         "global_timeout_s": 0.05,
     }
+    machine = StateMachine(
+        spec, execute_action=execute, guard_eval=slow_guard,
+    )
     with pytest.raises(StateMachineError):
-        StateMachine(
-            spec, execute_action=execute, guard_eval=slow_guard,
-        ).run()
+        machine.run()
 
 
 def test_no_fireable_transition_raises():
@@ -192,8 +194,9 @@ def test_no_fireable_transition_raises():
             "x": {"final": True},
         },
     }
+    machine = StateMachine(spec, execute_action=execute)
     with pytest.raises(StateMachineError, match="no transition fired"):
-        StateMachine(spec, execute_action=execute).run()
+        machine.run()
 
 
 # --- validation ------------------------------------------------------
@@ -205,8 +208,9 @@ def test_missing_initial_raises():
 
 def test_unknown_initial_state_raises():
     spec = {"initial": "nowhere", "states": {"done": {"final": True}}}
+    machine = StateMachine(spec)
     with pytest.raises(StateMachineError, match="initial state"):
-        StateMachine(spec).run()
+        machine.run()
 
 
 def test_transition_to_undefined_state_raises():
@@ -216,8 +220,9 @@ def test_transition_to_undefined_state_raises():
             "a": {"transitions": [{"go_to": "z"}]},
         },
     }
+    machine = StateMachine(spec)
     with pytest.raises(StateMachineError, match="undefined state"):
-        StateMachine(spec).run()
+        machine.run()
 
 
 def test_non_mapping_spec_raises():

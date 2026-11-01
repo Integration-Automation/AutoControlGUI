@@ -131,8 +131,9 @@ def test_a_linux_session_with_no_bus_names_both_ways_it_can_be_missing(
 
 def test_an_unknown_platform_gets_a_refusal_naming_it(on_platform):
     on_platform("sunos5")
+    backend = get_backend()
     with pytest.raises(AccessibilityNotAvailableError, match="sunos5"):
-        get_backend().list_elements()
+        backend.list_elements()
 
 
 def test_the_choice_is_made_once_and_cached(on_platform):
@@ -201,16 +202,19 @@ def test_an_unimplemented_pattern_says_which_one_and_whose(operation, call):
 
 
 def test_the_base_class_has_no_listing_of_its_own():
+    backend = AccessibilityBackend()
     with pytest.raises(NotImplementedError):
-        AccessibilityBackend().list_elements()
+        backend.list_elements()
 
 
 def test_the_null_backend_refuses_to_list_with_its_reason():
+    backend = NullAccessibilityBackend("no display")
     with pytest.raises(AccessibilityNotAvailableError, match="no display"):
-        NullAccessibilityBackend("no display").list_elements()
+        backend.list_elements()
 
 
 def test_a_null_backend_with_no_reason_still_says_something():
+    backend = NullAccessibilityBackend()
     with pytest.raises(AccessibilityNotAvailableError) as caught:
-        NullAccessibilityBackend().list_elements()
+        backend.list_elements()
     assert str(caught.value)

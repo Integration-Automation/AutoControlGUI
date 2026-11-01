@@ -41,12 +41,14 @@ def test_run_with_repair_exhausts_and_fails():
     outcome = run_with_repair(lambda: None, lambda: False,
                               policy=RepairPolicy(max_attempts=2))
     assert outcome.ok is False
-    assert outcome.attempts == 3 and len(outcome.tactics_used) == 2
+    assert outcome.attempts == 3
+    assert len(outcome.tactics_used) == 2
 
 
 def test_run_with_repair_ok_first_try():
     outcome = run_with_repair(lambda: None, lambda: True)
-    assert outcome.ok is True and outcome.attempts == 1
+    assert outcome.ok is True
+    assert outcome.attempts == 1
     assert outcome.tactics_used == []
 
 
@@ -65,4 +67,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("RepairPolicy", "RepairOutcome", "plan_repair", "next_tactic",
                  "run_with_repair"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

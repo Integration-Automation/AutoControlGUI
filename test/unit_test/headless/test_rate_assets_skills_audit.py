@@ -37,7 +37,8 @@ def test_the_idle_wait_keeps_its_deadline_and_never_spins(interval, bound):
 
     result = wait_until_app_idle(busy_probe=lambda: True, timeout_s=1.0, interval_s=interval,
                                  clock=lambda: now[0], sleep=sleep)
-    assert result["idle"] is False and max(slept) <= 1.0
+    assert result["idle"] is False
+    assert max(slept) <= 1.0
     assert len(slept) <= round(1.0 / bound) + 1
 
 
@@ -66,8 +67,9 @@ def test_retry_delays_stay_finite_and_bounded():
                                                ("enabled", "bool")])
 def test_an_asset_type_refuses_values_it_cannot_hold(value, asset_type):
     from je_auto_control.utils.assets import AssetStore
+    store = AssetStore(None)
     with pytest.raises(ValueError):
-        AssetStore(None).set("x", value, asset_type=asset_type)
+        store.set("x", value, asset_type=asset_type)
 
 
 def test_asset_types_keep_what_they_can_hold():
@@ -75,7 +77,8 @@ def test_asset_types_keep_what_they_can_hold():
     store = AssetStore(None)
     store.set("port", 8080.0, asset_type="int")
     store.set("flag", "off", asset_type="bool")
-    assert store.get("port").value == 8080 and store.get("flag").value is False
+    assert store.get("port").value == 8080
+    assert store.get("flag").value is False
 
 
 def test_a_memory_store_can_be_read_while_it_is_written():
@@ -135,7 +138,8 @@ def test_a_self_calling_skill_fails_at_the_top_and_the_script_goes_on(tmp_path):
     record = Executor().execute_action([["AC_skill_run", {"path": path, "name": "loop"}],
                                         ["AC_retry_delay", {"attempt": 1}]])
     first, second = record.values()
-    assert "nested deeper than" in str(first) and len(str(first)) < 300
+    assert "nested deeper than" in str(first)
+    assert len(str(first)) < 300
     assert second == {"delay": 0.1}
 
 
@@ -155,7 +159,8 @@ def test_the_mcp_saga_reports_rollback_errors_and_bad_steps_are_refused():
               "compensation": [["AC_does_not_exist"]]},
              {"name": "s2", "action": [["AC_also_missing"]]}]
     result = run_saga(steps)
-    assert result["failed_step"] == "s2" and "s1" in result["compensation_errors"]
+    assert result["failed_step"] == "s2"
+    assert "s1" in result["compensation_errors"]
     with pytest.raises(ValueError):
         run_saga([["AC_retry_delay", {"attempt": 1}]])
     dict_form = run_saga([{"name": "s", "action": {"auto_control": [["AC_retry_delay", {"attempt": 1}]]}}])
@@ -164,10 +169,11 @@ def test_the_mcp_saga_reports_rollback_errors_and_bad_steps_are_refused():
 
 def test_rate_limit_library_edges_are_refused():
     from je_auto_control.utils.rate_limit import SlidingWindowLimiter, TokenBucket, throttle
+    bucket, not_a_number = TokenBucket(1, 1), float("nan")
     with pytest.raises(AutoControlException):
-        TokenBucket(1, 1).acquire(2 * 0.5, timeout=float("nan"))
+        bucket.acquire(2 * 0.5, timeout=not_a_number)
     for limit in (0.5, float("inf")):
         with pytest.raises(AutoControlException):
             SlidingWindowLimiter(limit, 1.0)
     with pytest.raises(AutoControlException):
-        throttle(float("nan"))
+        throttle(not_a_number)

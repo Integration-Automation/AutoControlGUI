@@ -58,7 +58,8 @@ def test_repair_from_heal_object_and_dict():
     s1 = repair_from_heal(_Heal(), "a", store=store, confidence=1.0)
     s2 = repair_from_heal({"method": "image", "coordinates": [9, 9]}, "b",
                           store=store, confidence=1.0)
-    assert s1.coordinates == [7, 8] and s2.method == "image"
+    assert s1.coordinates == [7, 8]
+    assert s2.method == "image"
 
 
 def test_persists_across_instances(tmp_path):

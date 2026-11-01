@@ -28,7 +28,8 @@ def test_rfc6238_known_vector_at_step_boundary():
 def test_generated_code_is_six_digits_by_default():
     secret = generate_secret()
     code = generate_code(secret)
-    assert len(code) == 6 and code.isdigit()
+    assert len(code) == 6
+    assert code.isdigit()
 
 
 def test_verify_accepts_current_code():

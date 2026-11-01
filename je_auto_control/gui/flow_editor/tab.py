@@ -38,7 +38,7 @@ class FlowEditorTab(TranslatableMixin, QWidget):
         self._scene = FlowGraphScene(self)
         self._view = QGraphicsView(self._scene)
         self._view.setRenderHints(self._view.renderHints())
-        self._view.setDragMode(QGraphicsView.RubberBandDrag)
+        self._view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
         self._steps: List[Step] = []
         # The other keys of a wrapped file, written back by Save.
         self._file_extras: Optional[dict] = None
@@ -56,7 +56,7 @@ class FlowEditorTab(TranslatableMixin, QWidget):
         # Open/save/zoom/fit commands run from the Actions menu; the tab
         # keeps only the graph view, the inspector, and the status line.
         root = QVBoxLayout(self)
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self._view)
         splitter.addWidget(self._inspector)
         splitter.setStretchFactor(0, 3)
@@ -138,7 +138,7 @@ class FlowEditorTab(TranslatableMixin, QWidget):
         rect = self._scene.itemsBoundingRect()
         if rect.isEmpty():
             return
-        self._view.fitInView(rect, Qt.KeepAspectRatio)
+        self._view.fitInView(rect, Qt.AspectRatioMode.KeepAspectRatio)
 
     def _on_node_selected(self, path: Tuple) -> None:
         step = _resolve_step(self._steps, path)

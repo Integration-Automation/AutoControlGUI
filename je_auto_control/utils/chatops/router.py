@@ -15,6 +15,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.executor.run_control import ExecutionStopped
 from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
 
 
@@ -152,6 +153,9 @@ class CommandRouter:
             return spec.handler(rest, context)
         except ChatOpsError as error:
             return CommandResult(text=f"{name}: {error}", succeeded=False)
+        except ExecutionStopped as error:
+            # A stop is somebody's decision, not a failure of the script.
+            return _stopped_reply(name, error)
         except _HANDLER_ERRORS as error:
             return CommandResult(
                 text=f"{name} failed: {type(error).__name__}: {error}",
@@ -181,6 +185,15 @@ class CommandRouter:
 
 
 # --- internals ----------------------------------------------------
+
+def _stopped_reply(name: str, error: ExecutionStopped) -> CommandResult:
+    """The reply for a command whose run was stopped: ``<name> stopped.`` plus the reason."""
+    reason = f" ({error.reason})" if error.reason else ""
+    return CommandResult(
+        text=f"{name} stopped.{reason}", succeeded=False,
+        metadata={"stopped": True, "run_id": error.run_id, "reason": error.reason},
+    )
+
 
 def _validate_name(name: str) -> str:
     if not isinstance(name, str):

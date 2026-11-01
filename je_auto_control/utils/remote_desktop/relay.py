@@ -249,7 +249,8 @@ class RelayServer:
         session was refused for good.
         """
         now = time.monotonic()
-        for session_id, (_role, sock, parked) in list(self._pending.items()):
+        # reason (suppression below): stale entries are deleted inside the loop, so it walks a snapshot
+        for session_id, (_role, sock, parked) in list(self._pending.items()):  # NOSONAR python:S7504
             if now - parked > _PENDING_TTL_S or not _still_connected(sock):
                 del self._pending[session_id]
                 sock.close()

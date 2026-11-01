@@ -33,6 +33,7 @@ STATUS_NEW = "new"
 STATUS_IN_PROGRESS = "in_progress"
 STATUS_SUCCESS = "success"
 STATUS_FAILED = "failed"
+_BEGIN_IMMEDIATE = "BEGIN IMMEDIATE"
 
 
 class BusinessError(AutoControlException):
@@ -114,7 +115,7 @@ class WorkQueue:
         with self._connect() as conn:
             # One write transaction for the check and the insert: in autocommit
             # two dispatchers could both pass the check and enqueue twice.
-            conn.execute("BEGIN IMMEDIATE")
+            conn.execute(_BEGIN_IMMEDIATE)
             if dedupe and reference and self._has_pending(conn, reference):
                 conn.execute("COMMIT")
                 return None
@@ -154,7 +155,7 @@ class WorkQueue:
                     "SELECT 1 FROM work_items WHERE queue=? AND status=? LIMIT 1",
                     (self._name, STATUS_NEW)).fetchone() is None:
                 return None
-            conn.execute("BEGIN IMMEDIATE")
+            conn.execute(_BEGIN_IMMEDIATE)
             row = self._claimable(conn, stale_after_s, max_retries)
             if row is None:
                 conn.execute("COMMIT")
@@ -211,7 +212,7 @@ class WorkQueue:
         A stale ``claim`` is refused as in :meth:`complete`.
         """
         with self._connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
+            conn.execute(_BEGIN_IMMEDIATE)
             row = conn.execute(
                 "SELECT retries, status, claim FROM work_items WHERE id=?",
                 (item_id,)).fetchone()

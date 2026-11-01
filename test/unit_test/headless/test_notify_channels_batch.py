@@ -36,7 +36,8 @@ def test_teams_messagecard():
                    poster=poster)
     card = sent[0][1]
     assert card["@type"] == "MessageCard"
-    assert card["text"] == "hi" and card["title"] == "T"
+    assert card["text"] == "hi"
+    assert card["title"] == "T"
 
 
 def test_raw_payload():
@@ -71,8 +72,10 @@ def test_executor_round_trip_with_default_poster():
             {"url": "https://h/x", "text": "done", "transport": "discord"},
         ]])
         out = next(v for v in rec.values() if isinstance(v, dict))
-        assert out["ok"] is True and out["transport"] == "discord"
-        assert sent and sent[0][1]["content"] == "done"
+        assert out["ok"] is True
+        assert out["transport"] == "discord"
+        assert sent
+        assert sent[0][1]["content"] == "done"
     finally:
         set_default_poster(None)        # leave global state clean
 

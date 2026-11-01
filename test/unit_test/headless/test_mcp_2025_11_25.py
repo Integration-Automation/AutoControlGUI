@@ -47,7 +47,8 @@ def test_an_input_validation_error_is_a_tool_execution_error():
                    handler=lambda x: x)
     server = MCPServer(tools=[tool])
     reply = _send(server, "tools/call", {"name": "needs_x", "arguments": {"x": "nine"}})
-    assert "error" not in reply and reply["result"]["isError"] is True
+    assert "error" not in reply
+    assert reply["result"]["isError"] is True
     assert "expected integer" in reply["result"]["content"][0]["text"]
     # A request the protocol cannot read, and an unknown tool, stay protocol errors.
     assert _send(server, "tools/call", {"name": "no_such_tool"})["error"]["code"] == -32602
@@ -75,14 +76,15 @@ def test_every_tool_follows_the_2025_11_25_guidance():
     assert [n for n in names if not re.fullmatch(r"[A-Za-z0-9_.\-]{1,128}", n)] == []
     stale = []
     for tool in tools:
-        assert isinstance(tool.input_schema, dict) and tool.input_schema.get("type") == "object", tool.name
+        assert isinstance(tool.input_schema, dict), tool.name
+        assert tool.input_schema.get("type") == "object", tool.name
         for schema in filter(None, (tool.input_schema, tool.output_schema)):
             stale += [(tool.name, path, key) for path, key, value in _schema_nodes(schema)
                       if key in _DRAFT_07_ONLY or (key == "items" and isinstance(value, list))]
     assert stale == []
 
 
-@pytest.fixture()
+@pytest.fixture
 def http_server():
     server = HttpMCPServer(mcp=MCPServer(tools=[]), host="127.0.0.1", port=0)
     server.start()

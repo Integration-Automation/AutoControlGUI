@@ -10,7 +10,8 @@ def test_list_returns_valid_result_object():
     result = list_usb_devices()
     assert isinstance(result, UsbEnumerationResult)
     assert isinstance(result.devices, list)
-    assert isinstance(result.backend, str) and result.backend
+    assert isinstance(result.backend, str)
+    assert result.backend
 
 
 def test_each_device_has_expected_fields():

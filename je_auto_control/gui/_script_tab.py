@@ -1,15 +1,25 @@
-"""Script-executor tab builder (extracted mixin)."""
+"""Script-executor tab builder (extracted mixin).
+
+The three execute commands run the action list off the GUI thread, one run at
+a time, as a stoppable executor run: the window stays responsive while a
+script drives the desktop (or this window), and ``script_stop`` / Ctrl+4 end
+the run at its next checkpoint.
+"""
+import functools
 import json
 
-from typing import TYPE_CHECKING, Any, Callable
+from contextlib import nullcontext
+from typing import TYPE_CHECKING, Any, Callable, ContextManager
 
 from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QLabel, QLineEdit, QTextEdit, QVBoxLayout,
     QWidget,
 )
 
+from je_auto_control.gui._tab_task import TabTask, was_stopped
+from je_auto_control.gui._qt_typed import as_widget
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
-from je_auto_control.gui.manual_run_controls import ManualRunControls, _capture_manual_run
+from je_auto_control.gui.manual_run_controls import ManualRunControls, _requested_manual_run
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
@@ -23,6 +33,24 @@ _JSON_FILE_FILTER = "JSON (*.json)"
 def _t(key: str) -> str:
     """language_wrapper shorthand"""
     return language_wrapper.translate(key, key)
+
+
+def _run_script_file(path: str, capture: Callable[[], ContextManager[object]] = nullcontext) -> Any:
+    """Worker thread: load and execute one action file, inside the capture the tab asked for."""
+    with capture():
+        return execute_action(read_executable_action_json(path))
+
+
+def _run_script_dir(path: str, capture: Callable[[], ContextManager[object]] = nullcontext) -> Any:
+    """Worker thread: execute every action file under ``path``, inside the capture the tab asked for."""
+    with capture():
+        return execute_files(get_dir_files_as_list(path))
+
+
+def _run_script_text(text: str, capture: Callable[[], ContextManager[object]] = nullcontext) -> Any:
+    """Worker thread: execute the action list typed into the editor, inside the capture the tab asked for."""
+    with capture():
+        return execute_action(json.loads(text))
 
 
 class ScriptTabMixin:
@@ -67,10 +95,34 @@ class ScriptTabMixin:
         self.script_result_text.setReadOnly(True)
         layout.addWidget(self.script_result_text)
         tab.setLayout(layout)
+        self._script_runs = TabTask(as_widget(self))
+        self._script_runs.result.connect(self._show_script_result)
+        self._script_runs.error.connect(self._show_script_error)
         return tab
 
+    def _start_script_run(self, work: Callable[[], Any]) -> None:
+        """Run ``work`` as this tab's one stoppable script run."""
+        if not self._script_runs.start_script(work):
+            self.script_result_text.setText(_t("task_busy"))
+            return
+        self.script_result_text.setText(_t("task_running"))
+
+    def _show_script_result(self, result: object) -> None:
+        self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
+
+    def _show_script_error(self, error: object) -> None:
+        if was_stopped(error):
+            self.script_result_text.setText(_t("task_stopped"))
+            return
+        self.script_result_text.setText(f"Error: {error}")
+
+    def _stop_script(self) -> None:
+        """Ask the running script to stop; it ends at its next checkpoint."""
+        if self._script_runs.stop():
+            self.script_result_text.setText(_t("task_stopping"))
+
     def _browse_script(self):
-        path, _ = QFileDialog.getOpenFileName(self, _t("load_script"), "", _JSON_FILE_FILTER)
+        path, _ = QFileDialog.getOpenFileName(as_widget(self), _t("load_script"), "", _JSON_FILE_FILTER)
         if path:
             self.script_path_input.setText(path)
             try:
@@ -80,45 +132,27 @@ class ScriptTabMixin:
                 self.script_result_text.setText(f"Error loading: {error}")
 
     def _execute_script(self):
-        try:
-            path = self.script_path_input.text()
-            if not path:
-                return
-            data = read_executable_action_json(path)
-            with _capture_manual_run(getattr(self, "script_history_controls", None),
-                                     source_id="gui.file", script_path=path):
-                result = execute_action(data)
-            self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            self.script_result_text.setText(f"Error: {error}")
+        path = self.script_path_input.text()
+        if path:
+            capture = _requested_manual_run(getattr(self, "script_history_controls", None),
+                                            source_id="gui.file", script_path=path)
+            self._start_script_run(functools.partial(_run_script_file, path, capture))
 
     def _browse_script_dir(self):
-        path = QFileDialog.getExistingDirectory(self, _t("execute_dir_label"))
+        path = QFileDialog.getExistingDirectory(as_widget(self), _t("execute_dir_label"))
         if path:
             self.script_dir_input.setText(path)
 
     def _execute_dir(self):
-        try:
-            path = self.script_dir_input.text()
-            if not path:
-                return
-            files = get_dir_files_as_list(path)
-            with _capture_manual_run(getattr(self, "script_history_controls", None),
-                                     source_id="gui.directory", script_path=path):
-                result = execute_files(files)
-            self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            self.script_result_text.setText(f"Error: {error}")
+        path = self.script_dir_input.text()
+        if path:
+            capture = _requested_manual_run(getattr(self, "script_history_controls", None),
+                                            source_id="gui.directory", script_path=path)
+            self._start_script_run(functools.partial(_run_script_dir, path, capture))
 
     def _execute_manual_script(self):
-        try:
-            text = self.script_editor.toPlainText().strip()
-            if not text:
-                return
-            data = json.loads(text)
-            with _capture_manual_run(getattr(self, "script_history_controls", None),
-                                     source_id="gui.editor", script_path="<editor>"):
-                result = execute_action(data)
-            self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            self.script_result_text.setText(f"Error: {error}")
+        text = self.script_editor.toPlainText().strip()
+        if text:
+            capture = _requested_manual_run(getattr(self, "script_history_controls", None),
+                                            source_id="gui.editor", script_path="<editor>")
+            self._start_script_run(functools.partial(_run_script_text, text, capture))

@@ -42,6 +42,11 @@ class CommandSpec:
     fields: Tuple[FieldSpec, ...] = ()
     body_keys: Tuple[str, ...] = ()
     description: str = ""
+    #: The command's result carries a secret (a freshly issued token). The
+    #: builder masks secret-named fields in every command's result and offers
+    #: them once through its one-time reveal, flagged or not; the flag says so
+    #: in the schema and also hides a result that has no named fields at all.
+    sensitive_result: bool = False
 
 
 _MOUSE_BUTTONS = ("mouse_left", "mouse_right", "mouse_middle")
@@ -73,6 +78,9 @@ def _build_specs() -> List[CommandSpec]:
     _add_ocr_specs(specs)
     _add_window_specs(specs)
     _add_flow_specs(specs)
+    _add_mobile_specs(specs)
+    _add_run_control_specs(specs)
+    _add_user_specs(specs)
     _add_journal_specs(specs)
     _add_config_sync_specs(specs)
     specs.append(CommandSpec(
@@ -2324,7 +2332,8 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("requester", FieldType.STRING, optional=True),
             FieldSpec("db", FieldType.STRING, optional=True),
         ),
-        description="Maker-checker: file a high-risk action for approval.",
+        description="Maker-checker: file a high-risk action for approval; returns {token}, the "
+                    "request id to hand to the checker (shown, not masked).",
     ))
     specs.append(CommandSpec(
         "AC_approval_approve", "Tools", "Approval: Approve",
@@ -2358,7 +2367,9 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("name", FieldType.STRING),
             FieldSpec("ttl", FieldType.FLOAT, optional=True, default=300.0),
         ),
-        description="Issue a short-lived JIT lease for a secret (no value).",
+        description="Issue a short-lived JIT lease for a secret (no value); returns {token, ttl}. "
+                    "This builder masks the token -- read it with 'One-time values' after the run.",
+        sensitive_result=True,
     ))
     specs.append(CommandSpec(
         "AC_lease_valid", "Tools", "Lease: Valid?",
@@ -2373,7 +2384,9 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_lease_active", "Tools", "Lease: List Active",
         fields=(),
-        description="List active leases (token, name, ttl_remaining).",
+        description="List active leases (token, name, ttl_remaining). This builder masks each "
+                    "token -- read them with 'One-time values' after the run.",
+        sensitive_result=True,
     ))
     specs.append(CommandSpec(
         "AC_egress_allow", "Tools", "Egress: Set Allowlist",
@@ -3034,6 +3047,7 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
                       choices=("HS256", "HS384", "HS512")),
         ),
         description="Sign a compact JWT (HMAC) from claims; returns {token}.",
+        sensitive_result=True,
     ))
     specs.append(CommandSpec(
         "AC_jwt_decode", "Security", "JWT: Verify Token",
@@ -5285,6 +5299,8 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("private_path", FieldType.STRING),
             FieldSpec("public_path", FieldType.STRING),
+            FieldSpec("passphrase", FieldType.STRING, optional=True,
+                      placeholder="encrypts the private key file"),
         ),
         description="Create an Ed25519 key pair: keep the private key on the "
                     "signing machine, give execution endpoints the public key.",
@@ -5355,6 +5371,93 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Average + dominant colour of a screen region.",
     ))
+
+
+def _add_mobile_specs(specs: List[CommandSpec]) -> None:
+    """Android / iOS commands, generated from the table the executor and MCP tools share."""
+    from je_auto_control.wrapper.mobile_commands import MOBILE_COMMANDS
+    kinds = {"int": FieldType.INT, "float": FieldType.FLOAT, "bool": FieldType.BOOL,
+             "file_path": FieldType.FILE_PATH}
+    for command in MOBILE_COMMANDS:
+        specs.append(CommandSpec(
+            command.name, "Android" if command.platform == "android" else "iOS",
+            command.label,
+            fields=tuple(
+                FieldSpec(param.name, kinds.get(param.kind, FieldType.STRING),
+                          optional=not param.required, default=param.default)
+                for param in command.params),
+            description=command.description,
+        ))
+
+
+def _add_run_control_specs(specs: List[CommandSpec]) -> None:
+    """Stoppable runs: name a run, list the ones in progress, stop one at its next checkpoint."""
+    specs.append(CommandSpec(
+        "AC_run_stoppable", "Flow", "Stoppable Run",
+        fields=(
+            FieldSpec("run_id", FieldType.STRING, optional=True, placeholder="nightly"),
+        ),
+        body_keys=("body",),
+        description="Run the body as a named run that AC_stop_execution can end.",
+    ))
+    specs.append(CommandSpec(
+        "AC_stop_execution", "Flow", "Stop Execution",
+        fields=(
+            FieldSpec("run_id", FieldType.STRING, optional=True, placeholder="nightly"),
+            FieldSpec("reason", FieldType.STRING, optional=True),
+        ),
+        description="Ask a stoppable run (or every other one) to stop at its next checkpoint.",
+    ))
+    specs.append(CommandSpec(
+        "AC_list_executions", "Flow", "List Stoppable Runs",
+        description="List the stoppable runs in progress.",
+    ))
+
+def _add_user_specs(specs: List[CommandSpec]) -> None:
+    """RBAC user management; under RBAC these need the ``manage_users`` capability."""
+    user_id = FieldSpec("user_id", FieldType.STRING)
+    users_path = FieldSpec("users_path", FieldType.FILE_PATH, optional=True,
+                           placeholder="default: JE_AUTOCONTROL_RBAC_USERS")
+    roles = ("viewer", "operator", "admin")
+    token_note = (" The token is in the run's record once; this builder masks it -- "
+                  "read it with 'One-time values' after the run (top-level steps only).")
+    specs.extend([
+        CommandSpec(
+            "AC_user_add", "Security", "User: Add",
+            fields=(
+                user_id,
+                FieldSpec("role", FieldType.ENUM, optional=True, default="viewer", choices=roles),
+                FieldSpec("display_name", FieldType.STRING, optional=True),
+                users_path,
+            ),
+            description="Add an RBAC user ('tags' via JSON view) and issue its bearer token."
+                        + token_note,
+            sensitive_result=True,
+        ),
+        CommandSpec(
+            "AC_user_remove", "Security", "User: Remove",
+            fields=(user_id, users_path),
+            description="Remove an RBAC user; the only admin cannot be removed.",
+        ),
+        CommandSpec(
+            "AC_user_set_role", "Security", "User: Set Role",
+            fields=(user_id, FieldSpec("role", FieldType.ENUM, choices=roles), users_path),
+            description="Change a user's role; applies to their next request and their "
+                        "deferred work.",
+        ),
+        CommandSpec(
+            "AC_user_rotate_token", "Security", "User: Rotate Token",
+            fields=(user_id, users_path),
+            description="Replace a user's bearer token; the old one stops working."
+                        + token_note,
+            sensitive_result=True,
+        ),
+        CommandSpec(
+            "AC_user_list", "Security", "User: List",
+            fields=(users_path,),
+            description="List the RBAC users (id, display name, role, tags; never a token).",
+        ),
+    ])
 
 
 _SPECS: Tuple[CommandSpec, ...] = tuple(_build_specs())

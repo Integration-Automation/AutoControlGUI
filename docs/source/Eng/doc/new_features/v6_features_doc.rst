@@ -61,6 +61,11 @@ loops / ifs for screen-flow automation::
     }
     result = run_state_machine(spec)   # {final_state, steps, elapsed_s}
 
+Each ``on_enter`` entry is one action (``["AC_name", {...}]``) or a list
+of actions. One ``run_state_machine`` call is one run: its ``on_enter``
+actions share a variable scope that is dropped when the machine stops (see
+*Variable scope per run*).
+
 Each state's ``on_enter`` actions run through the executor; transitions
 fire on guards: ``after`` (seconds in the state -- the machine waits for
 it), ``if_var_eq``, ``if_image_found`` (a template path, or

@@ -1,6 +1,6 @@
 """Which signing keys this process was configured with, read at call time.
 
-Three environment variables separate the machine that signs from the machines
+These environment variables separate the machine that signs from the machines
 that execute:
 
 ``JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY``
@@ -8,6 +8,9 @@ that execute:
 ``JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY``
     Path of the matching public key. Set it on every execution endpoint; an
     endpoint that has this and no private key verifies and cannot sign.
+``JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE``
+    Passphrase of the private key file, when it was created with one. Only
+    the signing machine needs it; verifying uses the public key.
 ``JE_AUTOCONTROL_ACCEPT_LEGACY_ACTION_SIGNATURES``
     Migration mode: also accept HMAC sidecars written before version 2.
     Anyone who can execute actions can produce one, so switch it off again
@@ -23,6 +26,7 @@ from typing import Optional
 
 PRIVATE_KEY_ENV = "JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY"
 PUBLIC_KEY_ENV = "JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY"
+PASSPHRASE_ENV = "JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE"  # nosec B105  # reason: a variable's name
 ACCEPT_LEGACY_ENV = "JE_AUTOCONTROL_ACCEPT_LEGACY_ACTION_SIGNATURES"
 
 _SWITCHED_ON = frozenset({"1", "true", "yes", "on"})
@@ -50,6 +54,15 @@ class SigningConfig:
 def _path_from(name: str) -> Optional[Path]:
     value = os.environ.get(name, "").strip()
     return Path(value) if value else None
+
+
+def signing_passphrase() -> Optional[bytes]:
+    """The private key's passphrase from the environment, or ``None`` when unset.
+
+    Kept out of :class:`SigningConfig`, whose ``repr`` ends up in logs.
+    """
+    value = os.environ.get(PASSPHRASE_ENV, "")
+    return value.encode("utf-8") if value else None
 
 
 def action_signing_config() -> SigningConfig:

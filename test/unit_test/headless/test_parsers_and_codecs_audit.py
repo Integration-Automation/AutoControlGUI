@@ -91,7 +91,8 @@ def test_hardware_codecs_are_listed_only_when_they_open(monkeypatch):
     from je_auto_control.utils.remote_desktop import hw_codec
     _fake_create(monkeypatch, hw_codec, refuse=("h264_qsv",))
     listed = hw_codec.available_hardware_codecs()
-    assert "h264_qsv" not in listed and "h264_nvenc" in listed
+    assert "h264_qsv" not in listed
+    assert "h264_nvenc" in listed
 
 
 def test_an_encoder_that_cannot_open_falls_back_to_libx264(monkeypatch):
@@ -103,7 +104,8 @@ def test_an_encoder_that_cannot_open_falls_back_to_libx264(monkeypatch):
 
     created = _fake_create(monkeypatch, hw_codec, refuse=("h264_qsv",))
     context = hw_codec._open_codec_context("h264_qsv", _Frame(), 1_000_000, 30)
-    assert context.name == "libx264" and [c.name for c in created] == ["h264_qsv", "libx264"]
+    assert context.name == "libx264"
+    assert [c.name for c in created] == ["h264_qsv", "libx264"]
     nvenc = hw_codec._open_codec_context("h264_nvenc", _Frame(), 1_000_000, 30)
     assert nvenc.options.get("tune") != "zerolatency"   # NVENC refuses to open with it
 

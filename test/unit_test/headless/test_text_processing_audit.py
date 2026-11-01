@@ -37,7 +37,8 @@ def test_long_phone_numbers_are_masked_whole(text):
 def test_amex_numbers_are_cards_and_luhn_filters_random_digits():
     [finding] = detect_pii("Amex 3782 822463 10005")
     assert finding.kind == "credit_card"
-    assert luhn_valid("4111 1111 1111 1111") and not luhn_valid("4111 1111 1111 1112")
+    assert luhn_valid("4111 1111 1111 1111")
+    assert not luhn_valid("4111 1111 1111 1112")
     assert all(f.kind != "credit_card" for f in detect_pii("order 1234567890123"))
 
 

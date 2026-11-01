@@ -7,7 +7,7 @@ import pytest
 pytest.importorskip('PySide6.QtWidgets', exc_type=ImportError)
 from headless._webrtc_doubles import Bridge, Channel, FakePeerConnection
 from headless.test_folder_sync_content import loop
-from je_auto_control.gui.remote_desktop import webrtc_panel
+from je_auto_control.gui.remote_desktop import webrtc_panel, webrtc_viewer_connection
 from je_auto_control.gui.remote_desktop.folder_sync_io import make_folder_engine
 from je_auto_control.utils.rbac import AuthorizationContext, Role, UserStore, authorization_scope
 from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
@@ -24,7 +24,7 @@ def native_folder(tmp_path, monkeypatch):
     store.add_user(user_id='owner', display_name='Owner', role=Role.OPERATOR)
     monkeypatch.setattr(webrtc_files, 'get_bridge', Bridge)
     monkeypatch.setattr(webrtc_files, 'default_inbox_dir', lambda: watch)
-    monkeypatch.setattr(webrtc_panel, '_read_webrtc_config', lambda _owner: WebRTCConfig())
+    monkeypatch.setattr(webrtc_viewer_connection, '_read_webrtc_config', lambda _owner: WebRTCConfig())
     notices = []
     signals = SimpleNamespace(**{name: SimpleNamespace(emit=lambda *_args: None)
                                  for name in ['state', 'auth', 'inbox_listing', 'inbox_op']})

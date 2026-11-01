@@ -80,8 +80,8 @@ class AutoControlGUIUI(QMainWindow):
         self._navigation_dock.setVisible(preferences.navigation_visible)
         self._navigation_dock.installEventFilter(self)
 
-        self._view_menu: QMenu = None
-        self._actions_menu: QMenu = None
+        self._view_menu: QMenu | None = None
+        self._actions_menu: QMenu | None = None
         self._tab_actions: list = []
         self._build_menu_bar()
         self.auto_control_gui_widget.tabs_changed.connect(self._rebuild_tabs_menu)
@@ -262,16 +262,20 @@ class AutoControlGUIUI(QMainWindow):
         authorize_command('AC_sync_profile_load')
         self.auto_control_gui_widget.activate_tab('script_builder')
         builder = self.auto_control_gui_widget.tab_registry.open('script_builder')
+        from je_auto_control.gui.script_builder.builder_tab import ScriptBuilderTab
+        if not isinstance(builder, ScriptBuilderTab):
+            raise TypeError(f"the script_builder tab is a {type(builder).__name__}")
         builder.import_sync_script(actions, source_path)
 
     def _rebuild_tabs_menu(self) -> None:
-        if self._view_menu is None:
+        view_menu = self._view_menu
+        if view_menu is None:
             return
         # clear() only detaches: the submenus (and, parented to them, their
         # actions) stayed alive, 51 more actions and a menu per rebuild.
-        for submenu in self._view_menu.findChildren(QMenu, options=Qt.FindChildOption.FindDirectChildrenOnly):
+        for submenu in view_menu.findChildren(QMenu, options=Qt.FindChildOption.FindDirectChildrenOnly):
             submenu.deleteLater()
-        self._view_menu.clear()
+        view_menu.clear()
         self._tab_actions = []
         entries_by_cat: dict = {}
         for entry in self.auto_control_gui_widget.list_registered_tabs():
@@ -279,13 +283,13 @@ class AutoControlGUIUI(QMainWindow):
         for cat_key, title_key, default in _TAB_CATEGORIES:
             entries = entries_by_cat.pop(cat_key, [])
             if entries:
-                self._add_category_submenu(_t(title_key, default), entries)
+                self._add_category_submenu(view_menu, _t(title_key, default), entries)
         for cat_key, entries in entries_by_cat.items():
             if entries:
-                self._add_category_submenu(cat_key.title(), entries)
+                self._add_category_submenu(view_menu, cat_key.title(), entries)
 
-    def _add_category_submenu(self, label: str, entries: list) -> None:
-        sub = self._view_menu.addMenu(label)
+    def _add_category_submenu(self, view_menu: QMenu, label: str, entries: list) -> None:
+        sub = view_menu.addMenu(label)
         for entry in entries:
             action = QAction(entry["title"], sub, checkable=True)
             action.setChecked(entry["visible"])

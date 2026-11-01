@@ -26,7 +26,7 @@ def stub_adb_path(monkeypatch, tmp_path):
         "je_auto_control.android.adb_client.shutil.which",
         lambda name: str(fake_adb) if name == "adb" else None,
     )
-    yield str(fake_adb)
+    return str(fake_adb)
 
 
 @pytest.fixture(autouse=True)

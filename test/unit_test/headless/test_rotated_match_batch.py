@@ -35,7 +35,8 @@ def test_finds_rotated_template_and_recovers_angle():
     assert best is not None
     assert abs(best.angle - 30.0) < 1e-9
     assert best.score >= 0.99
-    assert abs(best.x - 40) <= 1 and abs(best.y - 50) <= 1
+    assert abs(best.x - 40) <= 1
+    assert abs(best.y - 50) <= 1
 
 
 def test_zero_angle_locates_unrotated_patch():
@@ -86,5 +87,6 @@ def test_wiring():
 
 
 def test_facade_exports():
-    assert hasattr(ac, "match_rotated") and "match_rotated" in ac.__all__
+    assert hasattr(ac, "match_rotated")
+    assert "match_rotated" in ac.__all__
     assert hasattr(ac, "match_rotated_all")

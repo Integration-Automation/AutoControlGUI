@@ -58,9 +58,9 @@ _URB_HEADER_SIZE = struct.calcsize(_URB_HEADER_FMT)
 # number_of_packets, interval, setup[8]
 _CMD_SUBMIT_FMT = "!IIiII8s"
 _CMD_SUBMIT_SIZE = struct.calcsize(_CMD_SUBMIT_FMT)
-_RET_SUBMIT_FMT = "!iIiII8s"  # status (__s32, signed), actual_length,
-                              # start_frame, number_of_packets, error_count,
-                              # setup[8]
+# Field order: status (__s32, so signed), actual_length, start_frame,
+# number_of_packets, error_count, setup[8]
+_RET_SUBMIT_FMT = "!iIiII8s"
 _RET_SUBMIT_SIZE = struct.calcsize(_RET_SUBMIT_FMT)
 # RET_UNLINK body: __s32 status + padding to fill the 28-byte body union.
 _RET_UNLINK_FMT = "!i24x"

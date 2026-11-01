@@ -82,11 +82,12 @@ class _FrameDisplay(QWidget):
     def paintEvent(self, _event) -> None:  # noqa: N802  Qt override
         painter = QPainter(self)
         painter.fillRect(self.rect(), Qt.GlobalColor.black)
-        if not self.has_image():
+        image = self._image
+        if image is None or not self.has_image():
             return
         target = self._fit_rect()
         if target.isValid():
-            painter.drawImage(target, self._image)
+            painter.drawImage(target, image)
             self._paint_remote_cursor(painter, target)
 
     def _paint_remote_cursor(self, painter: QPainter, target: QRect) -> None:

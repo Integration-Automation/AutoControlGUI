@@ -1,0 +1,34 @@
+# Modules that do not type-check against the real PySide6 / aiortc / av types.
+#
+# The shrink-only list of `typing_contract_verify.py --extras`. The ordinary
+# contract treats those three libraries as `Any`; this run does not, and these
+# are the modules that were already inconsistent with the libraries' own
+# signatures when the question was first asked (mixins that call methods of the
+# widget they are mixed into, `QLayout | None` used unguarded, and the like).
+#
+# Rules: the same as `typing_contract_exempt.txt`. A module may leave; it may
+# not join; the list is measured, never hand-edited:
+#         python test/verify/typing_contract_verify.py --extras --fix
+# Measure with the versions the `typing-extras` job of `quality.yml` pins.
+#
+# Targets: win32, linux, darwin
+# Measured entries: 18
+
+je_auto_control.gui.navigation
+je_auto_control.gui.remote_desktop.webrtc_host_connection
+je_auto_control.gui.remote_desktop.webrtc_host_media
+je_auto_control.gui.remote_desktop.webrtc_host_sessions
+je_auto_control.gui.remote_desktop.webrtc_host_trust
+je_auto_control.gui.remote_desktop.webrtc_host_ui
+je_auto_control.gui.remote_desktop.webrtc_panel_common
+je_auto_control.gui.remote_desktop.webrtc_viewer_address_book
+je_auto_control.gui.remote_desktop.webrtc_viewer_connection
+je_auto_control.gui.remote_desktop.webrtc_viewer_files
+je_auto_control.gui.remote_desktop.webrtc_viewer_media
+je_auto_control.gui.remote_desktop.webrtc_viewer_ui
+je_auto_control.gui.script_builder.step_form_view
+je_auto_control.gui.triggers_tab
+je_auto_control.utils.remote_desktop.hw_codec
+je_auto_control.utils.remote_desktop.session_recorder
+je_auto_control.utils.remote_desktop.webrtc_audio
+je_auto_control.utils.remote_desktop.webrtc_transport

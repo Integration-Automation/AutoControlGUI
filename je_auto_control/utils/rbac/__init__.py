@@ -20,11 +20,21 @@ exactly as before. With a store, each request is authenticated as one user
 command is checked against the capability it needs (:mod:`.policy`), and
 the audit entries carry the ``user_id``.
 
+Work registered by an authenticated user and run later -- a scheduler job, a
+trigger, a hotkey, a webhook, a watchdog rule -- keeps that user's authority
+(:class:`.deferred.DeferredAuthorization`). Users are managed through
+:mod:`.admin`: ``AC_user_*``, the ``ac_user_*`` MCP tools,
+``je_auto_control users`` and the REST API tab, all gated by ``manage_users``.
+
 The store is intentionally tiny — no LDAP, no OAuth, no row-level
 permissions. Operators who need more should stand up a proper IdP in
 front of the REST endpoint; this is the "good-enough-for-small-team"
 baseline.
 """
+from je_auto_control.utils.rbac.admin import (
+    IssuedToken, add_user, list_users, management_store, remove_user,
+    rotate_user_token, set_user_role,
+)
 from je_auto_control.utils.rbac.authorization import (
     USERS_ENV, AuthorizationContext, AuthorizationError, authorization_scope,
     current_authorization, resolve_token, user_store_from_env,
@@ -39,10 +49,12 @@ from je_auto_control.utils.rbac.users import (
 )
 
 __all__ = [
-    "AuthorizationContext", "AuthorizationError", "Capability", "Role",
-    "USERS_ENV", "UserAuthError", "UserRecord", "UserStore",
-    "authorization_scope", "authorize_command", "can",
+    "AuthorizationContext", "AuthorizationError", "Capability",
+    "IssuedToken", "Role", "USERS_ENV", "UserAuthError", "UserRecord", "UserStore",
+    "add_user", "authorization_scope", "authorize_command", "can",
     "capability_for_command", "capability_for_route", "capability_for_tool",
-    "current_authorization", "default_user_store", "denied_command_in",
-    "resolve_token", "role_capabilities", "user_store_from_env",
+    "current_authorization", "default_user_store",
+    "denied_command_in", "list_users", "management_store",
+    "remove_user", "resolve_token", "role_capabilities",
+    "rotate_user_token", "set_user_role", "user_store_from_env",
 ]

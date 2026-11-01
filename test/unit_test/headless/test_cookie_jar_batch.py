@@ -7,7 +7,8 @@ from je_auto_control.utils.cookie_jar import CookieJar, parse_set_cookie
 
 def test_parse_set_cookie():
     parsed = parse_set_cookie("sid=abc123; Path=/; Max-Age=3600; HttpOnly")
-    assert parsed["name"] == "sid" and parsed["value"] == "abc123"
+    assert parsed["name"] == "sid"
+    assert parsed["value"] == "abc123"
     assert parsed["attributes"]["path"] == "/"
     assert parsed["attributes"]["max-age"] == "3600"
     assert parsed["attributes"]["httponly"] == ""
@@ -18,7 +19,8 @@ def test_update_and_cookie_header():
     jar = CookieJar().update(["sid=abc; Path=/", "theme=dark"])
     assert len(jar) == 2
     header = jar.cookie_header()
-    assert "sid=abc" in header and "theme=dark" in header
+    assert "sid=abc" in header
+    assert "theme=dark" in header
     assert "; " in header
 
 
@@ -74,4 +76,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("CookieJar", "parse_set_cookie"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

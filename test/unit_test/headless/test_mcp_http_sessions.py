@@ -139,7 +139,7 @@ def _destructive_tool(ran):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def live_server(monkeypatch):
     """A real HttpMCPServer carrying one destructive tool, gate armed."""
     monkeypatch.setenv("JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", "1")
@@ -449,7 +449,8 @@ def test_an_sse_post_can_carry_its_own_confirmation(live_server):
     stream = conn.getresponse()
     try:
         prompt = _read_sse_event(stream)
-        assert prompt is not None and prompt["method"] == "elicitation/create"
+        assert prompt is not None
+        assert prompt["method"] == "elicitation/create"
 
         reply_conn = _connect(server)
         try:

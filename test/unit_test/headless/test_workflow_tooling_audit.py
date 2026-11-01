@@ -64,10 +64,12 @@ def _table(policy):
 
 
 def test_hit_policies_are_validated_and_any_must_agree():
+    misspelt = _table("COLECT")
     with pytest.raises(ValueError, match="hit policy"):
-        evaluate_table(_table("COLECT"), {"x": 1})
+        evaluate_table(misspelt, {"x": 1})
+    disagreeing = _table("ANY")
     with pytest.raises(ValueError, match="ANY"):
-        evaluate_table(_table("ANY"), {"x": 1})
+        evaluate_table(disagreeing, {"x": 1})
     agreeing = {"hit_policy": "ANY", "rules": [
         {"conditions": {"x": 1}, "outputs": {"y": "a"}},
         {"conditions": {"x": 1}, "outputs": {"y": "a"}}]}
@@ -78,8 +80,9 @@ def test_a_string_predicate_is_a_spec_error():
     spec = {"initial": "a", "max_steps": 3, "states": {
         "a": {"transitions": [{"predicate": "ctx.ok == True", "go_to": "b"}]},
         "b": {"final": True}}}
+    machine = StateMachine(spec, execute_action=lambda action: None)
     with pytest.raises(StateMachineError, match="callable"):
-        StateMachine(spec, execute_action=lambda action: None).run()
+        machine.run()
     assert issubclass(StateMachineError, AutoControlException)
 
 
@@ -91,10 +94,11 @@ def test_assert_poll_raises_an_assertion():
 def test_soft_failures_survive_an_exception_in_the_block():
     if not hasattr(BaseException, "add_note"):
         pytest.skip("exception notes need Python 3.11")
-    with pytest.raises(ValueError) as info:
-        with SoftAssertions() as soft:
-            soft.check(False, "first check")
-            raise ValueError("boom")
+    soft = SoftAssertions()
+    boom = ValueError("boom")
+    with pytest.raises(ValueError) as info, soft:
+        soft.check(False, "first check")
+        raise boom
     assert any("first check" in note for note in info.value.__notes__)
 
 

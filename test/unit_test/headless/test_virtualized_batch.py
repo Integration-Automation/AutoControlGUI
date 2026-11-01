@@ -87,4 +87,5 @@ def test_wiring():
 
 
 def test_facade_export():
-    assert hasattr(ac, "realize_item") and "realize_item" in ac.__all__
+    assert hasattr(ac, "realize_item")
+    assert "realize_item" in ac.__all__

@@ -67,4 +67,5 @@ def test_a_dropped_connection_is_still_reported():
     viewer._connected = True
     viewer._recv_loop(channel, stop)
     assert viewer._connected is False
-    assert len(errors) == 1 and isinstance(errors[0], OSError)
+    assert len(errors) == 1
+    assert isinstance(errors[0], OSError)

@@ -18,26 +18,31 @@ def _two_column_three_rows():
 
 def test_vertical_projection_has_a_zero_gutter():
     profile = vertical_projection(_two_column_three_rows())
-    assert profile[40] > 0 and profile[150] > 0   # inside the two columns
+    assert profile[40] > 0
+    assert profile[150] > 0  # inside the two columns
     assert profile[95] == 0                        # the gutter band is empty
 
 
 def test_column_gutters_finds_the_interior_band():
     gutters = column_gutters(_two_column_three_rows())
     assert len(gutters) == 1
-    assert gutters[0]["start"] == 70 and gutters[0]["end"] == 120
+    assert gutters[0]["start"] == 70
+    assert gutters[0]["end"] == 120
 
 
 def test_assign_columns_tags_each_box():
     tagged = {b["text"]: b["column"] for b in assign_columns(_two_column_three_rows())}
-    assert tagged["Name"] == 0 and tagged["Ann"] == 0
-    assert tagged["Age"] == 1 and tagged["30"] == 1
+    assert tagged["Name"] == 0
+    assert tagged["Ann"] == 0
+    assert tagged["Age"] == 1
+    assert tagged["30"] == 1
 
 
 def test_detect_borderless_table():
     table = detect_borderless_table(_two_column_three_rows())
     assert table is not None
-    assert table["n_rows"] == 3 and table["n_cols"] == 2
+    assert table["n_rows"] == 3
+    assert table["n_cols"] == 2
     assert table["rows"] == [["Name", "Age"], ["Ann", "30"], ["Bob", "25"]]
 
 
@@ -66,4 +71,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("vertical_projection", "column_gutters", "assign_columns",
                  "detect_borderless_table"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

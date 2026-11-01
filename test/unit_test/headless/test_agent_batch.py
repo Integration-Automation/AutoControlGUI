@@ -31,7 +31,8 @@ def test_skill_crud_and_persistence(tmp_path):
     assert lib.names() == ["login"]
     again = SkillLibrary(path)
     skill = again.get("login")
-    assert skill.actions == actions and skill.tags == ["auth"]
+    assert skill.actions == actions
+    assert skill.tags == ["auth"]
     assert again.remove("login") is True
     assert again.remove("login") is False
 
@@ -67,7 +68,8 @@ def test_guardrail_flags_injection():
     assert "ignore-previous-instructions" in labels
     assert "reveal-system-prompt" in labels
     verdict = assess_text(text)
-    assert verdict["suspicious"] is True and verdict["score"] >= 2
+    assert verdict["suspicious"] is True
+    assert verdict["score"] >= 2
     assert "[REDACTED]" in redact_text(text)
 
 
@@ -82,7 +84,8 @@ def test_guardrail_passes_clean_text():
 
 def test_agent_card_shape(tmp_path):
     card = build_agent_card()
-    assert card["name"] and card["version"]
+    assert card["name"]
+    assert card["version"]
     assert card["protocolVersion"]
     assert len(card["skills"]) >= 3
     assert all({"id", "name", "description"} <= set(s) for s in card["skills"])

@@ -176,6 +176,6 @@ def _add_body_node(parent: QTreeWidgetItem, body_key: str) -> QTreeWidgetItem:
 def _find_body_item(parent: QTreeWidgetItem, body_key: str) -> Optional[QTreeWidgetItem]:
     for i in range(parent.childCount()):
         child = parent.child(i)
-        if child.data(0, ROLE_BODY_KEY) == body_key:
+        if child is not None and child.data(0, ROLE_BODY_KEY) == body_key:
             return child
     return None

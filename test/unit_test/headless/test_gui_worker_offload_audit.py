@@ -18,7 +18,7 @@ pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 
-@pytest.fixture()
+@pytest.fixture
 def qapp():
     return QApplication.instance() or QApplication([])
 
@@ -52,7 +52,7 @@ class _FakeWatcher:
         return []
 
 
-@pytest.fixture()
+@pytest.fixture
 def watcher(monkeypatch):
     from je_auto_control.utils.usb import usb_watcher
     fake = _FakeWatcher()
@@ -69,7 +69,8 @@ def test_the_watcher_stops_with_its_last_holder(watcher):
     release_default_watcher()
     assert watcher.running
     release_default_watcher()
-    assert not watcher.running and watcher.stops == 1
+    assert not watcher.running
+    assert watcher.stops == 1
     release_default_watcher()                       # an extra release is ignored
     assert watcher.stops == 1
 
@@ -79,7 +80,8 @@ def test_holders_never_stop_a_watcher_something_else_started(watcher):
     watcher.running = True                          # the executor's AC_usb_watch_start
     hold_default_watcher()
     release_default_watcher()
-    assert watcher.running and watcher.stops == 0
+    assert watcher.running
+    assert watcher.stops == 0
 
 
 def test_the_usb_tab_enumerates_off_the_gui_thread_and_only_when_shown(qapp, monkeypatch, watcher):
@@ -98,7 +100,8 @@ def test_the_usb_tab_enumerates_off_the_gui_thread_and_only_when_shown(qapp, mon
         assert threads == []                        # not at construction
         tab.show()
         assert _pump(qapp, lambda: tab._table.rowCount() == 1)
-        assert threads and threads[0] != threading.get_ident()
+        assert threads
+        assert threads[0] != threading.get_ident()
     finally:
         tab.hide()
         tab.deleteLater()

@@ -16,14 +16,16 @@ def test_label_to_value_on_the_right():
     fields = associate_fields(boxes)
     assert len(fields) == 1
     assert fields[0]["label"] == "Name"
-    assert fields[0]["value"] == "Ann" and fields[0]["direction"] == "right"
+    assert fields[0]["value"] == "Ann"
+    assert fields[0]["direction"] == "right"
 
 
 def test_label_above_value_below():
     # value directly below the label, nothing to the right
     boxes = [_box(0, 0, "Email:"), _box(0, 40, "a@b.com")]
     fields = associate_fields(boxes, directions=("right", "below"))
-    assert fields[0]["value"] == "a@b.com" and fields[0]["direction"] == "below"
+    assert fields[0]["value"] == "a@b.com"
+    assert fields[0]["direction"] == "below"
 
 
 def test_nearest_value_wins_and_gap_within_max():
@@ -68,4 +70,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("associate_fields", "match_labels_to_widgets", "checkbox_state"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

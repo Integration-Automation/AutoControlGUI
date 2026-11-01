@@ -72,25 +72,25 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         self._populate_filter()
         self._filter.currentIndexChanged.connect(self._refresh)
         self._table = QTableWidget(0, _COLUMN_COUNT)
-        self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self._table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self._table.verticalHeader().setVisible(False)
         self._apply_table_headers()
         header = self._table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Interactive)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setStretchLastSection(True)
         self._count_label = QLabel()
         self._timeline = RunHistoryTimeline()
         self._timeline.run_clicked.connect(self._on_timeline_clicked)
         self._thumb_label = QLabel()
-        self._thumb_label.setAlignment(Qt.AlignCenter)
+        self._thumb_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._thumb_label.setMinimumSize(220, 160)
-        self._thumb_label.setFrameShape(QFrame.StyledPanel)
+        self._thumb_label.setFrameShape(QFrame.Shape.StyledPanel)
         self._thumb_label.setScaledContents(False)
         self._thumb_caption = QLabel()
         self._thumb_caption.setWordWrap(True)
-        self._thumb_caption.setAlignment(Qt.AlignTop)
-        self._thumb_caption.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self._thumb_caption.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._thumb_caption.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self._timer = QTimer(self)
         self._timer.setInterval(_REFRESH_INTERVAL_MS)
         self._timer.timeout.connect(self._refresh)
@@ -106,11 +106,15 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         self._repopulate_filter_labels()
         self._refresh()
         self._journal.retranslate()
+    def dispose(self) -> None:
+        """Stop the refresh timer and any journal read; the registry calls it before deleting the tab."""
+        self._journal.cancel()
+        self._timer.stop()
+
     # pylint: disable-next=invalid-name  # reason: Qt override
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802  # reason: Qt override
         """Stop journal reads immediately when the history page closes."""
-        self._journal.cancel()
-        self._timer.stop()
+        self.dispose()
         super().closeEvent(event)
 
     def resizeEvent(self, event) -> None:
@@ -153,7 +157,7 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         root.addWidget(timeline_label)
         root.addWidget(self._timeline)
 
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self._table)
         preview = QWidget()
         preview_layout = QVBoxLayout(preview)
@@ -164,7 +168,7 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         splitter.addWidget(preview)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 1)
-        sections = QSplitter(Qt.Vertical)
+        sections = QSplitter(Qt.Orientation.Vertical)
         sections.addWidget(splitter)
         sections.addWidget(self._journal)
         sections.setStretchFactor(0, 1)
@@ -197,9 +201,9 @@ class RunHistoryTab(TranslatableMixin, QWidget):
     def _on_clear(self) -> None:
         reply = QMessageBox.question(
             self, _t("rh_clear"), _t("rh_confirm_clear"),
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No,
         )
-        if reply == QMessageBox.Yes:
+        if reply == QMessageBox.StandardButton.Yes:
             default_history_store.clear()
             self._refresh()
 
@@ -236,7 +240,7 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         )
         for col, text in enumerate(values):
             item = QTableWidgetItem(text)
-            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self._table.setItem(row, col, item)
 
     def _selected_record(self) -> Optional[RunRecord]:
@@ -274,8 +278,8 @@ class RunHistoryTab(TranslatableMixin, QWidget):
                 self._thumb_label.setText(_t("rh_artifact_missing"))
             else:
                 self._thumb_label.setPixmap(pixmap.scaled(
-                    self._thumb_label.size(), Qt.KeepAspectRatio,
-                    Qt.SmoothTransformation,
+                    self._thumb_label.size(), Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
                 ))
         caption = (
             f"#{record.id} • {record.source_type}/{record.source_id}\n"

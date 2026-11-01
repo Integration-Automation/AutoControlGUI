@@ -29,19 +29,38 @@ FROM python:3.12-slim AS runtime
 
 ARG DEBIAN_FRONTEND=noninteractive
 
+# One sorted list, so a package is easy to find and a diff touches one line:
+# - display: xvfb, xauth, x11-utils, xdotool, x11vnc.
+# - XFCE desktop (slim selection): xfce4, xfce4-terminal.
+# - Qt / PySide6 + opencv runtime: libgl1, libglib2.0-0 (opencv needs its
+#   libgthread-2.0.so.0), libxkbcommon-x11-0, libdbus-1-3 and the libxcb-* set.
+# - other deps: libusb-1.0-0, ca-certificates.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        # display
-        xvfb xauth x11-utils xdotool x11vnc \
-        # XFCE desktop (slim selection)
-        xfce4 xfce4-terminal \
-        # Qt / PySide6 + opencv runtime (libgthread-2.0.so.0 ← libglib2.0-0)
-        libgl1 libglib2.0-0 libxkbcommon-x11-0 libdbus-1-3 \
-        libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
-        libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-sync1 \
-        libxcb-xfixes0 libxcb-xinerama0 libxcb-xkb1 \
-        # other deps
-        libusb-1.0-0 ca-certificates \
+        ca-certificates \
+        libdbus-1-3 \
+        libgl1 \
+        libglib2.0-0 \
+        libusb-1.0-0 \
+        libxcb-cursor0 \
+        libxcb-icccm4 \
+        libxcb-image0 \
+        libxcb-keysyms1 \
+        libxcb-randr0 \
+        libxcb-render-util0 \
+        libxcb-shape0 \
+        libxcb-sync1 \
+        libxcb-xfixes0 \
+        libxcb-xinerama0 \
+        libxcb-xkb1 \
+        libxkbcommon-x11-0 \
+        x11-utils \
+        x11vnc \
+        xauth \
+        xdotool \
+        xfce4 \
+        xfce4-terminal \
+        xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

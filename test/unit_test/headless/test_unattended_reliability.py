@@ -12,7 +12,8 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 def test_generate_totp_deterministic_and_verifies():
     secret = ac.generate_secret()
     code = ac.generate_totp(secret, at=0)
-    assert code.isdigit() and len(code) == 6
+    assert code.isdigit()
+    assert len(code) == 6
     assert ac.verify_totp(secret, code, at=0) is True
     # same 30-second step -> same code
     assert ac.generate_totp(secret, at=0) == ac.generate_totp(secret, at=15)

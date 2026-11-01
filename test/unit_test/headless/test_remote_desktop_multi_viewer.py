@@ -293,10 +293,10 @@ def test_trusting_a_viewer_carries_the_label_through():
     assert _FakeHost.instances[0].calls == [("trust", "Ops laptop")]
 
 
-def test_pending_viewer_id_is_read_from_the_live_session():
+def test_pending_viewer_id_is_read_from_the_live_session(monkeypatch):
     host = _host()
     session_id, _ = host.create_session_offer()
-    _FakeHost.instances[0].pending_viewer_id = "viewer-7"
+    monkeypatch.setattr(_FakeHost.instances[0], "pending_viewer_id", "viewer-7")
     assert host.pending_viewer_id(session_id) == "viewer-7"
 
 
@@ -357,11 +357,11 @@ def test_disabling_a_slot_survives_a_session_that_is_already_gone(method,
 
 # --- broadcast ----------------------------------------------------------------
 
-def test_broadcast_reaches_only_authenticated_viewers():
+def test_broadcast_reaches_only_authenticated_viewers(monkeypatch):
     host = _host()
     host.create_session_offer()
     host.create_session_offer()
-    _FakeHost.instances[0].authenticated = True
+    monkeypatch.setattr(_FakeHost.instances[0], "authenticated", True)
     assert host.broadcast_file("C:/report.txt", remote_name="r.txt") == 1
     assert _FakeHost.instances[0].pushed == [("C:/report.txt", "r.txt")]
     assert _FakeHost.instances[1].pushed == []
@@ -402,12 +402,12 @@ def test_screen_track_is_none_before_any_viewer_arrives():
     assert _host().screen_track() is None
 
 
-def test_first_session_pc_skips_sessions_that_have_no_connection_yet():
+def test_first_session_pc_skips_sessions_that_have_no_connection_yet(monkeypatch):
     host = _host()
     host.create_session_offer()
     host.create_session_offer()
     pc = object()
-    _FakeHost.instances[1]._pc = pc
+    monkeypatch.setattr(_FakeHost.instances[1], "_pc", pc)
     assert host.first_session_pc() is pc
 
 
@@ -417,12 +417,12 @@ def test_first_session_pc_is_none_when_nothing_is_connected():
     assert host.first_session_pc() is None
 
 
-def test_session_pc_addresses_one_named_session():
+def test_session_pc_addresses_one_named_session(monkeypatch):
     host = _host()
     first, _ = host.create_session_offer()
     second, _ = host.create_session_offer()
     pc = object()
-    _FakeHost.instances[1]._pc = pc
+    monkeypatch.setattr(_FakeHost.instances[1], "_pc", pc)
     assert host.session_pc(second) is pc
     assert host.session_pc(first) is None
 
@@ -512,13 +512,13 @@ def test_the_connection_time_is_stamped_even_without_a_listener():
     assert host.list_sessions()[0]["connected_at"]
 
 
-def test_a_pending_viewer_is_reported_with_the_id_read_at_fire_time():
+def test_a_pending_viewer_is_reported_with_the_id_read_at_fire_time(monkeypatch):
     seen = []
     host = _host(on_pending_viewer=lambda sid, vid: seen.append((sid, vid)))
     session_id, _ = host.create_session_offer()
     # The id does not exist when the wrapper is built -- only when a viewer
     # actually knocks -- so the wrapper has to look the host up on each call.
-    _FakeHost.instances[0].pending_viewer_id = "viewer-9"
+    monkeypatch.setattr(_FakeHost.instances[0], "pending_viewer_id", "viewer-9")
     _fire(_FakeHost.instances[0], "on_pending_viewer")
     assert seen == [(session_id, "viewer-9")]
 

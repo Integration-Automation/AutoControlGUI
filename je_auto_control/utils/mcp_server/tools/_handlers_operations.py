@@ -238,6 +238,31 @@ def lease_active():
     return {"leases": default_broker.active()}
 
 
+def user_add(user_id: str, role: str = "viewer", display_name: str = "", tags=None):
+    from je_auto_control.utils.rbac.admin import add_user
+    return dict(add_user(user_id, role=role, display_name=display_name, tags=tags))
+
+
+def user_remove(user_id: str):
+    from je_auto_control.utils.rbac.admin import remove_user
+    return remove_user(user_id)
+
+
+def user_set_role(user_id: str, role: str):
+    from je_auto_control.utils.rbac.admin import set_user_role
+    return set_user_role(user_id, role)
+
+
+def user_rotate_token(user_id: str):
+    from je_auto_control.utils.rbac.admin import rotate_user_token
+    return dict(rotate_user_token(user_id))
+
+
+def user_list():
+    from je_auto_control.utils.rbac.admin import list_users
+    return {"users": list_users()}
+
+
 def egress_allow(allow=None, deny=None):
     from je_auto_control.utils.egress import set_egress_policy
     policy = set_egress_policy(allow, deny)

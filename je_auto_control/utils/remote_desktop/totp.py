@@ -16,7 +16,6 @@ Implementation notes:
 from __future__ import annotations
 
 import base64
-import binascii
 import hashlib
 import hmac
 import math
@@ -52,7 +51,7 @@ def _decode_secret(secret: str) -> bytes:
     padding = "=" * ((8 - len(cleaned) % 8) % 8)
     try:
         return base64.b32decode(cleaned + padding, casefold=True)
-    except (ValueError, binascii.Error) as exc:
+    except ValueError as exc:  # binascii.Error is a ValueError
         raise TOTPError(f"invalid base32 secret: {exc}") from exc
 
 

@@ -490,7 +490,8 @@ def test_a_completed_transfer_is_audited_and_announced(host, audit_log):
     channel.fire("message", b"data")
     channel.fire("message", json.dumps({"type": "file_end"}))
     assert [event for event, _ in audit_log.events] == ["file_received"]
-    assert seen and seen[0].name == "report.txt"
+    assert seen
+    assert seen[0].name == "report.txt"
 
 
 def test_a_raising_file_callback_does_not_lose_the_file(host):

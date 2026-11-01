@@ -42,6 +42,32 @@ glue between AutoControl's public API and your code.
 | --- | --- |
 | [`18_slack_daily_report.py`](18_slack_daily_report.py) | Full daily workflow: pull Slack messages → Anthropic summary → HTML/PDF report → SMTP email, on a cron schedule. Every external service degrades to a stub so the script always runs to completion. |
 
+## Locators, agents and other hosts
+
+| Script | What it shows |
+| --- | --- |
+| [`19_self_healing_locator.py`](19_self_healing_locator.py) | Locate with an image template first and fall back to a VLM on a miss; read the heal log. |
+| [`20_webrunner_bridge.py`](20_webrunner_bridge.py) | Drive WebRunner (browser automation) from an AutoControl script. |
+| [`21_computer_use.py`](21_computer_use.py) | Drive Anthropic Computer-Use against the live screen. |
+| [`22_wayland_backend.py`](22_wayland_backend.py) | Run on a Wayland session: backend selection and which helper programs are installed. |
+| [`23_cross_host_dag.py`](23_cross_host_dag.py) | Orchestrate a DAG of automation steps across several AutoControl hosts. |
+| [`24_multi_viewer_presence.py`](24_multi_viewer_presence.py) | Maintain a presence roster across several connected viewers. |
+| [`25_chatops_bot.py`](25_chatops_bot.py) | Stand up a Slack chat-ops bot. |
+| [`26_pytest_plugin_and_bdd.py`](26_pytest_plugin_and_bdd.py) | Drive AutoControl from pytest and pytest-bdd. |
+| [`27_anchor_locator.py`](27_anchor_locator.py) | Compose locators with spatial relations ("Submit below the Username label"). |
+
+## Mobile devices
+
+| Script | What it shows | `--validate` uses |
+| --- | --- | --- |
+| [`30_mobile_devices.py`](30_mobile_devices.py) | Isolated Android / iOS device sessions: setup report, capture, gestures, typing, the capability matrix. | An offline `adb` transport; no device. |
+
+`--validate` runs the real API against an offline `adb` stand-in and exits 0
+when what it saw matches what the script's docstring says. It never reaches a
+device. It is evidence about how the calls are wired, not about hardware.
+Without the flag the script talks to a real device, and anything that sends
+input sits behind an explicit option (`--tap`).
+
 ## Running
 
 [`29_mcp_journal.py`](29_mcp_journal.py) sends capture/read JSON-RPC requests to
@@ -59,12 +85,17 @@ through `AC_journal_capture` and prints sanitized snapshots with
 python examples/28_action_journal.py run.jsonl --run-id example
 ```
 
-Each script is standalone and uses only the package facade
-(`import je_auto_control as ac`). After `pip install -e .` from the
+Each script is standalone and uses the package facade
+(`import je_auto_control as ac`); the few that also import a helper from a
+submodule say why next to the import. After `pip install -e .` from the
 repo root:
 
 ```
 python examples/01_screenshot_and_click.py
+```
+
+```
+python examples/30_mobile_devices.py --validate
 ```
 
 A few scripts have optional dependencies — the script comments

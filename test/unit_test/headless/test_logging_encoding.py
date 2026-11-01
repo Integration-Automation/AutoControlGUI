@@ -20,7 +20,7 @@ from je_auto_control.utils.logging.logging_instance import (
 _NON_CP950 = "braille ⠐ and emoji \U0001F600 and CJK 中文"
 
 
-@pytest.fixture()
+@pytest.fixture
 def handler(tmp_path):
     made = AutoControlGUILoggingHandler(filename=str(tmp_path / "t.log"))
     yield made

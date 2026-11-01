@@ -36,6 +36,7 @@ _ALGORITHMS = {
 }
 
 Key = Union[str, bytes]
+_MALFORMED_SEGMENT = "malformed base64url segment"
 
 
 class JwtError(AutoControlException):
@@ -74,12 +75,12 @@ def _b64url_decode(segment: str) -> bytes:
     # verified like "sig": many token strings per signature, which defeats a
     # denylist or replay cache keyed on the token.
     if not _B64URL_SEGMENT.fullmatch(segment):
-        raise JwtError("malformed base64url segment")
+        raise JwtError(_MALFORMED_SEGMENT)
     padding = "=" * (-len(segment) % 4)
     try:
         raw = base64.urlsafe_b64decode(segment + padding)
     except (ValueError, TypeError) as exc:
-        raise JwtError("malformed base64url segment") from exc
+        raise JwtError(_MALFORMED_SEGMENT) from exc
     # The last character's unused low bits are ignored by the decoder, so a
     # segment is only accepted in its one canonical spelling.
     if _b64url_encode(raw) != segment:
@@ -161,7 +162,7 @@ def _split_token(token: str) -> tuple:
     # Checked up front: the signing input is encoded as ASCII before the
     # signature segment is ever decoded.
     if not all(_B64URL_SEGMENT.fullmatch(part) for part in parts):
-        raise JwtError("malformed base64url segment")
+        raise JwtError(_MALFORMED_SEGMENT)
     return parts[0], parts[1], parts[2]
 
 

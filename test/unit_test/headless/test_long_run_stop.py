@@ -30,7 +30,8 @@ def test_the_agent_loop_stops_before_its_next_step():
                      stop_event=stop)
     result = loop.run("goal")
     assert len(ran) == 2
-    assert result.final_message == "stopped" and not result.succeeded
+    assert result.final_message == "stopped"
+    assert not result.succeeded
 
 
 def test_run_computer_use_passes_the_stop_event():

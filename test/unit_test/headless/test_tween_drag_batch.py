@@ -8,7 +8,8 @@ from je_auto_control.utils.tween_drag import (
 def test_tween_points_endpoints_and_count():
     points = tween_points((0, 0), (100, 50), steps=10, easing="linear")
     assert len(points) == 11
-    assert points[0] == [0, 0] and points[-1] == [100, 50]
+    assert points[0] == [0, 0]
+    assert points[-1] == [100, 50]
     assert points[5] == [50, 25]            # linear midpoint
 
 
@@ -26,10 +27,12 @@ def test_tween_drag_dispatches_press_moves_release():
     events = []
     out = tween_drag((0, 0), (10, 10), steps=4, sink=events.append)
     ops = [e["op"] for e in events]
-    assert ops[0] == "press" and ops[-1] == "release"
+    assert ops[0] == "press"
+    assert ops[-1] == "release"
     assert ops.count("move") == 5            # steps + 1 points
     assert out["points"] == 5
-    assert events[-1]["x"] == 10 and events[-1]["y"] == 10
+    assert events[-1]["x"] == 10
+    assert events[-1]["y"] == 10
 
 
 # --- wiring (registration only — executing moves the real mouse) ---------

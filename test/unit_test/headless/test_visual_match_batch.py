@@ -53,18 +53,21 @@ def test_multiscale_finds_scaled_template():
     hay = np.zeros((120, 200), dtype=np.uint8)
     hay[10:50, 60:100] = big                     # embed only the 2x version
     match = match_template(tmpl, haystack=hay, scales=(1.0, 2.0), min_score=0.9)
-    assert match is not None and match.scale == pytest.approx(2.0)
+    assert match is not None
+    assert match.scale == pytest.approx(2.0)
 
 
 def test_unknown_method_raises():
+    template, haystack = _patch(), _haystack()
     with pytest.raises(ValueError):
-        match_template(_patch(), haystack=_haystack(), method="bogus")
+        match_template(template, haystack=haystack, method="bogus")
 
 
 def test_to_dict_has_center():
     match = match_template(_patch(), haystack=_haystack(), min_score=0.9)
     data = match.to_dict()
-    assert data["center"] == [60, 40] and data["score"] == pytest.approx(1.0)
+    assert data["center"] == [60, 40]
+    assert data["score"] == pytest.approx(1.0)
 
 
 # --- screen coordinates ----------------------------------------------------
@@ -106,10 +109,11 @@ def test_flat_template_is_refused_rather_than_matched_anywhere():
     # colour saturates the whole score map at 1.0 and "finds" the target at an
     # arbitrary position — worse than failing, because the caller clicks there.
     flat = np.full((20, 20), 128, dtype=np.uint8)
+    haystack = _haystack()
     with pytest.raises(ac.AutoControlScreenException):
-        match_template(flat, haystack=_haystack())
+        match_template(flat, haystack=haystack)
     with pytest.raises(ac.AutoControlScreenException):
-        match_template_all(flat, haystack=_haystack())
+        match_template_all(flat, haystack=haystack)
 
 
 def test_template_larger_than_haystack_finds_nothing():
@@ -128,7 +132,8 @@ def test_template_loads_from_a_non_ascii_path(tmp_path):
     target = tmp_path / "樣板圖.png"
     target.write_bytes(ascii_path.read_bytes())
     match = match_template(str(target), haystack=_haystack(), min_score=0.9)
-    assert match is not None and (match.x, match.y) == (50, 30)
+    assert match is not None
+    assert (match.x, match.y) == (50, 30)
 
 
 # --- wiring ---------------------------------------------------------------
@@ -147,5 +152,6 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("TemplateMatch", "match_template", "match_template_all",
                  "best_matches"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__
     assert callable(best_matches)

@@ -18,7 +18,8 @@ def test_write_default_config_creates_stub(tmp_path):
     assert target.exists()
     raw = json.loads(target.read_text(encoding="utf-8"))
     assert raw["token"] == "CHANGE_ME_BEFORE_USE"  # nosec B105  # test fixture
-    assert "server_url" in raw and "host_id" in raw
+    assert "server_url" in raw
+    assert "host_id" in raw
 
 
 def test_generate_systemd_unit(tmp_path):

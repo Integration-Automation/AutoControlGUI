@@ -42,7 +42,7 @@ _ALIASES = {alias: spdx for spdx, names in _ALIAS_GROUPS.items()
 _TOKEN_SPLIT = re.compile(r"((?<![^\s()])(?:OR|AND|WITH)(?![^\s()])|[()])", re.IGNORECASE)
 _OPERATORS = ("OR", "AND", "WITH", "(", ")")
 # GPL / LGPL / AGPL ids, whose "+" and deprecated bare forms have SPDX names.
-_GNU_ID = re.compile(r"(?i)((?:A|L)?GPL-\d\.\d)(\+|-only|-or-later)?")
+_GNU_ID = re.compile(r"(?i)([AL]?GPL-\d\.\d)(\+|-only|-or-later)?")
 
 
 def _gnu_id(text: str) -> Optional[str]:

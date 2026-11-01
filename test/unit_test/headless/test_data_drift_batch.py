@@ -50,7 +50,8 @@ def test_detect_drift_report_and_threshold():
     assert detect_drift(reference, same)["drifted"] is False
     shifted = [value + 100.0 for value in reference]
     report = detect_drift(reference, shifted)
-    assert report["drifted"] is True and report["psi"] > 0.25
+    assert report["drifted"] is True
+    assert report["psi"] > 0.25
     assert "ks" in report
 
 
@@ -90,4 +91,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("psi", "ks_two_sample", "categorical_drift", "detect_drift"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

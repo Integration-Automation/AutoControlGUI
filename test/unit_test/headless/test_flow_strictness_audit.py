@@ -64,9 +64,9 @@ def test_retry_retries_a_failure_nested_in_a_loop(run):
 
 
 def test_a_strict_run_raises_from_inside_a_loop(run):
+    actions = [["AC_loop", {"times": 2, "body": [_probe("l", "action")]}], _probe("after")]
     with pytest.raises(AutoControlActionException):
-        run([["AC_loop", {"times": 2, "body": [_probe("l", "action")]}], _probe("after")],
-            raise_on_error=True)
+        run(actions, raise_on_error=True)
 
 
 def test_a_lenient_run_still_records_and_continues(run):

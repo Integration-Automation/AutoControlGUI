@@ -31,7 +31,8 @@ def test_type_unicode_dispatches_plan():
     result = type_unicode("café 🚀", sink=events.append)
     assert [e["op"] for e in events] == ["set_clipboard", "hotkey"]
     assert events[0]["text"] == "café 🚀"
-    assert result["ops"] == 2 and result["code_units"] == 7
+    assert result["ops"] == 2
+    assert result["code_units"] == 7
 
 
 # --- key injection ---------------------------------------------------------
@@ -154,4 +155,5 @@ def test_facade_exports():
     for attr in ("type_unicode", "type_unicode_keys", "type_unicode_text",
                  "plan_paste", "plan_unicode_keys", "unicode_code_units",
                  "unicode_keys_supported"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

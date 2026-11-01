@@ -104,7 +104,8 @@ class CredentialBroker:
         now = self._clock()
         result: List[Dict[str, object]] = []
         with self._lock:
-            for token, lease in list(self._leases.items()):
+            # reason (suppression below): expired leases are popped inside the loop, so it walks a snapshot
+            for token, lease in list(self._leases.items()):  # NOSONAR python:S7504
                 remaining = float(lease["expires_at"]) - now
                 if remaining > 0:
                     result.append({"token": token, "name": lease["name"],

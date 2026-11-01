@@ -67,13 +67,14 @@ class SeqpacketTransport:
             raise AgentTaskError("the owner service needs AF_UNIX sequenced packets")
         self._endpoint = os.fspath(endpoint)
         self._peer_uid = peer_uid
+        self._family: int = family
         self._kind = kind | getattr(socket, "SOCK_CLOEXEC", 0)
         self._socket: socket.socket | None = None
 
     def _connected(self) -> socket.socket:
         if self._socket is not None:
             return self._socket
-        connection = socket.socket(socket.AF_UNIX, self._kind)
+        connection = socket.socket(self._family, self._kind)
         try:
             # The service enables SO_PASSCRED/SO_PASSPIDFD on its end; the kernel then
             # attaches this process's credentials and pidfd to every packet it sends.
@@ -234,7 +235,7 @@ class OwnerServiceChannel:
             self._lease = reply.lease
             self._track_lease(reply.lease_deadline_ns)
         if self._ticket is None:
-            start = wire.ServiceRequest(wire.OP_START, self._start_id, lease=self._lease, request=self._start_id,
+            start = wire.ServiceRequest(wire.OP_START, self._start_id, lease=self._held_lease(), request=self._start_id,
                                         arguments=self._arguments)
             self._start_state = "sent"
             reply = self._retried(start, deadline)
@@ -243,6 +244,18 @@ class OwnerServiceChannel:
                 raise _refusal(reply, "start the helper")
             self._ticket = reply.ticket
             self._start_state = "started"
+
+    def _held_lease(self) -> wire.Identifier:
+        """The open lease; a request that needs one is refused before it is encoded."""
+        if self._lease is None:
+            raise AgentTaskError("owner service lease is not open")
+        return self._lease
+
+    def _held_ticket(self) -> wire.Ticket:
+        """The started helper's ticket; a request that needs one is refused before it is encoded."""
+        if self._ticket is None:
+            raise AgentTaskError("owner service helper has not started")
+        return self._ticket
 
     def _track_lease(self, deadline_ns: int) -> None:
         """Keep the lease renewed in the background; a fake or legacy reply without a deadline is not renewed."""
@@ -259,7 +272,7 @@ class OwnerServiceChannel:
 
     def _renew_loop(self) -> None:
         while not self._stop.wait(self._renew_delay()):
-            request = wire.ServiceRequest(wire.OP_RENEW, _nonce(), lease=self._lease)
+            request = wire.ServiceRequest(wire.OP_RENEW, _nonce(), lease=self._held_lease())
             try:
                 reply = self._call(request, time.monotonic() + _CALL_SECONDS)
             except TimeoutError:
@@ -278,7 +291,7 @@ class OwnerServiceChannel:
         return self._lease_lost or bool(self._deadline_ns and time.monotonic_ns() >= self._deadline_ns)
 
     def _relay(self, opcode: int, deadline: float, data: bytes = b"") -> wire.ServiceReply:
-        request = wire.ServiceRequest(opcode, _nonce(), lease=self._lease, ticket=self._ticket, data=data)
+        request = wire.ServiceRequest(opcode, _nonce(), lease=self._held_lease(), ticket=self._held_ticket(), data=data)
         try:
             reply = self._call(request, deadline)
         except TimeoutError:
@@ -350,9 +363,9 @@ class OwnerServiceChannel:
                     check()
                     self._fenced()
                     return value
-                require_event_owner(value, on_event)
+                handler = require_event_owner(value, on_event)
                 check()
-                on_event(detached(value))
+                handler(detached(value))
                 self._fenced()
                 self._send_line({"ack": True}, deadline)
         except TimeoutError:
@@ -382,7 +395,8 @@ class OwnerServiceChannel:
 
     def _observe_settled(self, deadline: float) -> bool:
         while time.monotonic() < deadline:
-            request = wire.ServiceRequest(wire.OP_OBSERVE, _nonce(), lease=self._lease, ticket=self._ticket)
+            request = wire.ServiceRequest(wire.OP_OBSERVE, _nonce(), lease=self._held_lease(),
+                                          ticket=self._held_ticket())
             try:
                 reply = self._call(request, deadline)
             except TimeoutError:
@@ -425,7 +439,7 @@ class OwnerServiceChannel:
         """START went out but its reply never arrived. The service answers a replay of an
         admitted START with its ticket in any lease phase, so any other answer means no
         helper was started; no answer leaves the outcome unknown and nothing is claimed."""
-        start = wire.ServiceRequest(wire.OP_START, self._start_id, lease=self._lease, request=self._start_id,
+        start = wire.ServiceRequest(wire.OP_START, self._start_id, lease=self._held_lease(), request=self._start_id,
                                     arguments=self._arguments)
         try:
             reply = self._call(start, deadline)

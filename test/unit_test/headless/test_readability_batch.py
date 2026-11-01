@@ -80,4 +80,5 @@ def test_facade_exports():
     for attr in ("count_syllables", "readability_stats", "flesch_reading_ease",
                  "flesch_kincaid_grade", "gunning_fog", "smog_index",
                  "automated_readability_index", "readability_report"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

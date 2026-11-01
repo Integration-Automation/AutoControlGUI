@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._validators import double_validator
+from je_auto_control.gui._qt_typed import as_widget
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.selector import crop_template_to_file
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -62,24 +63,25 @@ class ImageDetectTabMixin:
         return tab
 
     def _browse_img(self):
-        path, _ = QFileDialog.getOpenFileName(self, _t("template_image"), "", "Images (*.png *.jpg *.bmp);;All (*)")
+        path, _ = QFileDialog.getOpenFileName(
+            as_widget(self), _t("template_image"), "", "Images (*.png *.jpg *.bmp);;All (*)")
         if path:
             self.img_path_input.setText(path)
 
     def _crop_template(self):
         save_path, _ = QFileDialog.getSaveFileName(
-            self, _t("crop_template"), "", "PNG (*.png)"
+            as_widget(self), _t("crop_template"), "", "PNG (*.png)"
         )
         if not save_path:
             return
         try:
-            region = crop_template_to_file(save_path, self)
+            region = crop_template_to_file(save_path, as_widget(self))
             if region is None:
                 return
             self.img_path_input.setText(save_path)
             self.detect_result_text.setText(f"Template saved: {save_path} region={region}")
         except (AutoControlException, OSError, ValueError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
+            QMessageBox.warning(as_widget(self), "Error", str(error))
 
     def _get_detect_params(self):
         path = self.img_path_input.text()

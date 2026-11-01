@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 from je_auto_control.utils.cv2_utils import template_detection
 from je_auto_control.utils.exception.exception_tags import cant_find_image_error_message
@@ -58,7 +58,7 @@ def locate_image_center(image, detect_threshold: float = 1.0,
         raise
 
 
-def locate_and_click(image, mouse_keycode: Union[int, str],
+def locate_and_click(image, mouse_keycode: int | str,
                      detect_threshold: float = 1.0,
                      draw_image: bool = False) -> Tuple[int, int]:
     """

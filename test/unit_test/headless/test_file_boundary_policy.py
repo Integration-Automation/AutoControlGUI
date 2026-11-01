@@ -149,8 +149,10 @@ def test_policy_accepts_inside_and_rejects_outside(tmp_path):
 def test_policy_rejects_dot_dot_escape(tmp_path, escape):
     root = tmp_path / "root"
     root.mkdir()
+    policy = PathPolicy([root])
+    escaping = str(root / escape)
     with pytest.raises(PathNotAllowedError):
-        PathPolicy([root]).validate(str(root / escape), operation="t")
+        policy.validate(escaping, operation="t")
 
 
 def test_symlink_escape_is_rejected(tmp_path):
@@ -177,8 +179,9 @@ def test_drive_and_unc_escapes_are_rejected(tmp_path, monkeypatch, path):
     root = tmp_path / "root"
     root.mkdir()
     monkeypatch.chdir(root)
+    policy = PathPolicy([root])
     with pytest.raises(PathNotAllowedError):
-        PathPolicy([root]).validate(path, operation="t")
+        policy.validate(path, operation="t")
 
 
 def test_tilde_must_be_inside_both_expanded_and_literal(tmp_path, monkeypatch):
@@ -189,18 +192,20 @@ def test_tilde_must_be_inside_both_expanded_and_literal(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("USERPROFILE", str(home))
     monkeypatch.chdir(cwd)
+    cwd_only, home_only = PathPolicy([cwd]), PathPolicy([home])
     with pytest.raises(PathNotAllowedError):   # a handler that expands it leaves the root
-        PathPolicy([cwd]).validate("~/x.txt", operation="t")
+        cwd_only.validate("~/x.txt", operation="t")
     with pytest.raises(PathNotAllowedError):   # a handler that does not leaves it too
-        PathPolicy([home]).validate("~/x.txt", operation="t")
+        home_only.validate("~/x.txt", operation="t")
     assert PathPolicy([home, cwd]).validate("~/x.txt", operation="t") == \
         Path(os.path.realpath(home / "x.txt"))
 
 
 @pytest.mark.parametrize("bad", ["", "a\x00b"])
 def test_policy_rejects_malformed_paths(tmp_path, bad):
+    policy = PathPolicy([tmp_path])
     with pytest.raises(PathNotAllowedError):
-        PathPolicy([tmp_path]).validate(bad, operation="t")
+        policy.validate(bad, operation="t")
 
 
 def test_policy_from_env(tmp_path):
@@ -216,7 +221,8 @@ def test_policy_from_env(tmp_path):
 def test_client_roots_need_the_opt_in_and_fail_closed_until_known(tmp_path):
     ignored = PathPolicy()
     ignored.set_client_roots([tmp_path])
-    assert ignored.roots() == () and not ignored.enabled
+    assert ignored.roots() == ()
+    assert not ignored.enabled
 
     policy = PathPolicy(use_client_roots=True)
     assert policy.enabled
@@ -264,9 +270,11 @@ def test_walk_rejects_an_outside_path_wherever_it_sits(tmp_path, arguments, wher
     root.mkdir()
     outside = str(tmp_path / "outside.txt")
     text = json.dumps(arguments).replace("OUT", outside.replace("\\", "\\\\"))
+    policy = ArgumentPolicy(PathPolicy([root]))
+    outside_arguments = json.loads(text)
     with pytest.raises(PathNotAllowedError, match=where.replace("$", r"\$") if "\\" not in where
                        else where):
-        ArgumentPolicy(PathPolicy([root])).apply("tool", _SCHEMA, json.loads(text))
+        policy.apply("tool", _SCHEMA, outside_arguments)
 
 
 def test_walk_leaves_an_empty_path_to_the_handler(tmp_path):
@@ -294,7 +302,8 @@ def test_unconfigured_server_reads_anywhere_even_read_only(tmp_path):
     server = _server(["ac_load_dotenv"], read_only=True)
     assert not server.argument_policy.enabled
     result = _call(server, "ac_load_dotenv", {"path": str(target)})
-    assert result["isError"] is False and "abc" in _text(result)
+    assert result["isError"] is False
+    assert "abc" in _text(result)
 
 
 def test_configured_roots_reject_a_path_outside_them(tmp_path, monkeypatch):
@@ -312,14 +321,16 @@ def test_configured_roots_reject_a_path_outside_them(tmp_path, monkeypatch):
     assert dotted["isError"] is True
 
     allowed = _call(server, "ac_load_dotenv", {"path": str(inside)})
-    assert allowed["isError"] is False and "abc" in _text(allowed)
+    assert allowed["isError"] is False
+    assert "abc" in _text(allowed)
 
 
 def test_configured_roots_leave_a_json_path_alone(tmp_path, monkeypatch):
     monkeypatch.setenv(MCP_PATH_ROOTS_ENV, str(tmp_path))
     server = _server(["ac_json_query"])
     result = _call(server, "ac_json_query", {"data": {"a": {"b": 7}}, "path": "$.a.b"})
-    assert result["isError"] is False and "7" in _text(result)
+    assert result["isError"] is False
+    assert "7" in _text(result)
 
 
 def test_server_rejects_a_symlink_out_of_the_roots(tmp_path, monkeypatch):
@@ -330,7 +341,8 @@ def test_server_rejects_a_symlink_out_of_the_roots(tmp_path, monkeypatch):
     monkeypatch.setenv(MCP_PATH_ROOTS_ENV, str(root))
     result = _call(_server(["ac_load_dotenv"]), "ac_load_dotenv",
                    {"path": str(root / "link" / "app.env")})
-    assert result["isError"] is True and "abc" not in _text(result)
+    assert result["isError"] is True
+    assert "abc" not in _text(result)
 
 
 def test_roots_list_feeds_the_policy_only_when_opted_in(tmp_path, monkeypatch):
@@ -377,8 +389,9 @@ def test_env_ref_allowlist():
     with pytest.raises(SecretRefError, match="allowlist"):
         limited.check_all({"a": [{"b": "env://ANTHROPIC_API_KEY"}]})
     limited.check_all({"a": ["env://APP_KEY", "plain", 3, "secret://x"]})
+    closed = RefResolver(env=env, env_allowlist=[])
     with pytest.raises(SecretRefError):
-        RefResolver(env=env, env_allowlist=[]).resolve("env://APP_URL")
+        closed.resolve("env://APP_URL")
 
 
 @pytest.mark.parametrize("raw, expected", [
@@ -408,7 +421,8 @@ def test_unconfigured_server_resolves_any_env_ref(monkeypatch):
     monkeypatch.setenv("AC_TEST_BOUNDARY_VALUE", "visible")
     result = _call(_server(["ac_resolve_ref"]), "ac_resolve_ref",
                    {"ref": "env://AC_TEST_BOUNDARY_VALUE"})
-    assert result["isError"] is False and "visible" in _text(result)
+    assert result["isError"] is False
+    assert "visible" in _text(result)
 
 
 def test_server_applies_the_env_allowlist_to_both_ref_tools(monkeypatch):
@@ -417,14 +431,16 @@ def test_server_applies_the_env_allowlist_to_both_ref_tools(monkeypatch):
     monkeypatch.setenv(MCP_ENV_REF_ALLOW_ENV, "AC_TEST_BOUNDARY_VALUE")
     server = _server(["ac_resolve_ref", "ac_resolve_refs"])
     allowed = _call(server, "ac_resolve_ref", {"ref": "env://AC_TEST_BOUNDARY_VALUE"})
-    assert allowed["isError"] is False and "visible" in _text(allowed)
+    assert allowed["isError"] is False
+    assert "visible" in _text(allowed)
     for name, arguments in [
         ("ac_resolve_ref", {"ref": "env://AC_TEST_BOUNDARY_SECRET"}),
         ("ac_resolve_refs", {"obj": {"k": ["env://AC_TEST_BOUNDARY_SECRET"]}}),
     ]:
         refused = _call(server, name, arguments)
         assert refused["isError"] is True
-        assert "allowlist" in _text(refused) and "hidden" not in _text(refused)
+        assert "allowlist" in _text(refused)
+        assert "hidden" not in _text(refused)
 
 
 def test_server_applies_the_roots_to_file_refs(tmp_path, monkeypatch):
@@ -440,7 +456,8 @@ def test_server_applies_the_roots_to_file_refs(tmp_path, monkeypatch):
     for name, arguments in [("ac_resolve_ref", {"ref": outside}),
                             ("ac_resolve_refs", {"obj": {"k": outside}})]:
         refused = _call(server, name, arguments)
-        assert refused["isError"] is True and "leak" not in _text(refused)
+        assert refused["isError"] is True
+        assert "leak" not in _text(refused)
 
 
 # --- viewer downloads ------------------------------------------------------
@@ -482,7 +499,8 @@ def test_viewer_refuses_a_destination_outside_the_download_root(tmp_path, dest_p
     download_root = tmp_path / "downloads"
     receiver, outcomes = _confined(download_root)
     _receive(receiver, dest_path)
-    assert len(outcomes) == 1 and outcomes[0][0] is False
+    assert len(outcomes) == 1
+    assert outcomes[0][0] is False
     assert outcomes[0][2] == dest_path
     written = [path for path in tmp_path.rglob("*") if path.is_file()]
     assert written == []

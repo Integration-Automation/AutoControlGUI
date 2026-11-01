@@ -18,7 +18,8 @@ def test_an_abort_before_the_begin_cancels_it(tmp_path):
     receiver.abort(transfer_id, "viewer disconnected")
     receiver.handle_begin(encode_begin(transfer_id, str(tmp_path / "big.bin"), 10))
     assert list(tmp_path.iterdir()) == []
-    assert completed and completed[0][1] is False
+    assert completed
+    assert completed[0][1] is False
 
 
 def test_an_abort_while_the_part_file_opens_removes_it(tmp_path, monkeypatch):

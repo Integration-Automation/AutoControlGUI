@@ -49,7 +49,8 @@ def test_crowded_labels_never_overlap_or_leave_the_screen():
     marks = [{"id": n, "bbox": [10, 10, 40, 20]} for n in range(4)]
     labels = [entry["label"] for entry in place_labels(marks, bounds=(100, 100))]
     for i, first in enumerate(labels):
-        assert first[0] >= 0 and first[1] >= 0
+        assert first[0] >= 0
+        assert first[1] >= 0
         for second in labels[i + 1:]:
             assert (first[0] + first[2] <= second[0] or second[0] + second[2] <= first[0]
                     or first[1] + first[3] <= second[1] or second[1] + second[3] <= first[1])
@@ -73,7 +74,8 @@ def test_a_lock_wait_ends_at_its_deadline():
 
     result = _wait_lock_state(False, probe=lambda: True, timeout_s=1.0, interval_s=30.0,
                               clock=lambda: now[0], sleep=sleep)
-    assert result is False and max(slept) <= 1.0
+    assert result is False
+    assert max(slept) <= 1.0
 
 
 def test_polls_never_evaluate_a_rule_concurrently():
@@ -106,7 +108,8 @@ def test_cloudevents_follow_the_spec():
     with pytest.raises(ValueError):
         to_cloudevent("t", "src", {}, time="yesterday")
     binary = to_cloudevent("t", "src", b"\x00\x01")
-    assert binary["data_base64"] == "AAE=" and "data" not in binary
+    assert binary["data_base64"] == "AAE="
+    assert "data" not in binary
     stamp = datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc).isoformat()
     assert to_cloudevent("t", "src", {}, time=stamp)["time"] == stamp
 

@@ -99,7 +99,7 @@ def captures(monkeypatch, tmp_path):
     monkeypatch.setattr(region_capture, "grab_screen_region", grab_screen_region)
     template = tmp_path / "template.png"
     Image.fromarray(np.asarray(frame)[20:40, 20:40]).save(template)
-    yield calls, str(template)
+    return calls, str(template)
 
 
 def test_every_region_hint_is_a_named_convention():

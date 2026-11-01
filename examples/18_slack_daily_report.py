@@ -33,6 +33,7 @@ editing one block.
 """
 from __future__ import annotations
 
+import html
 import json
 import os
 import smtplib
@@ -150,6 +151,23 @@ def summarise(messages: Sequence[SlackMessage]) -> str:
         return "Today's digest:\n" + bullet_lines
 
 
+def _path_inside(base_dir: Path, name: str) -> Path:
+    """Return ``base_dir/name``, refusing a name that would land outside it.
+
+    The pattern to copy whenever part of a file name comes from outside the
+    program (a channel name, a date in a request, a user-chosen title):
+    resolve both ends with ``os.path.realpath`` — which follows ``..`` and
+    symlinks — and write only if the result is still under the base folder.
+    """
+    base = os.path.realpath(base_dir)
+    candidate = os.path.realpath(os.path.join(base, name))
+    # join(base, "") ends in exactly one separator, so "digests-old" is not
+    # taken for a child of "digests".
+    if not candidate.startswith(os.path.join(base, "")):
+        raise ValueError(f"refusing a path outside {base}: {name!r}")
+    return Path(candidate)
+
+
 def render_report(summary: str, raw_messages: Sequence[SlackMessage],
                    output_dir: Path) -> Path:
     """Render an HTML report + (if weasyprint is available) a PDF.
@@ -159,11 +177,14 @@ def render_report(summary: str, raw_messages: Sequence[SlackMessage],
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     today = datetime.now(tz=timezone.utc).date().isoformat()
+    # Slack messages and the model's summary are text from outside the
+    # program: escaped, they cannot add markup (an <img> or <link> that
+    # would make the PDF renderer open a local file or a URL).
     rows = "".join(
-        f"<li><strong>{m.user}</strong>: {m.text}</li>"
+        f"<li><strong>{html.escape(m.user)}</strong>: {html.escape(m.text)}</li>"
         for m in raw_messages
     )
-    html = f"""<!doctype html>
+    page = f"""<!doctype html>
 <html><head><meta charset="utf-8"><title>Daily Slack digest — {today}</title>
 <style>
   body {{ font-family: -apple-system, sans-serif; margin: 2em; }}
@@ -174,28 +195,31 @@ def render_report(summary: str, raw_messages: Sequence[SlackMessage],
 <body>
 <h1>Daily Slack digest — {today}</h1>
 <h2>Summary</h2>
-<pre>{summary}</pre>
+<pre>{html.escape(summary)}</pre>
 <h2>Raw messages ({len(raw_messages)})</h2>
 <ul>{rows}</ul>
 </body></html>
 """
-    # Anchor the filename inside output_dir's resolved path so a
-    # malicious ``today`` (e.g. ``../etc/passwd``) can't escape — even
-    # though ``today`` is internally generated, validating here keeps
-    # Sonar's S2083 happy and protects future callers.
-    safe_name = os.path.basename(f"digest-{today}.html")
-    safe_root = output_dir.resolve()
-    html_path = (safe_root / safe_name).resolve()
-    if safe_root not in html_path.parents:
-        raise ValueError(f"refusing path-traversal name: {today!r}")
-    html_path.write_text(html, encoding="utf-8")
+    html_path = _path_inside(output_dir, f"digest-{today}.html")
+    with open(html_path, "w", encoding="utf-8") as report:
+        report.write(page)
     try:
-        from weasyprint import HTML
+        from weasyprint import HTML, default_url_fetcher
     except ImportError:
         print("  (no weasyprint — sending the HTML instead)")
         return html_path
-    pdf_path = output_dir / f"digest-{today}.pdf"
-    HTML(string=html).write_pdf(str(pdf_path))
+    page_url = html_path.as_uri()
+
+    def only_the_page(url: str, *args: object, **kwargs: object) -> dict:
+        """Let WeasyPrint read the page it renders and nothing else."""
+        if url != page_url:
+            raise ValueError(f"the digest loads no other resource: {url!r}")
+        return default_url_fetcher(url, *args, **kwargs)
+
+    pdf_path = _path_inside(output_dir, f"digest-{today}.pdf")
+    # Rendered from the file just written, through a fetcher that serves only
+    # that file: the page needs no image, stylesheet or font from anywhere.
+    HTML(filename=str(html_path), url_fetcher=only_the_page).write_pdf(str(pdf_path))
     return pdf_path
 
 

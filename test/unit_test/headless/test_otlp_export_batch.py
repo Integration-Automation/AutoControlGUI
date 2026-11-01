@@ -81,4 +81,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("attributes_to_otlp", "spans_to_otlp", "write_otlp"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

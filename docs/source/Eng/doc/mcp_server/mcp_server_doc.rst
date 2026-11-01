@@ -85,7 +85,9 @@ Recording / replay
 
 Action executor / history
   ``ac_execute_actions``, ``ac_execute_action_file``,
-  ``ac_list_action_commands``, ``ac_list_run_history``.
+  ``ac_list_action_commands``, ``ac_list_run_history``,
+  ``ac_stop_execution``, ``ac_list_executions`` (stop / list the stoppable
+  runs; a list becomes stoppable by wrapping it in ``AC_run_stoppable``).
 
 Scheduler / triggers / hotkeys
   ``ac_scheduler_add_job``, ``ac_scheduler_remove_job``,
@@ -234,6 +236,8 @@ exits — useful in CI smoke tests and prompt prep:
    je_auto_control_mcp --list-resources
    je_auto_control_mcp --list-prompts
    je_auto_control_mcp --read-only          # serve only the read-only tools
+   je_auto_control_mcp --tool-mode progressive   # a small core; see "Tool modes"
+   je_auto_control_mcp --list-tools --tool-mode progressive   # what a new session sees
    je_auto_control_mcp --fake-backend       # swap in the in-memory backend
 
 One ``--list-*`` flag prints its array; several print one object keyed
@@ -340,7 +344,69 @@ bearer token and uses the same operator ceiling for its live tool sessions.
   ``ac_rate_limit`` change state and are excluded from ``--read-only`` mode. ``ac_remote_host_start`` / ``_stop``,
   ``ac_usb_acl_add`` / ``_remove`` / ``_set_default``,
   ``ac_usb_passthrough_enable``, ``ac_egress_allow`` / ``_reset`` and
-  ``ac_load_plugins`` need ``manage_hosts`` (``admin``).
+  ``ac_load_plugins`` need ``manage_hosts`` (``admin``); ``ac_user_add`` /
+  ``_remove`` / ``_set_role`` / ``_rotate_token`` / ``_list`` need
+  ``manage_users`` (``admin``).
+- Read-only is not the same as harmless to show: the read-only tools that
+  return the host's data rather than the state of its screen need
+  ``read_data``, which ``operator`` and ``admin`` hold and ``viewer`` does
+  not. They are the clipboard tools (``ac_get_clipboard`` and its
+  ``_csv`` / ``_files`` / ``_html`` / ``_image`` / ``_rtf`` variants,
+  ``ac_clipboard_formats``, ``ac_assert_clipboard``, ``ac_clip_history_list``
+  / ``_search``); the file readers (``ac_load_dotenv``, ``ac_load_data``,
+  ``ac_read_action_file``, ``ac_read_document``, ``ac_read_presentation``,
+  ``ac_read_workbook``, ``ac_extract_pdf_text``, ``ac_assert_pdf_text``,
+  ``ac_assert_file``, ``ac_build_provenance``, ``ac_verify_provenance``); the
+  database and store readers (``ac_sql_query``, ``ac_assert_db``,
+  ``ac_get_asset``, ``ac_list_assets``, ``ac_cas_get``, ``ac_outbox_pending``,
+  ``ac_checkpoint_status``, ``ac_memory_recall``, ``ac_memory_recent``,
+  ``ac_s3_list``); references and tokens (``ac_resolve_ref``,
+  ``ac_resolve_refs``, ``ac_generate_otp``, ``ac_jwt_encode``,
+  ``ac_jwt_decode``); and the process list, network and microphone probes
+  (``ac_list_processes``, ``ac_assert_process``, ``ac_wait_for_process``,
+  ``ac_assert_http``, ``ac_wait_for_port``, ``ac_assert_audio``). The list is
+  ``DATA_TOOLS`` in ``je_auto_control.utils.rbac.policy``. A ``viewer`` keeps
+  every other read-only tool: screen size, windows, pixels, image and text
+  location, accessibility reads, waits.
+- The rule behind that list: a tool that returns **records or configuration
+  the host keeps** needs ``read_data``; a tool that only observes the live
+  screen needs ``read_screen``. So ``read_data`` also covers run history and
+  what is computed from it (``ac_list_run_history``, ``ac_flaky_report``,
+  ``ac_rank_tests``, ``ac_select_tests``, ``ac_shard_suite``); agent traces
+  and the cost ledger (``ac_trace_export``, ``ac_trace_summary``,
+  ``ac_costs_list``, ``ac_costs_summary``); action journals
+  (``ac_journal_read``, ``ac_journal_runs``); the self-healing log, its
+  statistics, stored revisions and datasets (``ac_self_heal_log_list``,
+  ``ac_heal_stats``, ``ac_self_heal_revision_list``,
+  ``ac_self_heal_evaluate``); locator strategy history, repairs and saved
+  libraries (``ac_ab_report``, ``ac_ab_best_strategy``, ``ac_repair_pending``,
+  ``ac_repair_resolved``, ``ac_element_list``, ``ac_skill_list``,
+  ``ac_skill_search``); stored policy and state (``ac_usb_acl_list``,
+  ``ac_lease_active``, ``ac_quarantine_list``, ``ac_pending_artifacts``);
+  and a connected device's clipboard
+  (``ac_android_get_clipboard``, ``ac_ios_get_clipboard``). These were
+  ``read_screen`` before, so **a viewer token can no longer call them**;
+  ``operator`` and ``admin`` are unaffected.
+- What a call costs is not a capability. ``ac_vlm_locate`` and
+  ``ac_self_heal_locate`` read the screen and stay ``read_screen`` although a
+  call may be billed by a model provider; limit spend with the rate limiter
+  or by not configuring a VLM backend for a server viewers reach.
+- The REST API follows the same rule: ``GET /history`` and ``GET /usb/acl``
+  need ``read_data`` like ``ac_list_run_history`` and ``ac_usb_acl_list``, so
+  a viewer token reads neither the run history nor the USB ACL there either
+  (see the REST table in the operations chapter).
+- Resources follow the same rule. ``autocontrol://history`` (the last 100
+  run-history rows) and the action files under ``autocontrol://files/`` need
+  ``read_data``; ``autocontrol://commands`` and the live screen feed need
+  ``read_screen``. ``resources/list`` shows a caller only what it may read,
+  and ``resources/read`` and ``resources/subscribe`` refuse the rest with
+  ``-32003``. A resource URI the server does not recognise (one from a custom
+  provider) is treated as stored data and needs ``read_data``.
+- Tools that report the live state of this process rather than a stored
+  record -- ``ac_list_executions``, ``ac_scheduler_list_jobs``,
+  ``ac_trigger_list``, ``ac_hotkey_list``, ``ac_observe_list``,
+  ``ac_watchdog_list``, ``ac_journal_status``, the USB device lists -- stay
+  ``read_screen``.
 - ``tools/list`` returns only the tools the caller may call, and
   ``tools/call`` on any other answers JSON-RPC error ``-32003``
   (``Forbidden: ...``, ``data.required_capability``) without running it.
@@ -405,6 +471,17 @@ offer.
 - An unknown or expired id is refused with **404**, not served under
   a fresh scope: the client holds state the server does not, and
   needs to know to re-initialize.
+- With roles on (RBAC), a session belongs to the user whose ``initialize``
+  minted it. Any other user who presents its id -- on a ``POST``, on the
+  ``GET`` stream or on ``DELETE`` -- is refused with **403**, and the attempt
+  does not keep the session alive. The id used to be honoured for every
+  authenticated user, so one user could attach to another's stream, end
+  their session, or read which tools they had enabled. Without a user store
+  nobody is identified and the id works as before.
+- A tool registered or removed outside any request -- a plugin picked up by
+  the watcher thread -- sends ``notifications/tools/list_changed`` down the
+  standing stream of every session. A session with no ``GET`` stream has
+  nowhere to receive it.
 - Sessions are bounded. They are swept after ten minutes untouched
   (a standing stream keeps its own session fresh), and the registry
   evicts the least recently seen once it holds 128.
@@ -478,6 +555,24 @@ existing client keeps working unchanged next to a 2026-07-28 one.
   confirmation included, since the question comes back in the result; an
   SSE ``POST`` additionally carries the call's progress notifications.
 
+Tool modes: full, progressive, static
+=====================================
+
+``full`` (the default) lists every permitted tool. ``progressive`` starts a
+session with five discovery controls (``ac_mcp_tool_search``,
+``ac_mcp_tool_schema``, ``ac_mcp_tools_enable``, ``ac_mcp_tools_disable`` and
+``ac_mcp_tools_state``) and enables the rest on request, for that session only.
+``static`` serves a fixed profile to clients that never refresh their tool
+list::
+
+   je_auto_control_mcp --tool-mode progressive
+   je_auto_control_mcp --tool-mode static --tool-profile ac_screen_size,ac_list_windows
+
+``JE_AUTOCONTROL_MCP_TOOL_PROFILE`` gives the profile from the environment;
+embedded and HTTP servers use ``MCPServer.configure_tool_disclosure(...)``.
+Paging, cursors and the measured list sizes are described under "MCP session
+tool availability" in :doc:`../ai_agents/ai_agents_doc`.
+
 Read-only / safe mode
 =====================
 
@@ -498,6 +593,19 @@ clipboard reads, history, ...) survive:
        }
      }
    }
+
+The server holds to this after it has started, in every tool mode: a tool
+that is not marked read-only and is registered on a running read-only server
+-- by ``register_tool``, ``ac_load_plugins`` or the plugin watcher -- is left
+out of ``tools/list`` and a call to it is answered ``-32602`` and recorded in
+the audit log as ``denied``. In the default ``full`` mode the filter used to
+run only when the registry was built, so such a tool was listed and ran.
+Plugin tools are registered as destructive unless the plugin declares
+otherwise, so **a read-only server runs no plugin tool that has not declared
+itself read-only** (see `Plugin hot-reload`_); a tool your own code registers
+with ``readOnlyHint`` true is still offered. ``MCPServer(tools=[...])`` with
+the variable set is filtered the same way -- pass ``read_only=False`` to an
+embedded server that must ignore the variable.
 
 Confining file arguments to root directories
 ============================================
@@ -544,18 +652,41 @@ canonical absolute path that was checked, so a relative path is relative to
 the server's working directory.
 
 The annotation follows meaning, not the property's name: ``ac_json_query``'s
-``path`` is a JSONPath expression and is left alone. What it does **not**
-reach:
+``path`` is a JSONPath expression and is left alone.
+
+**Arguments that are a path only sometimes** carry a second annotation,
+``"format": "path-or-other"``: ``target`` of ``ac_open_path`` /
+``ac_plan_open`` (path or URL), of ``ac_file_association`` (path or
+extension) and of ``ac_act_in_view`` (template path or text), and ``path`` of
+``ac_handle_file_dialog``. Such a value is held to the roots when it *is* a
+path, which means one of:
+
+* it looks like an absolute path -- it starts with ``/``, ``\``, ``~`` or a
+  drive (``C:\`` / ``C:/``), UNC shares included -- whether or not it exists;
+* it is a ``file:`` URL, judged by the file it names;
+* it names something that exists, relative to the server's working directory
+  (``..``, ``notes.txt``).
+
+Anything else -- ``https://...``, ``.txt``, the text ``Submit`` -- passes
+untouched, and a value that passes the check reaches the tool exactly as it
+was sent (it is not rewritten to the canonical path, because the same string
+may be the text the caller meant). Two consequences to know about: a *text*
+target that looks like an absolute path (``/help``) or happens to name an
+existing file outside the roots is refused while roots are configured, and
+``ac_handle_file_dialog`` types into another application, whose own current
+directory decides what a relative name means -- only what the server can
+judge is judged.
+
+What the roots do **not** reach:
 
 * ``ac_execute_actions`` and the other tools that run an action list — an
   action can open any file, which is why they are not read-only tools.
-* Arguments that are a path only sometimes: ``target`` of ``ac_open_path`` /
-  ``ac_plan_open`` / ``ac_file_association`` (path or URL or extension) and of
-  ``ac_act_in_view`` (template path or text), ``ac_handle_file_dialog``'s
-  ``path`` (keystrokes typed into another application), ``argv`` of
-  ``ac_launch_process`` / ``ac_shell``, and paths inside free-form objects
-  (``ac_run_suite`` ``spec``, ``ac_run_dag`` ``definition``,
-  ``ac_assert_all`` ``specs``).
+* ``argv`` of ``ac_launch_process`` and ``command`` of ``ac_shell``, on
+  purpose: a command line is a program, the program decides what its
+  arguments mean, and refusing the ones that read as paths would confine
+  nothing. Do not offer these tools to a client you want confined.
+* Paths inside free-form objects (``ac_run_suite`` ``spec``, ``ac_run_dag``
+  ``definition``, ``ac_assert_all`` ``specs``).
 * Tools registered by plugins, unless their schema carries the annotation.
 
 ``ac_resolve_ref`` / ``ac_resolve_refs`` follow the same roots for
@@ -624,6 +755,11 @@ handshake era's unprompted run.
 Audit log
 =========
 
+The audit log is **off by default**: without the variable below (and
+without an ``AuditLogger(path=...)`` handed to ``MCPServer``) nothing is
+recorded and no file is created -- not in the working directory either, which
+an earlier docstring wrongly named as the default.
+
 Set ``JE_AUTOCONTROL_MCP_AUDIT=/path/to/audit.jsonl`` to append one
 JSONL record per ``tools/call``: timestamp, tool name, sanitised
 arguments (``password`` / ``passphrase`` / ``token`` / ``secret`` /
@@ -677,6 +813,48 @@ directory and let ``PluginWatcher`` keep the registry in sync:
 Each register / unregister fires
 ``notifications/tools/list_changed`` so the client refreshes its
 cached catalogue automatically.
+
+**Declaring a plugin tool read-only.** A plugin tool is registered as
+mutating: it is absent from a read-only server and needs ``drive_input``
+under RBAC. A plugin opts one of its callables out by setting the attribute
+``mcp_read_only`` to ``True`` on it:
+
+.. code-block:: python
+
+   def AC_queue_depth():
+       """How many jobs are waiting."""
+       return {"depth": len(_pending)}
+
+   AC_queue_depth.mcp_read_only = True
+
+The tool is then registered with ``readOnlyHint`` true. It is listed and
+runs on a read-only server in all three tool modes (``full``,
+``progressive`` -- once enabled -- and ``static``, when the profile names
+it), and under RBAC it needs only ``read_screen``, so a ``viewer`` may call
+it. Only the read-only hint is taken from the plugin; the tool is not
+marked idempotent.
+
+.. warning::
+
+   The declaration is **trusted, not verified**. It is the plugin author's
+   word: the server cannot tell what arbitrary Python does, and a callable
+   that declares itself read-only and then writes files or sends input will
+   do so on a read-only server and for a viewer. Declaring it does not
+   sandbox it. Review a plugin before giving it a directory a read-only or
+   viewer-facing server watches. Each time such a tool is registered the
+   server logs a warning naming it (``plugin tool 'plugin_ac_queue_depth' is
+   registered read-only because its plugin declared mcp_read_only=True; the
+   declaration is trusted, not verified``).
+
+Anything other than the boolean ``True`` is not a declaration: ``"true"``,
+``1``, a callable, an attribute that raises. Such a value is logged and the
+tool stays mutating, as does a tool with no attribute or with ``False``.
+The same rule applies to tools registered through
+``register_plugin_tools(server, commands)`` and ``make_plugin_tool``; the
+attribute's name is ``PLUGIN_READ_ONLY_ATTRIBUTE`` in
+``je_auto_control.utils.mcp_server.tools.plugin_tools``. The declaration
+says nothing to the ``AC_*`` executor command of the same name, and the path
+roots still do not reach a plugin tool's arguments.
 
 CI smoke tests with the fake backend
 ====================================

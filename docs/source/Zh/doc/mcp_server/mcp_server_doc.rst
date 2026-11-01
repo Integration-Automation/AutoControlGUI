@@ -78,7 +78,9 @@ list-changed 通知與 elicitation。
 
 動作執行器 / 歷程
   ``ac_execute_actions``、``ac_execute_action_file``、
-  ``ac_list_action_commands``、``ac_list_run_history``。
+  ``ac_list_action_commands``、``ac_list_run_history``、
+  ``ac_stop_execution``、``ac_list_executions``（停止／列出可停止的執行；把清單包進
+  ``AC_run_stoppable`` 就是可停止的）。
 
 排程 / 觸發 / 熱鍵
   ``ac_scheduler_add_job``、``ac_scheduler_remove_job``、
@@ -211,6 +213,8 @@ CLI 檢視旗標
    je_auto_control_mcp --list-resources
    je_auto_control_mcp --list-prompts
    je_auto_control_mcp --read-only          # 伺服器只提供唯讀工具
+   je_auto_control_mcp --tool-mode progressive   # 只提供少量核心工具;見「工具模式」
+   je_auto_control_mcp --list-tools --tool-mode progressive   # 新 session 看到的清單
    je_auto_control_mcp --fake-backend       # 切換成記憶體版 backend
 
 只給一個 ``--list-*`` 旗標時輸出該陣列;給多個時輸出一個以 ``tools`` / ``resources`` /
@@ -306,7 +310,56 @@ Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
   不會出現在 ``--read-only`` 模式中。
   ``ac_remote_host_start``／``_stop``、``ac_usb_acl_add``／``_remove``／
   ``_set_default``、``ac_usb_passthrough_enable``、``ac_egress_allow``／``_reset`` 與
-  ``ac_load_plugins`` 需要 ``manage_hosts``\ （``admin``）。
+  ``ac_load_plugins`` 需要 ``manage_hosts``\ （``admin``）；``ac_user_add``／
+  ``_remove``／``_set_role``／``_rotate_token``／``_list`` 需要 ``manage_users``\
+  （``admin``）。
+- 唯讀不等於可以給人看：回傳主機資料而不是畫面狀態的唯讀工具需要 ``read_data``，
+  ``operator`` 與 ``admin`` 有這個能力，``viewer`` 沒有。包括剪貼簿工具
+  （``ac_get_clipboard`` 及其 ``_csv``／``_files``／``_html``／``_image``／``_rtf``
+  變體、``ac_clipboard_formats``、``ac_assert_clipboard``、``ac_clip_history_list``／
+  ``_search``）；讀檔工具（``ac_load_dotenv``、``ac_load_data``、
+  ``ac_read_action_file``、``ac_read_document``、``ac_read_presentation``、
+  ``ac_read_workbook``、``ac_extract_pdf_text``、``ac_assert_pdf_text``、
+  ``ac_assert_file``、``ac_build_provenance``、``ac_verify_provenance``）；資料庫與
+  具名儲存區（``ac_sql_query``、``ac_assert_db``、``ac_get_asset``、``ac_list_assets``、
+  ``ac_cas_get``、``ac_outbox_pending``、``ac_checkpoint_status``、``ac_memory_recall``、
+  ``ac_memory_recent``、``ac_s3_list``）；參照與 token（``ac_resolve_ref``、
+  ``ac_resolve_refs``、``ac_generate_otp``、``ac_jwt_encode``、``ac_jwt_decode``）；
+  以及行程清單、網路與麥克風探測（``ac_list_processes``、``ac_assert_process``、
+  ``ac_wait_for_process``、``ac_assert_http``、``ac_wait_for_port``、
+  ``ac_assert_audio``）。完整清單是 ``je_auto_control.utils.rbac.policy`` 的
+  ``DATA_TOOLS``。其餘唯讀工具 ``viewer`` 都保留：螢幕尺寸、視窗、像素、影像與文字
+  定位、無障礙讀取、等待。
+- 這份清單背後的規則：回傳\ **主機保存的紀錄或設定**\ 的工具需要 ``read_data``；
+  只觀察目前畫面的工具需要 ``read_screen``。所以 ``read_data`` 也包含執行歷史與由它
+  算出來的結果（``ac_list_run_history``、``ac_flaky_report``、``ac_rank_tests``、
+  ``ac_select_tests``、``ac_shard_suite``）；agent trace 與費用帳本
+  （``ac_trace_export``、``ac_trace_summary``、``ac_costs_list``、
+  ``ac_costs_summary``）；動作日誌（``ac_journal_read``、``ac_journal_runs``）；
+  自愈紀錄、其統計、保存的 revision 與資料集（``ac_self_heal_log_list``、
+  ``ac_heal_stats``、``ac_self_heal_revision_list``、``ac_self_heal_evaluate``）；
+  定位策略歷史、修復與保存的函式庫（``ac_ab_report``、``ac_ab_best_strategy``、
+  ``ac_repair_pending``、``ac_repair_resolved``、``ac_element_list``、
+  ``ac_skill_list``、``ac_skill_search``）；保存的政策與狀態（``ac_usb_acl_list``、
+  ``ac_lease_active``、``ac_quarantine_list``、``ac_pending_artifacts``）；
+  以及連線裝置的剪貼簿（``ac_android_get_clipboard``、
+  ``ac_ios_get_clipboard``）。這些以前是 ``read_screen``，所以\ **viewer 的 token
+  現在不能呼叫它們**\ ；``operator`` 與 ``admin`` 不受影響。
+- 一次呼叫要花多少錢不是一種能力。``ac_vlm_locate`` 與 ``ac_self_heal_locate`` 讀的是
+  畫面，雖然呼叫可能被模型供應商計費，仍然是 ``read_screen``；要限制花費，請用
+  rate limiter，或不要在 viewer 連得到的伺服器上設定 VLM 後端。
+- REST API 依同一條規則：``GET /history`` 與 ``GET /usb/acl`` 和
+  ``ac_list_run_history``、``ac_usb_acl_list`` 一樣需要 ``read_data``，所以 viewer 的
+  token 在那裡也讀不到執行歷史與 USB ACL（見維運章節的 REST 表格）。
+- resource 適用同一條規則。\ ``autocontrol://history``\ （最近 100 筆執行歷史）與
+  ``autocontrol://files/`` 底下的動作檔需要 ``read_data``\ ；\ ``autocontrol://commands``
+  與即時畫面需要 ``read_screen``\ 。\ ``resources/list`` 只列出呼叫者讀得到的，
+  ``resources/read`` 與 ``resources/subscribe`` 對其餘的回 ``-32003``\ 。伺服器不認得的
+  resource URI（自訂 provider 的）視為已儲存的資料，需要 ``read_data``\ 。
+- 回報這個行程目前狀態、而不是保存紀錄的工具——``ac_list_executions``、
+  ``ac_scheduler_list_jobs``、``ac_trigger_list``、``ac_hotkey_list``、
+  ``ac_observe_list``、``ac_watchdog_list``、``ac_journal_status``、USB 裝置清單——
+  維持 ``read_screen``。
 - ``tools/list`` 只回呼叫者可以呼叫的工具；對其他工具 ``tools/call`` 會回 JSON-RPC
   錯誤 ``-32003``\ （``Forbidden: ...``、``data.required_capability``），且不會執行。
 - 接受動作清單的工具（``ac_execute_actions`` 等）在清單含有呼叫者角色沒有的指令時
@@ -356,6 +409,14 @@ scope——包含你在 ``initialize`` 聲明的能力,以及進行中呼叫佔�
   不帶標頭時照舊接受,不影響沒有 session 概念的 client。
 - 未知或已過期的 id 一律回 **404**,不會改用一個新的 scope 服務它:
   client 手上有伺服器沒有的狀態,它需要知道自己該重新 initialize。
+- 啟用角色(RBAC)時,session 屬於用 ``initialize`` 建立它的那位使用者。其他使用者
+  拿同一個 id 來 ``POST``、開 ``GET`` 串流或 ``DELETE``,一律回 **403**,而且這次嘗試
+  不會讓 session 保持存活。以前只要通過驗證,任何使用者都能用這個 id,因此可以接上
+  別人的串流、結束別人的 session,或看到別人啟用了哪些工具。沒有設定使用者存放檔時
+  沒有人被識別,id 的行為與以前相同。
+- 在任何請求之外註冊或移除的工具(由 watcher 執行緒載入的 plugin),會對每個 session
+  的常駐串流送出 ``notifications/tools/list_changed``。沒有 ``GET`` 串流的 session
+  無處可收。
 - session 有上下界。十分鐘沒被碰過就會被掃掉(常駐串流會讓自己的
   session 保持新鮮),而註冊表滿 128 個時,最久沒動的那個會被淘汰。
 
@@ -407,6 +468,21 @@ client 不用改,可以和 2026-07-28 的 client 並存。
   普通的 JSON ``POST`` 就能做所有事,確認也一樣(問題放在結果裡回來);SSE ``POST``
   另外會送出呼叫的進度通知。
 
+工具模式:full、progressive、static
+====================================
+
+``full``（預設）列出所有允許的工具。``progressive`` 讓 session 從五個探索控制
+（``ac_mcp_tool_search``、``ac_mcp_tool_schema``、``ac_mcp_tools_enable``、
+``ac_mcp_tools_disable`` 與 ``ac_mcp_tools_state``）開始，其餘工具依需求只對該 session 啟用。
+``static`` 為從不重新整理工具清單的 client 提供固定的工具組合::
+
+   je_auto_control_mcp --tool-mode progressive
+   je_auto_control_mcp --tool-mode static --tool-profile ac_screen_size,ac_list_windows
+
+``JE_AUTOCONTROL_MCP_TOOL_PROFILE`` 從環境變數提供工具組合；內嵌與 HTTP 伺服器使用
+``MCPServer.configure_tool_disclosure(...)``。分頁、cursor 與實測的清單大小見
+:doc:`../ai_agents/ai_agents_doc` 的「MCP session 工具清單」。
+
 唯讀 / 安全模式
 ===============
 
@@ -426,6 +502,16 @@ client 不用改,可以和 2026-07-28 的 client 並存。
        }
      }
    }
+
+伺服器啟動之後,在每一種工具模式下都維持這個限制:在執行中的唯讀伺服器上註冊、且沒有
+標為唯讀的工具(透過 ``register_tool``、``ac_load_plugins`` 或 plugin watcher),不會
+出現在 ``tools/list``,呼叫它會得到 ``-32602`` 並在稽核 log 記為 ``denied``。預設的
+``full`` 模式以前只在建立 registry 時過濾,所以這種工具會被列出、也會執行。Plugin
+工具除非自己宣告,否則註冊為破壞性,因此\ **唯讀伺服器不會執行沒有宣告自己唯讀的
+plugin 工具**\ (見下方「Plugin Hot-Reload」);你自己的程式以
+``readOnlyHint`` 為 true 註冊的工具仍然會提供。設了該環境變數時,
+``MCPServer(tools=[...])`` 也會被同樣過濾——內嵌的伺服器若必須忽略該變數,請傳
+``read_only=False``。
 
 把檔案參數限制在根目錄內
 ========================
@@ -464,16 +550,33 @@ client 不用改,可以和 2026-07-28 的 client 並存。
 伺服器的工作目錄。
 
 這個標記看的是語意，不是屬性名稱：``ac_json_query`` 的 ``path`` 是 JSONPath，不受影響。
-它**涵蓋不到**的地方：
+
+**只有某些情況下才是路徑的參數**\ 帶第二種標記 ``"format": "path-or-other"``：
+``ac_open_path`` / ``ac_plan_open`` 的 ``target``（路徑或 URL）、``ac_file_association``
+的 ``target``（路徑或副檔名）、``ac_act_in_view`` 的 ``target``（樣板路徑或文字），以及
+``ac_handle_file_dialog`` 的 ``path``。這類值\ *是*\ 路徑時才受根目錄約束，也就是符合
+下列其中一項：
+
+* 看起來是絕對路徑——以 ``/``、``\``、``~`` 或磁碟機（``C:\`` / ``C:/``）開頭，含 UNC
+  共用——不論它是否存在；
+* 是 ``file:`` URL，依它指向的檔案判斷；
+* 相對於伺服器的工作目錄，它指向某個存在的東西（``..``、``notes.txt``）。
+
+其他的值——``https://...``、``.txt``、文字 ``Submit``——原樣通過；通過檢查的值也會原封不動
+交給工具（不會改寫成標準化路徑，因為同一個字串可能就是呼叫者要找的文字）。有兩點要知道：
+設定了根目錄時，看起來像絕對路徑（``/help``）或剛好是根目錄外某個現存檔案名稱的\ *文字*\
+目標會被拒絕；``ac_handle_file_dialog`` 是把字打進別的應用程式，相對名稱的意義由那個程式
+自己的目前目錄決定——伺服器只判斷它判斷得了的部分。
+
+根目錄**涵蓋不到**的地方：
 
 * ``ac_execute_actions`` 與其他執行動作清單的工具——動作可以開任何檔案，這也是它們不屬於
   唯讀工具的原因。
-* 只有某些情況下才是路徑的參數：``ac_open_path`` / ``ac_plan_open`` /
-  ``ac_file_association`` 的 ``target``（路徑、URL 或副檔名）、``ac_act_in_view`` 的
-  ``target``（樣板路徑或文字）、``ac_handle_file_dialog`` 的 ``path``（打進別的應用程式的
-  按鍵）、``ac_launch_process`` / ``ac_shell`` 的 ``argv``，以及自由格式物件裡的路徑
-  （``ac_run_suite`` 的 ``spec``、``ac_run_dag`` 的 ``definition``、``ac_assert_all`` 的
-  ``specs``）。
+* ``ac_launch_process`` 的 ``argv`` 與 ``ac_shell`` 的 ``command``，這是刻意的：命令列就是
+  一個程式，參數的意義由該程式決定，只拒絕看起來像路徑的參數並不能限制任何東西。不要把這些
+  工具提供給你想限制的 client。
+* 自由格式物件裡的路徑（``ac_run_suite`` 的 ``spec``、``ac_run_dag`` 的 ``definition``、
+  ``ac_assert_all`` 的 ``specs``）。
 * 外掛註冊的工具，除非它的 schema 也帶這個標記。
 
 ``ac_resolve_ref`` / ``ac_resolve_refs`` 的 ``file://`` 參照套用同一組根目錄；``env://``
@@ -529,6 +632,10 @@ client 不用改,可以和 2026-07-28 的 client 並存。
 稽核 Log
 ========
 
+稽核 log **預設關閉**:沒有設定下面的變數(也沒有把 ``AuditLogger(path=...)``
+交給 ``MCPServer``)時,不會記錄任何東西,也不會建立任何檔案——工作目錄裡也不會;
+先前的 docstring 把工作目錄寫成預設值是錯的。
+
 設定 ``JE_AUTOCONTROL_MCP_AUDIT=/path/to/audit.jsonl``,每次
 ``tools/call`` 都會寫一筆 JSONL:時間戳、工具名稱、過濾過的參數
 (``password`` / ``passphrase`` / ``token`` / ``secret`` / ``api_key`` /
@@ -578,6 +685,40 @@ Plugin Hot-Reload
 
 每次 register / unregister 都會送出
 ``notifications/tools/list_changed``,client 會自動更新工具目錄。
+
+**宣告 plugin 工具為唯讀。** Plugin 工具預設註冊為會變更狀態的工具:唯讀伺服器不提供它,
+在 RBAC 下需要 ``drive_input``。Plugin 可以在某個 callable 上把屬性 ``mcp_read_only``
+設為 ``True``,讓它例外:
+
+.. code-block:: python
+
+   def AC_queue_depth():
+       """有多少工作在等待。"""
+       return {"depth": len(_pending)}
+
+   AC_queue_depth.mcp_read_only = True
+
+這個工具就會以 ``readOnlyHint`` 為 true 註冊。唯讀伺服器在三種工具模式下都會列出並執行它
+(``full``、``progressive`` —— 啟用之後 —— 以及 profile 有列它的 ``static``),在 RBAC 下
+只需要 ``read_screen``,所以 ``viewer`` 可以呼叫。從 plugin 取用的只有唯讀這一項;
+工具不會被標成 idempotent。
+
+.. warning::
+
+   這個宣告是\ **被信任的,不是被驗證的**。它只是 plugin 作者的說法:伺服器無從得知
+   任意的 Python 程式做了什麼,一個宣告自己唯讀、實際上卻寫檔或送出輸入的 callable,
+   在唯讀伺服器上、對 viewer 也照樣會那樣做。宣告不會把它關進沙箱。把 plugin 放進
+   唯讀或給 viewer 用的伺服器所監看的目錄之前,請先審查它。每次註冊這樣的工具,
+   伺服器都會記一筆指名它的 warning(``plugin tool 'plugin_ac_queue_depth' is
+   registered read-only because its plugin declared mcp_read_only=True; the
+   declaration is trusted, not verified``)。
+
+布林值 ``True`` 以外的任何值都不算宣告:``"true"``、``1``、callable、讀取時丟例外的屬性。
+這樣的值會被記錄,工具維持會變更狀態;沒有這個屬性或值為 ``False`` 的工具也一樣。
+透過 ``register_plugin_tools(server, commands)`` 與 ``make_plugin_tool`` 註冊的工具適用
+同一條規則;屬性名稱是 ``je_auto_control.utils.mcp_server.tools.plugin_tools`` 的
+``PLUGIN_READ_ONLY_ATTRIBUTE``。這個宣告不影響同名的 ``AC_*`` executor 指令,
+路徑根目錄也仍然管不到 plugin 工具的參數。
 
 CI 煙霧測試 (Fake Backend)
 ==========================

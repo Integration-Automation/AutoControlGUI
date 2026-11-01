@@ -21,6 +21,7 @@ import time
 from typing import Callable, Dict, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.executor.run_control import pause
 
 
 def _positive_finite(value: float) -> bool:
@@ -90,7 +91,7 @@ class TokenBucket:
             return (n - self._tokens) / self._rate
 
     def acquire(self, n: float = 1.0, *, timeout: Optional[float] = None,
-                sleep: Callable[[float], None] = time.sleep) -> bool:
+                sleep: Callable[[float], None] = pause) -> bool:
         """Block until ``n`` tokens are taken or ``timeout`` elapses."""
         self._check_request(n)
         # A NaN deadline is never reached, so the wait never timed out.
@@ -185,7 +186,7 @@ def throttle(interval_s: float, *,
     are dropped (the wrapper returns ``None``). ``interval_s`` must be a
     number >= 0: NaN compared false with every elapsed time and never throttled.
     """
-    if not float(interval_s) >= 0:
+    if not float(interval_s) >= 0:  # NOSONAR python:S1940  # reason: "< 0" is false for NaN
         raise AutoControlException(f"interval_s must be a number >= 0, got {interval_s!r}")
 
     def decorator(func: Callable) -> Callable:

@@ -21,7 +21,8 @@ def test_column_aware_order_reads_down_columns():
 
 def test_top_level_split_is_vertical():
     tree = xy_cut(_two_columns(), min_gap=12)
-    assert tree["type"] == "split" and tree["axis"] == "x"
+    assert tree["type"] == "split"
+    assert tree["axis"] == "x"
 
 
 def test_single_column_is_top_to_bottom():
@@ -61,4 +62,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("flow_order", "xy_cut", "to_blocks"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

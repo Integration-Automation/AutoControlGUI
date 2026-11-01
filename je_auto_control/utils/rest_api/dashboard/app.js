@@ -21,11 +21,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   saveBtn.addEventListener("click", () => {
     sessionStorage.setItem(BEARER_STASH, tokenInput.value.trim());
-    refreshAll();
+    refreshAndReport();
   });
   serverInfo.textContent = `${location.protocol}//${location.host}`;
-  refreshAll();
-  pollTimer = setInterval(refreshAll, POLL_MS);
+  refreshAndReport();
+  pollTimer = setInterval(refreshAndReport, POLL_MS);
 });
 
 function getToken() {
@@ -40,10 +40,30 @@ async function fetchJson(path) {
   const resp = await fetch(path, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (resp.status === 403) {
+    throw new Error(await forbiddenMessage(resp, path));
+  }
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status} on ${path}`);
   }
   return resp.json();
+}
+
+// A 403 is the server saying this token's role may not read the panel, not
+// that the panel is broken: say which capability is missing. The body is
+// {"error": "forbidden", "required_capability": "...", "role": "..."}.
+async function forbiddenMessage(resp, path) {
+  let body = null;
+  try {
+    body = await resp.json();
+  } catch (_error) {
+    body = null;
+  }
+  if (!body?.required_capability) {
+    return `HTTP 403 on ${path}`;
+  }
+  const role = body.role ? `role '${body.role}'` : "this token";
+  return `not available to ${role}: needs the '${body.required_capability}' capability`;
 }
 
 function panelEl(name) {
@@ -106,6 +126,14 @@ async function refreshAll() {
     refreshUsb(),
     refreshAudit(),
   ]);
+}
+
+// Each panel reports its own failure, so a rejection here is one nothing
+// caught: show it on every panel instead of leaving it to the console.
+function refreshAndReport() {
+  refreshAll().catch((error) => {
+    PANELS.forEach((name) => setPanelStatus(name, String(error.message || error), "error"));
+  });
 }
 
 async function refreshDiagnostics() {

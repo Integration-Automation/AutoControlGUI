@@ -100,7 +100,8 @@ def test_send_file_to_receiver_writes_dest(tmp_path: Path):
     assert result.success is True
     assert result.bytes_sent == src.stat().st_size
     assert dest.read_bytes() == src.read_bytes()
-    assert completes and completes[-1][1] is True
+    assert completes
+    assert completes[-1][1] is True
     # Progress is reported at start (0) and after each chunk; final value
     # equals the file size.
     assert progress[-1][1] == src.stat().st_size

@@ -23,6 +23,15 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
+@pytest.fixture(autouse=True)
+def _panels_deleted():
+    """Each test deletes the parentless forms it built (see ``_qt_settle.deleting``)."""
+    from headless._qt_settle import deleting
+    from je_auto_control.gui.script_builder import step_form_view
+    with deleting(step_form_view.StepFormView):
+        yield
+
+
 def _round_trip(action):
     """Load an action into the form exactly as selecting a step does."""
     step = action_to_step(action)

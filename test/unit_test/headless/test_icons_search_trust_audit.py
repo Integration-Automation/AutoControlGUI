@@ -33,8 +33,9 @@ def test_a_box_past_the_edge_uses_the_clipped_patch_and_bad_arrays_are_framework
     from je_auto_control.utils.icon_classify import box_features, classify_icon
     image = _checkbox(255, 0)
     assert box_features(image, [-10, 0, 30, 20])["aspect"] == box_features(image, [0, 0, 20, 20])["aspect"]
+    as_float = image.astype(np.float32)
     with pytest.raises(AutoControlException):
-        classify_icon(image.astype(np.float32), [2, 2, 26, 26])
+        classify_icon(as_float, [2, 2, 26, 26])
 
 
 # --- nested runs on the running executor ------------------------------------------------------------------
@@ -63,7 +64,8 @@ def test_checksums_take_whole_floats_and_any_length():
     from je_auto_control.utils.checksum.checksum import (
         luhn_check_digit, luhn_validate, mod97_10_check_digits, mod97_10_validate,
     )
-    assert luhn_validate(79927398713.0) is True and luhn_check_digit(7992739871.0) == "3"
+    assert luhn_validate(79927398713.0) is True
+    assert luhn_check_digit(7992739871.0) == "3"
     assert mod97_10_validate("1" * 5000) in (True, False)
     assert len(mod97_10_check_digits("1" * 5000)) == 2
     assert mod97_10_validate("3214282912345698765432161182")
@@ -84,7 +86,9 @@ def test_the_ime_wait_sleeps_within_its_deadline_and_never_spins(interval, bound
 
     assert wait_for_composition_commit(reader=lambda: {"composition": "ni"}, timeout_s=1.0, interval_s=interval,
                                        clock=lambda: now[0], sleep=sleep) is False
-    assert slept and max(slept) <= 1.0 and len(slept) <= round(1.0 / bound) + 1
+    assert slept
+    assert max(slept) <= 1.0
+    assert len(slept) <= round(1.0 / bound) + 1
 
 
 # --- search ----------------------------------------------------------------------------------------------------

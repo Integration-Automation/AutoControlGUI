@@ -9,7 +9,7 @@ import pytest
 
 pytest.importorskip('PySide6.QtWidgets', exc_type=ImportError)
 from headless.test_webrtc_file_delivery import bridge as bridge
-from je_auto_control.gui.remote_desktop import webrtc_panel
+from je_auto_control.gui.remote_desktop import webrtc_panel, webrtc_viewer_files
 from je_auto_control.gui.remote_desktop.folder_sync_io import make_folder_engine
 from je_auto_control.utils.rbac import (
     AuthorizationContext, Role, UserStore, authorization_scope, current_authorization,
@@ -130,7 +130,7 @@ def test_mid_file_stop_or_replacement_aborts_without_committing_partial_bytes(
         result._interval = .001
         return result
 
-    monkeypatch.setattr(webrtc_panel, 'make_folder_engine', fast_factory)
+    monkeypatch.setattr(webrtc_viewer_files, 'make_folder_engine', fast_factory)
     with authorization_scope(context):
         if via_gui:
             webrtc_panel._WebRTCViewerPanel._on_toggle_sync(owner, True)

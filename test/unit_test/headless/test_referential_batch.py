@@ -13,7 +13,8 @@ _CHILDREN = [{"user_id": 1}, {"user_id": 2}, {"user_id": 9}, {"user_id": None}]
 def test_foreign_key_reports_orphans():
     report = check_foreign_key(_CHILDREN, "user_id", _PARENTS, "id")
     assert report["ok"] is False
-    assert report["violations"] == 1 and report["missing"] == [9]
+    assert report["violations"] == 1
+    assert report["missing"] == [9]
 
 
 def test_foreign_key_passes_when_all_present():
@@ -33,7 +34,8 @@ def test_unique_key_single_and_composite():
 def test_accepted_values():
     rows = [{"s": "open"}, {"s": "closed"}, {"s": "weird"}, {"s": None}]
     report = check_accepted_values(rows, "s", ["open", "closed"])
-    assert report["ok"] is False and report["unexpected"] == ["weird"]
+    assert report["ok"] is False
+    assert report["unexpected"] == ["weird"]
     assert check_accepted_values(rows[:2], "s", ["open", "closed"])["ok"]
 
 
@@ -77,4 +79,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("check_foreign_key", "check_unique_key",
                  "check_accepted_values", "check_row_count"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

@@ -53,7 +53,8 @@ def test_accepts_dict_and_pair_shapes():
 
 def test_no_patterns_when_unique():
     report = mine_action_log([["A", {}], ["B", {}], ["C", {}]], min_count=3)
-    assert report.patterns == [] and report.candidates == []
+    assert report.patterns == []
+    assert report.candidates == []
 
 
 def test_rank_is_stable_on_empty():

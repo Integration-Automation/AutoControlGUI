@@ -136,7 +136,9 @@ def _timed_out_bulk(wire: _Wire, handle) -> Frame:
     """Issue a bulk read nobody answers; return the request that timed out."""
     sent_before = len(wire.sent)
     with pytest.raises(UsbClientTimeout):
-        handle.bulk_transfer(endpoint=0x81, direction="in", length=8)
+        # timeout_ms=0: the client waits the transfer's own timeout on top of
+        # reply_timeout_s, and the default 1000 ms would add a second per call.
+        handle.bulk_transfer(endpoint=0x81, direction="in", length=8, timeout_ms=0)
     return wire.sent[sent_before]
 
 
@@ -258,7 +260,8 @@ def test_reply_half_received_at_the_timeout_is_still_discarded_whole():
     wire = _Wire(timeout_s=0.5)
     handle = _opened(wire, 1)
     sent_before = len(wire.sent)
-    call = _Call(lambda: handle.bulk_transfer(endpoint=0x81, direction="in", length=8))
+    call = _Call(lambda: handle.bulk_transfer(
+        endpoint=0x81, direction="in", length=8, timeout_ms=0))
     first = wire.wait_sent(sent_before + 1)
     stale_frames = _big_reply(1, b"\x01" * (MAX_PAYLOAD_BYTES * 2), first)
     wire.client.feed_frame(stale_frames[0])
@@ -472,7 +475,8 @@ def test_host_echoes_the_id_on_every_reply_kind():
 
     listed = _joined(session.handle_frame(
         _request(Opcode.LIST, request_id="r-list")), Opcode.LIST)
-    assert listed["request_id"] == "r-list" and len(listed["devices"]) == 1
+    assert listed["request_id"] == "r-list"
+    assert len(listed["devices"]) == 1
 
     for op in (Opcode.CTRL, Opcode.BULK, Opcode.INT):
         body = _CTRL_BODY if op == Opcode.CTRL else {
@@ -517,7 +521,8 @@ def test_host_ignores_an_id_it_cannot_echo(bad_id):
     session = _session()
     opened = _joined(session.handle_frame(
         _request(Opcode.OPEN, request_id=bad_id, **_OPEN_BODY)), Opcode.OPENED)
-    assert opened["ok"] is True and "request_id" not in opened
+    assert opened["ok"] is True
+    assert "request_id" not in opened
 
 
 def test_host_echoes_the_id_when_the_peer_is_locked_out():
@@ -527,7 +532,8 @@ def test_host_echoes_the_id_when_the_peer_is_locked_out():
     assert session.is_locked_out()
     reply = _joined(session.handle_frame(
         _request(Opcode.OPEN, request_id="r", **_OPEN_BODY)), Opcode.ERROR)
-    assert reply["request_id"] == "r" and "locked out" in reply["error"]
+    assert reply["request_id"] == "r"
+    assert "locked out" in reply["error"]
 
 
 def test_host_echoes_the_id_on_a_fragmented_reply():

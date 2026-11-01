@@ -19,7 +19,9 @@ from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.logging.secret_scope import secret_log_scope
-from je_auto_control.utils.mcp_server._authz import authorize_tool_call
+from je_auto_control.utils.mcp_server._authz import (
+    authorize_resource, authorize_tool_call, visible_resources,
+)
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server._disclosure_server import DisclosureServerMixin
 from je_auto_control.utils.mcp_server.stdio import start_mcp_stdio_server  # noqa: F401  # reason: legacy re-export
@@ -545,7 +547,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin,
     def _handle_resources_list(self) -> Dict[str, Any]:
         """List descriptors for every registered resource."""
         return {"resources": [resource.to_descriptor()
-                              for resource in self._resources.list()]}
+                              for resource in visible_resources(self._resources.list())]}
 
     def _handle_prompts_list(self) -> Dict[str, Any]:
         """List descriptors for every registered prompt."""
@@ -595,6 +597,7 @@ class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin,
         uri = params.get("uri")
         if not isinstance(uri, str) or not uri:
             raise _MCPError(-32602, "resources/read requires string 'uri'")
+        authorize_resource(uri, self._audit)  # RBAC; a no-op without a user
         content = self._resources.read(uri)
         if content is None:
             raise _MCPError(-32602, f"Unknown resource: {uri}")

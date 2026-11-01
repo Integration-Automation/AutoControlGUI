@@ -1,8 +1,10 @@
 """Test Suites tab: run a QA suite spec and manage flaky quarantine.
 
 Thin wrapper over :func:`je_auto_control.run_suite`, the JUnit/Allure
-report writers, and the quarantine store. Holds no business logic.
+report writers, and the quarantine store. Holds no business logic. A suite
+runs off the GUI thread as a stoppable executor run, one at a time.
 """
+import functools
 import json
 from typing import Any, Optional
 
@@ -13,12 +15,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._tab_task import TabTask, was_stopped
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 import je_auto_control as ac
-from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.quarantine import (
     auto_quarantine_from_flakiness, default_quarantine_store,
 )
@@ -29,6 +32,11 @@ _COLS = ("suite_col_case", "suite_col_status", "suite_col_time",
 
 def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
+
+
+def _run_suite(spec: Any) -> Any:
+    """Worker thread: run one suite spec."""
+    return ac.run_suite(spec)
 
 
 class TestSuiteTab(TranslatableMixin, QWidget):
@@ -42,11 +50,14 @@ class TestSuiteTab(TranslatableMixin, QWidget):
             '{"name": "Demo", "cases": [{"name": "c1", "actions": []}]}',
         )
         self._table = QTableWidget(0, len(_COLS))
-        self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._table.horizontalHeader().setStretchLastSection(True)
         self._summary = QLabel()
         self._quarantine = QListWidget()
         self._last_result: Optional[Any] = None
+        self._runs = TabTask(self)
+        self._runs.result.connect(self._show_run_result)
+        self._runs.error.connect(self._show_run_error)
         self._apply_headers()
         self._build_layout()
         self._refresh_quarantine()
@@ -69,11 +80,20 @@ class TestSuiteTab(TranslatableMixin, QWidget):
         root.addWidget(QLabel(_t("suite_q_label")))
         root.addWidget(self._quarantine)
 
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: the command still running in the background.
+
+        A script run is stopped; other work cannot be interrupted, so it runs to its end and its
+        result is dropped. Called by ``close_tab(key, release=True)``; safe to call twice.
+        """
+        release_resources(self)
+
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""
         return [
             ("suite_load_file", self._on_load_file),
             ("suite_run", self._on_run),
+            ("task_stop", self._on_stop),
             ("suite_junit", self._on_junit),
             ("suite_allure", self._on_allure),
             ("suite_q_auto", self._on_auto_quarantine),
@@ -99,13 +119,28 @@ class TestSuiteTab(TranslatableMixin, QWidget):
 
     def _on_run(self) -> None:
         try:
-            result = ac.run_suite(self._parse_spec())
-        except (AutoControlException, ValueError, TypeError,
-                OSError, RuntimeError) as err:
+            spec = self._parse_spec()
+        except (ValueError, TypeError) as err:
             self._summary.setText(_t("suite_error").replace("{error}", str(err)))
             return
+        if not self._runs.start_script(functools.partial(_run_suite, spec)):
+            self._summary.setText(_t("task_busy"))
+            return
+        self._summary.setText(_t("task_running"))
+
+    def _on_stop(self) -> None:
+        if self._runs.stop():
+            self._summary.setText(_t("task_stopping"))
+
+    def _show_run_result(self, result: Any) -> None:
         self._last_result = result
         self._render_result(result)
+
+    def _show_run_error(self, error: object) -> None:
+        if was_stopped(error):
+            self._summary.setText(_t("task_stopped"))
+            return
+        self._summary.setText(_t("suite_error").replace("{error}", str(error)))
 
     def _render_result(self, result) -> None:
         self._table.setRowCount(len(result.cases))
@@ -114,7 +149,7 @@ class TestSuiteTab(TranslatableMixin, QWidget):
                       case.message)
             for col, text in enumerate(values):
                 item = QTableWidgetItem(text)
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self._table.setItem(row, col, item)
         self._summary.setText(
             _t("suite_summary")

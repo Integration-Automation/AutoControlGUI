@@ -14,7 +14,7 @@ from je_auto_control.gui.usb_browser_tab import fetch_remote_devices  # noqa: E4
 from je_auto_control.utils.rest_api.rest_server import RestApiServer  # noqa: E402
 
 
-@pytest.fixture()
+@pytest.fixture
 def rest_server(monkeypatch):
     # These tests cover the HTTP path, not this machine's USB hardware. The
     # real enumeration shells out to PowerShell on Windows, which under the

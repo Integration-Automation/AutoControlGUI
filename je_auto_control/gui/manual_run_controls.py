@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from contextlib import AbstractContextManager, ExitStack, contextmanager, nullcontext
-from typing import Iterator, Optional
+from functools import partial
+from typing import Callable, Iterator, Optional
 
 from PySide6.QtWidgets import QCheckBox, QFormLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
 
@@ -30,21 +31,39 @@ class ManualRunControls(TranslatableMixin, QWidget):
         fields.addRow(self._tr(QLabel(), "manual_journal_optional"), self.journal_path)
         layout.addLayout(fields)
 
-    @contextmanager
-    def capture(self, *, source_id: str, script_path: str) -> Iterator[None]:
+    def capture(self, *, source_id: str, script_path: str) -> AbstractContextManager[None]:
         """Bind requested ownership/capture around the caller's existing execution."""
-        record, path = self.record_history.isChecked(), self.journal_path.text()
-        if not record and not path:
-            yield
-            return
-        with secret_log_scope(), ExitStack() as stack:
-            authorize_command("AC_history_capture")
-            candidate = validate_path(path) if path else None
-            if record:
-                stack.enter_context(manual_history_scope(source_id=source_id, script_path=script_path))
-            if candidate is not None:
-                stack.enter_context(journal_scope(ActionJournal(candidate)))
-            yield
+        return self.requested_capture(source_id=source_id, script_path=script_path)()
+
+    def requested_capture(self, *, source_id: str,
+                          script_path: str) -> Callable[[], AbstractContextManager[None]]:
+        """Read the controls now, on the GUI thread; enter the returned capture later, on any thread."""
+        return partial(_requested_capture, self.record_history.isChecked(), self.journal_path.text(),
+                       source_id=source_id, script_path=script_path)
+
+
+@contextmanager
+def _requested_capture(record: bool, path: str, *, source_id: str, script_path: str) -> Iterator[None]:
+    """The capture a snapshot of the controls asked for; nothing when it asked for none."""
+    if not record and not path:
+        yield
+        return
+    with secret_log_scope(), ExitStack() as stack:
+        authorize_command("AC_history_capture")
+        candidate = validate_path(path) if path else None
+        if record:
+            stack.enter_context(manual_history_scope(source_id=source_id, script_path=script_path))
+        if candidate is not None:
+            stack.enter_context(journal_scope(ActionJournal(candidate)))
+        yield
+
+
+def _requested_manual_run(controls: Optional[ManualRunControls], *, source_id: str,
+                          script_path: str) -> Callable[[], AbstractContextManager[object]]:
+    """``_capture_manual_run`` read now and entered later, for work that runs off the GUI thread."""
+    if controls is None:
+        return nullcontext
+    return controls.requested_capture(source_id=source_id, script_path=script_path)
 
 
 def _capture_manual_run(controls: Optional[ManualRunControls], *, source_id: str,

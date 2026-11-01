@@ -8,8 +8,12 @@ from je_auto_control.utils.remote_desktop.registry import registry
 
 
 @pytest.fixture(autouse=True)
-def reset_registry():
-    """Tear down any leftover host/viewer before and after each test."""
+def reset_registry(monkeypatch):
+    """Tear down any leftover host/viewer before and after each test.
+
+    ``monkeypatch`` is requested so it is set up first and undone last: a host
+    a test injects is still in the registry when this teardown stops it.
+    """
     registry.disconnect_viewer()
     registry.stop_host()
     registry.disconnect_ws_viewer()
@@ -45,7 +49,7 @@ def test_known_commands_include_remote_desktop():
     assert "AC_remote_send_input" in executor.known_commands()
 
 
-def test_start_host_then_status_via_executor():
+def test_start_host_then_status_via_executor(monkeypatch):
     captured = []
 
     def stub_provider() -> bytes:
@@ -60,7 +64,7 @@ def test_start_host_then_status_via_executor():
         frame_provider=stub_provider, input_dispatcher=captured.append,
     )
     host.start()
-    registry._host = host  # noqa: SLF001  # test-only injection
+    monkeypatch.setattr(registry, "_host", host)  # test-only injection
 
     record = executor.execute_action([["AC_remote_host_status"]])
     status_value = next(iter(record.values()))
@@ -82,7 +86,7 @@ def test_send_input_without_viewer_records_connection_error():
     assert any("ConnectionError" in repr(v) for v in record.values())
 
 
-def test_remote_round_trip_through_executor():
+def test_remote_round_trip_through_executor(monkeypatch):
     """Start host + connect viewer + send input via executor commands."""
     record = executor.execute_action([
         ["AC_start_remote_host", {
@@ -97,9 +101,10 @@ def test_remote_round_trip_through_executor():
 
     # Replace the default frame provider (PIL.ImageGrab) with a stub so
     # the test does not depend on a real screen being available.
-    registry._host._frame_provider = lambda: b"executor-frame"  # noqa: SLF001
+    started_host = registry._host  # noqa: SLF001
+    monkeypatch.setattr(started_host, "_frame_provider", lambda: b"executor-frame")
     captured = []
-    registry._host._dispatch = captured.append  # noqa: SLF001
+    monkeypatch.setattr(started_host, "_dispatch", captured.append)
 
     executor.execute_action([
         ["AC_remote_connect", {
@@ -145,7 +150,7 @@ def test_ws_send_input_without_viewer_records_connection_error():
     assert any("ConnectionError" in repr(v) for v in record.values())
 
 
-def test_ws_round_trip_through_executor():
+def test_ws_round_trip_through_executor(monkeypatch):
     """Start WS host + connect WS viewer + send input via executor commands."""
     from je_auto_control.utils.remote_desktop.ws_host import (
         WebSocketDesktopHost,
@@ -157,7 +162,7 @@ def test_ws_round_trip_through_executor():
         input_dispatcher=captured.append,
     )
     host.start()
-    registry._ws_host = host  # noqa: SLF001  # test-only injection
+    monkeypatch.setattr(registry, "_ws_host", host)  # test-only injection
 
     status = executor.execute_action([["AC_ws_host_status"]])
     status_value = next(iter(status.values()))

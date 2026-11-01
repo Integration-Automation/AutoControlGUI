@@ -1,8 +1,11 @@
 """Accessibility Audit tab: surface a11y / i18n defects from the live tree.
 
 Thin wrapper over :func:`je_auto_control.run_audit` and
-:func:`je_auto_control.contrast_ratio`.
+:func:`je_auto_control.contrast_ratio`. The audit walks the accessibility
+tree, so it runs off the GUI thread (:class:`~je_auto_control.gui._tab_task.TabTask`);
+the contrast check is arithmetic and stays where it is.
 """
+import functools
 from typing import Optional
 
 from PySide6.QtCore import Qt
@@ -11,7 +14,9 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._tab_task import TabTask
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
@@ -29,6 +34,12 @@ def _ints(raw: str):
     return [int(p.strip()) for p in raw.split(",") if p.strip()]
 
 
+def _audit(app: Optional[str]) -> dict:
+    """Worker thread: run the audit and hand back plain data."""
+    report: dict = ac.run_audit(app_name=app).to_dict()
+    return report
+
+
 class A11yAuditTab(TranslatableMixin, QWidget):
     """Run the accessibility / i18n audit and render the issue list."""
 
@@ -41,11 +52,21 @@ class A11yAuditTab(TranslatableMixin, QWidget):
         self._bg = QLineEdit()
         self._bg.setPlaceholderText("255, 255, 255")
         self._table = QTableWidget(0, len(_COLS))
-        self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._table.horizontalHeader().setStretchLastSection(True)
         self._summary = QLabel()
+        self._task = TabTask(self)          # the audit, off the GUI thread; one at a time
+        self._task.result.connect(self._render)
+        self._task.error.connect(self._on_audit_error)
         self._apply_headers()
         self._build_layout()
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: the audit still running, whose report is dropped.
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self)
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
@@ -79,12 +100,11 @@ class A11yAuditTab(TranslatableMixin, QWidget):
 
     def _on_run(self) -> None:
         app = self._app.text().strip() or None
-        try:
-            report = ac.run_audit(app_name=app)
-        except (RuntimeError, OSError, ValueError) as error:
-            self._summary.setText(str(error))
-            return
-        self._render(report.to_dict())
+        self._task.start(functools.partial(_audit, app))   # False while one runs: the text is true either way
+        self._summary.setText(_t("task_running"))
+
+    def _on_audit_error(self, error: object) -> None:
+        self._summary.setText(str(error))
 
     def _render(self, report: dict) -> None:
         issues = report["issues"]
@@ -94,7 +114,7 @@ class A11yAuditTab(TranslatableMixin, QWidget):
                       issue["message"])
             for col, text in enumerate(values):
                 item = QTableWidgetItem(str(text))
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self._table.setItem(row, col, item)
         self._summary.setText(
             _t("audit_summary")

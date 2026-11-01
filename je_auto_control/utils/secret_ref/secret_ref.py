@@ -152,7 +152,11 @@ class RefResolver:
             return self._resolve_env(target)
         if scheme == "file":
             return self._resolve_file(target)
-        return self._resolve_secret(target)
+        value = self._resolve_secret(target)
+        # The current run masks it by exact match from here on (journal, audit, logs).
+        from je_auto_control.utils.logging.secret_scope import remember_secret
+        remember_secret(value)
+        return value
 
     def resolve_all(self, obj: Any) -> Any:
         """Recursively resolve every reference in a nested structure."""

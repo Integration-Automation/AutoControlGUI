@@ -76,8 +76,7 @@ _panel_mod = pytest.importorskip(
 @pytest.fixture(scope="module")
 def qapp():
     from PySide6.QtWidgets import QApplication
-    app = QApplication.instance() or QApplication([])
-    yield app
+    return QApplication.instance() or QApplication([])
 
 
 def _make_panel(qapp, tmp_path):
@@ -107,6 +106,8 @@ def test_panel_enable_then_disable_sharing(qapp, tmp_path):
         assert panel._loopback is not None
         panel._disable_sharing()
         assert panel._loopback is None
+        from headless._qt_settle import settle_op
+        assert settle_op(panel._share_op)
     finally:
         panel.deleteLater()
 
@@ -171,8 +172,7 @@ def test_panel_remote_source_without_session_warns(qapp, tmp_path):
     )
     try:
         panel._source_combo.setCurrentIndex(1)
-        import pytest as _pytest
-        with _pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError):
             panel._active_use_client()
     finally:
         panel.deleteLater()

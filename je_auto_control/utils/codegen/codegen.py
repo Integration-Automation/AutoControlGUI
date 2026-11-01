@@ -19,7 +19,7 @@ import os
 import pprint
 import re
 import textwrap
-from typing import Any, Dict, Sequence, Tuple, Union
+from typing import Any, Dict, Sequence, Tuple
 
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.json_store.json_store import atomic_write_text
@@ -255,7 +255,7 @@ _RENDERERS = {
 }
 
 
-def generate_code(actions: Union[Sequence, Dict[str, Any]], target: str = "pytest",
+def generate_code(actions: Sequence | Dict[str, Any], target: str = "pytest",
                   name: str = "recorded_flow", style: str = "calls",
                   failure_bundle: bool = False) -> str:
     """Render ``actions`` as source code for ``target`` (pytest/python/robot).
@@ -272,7 +272,13 @@ def generate_code(actions: Union[Sequence, Dict[str, Any]], target: str = "pytes
         raise ValueError(f"unknown codegen target: {target!r}")
     if failure_bundle and target != "pytest":
         raise ValueError("failure_bundle is currently supported for pytest only")
-    return renderer(actions, name, style, failure_bundle)
+    code = renderer(actions, name, style, failure_bundle)
+    if target == "robot":
+        # A structural check, not the Robot parser (robotframework is not a
+        # dependency): a failure here is a defect in the renderer above.
+        from je_auto_control.utils.codegen.robot_check import require_robot_structure
+        require_robot_structure(code)
+    return code
 
 
 def generate_code_file(source, output_path: str, target: str = "pytest",

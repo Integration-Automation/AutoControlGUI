@@ -14,11 +14,14 @@ Usage::
     je_auto_control fmt script.json [--check]
     je_auto_control record out.json [--duration 5]
     je_auto_control codegen script.json [--target pytest] [-o test_flow.py]
+    je_auto_control codegen --from-log journal.jsonl --run-id ID   # JSON candidate review bundle
     je_auto_control failure-bundle failure.zip [--error "message"]
     je_auto_control version
     je_auto_control list-jobs
     je_auto_control start-server --port 9938
     je_auto_control start-rest --port 9939
+    je_auto_control users [--users users.json] add alice --role admin
+    je_auto_control users list | set-role ID ROLE | rotate-token ID | remove ID
 
 The CLI is a thin wrapper around the headless APIs so every feature works
 without ever importing PySide6.
@@ -34,11 +37,7 @@ from typing import Callable, Dict, Iterator, List, Optional, Sequence
 
 from je_auto_control.utils.logging.secret_scope import scrub_secret_text, secret_log_scope
 
-from je_auto_control.utils.exception.exceptions import (
-    AutoControlActionException,
-    AutoControlException,
-    AutoControlJsonActionException,
-)
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 def _parse_vars(pairs: Optional[Sequence[str]]) -> Dict[str, object]:
@@ -145,7 +144,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     # Unwrapped and checked like `run` does: {"auto_control": [...]} failed
     # here and ran there, and [] passed here and failed there.
     actions = executor._unwrap_action_list(read_action_json(args.script))
-    validate_actions(actions, executor.known_commands())
+    validate_actions(actions, executor.known_commands(), executor._self_loadable())
     sys.stdout.write(f"OK: {len(actions)} action(s)\n")
     return 0
 
@@ -227,6 +226,7 @@ def cmd_codegen(args: argparse.Namespace) -> int:
                              failure_bundle=args.failure_bundle)
         sys.stdout.write(code)
     return 0
+
 
 
 def cmd_version(_: argparse.Namespace) -> int:
@@ -407,6 +407,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_rest.add_argument("--host", default="127.0.0.1")
     p_rest.add_argument("--port", type=_port, default=9939)
     p_rest.set_defaults(func=cmd_start_rest)
+
+    from je_auto_control.utils.rbac.cli import add_users_arguments
+    add_users_arguments(sub.add_parser(
+        "users", help="Manage RBAC users of the REST API and MCP server"))
     return parser
 
 
@@ -442,9 +446,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     utf8_stdout()
     try:
         return args.func(args)
-    except (AutoControlActionException, AutoControlException,
-            AutoControlJsonActionException, OSError, RuntimeError,
-            ValueError) as error:
+    except (AutoControlException, OSError, RuntimeError, ValueError) as error:
         sys.stderr.write(f"error: {scrub_secret_text(str(error))}\n")
         return 1
 

@@ -11,6 +11,12 @@ presence) with an ``on_event`` callback. Detection is decoupled from the
 screen: predicates are injectable, so transition logic is unit-tested with
 synthetic values via :meth:`ScreenObserver.poll_once`; :meth:`start` adds an
 optional background polling thread. Imports no ``PySide6`` — fully headless.
+
+A callback fires long after the request that registered it. A watch added by
+an authenticated RBAC user keeps that user as its owner and fires as them,
+with the role the user store gives them at that moment
+(:mod:`je_auto_control.utils.rbac.deferred`); added outside any RBAC scope it
+has no owner and fires as before.
 """
 import threading
 import time

@@ -35,7 +35,12 @@ from je_auto_control.utils.agent_runtime.commands import COMMANDS as AGENT_TASK_
 from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue, MacroDepthExceeded,
 )
-from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
+from je_auto_control.utils.executor.action_redaction import (
+    describe_action, record_command, redact_actions, redact_result,
+)
+from je_auto_control.utils.executor.result_hook import (
+    ResultHook, enter_list, leave_list, observe_results, report_result,
+)
 from je_auto_control.utils.action_journal.capture import action_step
 from je_auto_control.utils.action_journal.commands import _capture_body, _read_journal
 from je_auto_control.utils.logging.secret_scope import secret_log_scope
@@ -63,6 +68,10 @@ from je_auto_control.utils.config_sync.causal_commands import (
     _enqueue_sync_outbox, _merge_sync_entry, _status_sync_outbox, _sync_peer_state,
 )
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
+from je_auto_control.utils.executor.run_control import (
+    ExecutionStopped, active_executions, checkpoint, note_command, stop_execution,
+    stoppable_run,
+)
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
     run_from_description as llm_run_from_description,
@@ -1453,6 +1462,40 @@ def _admin_broadcast_execute(actions: List[Any],
     )
 
 
+def _user_add(user_id: str, role: str = "viewer", display_name: str = "",
+              tags: Optional[List[str]] = None,
+              users_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: add an RBAC user; the reply carries its token, once."""
+    from je_auto_control.utils.rbac.admin import add_user
+    return add_user(user_id, role=role, display_name=display_name, tags=tags,
+                    users_path=users_path)
+
+
+def _user_remove(user_id: str, users_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: remove an RBAC user."""
+    from je_auto_control.utils.rbac.admin import remove_user
+    return remove_user(user_id, users_path=users_path)
+
+
+def _user_set_role(user_id: str, role: str,
+                   users_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: change an RBAC user's role."""
+    from je_auto_control.utils.rbac.admin import set_user_role
+    return set_user_role(user_id, role, users_path=users_path)
+
+
+def _user_rotate_token(user_id: str, users_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: replace an RBAC user's token; the reply carries it, once."""
+    from je_auto_control.utils.rbac.admin import rotate_user_token
+    return rotate_user_token(user_id, users_path=users_path)
+
+
+def _user_list(users_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Executor adapter: list RBAC users (no tokens, no hashes)."""
+    from je_auto_control.utils.rbac.admin import list_users
+    return list_users(users_path=users_path)
+
+
 def _audit_log_list(event_type: Optional[str] = None,
                     host_id: Optional[str] = None,
                     limit: int = 200) -> List[Dict[str, Any]]:
@@ -1685,7 +1728,15 @@ _android_client_cache: Dict[Tuple[Optional[str], Optional[str]], Any] = {}
 
 def _android_client(serial: Optional[str] = None,
                     adb_path: Optional[str] = None) -> Any:
-    """Build (or return) a cached :class:`AdbClient` for ``serial``."""
+    """Build (or return) a cached :class:`AdbClient` for ``serial``.
+
+    Inside ``use_device`` (a device-matrix worker) the bound session's own
+    client is used unless ``serial`` names another device.
+    """
+    from je_auto_control.android.session import bound_android_session
+    session = bound_android_session(serial)
+    if session is not None:
+        return session.adb
     key = (serial, adb_path)
     cached = _android_client_cache.get(key)
     if cached is not None:
@@ -1694,6 +1745,16 @@ def _android_client(serial: Optional[str] = None,
     cached = AdbClient(adb_path=adb_path, default_serial=serial)
     _android_client_cache[key] = cached
     return cached
+
+
+def _android_ui_device(serial: Optional[str] = None) -> Any:
+    """The uiautomator2 wrapper for ``serial``: the bound session's, else a new one."""
+    from je_auto_control.android.session import bound_android_session
+    session = bound_android_session(serial)
+    if session is not None:
+        return session.ui_device
+    from je_auto_control.android import UIAutomatorDevice
+    return UIAutomatorDevice(serial=serial)
 
 
 def _ac_android_tap(x: int, y: int,
@@ -1724,8 +1785,9 @@ def _ac_android_key(key: str,
 def _ac_android_text(text: str,
                      serial: Optional[str] = None,
                      adb_path: Optional[str] = None) -> None:
-    """Type a string via ``input text``."""
-    _android_client(serial, adb_path).text(text)
+    """Type a string: ``input text`` for ASCII, a Unicode-capable path otherwise."""
+    from je_auto_control.android.input import type_text
+    type_text(_android_client(serial, adb_path), text)
 
 
 def _ac_android_screenshot(file_path: str,
@@ -1762,10 +1824,8 @@ def _ac_android_find_element(text: Optional[str] = None,
                               serial: Optional[str] = None,
                               ) -> Dict[str, int]:
     """Find an Android widget via uiautomator2; return its bounding rect."""
-    from je_auto_control.android import (
-        UIAutomatorDevice, find_element,
-    )
-    device = UIAutomatorDevice(serial=serial)
+    from je_auto_control.android import find_element
+    device = _android_ui_device(serial)
     x1, y1, x2, y2 = find_element(
         text=text, resource_id=resource_id, description=description,
         class_name=class_name, timeout_s=float(timeout_s), device=device,
@@ -1781,10 +1841,8 @@ def _ac_android_click_element(text: Optional[str] = None,
                                serial: Optional[str] = None,
                                ) -> Dict[str, int]:
     """Tap the first widget matching the selectors; return click centre."""
-    from je_auto_control.android import (
-        UIAutomatorDevice, click_element,
-    )
-    device = UIAutomatorDevice(serial=serial)
+    from je_auto_control.android import click_element
+    device = _android_ui_device(serial)
     cx, cy = click_element(
         text=text, resource_id=resource_id, description=description,
         class_name=class_name, timeout_s=float(timeout_s), device=device,
@@ -1794,14 +1852,25 @@ def _ac_android_click_element(text: Optional[str] = None,
 
 def _ac_android_dump_hierarchy(serial: Optional[str] = None) -> str:
     """Return the device's widget tree as an XML string."""
-    from je_auto_control.android import UIAutomatorDevice, dump_hierarchy
-    device = UIAutomatorDevice(serial=serial)
+    from je_auto_control.android import dump_hierarchy
+    device = _android_ui_device(serial)
     return dump_hierarchy(device=device)
+
+
+def _mobile_command_handlers() -> Dict[str, Callable[..., Any]]:
+    """The generated ``AC_android_*`` / ``AC_ios_*`` handlers (see ``wrapper.mobile_commands``)."""
+    from je_auto_control.wrapper.mobile_commands import generated_handlers
+    return generated_handlers()
 
 
 # === iOS executor adapters (WebDriverAgent / facebook-wda) ==================
 
 def _ios_device(url: Optional[str]) -> Any:
+    """The WDA wrapper for ``url``: the bound session's, else a new one."""
+    from je_auto_control.ios.session import bound_ios_session
+    session = bound_ios_session(url)
+    if session is not None:
+        return session.device
     from je_auto_control.ios import IOSDevice
     return IOSDevice(url=url)
 
@@ -1886,7 +1955,7 @@ def _llm_run_for_executor(description: str,
                           examples: Optional[list] = None,
                           model: Optional[str] = None,
                           max_tokens: int = 2048) -> Dict[str, Any]:
-    """Executor adapter: plan and execute against the global executor."""
+    """Executor adapter: plan and execute, as the caller this thread already serves (so no ``owner``)."""
     return llm_run_from_description(
         description,
         executor=executor,
@@ -2245,17 +2314,19 @@ def _human_type(text: str, base_delay: float = 0.05, jitter: float = 0.04,
 
 
 def _sign_action_file(path: str, key: Optional[str] = None,
-                      private_key_path: Optional[str] = None) -> Dict[str, Any]:
+                      private_key_path: Optional[str] = None,
+                      passphrase: Optional[str] = None) -> Dict[str, Any]:
     """Executor adapter: write an Ed25519 or HMAC signature sidecar for a file."""
     from je_auto_control.utils.action_signing import sign_action_file
     return {"signature_path": sign_action_file(
-        path, key, private_key_path=private_key_path)}
+        path, key, private_key_path=private_key_path, passphrase=passphrase)}
 
 
-def _create_signing_keypair(private_path: str, public_path: str) -> Dict[str, Any]:
+def _create_signing_keypair(private_path: str, public_path: str,
+                            passphrase: Optional[str] = None) -> Dict[str, Any]:
     """Executor adapter: create an Ed25519 action-signing key pair."""
     from je_auto_control.utils.action_signing import create_signing_keypair
-    create_signing_keypair(private_path, public_path)
+    create_signing_keypair(private_path, public_path, passphrase=passphrase)
     return {"private_path": str(private_path), "public_path": str(public_path)}
 
 
@@ -2284,7 +2355,7 @@ def _decrypt_action_file(enc_path: str, key: Optional[str] = None,
 
 
 def _annotate_screenshot(source: str,
-                         annotations: Union[List[Dict[str, Any]], str],
+                         annotations: List[Dict[str, Any]] | str,
                          output_path: str) -> Dict[str, Any]:
     """Executor adapter: draw annotations onto a screenshot and save it.
 
@@ -2311,7 +2382,7 @@ def _move_to_trash(path: str) -> Dict[str, Any]:
     return {"trashed": move_to_trash(path)}
 
 
-def _read_qr(region: Optional[Union[List[int], str]] = None) -> Dict[str, Any]:
+def _read_qr(region: Optional[List[int] | str] = None) -> Dict[str, Any]:
     """Executor adapter: decode QR codes in a screen region.
 
     ``region`` is ``[x1, y1, x2, y2]`` (or a JSON string for the builder);
@@ -2391,14 +2462,14 @@ def _save_window_layout(path: Optional[str] = None) -> Dict[str, Any]:
     return {"count": len(layout), "path": path, "layout": layout}
 
 
-def _restore_window_layout(layout: Union[List[Dict[str, Any]], str]
+def _restore_window_layout(layout: List[Dict[str, Any]] | str
                            ) -> Dict[str, Any]:
     """Executor adapter: move windows back to a saved layout (list or path)."""
     from je_auto_control.utils.window_capture import restore_window_layout
     return {"restored": restore_window_layout(layout)}
 
 
-def _region_color_stats(region: Optional[Union[List[int], str]] = None,
+def _region_color_stats(region: Optional[List[int] | str] = None,
                         buckets: int = 8) -> Dict[str, Any]:
     """Executor adapter: average + dominant colour of a screen region.
 
@@ -3530,10 +3601,22 @@ def _seed_everything(seed: int = 0) -> Dict[str, Any]:
 
 
 def _observe_handler(actions: List[Any]) -> Callable[[str, Any], None]:
-    """Build an observer callback that runs an action list on each event."""
+    """Build an observer callback that runs an action list on each event.
+
+    The callback fires long after the run that registered it has ended -- on
+    the observer's thread, or inside whichever run calls ``AC_observe_poll``
+    -- so it cannot share a run's scope. It keeps a snapshot of the variables
+    visible at registration, and every firing runs on the module executor in
+    a fresh scope seeded from that snapshot: the actions see what the
+    registering run had set, and what they set reaches neither the process
+    scope, the run that polled, nor the next firing.
+    """
+    snapshot = _running_executor().variables.as_dict()
+
     def handler(_event: str, _value: Any) -> None:
         if actions:
-            _running_executor().execute_action(list(actions))
+            with execution_scope(dict(snapshot)):
+                executor.execute_action(list(actions))
     return handler
 
 
@@ -7149,6 +7232,16 @@ def _export_sarif(findings: Any, path: Optional[str] = None,
     return result
 
 
+def _stop_execution(run_id: Optional[str] = None, reason: str = "") -> Dict[str, Any]:
+    """Adapter: ask one stoppable run (or every other one) to stop."""
+    return {"stopped": stop_execution(str(run_id) if run_id else None, str(reason))}
+
+
+def _list_executions() -> List[Dict[str, Any]]:
+    """Adapter: the stoppable runs in progress."""
+    return active_executions()
+
+
 #: Whether the action list running on this thread was asked to raise on
 #: error; nested bodies (``_validated=True``) inherit it. Thread-local, so
 #: AC_parallel branches -- their own threads and executors -- are unaffected.
@@ -7313,6 +7406,8 @@ class Executor:
             # Executor 執行器
             "AC_execute_action": self.execute_action,
             "AC_execute_files": self.execute_files,
+            "AC_stop_execution": _stop_execution,
+            "AC_list_executions": _list_executions,
             "AC_add_package_to_executor": package_manager.add_package_to_executor,
             "AC_add_package_to_callback_executor": package_manager.add_package_to_callback_executor,
 
@@ -8027,6 +8122,9 @@ class Executor:
             "AC_android_screenshot": _ac_android_screenshot,
             "AC_android_list_devices": _ac_android_list_devices,
             "AC_android_shell": _ac_android_shell,
+            # Android / iOS sessions, gestures, locating, apps and extensions:
+            # generated from the table the MCP tools and builder schema share.
+            **_mobile_command_handlers(),
 
             # LLM action planner
             "AC_llm_plan": _llm_plan_for_executor,
@@ -8090,6 +8188,13 @@ class Executor:
             "AC_admin_list_hosts": _admin_list_hosts,
             "AC_admin_poll": _admin_poll,
             "AC_admin_broadcast_execute": _admin_broadcast_execute,
+
+            # RBAC user management (needs manage_users under RBAC)
+            "AC_user_add": _user_add,
+            "AC_user_remove": _user_remove,
+            "AC_user_set_role": _user_set_role,
+            "AC_user_rotate_token": _user_rotate_token,
+            "AC_user_list": _user_list,
 
             # Audit log (tamper-evident security log)
             "AC_audit_log_list": _audit_log_list,
@@ -8177,7 +8282,7 @@ class Executor:
         """Return the set of all command names the executor recognises."""
         return set(self.event_dict.keys()) | set(self._block_commands.keys())
 
-    def unknown_commands_in(self, action_list: Union[list, dict]) -> List[str]:
+    def unknown_commands_in(self, action_list: list | dict) -> List[str]:
         """Return the unrecognised command names in ``action_list``, in order.
 
         Nothing is executed. Structural problems raise exactly as
@@ -8186,7 +8291,16 @@ class Executor:
         failed" *before* the first action moves anything.
         """
         return unknown_command_names(self._unwrap_action_list(action_list),
-                                     self.known_commands())
+                                     self.known_commands(), self._self_loadable())
+
+    def _self_loadable(self) -> Optional[Callable[[str], bool]]:
+        """The package gate's verdict, on the executor a load command fills.
+
+        ``AC_add_package_to_executor`` registers ``<package>_<member>`` names
+        on the package manager's executor, so only there may validation leave
+        such a name to run time; anywhere else it would never appear.
+        """
+        return package_manager.would_allow if package_manager.executor is self else None
 
     def _resolve_runtime_args(self, args: Any, command: str = "") -> Any:
         """Interpolate ``${var}`` placeholders against the current scope.
@@ -8240,9 +8354,11 @@ class Executor:
         if len(action) == 2:
             resolved = self._resolve_runtime_args(action[1], name)
             dispatch_checkpoint(name, resolved)
-            if isinstance(resolved, dict):
-                return event(**resolved)
-            return event(*resolved)
+            result = event(**resolved) if isinstance(resolved, dict) else event(*resolved)
+            # Inside a stoppable run: remember what a press leaves held, so a
+            # stop can let go of it. Nothing happens outside one.
+            note_command(name, resolved)
+            return result
         if len(action) == 1:
             dispatch_checkpoint(name, {})
             return event()
@@ -8258,6 +8374,7 @@ class Executor:
                        _validated: bool = False,
                        dry_run: bool = False,
                        step_callback: Optional[Callable[[list], None]] = None,
+                       result_callback: Optional[ResultHook] = None,
                        ) -> Dict[str, str]:
         """
         執行 action list
@@ -8268,8 +8385,15 @@ class Executor:
         :param _validated: 內部用；子呼叫已驗證過時避免重複驗證
         :param dry_run: 若為 True，只記錄將執行的動作，不實際呼叫。
         :param step_callback: 每個 action 開始前呼叫此 hook（偵錯用）。
+        :param result_callback: called with ``(command, arguments, result, path)`` after every
+            command that returned, nested ones included, for this run on this thread only
+            (:mod:`je_auto_control.utils.executor.result_hook`).
         :return: 執行紀錄字典
         """
+        if result_callback is not None:
+            with observe_results(result_callback):
+                return self.execute_action(action_list, raise_on_error, _validated,
+                                           dry_run, step_callback)
         # A nested body inherits the strictness of the list that runs it, so
         # a failure inside an AC_loop / AC_if_* / macro under raise_on_error
         # reaches the enclosing AC_try / AC_retry / caller instead of being
@@ -8291,21 +8415,30 @@ class Executor:
             _STRICT_BODIES.value = inherited
             _RUNNING.value = running
 
-    def _execute_list(self, action_list: Union[list, dict], raise_on_error: bool,
+    def _execute_list(self, action_list: list | dict, raise_on_error: bool,
                       _validated: bool, dry_run: bool,
                       step_callback: Optional[Callable[[list], None]],
                       ) -> Dict[str, str]:
         """The body of :meth:`execute_action`, with strictness already settled."""
         action_list = self._unwrap_action_list(action_list)
         if not _validated:
-            validate_actions(action_list, self.known_commands())
+            validate_actions(action_list, self.known_commands(), self._self_loadable())
 
         execute_record_dict: Dict[str, Any] = {}
-        for action in action_list:
-            self._execute_list_step(action, execute_record_dict, raise_on_error, _validated, dry_run, step_callback)
+        frame = enter_list()  # None unless a result hook watches this run
+        try:
+            for position, action in enumerate(action_list, start=1):
+                checkpoint()  # a stop requested for this run ends it between actions
+                if frame is not None:
+                    frame.advance(position, action)
+                self._execute_list_step(action, execute_record_dict, raise_on_error, _validated, dry_run,
+                                        step_callback)
+        finally:
+            leave_list(frame)
 
         for key, value in execute_record_dict.items():
-            autocontrol_logger.info("%s -> %s", key, value)
+            # Masked by field name: a minted token (AC_jwt_encode, a lease) is a result, not an argument.
+            autocontrol_logger.info("%s -> %s", key, redact_result(record_command(key), value))
         return execute_record_dict
 
     def _execute_list_step(self, action: list, record: Dict[str, Any], raise_on_error: bool,
@@ -8356,7 +8489,7 @@ class Executor:
         _count_recorded_failure()
 
     @staticmethod
-    def _unwrap_action_list(action_list: Union[list, dict]) -> list:
+    def _unwrap_action_list(action_list: list | dict) -> list:
         """Normalise the ``action_list`` argument or raise on invalid input."""
         actions: Any = action_list
         if isinstance(actions, dict):
@@ -8376,9 +8509,10 @@ class Executor:
         try:
             with default_profiler.measure(action_name):
                 record[key] = self._execute_event(action)
+            report_result(action, record[key])  # a no-op unless a result hook watches this run
             _observe_executor_metrics(action_name, started, error=None)
-        except (LoopBreak, LoopContinue):
-            raise
+        except (LoopBreak, LoopContinue, ExecutionStopped):
+            raise  # a stop is never recorded-and-continued, whatever raise_on_error says
         # LookupError covers the KeyError/IndexError raised by block handlers
         # that subscript a required arg directly (``args["name"]``). Without
         # it a merely malformed action escaped raise_on_error=False and
@@ -8485,17 +8619,38 @@ def add_command_to_executor(command_dict: dict) -> None:
             raise AutoControlAddCommandException(add_command_exception_error_message)
 
 
-def execute_action(action_list: list) -> Dict[str, str]:
-    return executor.execute_action(action_list)
+def execute_action(action_list: list | dict, *,
+                   raise_on_error: bool = False, dry_run: bool = False,
+                   step_callback: Optional[Callable[[list], None]] = None,
+                   result_callback: Optional[ResultHook] = None,
+                   ) -> Dict[str, str]:
+    """Run ``action_list`` on the shared executor; return its execution record.
+
+    The keywords are the ones :meth:`Executor.execute_action` takes:
+    ``raise_on_error`` raises at the first failed action instead of recording
+    it, ``dry_run`` lists what would run without calling anything,
+    ``step_callback`` is called with each top-level action before it starts,
+    and ``result_callback`` with ``(command, arguments, result, path)`` after
+    every command that returned, the ones nested in a block included
+    (:mod:`je_auto_control.utils.executor.result_hook`).
+    """
+    return executor.execute_action(
+        action_list, raise_on_error=raise_on_error, dry_run=dry_run,
+        step_callback=step_callback, result_callback=result_callback)
 
 
 def execute_files(execute_files_list: list) -> List[Dict[str, str]]:
     return executor.execute_files(execute_files_list)
 
 
-def execute_action_with_vars(action_list: list, variables: dict
-                             ) -> Dict[str, str]:
+def execute_action_with_vars(action_list: list, variables: dict,
+                             run_id: Optional[str] = None) -> Dict[str, str]:
     """Run ``action_list`` in a fresh variable scope seeded with ``variables``.
+
+    With ``run_id`` the run is stoppable under that name:
+    ``stop_execution(run_id)`` from another thread (or ``AC_stop_execution``
+    from another entry point) ends it at its next checkpoint by raising
+    :class:`~je_auto_control.utils.executor.run_control.ExecutionStopped` here.
 
     The scope belongs to this run: ``AC_set_var``, loop variables and macro
     parameters work as usual inside it and are gone when it returns, so the
@@ -8515,4 +8670,7 @@ def execute_action_with_vars(action_list: list, variables: dict
     resolver interpolate per action fixes both.
     """
     with execution_scope(variables):
-        return executor.execute_action(action_list)
+        if run_id is None:
+            return executor.execute_action(action_list)
+        with stoppable_run(run_id):
+            return executor.execute_action(action_list)

@@ -496,8 +496,9 @@ def check_pointer(layout: Layout) -> None:
     def _pointer_at(point: Tuple[int, int]) -> str:
         set_mouse_position(*point)
         shell = _run(["xdotool", "getmouselocation", "--shell"])
-        values = dict(
-            line.split("=", 1) for line in shell.splitlines() if "=" in line)
+        values = {
+            name: value for name, _, value in
+            (line.partition("=") for line in shell.splitlines() if "=" in line)}
         server = (int(values["X"]), int(values["Y"]))
         _assert_eq(server, point)
         _assert_eq(tuple(get_mouse_position()), point)

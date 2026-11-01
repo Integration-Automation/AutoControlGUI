@@ -229,7 +229,8 @@ def test_show_window_reports_a_dead_handle_and_a_refused_activation(monkeypatch)
     fake = _user32(IsWindow=lambda hwnd: 0, ShowWindow=lambda hwnd, cmd: shown.append(cmd),
                    SetForegroundWindow=lambda hwnd: 0)
     monkeypatch.setattr(module, "_user32", fake)
-    assert module.show_window(7, 3) is False and shown == [], "not a window: nothing shown"
+    assert module.show_window(7, 3) is False, "not a window: nothing shown"
+    assert shown == [], "not a window: nothing shown"
     fake.IsWindow = lambda hwnd: 1
     assert module.show_window(7, 3) is False, "maximised but refused the foreground"
     assert module.show_window(7, 6) is True, "minimising does not need the foreground"

@@ -20,7 +20,8 @@ def test_from_anthropic_click_key_scroll():
         "type": "key", "text": "ctrl+s"}
     scroll = from_anthropic({"action": "scroll", "coordinate": [10, 20],
                              "scroll_direction": "down", "scroll_amount": 3})
-    assert scroll["type"] == "scroll" and scroll["amount"] == 3
+    assert scroll["type"] == "scroll"
+    assert scroll["amount"] == 3
 
 
 def test_from_openai_click_button_and_keypress():
@@ -82,4 +83,5 @@ def test_executor_normalizes_and_maps():
 def test_facade_exports():
     for attr in ("canonical_action", "from_anthropic", "from_openai_cua",
                  "to_ac_command"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

@@ -57,8 +57,9 @@ class _Response:
 
 def test_a_response_over_the_limit_is_refused(monkeypatch):
     monkeypatch.setattr(http_client, "MAX_RESPONSE_BYTES", 10)
+    response = _Response(b"x" * 11, Message())
     with pytest.raises(OSError, match="exceeds"):
-        http_client._read_response(_Response(b"x" * 11, Message()))
+        http_client._read_response(response)
 
 
 def test_repeated_headers_are_kept():
@@ -178,4 +179,5 @@ def test_a_bare_max_age_is_not_fresh():
 def test_a_null_problem_type_is_about_blank():
     problem = parse_problem({"status": 400, "headers": {"Content-Type": "application/problem+json"},
                              "json": {"type": None, "title": "x"}})
-    assert problem is not None and problem.type == "about:blank"
+    assert problem is not None
+    assert problem.type == "about:blank"

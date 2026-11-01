@@ -15,6 +15,8 @@ from contextvars import ContextVar
 from typing import Iterator
 from typing import Dict, Optional
 
+from je_auto_control.utils.executor.run_control import pause
+
 _DEFAULT_TITLES = {"open": "Open", "save": "Save As", "folder": "Select Folder"}
 
 
@@ -40,7 +42,7 @@ class FileDialogDriver:
                 return backend.bring_to_front(window_id)
             if time.monotonic() >= deadline:
                 return False
-            time.sleep(0.2)
+            pause(0.2, time.sleep)
 
     def type_path(self, path: str) -> None:
         from je_auto_control.wrapper.auto_control_keyboard import write

@@ -10,9 +10,14 @@ The prompt callback wired into :class:`UsbPassthroughSession` is
 synchronous — it must return ``True`` / ``False`` from a non-GUI
 thread (the callback runs on the WebRTC/asyncio bridge thread, not
 the Qt main thread). :class:`PromptBridge` does the cross-thread
-marshalling: the worker thread calls ``decide()``, which posts a
-``QMetaObject.invokeMethod`` to the GUI thread, waits on a
-``threading.Event``, and returns the operator's verdict.
+marshalling: the worker thread calls ``decide()``, which emits a queued
+signal to the GUI thread, waits on a ``threading.Event``, and returns the
+operator's verdict.
+
+The dialog is built, shown and destroyed on the GUI thread, and it must not be
+a reference cycle: its last reference goes when the slot returns, so the C++
+window dies there and then. A dialog left to the cycle collector is destroyed
+wherever the collector runs — another thread, or the middle of a PySide call.
 """
 from __future__ import annotations
 
@@ -126,11 +131,9 @@ class PromptBridge(QObject):
         )
         if not done.wait(timeout=wait_timeout_s):
             return False
-        # Sonar can't see through the cross-thread QMetaObject
-        # .invokeMethod + queued slot above: ``result`` is mutated by
-        # ``_show_dialog`` on the GUI thread before ``done`` is set,
-        # so neither key is guaranteed False at this point.
-        # (Cross-thread mutation through Q_ARG(object, result).)
+        # Sonar can't see through the queued signal above: ``result`` is
+        # mutated by ``_show_dialog`` on the GUI thread before ``done`` is
+        # set, so neither key is guaranteed False at this point.
         if result["allow"] and result["remember"] and self._acl is not None:  # NOSONAR
             self._acl.add_rule(AclRule(
                 vendor_id=vendor_id, product_id=product_id,

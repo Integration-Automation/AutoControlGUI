@@ -51,7 +51,8 @@ def test_executor_paths():
     assert sig["signature"] == failure_signature(_RUN_A)
     assert sig["normalized"].endswith("at <ts>")
     grouped = _group_failures(f'["{_OTHER}", "{_OTHER}"]')
-    assert grouped["count"] == 1 and grouped["groups"][0]["count"] == 2
+    assert grouped["count"] == 1
+    assert grouped["groups"][0]["count"] == 2
 
 
 def test_wiring():
@@ -67,4 +68,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("normalize_error", "failure_signature", "group_failures"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

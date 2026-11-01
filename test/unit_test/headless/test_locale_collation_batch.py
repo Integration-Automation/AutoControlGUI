@@ -78,4 +78,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("collation_key", "collation_compare", "sort_strings"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

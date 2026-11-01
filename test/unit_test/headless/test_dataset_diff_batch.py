@@ -28,7 +28,8 @@ def test_diff_buckets():
 
 def test_changed_entry_carries_old_and_new():
     [changed] = diff_rows(_OLD, _NEW, "id")["changed"]
-    assert changed["old"]["age"] == 30 and changed["new"]["age"] == 31
+    assert changed["old"]["age"] == 30
+    assert changed["new"]["age"] == 31
 
 
 def test_summarize_diff_counts():
@@ -52,7 +53,8 @@ def test_composite_key():
 def test_duplicate_key_last_wins():
     old = [{"id": 1, "v": "a"}, {"id": 1, "v": "b"}]
     diff = diff_rows(old, [{"id": 1, "v": "b"}], "id")
-    assert diff["unchanged"] and not diff["changed"]
+    assert diff["unchanged"]
+    assert not diff["changed"]
 
 
 # --- wiring ---------------------------------------------------------------
@@ -86,4 +88,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("diff_rows", "cell_changes", "summarize_diff"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

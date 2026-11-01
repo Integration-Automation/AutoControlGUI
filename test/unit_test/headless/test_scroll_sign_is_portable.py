@@ -24,7 +24,7 @@ import types
 import pytest
 
 
-@pytest.fixture()
+@pytest.fixture
 def x11_mouse(monkeypatch):
     """Import the X11 mouse backend with python-Xlib and the display faked."""
     monkeypatch.setattr(sys, "platform", "linux")

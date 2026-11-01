@@ -42,6 +42,22 @@ Linux (``xclip`` 或 ``xsel``)。若無可用後端會拋出 ``RuntimeError``。
 
    executor.execute_action(actions, step_callback=lambda a: print(a))
 
+``result_callback`` 會收到每一個成功回傳的指令的結果，包含區塊（``AC_loop``、
+``AC_try``、``AC_if_*``…）裡的指令——這些結果不在任何執行紀錄裡::
+
+   def seen(command, arguments, result, path):
+       # path：每一層 action 列表一個 (run, position, command)，
+       # 例如 步驟 2（AC_loop）> 第 3 次、步驟 1
+       ...
+
+   executor.execute_action(actions, result_callback=seen)
+
+掛鉤只在該次執行、呼叫它的執行緒上有效（執行中啟動的執行緒，例如 ``AC_parallel``
+的分支，不會被跟到）；失敗的指令與 ``dry_run`` 不會回報；callback 丟出例外時只記錄
+例外型別並忽略。有沒有掛鉤，執行的回傳值與 log 都相同。``result`` 就是紀錄裡的那個
+物件，請勿修改。要觀察多次執行，可用
+``je_auto_control.utils.executor.result_hook`` 的 ``with observe_results(seen):``。
+
 CLI::
 
    python -m je_auto_control.cli run script.json --dry-run
@@ -293,7 +309,7 @@ Action-JSON 指令：``AC_vlm_locate``、``AC_vlm_click``。GUI：
 =======================
 
 排程器、觸發器、熱鍵守護程序、REST API 與 GUI 手動回放的每一次執行
-都會被寫入 ``~/.je_auto_control/history.db`` （SQLite）。失敗時會自動
+都會被寫入 ``~/.je_auto_control/history.db``\ （SQLite）。失敗時會自動
 擷取螢幕截圖並附到該筆紀錄上::
 
    from je_auto_control import default_history_store
@@ -388,6 +404,46 @@ CLI ``run`` （含 ``--dry-run``）、頂層 ``run_from_description`` 與 ``Stat
 Python 啟用執行緒 context 繼承（free-threaded 預設）或呼叫端明確複製 context 時，
 新執行緒會繼承變數範圍；獨立 worker 應在自己的 ``execution_scope`` 中執行以隔離變數。
 
+在區塊內自行啟動的執行緒\ **不會**\ 加入這次執行：它看到的是行程層級的範圍，
+執行緒池的 worker 與 timer 也一樣。這在每一種直譯器上都成立——包含
+free-threaded Python 與 ``-X thread_inherit_context=1``\ （新執行緒一開始就拿到
+建立者 context 的複本）——因為綁定只在建立它的那條執行緒上有效。要在另一條
+執行緒上替這次執行做事，請把值傳過去（或在那裡自己開一個
+``execution_scope``\ ）。在綁定執行緒上的 coroutine 與 task 則共用這次執行。
+
+其他屬於呼叫執行緒的狀態也是同一條規則：請求所代表的 RBAC 呼叫者
+（``authorization_scope`` / ``current_authorization``）、``use_device`` 綁定的裝置、
+``heal_context`` 的標記，以及可停止執行的停止權杖。在它們裡面啟動的執行緒，在每一種
+直譯器上一開始都不帶這些狀態，所以在 free-threaded Python 上，一條在管理員的請求
+進行中才第一次啟動的排程器或 observer 執行緒，不會一直以那位管理員的身分執行。
+刻意把工作交給另一條執行緒的程式會把值帶過去、在那裡重新綁定，``AC_parallel`` 對
+呼叫者與停止權杖就是這樣做的。
+
+另外四種呼叫者的範圍是刻意選定的，不再是行程層級的範圍：
+
+* ``je_auto_control run --dry-run --var name=value`` 把變數放進該次 dry run
+  自己的範圍，與真正的 ``run --var`` 相同。
+* **observer 回呼**\ （``AC_observe_add`` 與 MCP 的 ``ac_observe_add``\ ）
+  在註冊它的那次執行結束很久之後才觸發，無法共用那次執行的範圍。回呼會保留
+  註冊當下可見變數的一份\ *快照*\ ，每次觸發都在模組 executor 上、以該快照
+  為初值的全新範圍內執行——不論是 observer 的執行緒觸發，還是別的執行裡的
+  ``AC_observe_poll`` 觸發。動作看得到註冊時那次執行設好的值（之後對那些
+  變數的修改看不到）；動作寫入的值不會進到行程範圍、不會進到呼叫 poll 的
+  那次執行，也不會留到下一次觸發。經 MCP 註冊的回呼一開始沒有任何變數，
+  因為工具呼叫的範圍是空的。要在多次觸發之間保留狀態，請存在範圍之外
+  （檔案、secrets vault）。
+* **由描述產生並執行的計畫**\ （``run_from_description``\ 、``AC_llm_run``\ ）
+  與\ **狀態機**\ （``run_state_machine``\ 、``AC_run_state_machine``\ ）
+  從 Python 呼叫時本身就是一次執行：各自拿到一個全新的範圍——狀態機所有
+  ``on_enter`` 動作共用它——呼叫返回時丟棄，也讀不到先前的呼叫留在行程範圍
+  裡的值。從動作清單裡呼叫，或在 ``execution_scope`` 區塊內呼叫時，它們是
+  該次執行的一個步驟，共用其變數；要傳值給它們就用這個方式::
+
+     with ac.execution_scope({"user": "alice"}):
+         ac.run_state_machine(spec)       # on_enter 的動作可以用 ${user}
+
+  ``AC_parallel`` 分支內的狀態機使用該分支的變數。
+
 
 ::
 
@@ -447,6 +503,95 @@ Action-JSON 指令：``AC_set_var``、``AC_get_var``、``AC_inc_var``、
 GUI：**Variables** 分頁 — 即時檢視 ``executor.variables``，可單筆設
 定、JSON 整批 seed、清空，反映 ``AC_set_var`` / ``AC_for_each`` 在執
 行期的變動。
+
+
+停止執行中的腳本
+================
+
+一次執行只要是「可停止的執行」（stoppable run），就能從外部停止。單純的
+``executor.execute_action(...)`` 行為不變：沒有停止權杖就不做任何檢查，也沒有
+東西能中斷它。
+
+::
+
+   import threading
+   import je_auto_control as ac
+
+   def job():
+       try:
+           ac.execute_action_with_vars(actions, {}, run_id="nightly")
+       except ac.ExecutionStopped as stopped:
+           print("stopped:", stopped.reason)
+
+   threading.Thread(target=job).start()
+   ...
+   ac.stop_execution("nightly", reason="operator")   # 立刻返回
+   ac.active_executions()   # [{"run_id": ..., "started_at": ..., "stopping": ...}]
+
+背後的 context manager 是 ``stoppable_run(run_id=None, token=None)``，它交出這次
+執行的 ``StopToken``（``stop()``、``stopped``、``run_id``）。從 action list（JSON
+檔、REST / socket / MCP 請求、排程工作）要用時，把要能停止的部分包進
+``AC_run_stoppable`` 區塊，再從同一個行程的任何其他入口停止它::
+
+   [["AC_run_stoppable", {"run_id": "nightly", "body": [
+       ["AC_loop", {"times": 1000, "body": [["AC_sleep", {"seconds": 5}]]}]
+   ]}]]
+
+   [["AC_stop_execution", {"run_id": "nightly", "reason": "operator"}]]
+   [["AC_list_executions"]]
+
+不帶 ``run_id`` 的 ``AC_stop_execution``（以及 ``stop_execution()``）會停止呼叫者
+自己以外的所有可停止執行。
+
+在 MCP 上，同樣的兩件事是工具 ``ac_stop_execution``\ （參數 ``run_id`` 與 ``reason``\ ，需要
+``drive_input``\ ，唯讀的 server 不提供）與 ``ac_list_executions``\ （唯讀）。沒有另外的
+「以可停止方式執行」工具： ``ac_execute_actions`` 與 ``ac_execute_action_file`` 接受
+任何 action list，所以由清單自己帶上面的 ``AC_run_stoppable`` 區塊。ChatOps 的
+``/run`` 本身就是可停止的執行，名稱為 ``chatops-<腳本>-<id>``\ ，所以上面每一種停止
+（包含不指名的停止）都停得到它，聊天指令 ``/stop [run-id]`` 也可以。ChatOps 指令的
+執行被停止時，回覆是 ``<command> stopped.``\ （原因放在括號裡），而不是回報失敗。
+
+停止時會發生的事：
+
+* **檢查點**：每個 action 之前、``AC_loop`` / ``AC_while_image`` /
+  ``AC_while_var`` / ``AC_for_each`` / ``AC_for_each_row`` 的每一輪（body 是空的
+  也算），以及 ``AC_sleep``、``AC_wait_image``、``AC_wait_pixel`` 與 ``AC_retry``
+  退避等待的內部——這些等待會立刻醒來。``AC_parallel`` 的分支跟著所屬的執行一起停。
+* **輪詢式的等待也會被叫醒**——它們在兩次探測之間睡在 ``run_control.pause`` 上，
+  在可停止的執行之外那就是單純的 ``time.sleep``：``AC_wait_window``、
+  ``AC_wait_text``、``AC_expect_poll``、``AC_assert_eventually``、smart wait
+  （``AC_wait_screen_stable``、``AC_wait_pixel_changes``、``AC_wait_region_idle``、
+  ``AC_wait_clipboard_change``、``AC_wait_image_gone``、``AC_wait_text_gone``、
+  ``AC_wait_color``、``AC_wait_window_title``、``AC_wait_window_closed``、
+  ``AC_wait_for_file``、``AC_wait_for_port``、``AC_wait_for_process``）、
+  ``AC_wait_actionable``、``AC_wait_until_app_idle``、``AC_wait_for_unlock``、
+  ``AC_wait_for_composition_commit``、``AC_android_wait_for_app`` /
+  ``AC_ios_wait_for_app``、``AC_handle_file_dialog`` 等對話框出現的等待、
+  ``AC_self_heal_click`` 的 ``verify`` 輪詢、``AC_run_state_machine`` 的 ``after``
+  計時，以及 ``AC_hold_key``、``AC_input_sequence``（``wait`` 步驟）與
+  ``AC_replay_timeline`` 的計時按住（離開時會放開它們按住的東西）。
+* **拋出** ``ExecutionStopped``（``AutoControlException`` 的子類別），在執行自己的
+  執行緒上。不論 ``raise_on_error`` 為何，它都不會被「記錄後繼續」，``AC_try`` /
+  ``AC_retry`` 也不會接住它：``catch`` 會被跳過。測試套件會整個停止，而不是把
+  該案例記成 error。
+* **沿途的** ``finally`` **都會執行**：``AC_type_keyboard``、``AC_hotkey``、
+  ``AC_with_modifiers`` 會放開它們按住的鍵，``AC_try`` 的 ``finally`` 分支會跑完。
+  第二次停止要求會連這段清理一起中斷，所以不會返回的清理無法讓執行停不下來。
+* **放開**\ 這次執行用 ``AC_press_keyboard_key`` / ``AC_press_mouse`` 按下、還沒放開
+  的按鍵與滑鼠鍵。
+* **具黏著性**：吞掉這個例外的指令只是把它延後到下一個檢查點。
+
+不會做的事：中斷已經進到後端的指令（一次影像搜尋、一次 OCR、一次 HTTP 請求、
+一次 shell 指令、wrapper 自己的 ``time.sleep``）。該指令返回後執行才結束。同樣不會
+被叫醒的還有：``AC_wait_for_focus_change``（單一次原生 UI Automation 等待）、聚焦
+視窗之後不到一秒的穩定等待，以及單一手勢內部的節奏停頓（帶 ``interval`` 的
+``AC_click_mouse``、擬人化的移動與打字、補間拖曳）。兩個進行中的執行不能使用同一個
+``run_id``。
+
+GUI：Script、Script Builder、LLM Planner、Record（回放）、Test Suites 與 ChatOps
+分頁都改在 GUI 執行緒之外執行，每個分頁一次只跑一個，並各有 **停止執行**
+（**停止回放**）動作。``Ctrl+4`` 與 Auto Click 分頁的 **Stop** 也會停止所有執行中
+的腳本。停止會立刻返回；腳本真正結束之前，分頁會顯示「正在停止...」。
 
 
 LLM 動作規劃器
@@ -521,6 +666,16 @@ Headless viewer（控制別人）::
    viewer.send_input({"action": "mouse_move", "x": 100, "y": 200})
    viewer.send_input({"action": "type", "text": "hello"})
    viewer.disconnect()
+
+``send_input`` 不會等 socket。事件先進一個有上限的佇列
+（``RemoteDesktopViewer.INPUT_QUEUE_LIMIT``，256 筆），由一條寫入執行緒送出，
+所以在 GUI 執行緒上呼叫也不會被一台不再讀取的 host 卡住。寫入端落後時，
+佇列裡較舊的 ``mouse_move`` 會讓位給新事件（只有最後的位置有意義）；按鍵、
+滑鼠按鈕、滾輪與文字事件絕不丟棄。寫入失敗，或 host 在
+``RemoteDesktopViewer.SEND_TIMEOUT_S``（10 秒）內沒有收下，會經由
+``on_error`` 回報；之後 viewer 視為未連線，``send_input`` 拋出
+``ConnectionError``。``viewer.input_backlog()`` 回傳
+``{"pending": ..., "dropped_moves": ...}``。``WebSocketDesktopViewer`` 相同。
 
 輸入訊息允許清單（host 派送前驗證）：
 

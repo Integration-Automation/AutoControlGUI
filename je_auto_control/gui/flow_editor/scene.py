@@ -33,7 +33,7 @@ class FlowNodeItem(QGraphicsRectItem):
         self._on_clicked = on_clicked
         self._set_default_brush()
         self.setPen(QPen(_NODE_BORDER, 1.5))
-        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setAcceptHoverEvents(True)
         self._build_label(position)
 

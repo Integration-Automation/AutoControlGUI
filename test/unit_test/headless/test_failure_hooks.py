@@ -71,7 +71,8 @@ def test_manager_fire_dispatches_to_every_backend(manager):
     manager.register(b)
     results = manager.fire(FailureReport(source="s", source_id="id"))
     assert len(results) == 2
-    assert a.calls == 1 and b.calls == 1
+    assert a.calls == 1
+    assert b.calls == 1
 
 
 def test_manager_swallows_backend_exceptions(manager):

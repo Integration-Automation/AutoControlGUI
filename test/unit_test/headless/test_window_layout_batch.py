@@ -19,7 +19,9 @@ def test_thirds_split_the_width():
     left = tile_rect(_SCREEN, "left_third")
     center = tile_rect(_SCREEN, "center_third")
     right = tile_rect(_SCREEN, "right_third")
-    assert left.x == 0 and center.x == 640 and right.x == 1280
+    assert left.x == 0
+    assert center.x == 640
+    assert right.x == 1280
     assert left.width == center.width == right.width == 640
 
 
@@ -67,7 +69,8 @@ def test_cascade_staggers_and_clamps():
 
 def test_cascade_default_size_is_60_percent():
     rect = cascade_rects(_SCREEN, 1)[0]
-    assert rect.width == 1152 and rect.height == 648    # 0.6 * 1920 / 1080
+    assert rect.width == 1152
+    assert rect.height == 648  # 0.6 * 1920 / 1080
 
 
 def test_available_slots_lists_known_names():
@@ -100,5 +103,6 @@ def test_executor_adapters_return_plans():
 def test_facade_exports():
     for attr in ("tile_rect", "grid_rects", "cascade_rects", "available_slots",
                  "WindowRect"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__
     assert isinstance(tile_rect(_SCREEN, "left"), WindowRect)

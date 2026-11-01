@@ -66,9 +66,9 @@ def test_ab_locate_rejects_empty_strategies():
 
 
 def test_ab_locate_rejects_blank_target_id():
+    strategies = {"a": image_locator("a.png")}
     with pytest.raises(ValueError):
-        ab_locate(target_id="   ",
-                   strategies={"a": image_locator("a.png")})
+        ab_locate(target_id="   ", strategies=strategies)
 
 
 def test_ab_locate_skips_recording_when_disabled(monkeypatch, temp_store):

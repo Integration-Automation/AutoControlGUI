@@ -402,8 +402,12 @@ class ConfigSyncTab(TranslatableMixin, QWidget):
         if self._status_key in {'running', 'cancelling'}:
             self._set_status('interrupted')
 
-    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802  # reason: Qt override
-        """Invalidate queued results and request stop before destroying the panel."""
+    def dispose(self) -> None:
+        """Invalidate queued results and request stop; the registry calls it before deleting the tab."""
         self.cancel()
         self._generation += 1
+
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802  # reason: Qt override
+        """Invalidate queued results and request stop before destroying the panel."""
+        self.dispose()
         super().closeEvent(event)

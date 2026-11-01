@@ -10,8 +10,10 @@ from je_auto_control.utils.contrast_map import (
 def test_grade_black_on_white_passes_all():
     grade = grade_contrast((0, 0, 0), (255, 255, 255))
     assert grade["ratio"] > 20.0  # 21:1 black/white
-    assert grade["aa"] is True and grade["aaa"] is True
-    assert grade["aa_large"] is True and grade["aaa_large"] is True
+    assert grade["aa"] is True
+    assert grade["aaa"] is True
+    assert grade["aa_large"] is True
+    assert grade["aaa_large"] is True
 
 
 def test_grade_low_contrast_fails_normal():
@@ -98,4 +100,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("grade_contrast", "dominant_pair", "region_contrast"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

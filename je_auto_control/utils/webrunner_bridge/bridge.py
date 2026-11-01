@@ -63,7 +63,7 @@ def _call(name: str, callable_obj: Callable[..., Any], params: dict) -> Any:
         return callable_obj(**params)
     except AutoControlException:
         raise
-    except Exception as error:  # noqa: BLE001 - any WebRunner / Selenium / Playwright error; wrapped, not swallowed
+    except Exception as error:  # noqa: BLE001  # reason: any WebRunner / Selenium / Playwright error; wrapped
         raise WebRunnerBridgeError(f"{name} failed: {error!r}") from error
 
 

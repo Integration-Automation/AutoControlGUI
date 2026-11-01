@@ -237,9 +237,6 @@ def generate_code(source: Any, target: str = "pytest",
     return {"code": _gen(actions, target=target, name=name, style=style)}
 
 
-# --- Visual regression + state machine -------------------------------------
-
-
 def generate_candidate_from_log(path: str, run_id: str, target: str = "pytest", style: str = "actions",
                                   output: Optional[str] = None, *,
                                   ctx: Optional[ToolCallContext] = None) -> dict[str, object]:

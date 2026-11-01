@@ -24,8 +24,10 @@ def test_percent_encoding_round_trip():
 def test_immutability_set_and_remove():
     base = Baggage({"a": "1"})
     extended = base.set("b", "2")
-    assert "b" not in base and extended.get("b") == "2"
-    assert base.remove("a").to_dict() == {} and base.get("a") == "1"
+    assert "b" not in base
+    assert extended.get("b") == "2"
+    assert base.remove("a").to_dict() == {}
+    assert base.get("a") == "1"
 
 
 def test_inject_and_extract_case_insensitive():
@@ -72,4 +74,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("Baggage", "parse_baggage", "format_baggage",
                  "inject_baggage", "extract_baggage"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

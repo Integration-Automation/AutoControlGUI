@@ -30,7 +30,8 @@ def test_flaky_script_detected(store):
     entry = report.entries[0]
     assert entry.key == "flaky.json"
     assert entry.flaky is True
-    assert entry.ok == 2 and entry.error == 2
+    assert entry.ok == 2
+    assert entry.error == 2
     assert entry.flips == 3
     assert entry.flip_rate == pytest.approx(1.0)
     assert report.flaky_count == 1

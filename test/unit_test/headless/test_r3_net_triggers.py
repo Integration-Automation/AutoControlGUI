@@ -98,9 +98,10 @@ def test_decode_header_unknown_charset_does_not_raise():
     from email.header import decode_header, make_header
     poisoned = "=?x-unknown-charset?B?SGVsbG8=?="
     # Prove the input genuinely triggers the LookupError path the old
-    # `except ValueError` could not catch.
+    # `except ValueError` could not catch: building the header looks the codec up.
+    decoded = decode_header(poisoned)
     with pytest.raises(LookupError):
-        str(make_header(decode_header(poisoned)))  # NOSONAR python:S2201  # reason: called for its raising side effect (proves the LookupError path)
+        make_header(decoded)
     # The helper must swallow it and fall back to the raw value.
     assert et._decode_header_value(poisoned) == poisoned
 

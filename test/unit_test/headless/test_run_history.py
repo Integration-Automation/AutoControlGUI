@@ -152,7 +152,8 @@ def test_scheduler_records_error(monkeypatch, store):
     finally:
         sched.stop(timeout=1.0)
     runs = store.list_runs()
-    assert runs and runs[0].status == STATUS_ERROR
+    assert runs
+    assert runs[0].status == STATUS_ERROR
     assert "fail" in (runs[0].error_text or "")
 
 
@@ -166,7 +167,8 @@ def test_executor_history_commands(monkeypatch, store):
     monkeypatch.setattr(action_executor, "default_history_store", store)
     store.start_run(SOURCE_SCHEDULER, "j", "p")
     rows = action_executor._history_list_as_dicts(limit=10)
-    assert rows and rows[0]["source_type"] == SOURCE_SCHEDULER
+    assert rows
+    assert rows[0]["source_type"] == SOURCE_SCHEDULER
 
 
 def test_finish_run_persists_artifact_path(tmp_path, store):

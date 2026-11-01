@@ -58,7 +58,8 @@ def test_a_real_workbook_keeps_formula_text_and_every_column(tmp_path):
                                  [{"a": "=1+1"}, {"a": "x", "b": "late key"}])
     sheet = openpyxl.load_workbook(path).active
     assert [cell.value for cell in sheet[1]] == ["a", "b"]
-    assert sheet["A2"].data_type == "s" and sheet["A2"].value == "=1+1"
+    assert sheet["A2"].data_type == "s"
+    assert sheet["A2"].value == "=1+1"
     assert sheet["B3"].value == "late key"
 
 
@@ -112,7 +113,8 @@ def test_icu_stray_brace_and_non_numeric_plural_are_value_errors():
 
 def test_xml_empty_elements_and_numbers_round_trip():
     text = dict_to_elements_tree({"a": {"b": None, "c": "1", "d": 2}})
-    assert "<b" in text and "<d>2</d>" in text
+    assert "<b" in text
+    assert "<d>2</d>" in text
 
 
 def _prop_schema(prop):

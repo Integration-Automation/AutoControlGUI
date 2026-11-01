@@ -27,14 +27,16 @@ def test_moved_is_a_change():
     # At x=50 the boxes no longer touch, and IoU 0 is no match.
     curr = [_el(30, 0, name="X")]
     delta = delta_index(prev, curr, iou_threshold=0.0)
-    assert delta["changed"] and "moved" in delta["changed"][0]["fields"]
+    assert delta["changed"]
+    assert "moved" in delta["changed"][0]["fields"]
 
 
 def test_summarize_renders_markers_and_drops_stable():
     prev = [_el(0, 0, name="A"), _el(0, 40, name="B")]
     curr = [_el(0, 0, name="A"), _el(0, 40, name="B2"), _el(0, 80, name="C")]
     text = summarize_delta(delta_index(prev, curr))
-    assert "+ " in text and "~ " in text  # C added, B changed
+    assert "+ " in text
+    assert "~ " in text  # C added, B changed
     assert '"A"' not in text              # stable A is omitted
 
 
@@ -50,7 +52,8 @@ def test_delta_observation_end_to_end():
     prev = [_el(0, 0, name="Old")]
     curr = [_el(0, 0, name="Old"), _el(0, 50, name="New")]
     text = delta_observation(prev, curr, interactive_only=False)
-    assert '+ [' in text and '"New"' in text
+    assert '+ [' in text
+    assert '"New"' in text
 
 
 # --- wiring ---------------------------------------------------------------
@@ -67,4 +70,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("delta_index", "delta_observation", "summarize_delta"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

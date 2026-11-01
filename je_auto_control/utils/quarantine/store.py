@@ -14,7 +14,7 @@ from __future__ import annotations
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Set, TypeVar
 
 from je_auto_control.utils.json_store.json_store import SharedJsonDict
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -80,7 +80,7 @@ class QuarantineStore:
     runner holding the default store wiped names the CLI or GUI had added.
     """
 
-    def __init__(self, path: Union[str, Path, None] = None) -> None:
+    def __init__(self, path: str | Path | None = None) -> None:
         self._path = Path(path) if path is not None else _default_path()
         self._state = SharedJsonDict(self._path)
 

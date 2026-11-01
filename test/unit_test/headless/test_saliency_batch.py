@@ -36,8 +36,10 @@ def test_salient_regions_in_bounds_and_ranked():
     regions = salient_regions(_structured())
     assert len(regions) >= 1
     for region in regions:
-        assert 0 <= region["x"] and region["x"] + region["width"] <= 320
-        assert 0 <= region["y"] and region["y"] + region["height"] <= 240
+        assert 0 <= region["x"]
+        assert region["x"] + region["width"] <= 320
+        assert 0 <= region["y"]
+        assert region["y"] + region["height"] <= 240
         assert 0.0 <= region["score"] <= 1.0
     scores = [r["score"] for r in regions]
     assert scores == sorted(scores, reverse=True)
@@ -46,7 +48,8 @@ def test_salient_regions_in_bounds_and_ranked():
 def test_most_salient_matches_top_region():
     img = _structured()
     top = most_salient(img)
-    assert top is not None and top == salient_regions(img)[0]
+    assert top is not None
+    assert top == salient_regions(img)[0]
 
 
 def test_high_threshold_yields_nothing():
@@ -60,7 +63,8 @@ def test_high_threshold_yields_nothing():
 def test_executor_pure_path():
     from je_auto_control.utils.executor.action_executor import _salient_regions
     out = _salient_regions(_structured())
-    assert isinstance(out["regions"], list) and len(out["regions"]) >= 1
+    assert isinstance(out["regions"], list)
+    assert len(out["regions"]) >= 1
 
 
 def test_wiring():
@@ -76,4 +80,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("saliency_map", "salient_regions", "most_salient"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

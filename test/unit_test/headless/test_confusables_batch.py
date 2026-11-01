@@ -42,7 +42,8 @@ def test_scripts_of_ignores_common():
 def test_executor_round_trip():
     rec = ac.execute_action([["AC_confusable_scan", {"text": _SPOOF}]])
     out = next(v for v in rec.values() if isinstance(v, dict))
-    assert out["skeleton"] == "paypal" and out["mixed_script"] is True
+    assert out["skeleton"] == "paypal"
+    assert out["mixed_script"] is True
     assert out["scripts"] == ["CYRILLIC", "LATIN"]
     rec2 = ac.execute_action([[
         "AC_confusable_compare", {"first": _SPOOF, "second": "paypal"}]])
@@ -63,4 +64,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("confusable_skeleton", "is_confusable", "detect_homoglyphs",
                  "is_mixed_script", "scripts_of"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

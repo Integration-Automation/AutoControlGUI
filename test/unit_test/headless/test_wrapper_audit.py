@@ -61,8 +61,9 @@ def test_a_missing_template_file_is_named(screen):
 
 @pytest.mark.parametrize("threshold", [-1, 85])
 def test_a_threshold_outside_zero_to_one_is_refused(screen, threshold):
+    template = screen.crop((130, 80, 170, 120))
     with pytest.raises(ImageNotFoundException, match="between 0 and 1"):
-        auto_control_image.locate_all_image(screen.crop((130, 80, 170, 120)), threshold)
+        auto_control_image.locate_all_image(template, threshold)
 
 
 # --- mouse / keyboard ---------------------------------------------------------

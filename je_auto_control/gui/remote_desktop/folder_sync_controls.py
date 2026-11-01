@@ -32,6 +32,11 @@ def toggle_folder_sync(owner: Any, checked: bool, factory: Callable[..., FolderS
         owner._sync_btn.setText(_t('rd_webrtc_sync_start'))
 
 
+def start_folder_sync(owner: Any, factory: Callable[..., FolderSyncEngine]) -> None:
+    """Start the panel's folder sync: authenticated viewer, chosen folder, retained baseline."""
+    _start(owner, factory)
+
+
 def _start(owner: Any, factory: Callable[..., FolderSyncEngine]) -> None:
     if owner._viewer is None or not owner._viewer.authenticated:
         QMessageBox.information(owner, 'WebRTC', _t('rd_webrtc_cad_not_connected'))

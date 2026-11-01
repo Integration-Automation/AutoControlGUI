@@ -496,7 +496,8 @@ def window_tools() -> List[MCPTool]:
         ),
         MCPTool(
             name="ac_window_minimize",
-            description="Minimise the first matching window.",
+            description=("Minimise the first matching window. Fails if the "
+                         "window is gone by the time the request is made."),
             input_schema=schema({
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
@@ -506,7 +507,8 @@ def window_tools() -> List[MCPTool]:
         ),
         MCPTool(
             name="ac_window_maximize",
-            description="Maximise the first matching window.",
+            description=("Maximise the first matching window. Fails if the "
+                         "window is gone or Windows refuses to activate it."),
             input_schema=schema({
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
@@ -517,7 +519,8 @@ def window_tools() -> List[MCPTool]:
         MCPTool(
             name="ac_window_restore",
             description=("Restore the first matching window to its previous "
-                         "size and position."),
+                         "size and position. Fails if the window is gone or "
+                         "Windows refuses to activate it."),
             input_schema=schema({
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
@@ -584,6 +587,35 @@ def system_tools() -> List[MCPTool]:
                                 required=["file_path"]),
             handler=h_runs.execute_action_file,
             annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_stop_execution",
+            description=("Ask a stoppable run to stop; returns {stopped: N} "
+                         "at once and the run ends at its next checkpoint "
+                         "(between actions, or inside a wait). A run is "
+                         "stoppable when its action list is wrapped in an "
+                         "AC_run_stoppable block (give it a run_id) or it "
+                         "was started with a run_id from Python or the GUI. "
+                         "Without run_id every stoppable run is asked. A "
+                         "second request for the same run also interrupts "
+                         "its cleanup."),
+            input_schema=schema({
+                "run_id": {"type": "string",
+                           "description": "The run to stop (see ac_list_executions)."},
+                "reason": {"type": "string",
+                           "description": "Stored on the run and shown in its stop error."},
+            }),
+            handler=h_runs.stop_execution,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_list_executions",
+            description=("Return the stoppable runs in progress as "
+                         "[{run_id, started_at, stopping}]; run_id is what "
+                         "ac_stop_execution takes."),
+            input_schema=schema({}),
+            handler=h_runs.list_executions,
+            annotations=READ_ONLY,
         ),
         MCPTool(
             name="ac_list_action_commands",
@@ -1144,6 +1176,20 @@ def ios_tools() -> List[MCPTool]:
             handler=h_exec.ios_dump_source,
             annotations=READ_ONLY,
         ),
+    ]
+
+
+def mobile_command_tools() -> List[MCPTool]:
+    """Android / iOS tools generated from the table the executor commands come from."""
+    from je_auto_control.wrapper.mobile_commands import mcp_tool_specs
+    return [
+        MCPTool(
+            name=spec["name"], description=spec["description"],
+            input_schema=schema(spec["properties"], spec["required"]),
+            handler=spec["handler"],
+            annotations=READ_ONLY if spec["read_only"] else DESTRUCTIVE,
+        )
+        for spec in mcp_tool_specs()
     ]
 
 
@@ -2168,7 +2214,7 @@ def smart_wait_tools() -> List[MCPTool]:
             description=("Scroll a 'target' (kind=image template path / text) "
                          "into view, wait until it is actionable, then click it "
                          "('button'). Returns {acted, coords, scrolls}."),
-            input_schema=schema({"target": {"type": "string"},
+            input_schema=schema({"target": {"type": "string", "format": "path-or-other"},
                                  "kind": {"type": "string"},
                                  "direction": {"type": "string"},
                                  "max_scrolls": {"type": "integer"},
@@ -2514,7 +2560,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             description=("Open a file with its OS-registered default app (or a "
                          "'verb' like print), or a URL through je_web_runner. "
                          "'target' is a path or URL. Returns {opened}."),
-            input_schema=schema({"target": {"type": "string"},
+            input_schema=schema({"target": {"type": "string", "format": "path-or-other"},
                                  "verb": {"type": "string"}},
                                 required=["target"]),
             handler=h_system.open_path,
@@ -2525,7 +2571,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             description=("Classify how a file path / URL would be opened without "
                          "opening it (pure): {kind, target, backend, verb} "
                          "(+scheme for URLs). Rejects non-allow-listed schemes."),
-            input_schema=schema({"target": {"type": "string"},
+            input_schema=schema({"target": {"type": "string", "format": "path-or-other"},
                                  "verb": {"type": "string"}},
                                 required=["target"]),
             handler=h_system.plan_open,
@@ -2588,7 +2634,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             description=("Which application is registered to open a file type. "
                          "'target' is a path / .ext / bare ext. Returns {ext, "
                          "command, exe, friendly, content_type} (Windows)."),
-            input_schema=schema({"target": {"type": "string"}},
+            input_schema=schema({"target": {"type": "string", "format": "path-or-other"}},
                                 required=["target"]),
             handler=h_system.file_association,
             annotations=READ_ONLY,
@@ -5780,6 +5826,60 @@ def credential_lease_tools() -> List[MCPTool]:
     ]
 
 
+def user_admin_tools() -> List[MCPTool]:
+    _ID = {"user_id": {"type": "string"}}
+    _ROLE = {"type": "string", "enum": ["viewer", "operator", "admin"]}
+    return [
+        MCPTool(
+            name="ac_user_add",
+            description=("RBAC: add a user with a 'role' (viewer / operator / "
+                         "admin). Returns {user_id, display_name, role, tags, "
+                         "token}; the token is shown this once and only its "
+                         "hash is stored. Needs the manage_users capability."),
+            input_schema=schema({**_ID, "role": _ROLE,
+                                 "display_name": {"type": "string"},
+                                 "tags": {"type": "array", "items": {"type": "string"}}},
+                                ["user_id"]),
+            handler=h_ops.user_add,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_user_remove",
+            description=("RBAC: remove a user; their token stops working and "
+                         "work they scheduled no longer runs. The last admin "
+                         "cannot be removed. Returns {user_id, removed}."),
+            input_schema=schema(_ID, ["user_id"]),
+            handler=h_ops.user_remove,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_user_set_role",
+            description=("RBAC: change a user's role; it applies to their next "
+                         "request and to work they already scheduled. The last "
+                         "admin cannot be demoted. Returns {user_id, role}."),
+            input_schema=schema({**_ID, "role": _ROLE}, ["user_id", "role"]),
+            handler=h_ops.user_set_role,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_user_rotate_token",
+            description=("RBAC: replace a user's token; the old one stops "
+                         "working. Returns {user_id, token}, shown this once."),
+            input_schema=schema(_ID, ["user_id"]),
+            handler=h_ops.user_rotate_token,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_user_list",
+            description=("RBAC: list users as {users:[{user_id, display_name, "
+                         "role, tags}]} - no tokens. Needs manage_users."),
+            input_schema=schema({}),
+            handler=h_ops.user_list,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def egress_tools() -> List[MCPTool]:
     _LISTS = {"allow": {"type": "array", "items": {"type": "string"}},
               "deny": {"type": "array", "items": {"type": "string"}}}
@@ -7935,7 +8035,7 @@ def unattended_tools() -> List[MCPTool]:
                          "it, and confirm (default Enter). Returns "
                          "{handled, title}."),
             input_schema=schema({
-                "path": {"type": "string"},
+                "path": {"type": "string", "format": "path-or-other"},
                 "action": {"type": "string"},
                 "window_title": {"type": "string"},
                 "timeout_s": {"type": "number"},
@@ -9220,7 +9320,8 @@ ALL_FACTORIES = (
     ocr_structure_tools,
     smart_wait_tools, cost_telemetry_tools, failure_hook_tools,
     computer_use_tools, dag_tools, presence_tools, chatops_tools,
-    redaction_tools, android_widget_tools, ios_tools, webrunner_tools,
+    redaction_tools, android_widget_tools, ios_tools, mobile_command_tools,
+    webrunner_tools,
     scheduler_tools, trigger_tools, hotkey_tools, watchdog_tools,
     unattended_tools, work_queue_tools,
     synthetic_data_tools, mcp_registry_tools, test_selection_tools,
@@ -9246,7 +9347,7 @@ ALL_FACTORIES = (
     observation_tools, action_grounding_tools, agent_replay_tools,
     element_diff_tools, element_scoring_tools, barcode_tools, plugin_sdk_tools,
     governance_tools,
-    credential_lease_tools, egress_tools, approval_testing_tools,
+    credential_lease_tools, egress_tools, user_admin_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     url_canon_tools,

@@ -59,7 +59,8 @@ def _vars_program():
 def test_debugger_step_and_variables():
     dbg = FlowDebugger(_vars_program())
     step = dbg.step()
-    assert step["index"] == 0 and step["command"] == "AC_set_var"
+    assert step["index"] == 0
+    assert step["command"] == "AC_set_var"
     assert dbg.variables()["a"] == 1
     dbg.run_to_end()
     assert dbg.finished
@@ -70,7 +71,8 @@ def test_debugger_breakpoint_pauses_then_resumes():
     dbg = FlowDebugger(_vars_program(), breakpoints=[2])
     first = dbg.continue_()
     assert [s["index"] for s in first] == [0, 1]   # paused before index 2
-    assert dbg.index == 2 and not dbg.finished
+    assert dbg.index == 2
+    assert not dbg.finished
     rest = dbg.continue_()
     assert [s["index"] for s in rest] == [2]
     assert dbg.finished
@@ -80,7 +82,8 @@ def test_debugger_reset():
     dbg = FlowDebugger(_vars_program())
     dbg.run_to_end()
     dbg.reset()
-    assert dbg.index == 0 and dbg.variables() == {}
+    assert dbg.index == 0
+    assert dbg.variables() == {}
 
 
 def test_trace_actions_dry_run_and_real():

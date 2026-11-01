@@ -25,7 +25,8 @@ def _jpeg() -> bytes:
 def test_issue_and_consume_round_trip():
     store = ResumeTokenStore(ttl=60.0)
     token = store.issue(permission="view_only")
-    assert isinstance(token, str) and len(token) > 16
+    assert isinstance(token, str)
+    assert len(token) > 16
     assert store.consume(token) == "view_only"
     # Second consume returns None — single-use semantics.
     assert store.consume(token) is None

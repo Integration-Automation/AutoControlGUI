@@ -142,10 +142,27 @@ ACL 預設為 ``"deny"``\ ，所以 viewer 無法 claim 操作員未核准的裝
 ACL 檔案完整性（HMAC）
 ----------------------
 
-ACL 旁附一個 ``usb_acl.json.sig`` sidecar HMAC-SHA256 簽章。載入時對
-檔案位元組驗證；不符就 **fail-closed**\ （default-deny，
-``UsbAcl.integrity_ok`` 回 ``False``\ ）。這擋住偷偷改寫 JSON 想給自己
-授權的 process。
+ACL 由 HMAC-SHA256 簽章保護，簽章就存在檔案本身的 ``"signature"`` 欄位。它涵蓋
+其餘所有欄位的正規化形式，所以重新縮排不會影響，改任何一個值就會失效。載入時不符就
+**fail-closed**\ （default-deny，``UsbAcl.integrity_ok`` 回 ``False``\ ）。這擋住
+偷偷改寫 JSON 想給自己授權的 process。
+
+fail-closed 的意思是 ``decide()`` 對**每一個**裝置都回 ``"deny"``：即使這個實例是用
+``default_policy="allow"`` 建立的、即使它先前從完好的檔案讀到過允許規則也一樣
+（以前 allow-by-default 的 ACL 會一邊回報 ``integrity_ok False`` 一邊繼續放行）。
+這段期間 ``default_policy`` 也回報 ``"deny"``。等檔案再次讀到完好的內容，或操作者
+存入一次變更（會重新簽章），才恢復正常判斷。
+
+簽章以前是寫在資料之後的 sidecar ``usb_acl.json.sig``，所以 GUI 與 host session
+（或兩個行程）可能讀到新資料配舊簽章，於是在沒有人動過的檔案上退回全部拒絕。現在
+資料與簽章是同一個檔案、以一次 rename 取代。變更（新增／移除／匯入／設定預設值）
+另外會在重新讀取、修改、寫入的期間持有 ``usb_acl.json.lock``，所以兩個寫入者不會再
+互相蓋掉對方的規則；十秒內拿不到鎖時，變更會丟出 ``UsbAclBusyError`` 且不做任何修改
+（行程死掉留下的鎖會在三十秒後被接手）。
+
+- 舊的兩檔案格式仍可載入，下次儲存時改寫成單一檔案（並移除 ``.sig``）。**比這一版
+  舊的版本讀不懂新檔案**：它會看到有金鑰卻沒有 sidecar，於是全部拒絕。手動編輯檔案
+  現在會讓它失效，除非同時重算簽章——請改用 GUI、``AC_usb_acl_*`` 指令或 ``UsbAcl``。
 
 - 預設簽章金鑰是隨機 32-byte 檔 ``usb_acl.json.key``\ （POSIX 上 mode
   ``0600``\ ），首次儲存時建立。
@@ -221,10 +238,12 @@ Open + transfer
 錯誤：
 
 - ``UsbClientTimeout`` — host 超過 ``reply_timeout_s``\ （預設 10 秒）
-  沒回。檢查網路 / host 程序。
+  沒回；傳輸則是超過它自己的 ``timeout_ms`` 加上 ``reply_timeout_s``\ 。
+  檢查網路 / host 程序。
 - ``UsbClientError`` — host 回 ``{ok: false, error: ...}``\ 。最常見
   情境是 *denied by ACL policy* — 去看 host 端的 prompt 對話框或 ACL
-  規則。
+  規則。*usb passthrough disabled* 與 *no usb session on host* 表示
+  host 沒有啟用（或沒有後端）；會立即回報，不再等到逾時。
 - ``UsbClientClosed`` — client 或其 handle 已 shutdown。
 - ``UsbClientDesynchronized`` — 先前有請求逾時，而 host 不帶回請求
   編號（版本早於此欄位），遲到的回覆與下一個回覆無法分辨。此時不會

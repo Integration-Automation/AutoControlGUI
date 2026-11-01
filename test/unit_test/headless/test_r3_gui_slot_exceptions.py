@@ -9,7 +9,9 @@ exceptions instead of letting them escape into the Qt event loop.
   non-UTF-8 file escaped the slot (finding 10).
 
 Each slot is exercised on a lightweight stub ``self`` with the callee
-monkeypatched to fail, so no full Qt widget tree is constructed.
+monkeypatched to fail, so no full Qt widget tree is constructed. The slots that
+execute a script run it off the GUI thread now; those three use a real (small)
+widget and wait for the outcome to be delivered.
 """
 import os
 import types
@@ -19,10 +21,16 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 
+from headless._qt_settle import settle  # noqa: E402
 from je_auto_control.utils.exception.exceptions import (  # noqa: E402
     AutoControlExecuteActionException, AutoControlHTMLException,
     AutoControlMouseException,
 )
+
+
+def _app():
+    from PySide6.QtWidgets import QApplication
+    return QApplication.instance() or QApplication([])
 
 
 def _raiser(exc):
@@ -43,11 +51,11 @@ def test_builder_run_slot_surfaces_autocontrol_exception(monkeypatch):
         _raiser(AutoControlExecuteActionException("unregistered command")),
     )
 
-    tree = types.SimpleNamespace(root_steps=lambda: [bt.Step(command="AC_ok")])
-    result = types.SimpleNamespace(setPlainText=lambda _s: None)
-    stub = types.SimpleNamespace(_tree=tree, _result=result)
-
-    bt.ScriptBuilderTab._on_run(stub)  # must not raise
+    _app()
+    tab = bt.ScriptBuilderTab()
+    tab._tree.add_step(bt.Step(command="AC_sleep", params={"seconds": 0}))
+    tab._on_run()  # must not raise
+    assert settle(tab._runs, "task")
     assert warned.get("hit")
 
 
@@ -63,9 +71,12 @@ def test_playback_record_slot_surfaces_autocontrol_exception(monkeypatch):
         rt, "execute_action",
         _raiser(AutoControlExecuteActionException("boom")),
     )
-    stub = types.SimpleNamespace(_record_data=[["AC_ok"]])
-
-    mw.AutoControlGUIWidget._playback_record(stub)  # must not raise
+    from headless._tab_hosts import RecordHost
+    assert mw.AutoControlGUIWidget._playback_record is RecordHost._playback_record
+    _app()
+    host = RecordHost([["AC_ok"]])
+    host._playback_record()  # must not raise
+    assert settle(host._playback_runs, "task")
     assert warned.get("hit")
 
 
@@ -78,12 +89,14 @@ def test_execute_script_slot_surfaces_autocontrol_exception(monkeypatch):
         st, "execute_action",
         _raiser(AutoControlExecuteActionException("boom")),
     )
-    editor = types.SimpleNamespace(text=lambda: "some.json")
-    result = types.SimpleNamespace(setText=lambda s: captured.__setitem__("t", s))
-    stub = types.SimpleNamespace(script_path_input=editor,
-                                 script_result_text=result)
-
-    mw.AutoControlGUIWidget._execute_script(stub)  # must not raise
+    from headless._tab_hosts import ScriptHost
+    assert mw.AutoControlGUIWidget._execute_script is ScriptHost._execute_script
+    _app()
+    host = ScriptHost()
+    host.script_path_input.setText("some.json")
+    host._execute_script()  # must not raise
+    assert settle(host._script_runs, "task")
+    captured["t"] = host.script_result_text.toPlainText()
     assert captured.get("t", "").startswith("Error")
 
 

@@ -43,7 +43,8 @@ def test_match_auto_finds_both_occurrences():
                          floor=0.5)
     assert len(matches) == 2
     xs = sorted(m.x for m in matches)
-    assert abs(xs[0] - 30) <= 1 and abs(xs[1] - 150) <= 1
+    assert abs(xs[0] - 30) <= 1
+    assert abs(xs[1] - 150) <= 1
 
 
 def test_floor_prevents_noise_on_blank():
@@ -73,4 +74,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("match_auto", "auto_threshold"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

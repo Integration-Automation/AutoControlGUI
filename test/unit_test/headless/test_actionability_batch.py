@@ -34,13 +34,15 @@ def test_becomes_actionable_once_visible_and_stable():
         return (10, 10, 40, 20) if calls["n"] >= 2 else None
 
     report = wait_actionable(bbox, config=_config())
-    assert report.actionable is True and report.reason == "actionable"
+    assert report.actionable is True
+    assert report.reason == "actionable"
     assert report.point == [30, 20]
 
 
 def test_never_visible_times_out():
     report = wait_actionable(lambda: None, config=_config())
-    assert report.actionable is False and report.reason == "not visible"
+    assert report.actionable is False
+    assert report.reason == "not visible"
 
 
 def test_moving_target_is_not_stable():
@@ -51,19 +53,22 @@ def test_moving_target_is_not_stable():
         return (counter["n"], 10, 40, 20)        # x shifts every poll
 
     report = wait_actionable(moving, config=_config())
-    assert report.actionable is False and report.reason == "not stable"
+    assert report.actionable is False
+    assert report.reason == "not stable"
 
 
 def test_disabled_blocks():
     report = wait_actionable(lambda: (0, 0, 10, 10), enabled_probe=lambda: False,
                              config=_config())
-    assert report.actionable is False and report.reason == "disabled"
+    assert report.actionable is False
+    assert report.reason == "disabled"
 
 
 def test_occluded_blocks():
     report = wait_actionable(lambda: (0, 0, 10, 10), hit_tester=lambda point: False,
                              config=_config())
-    assert report.actionable is False and report.reason == "occluded"
+    assert report.actionable is False
+    assert report.reason == "occluded"
 
 
 def test_region_sampler_must_settle():
@@ -75,20 +80,23 @@ def test_region_sampler_must_settle():
 
     report = wait_actionable(lambda: (0, 0, 10, 10), region_sampler=churning,
                              config=_config())
-    assert report.actionable is False and report.reason == "not stable"
+    assert report.actionable is False
+    assert report.reason == "not stable"
 
 
 def test_act_when_ready_calls_action_with_center():
     clicked = []
     result = act_when_ready(lambda point: clicked.append(point) or "ok",
                             lambda: (10, 10, 40, 20), config=_config())
-    assert result == "ok" and clicked == [[30, 20]]
+    assert result == "ok"
+    assert clicked == [[30, 20]]
 
 
 def test_act_when_ready_raises_on_timeout():
     from je_auto_control.utils.exception.exceptions import AutoControlActionException
+    config = _config()
     with pytest.raises(AutoControlActionException):
-        act_when_ready(lambda point: "never", lambda: None, config=_config())
+        act_when_ready(lambda point: "never", lambda: None, config=config)
 
 
 # --- wiring ---------------------------------------------------------------
@@ -106,4 +114,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("wait_actionable", "act_when_ready", "ActionabilityReport",
                  "GateConfig"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

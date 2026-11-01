@@ -7,5 +7,11 @@ from je_auto_control.utils.codegen.candidate_models import CandidateGenerationEr
 from je_auto_control.utils.codegen.journal_import import generate_candidate_from_log
 from je_auto_control.utils.codegen.candidate_archive import write_candidate_archive
 
+from je_auto_control.utils.codegen.robot_check import (
+    RobotStructureError,
+    check_robot_structure,
+)
+
 __all__ = ["generate_code", "generate_code_file", "generate_candidate_from_log",
-           "CandidateGenerationError", "CandidateScript", "write_candidate_archive"]
+           "CandidateGenerationError", "CandidateScript", "write_candidate_archive",
+           "RobotStructureError", "check_robot_structure"]

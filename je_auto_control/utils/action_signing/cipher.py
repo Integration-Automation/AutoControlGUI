@@ -14,7 +14,7 @@ import base64
 import hashlib
 import os
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 from je_auto_control.utils.action_signing._key_file import load_or_create_key_file
 from je_auto_control.utils.exception.exceptions import (
@@ -35,7 +35,7 @@ _FERNET_KEY_LENGTH = 44  # urlsafe-base64 of 32 bytes
 # scrypt cost: 2**15 * 8 * 128 bytes = 32 MiB, about 0.1 s per derivation.
 _SCRYPT_N, _SCRYPT_R, _SCRYPT_P = 2 ** 15, 8, 1
 
-KeyType = Optional[Union[bytes, str]]
+KeyType = Optional[bytes | str]
 
 
 def _fernet_types() -> tuple:
@@ -63,7 +63,7 @@ def _persistent_key() -> bytes:
         _default_key_path(), fernet_cls.generate_key, _FERNET_KEY_LENGTH)
 
 
-def _passphrase(key: Union[bytes, str]) -> bytes:
+def _passphrase(key: bytes | str) -> bytes:
     raw = key if isinstance(key, bytes) else str(key).encode("utf-8")
     if not raw:
         raise AutoControlException("an empty passphrase encrypts nothing")
@@ -105,7 +105,7 @@ def _decrypt(blob: bytes, key: KeyType) -> bytes:
     return fernet_cls(_legacy_key(passphrase)).decrypt(blob)
 
 
-def encrypt_action_file(path: Union[str, Path], key: KeyType = None) -> str:
+def encrypt_action_file(path: str | Path, key: KeyType = None) -> str:
     """Encrypt the file at ``path`` to ``<path>.enc``; return the enc path."""
     target = Path(path)
     token = _encrypt(target.read_bytes(), key)
@@ -115,8 +115,8 @@ def encrypt_action_file(path: Union[str, Path], key: KeyType = None) -> str:
     return str(enc_path)
 
 
-def decrypt_action_file(enc_path: Union[str, Path], key: KeyType = None,
-                        output_path: Optional[Union[str, Path]] = None) -> str:
+def decrypt_action_file(enc_path: str | Path, key: KeyType = None,
+                        output_path: Optional[str | Path] = None) -> str:
     """Decrypt ``enc_path`` to a plaintext file; return its path.
 
     ``output_path`` defaults to ``enc_path`` with the ``.enc`` suffix
@@ -136,7 +136,7 @@ def decrypt_action_file(enc_path: Union[str, Path], key: KeyType = None,
     return str(out)
 
 
-def _output_path(enc: Path, output_path: Optional[Union[str, Path]]) -> Path:
+def _output_path(enc: Path, output_path: Optional[str | Path]) -> Path:
     if output_path is not None:
         return Path(output_path)
     if enc.name.endswith(_ENC_SUFFIX):

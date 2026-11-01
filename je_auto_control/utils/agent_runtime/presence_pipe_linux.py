@@ -80,8 +80,9 @@ def _listener(value: Any) -> Any:
     peer = _closed_object(value, _PEER_FIELDS, "listener_process")
     if any(not isinstance(peer[name], str) or not peer[name] for name in _PEER_NAMESPACES):
         raise AgentTaskError("Linux presence endpoint namespaces are invalid")
-    return LinuxPeerIdentity(*(_whole(peer[name], name) for name in _PEER_NUMBERS),
-                             *(peer[name] for name in _PEER_NAMESPACES))
+    pid, uid, gid, birth = (_whole(peer[name], name) for name in _PEER_NUMBERS)
+    user_namespace, pid_namespace = (str(peer[name]) for name in _PEER_NAMESPACES)
+    return LinuxPeerIdentity(pid, uid, gid, birth, user_namespace, pid_namespace)
 
 
 def _wait_readable(descriptor: int, cancel: threading.Event) -> None:

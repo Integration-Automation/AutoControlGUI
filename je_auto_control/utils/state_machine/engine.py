@@ -6,6 +6,7 @@ from contextlib import nullcontext
 from typing import Any, Callable, Dict, Mapping, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.executor.run_control import pause
 from je_auto_control.utils.script_vars.execution import current_scope, execution_scope
 
 
@@ -32,6 +33,14 @@ class StateMachine:
     (a template path, or ``{"image": ..., "detect_threshold": ...}``) and
     ``predicate`` (a callable). Any other ``if_*`` key is an error rather
     than a guard that silently always passes.
+
+    Variables: one :meth:`run` is one run. Started from Python it gets a
+    fresh variable scope that every ``on_enter`` action shares and that is
+    dropped when the machine stops; started from an action list
+    (``AC_run_state_machine``) it uses the scope of the list that called it,
+    as any nested step does. The default runner executes on the executor
+    running that list, so inside an ``AC_parallel`` branch the machine sees
+    the branch's variables.
     """
 
     def __init__(self, spec: Mapping[str, Any],
@@ -121,7 +130,7 @@ class StateMachine:
                 raise StateMachineError(
                     f"no transition fired in state {state_name!r}",
                 )
-            time.sleep(min(wait_s, _TIMER_POLL_S))
+            pause(min(wait_s, _TIMER_POLL_S), time.sleep)
             self._check_timeout(started_at, state_name)
 
     def _target(self, trans: Mapping[str, Any], state_name: str) -> str:
@@ -156,10 +165,14 @@ def _validate_spec(spec: Mapping[str, Any]) -> None:
 
 
 def _default_execute_action(action: Any) -> Any:
-    """Lazy bridge accepting a single action or a nested action batch."""
-    from je_auto_control.utils.executor.action_executor import execute_action
+    """Lazy bridge accepting a single action or a nested action batch.
+
+    It runs on the executor running the calling list (a parallel branch has
+    its own), else the module's, so the actions see that list's variables.
+    """
+    from je_auto_control.utils.executor.action_executor import _running_executor
     batch = isinstance(action, list) and (not action or isinstance(action[0], list))
-    return execute_action(action if batch else [action])
+    return _running_executor().execute_action(action if batch else [action])
 
 
 def _after_ok(transition: Mapping[str, Any], _context: Mapping[str, Any],

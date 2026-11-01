@@ -1906,6 +1906,54 @@ if _TYPE_CHECKING:
         windows_for_process_id,
     )
 
+
+# Kept from the 1.0.x line: mobile devices, Wayland recording and shortcuts, input
+# authorisation records, stoppable runs, RBAC user management, signing and Robot checks.
+if _TYPE_CHECKING:
+    from je_auto_control.wrapper.device_context import (
+        AlertNotPresentError, AppState, DeviceCancelledError,
+        DeviceCapability, DeviceClosedError, DeviceContext,
+        DeviceError, DevicePermissionError, DeviceSession,
+        DeviceSetupReport, DeviceTimeoutError, DeviceUnavailableError,
+        DeviceUnsupportedError, Drag, LongPress,
+        Pinch, Swipe, Tap,
+        open_device, use_device,
+    )
+    from je_auto_control.utils.exception.exceptions import (
+        AutoControlSignatureException,
+    )
+    from je_auto_control.wrapper.device_frame import (
+        DeviceFrame,
+    )
+    from je_auto_control.utils.executor.run_control import (
+        ExecutionStopped, StopToken, active_executions,
+        stop_execution, stoppable_run,
+    )
+    from je_auto_control.linux_wayland.input_events import (
+        InputDevice, InputEvent, InputPermissionError,
+        InputRecordingError, InputStepLog, PhysicalRecorder,
+        list_input_devices,
+    )
+    from je_auto_control.wrapper.mobile_commands import (
+        MOBILE_COMMANDS, MobileCommand, device_setup_report,
+        mobile_capability_matrix, run_mobile_command,
+    )
+    from je_auto_control.wrapper.mobile_extensions import (
+        MobileExtension, accept_alert, app_state,
+        dismiss_alert, launch_app, mobile_extension,
+        register_mobile_extension, stop_app, wait_for_app,
+    )
+    from je_auto_control.utils.codegen.robot_check import (
+        RobotStructureError, check_robot_structure,
+    )
+    from je_auto_control.linux_wayland.global_shortcuts import (
+        ShortcutPermissionError, ShortcutUnavailable, StopShortcutSession,
+    )
+    from je_auto_control.utils.rbac.admin import (
+        add_user as rbac_add_user, list_users as rbac_list_users, remove_user as rbac_remove_user,
+        rotate_user_token as rbac_rotate_user_token, set_user_role as rbac_set_user_role,
+    )
+
 if _sys.platform in ("win32", "cygwin", "msys"):
     if _TYPE_CHECKING:
         from je_auto_control.windows.window import windows_window_manage
@@ -2655,6 +2703,22 @@ __all__ = [
     "callback_executor", "package_manager", "ShellManager", "default_shell_manager",
     "RecordingThread", "send_key_event_to_window", "send_mouse_event_to_window", "windows_window_manage",
     "ScreenRecorder", "get_pixel",
+    "AlertNotPresentError", "AppState", "AutoControlSignatureException", "DeviceCancelledError",
+    "DeviceCapability", "DeviceClosedError",
+    "DeviceContext", "DeviceError", "DeviceFrame", "DevicePermissionError",
+    "DeviceSession", "DeviceSetupReport", "DeviceTimeoutError", "DeviceUnavailableError",
+    "DeviceUnsupportedError", "Drag", "ExecutionStopped", "InputDevice",
+    "InputEvent", "InputPermissionError", "InputRecordingError", "InputStepLog",
+    "LongPress", "MOBILE_COMMANDS", "MobileCommand", "MobileExtension",
+    "PhysicalRecorder", "Pinch", "RobotStructureError", "ShortcutPermissionError",
+    "ShortcutUnavailable", "StopShortcutSession", "StopToken", "Swipe",
+    "Tap", "accept_alert", "active_executions",
+    "app_state", "check_robot_structure", "device_setup_report", "dismiss_alert",
+    "launch_app", "list_input_devices", "mobile_capability_matrix", "mobile_extension",
+    "open_device", "rbac_add_user", "rbac_list_users", "rbac_remove_user",
+    "rbac_rotate_user_token", "rbac_set_user_role", "register_mobile_extension", "run_mobile_command",
+    "stop_app", "stop_execution", "stoppable_run", "use_device",
+    "wait_for_app",
     "start_autocontrol_gui"
 ]
 

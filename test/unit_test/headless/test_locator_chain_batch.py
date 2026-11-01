@@ -20,7 +20,8 @@ def test_within_clips_to_region():
 
 def test_filter_has_text_case_insensitive():
     deletes = from_boxes(_scene()).filter(has_text="delete")
-    assert len(deletes) == 2 and all(b["text"] == "Delete" for b in deletes)
+    assert len(deletes) == 2
+    assert all(b["text"] == "Delete" for b in deletes)
 
 
 def test_chained_within_filter_nth():
@@ -69,9 +70,11 @@ def test_executor_applies_op_chain():
         {"op": "filter", "has_text": "Delete"},
         {"op": "reading"},
         {"op": "nth", "index": 0}])
-    assert result["count"] == 1 and result["center"] == [80, 20]
+    assert result["count"] == 1
+    assert result["center"] == [80, 20]
 
 
 def test_facade_exports():
     for attr in ("Candidates", "from_boxes"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

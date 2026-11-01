@@ -254,17 +254,13 @@ def test_rapid_start_stop_never_leaks_a_thread_exception(monkeypatch):
     the owning thread in start(), before publishing the socket.
     """
     caught: list = []
-    original = threading.excepthook
-    threading.excepthook = lambda args: caught.append(
-        (args.thread.name, type(args.exc_value).__name__))
-    try:
-        for _ in range(80):
-            server = UsbIpServer(FakeUrbBackend(devices=[_device()]),
-                                 host="127.0.0.1", port=0)
-            server.start()
-            server.stop(timeout=0.2)
-    finally:
-        threading.excepthook = original
+    monkeypatch.setattr(threading, "excepthook", lambda args: caught.append(
+        (args.thread.name, type(args.exc_value).__name__)))
+    for _ in range(80):
+        server = UsbIpServer(FakeUrbBackend(devices=[_device()]),
+                             host="127.0.0.1", port=0)
+        server.start()
+        server.stop(timeout=0.2)
 
     assert caught == [], f"accept thread raised: {caught[:3]}"
 

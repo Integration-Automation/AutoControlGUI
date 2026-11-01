@@ -52,7 +52,8 @@ def test_an_unknown_locale_is_an_error_not_english():
 def test_a_pattern_icu_rejects_raises(pattern):
     with pytest.raises(MessageFormatError) as caught:
         format_message(pattern, {"n": 1, "g": "male"})
-    assert isinstance(caught.value, AutoControlException) and isinstance(caught.value, ValueError)
+    assert isinstance(caught.value, AutoControlException)
+    assert isinstance(caught.value, ValueError)
 
 
 def test_exact_selectors_compare_as_numbers():

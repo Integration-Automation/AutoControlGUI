@@ -15,6 +15,10 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlException, ImageNotFoundException,
 )
 from je_auto_control.utils.executor.flags import as_bool
+from je_auto_control.utils.executor.run_control import (
+    ExecutionStopped, bound_stop_token, checkpoint, current_stop_token, pause,
+    shielded, stoppable_run,
+)
 from je_auto_control.utils.executor.flow_data_commands import (
     exec_assert_db, exec_assert_duration, exec_assert_var, exec_http_to_var,
     exec_now_to_var, exec_ocr_to_var, exec_otp_to_var, exec_pdf_to_var,
@@ -92,8 +96,10 @@ def _run_loop_body(executor: Any, body: Optional[list]) -> None:
     A loop with an empty ``body`` is valid (it does nothing each pass) and
     must not reach ``execute_action``, which raises on an empty action list.
     ``AC_break`` / ``AC_continue`` raised from within the body still
-    propagate to the caller's loop handler.
+    propagate to the caller's loop handler. A stop requested for the run ends
+    the loop here even when the body is empty.
     """
+    checkpoint()
     if not body:
         return
     executor.execute_action(body, _validated=True)
@@ -132,7 +138,7 @@ def exec_wait_image(executor: Any, args: Mapping[str, Any]) -> bool:
             return True
         if time.monotonic() >= deadline:
             break
-        time.sleep(poll)
+        pause(poll)
     raise AutoControlActionException(f"AC_wait_image timeout: {image}")
 
 
@@ -150,14 +156,14 @@ def exec_wait_pixel(executor: Any, args: Mapping[str, Any]) -> bool:
             return True
         if time.monotonic() >= deadline:
             break
-        time.sleep(poll)
+        pause(poll)
     raise AutoControlActionException(f"AC_wait_pixel timeout at ({x},{y})")
 
 
 def exec_sleep(executor: Any, args: Mapping[str, Any]) -> None:
-    """Sleep for ``seconds``."""
+    """Sleep for ``seconds``; a stop requested for the run wakes it."""
     del executor
-    time.sleep(float(args["seconds"]))
+    pause(float(args["seconds"]))
 
 
 def exec_loop(executor: Any, args: Mapping[str, Any]) -> int:
@@ -218,7 +224,7 @@ def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
     for attempt in range(max_attempts):
         try:
             return _run_strict(executor, body)
-        except MacroDepthExceeded:
+        except (MacroDepthExceeded, ExecutionStopped):
             raise
         except _TRY_CATCHABLE as error:
             raise_if_run_interrupted(error)
@@ -230,7 +236,7 @@ def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
             if attempt + 1 < max_attempts:
                 # Capped: 2 ** attempt overflowed float after ~1000 attempts,
                 # and attempt 20 already slept 36 hours at the default 0.5 s.
-                time.sleep(min(backoff * (2 ** min(attempt, 30)), _MAX_RETRY_BACKOFF_S))
+                pause(min(backoff * (2 ** min(attempt, 30)), _MAX_RETRY_BACKOFF_S))
     # A failed assertion is a deliberate fail signal that must propagate
     # even under raise_on_error=False; wrapping it would neutralise it.
     if isinstance(last_error, AutoControlAssertionException):
@@ -250,13 +256,15 @@ def exec_try(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     propagates. The caught error's text is exposed to ``error_var`` (when
     given) so the ``catch`` branch can inspect it. Set ``reraise`` true to
     re-raise after the ``catch`` branch (still running ``finally`` first).
+    A stop requested for the run is not caught: ``catch`` is skipped and
+    ``finally`` still runs.
     """
     body = args.get("body") or []
     caught_repr: Optional[str] = None
     try:
         try:
             _run_strict(executor, body)
-        except (LoopBreak, LoopContinue, MacroDepthExceeded):
+        except (LoopBreak, LoopContinue, MacroDepthExceeded, ExecutionStopped):
             raise
         except _TRY_CATCHABLE as error:
             raise_if_run_interrupted(error)
@@ -269,7 +277,10 @@ def exec_try(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
             if as_bool(args.get("reraise", False)):
                 raise
     finally:
-        _run_branch(executor, args.get("finally"))
+        # Cleanup the script asked for runs to its end even while a stop
+        # unwinds; a second stop request interrupts it (run_control.shielded).
+        with shielded():
+            _run_branch(executor, args.get("finally"))
     return {"caught": caught_repr}
 
 
@@ -487,6 +498,9 @@ class _ParallelRun:
         from je_auto_control.utils.agent_runtime.origin_policy import current_origin
         self._task_operation = current_operation()
         self._origin = current_origin()
+        # Branch threads do not inherit the run's stop token either.
+        self._stop_token = current_stop_token()
+        self._stopped: Optional[ExecutionStopped] = None
         self.results: list = [None] * len(branches)
         self._failures: list = [0] * len(branches)
         self._errors: Dict[int, str] = {}
@@ -522,10 +536,13 @@ class _ParallelRun:
             with (authorization_scope(self._caller), bound_journal(self._journal),
                   bound_secret_scope(self._secret_scope), bound_history(self._history),
                   bound_command_guards(self._command_guards), cancellation_scope(self._cancellation),
-                  operation_scope(self._task_operation), origin_scope(self._origin)):
+                  operation_scope(self._task_operation), origin_scope(self._origin),
+                  bound_stop_token(self._stop_token)):
                 self.results[index] = self._branch_executor().execute_action(
                     branch, raise_on_error=self._strict, _validated=True)
             self._failures[index] = self._module.recorded_failures()
+        except ExecutionStopped as error:
+            self._stopped = error
         except AutoControlAssertionException as error:
             self._assertions[index] = error
         except BaseException as error:  # reason: return worker control signals to the caller after joining
@@ -546,6 +563,8 @@ class _ParallelRun:
         """On the parent thread: count branch failures, then raise the first problem."""
         for _ in range(sum(self._failures)):
             self._module._count_recorded_failure()
+        if self._stopped is not None:
+            raise self._stopped  # the run was stopped: not a branch failure
         self._raise_interruption()
         if self._assertions:
             # Re-raised as itself so it propagates like a top-level assert.
@@ -648,6 +667,20 @@ def _restore_params(variables: Any, params: Any, saved: Mapping[str, Any]) -> No
             del variables[param]
 
 
+def exec_run_stoppable(executor: Any, args: Mapping[str, Any]) -> Any:
+    """Run ``body`` as a stoppable run named ``run_id``.
+
+    ``AC_stop_execution`` (or :func:`stop_execution`) with that id, from
+    another thread, connection or process entry point, ends the body at its
+    next checkpoint with :class:`ExecutionStopped`, which also ends the action
+    list that contains this block. Without ``run_id`` the block joins the
+    enclosing stoppable run, or gets a generated id.
+    """
+    run_id = args.get("run_id")
+    with stoppable_run(str(run_id) if run_id else None):
+        return _run_branch(executor, args.get("body"))
+
+
 #: The longest single wait between AC_retry attempts.
 _MAX_RETRY_BACKOFF_S = 300.0
 
@@ -673,6 +706,7 @@ BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_for_each_row": exec_for_each_row,
     "AC_assert_duration": exec_assert_duration,
     "AC_parallel": exec_parallel,
+    "AC_run_stoppable": exec_run_stoppable,
     "AC_define_macro": exec_define_macro,
     "AC_call_macro": exec_call_macro,
     "AC_ocr_to_var": exec_ocr_to_var,

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from PySide6.QtWidgets import (
     QWidget, QLineEdit, QComboBox, QVBoxLayout, QLabel,
@@ -6,6 +6,8 @@ from PySide6.QtWidgets import (
     QGroupBox,
 )
 
+from je_auto_control.gui._qt_typed import as_widget
+from je_auto_control.gui._tab_task import stop_all_script_runs
 from je_auto_control.gui._validators import int_validator
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper.auto_control_keyboard import (
@@ -149,7 +151,7 @@ class AutoClickTabMixin:
         sc_layout.addWidget(self._tr(QLabel(), "mouse_scroll_label"))
         sc_layout.addWidget(self.scroll_value_input)
         if special_mouse_keys_table:
-            self.scroll_dir_combo = QComboBox()
+            self.scroll_dir_combo: Optional[QComboBox] = QComboBox()
             self.scroll_dir_combo.addItems(list(special_mouse_keys_table.keys()))
             sc_layout.addWidget(self.scroll_dir_combo)
         else:
@@ -191,12 +193,12 @@ class AutoClickTabMixin:
         try:
             interval = int(self.interval_input.text())
         except ValueError:
-            QMessageBox.warning(self, "Warning", "Interval must be a number")
+            QMessageBox.warning(as_widget(self), "Warning", "Interval must be a number")
             return
         # The validator's bottom of 1 is a hint only: "0" set a 0 ms timer,
         # which clicked on every event-loop pass (18,579 clicks in 0.5 s).
         if interval < 1:
-            QMessageBox.warning(self, "Warning", "Interval must be at least 1 ms")
+            QMessageBox.warning(as_widget(self), "Warning", "Interval must be at least 1 ms")
             return
         self.repeat_count = 0
         try:
@@ -212,7 +214,9 @@ class AutoClickTabMixin:
         self.timer.start()
 
     def _stop_auto_click(self):
+        """Stop the auto-clicker and ask every running script to stop (Ctrl+4)."""
         self.timer.stop()
+        stop_all_script_runs()
 
     def _timer_tick(self):
         if self.repeat_until_stopped.isChecked():
@@ -245,7 +249,7 @@ class AutoClickTabMixin:
             # throwing backend must land here — otherwise timer.stop() is
             # skipped and the auto-click QTimer fires the failing action forever.
             self.timer.stop()
-            QMessageBox.warning(self, "Error", str(error))
+            QMessageBox.warning(as_widget(self), "Error", str(error))
 
     def _get_mouse_pos(self):
         try:
@@ -264,7 +268,7 @@ class AutoClickTabMixin:
             self.cursor_x_input.setText(str(x))
             self.cursor_y_input.setText(str(y))
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
+            QMessageBox.warning(as_widget(self), "Error", str(error))
 
     def _send_hotkey(self):
         try:
@@ -272,7 +276,7 @@ class AutoClickTabMixin:
             if keys:
                 hotkey(keys)
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
+            QMessageBox.warning(as_widget(self), "Error", str(error))
 
     def _send_write(self):
         try:
@@ -280,7 +284,7 @@ class AutoClickTabMixin:
             if text:
                 write(text)
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
+            QMessageBox.warning(as_widget(self), "Error", str(error))
 
     def _send_scroll(self):
         try:
@@ -288,4 +292,4 @@ class AutoClickTabMixin:
             direction = self.scroll_dir_combo.currentText() if self.scroll_dir_combo else "scroll_up"
             mouse_scroll(val, scroll_direction=direction)
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
+            QMessageBox.warning(as_widget(self), "Error", str(error))

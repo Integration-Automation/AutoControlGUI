@@ -44,7 +44,8 @@ class AccessibilityBackend:
         ``window_title`` / ``contains`` narrow which control is meant, the
         same way :meth:`get_state` does — the two reads stay a pair.
         """
-        self._unsupported("get_value", name, role, app_name, automation_id)
+        self._unsupported("get_value", name, role, app_name, automation_id,
+                          window_title, contains)
 
     def set_value(self, value: str, name: Optional[str] = None,
                   role: Optional[str] = None, app_name: Optional[str] = None,
@@ -220,7 +221,8 @@ class AccessibilityBackend:
         key is absent when the control does not support it — distinct from the
         value being empty. A password field reports only ``{"password": True}``.
         """
-        self._unsupported("get_state", name, role, app_name, automation_id)
+        self._unsupported("get_state", name, role, app_name, automation_id,
+                          window_title, contains)
 
     # --- table headers + cell addressing (TablePattern / GridItemPattern) ---
 

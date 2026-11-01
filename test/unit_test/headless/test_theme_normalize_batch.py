@@ -69,4 +69,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("normalize_theme", "match_theme"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__
