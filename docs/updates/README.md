@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261101-12 | 2026-11-01 | Build the Android helper's protocol handler and app | #snapshot #agent #android | [2026-11](2026-11.md) |
 | U-20261101-11 | 2026-11-01 | Start the Android device-side helper with its fence ledger | #snapshot #agent #android | [2026-11](2026-11.md) |
 | U-20261101-10 | 2026-11-01 | Audit the role boundaries against injected page text | #done #agent #security | [2026-11](2026-11.md) |
 | U-20261101-09 | 2026-11-01 | Read the XInput opcode through the public Display API | #incident #ci #x11 | [2026-11](2026-11.md) |
@@ -568,7 +569,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-11.md](2026-11.md) | 2026-11 | 11 |
+| [2026-11.md](2026-11.md) | 2026-11 | 12 |
 | [2026-10-f.md](2026-10-f.md) | 2026-10 | 5 |
 | [2026-10-e.md](2026-10-e.md) | 2026-10 | 10 |
 | [2026-10-d.md](2026-10-d.md) | 2026-10 | 15 |
