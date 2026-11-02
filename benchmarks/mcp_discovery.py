@@ -11,6 +11,8 @@ from typing import Any
 from je_auto_control.utils.mcp_server.server import MCPServer
 from je_auto_control.utils.mcp_server.tools import MCPTool, build_default_tool_registry
 
+_TOOLS_CALL = "tools/call"
+
 
 def _rpc(server: MCPServer, method: str, params: dict | None = None) -> tuple[dict, float, int]:
     request = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params or {}})
@@ -42,14 +44,14 @@ def _mode(tools: list[MCPTool], mode: str, repeats: int) -> dict[str, Any]:
         search, enable = [], []
         search_bytes = 0
         for _ in range(repeats):
-            _, elapsed, search_bytes = _rpc(server, "tools/call", {
+            _, elapsed, search_bytes = _rpc(server, _TOOLS_CALL, {
                 "name": "ac_mcp_tool_search", "arguments": {"query": "screen", "limit": 10}})
             search.append(elapsed)
             if mode == "progressive":
-                _, elapsed, _ = _rpc(server, "tools/call", {
+                _, elapsed, _ = _rpc(server, _TOOLS_CALL, {
                     "name": "ac_mcp_tools_enable", "arguments": {"names": ["ac_screen_size"]}})
                 enable.append(elapsed)
-                _rpc(server, "tools/call", {
+                _rpc(server, _TOOLS_CALL, {
                     "name": "ac_mcp_tools_disable", "arguments": {"names": ["ac_screen_size"]}})
         return {"count": len(initial["tools"]), "response_json_bytes": wire_bytes,
                 "descriptor_json_bytes": len(json.dumps(initial["tools"], ensure_ascii=False,

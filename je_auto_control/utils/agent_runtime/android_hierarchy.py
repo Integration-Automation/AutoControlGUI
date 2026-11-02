@@ -22,10 +22,10 @@ _FLAGS = frozenset({'checkable', 'checked', 'clickable', 'enabled', 'focusable',
                     'long-clickable', 'password', 'selected'})
 _FIELDS = _FLAGS | {'index', 'text', 'resource-id', 'class', 'package', 'content-desc', 'bounds'}
 _OPTIONAL = frozenset({'NAF', 'editable', 'visible-to-user'})
-_INDEX = re.compile(r'0|[1-9][0-9]{0,4}')
-_PATH = re.compile(r'0(?:/(?:0|[1-9][0-9]{0,4})){0,31}')
-_BOUNDS = re.compile(r'\[(0|[1-9][0-9]{0,4}),(0|[1-9][0-9]{0,4})\]'
-                     r'\[(0|[1-9][0-9]{0,4}),(0|[1-9][0-9]{0,4})\]')
+_INDEX = re.compile(r'0|[1-9]\d{0,4}', re.ASCII)
+_PATH = re.compile(r'0(?:/(?:0|[1-9]\d{0,4})){0,31}', re.ASCII)
+_BOUNDS = re.compile(r'\[(0|[1-9]\d{0,4}),(0|[1-9]\d{0,4})\]'
+                     r'\[(0|[1-9]\d{0,4}),(0|[1-9]\d{0,4})\]', re.ASCII)
 _ROLES = {'android.widget.Button': 'button', 'android.widget.ImageButton': 'button',
           'android.widget.CheckBox': 'checkbox', 'android.widget.RadioButton': 'radio',
           'android.widget.Switch': 'switch', 'android.widget.EditText': 'textfield',
@@ -215,7 +215,7 @@ class _HierarchyBuilder:
 
     def finish(self) -> list[dict]:
         """Never accept missing grants, empty/multiple roots or unfinished XML state."""
-        if self.stack or not self.root_seen or not self.elements or not self.grants <= self.seen:
+        if self.stack or not self.root_seen or not self.elements or not self.grants.issubset(self.seen):
             raise AgentTaskError('Android hierarchy is incomplete or has stale text grants')
         return self.elements
 

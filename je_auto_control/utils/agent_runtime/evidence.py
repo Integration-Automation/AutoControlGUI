@@ -20,6 +20,8 @@ from je_auto_control.utils.json_store.json_store import atomic_write_text
 from je_auto_control.utils.run_history.history_store import HistoryStore
 from je_auto_control.utils.sqlite_support import last_row_id
 
+_JOURNAL_NAME = 'journal.jsonl'
+
 
 class TaskEvidence:
     """Own only artifacts under this runtime's cache; user output files and external journals stay separate."""
@@ -41,7 +43,7 @@ class TaskEvidence:
 
     def ensure(self, task_id: str) -> dict[str, Any]:
         """Create one history link and private artifact directory, idempotently after restart."""
-        journal = self.cache.file(task_id, 'journal.jsonl')
+        journal = self.cache.file(task_id, _JOURNAL_NAME)
         with self.store.connection() as connection:
             current = self._current_link(connection, task_id, journal)
         if current is not None:
@@ -51,7 +53,7 @@ class TaskEvidence:
         self.history.list_runs(limit=1)  # initialize the existing history schema before the shared transaction
         directory = self.directory(task_id)
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-        journal = self.cache.file(task_id, 'journal.jsonl')
+        journal = self.cache.file(task_id, _JOURNAL_NAME)
         journal.touch(mode=0o600, exist_ok=True)
         with self.store.connection(write=True) as connection:
             self.cache.check_identity(connection)
@@ -95,7 +97,7 @@ class TaskEvidence:
         artifacts = [str(path) for path in paths if path.is_file() and not path.is_symlink()]
         return {"history_path": self.history.path, "history_id": row["history_id"],
                 "journal_path": row["journal_path"], "artifacts": sorted(artifacts),
-                "artifact_cache_state": "owned" if Path(row['journal_path']) == directory / 'journal.jsonl'
+                "artifact_cache_state": "owned" if Path(row['journal_path']) == directory / _JOURNAL_NAME
                 else "historical",
                 "report_pending": pending is not None, "completion_contract": completion[0] if completion else 0}
 
@@ -116,10 +118,11 @@ class TaskEvidence:
     def action(self, task_id: str, receipt: dict[str, Any], *, finished: bool = False) -> None:
         """Mirror receipt certainty into the existing append-only action journal."""
         self.ensure(task_id)
-        journal = self.cache.file(task_id, 'journal.jsonl')
+        journal = self.cache.file(task_id, _JOURNAL_NAME)
         self.cache.file(task_id, 'journal.jsonl.lock')
-        status: EventStatus = "incomplete" if not finished else (
-            "ok" if receipt["status"] == "confirmed" else "error")
+        status: EventStatus = "incomplete"
+        if finished:
+            status = "ok" if receipt["status"] == "confirmed" else "error"
         ActionJournal(journal).append(ActionEvent(
             run_id=task_id, step_id=receipt["id"], command=receipt["command"],
             parameters=durable_payload(receipt["arguments"]), started_at=receipt["created"],
@@ -188,7 +191,7 @@ class TaskEvidence:
 def _owned_artifact(path: Path) -> bool:
     if path.is_symlink() or not path.is_file():
         return False
-    return path.name in {"journal.jsonl", "journal.jsonl.lock", "report.json"} or (
+    return path.name in {_JOURNAL_NAME, "journal.jsonl.lock", "report.json"} or (
         re.fullmatch(r"[0-9a-f]{32}\.jpg", path.name) is not None)
 
 

@@ -1,6 +1,5 @@
 """Canonical bounded base64 chunks keep binary asset traffic inside the existing authenticated JSON body limit."""
 import base64
-import binascii
 
 from je_auto_control.utils.config_sync.blob_models import CHUNK_BYTES
 from je_auto_control.utils.config_sync.contract import ConfigSyncError
@@ -19,7 +18,7 @@ def decode_chunk(value: object) -> bytes:
         raise ConfigSyncError('asset chunk exceeds its encoded size limit')
     try:
         body = base64.b64decode(value, validate=True)
-    except (ValueError, binascii.Error) as error:
+    except ValueError as error:  # includes binascii.Error
         raise ConfigSyncError('invalid asset chunk encoding') from error
     if encode_chunk(body) != value:
         raise ConfigSyncError('noncanonical asset chunk encoding')

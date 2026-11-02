@@ -70,6 +70,7 @@ class SourceLineage:
             seen.add(row['id'])
             self.manager(issuer, row['owner'])
             with DeferredAuthorization(AuthorizationContext(**row['owner']) if row['owner'] else None).scope():
+                # reason: entering the scope re-checks the owner's current rights; nothing runs inside it
                 pass
             if connection.execute('SELECT 1 FROM agent_control WHERE owner=?', (row['id'],)).fetchone():
                 raise AgentTaskError('source recovery ancestry still owns input control')

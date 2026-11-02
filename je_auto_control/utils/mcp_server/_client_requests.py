@@ -124,7 +124,7 @@ class ClientRequestMixin:
     def _refresh_roots_safely(self) -> None:
         try:
             self.refresh_roots(timeout=5.0)
-        except (AutoControlException, OSError, RuntimeError, TimeoutError) as error:
+        except (AutoControlException, OSError, RuntimeError) as error:  # TimeoutError is an OSError
             autocontrol_logger.info("MCP roots refresh skipped: %r", error)
 
     def refresh_roots(self, timeout: float = 10.0) -> List[Dict[str, Any]]:

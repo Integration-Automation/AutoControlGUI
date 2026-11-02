@@ -9,6 +9,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 
 EventStatus = Literal["incomplete", "ok", "error", "cancelled", "skipped", "dry_run"]
 _STATUSES = frozenset({"incomplete", "ok", "error", "cancelled", "skipped", "dry_run"})
+_NON_FINITE_TIMESTAMP = "journal timestamps must be finite numbers"
 OUTCOME_TYPES = frozenset({"none", "boolean", "integer", "number", "text", "object", "array", "unsupported"})
 
 
@@ -34,13 +35,13 @@ def _integer(value: object) -> int:
 
 def _number(value: object) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ActionJournalError("journal timestamps must be finite numbers")
+        raise ActionJournalError(_NON_FINITE_TIMESTAMP)
     try:
         number = float(value)
     except OverflowError:
-        raise ActionJournalError("journal timestamps must be finite numbers") from None
+        raise ActionJournalError(_NON_FINITE_TIMESTAMP) from None
     if not math.isfinite(number):
-        raise ActionJournalError("journal timestamps must be finite numbers")
+        raise ActionJournalError(_NON_FINITE_TIMESTAMP)
     return number
 
 

@@ -107,7 +107,7 @@ def _manifest_selection(policy: Any, clause: dict, selection: TransferSelection,
     source = snapshot_file(policy, clause['path'], checkpoint, max_bytes=1_000_000, inspect=pieces.append)
     try:
         document = json.loads(b''.join(pieces).decode('utf-8'))
-    except (ValueError, UnicodeError) as error:
+    except ValueError as error:
         raise AgentTaskError('source file manifest is malformed') from error
     if (not isinstance(document, dict) or set(document) != {'files'} or not isinstance(document['files'], list)
             or len(document['files']) != len(clause['names'])):

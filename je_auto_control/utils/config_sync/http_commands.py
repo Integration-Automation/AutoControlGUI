@@ -30,7 +30,7 @@ def _client(endpoint: str, user_id: str, options: dict[str, object]) -> CausalSy
     environment = options.get("secret_env")
     secret = None
     if environment is not None:
-        if not isinstance(environment, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,127}", environment):
+        if not isinstance(environment, str) or not re.fullmatch(r"[A-Za-z_]\w{0,127}", environment, re.ASCII):
             raise ConfigSyncError("secret_env must name one environment variable")
         secret = os.environ.get(environment)
         if not secret:

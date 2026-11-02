@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 
 _DEVICE = re.compile(r"[A-Za-z0-9._:-]{1,128}")
-_PACKAGE = re.compile(r"[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+")
+_PACKAGE = re.compile(r"[A-Za-z]\w*(?:\.[A-Za-z]\w*)+", re.ASCII)
 _BOOT = re.compile(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}")
-_WINDOW = re.compile(r"Window\{([0-9a-f]+) u([0-9]+) ([A-Za-z0-9_.]+)/([A-Za-z0-9_.$]+)\}")
-_ACTIVITY = re.compile(r"ActivityRecord\{[0-9a-f]+ u([0-9]+) ([A-Za-z0-9_.]+)/[A-Za-z0-9_.$]+ t[0-9]+\}")
+_WINDOW = re.compile(r"Window\{([0-9a-f]+) u(\d+) ([A-Za-z0-9_.]+)/([A-Za-z0-9_.$]+)\}", re.ASCII)
+_ACTIVITY = re.compile(r"ActivityRecord\{[0-9a-f]+ u(\d+) ([A-Za-z0-9_.]+)/[A-Za-z0-9_.$]+ t\d+\}", re.ASCII)
 IDENTITY_MARKER = "__JE_ANDROID_IDENTITY_V1__"
 IDENTITY_PROBE = (
     f"/system/bin/printf '{IDENTITY_MARKER}\\n'; "
@@ -77,7 +77,7 @@ def parse_android_snapshot(output: bytes, physical_id: str, package: str, *, use
         raise AgentTaskError("Android identity evidence exceeds its closed byte format")
     try:
         marker, device, boot, dump = output.decode("utf-8").split("\n", 3)
-    except (UnicodeError, ValueError):
+    except ValueError:  # includes UnicodeError
         raise AgentTaskError("Android identity evidence is incomplete or invalid UTF-8") from None
     if marker != IDENTITY_MARKER or device != physical_id:
         raise AgentTaskError("Android endpoint does not identify the reviewed physical device")

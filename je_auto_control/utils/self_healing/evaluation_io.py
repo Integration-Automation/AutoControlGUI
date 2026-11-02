@@ -113,7 +113,7 @@ def _load_samples_manifest(path: str | Path, path_policy: Optional[PathPolicy],
     candidate = _bounded_path(path, path_policy)
     try:
         payload = json.loads(_read(candidate, 1024 * 1024), object_pairs_hook=_unique_object)
-    except (ValueError, UnicodeError) as error:
+    except ValueError as error:
         raise HealingEvaluationError("manifest must be UTF-8 JSON") from error
     required = {"schema_version", "samples", "versions"} if require_versions else {"schema_version", "samples"}
     body = _object(payload, {"schema_version", "samples", "versions"}, required)

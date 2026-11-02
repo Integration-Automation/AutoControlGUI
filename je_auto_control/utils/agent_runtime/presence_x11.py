@@ -53,7 +53,8 @@ class LogindSession:
                               capture_output=True, text=True, timeout=1, check=False, shell=False)
         if result.returncode != 0:
             return False
-        values = dict(line.split('=', 1) for line in result.stdout.splitlines() if '=' in line)
+        values = {key: value for key, value in (line.split('=', 1) for line in result.stdout.splitlines()
+                                                if '=' in line)}
         return values.get('Active') == 'yes' and values.get('LockedHint') == 'no'
 
     def interactive(self) -> bool:

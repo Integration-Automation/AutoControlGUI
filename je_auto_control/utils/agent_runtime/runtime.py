@@ -47,8 +47,7 @@ from je_auto_control.utils.agent_runtime.task_authority import (
 )
 from je_auto_control.utils.agent_runtime.completion_recovery import (
     completion_target, completion_evidence, completion_metadata, require_executable_task,
-    check_completion_authority, completion_spec, completion_details,
-    retainable_browser,
+    check_completion_authority, completion_spec, completion_details, retainable_browser,
 )
 from je_auto_control.utils.agent_runtime.verification import verify
 from je_auto_control.utils.agent_runtime.resume_gate import ResumeGate, validate_task_conditions
@@ -134,8 +133,7 @@ class AgentRuntime:
                 policy = (lambda value: TaskPolicy(bind_origin(AgentTaskSpec.from_dict(value))),
                           submitted_digest, request_spec_digest, recorded_recovery_owner,
                           self.batches.transfer_private_files, self.target_profiles.transfer_profile, origin_ceilings)
-                host = TransferHost(self, policy, check_completion_authority,
-                                    lambda: not self._closed, retired)
+                host = TransferHost(self, policy, check_completion_authority, lambda: not self._closed, retired)
                 self._transfers = AgentTransfers(self, TransferPeer(self.batches.transfer_call), host=host,
                                                 task_active=lambda: current_operation() is not None)
             return self._transfers
@@ -215,7 +213,7 @@ class AgentRuntime:
             digest = request_spec_digest(expected.to_dict())
         except AuthorizationError:
             raise
-        except (AgentTaskError, OSError, ValueError):
+        except (OSError, ValueError):
             return "unverifiable"
         return "matches" if digest == record["spec_hash"] else "differs"
 
@@ -307,6 +305,7 @@ class AgentRuntime:
             self.target_profiles.check(spec)
             check_task_authority(self, row["id"])
             with DeferredAuthorization(owner).scope():
+                # reason: entering the scope re-checks the owner's current rights; nothing runs inside it
                 pass
 
         def guard(name: str, arguments: Any) -> None:
@@ -325,11 +324,11 @@ class AgentRuntime:
         with self._mutex:
             self._executing.add(task_id)
         try:
-            with DeferredAuthorization(owner).scope(), cancellation_scope(self._token(task_id)):
-                with (command_guard(guard), execution_scope(thaw(spec.inputs)),
-                      operation_scope(TaskOperation(spec, checkpoint, current_authorization(), takeover,
-                                                    self._presence.reference))):
-                    yield policy
+            with (DeferredAuthorization(owner).scope(), cancellation_scope(self._token(task_id)),
+                  command_guard(guard), execution_scope(thaw(spec.inputs)),
+                  operation_scope(TaskOperation(spec, checkpoint, current_authorization(), takeover,
+                                                self._presence.reference))):
+                yield policy
         except AuthorizationError:
             self.cancel(task_id)
             raise
@@ -685,6 +684,7 @@ class AgentRuntime:
                 self.target_profiles.check(AgentTaskSpec.from_dict(row["spec"]))
                 check_task_authority(self, task_id)
                 with DeferredAuthorization(owner).scope():
+                    # reason: entering the scope re-checks the owner's current rights; nothing runs inside it
                     pass
             except (AutoControlException, OSError, ValueError):
                 self._stop_owned(task_id, lease, "cancelled",
@@ -732,8 +732,8 @@ class AgentRuntime:
         spec = AgentTaskSpec.from_dict(row["spec"])
         validate_root_snapshot(spec.roots)
         self.target_profiles.check(spec)
-        owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
-        with DeferredAuthorization(owner).scope():
+        with DeferredAuthorization(AuthorizationContext(**row["owner"]) if row["owner"] else None).scope():
+            # reason: entering the scope re-checks the owner's current rights; nothing runs inside it
             pass
         return row
 
