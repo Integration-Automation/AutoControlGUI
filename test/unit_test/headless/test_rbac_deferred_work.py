@@ -82,12 +82,13 @@ def _work(kind, path):
 def _fire_on_worker(work, worker=ADMIN):
     outcomes = []
     errors = []
+    after = []
 
     def run():
         try:
             with authorization_scope(worker):
                 outcomes.append(work.fire())
-                assert current_authorization() is worker
+                after.append(current_authorization())
         except BaseException as error:
             errors.append(error)
 
@@ -96,6 +97,7 @@ def _fire_on_worker(work, worker=ADMIN):
     thread.join(timeout=5)
     assert not thread.is_alive(), "deferred work did not finish"
     assert not errors, errors
+    assert after == [worker], "the worker's own scope was not restored after the work"
     return outcomes
 
 

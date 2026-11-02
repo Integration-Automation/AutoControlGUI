@@ -9,7 +9,8 @@ def build(destination: Path) -> None:
     """Write two template revisions, two target frames and an expected-miss frame."""
     destination.mkdir(parents=True, exist_ok=True)
     for version, seed in (("old", 41), ("new", 42)):
-        with Image.frombytes("RGB", (17, 13), Random(seed).randbytes(17 * 13 * 3)) as template:
+        # Seeded on purpose: the fixtures must be the same bytes on every run.
+        with Image.frombytes("RGB", (17, 13), Random(seed).randbytes(17 * 13 * 3)) as template:  # NOSONAR python:S2245
             template.save(destination / f"{version}.png")
             with Image.new("RGB", (64, 48), (240, 240, 240)) as frame:
                 frame.paste(template, (20, 16))
