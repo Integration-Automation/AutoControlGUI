@@ -9,7 +9,7 @@ import pytest
     ('accept', 'agent_skill_execution_accept_example'),
 ])
 def test_gui_prepares_original_trial_and_separate_execution_without_dispatch(monkeypatch, operation, key):
-    pytest.importorskip('PySide6')
+    pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)  # also when Qt cannot load (no libEGL)
     from PySide6.QtWidgets import QApplication
     from je_auto_control.gui.agent_tasks_tab import AgentTasksTab
     import shiboken6

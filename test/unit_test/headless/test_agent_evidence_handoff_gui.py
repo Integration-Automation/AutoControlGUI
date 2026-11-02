@@ -6,7 +6,7 @@ import pytest
 
 @pytest.mark.parametrize('operation', ['review_handoff', 'create_handoff', 'revoke_handoff'])
 def test_actions_only_prepare_explicit_handoff_requests(monkeypatch, operation):
-    pytest.importorskip('PySide6')
+    pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)  # also when Qt cannot load (no libEGL)
     from PySide6.QtWidgets import QApplication
     from je_auto_control.gui.agent_tasks_tab import AgentTasksTab
     import shiboken6

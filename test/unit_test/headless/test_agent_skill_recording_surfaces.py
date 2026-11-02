@@ -72,7 +72,7 @@ def test_http_revoked_reviewer_refuses_recording_with_409(recording, tmp_path):
 
 
 def test_gui_prepares_original_source_and_reader_fields_without_recording(monkeypatch):
-    pytest.importorskip('PySide6')
+    pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)  # also when Qt cannot load (no libEGL)
     from PySide6.QtWidgets import QApplication
     from je_auto_control.gui.agent_tasks_tab import AgentTasksTab
     import shiboken6

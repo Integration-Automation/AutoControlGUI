@@ -11,7 +11,7 @@ from .test_agent_dag_batches import graph
 
 
 def test_background_worker_forwards_initial_and_explicit_approved_continuation(monkeypatch):
-    pytest.importorskip("PySide6")
+    pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)  # also when Qt cannot load (no libEGL)
     from je_auto_control.gui.dag_tab import _DagWorker
     call = Mock(return_value={"approval_id": "approval"})
     monkeypatch.setattr("je_auto_control.gui.dag_tab.manage_agent_dag", call)
@@ -27,7 +27,7 @@ def test_background_worker_forwards_initial_and_explicit_approved_continuation(m
 
 
 def test_closing_the_view_does_not_stop_a_batch_already_accepted_by_the_service(service, monkeypatch):
-    pytest.importorskip("PySide6")
+    pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)  # also when Qt cannot load (no libEGL)
     import shiboken6
     from PySide6.QtWidgets import QApplication
     from je_auto_control.gui.dag_tab import DagTab

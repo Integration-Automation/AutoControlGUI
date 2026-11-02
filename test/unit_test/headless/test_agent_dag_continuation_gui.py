@@ -9,7 +9,7 @@ from .test_agent_dag_batches import graph
 
 
 def test_review_and_run_actions_preserve_source_selection_and_do_not_auto_execute(monkeypatch):
-    pytest.importorskip("PySide6")
+    pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)  # also when Qt cannot load (no libEGL)
     import shiboken6
     from PySide6.QtWidgets import QApplication
     from je_auto_control.gui.dag_tab import DagTab, _DagWorker
