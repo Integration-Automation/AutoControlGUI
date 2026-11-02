@@ -4,8 +4,9 @@ plugins {
     id("com.android.application") version "8.7.3" apply false
 }
 
-// Every resolved configuration is locked. Until a project's gradle.lockfile exists Gradle
-// resolves as before; `--write-locks` writes them (see the android-helper workflow).
+// Every resolved configuration is locked by the gradle.lockfile next to each project.
+// After changing a dependency, refresh them with
+//   gradle -p native/android_helper dependencies :core:dependencies :app:dependencies --write-locks
 allprojects {
     dependencyLocking {
         lockAllConfigurations()
