@@ -35,7 +35,7 @@ def _debugger_argv(command: Sequence[str], debugger: str | None) -> Iterator[lis
         raise RuntimeError('native diagnostics is supported only on Linux')
     # A secure ASCII path avoids old GDB's whitespace parser; JSON preserves the original command as data.
     with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', prefix='ac-native-', suffix='.py',
-                                     dir='/tmp') as launcher:  # nosec B108  # reason: secure NamedTemporaryFile
+                                     dir='/tmp') as launcher:  # nosec B108  # NOSONAR python:S5443  # reason: random-named 0600 file
         launcher.write(f'import json,os\ncommand=json.loads({json.dumps(list(command))!r})\n'
                        'os.execvp(command[0],command)\n')
         launcher.flush()
@@ -54,7 +54,8 @@ def _versions() -> dict[str, str]:
 
 def run(command: Sequence[str], directory: Path, *, native: bool = False) -> int:
     """Stream merged child output to CI and a retained file; never convert failure into success."""
-    directory.mkdir(parents=True, exist_ok=True)
+    # The CI job names its own artifact directory; nothing else reaches this argument.
+    directory.mkdir(parents=True, exist_ok=True)  # NOSONAR pythonsecurity:S8707
     debugger = shutil.which('gdb') if native else None
     if native and debugger is None:
         raise RuntimeError('native diagnostics requires gdb; install it before running the suite')

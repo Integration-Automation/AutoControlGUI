@@ -14,7 +14,7 @@ def main() -> None:
         root = Path(temporary)
         source = root / 'saved-gui.ini'
         source.write_text('[workspace]\ntheme=light\nfont_pt=16\nnavigation_visible=false\nnavigation_width=480\n'
-                          '\n[private]\npassword=local-only\n', encoding='utf-8')
+                          '\n[private]\nprivate_note=local-only\n', encoding='utf-8')
         sender = WorkspaceSettingsSyncAdapter(source, SyncAdapterState(root / 'sender.sqlite3',
             SyncLocalIdentity('https://controlled.invalid', 'example', 'desktop')))
         receiver_source = root / 'current-gui.ini'

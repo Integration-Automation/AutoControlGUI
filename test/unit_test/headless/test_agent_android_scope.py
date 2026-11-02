@@ -300,6 +300,17 @@ def test_expired_discovery_cannot_get_another_shell_budget_or_pin_boot(monkeypat
     assert adapter._boot is None
 
 
+class _WireMismatch(Exception):
+    """The fixture saw a frame other than the one it expects; the parent test reports it."""
+
+
+def _expect_wire(condition, what):
+    # Raised, not asserted: this runs on the fixture thread, whose handler hands every
+    # failure to the parent test, and an assert there would be one of them.
+    if not condition:
+        raise _WireMismatch(what)
+
+
 def _serve_identity_wire(remote, device, services, failures):
     try:
         with remote, remote.makefile("rwb") as stream:
@@ -310,15 +321,15 @@ def _serve_identity_wire(remote, device, services, failures):
                 stream.write(b"OKAY" + f"{len(rows):04x}".encode() + rows)
                 stream.flush()
                 return
-            assert service == b"host:transport-id:42"
+            _expect_wire(service == b"host:transport-id:42", f"transport selection {service!r}")
             stream.write(b"OKAY")
             stream.flush()
             service = stream.read(int(stream.read(4), 16))
-            assert service == b"shell,v2,raw:" + IDENTITY_PROBE.encode()
+            _expect_wire(service == b"shell,v2,raw:" + IDENTITY_PROBE.encode(), f"probe command {service!r}")
             services.append(service)
             stream.write(b"OKAY")
             stream.flush()
-            assert stream.read(5) == struct.pack("<BI", 4, 0)
+            _expect_wire(stream.read(5) == struct.pack("<BI", 4, 0), "the closing stdin frame")
             output = evidence(device=device)
             stream.write(struct.pack("<BI", 1, len(output)) + output + struct.pack("<BI", 3, 1) + b"\0")
             stream.flush()

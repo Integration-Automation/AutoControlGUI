@@ -160,9 +160,14 @@ def check_facade_is_importable() -> None:
     check("import je_auto_control", _facade)
 
     def _backend() -> str:
-        from je_auto_control.wrapper import platform_wrapper
+        from je_auto_control.wrapper import _platform_linux, platform_wrapper
 
-        module = platform_wrapper.mouse.__name__
+        # The pointer is a proxy that picks its backend on first use; ask the
+        # X11/Unix wrapper that defines it which backend that is.
+        _assert_true(isinstance(platform_wrapper.mouse, _platform_linux._Mouse),
+                     f"expected the X11/Unix wrapper, got {type(platform_wrapper.mouse).__module__}")
+        backend = _platform_linux._get_input_backend()[1]
+        module = getattr(backend, "__name__", type(backend).__module__)
         _assert_true("linux_with_x11" in module,
                      f"expected the X11 backend, got {module}")
         return module

@@ -55,12 +55,18 @@ def actor(api):
 
 
 def lease(source):
-    deadline = time.monotonic() + 2
+    # A request is capped at 0.25 s. On a loaded runner the observer can miss that
+    # window before its first poll; a timed-out request allocates no lease (the
+    # tests below prove it), so a deadline miss here is retried like a busy source.
+    deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
         try:
             return source.request('acquire', {})
         except AgentControlBusy:
             threading.Event().wait(0.001)
+        except AgentTaskError as error:
+            if 'deadline exhausted' not in str(error):
+                raise
     pytest.fail('synthetic observer never acquired its verified sixty-second idle')
 
 

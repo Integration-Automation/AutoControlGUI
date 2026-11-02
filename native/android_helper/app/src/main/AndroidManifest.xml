@@ -5,7 +5,8 @@
 
     <application
         android:allowBackup="false"
-        android:label="AutoControl helper" />
+        android:label="AutoControl helper"
+        android:usesCleartextTraffic="false" />
 
     <instrumentation
         android:name=".HelperInstrumentation"

@@ -233,8 +233,10 @@ def inspect_package(package: str) -> tuple[list[str], dict[str, Binding], dict[s
 def compare_baseline(path: Path, assignments_path: Path,
                      inspected: dict[str, tuple[list[str], dict[str, Binding], dict[str, Binding]]]) -> None:
     """Compare all original aliases and loader group membership, not just counts."""
-    baseline = json.loads(path.read_text(encoding="utf-8"))["packages"]
-    assignments = json.loads(assignments_path.read_text(encoding="utf-8"))["optional_assignments"]
+    # Both paths are this repository's own baseline files, named on the command line by the maintainer.
+    baseline = json.loads(path.read_text(encoding="utf-8"))["packages"]  # NOSONAR pythonsecurity:S8707
+    assignments_text = assignments_path.read_text(encoding="utf-8")  # NOSONAR pythonsecurity:S8707
+    assignments = json.loads(assignments_text)["optional_assignments"]
     for package, (names, _bindings, owners) in inspected.items():
         original = baseline[package.replace(".", "/")]
         if names != original["ordered_exports"]:

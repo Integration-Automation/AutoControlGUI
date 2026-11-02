@@ -5,7 +5,7 @@ import os
 import pytest
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
-pytest.importorskip('PySide6')
+pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)  # also when Qt cannot load (no libEGL)
 from PySide6.QtWidgets import QApplication  # noqa: E402  # reason: optional offscreen Qt after skip
 from je_auto_control.gui.agent_tasks_tab import AgentTasksTab  # noqa: E402  # reason: optional Qt after skip
 
