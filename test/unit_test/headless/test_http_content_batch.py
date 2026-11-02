@@ -90,4 +90,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("build_accept", "build_accept_encoding", "decode_body",
                  "negotiated_call", "parse_quality_values"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

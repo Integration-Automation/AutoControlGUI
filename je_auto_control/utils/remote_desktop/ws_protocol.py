@@ -156,7 +156,7 @@ def _is_valid_key(key: str) -> bool:
     """
     try:
         return len(base64.b64decode(key.encode("ascii"), validate=True)) == 16
-    except (UnicodeEncodeError, ValueError):   # binascii.Error is a ValueError
+    except ValueError:   # UnicodeEncodeError and binascii.Error are both ValueErrors
         return False
 
 

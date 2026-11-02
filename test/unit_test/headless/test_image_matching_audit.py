@@ -45,7 +45,8 @@ def test_rotated_matches_on_a_light_background_and_report_screen_coordinates(off
     screen[40:40 + height, 50:50 + width] = np.where(mask > 0, rotated, 255)
     offset_screen(screen)
     match = match_rotated(template, angles=(30.0,), min_score=0.9)
-    assert match is not None and (match.x, match.y) == (550, 340)
+    assert match is not None
+    assert (match.x, match.y) == (550, 340)
 
 
 def test_rotated_sqdiff_picks_the_best_spot():
@@ -64,8 +65,9 @@ def test_rotated_sqdiff_picks_the_best_spot():
 ])
 def test_a_flat_template_is_refused_everywhere(finder):
     flat = np.full((10, 10), 128, np.uint8)
+    haystack = RNG.integers(0, 255, (60, 60), dtype=np.uint8)
     with pytest.raises(AutoControlFlatTemplateException):
-        finder(flat, RNG.integers(0, 255, (60, 60), dtype=np.uint8))
+        finder(flat, haystack)
 
 
 def test_each_blob_reports_its_own_peak():

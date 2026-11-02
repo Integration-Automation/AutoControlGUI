@@ -77,4 +77,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("classify_format", "classify_formats", "diff_formats",
                  "list_clipboard_formats", "clipboard_formats"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

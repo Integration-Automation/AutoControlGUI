@@ -35,7 +35,8 @@ def test_fuse_prefers_higher_priority_source():
         ocr_boxes=[_b(0, 0, 50, 20, text="OK")],
         a11y_boxes=[_b(1, 0, 50, 20, text="OK", role="button")])
     assert len(fused) == 1
-    assert fused[0]["source"] == "a11y" and fused[0]["role"] == "button"
+    assert fused[0]["source"] == "a11y"
+    assert fused[0]["role"] == "button"
 
 
 def test_fuse_keeps_disjoint_boxes_from_all_sources():
@@ -52,7 +53,8 @@ def test_fuse_custom_priority():
         ocr_boxes=[_b(0, 0, 50, 20, text="from-ocr")],
         icon_boxes=[_b(0, 0, 50, 20, text="from-icon")],
         source_priority=("icon", "ocr", "a11y"))
-    assert len(fused) == 1 and fused[0]["source"] == "icon"
+    assert len(fused) == 1
+    assert fused[0]["source"] == "icon"
 
 
 def test_reading_order_rows_then_columns():
@@ -85,4 +87,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("iou", "merge_boxes", "fuse_elements", "reading_order"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

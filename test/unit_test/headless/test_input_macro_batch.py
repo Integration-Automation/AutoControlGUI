@@ -14,7 +14,8 @@ def test_replay_timeline_honors_gaps_and_speed():
     played = replay_timeline(
         events, speed=2.0, sink=lambda e: sunk.append(e["key"]),
         sleep=gaps.append)
-    assert played == 2 and sunk == ["a", "b"]
+    assert played == 2
+    assert sunk == ["a", "b"]
     assert gaps == [pytest.approx(0.1)]      # 200ms / speed 2 = 0.1s; first=0
 
 

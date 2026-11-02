@@ -42,7 +42,8 @@ def test_verify_clean_and_tamper(tmp_path):
     assert verify_provenance(stmt, {"a.txt": path}) == []
     _write(tmp_path, "a.txt", b"TAMPERED")
     mismatches = verify_provenance(stmt, {"a.txt": path})
-    assert len(mismatches) == 1 and mismatches[0]["name"] == "a.txt"
+    assert len(mismatches) == 1
+    assert mismatches[0]["name"] == "a.txt"
 
 
 def test_write_provenance_round_trip(tmp_path):

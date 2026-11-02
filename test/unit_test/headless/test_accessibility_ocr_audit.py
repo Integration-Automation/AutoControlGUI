@@ -73,7 +73,8 @@ def test_an_element_with_no_rectangle_ranks_last_and_is_not_clicked(monkeypatch)
     clicks = []
     monkeypatch.setattr(auto_control_mouse, "set_mouse_position", lambda *a: clicks.append(a))
     monkeypatch.setattr(auto_control_mouse, "click_mouse", lambda *a: clicks.append(a))
-    assert accessibility_api.click_accessibility_element(name="Save") is False and clicks == []
+    assert accessibility_api.click_accessibility_element(name="Save") is False
+    assert clicks == []
 
 
 def test_audits_read_windows_role_names():
@@ -134,14 +135,16 @@ def test_the_linux_search_stops_at_its_node_budget():
     backend = object.__new__(linux_backend.LinuxAccessibilityBackend)
     tree = _WideTree()
     found = backend._search(tree, ("bus", "app"), "app", "Missing", None, False)  # noqa: SLF001
-    assert found is None and tree.calls < 3 * (linux_backend._SEARCH_BUDGET + 10)  # noqa: SLF001
+    assert found is None
+    assert tree.calls < 3 * (linux_backend._SEARCH_BUDGET + 10)  # noqa: SLF001
 
 
 def test_mixed_text_formatting_reads_as_unknown():
     from je_auto_control.utils.accessibility.backends import windows_reads
     sentinel_range = types.SimpleNamespace(GetAttributeValue=lambda attribute_id: object())
     attributes = windows_reads._read_text_attributes(sentinel_range)  # noqa: SLF001
-    assert attributes["font_name"] is None and attributes["italic"] is None
+    assert attributes["font_name"] is None
+    assert attributes["italic"] is None
 
 
 def test_a_tesseract_failure_other_than_a_missing_binary_says_what_failed(monkeypatch):
@@ -170,8 +173,9 @@ def test_anchor_locate_reports_a_backend_that_is_not_set_up(monkeypatch):
         raise OCRBackendNotAvailableError("no OCR backend ready")
 
     monkeypatch.setattr(ocr_engine, "find_text_matches", no_engine)
+    by_text = locator.ocr_locator("Name")
     with pytest.raises(OCRBackendNotAvailableError):
-        locator._ocr_candidates(locator.ocr_locator("Name"))  # noqa: SLF001
+        locator._ocr_candidates(by_text)  # noqa: SLF001
 
 
 def test_an_integer_role_is_matched_not_crashed():

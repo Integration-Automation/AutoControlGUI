@@ -25,7 +25,7 @@ def _wait_until(predicate, timeout: float = 2.0,
     return predicate()
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_frame_provider():
     """Frame provider returning sequential payloads so tests can spot updates."""
     state = {"i": 0}
@@ -37,7 +37,7 @@ def fake_frame_provider():
     return provide
 
 
-@pytest.fixture()
+@pytest.fixture
 def host_factory(fake_frame_provider):
     """Build hosts with a stub frame provider; clean up on teardown."""
     started: List[RemoteDesktopHost] = []

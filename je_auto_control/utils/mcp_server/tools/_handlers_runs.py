@@ -24,6 +24,18 @@ def execute_action_file(file_path: str) -> Dict[str, str]:
     return {key: str(value) for key, value in result.items()}
 
 
+def stop_execution(run_id: Optional[str] = None, reason: str = "") -> Dict[str, int]:
+    """Ask one stoppable run (or, without ``run_id``, every one) to stop."""
+    from je_auto_control.utils.executor.run_control import stop_execution as _stop
+    return {"stopped": _stop(str(run_id) if run_id else None, str(reason or ""))}
+
+
+def list_executions() -> List[Dict[str, Any]]:
+    """The stoppable runs in progress."""
+    from je_auto_control.utils.executor.run_control import active_executions
+    return active_executions()
+
+
 def list_action_commands() -> List[str]:
     from je_auto_control.utils.executor.action_executor import executor
     return sorted(executor.known_commands())

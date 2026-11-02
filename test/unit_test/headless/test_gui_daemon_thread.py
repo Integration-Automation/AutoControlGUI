@@ -87,10 +87,12 @@ def test_a_daemon_thread_reports_on_the_gui_thread_and_can_be_interrupted():
     worker.start()
     assert worker.isRunning()
     worker.requestInterruption()
-    assert worker.wait(5000) and not worker.isRunning()
+    assert worker.wait(5000)
+    assert not worker.isRunning()
     deadline = time.monotonic() + 5
     while not (seen and finished) and time.monotonic() < deadline:
         app.processEvents()
         time.sleep(0.01)
-    assert seen and seen[0][0] < 500, "run() did not see the interruption"
+    assert seen, "run() did not see the interruption"
+    assert seen[0][0] < 500, "run() did not see the interruption"
     assert seen[0][1] is True, "the signal was not delivered on the GUI thread"

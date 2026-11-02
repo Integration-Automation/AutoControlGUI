@@ -1,6 +1,21 @@
-"""Composite widget that ties the step tree and form into a Script Builder tab."""
+"""Composite widget that ties the step tree and form into a Script Builder tab.
+
+Run executes the steps off the GUI thread as a stoppable executor run, one at
+a time; Stop ends it at its next checkpoint.
+
+Every secret-named field of a result (a freshly issued token, at any depth,
+whatever the command) is masked in the result pane. The run reports each
+command's result -- the ones inside a block too -- to a
+:class:`OneTimeCollector`, which keeps what the pane masks, in memory. The
+"one-time values" button hands those values to :class:`OneTimeValueDialog` --
+once: the tab forgets them as it opens the dialog, when the next run starts
+and when it is disposed. A run that was stopped or failed still offers what
+it had issued by then.
+"""
+import functools
+from contextlib import nullcontext
 import json
-from typing import Callable, Optional
+from typing import Callable, ContextManager, List, Optional, Sequence
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QCloseEvent
@@ -9,18 +24,22 @@ from PySide6.QtWidgets import (
     QTextEdit, QToolButton, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui.manual_run_controls import ManualRunControls, _capture_manual_run
+from je_auto_control.gui.manual_run_controls import ManualRunControls, _requested_manual_run
+from je_auto_control.gui._tab_task import TabTask, was_stopped
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.gui.script_builder.command_schema import (
     CATEGORIES, COMMAND_SPECS, specs_in_category,
 )
+from je_auto_control.gui.script_builder.one_time_dialog import OneTimeValueDialog
 from je_auto_control.gui.script_builder.step_form_view import StepFormView
 from je_auto_control.gui.script_builder.step_list_view import StepTreeView
 from je_auto_control.gui.script_builder.step_model import (
-    Step, actions_to_steps, load_action_file, save_action_file, steps_to_actions,
+    OneTimeCollector, OneTimeValue, Step, actions_to_steps, displayable_record,
+    load_action_file, save_action_file, steps_to_actions,
 )
 from je_auto_control.utils.codegen.candidate_models import CandidateGenerationError, CandidateScript
 from je_auto_control.utils.codegen.candidate_validation import validate_candidate_actions
@@ -32,6 +51,16 @@ from je_auto_control.utils.executor.action_executor import execute_action
 
 def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
+
+
+def _run_actions(actions: list, collector: OneTimeCollector,
+                 capture: Callable[[], ContextManager[object]] = nullcontext) -> object:
+    """Worker thread: execute the built action list, reporting each result to ``collector``.
+
+    ``capture`` is the history/journal capture the tab's controls asked for, read on the GUI thread.
+    """
+    with capture():
+        return execute_action(actions, result_callback=collector.note)
 
 
 class ScriptBuilderTab(TranslatableMixin, QWidget):
@@ -51,8 +80,27 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         self._file_extras: Optional[dict] = None
         self._source_path = "<script-builder>"
         self._capture = ManualRunControls()
+        # The secrets of the last run, until they are revealed or the next run starts.
+        self._one_time: List[OneTimeValue] = []
+        # What the running (or last) run reported; emptied when its values are claimed.
+        self._collector: Optional[OneTimeCollector] = None
+        # The line of the result pane that says values are waiting, to replace once they are shown.
+        self._available_line = ""
+        self._reveal_btn = QPushButton()
+        self._reveal_dialog: Optional[OneTimeValueDialog] = None
+        self._runs = TabTask(self)
+        self._runs.result.connect(self._show_run_result)
+        self._runs.error.connect(self._show_run_error)
         self._build_layout()
         self._wire_signals()
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: the command still running in the background.
+
+        A script run is stopped; other work cannot be interrupted, so it runs to its end and its
+        result is dropped. Called by ``close_tab(key, release=True)``; safe to call twice.
+        """
+        release_resources(self, self._forget_one_time)
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
@@ -89,10 +137,15 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             ("sb_load_json", self._on_load),
             ("sb_save_json", self._on_save),
             ("sb_run", self._on_run),
+            ("task_stop", self._on_stop),
         ):
             btn = self._tr(QPushButton(), key)
             btn.clicked.connect(handler)
             bar.addWidget(btn)
+        self._tr(self._reveal_btn, "sb_one_time_show")
+        self._reveal_btn.setEnabled(False)
+        self._reveal_btn.clicked.connect(self._on_reveal)
+        bar.addWidget(self._reveal_btn)
         return bar
 
     def _add_button(self) -> QToolButton:
@@ -207,15 +260,89 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
     def _on_run(self) -> None:
         try:
             actions = steps_to_actions(self._tree.root_steps())
-            if not actions:
-                QMessageBox.information(self, "Info", "No steps to run")
-                return
-            with _capture_manual_run(getattr(self, "_capture", None), source_id="gui.builder",
-                                     script_path=getattr(self, "_source_path", "<script-builder>")):
-                result = execute_action(actions)
-            self._result.setPlainText(
-                json.dumps(result, indent=2, default=str, ensure_ascii=False)
-            )
         except (AutoControlException, OSError, ValueError, TypeError,
                 RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
+            return
+        if not actions:
+            QMessageBox.information(self, "Info", "No steps to run")
+            return
+        collector = OneTimeCollector()
+        capture = _requested_manual_run(getattr(self, "_capture", None), source_id="gui.builder",
+                                        script_path=getattr(self, "_source_path", "<script-builder>"))
+        if not self._runs.start_script(functools.partial(_run_actions, actions, collector, capture)):
+            self._result.setPlainText(_t("task_busy"))
+            return
+        self._forget_one_time()
+        self._collector = collector
+        self._result.setPlainText(_t("task_running"))
+
+    def _on_stop(self) -> None:
+        if self._runs.stop():
+            self._result.setPlainText(_t("task_stopping"))
+
+    def _show_run_result(self, result: object) -> None:
+        # Masked first: a result may carry a token (AC_user_add, AC_jwt_encode, a lease...).
+        self._show_with_one_time(
+            [json.dumps(displayable_record(result), indent=2, default=str, ensure_ascii=False)])
+
+    def _show_with_one_time(self, lines: Sequence[str]) -> None:
+        """Fill the result pane with ``lines`` and say what the ended run left to reveal."""
+        shown = [line for line in lines if line]
+        collector, self._collector = self._collector, None
+        self._one_time, truncated = collector.take() if collector is not None else ([], False)
+        self._available_line = ""
+        if self._one_time:
+            self._available_line = _t("sb_one_time_available").format(count=len(self._one_time))
+            shown.append(self._available_line)
+        if truncated and collector is not None:
+            shown.append(_t("sb_one_time_limit").format(limit=collector.limit))
+        self._result.setPlainText("\n\n".join(shown))
+        self._reveal_btn.setEnabled(bool(self._one_time))
+
+    def _forget_one_time(self) -> None:
+        """Drop the last run's secrets and close the dialog still showing them."""
+        self._one_time = []
+        self._collector = None
+        self._available_line = ""
+        self._reveal_btn.setEnabled(False)
+        dialog, self._reveal_dialog = self._reveal_dialog, None
+        if dialog is not None:
+            dialog.forget()
+            dialog.done(0)  # emits ``finished`` even when it was never shown
+
+    def _take_one_time_dialog(self) -> Optional[OneTimeValueDialog]:
+        """Build the reveal dialog for the pending values and forget them here; not shown yet."""
+        if not self._one_time:
+            return None
+        values, self._one_time = self._one_time, []
+        self._reveal_btn.setEnabled(False)
+        self._mark_one_time_shown()
+        dialog = OneTimeValueDialog(values, self)
+        dialog.finished.connect(dialog.deleteLater)
+        dialog.finished.connect(self._on_reveal_closed)
+        self._reveal_dialog = dialog
+        return dialog
+
+    def _mark_one_time_shown(self) -> None:
+        """Replace the pane's "values are available" line: they were shown and are gone."""
+        line, self._available_line = self._available_line, ""
+        text = self._result.toPlainText()
+        if line and line in text:
+            self._result.setPlainText(text.replace(line, _t("sb_one_time_shown")))
+
+    def _on_reveal(self) -> None:
+        dialog = self._take_one_time_dialog()
+        if dialog is not None:
+            dialog.open()  # window-modal without a nested event loop
+
+    def _on_reveal_closed(self, _result: int = 0) -> None:
+        self._reveal_dialog = None
+
+    def _show_run_error(self, error: object) -> None:
+        # A token issued before the stop or the failure exists; it is still offered.
+        if was_stopped(error):
+            self._show_with_one_time([_t("task_stopped")])
+            return
+        self._show_with_one_time([])
+        QMessageBox.warning(self, "Error", str(error))

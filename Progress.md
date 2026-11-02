@@ -305,8 +305,7 @@ D2 仍缺 helper 隔離與半開交握資源回收；D3 的錄製／全域停止
 - **Remote Desktop 與 Script Builder 仍在啟動時建立**（預設開啟），啟動時間 2.6–2.7 秒裡大半是它們與門面匯入。
 - **F1 的遺留面板釋放**：擁有者直接建立的核心表單與 Remote Desktop 在關閉時仍保留 widget；需隨 F3 遷移直接控制項引用、執行中工作與連線生命週期，再啟用銷毀。
 - **F2 其餘**：計畫指定的 `WorkspaceShell` 介面、右側可收合詳情，以及各面板的空白／錯誤／permission states 還沒全面交付。
-- **F3** 還缺共用 `TaskController` 接入其餘面板、backend timeout／cancel 傳遞與關閉生命週期遷移，
-  以及 `webrtc_panel.py` 的 dialog／worker／session 拆分。
+- **F3** 還缺共用 `TaskController` 接入其餘面板、backend timeout／cancel 傳遞與關閉生命週期遷移。
 - **F4**（啟動／記憶體基準、mixed-DPI、功能對等測試）尚未開始。
 - **F3 Windows 原生釋放驗收**：`test/unit_test/headless/test_remote_desktop_host_id.py` 的 freed-thread-state abort 尚缺 Windows 原生堆疊與獨立根因確認。
 
@@ -336,8 +335,6 @@ D2 仍缺 helper 隔離與半開交握資源回收；D3 的錄製／全域停止
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
 | `utils/mcp_server/tools/_handlers_executor_bridge.py` | 1,429 | 純委派函式（函式內匯入後立即轉呼叫，沒有分支），不適用 flat data tables 豁免。需先定義領域邊界再拆分。 |
-| `gui/remote_desktop/webrtc_panel.py` | 2,488 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
-| `utils/accessibility/backends/windows_backend.py` | 805 | 剩餘 UIA COM 生命週期管理仍需保留 `CoInitialize`／介面釋放的配對；拆分前須建立這些配對的回歸。 |
 
 **本質豁免（flat data tables）**：`utils/mcp_server/tools/_factories.py`、
 `utils/executor/action_executor.py`、`gui/script_builder/command_schema.py`、
@@ -397,8 +394,6 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
   bus 上跑過,三種都得在自己的時限內收斂。至於真的 mutter 對話框長什麼樣、真人猶豫
   三十秒會不會撞到別的東西,那是 mutter 的事,CI 裡沒有人可以去按它。
 
----
-
 ## 輸入、視窗與擷取修正：還沒在真的桌面與 Jeffrey_RPA 上驗過
 
 `TODO` — 原生桌面與正式批次升級前的行為驗收暫緩。
@@ -413,10 +408,6 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 - **真的 Win32 行為沒有實測**：`post_key` 在真的編輯框是否只出現一個字、DWM cloak 過濾掉的是哪些視窗、
   `MoveWindow` 對最大化視窗與另一個 DPI 的螢幕是否能原樣還原，都只用假的 `user32` 驗過。
 - **X11／Wayland**：大寫與 Shift 標點的判斷假設 `keysym_to_keycode` 把大寫字母對到小寫的 keycode，沒有對著 X server 跑過。
-
-**還沒決定的小事**：Windows 鍵表沒有 `slash` 這個名字。`plus`／`minus`／`comma`／`period` 與 `oem_1`…`oem_8` 都有，
-但鍵表的註解刻意不替 `oem_*` 取好讀的別名，因為它們隨鍵盤配置而變（`oem_2` 只有在美式配置上是 `/`）。
-要加的話是 `wrapper/_platform_windows.py` 的 `keyboard_key_aliases` 一行。
 
 ---
 
@@ -463,6 +454,68 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 - **`pytest --cov` 沒有重新量過**：進入點搬到 `je_auto_control_pytest` 之後，它是否還少算，未知；規則仍是 `coverage run -m pytest`。
 - **快到 750 行上限的檔案**：`utils/usb/passthrough/viewer_client.py`（748）、`gui/remote_desktop/connection_screen.py`（729）、
   `utils/mcp_server/server.py`（734）、`utils/mcp_server/http_transport.py`（727）、`utils/agent/backends/anthropic_computer_use.py`（723）——下一次要加東西就得先拆。
+
+---
+
+## 行動裝置（Android／iOS）：完全沒有在裝置上跑過
+
+`BLOCKED` — 需要 Android 模擬器或實機、iPhone 與 WebDriverAgent；這台機器連 `adb` 都沒有
+
+U-20261009-18 的每一個裝置面呼叫都只對假的 ADB／uiautomator2／WDA 測過。`uiautomator2` 與 `facebook-wda` 沒有安裝在開發環境裡，
+方法名稱與參數是憑記憶寫的，第一次接上真的 SDK 很可能要修：
+
+- uiautomator2：`send_keys`、`drag`、空 selector 的 `gesture(...)`（捏合）、`clipboard`／`set_clipboard`、對話框按鈕的 resource id。
+- facebook-wda：`app_launch`／`app_terminate`／`app_state`、`alert.*`、`set_clipboard`、`status()`、`orientation` 的值、元素的 `pinch`、`screenshot()` 回傳 PIL 影像。
+- 旋轉方向：螢幕截圖以面板自然方向回來時，`landscape_left` 轉 270°、`landscape_right` 轉 90°，是從文件推的，沒看過。
+- Android：`input draganddrop` 是否存在、`monkey` 啟動輸出、`pidof`／`pm path` 的結束碼、`dumpsys activity activities` 的格式、`pkill -INT screenrecord` 能否收尾 MP4。
+  ADBKeyBoard 的送達無法由裝置確認，是從 IME 被選取推定的。
+- 已知限制：iOS 捏合忽略 `x`／`y`／`span`；iOS `app_state` 不會回 `not_installed`；iOS 的安裝／檔案／錄影沒有 adapter（只有 `MobileExtension` 協定與註冊點）；
+  Mobile 分頁的 probe／run 會卡住 GUI 執行緒到裝置回應或逾時。`AC_android_shell` 刻意不做成 MCP 工具，**請維護者確認**。
+- 沒有 `examples/` 的實機腳本以外的 smoke；Xcode／WDA 的建置與簽章只寫成前置條件。
+
+---
+
+## GUI：留下的缺口
+
+`TODO` — U-20261009-27、-28、-34、-36、-38、-40 之後還開著的
+
+- **Windows UIA 後端的執行緒模型完全沒對真的 COM 驗過**：現在每個呼叫執行緒各有一個自動化物件（`accessibility/backends/windows_automation.py`；
+  主執行緒 STA、其他執行緒進 MTA），Accessibility 分頁與 A11y Audit 已移出 GUI 執行緒。開發環境沒裝 `comtypes`，CI 也沒有同時有 `comtypes` 與桌面的 job，
+  測試全是假 COM 物件。未驗證的假設：MTA 工作執行緒上的 UIA 呼叫可用；焦點事件 callback 不需要 message pump；
+  `import comtypes` 第一次發生在已經是 MTA 的執行緒上會丟 `OSError`（憑記憶，沒處理）。`AC_wait_for_focus_change` 的原生 `Queue.get` 仍不會被 stop 叫醒。
+- **Script Builder 的一次性值**：一次執行最多保留 200 個（`MAX_ONE_TIME_VALUES`，留前面的）；`AC_parallel` 分支裡產生的值不經結果掛鉤回報，
+  只能從區塊的結果裡取得（標成 `results[0].…`）。結果裡內嵌的動作清單以「參數」規則遮蔽，那些欄位不提供一次性顯示。
+  對話框從未在真的螢幕上顯示過，真的系統剪貼簿（`QClipboard.clear()`／`text()`）在測試裡是假物件。
+  `AC_approval_request` 的 `token`（請求編號）在結果畫面保持可見，但在 log 裡仍被遮蔽。
+- **stop 還叫不醒的**：已經進到後端的單一指令（一次影像搜尋、OCR、HTTP 請求、shell 指令）、單一手勢內的節奏 sleep、`AC_wait_for_focus_change`；
+  MCP 自己的輪詢（`ac_wait_for_image`／`ac_wait_for_pixel`）不在可停止的執行裡。非腳本的分頁工作在後端無法取消，只是結果被丟掉。
+  ChatOps 的 Slack bot：`/run` 現在在工作執行緒上跑，`/stop` 的反應受輪詢間隔限制（預設 5 秒）；卡在不可中斷的後端呼叫裡的執行仍停不掉，`stop()` 逾時後回 `False`；在輪詢執行緒上的指令 handler 裡呼叫 `stop()` 也會等到逾時。沒對真的 Slack workspace 跑過。
+  新轉成可停止的等待裡，`AC_handle_file_dialog`、`AC_wait_until_app_idle`、`AC_wait_for_composition_commit`、`AC_wait_for_unlock` 與行動裝置的 `wait_for_app` 只對假探針測過。
+- **WebRTC**：`StatsPoller.start()` 會在 GUI 執行緒上最多等 2 秒（`future.result(timeout=2.0)`，是啟動路徑，沒動）。LAN 廣播的註冊與取消已移出 GUI 執行緒，
+  但真的 zeroconf 的時間與名稱衝突行為只對假物件測過。
+- **切換主題後那幾個事件迴圈回合內**，以被暫存的頁面為 parent 的 `QMessageBox` 會相對於隱藏的暫存 widget 定位（只影響位置）。
+  系統匣路徑在 offscreen 下沒有 tray，`_on_tray_open` 是直接呼叫測的。基準（`benchmarks/gui_*.py`）CI 仍不設門檻。
+- **把 Python 建的 widget 放進分頁列在結束時崩潰**：已查明觸發條件——分頁列按鈕上接了 Python callable、又有排隊中的 `deleteLater()`、而行程經 `os._exit` 離開；
+  先把 deferred delete 沖掉就不會。機制（Qt 在行程結束時釋放那個 slot）是推論，沒有 C 堆疊可看。`_tab_close_icon.py` 沒有改回自訂按鈕。
+- **對真實 Qt 型別的型別檢查**：`test/verify/typing_extras_exempt.txt` 從 70 個模組降到 18 個（11 個 WebRTC 面板 mixin、`navigation`、`step_form_view`、
+  `triggers_tab`，與 4 個對 aiortc／av 型別的 `utils/remote_desktop` 模組），只准變少。`QImage.fromData(x, "JPEG")` 的 5 處保留 `# type: ignore[arg-type]`：
+  stub 要 bytes，實際的 binding 對 bytes 丟 `ValueError`。
+- 遠端桌面的輸入改成佇列送出後，`AC_remote_send_input` 回的 `{"sent": True}` 意思是「已排入」；`SO_SNDTIMEO` 的 POSIX 包法與經 TLS socket 的行為沒在這台機器上驗過。
+- 沒在 macOS／Linux 上看過新的關閉鈕、捲動與重設樣式；沒在真的多螢幕桌面試過視窗位置還原；PyBreeze 沒有對這一版跑過；各語系新增的字串（日文、簡體中文）沒有母語者看過。
+
+---
+
+## 雜項
+
+`TODO` — 小項目，各自獨立
+
+- **本機的共用 `.venv` 裝著 `je_auto_control_dev 0.0.136`**，它的 `pytest11` 進入點還是舊的重量級路徑；重裝即可，不影響 CI。
+- **free-threaded**：呼叫者身分、綁定的裝置、自愈的執行標記與 stop token 都改成只在設定它的執行緒上有效（`utils/thread_bound.py`）。
+  這台機器沒有 free-threaded 直譯器：驗證用的是模擬繼承與真的 `-X thread_inherit_context=1`（3.14.7，GIL 開著）；`free-threaded-scope` job（3.14t）是第一次真的跑。
+- **能力探測**：Windows 的鎖定工作站、session 0、低完整性與擷取失敗分支只用假資料判斷；macOS 的三個 preflight 呼叫只對假物件跑過，
+  pyobjc 的 `Quartz` 有沒有 `CGPreflightListenEventAccess` 未知（沒有的話 `recording`／`stop_shortcut` 回 `unknown`）。
+- **Windows 的版面鍵名**（`slash` 等 8 個）只在美式配置上實際呼叫過。
+- **狀態機 `on_enter` 的單一動作寫法**以前一直被拒絕、從沒執行過（已修，U-20261009-24）：依賴「它不會跑」的既有狀態機現在會跑它。
 
 ---
 

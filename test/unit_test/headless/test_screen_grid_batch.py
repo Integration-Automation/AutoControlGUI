@@ -13,8 +13,10 @@ def test_grid_cells_cover_region_row_major():
     cells = grid_cells(2, 4, region=REGION)
     assert len(cells) == 8
     assert [c.label for c in cells[:4]] == ["A1", "B1", "C1", "D1"]
-    assert cells[0].left == 0 and cells[0].right == 100
-    assert cells[-1].label == "D2" and cells[-1].right == 400
+    assert cells[0].left == 0
+    assert cells[0].right == 100
+    assert cells[-1].label == "D2"
+    assert cells[-1].right == 400
     assert cells[-1].bottom == 200
 
 
@@ -44,7 +46,8 @@ def test_round_trip_point_to_cell_to_point():
 
 def test_screen_size_default_origin():
     cells = grid_cells(1, 2, screen_size=[200, 100])
-    assert cells[0].left == 0 and cells[1].right == 200
+    assert cells[0].left == 0
+    assert cells[1].right == 200
     assert cells[0].bottom == 100
 
 
@@ -78,4 +81,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("grid_cells", "cell_for_point", "point_for_cell", "GridCell"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

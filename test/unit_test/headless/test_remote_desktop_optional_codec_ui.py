@@ -12,7 +12,7 @@ pytest.importorskip("aiortc")
 
 from PySide6.QtWidgets import QApplication, QComboBox, QLabel
 
-from je_auto_control.gui.remote_desktop import advanced_group, webrtc_panel
+from je_auto_control.gui.remote_desktop import advanced_group, webrtc_host_media, webrtc_panel
 
 
 @pytest.fixture(scope="module")
@@ -53,8 +53,8 @@ def test_available_codec_helpers_populate_and_select_picker(qapp, monkeypatch):
 @pytest.mark.parametrize("codec", ["", "h264_nvenc"])
 def test_missing_codec_actions_report_failure(qapp, monkeypatch, codec):
     """A stale selection cannot call unavailable install or uninstall functions."""
-    monkeypatch.setattr(webrtc_panel, "install_hardware_codec", None)
-    monkeypatch.setattr(webrtc_panel, "uninstall_hardware_codec", None)
+    monkeypatch.setattr(webrtc_host_media, "install_hardware_codec", None)
+    monkeypatch.setattr(webrtc_host_media, "uninstall_hardware_codec", None)
     combo = QComboBox()
     combo.addItem("selected", codec)
     label = QLabel()

@@ -31,10 +31,14 @@ def classify_reply(reply: Any, request_id: str) -> tuple[bool, Any]:
     return False, detached(reply.get("result"))
 
 
-def require_event_owner(event: Any, callback: Callable[[dict], None] | None) -> None:
-    """Refuse an input announcement that is malformed or that no caller agreed to handle."""
+def require_event_owner(event: Any, callback: Callable[[dict], None] | None) -> Callable[[dict], None]:
+    """Refuse an input announcement that is malformed or that no caller agreed to handle.
+
+    Returns the callback that agreed to handle it.
+    """
     if not isinstance(event, dict) or callback is None:
         raise AgentTaskError("native helper announced unexpected input")
+    return callback
 
 
 class OwnedChannel:
@@ -189,9 +193,9 @@ class OwnedChannel:
             raise AgentTaskError("native helper was closed while a request was waiting")
 
     def _event(self, event: Any, callback: Callable[[dict], None] | None, check: Callable[[], None]) -> None:
-        require_event_owner(event, callback)
+        handler = require_event_owner(event, callback)
         check()
-        callback(detached(event))
+        handler(detached(event))
         self._fenced()
         self._send({"ack": True})
 
@@ -215,6 +219,8 @@ class OwnedChannel:
 
     def _signal_owned_group(self) -> None:
         """Signal the helper's group only while its unreaped leader still holds the group ID."""
+        if sys.platform == "win32":  # the caller closes the Job instead; there are no process groups
+            raise AgentTaskError("process groups exist only on POSIX")
         reaped = self._leader_held()
         try:
             os.killpg(self._process.pid, signal.SIGKILL)
@@ -234,10 +240,13 @@ class OwnedChannel:
         group's other members still hold the ID, and only an already empty group
         could see it reused in the moment before the signal, which then finds nothing.
         """
+        if sys.platform == "win32":  # reached only through _signal_owned_group, which refuses first
+            raise AgentTaskError("process groups exist only on POSIX")
         pid = self._process.pid
+        waitid = getattr(os, "waitid", None)
         try:
-            if getattr(os, "waitid", None) is not None:
-                os.waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
+            if waitid is not None:
+                waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
                 return False
             reaped_pid, status = os.waitpid(pid, os.WNOHANG)
         except ChildProcessError as error:

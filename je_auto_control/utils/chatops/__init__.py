@@ -16,7 +16,8 @@ Compose your own:
     bot.run_forever()
 """
 from je_auto_control.utils.chatops.handlers import (
-    cmd_run, cmd_screenshot, cmd_scripts, cmd_status,
+    CHATOPS_RUN_PREFIX, chatops_run_id,
+    cmd_run, cmd_screenshot, cmd_scripts, cmd_status, cmd_stop,
     register_default_commands as register_chatops_default_commands,
 )
 from je_auto_control.utils.chatops.router import (
@@ -29,8 +30,8 @@ from je_auto_control.utils.chatops.slack_bot import (
 
 
 __all__ = [
-    "ChatOpsError", "CommandHandler", "CommandResult", "CommandRouter",
-    "CommandSpec", "SlackBot", "SlackError",
-    "cmd_run", "cmd_screenshot", "cmd_scripts", "cmd_status",
+    "CHATOPS_RUN_PREFIX", "ChatOpsError", "CommandHandler", "CommandResult",
+    "CommandRouter", "CommandSpec", "SlackBot", "SlackError", "chatops_run_id",
+    "cmd_run", "cmd_screenshot", "cmd_scripts", "cmd_status", "cmd_stop",
     "make_default_slack_bot", "register_chatops_default_commands",
 ]

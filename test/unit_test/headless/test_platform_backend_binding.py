@@ -38,7 +38,7 @@ class _RecordingMouse:
         self.calls.append(("click", mouse_button, x, y))
 
 
-@pytest.fixture()
+@pytest.fixture
 def stub_env(monkeypatch):
     """Neutralise everything the wrapper touches except the backend call."""
     monkeypatch.setattr(auto_control_mouse, "record_action_to_list",

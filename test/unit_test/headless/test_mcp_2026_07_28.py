@@ -69,7 +69,8 @@ def test_discover_names_every_version_and_the_servers_identity():
     assert result["capabilities"] == {"tools": {"listChanged": True},
                                       "resources": {"subscribe": True}, "prompts": {}}
     assert result["_meta"][META_SERVER_INFO]["name"] == "je_auto_control"
-    assert result["ttlMs"] > 0 and result["cacheScope"] == "private"
+    assert result["ttlMs"] > 0
+    assert result["cacheScope"] == "private"
 
 
 def test_discover_without_the_per_request_fields_is_invalid_params():
@@ -112,13 +113,17 @@ def test_methods_the_revision_removed_are_not_found(method):
 def test_every_result_says_it_is_complete_and_lists_carry_caching_hints():
     server = MCPServer(tools=[_tool(annotations=READ_ONLY)])
     listed = _send(server, "tools/list")["result"]
-    assert listed["resultType"] == "complete" and [t["name"] for t in listed["tools"]] == ["act"]
-    assert listed["ttlMs"] == 60_000 and listed["cacheScope"] == "private"
+    assert listed["resultType"] == "complete"
+    assert [t["name"] for t in listed["tools"]] == ["act"]
+    assert listed["ttlMs"] == 60_000
+    assert listed["cacheScope"] == "private"
     for method in ("resources/list", "prompts/list"):
         assert _send(server, method)["result"]["cacheScope"] == "private"
     called = _send(server, "tools/call", {"name": "act", "arguments": {"x": 3}, "_meta": _meta()})["result"]
-    assert called["resultType"] == "complete" and called["isError"] is False
-    assert "ttlMs" not in called and called["_meta"][META_SERVER_INFO]["version"]
+    assert called["resultType"] == "complete"
+    assert called["isError"] is False
+    assert "ttlMs" not in called
+    assert called["_meta"][META_SERVER_INFO]["version"]
 
 
 def test_an_unknown_resource_is_invalid_params():
@@ -133,7 +138,8 @@ def test_initialize_still_selects_the_handshake_era():
     assert "resultType" not in result
     legacy = json.loads(server.handle_line(json.dumps(
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})))["result"]
-    assert "resultType" not in legacy and "ttlMs" not in legacy
+    assert "resultType" not in legacy
+    assert "ttlMs" not in legacy
 
 
 def test_capabilities_come_from_the_request_not_the_connection():
@@ -167,12 +173,13 @@ def test_no_server_initiated_request_is_sent_in_a_stateless_request():
                                     input_schema={"type": "object", "properties": {}},
                                     handler=asks, annotations=READ_ONLY)
     _send(server, "tools/call", {"name": "asks", "_meta": _meta({"sampling": {}})})
-    assert written == [] and "2026-07-28" in errors[0]
+    assert written == []
+    assert "2026-07-28" in errors[0]
 
 
 # --- destructive confirmation by multi round-trip ---------------------------
 
-@pytest.fixture()
+@pytest.fixture
 def gated(monkeypatch):
     monkeypatch.setenv("JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", "1")
     calls = []
@@ -189,11 +196,14 @@ def test_a_destructive_call_asks_for_confirmation_by_input_required(gated):
     written = []
     server.set_writer(written.append)
     result = _call(server, {"elicitation": {}})["result"]
-    assert result["resultType"] == "input_required" and "ttlMs" not in result
+    assert result["resultType"] == "input_required"
+    assert "ttlMs" not in result
     question = result["inputRequests"]["confirm"]
-    assert question["method"] == "elicitation/create" and question["params"]["mode"] == "form"
+    assert question["method"] == "elicitation/create"
+    assert question["params"]["mode"] == "form"
     assert isinstance(result["requestState"], str)
-    assert calls == [] and written == []
+    assert calls == []
+    assert written == []
 
 
 def test_an_accepted_retry_runs_the_tool_once(gated):
@@ -201,7 +211,9 @@ def test_an_accepted_retry_runs_the_tool_once(gated):
     state = _call(server, {"elicitation": {}})["result"]["requestState"]
     accepted = {"inputResponses": {"confirm": {"action": "accept"}}, "requestState": state}
     done = _call(server, {"elicitation": {}}, **accepted)["result"]
-    assert done["resultType"] == "complete" and done["isError"] is False and calls == [5]
+    assert done["resultType"] == "complete"
+    assert done["isError"] is False
+    assert calls == [5]
     # The same state again is a replay.
     assert _call(server, {"elicitation": {}}, **accepted)["error"]["code"] == -32602
     assert calls == [5]
@@ -213,14 +225,17 @@ def test_a_declined_retry_is_a_tool_error_and_does_not_run(gated, action):
     state = _call(server, {"elicitation": {}})["result"]["requestState"]
     result = _call(server, {"elicitation": {}}, requestState=state,
                    inputResponses={"confirm": {"action": action}})["result"]
-    assert result["isError"] is True and action in result["content"][0]["text"] and calls == []
+    assert result["isError"] is True
+    assert action in result["content"][0]["text"]
+    assert calls == []
 
 
 def test_a_retry_without_an_answer_is_asked_again(gated):
     server, calls = gated
     state = _call(server, {"elicitation": {}})["result"]["requestState"]
     again = _call(server, {"elicitation": {}}, requestState=state, inputResponses={})["result"]
-    assert again["resultType"] == "input_required" and again["requestState"] != state
+    assert again["resultType"] == "input_required"
+    assert again["requestState"] != state
     assert calls == []
 
 
@@ -321,7 +336,7 @@ def test_list_changes_are_not_pushed_to_a_stateless_peer():
 _TEST_SCHEME = "http"  # NOSONAR localhost-only ephemeral test server; TLS out of scope
 
 
-@pytest.fixture()
+@pytest.fixture
 def http_server(monkeypatch):
     monkeypatch.setenv("JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", "1")
     server = HttpMCPServer(mcp=MCPServer(tools=[_tool(), _tool(name="read", annotations=READ_ONLY)]),
@@ -359,12 +374,14 @@ def _request(method, params=None, capabilities=None, msg_id=1):
 
 def test_a_stateless_http_request_is_served_without_a_session(http_server):
     status, body, headers = _http(http_server, _request("tools/list"), _headers_for("tools/list"))
-    assert status == 200 and body["result"]["resultType"] == "complete"
+    assert status == 200
+    assert body["result"]["resultType"] == "complete"
     assert "Mcp-Session-Id" not in headers
     # An unknown session id is ignored rather than a 404: there are no sessions.
     status, body, _ = _http(http_server, _request("server/discover"),
                             {**_headers_for("server/discover"), "Mcp-Session-Id": "nope"})
-    assert status == 200 and STATELESS_PROTOCOL_VERSION in body["result"]["supportedVersions"]
+    assert status == 200
+    assert STATELESS_PROTOCOL_VERSION in body["result"]["supportedVersions"]
 
 
 @pytest.mark.parametrize("headers, detail", [
@@ -375,7 +392,9 @@ def test_a_stateless_http_request_is_served_without_a_session(http_server):
 ])
 def test_headers_that_disagree_with_the_body_are_a_header_mismatch(http_server, headers, detail):
     status, body, _ = _http(http_server, _request("tools/list"), headers)
-    assert status == 400 and body["error"]["code"] == -32020 and detail in body["error"]["message"]
+    assert status == 400
+    assert body["error"]["code"] == -32020
+    assert detail in body["error"]["message"]
 
 
 def test_mcp_name_mirrors_the_tool_name(http_server):
@@ -383,7 +402,8 @@ def test_mcp_name_mirrors_the_tool_name(http_server):
     assert _http(http_server, call, _headers_for("tools/call"))[1]["error"]["code"] == -32020
     assert _http(http_server, call, _headers_for("tools/call", "act"))[1]["error"]["code"] == -32020
     status, body, _ = _http(http_server, call, _headers_for("tools/call", "read"))
-    assert status == 200 and body["result"]["isError"] is False
+    assert status == 200
+    assert body["result"]["isError"] is False
     encoded = "=?base64?" + base64.b64encode(b"read").decode() + "?="
     assert _http(http_server, call, _headers_for("tools/call", encoded))[0] == 200
 
@@ -391,28 +411,35 @@ def test_mcp_name_mirrors_the_tool_name(http_server):
 def test_version_and_metadata_errors_are_400_and_unknown_methods_404(http_server):
     status, body, _ = _http(http_server, {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
                             _headers_for("tools/list"))
-    assert status == 400 and body["error"]["code"] == -32602
+    assert status == 400
+    assert body["error"]["code"] == -32602
     status, body, _ = _http(http_server, _request("ping"), _headers_for("ping"))
-    assert status == 404 and body["error"]["code"] == -32601
+    assert status == 404
+    assert body["error"]["code"] == -32601
     status, body, _ = _http(http_server, _request("tools/list"),
                             _headers_for("tools/list", version="2099-01-01"))
-    assert status == 400 and body["error"]["code"] == -32022 and body["id"] == 1
+    assert status == 400
+    assert body["error"]["code"] == -32022
+    assert body["id"] == 1
     assert STATELESS_PROTOCOL_VERSION in body["error"]["data"]["supported"]
 
 
 def test_confirmation_over_http_is_a_multi_round_trip(http_server):
     call = _request("tools/call", {"name": "act", "arguments": {"x": 2}}, {"elicitation": {}})
     status, body, _ = _http(http_server, call, _headers_for("tools/call", "act"))
-    assert status == 200 and body["result"]["resultType"] == "input_required"
+    assert status == 200
+    assert body["result"]["resultType"] == "input_required"
     retry = _request("tools/call", {"name": "act", "arguments": {"x": 2},
                                     "requestState": body["result"]["requestState"],
                                     "inputResponses": {"confirm": {"action": "accept"}}},
                      {"elicitation": {}}, msg_id=2)
     status, body, _ = _http(http_server, retry, _headers_for("tools/call", "act"))
-    assert status == 200 and body["result"]["isError"] is False
+    assert status == 200
+    assert body["result"]["isError"] is False
     bare = _request("tools/call", {"name": "act", "arguments": {"x": 2}})
     status, body, _ = _http(http_server, bare, _headers_for("tools/call", "act"))
-    assert status == 400 and body["error"]["code"] == -32021
+    assert status == 400
+    assert body["error"]["code"] == -32021
 
 
 def test_get_and_delete_are_not_part_of_the_stateless_revision(http_server):
@@ -424,7 +451,8 @@ def test_get_and_delete_are_not_part_of_the_stateless_revision(http_server):
 def test_the_handshake_era_still_gets_a_session(http_server):
     status, body, headers = _http(http_server, {"jsonrpc": "2.0", "id": 1, "method": "initialize",
                                                 "params": {"protocolVersion": "2025-11-25"}}, {})
-    assert status == 200 and body["result"]["protocolVersion"] == "2025-11-25"
+    assert status == 200
+    assert body["result"]["protocolVersion"] == "2025-11-25"
     assert headers.get("Mcp-Session-Id")
 
 
@@ -514,9 +542,11 @@ def test_a_cancelled_subscription_stops_silently_and_releases_its_resources():
                                                   "resourceSubscriptions": [_Updates.URI]})
     server.handle_line(json.dumps({"jsonrpc": "2.0", "method": "notifications/cancelled",
                                    "params": {"requestId": 7}}))
-    assert provider.unsubscribed == [1] and provider.callbacks == {}
+    assert provider.unsubscribed == [1]
+    assert provider.callbacks == {}
     server.register_tool(_tool(name="late"))
-    assert len(written) == 1 and server.subscription(None, 7) is None
+    assert len(written) == 1
+    assert server.subscription(None, 7) is None
 
 
 def test_the_server_ending_a_subscription_answers_the_listen_request():
@@ -525,7 +555,8 @@ def test_the_server_ending_a_subscription_answers_the_listen_request():
     server.end_subscriptions(stdio=True)
     assert written[-1] == {"jsonrpc": "2.0", "id": 7, "result": {
         "resultType": "complete", "_meta": {"io.modelcontextprotocol/subscriptionId": 7}}}
-    assert closed.is_set() and provider.unsubscribed == [1]
+    assert closed.is_set()
+    assert provider.unsubscribed == [1]
 
 
 @pytest.mark.parametrize("filter_, code", [
@@ -534,7 +565,8 @@ def test_the_server_ending_a_subscription_answers_the_listen_request():
 ])
 def test_a_malformed_filter_is_invalid_params(filter_, code):
     _, _, written, _, reply = _listening(filter_)
-    assert json.loads(reply)["error"]["code"] == code and written == []
+    assert json.loads(reply)["error"]["code"] == code
+    assert written == []
 
 
 def test_one_id_listens_once():
@@ -553,7 +585,8 @@ def test_listen_over_stdio_is_answered_when_the_loop_ends():
     lines = [json.loads(line) for line in out.getvalue().splitlines()]
     assert [line.get("method", "result") for line in lines] == [
         "notifications/subscriptions/acknowledged", "result"]
-    assert lines[1]["id"] == 3 and lines[1]["result"]["resultType"] == "complete"
+    assert lines[1]["id"] == 3
+    assert lines[1]["result"]["resultType"] == "complete"
 
 
 def _open_listen(server, filter_):
@@ -580,7 +613,8 @@ def test_listen_over_http_streams_until_the_server_stops():
     server.start()
     try:
         connection, response = _open_listen(server, {"toolsListChanged": True})
-        assert response.status == 200 and response.getheader("X-Accel-Buffering") == "no"
+        assert response.status == 200
+        assert response.getheader("X-Accel-Buffering") == "no"
         assert "Mcp-Session-Id" not in dict(response.getheaders())
         assert _next_event(response)["params"]["notifications"] == {"toolsListChanged": True}
         server.mcp.register_tool(_tool(name="late"))
@@ -615,4 +649,5 @@ def test_listen_over_http_ends_when_the_client_goes_away():
 def test_listen_over_http_needs_an_event_stream(http_server):
     body = _request("subscriptions/listen", {"notifications": {"toolsListChanged": True}})
     status, reply, _ = _http(http_server, body, _headers_for("subscriptions/listen"))
-    assert status == 406 and reply["error"]["code"] == -32600
+    assert status == 406
+    assert reply["error"]["code"] == -32600

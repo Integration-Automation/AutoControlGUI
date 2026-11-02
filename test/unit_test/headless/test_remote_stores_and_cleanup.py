@@ -43,7 +43,8 @@ def test_a_damaged_trust_list_is_kept_aside(tmp_path):
     damaged = _damage(path)
     TrustList(path).add("viewer-c")
     kept = _quarantined(tmp_path, path.name)
-    assert len(kept) == 1 and kept[0].read_text(encoding="utf-8") == damaged
+    assert len(kept) == 1
+    assert kept[0].read_text(encoding="utf-8") == damaged
 
 
 def test_a_damaged_known_hosts_is_kept_aside(tmp_path):

@@ -24,10 +24,14 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Optional
+from types import ModuleType
+from typing import TYPE_CHECKING, Any, Generator, Optional
 
 import pytest
 
+
+if TYPE_CHECKING:  # the executor pulls in the whole facade; fixtures import it on use
+    from je_auto_control.utils.executor.action_executor import Executor
 
 _MARKER_NAME = "autocontrol"
 _DEFAULT_SUBDIR = "autocontrol_screenshots"
@@ -42,14 +46,14 @@ def pytest_configure(config: "pytest.Config") -> None:
 
 
 @pytest.fixture
-def autocontrol():
+def autocontrol() -> ModuleType:
     """Return the ``je_auto_control`` module without forcing a global import."""
     import je_auto_control
     return je_auto_control
 
 
 @pytest.fixture
-def autocontrol_screenshot_dir(tmp_path) -> Path:
+def autocontrol_screenshot_dir(tmp_path: Path) -> Path:
     """Per-test directory under ``tmp_path`` for screenshots / artefacts."""
     target = tmp_path / _DEFAULT_SUBDIR
     target.mkdir(parents=True, exist_ok=True)
@@ -57,7 +61,7 @@ def autocontrol_screenshot_dir(tmp_path) -> Path:
 
 
 @pytest.fixture
-def autocontrol_executor():
+def autocontrol_executor() -> "Executor":
     """Yield the executor singleton (callable via ``executor.event_dict``)."""
     from je_auto_control.utils.executor.action_executor import executor
     return executor
@@ -84,7 +88,8 @@ def _capture_failure_screenshot(item: "pytest.Item",
 
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
-def pytest_runtest_makereport(item, call):  # noqa: D401
+def pytest_runtest_makereport(item: "pytest.Item",
+                              call: "pytest.CallInfo[None]") -> Generator[None, Any, None]:
     """Attach a screenshot path to the failure report for ``autocontrol`` tests."""
     outcome = yield
     report = outcome.get_result()

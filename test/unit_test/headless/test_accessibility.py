@@ -108,8 +108,8 @@ def test_null_backend_raises_with_custom_reason():
     assert "because reasons" in str(info.value)
 
 
-def test_reset_backend_cache_clears_cached_instance():
-    backends_mod._cached_backend = _FakeBackend([])
+def test_reset_backend_cache_clears_cached_instance(monkeypatch):
+    monkeypatch.setattr(backends_mod, "_cached_backend", _FakeBackend([]))
     assert backends_mod.get_backend() is backends_mod._cached_backend
     backends_mod.reset_backend_cache()
     assert backends_mod._cached_backend is None
@@ -232,8 +232,10 @@ def test_executor_registers_a11y_commands():
 def test_executor_flag_coercion_treats_string_false_as_false():
     # A JSON action file / CLI / MCP call can deliver "false", which is truthy.
     from je_auto_control.utils.executor.action_executor import _as_bool
-    assert _as_bool("false") is False and _as_bool("0") is False
-    assert _as_bool("true") is True and _as_bool(True) is True
+    assert _as_bool("false") is False
+    assert _as_bool("0") is False
+    assert _as_bool("true") is True
+    assert _as_bool(True) is True
 
 
 def test_package_facade_exports_accessibility_api():

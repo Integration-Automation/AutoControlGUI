@@ -221,8 +221,9 @@ def test_resolve_monitor_falls_back_to_the_only_entry_when_alone():
 
 
 def test_resolve_monitor_raises_when_mss_reports_nothing():
+    sct = _FakeSct(monitors=[])
     with pytest.raises(RuntimeError, match="no monitors"):
-        _resolve_monitor(_FakeSct(monitors=[]), 1)
+        _resolve_monitor(sct, 1)
 
 
 def test_capture_frame_drops_alpha_and_returns_a_contiguous_bgr_array(

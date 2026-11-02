@@ -1,5 +1,6 @@
 """GUI smoke tests for the B-group tabs (a11y audit / matrix / media)."""
 import os
+import time
 
 import pytest
 
@@ -34,6 +35,11 @@ def test_device_matrix_tab_runs(app):
         '[["AC_set_var", {"name":"id","value":"${device.serial}"}]]',
     )
     tab._on_run()
+    # The run is off the GUI thread now: the table fills once it is delivered.
+    deadline = time.monotonic() + 10.0
+    while tab._task is not None and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.01)
     assert tab._table.rowCount() == 1
     assert "1" in tab._summary.text()
 

@@ -113,7 +113,8 @@ def _occupant(reg, slot):
 
 def test_owner_tokens_are_unique_and_never_the_script_owner():
     first, second = new_owner("viewer-tab"), new_owner("viewer-tab")
-    assert first != second and SCRIPT_OWNER not in (first, second)
+    assert first != second
+    assert SCRIPT_OWNER not in (first, second)
     assert first.startswith("viewer-tab#")
 
 
@@ -121,8 +122,9 @@ def test_owner_tokens_are_unique_and_never_the_script_owner():
 def test_an_unknown_slot_is_refused(reg, call):
     args = {"owner_of": (), "owned": ("me",), "evict": ("me",), "release": ("me",),
             "adopt": (object(), "me")}[call]
+    method = getattr(reg, call)
     with pytest.raises(AutoControlException):
-        getattr(reg, call)("webrtc", *args)
+        method("webrtc", *args)
 
 
 # --- a panel's own session ---------------------------------------------------------------------------------
@@ -135,7 +137,8 @@ def test_a_panel_reads_and_closes_what_it_adopted(reg, slot):
     assert reg.owned(slot, panel.owner) is made
     assert getattr(reg, _STATUS[slot])()["owner"] == panel.owner
     assert reg.release(slot, panel.owner) is True
-    assert not _is_up(made) and reg.owner_of(slot) is None
+    assert not _is_up(made)
+    assert reg.owner_of(slot) is None
     assert panel.displaced == []            # it asked for this itself
 
 
@@ -146,7 +149,8 @@ def test_a_panel_reconnecting_is_not_told_it_was_displaced(reg, slot):
     assert reg.evict(slot, by=panel.owner) is True
     reg.adopt(slot, second, panel.owner, panel.on_displaced)
     reg.adopt(slot, _live(slot), panel.owner, panel.on_displaced)   # replaced without evicting first
-    assert not _is_up(first) and not _is_up(second)
+    assert not _is_up(first)
+    assert not _is_up(second)
     assert panel.displaced == []
 
 
@@ -154,7 +158,8 @@ def test_adopting_the_same_object_again_does_not_close_it(reg):
     panel, viewer = _Panel(), _live(SLOT_VIEWER)
     reg.adopt(SLOT_VIEWER, viewer, panel.owner, panel.on_displaced)
     reg.adopt(SLOT_VIEWER, viewer, panel.owner, panel.on_displaced)
-    assert viewer.connected and reg.owned(SLOT_VIEWER, panel.owner) is viewer
+    assert viewer.connected
+    assert reg.owned(SLOT_VIEWER, panel.owner) is viewer
 
 
 # --- panel against panel ------------------------------------------------------------------------------------
@@ -166,7 +171,8 @@ def test_one_panel_cannot_see_or_close_another_panels_session(reg, slot):
     assert reg.owned(slot, second.owner) is None
     assert reg.release(slot, second.owner) is False
     getattr(reg, _SCRIPT_CLOSE[slot])(owner=second.owner)
-    assert _is_up(made) and reg.owned(slot, first.owner) is made
+    assert _is_up(made)
+    assert reg.owned(slot, first.owner) is made
     assert first.displaced == []
 
 
@@ -178,10 +184,13 @@ def test_a_panel_replaced_by_another_panel_is_told(reg, slot, evict_first):
     if evict_first:
         reg.evict(slot, by=second.owner)
     reg.adopt(slot, new, second.owner, second.on_displaced)
-    assert not _is_up(old) and _is_up(new)
-    assert first.displaced == [(slot, second.owner)] and second.displaced == []
+    assert not _is_up(old)
+    assert _is_up(new)
+    assert first.displaced == [(slot, second.owner)]
+    assert second.displaced == []
     # The replaced panel's Disconnect no longer reaches the new session.
-    assert reg.release(slot, first.owner) is False and _is_up(new)
+    assert reg.release(slot, first.owner) is False
+    assert _is_up(new)
     assert reg.owned(slot, first.owner) is None
 
 
@@ -190,7 +199,8 @@ def test_the_two_viewer_transports_do_not_displace_each_other(reg):
     reg.adopt(SLOT_VIEWER, _live(SLOT_VIEWER), tcp.owner, tcp.on_displaced)
     reg.adopt(SLOT_WS_VIEWER, _live(SLOT_WS_VIEWER), ws.owner, ws.on_displaced)
     reg.evict(SLOT_WS_VIEWER, by=tcp.owner)
-    assert tcp.displaced == [] and ws.displaced == [(SLOT_WS_VIEWER, tcp.owner)]
+    assert tcp.displaced == []
+    assert ws.displaced == [(SLOT_WS_VIEWER, tcp.owner)]
     assert reg.owned(SLOT_VIEWER, tcp.owner).connected
 
 
@@ -201,9 +211,11 @@ def test_a_script_connect_replaces_a_panels_session_and_tells_it(reg, slot):
     panel, old = _Panel(), _live(slot)
     reg.adopt(slot, old, panel.owner, panel.on_displaced)
     status = _SCRIPT_OPEN[slot](reg)
-    assert status["owner"] == SCRIPT_OWNER and not _is_up(old)
+    assert status["owner"] == SCRIPT_OWNER
+    assert not _is_up(old)
     assert panel.displaced == [(slot, SCRIPT_OWNER)]
-    assert reg.release(slot, panel.owner) is False and _is_up(_occupant(reg, slot))
+    assert reg.release(slot, panel.owner) is False
+    assert _is_up(_occupant(reg, slot))
 
 
 @pytest.mark.parametrize("slot", ALL_SLOTS)
@@ -211,7 +223,8 @@ def test_a_script_close_ends_a_panels_session_and_tells_it(reg, slot):
     panel, made = _Panel(), _live(slot)
     reg.adopt(slot, made, panel.owner, panel.on_displaced)
     status = getattr(reg, _SCRIPT_CLOSE[slot])()
-    assert status["owner"] is None and not _is_up(made)
+    assert status["owner"] is None
+    assert not _is_up(made)
     assert panel.displaced == [(slot, SCRIPT_OWNER)]
 
 
@@ -220,10 +233,12 @@ def test_a_panel_replaces_a_scripts_session(reg, slot):
     _SCRIPT_OPEN[slot](reg)
     scripted, panel = _occupant(reg, slot), _Panel()
     assert reg.owned(slot, panel.owner) is None
-    assert reg.release(slot, panel.owner) is False and _is_up(scripted)
+    assert reg.release(slot, panel.owner) is False
+    assert _is_up(scripted)
     reg.evict(slot, by=panel.owner)
     reg.adopt(slot, _live(slot), panel.owner, panel.on_displaced)
-    assert not _is_up(scripted) and reg.owner_of(slot) == panel.owner
+    assert not _is_up(scripted)
+    assert reg.owner_of(slot) == panel.owner
 
 
 @pytest.mark.parametrize(("slot", "send"), [(SLOT_VIEWER, "send_input"), (SLOT_WS_VIEWER, "ws_send_input")])
@@ -233,8 +248,9 @@ def test_script_input_goes_to_the_active_viewer_whoever_opened_it(reg, slot, sen
     assert getattr(reg, send)({"action": "type", "text": "a"}) == {"sent": True}
     assert viewer.sent == [{"action": "type", "text": "a"}]
     reg.release(slot, panel.owner)
+    send_input = getattr(reg, send)
     with pytest.raises(ConnectionError):
-        getattr(reg, send)({"action": "type", "text": "b"})
+        send_input({"action": "type", "text": "b"})
 
 
 # --- script alone: unchanged ---------------------------------------------------------------------------------
@@ -243,13 +259,19 @@ def test_script_input_goes_to_the_active_viewer_whoever_opened_it(reg, slot, sen
 def test_a_script_only_session_behaves_as_before(reg, slot):
     first_status = _SCRIPT_OPEN[slot](reg)
     first = _occupant(reg, slot)
-    assert first_status["owner"] == SCRIPT_OWNER and _is_up(first)
+    assert first_status["owner"] == SCRIPT_OWNER
+    assert _is_up(first)
     _SCRIPT_OPEN[slot](reg)                               # a second connect replaces the first
     second = _occupant(reg, slot)
-    assert second is not first and not _is_up(first) and _is_up(second)
+    assert second is not first
+    assert not _is_up(first)
+    assert _is_up(second)
     closed = getattr(reg, _SCRIPT_CLOSE[slot])()
-    assert not _is_up(second) and _occupant(reg, slot) is None
-    assert closed["owner"] is None and not (closed.get("connected") or closed.get("running"))
+    assert not _is_up(second)
+    assert _occupant(reg, slot) is None
+    assert closed["owner"] is None
+    assert not closed.get("connected")
+    assert not closed.get("running")
     getattr(reg, _SCRIPT_CLOSE[slot])()                   # closing nothing is still fine
 
 
@@ -271,7 +293,8 @@ def test_an_occupant_set_on_the_attribute_counts_as_the_scripts(reg):
     assert reg.owner_of(SLOT_VIEWER) == SCRIPT_OWNER
     assert reg.owned(SLOT_VIEWER, panel.owner) is None
     reg.disconnect_viewer()
-    assert not injected.connected and panel.displaced == []
+    assert not injected.connected
+    assert panel.displaced == []
 
 
 # --- notification delivery --------------------------------------------------------------------------------
@@ -291,7 +314,8 @@ def test_the_owner_is_told_even_when_closing_its_session_raises(reg):
     reg.adopt(SLOT_VIEWER, Stuck(), panel.owner, panel.on_displaced)
     with pytest.raises(OSError):
         reg.disconnect_viewer()
-    assert panel.displaced == [(SLOT_VIEWER, SCRIPT_OWNER)] and reg.viewer is None
+    assert panel.displaced == [(SLOT_VIEWER, SCRIPT_OWNER)]
+    assert reg.viewer is None
 
 
 def test_a_callback_may_call_back_into_the_registry(reg):
@@ -304,7 +328,8 @@ def test_a_callback_may_call_back_into_the_registry(reg):
     done.join(5.0)
     assert not done.is_alive(), "the callback ran under the registry lock"
     # Told while the slot is empty: the old viewer is closed before the new one dials.
-    assert seen == [(None, None)] and reg.owner_of(SLOT_VIEWER) == SCRIPT_OWNER
+    assert seen == [(None, None)]
+    assert reg.owner_of(SLOT_VIEWER) == SCRIPT_OWNER
 
 
 # --- through the executor and the MCP handlers ----------------------------------------------------------------
@@ -334,12 +359,14 @@ def test_ac_remote_commands_alone_work_as_before(shared):
     assert _run("AC_remote_connect", connect)["connected"] is True
     first = shared.viewer
     assert _run("AC_remote_connect", connect)["connected"] is True
-    assert shared.viewer is not first and not first.connected
+    assert shared.viewer is not first
+    assert not first.connected
     assert _run("AC_remote_send_input", {"action": {"action": "type", "text": "x"}}) == {"sent": True}
     assert _run("AC_remote_viewer_status")["owner"] == SCRIPT_OWNER
     assert _run("AC_remote_disconnect")["connected"] is False
     assert _run("AC_stop_remote_host")["running"] is False
-    assert shared.viewer is None and shared.host is None
+    assert shared.viewer is None
+    assert shared.host is None
 
 
 def test_ac_remote_commands_see_and_end_a_panels_session(shared):
@@ -353,7 +380,8 @@ def test_ac_remote_commands_see_and_end_a_panels_session(shared):
     assert viewer.sent == [{"action": "type", "text": "x"}]
     _run("AC_remote_disconnect")
     _run("AC_stop_remote_host")
-    assert not viewer.connected and not host.is_running
+    assert not viewer.connected
+    assert not host.is_running
     assert panel.displaced == [(SLOT_VIEWER, SCRIPT_OWNER), (SLOT_HOST, SCRIPT_OWNER)]
 
 
@@ -361,7 +389,8 @@ def test_ac_ws_commands_tell_a_replaced_panel(shared):
     panel, viewer = _Panel(), _live(SLOT_WS_VIEWER)
     shared.adopt(SLOT_WS_VIEWER, viewer, panel.owner, panel.on_displaced)
     assert _run("AC_ws_connect", {"host": "h", "port": 1, "token": "t"})["owner"] == SCRIPT_OWNER
-    assert not viewer.connected and panel.displaced == [(SLOT_WS_VIEWER, SCRIPT_OWNER)]
+    assert not viewer.connected
+    assert panel.displaced == [(SLOT_WS_VIEWER, SCRIPT_OWNER)]
     assert _run("AC_ws_disconnect")["connected"] is False
 
 

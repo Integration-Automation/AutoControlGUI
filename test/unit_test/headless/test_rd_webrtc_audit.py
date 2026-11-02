@@ -25,6 +25,7 @@ from je_auto_control.gui.remote_desktop import connection_screen, tray_icon, web
 from je_auto_control.gui.remote_desktop._helpers import _t  # noqa: E402
 from je_auto_control.utils.remote_desktop.registry import registry  # noqa: E402
 from je_auto_control.utils.remote_desktop.webrtc_stats import StatsSnapshot  # noqa: E402
+from headless._qt_settle import deleting, settle_op  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -36,7 +37,15 @@ def qapp(monkeypatch):
     monkeypatch.setattr(registry, "_viewer", None)
     monkeypatch.setattr(registry, "_ws_viewer", None)
     app.messages = messages
-    yield app
+    return app
+
+
+@pytest.fixture(autouse=True)
+def _panels_deleted():
+    """Each test deletes the parentless panels it built (see ``_qt_settle.deleting``)."""
+    with deleting(webrtc_panel._WebRTCHostPanel, webrtc_panel._WebRTCViewerPanel,
+                  connection_screen.QuickConnectScreen):
+        yield
 
 
 # --- host side -------------------------------------------------------------------------------------------
@@ -48,7 +57,8 @@ def test_remote_annotations_are_checked_and_bounded():
     for step in range(6000):
         panel._on_annotation_event({"action": "point", "x": step, "y": step})
     strokes = panel._annotation_overlay._strokes
-    assert len(strokes) == 1 and strokes[0]["width"] == 32
+    assert len(strokes) == 1
+    assert strokes[0]["width"] == 32
     assert len(strokes[0]["points"]) == 5000
     panel._annotation_overlay.hide()
 
@@ -143,6 +153,7 @@ def test_an_empty_recording_is_not_reported_saved(qapp):
     panel = webrtc_panel._WebRTCViewerPanel()
     panel._recorder = types.SimpleNamespace(stop=lambda: None, has_output=False, output_path="out.mp4")
     panel._on_toggle_recording(False)
+    assert settle_op(panel._stops)      # the recorder is finalised off the GUI thread
     assert qapp.messages == [_t("rd_webrtc_recording_empty").format(path="out.mp4")]
 
 
@@ -190,7 +201,8 @@ def test_a_session_error_ends_the_quick_connect_session(monkeypatch, qapp):
     registry.adopt("ws_viewer", viewer, screen._owner)   # the session this screen opened
     screen._open_screen_window("desk")
     screen._on_error("connection reset")
-    assert viewer.disconnected and screen._screen_window is None
+    assert viewer.disconnected
+    assert screen._screen_window is None
     assert qapp.messages == ["connection reset"]
 
 
@@ -202,4 +214,6 @@ def test_an_approval_box_closes_when_the_host_stops_waiting(monkeypatch, qapp):
     request = connection_screen._ApprovalRequest(types.SimpleNamespace(address=("10.0.0.2", 5), transport="tcp"))
     started = time.monotonic()
     connection_screen.QuickConnectScreen()._show_approval_dialog(request)
-    assert time.monotonic() - started < 3 and request.decision == "denied" and request.event.is_set()
+    assert time.monotonic() - started < 3
+    assert request.decision == "denied"
+    assert request.event.is_set()

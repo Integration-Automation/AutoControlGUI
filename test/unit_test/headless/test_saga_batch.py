@@ -91,7 +91,8 @@ def test_executor_round_trip_success():
     ]])
     out = next(v for v in rec.values() if isinstance(v, dict)
                and "completed" in v)
-    assert out["ok"] is True and out["completed"] == ["q"]
+    assert out["ok"] is True
+    assert out["completed"] == ["q"]
 
 
 def test_wiring():

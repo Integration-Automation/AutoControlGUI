@@ -171,7 +171,8 @@ def test_ws_host_reports_transport_ws(jpeg_bytes):
             deadline = time.monotonic() + 2.0
             while not captured and time.monotonic() < deadline:
                 time.sleep(0.05)
-            assert captured and captured[0].transport == "ws"
+            assert captured
+            assert captured[0].transport == "ws"
         finally:
             viewer.disconnect(timeout=1.0)
     finally:

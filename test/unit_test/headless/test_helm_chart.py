@@ -36,7 +36,8 @@ def test_chart_yaml_has_required_fields():
     assert chart["apiVersion"] == "v2"
     assert chart["name"] == "autocontrol"
     assert chart["type"] == "application"
-    assert "version" in chart and "appVersion" in chart
+    assert "version" in chart
+    assert "appVersion" in chart
 
 
 def test_values_yaml_declares_three_services():
@@ -56,7 +57,8 @@ def test_values_yaml_empty_token_default():
 def test_values_yaml_resources_request_limits():
     values = _yaml("values.yaml")
     res = values["resources"]
-    assert "requests" in res and "limits" in res
+    assert "requests" in res
+    assert "limits" in res
     assert res["requests"]["cpu"] == "200m"
 
 

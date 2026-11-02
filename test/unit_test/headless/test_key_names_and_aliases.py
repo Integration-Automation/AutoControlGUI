@@ -62,9 +62,14 @@ def test_every_alias_resolves_to_its_targets_code():
     table = platform_wrapper.keyboard_keys_table
     aliases = platform_wrapper.keyboard_key_aliases
     assert len(aliases) >= 40, "the alias map is empty; the checks below would pass vacuously"
+    # Names resolved through the keyboard layout answer differently per
+    # machine; test_windows_layout_key_aliases.py covers them with a fake.
+    layout_names = set(table.layout_names())
     for alias, target in aliases.items():
         assert target in table, (alias, target)
         assert target not in aliases, (alias, target)
+        if alias in layout_names:
+            continue
         assert table[alias] == table[target], alias
         assert auto_control_keyboard._resolve_keycode(alias) == table[target], alias
 
@@ -89,12 +94,19 @@ def test_every_name_is_typable_except_the_legacy_capitals():
 
 
 @windows_only
-def test_layout_dependent_oem_keys_get_no_layout_specific_alias():
-    """``oem_1`` is ";" on a US layout only; a name like "semicolon" would lie."""
+def test_layout_dependent_oem_keys_get_no_fixed_alias():
+    """``oem_1`` is ";" on a US layout only; a fixed "semicolon" would lie.
+
+    The only aliases that may land on such a key are the ones the table
+    resolves through the keyboard layout when they are looked up.
+    """
     layout_bound = {0xBA, 0xBF, 0xC0, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF, 0xE2}
     table = platform_wrapper.keyboard_keys_table
+    layout_names = set(table.layout_names())
+    stored = dict(table)                        # the static codes, no layout lookup
     for alias in platform_wrapper.keyboard_key_aliases:
-        assert table[alias] not in layout_bound, alias
+        if alias not in layout_names:
+            assert stored[alias] not in layout_bound, alias
 
 
 # --- reverse lookup: canonical names only ----------------------------------------

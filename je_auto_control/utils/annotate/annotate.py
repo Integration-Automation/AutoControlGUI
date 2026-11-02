@@ -25,7 +25,8 @@ from typing import (
 if TYPE_CHECKING:  # pragma: no cover - annotations only
     from PIL import Image, ImageDraw
 
-ImageSource = Union[str, Path, bytes, "Image.Image"]
+# "Image.Image" is a string forward reference, which "|" cannot take at runtime.
+ImageSource = Union[str, Path, bytes, "Image.Image"]  # NOSONAR python:S6546  # reason: see the line above
 
 
 def _load_image(source: ImageSource) -> "Image.Image":
@@ -91,7 +92,7 @@ def _draw_text(draw: ImageDraw.ImageDraw, ann: Dict[str, Any]) -> None:
 
 def annotate_screenshot(source: ImageSource,
                         annotations: List[Dict[str, Any]],
-                        output_path: Union[str, Path]) -> str:
+                        output_path: str | Path) -> str:
     """Draw ``annotations`` onto ``source`` and save the result as PNG.
 
     Returns the output path. ``source`` may be a file path, PNG bytes, or a

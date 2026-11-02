@@ -19,6 +19,10 @@ class ControlLease:
     generation: int
 
 
+#: How long a release waits for a brief holder of the target lock (a queued claim).
+_RELEASE_WAIT_SECONDS = 2.0
+
+
 class ControlBroker:
     """One host broker serializes target dispatch and refuses premature transfers."""
 
@@ -71,9 +75,15 @@ class ControlBroker:
             yield
 
     def release(self, lease: ControlLease, cleanup: Callable[[], None]) -> bool:
-        """Release only after owned dispatch and cleanup finish; never steal an active operation."""
+        """Release only after owned dispatch and cleanup finish; never steal an active operation.
+
+        Waits a bounded moment for the target lock: a queued task's ``acquire``
+        holds it for one claim, and a release that lost that race used to
+        report its cleanup unconfirmed, sending a finished task to review. An
+        operation still dispatching outlasts the wait and keeps the target.
+        """
         lock = self._lock(lease.target)
-        if not lock.acquire(blocking=False):
+        if not lock.acquire(timeout=_RELEASE_WAIT_SECONDS):
             return False
         try:
             self.validate(lease)

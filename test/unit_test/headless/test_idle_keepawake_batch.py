@@ -33,7 +33,8 @@ def test_plan_keep_awake_flags():
     plan = plan_keep_awake(display=True, system=True)
     assert plan["flags"] == (_ES_CONTINUOUS | _ES_SYSTEM_REQUIRED
                              | _ES_DISPLAY_REQUIRED)
-    assert plan["display"] is True and plan["system"] is True
+    assert plan["display"] is True
+    assert plan["system"] is True
     assert plan["backend"] in ("SetThreadExecutionState", "caffeinate",
                                "systemd-inhibit")
 
@@ -109,4 +110,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("idle_seconds", "is_idle", "plan_keep_awake",
                  "keep_awake", "keep_awake_on", "allow_sleep"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

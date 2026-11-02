@@ -139,4 +139,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("ime_state", "is_composing", "wait_for_composition_commit",
                  "decode_conversion_mode"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

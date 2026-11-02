@@ -16,7 +16,7 @@ from je_auto_control.gui.recording_editor_tab import (  # noqa: E402
 @pytest.fixture(scope="module")
 def qapp():
     app = QApplication.instance() or QApplication([])
-    yield app
+    return app
 
 
 def _names(tab):

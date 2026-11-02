@@ -36,7 +36,7 @@ def _frame(opcode, payload, mask_key=None):
     return header + payload
 
 
-@pytest.fixture()
+@pytest.fixture
 def pair():
     left, right = socket.socketpair()
     left.settimeout(5)
@@ -59,7 +59,8 @@ def test_a_client_answers_a_ping_masked(pair):
     server.sendall(_frame(ws_protocol.OPCODE_PING, b"hi") + _frame(ws_protocol.OPCODE_BINARY, b"x"))
     assert ws_protocol.recv_message(client, mask=True, expect_masked=False) == b"x"
     pong = server.recv(64)
-    assert pong[0] & 0x0F == ws_protocol.OPCODE_PONG and pong[1] & 0x80
+    assert pong[0] & 0x0F == ws_protocol.OPCODE_PONG
+    assert pong[1] & 0x80
 
 
 def test_a_server_refuses_unmasked_and_oversized_control_frames(pair):
@@ -77,7 +78,8 @@ def test_a_destination_naming_no_file_fails_the_transfer(dest):
     finished = []
     receiver = FileReceiver(on_complete=lambda *args: finished.append(args))
     receiver.handle_begin(encode_begin(str(uuid.uuid4()), dest, 3))
-    assert finished and finished[0][1] is False
+    assert finished
+    assert finished[0][1] is False
 
 
 def test_a_boolean_size_is_refused():

@@ -12,7 +12,7 @@ dispatch is unit-testable without touching a real recycle bin.
 import os
 import sys
 from pathlib import Path
-from typing import Callable, Optional, Union
+from typing import Callable, Optional
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
@@ -66,7 +66,7 @@ def _select_backend() -> Optional[TrashBackend]:
     return None
 
 
-def move_to_trash(path: Union[str, Path], *,
+def move_to_trash(path: str | Path, *,
                   backend: Optional[TrashBackend] = None) -> bool:
     """Move ``path`` to the OS recycle bin / trash. Return ``True`` on success.
 

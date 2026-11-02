@@ -34,7 +34,8 @@ def test_near_duplicates_clusters():
     assert sorted(i for group in clusters for i in group) == [0, 1, 2]
     # 0 and 1 land together, 2 separate
     group_of = {i: gi for gi, group in enumerate(clusters) for i in group}
-    assert group_of[0] == group_of[1] and group_of[2] != group_of[0]
+    assert group_of[0] == group_of[1]
+    assert group_of[2] != group_of[0]
 
 
 def test_minhash_similarity():
@@ -78,4 +79,5 @@ def test_facade_exports():
     # hamming_distance is exported by image_dedup (identical int semantics)
     for attr in ("simhash", "near_duplicates", "minhash_signature",
                  "minhash_similarity"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

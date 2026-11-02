@@ -47,4 +47,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("frame_insets", "client_to_screen", "get_client_rect",
                  "client_point"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

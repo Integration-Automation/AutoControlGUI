@@ -45,7 +45,8 @@ def test_tickets_are_redacted_and_one_broken_backend_does_not_stop_the_rest():
         source="rest", source_id="1", error_text="failed",
         log_tail=f"Authorization: Bearer {token}", metadata={"password": "hunter2"}))
     assert [result.succeeded for result in results] == [False, True]
-    assert token not in good.bodies[0] and "hunter2" not in good.bodies[0]
+    assert token not in good.bodies[0]
+    assert "hunter2" not in good.bodies[0]
 
 
 def test_a_plugin_symlinked_from_outside_is_not_loaded(tmp_path):

@@ -18,6 +18,8 @@ import math
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from je_auto_control.utils.executor.run_control import pause
+
 
 def _sink_move(event: Dict[str, Any]) -> None:
     from je_auto_control.wrapper.auto_control_mouse import set_mouse_position
@@ -216,7 +218,7 @@ def replay_timeline(events: List[Dict[str, Any]], *, speed: float = 1.0,
     propagates.
     """
     dispatch = _HeldInputs(sink or _default_sink)
-    sleeper = sleep or time.sleep
+    sleeper = sleep or _stoppable_sleep
     factor = _playback_factor(speed)
     played = 0
     try:
@@ -233,6 +235,11 @@ def replay_timeline(events: List[Dict[str, Any]], *, speed: float = 1.0,
         dispatch.release_all()
         raise
     return played
+
+
+def _stoppable_sleep(seconds: float) -> None:
+    """``time.sleep`` that a stop of the surrounding stoppable run wakes."""
+    pause(seconds, time.sleep)
 
 
 def _run_steps(steps: List[Dict[str, Any]], dispatch: Callable,
@@ -261,7 +268,7 @@ def run_sequence(steps: List[Dict[str, Any]], *,
     raises, and keys still held when a step fails are released first.
     """
     dispatch = _HeldInputs(sink or _default_sink)
-    sleeper = sleep or time.sleep
+    sleeper = sleep or _stoppable_sleep
     log: List[Dict[str, Any]] = []
     try:
         _run_steps(steps, dispatch, sleeper, log)

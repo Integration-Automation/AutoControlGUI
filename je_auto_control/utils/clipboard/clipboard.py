@@ -15,9 +15,11 @@ import shutil
 import subprocess  # nosec B404  # reason: required for pbcopy/pbpaste/xclip/xsel
 import sys
 from io import BytesIO
-from typing import Optional, Union
+from typing import Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+
+_PILLOW_REQUIRED = "Pillow is required for clipboard image support"
 
 
 def get_clipboard() -> str:
@@ -51,7 +53,7 @@ def get_clipboard_image() -> Optional[bytes]:
     return _linux_get_image()
 
 
-def _as_png_bytes(image: Union[bytes, bytearray, str, os.PathLike]) -> bytes:
+def _as_png_bytes(image: bytes | bytearray | str | os.PathLike) -> bytes:
     """PNG bytes for either raw bytes or a path to any Pillow-readable file."""
     if isinstance(image, (bytes, bytearray)):
         if not image:
@@ -64,9 +66,7 @@ def _as_png_bytes(image: Union[bytes, bytearray, str, os.PathLike]) -> bytes:
         try:
             from PIL import Image  # noqa: PLC0415  lazy import
         except ImportError as error:
-            raise RuntimeError(
-                "Pillow is required for clipboard image support"
-            ) from error
+            raise RuntimeError(_PILLOW_REQUIRED) from error
         buffer = BytesIO()
         with Image.open(safe_path) as opened:
             opened.convert("RGB").save(buffer, format="PNG")
@@ -75,7 +75,7 @@ def _as_png_bytes(image: Union[bytes, bytearray, str, os.PathLike]) -> bytes:
 
 
 def set_clipboard_image(
-        image: Union[bytes, bytearray, str, os.PathLike]) -> None:
+        image: bytes | bytearray | str | os.PathLike) -> None:
     """Place an image on the clipboard, from PNG bytes **or** a file path.
 
     Both are accepted because both callers are real: the remote-desktop viewer
@@ -207,9 +207,7 @@ def _win_get_image() -> Optional[bytes]:
     try:
         from PIL import ImageGrab  # noqa: PLC0415  lazy import
     except ImportError as error:
-        raise RuntimeError(
-            "Pillow is required for clipboard image support"
-        ) from error
+        raise RuntimeError(_PILLOW_REQUIRED) from error
     image = ImageGrab.grabclipboard()
     if image is None or isinstance(image, list):
         return None
@@ -225,9 +223,7 @@ def _win_set_image(png_bytes: bytes) -> None:
     try:
         from PIL import Image  # noqa: PLC0415  lazy import
     except ImportError as error:
-        raise RuntimeError(
-            "Pillow is required for clipboard image support"
-        ) from error
+        raise RuntimeError(_PILLOW_REQUIRED) from error
     # `Image.open` returns an `ImageFile`; `convert` returns a plain
     # `Image`, so the variable has to be declared as the wider one.
     image: Image.Image = Image.open(BytesIO(png_bytes))

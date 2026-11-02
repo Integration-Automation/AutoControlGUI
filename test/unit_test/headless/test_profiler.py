@@ -61,9 +61,12 @@ def test_reset_clears_samples(profiler):
 
 def test_measure_records_error_and_reraises(profiler):
     profiler.enable()
-    with pytest.raises(RuntimeError):
+    def fail_while_measured():
         with profiler.measure("AC_press_keyboard_key"):
             raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError):
+        fail_while_measured()
     row = profiler.get("AC_press_keyboard_key")
     assert row.calls == 1
     assert row.errors == 1
@@ -86,4 +89,5 @@ def test_to_dict_includes_average_and_share(profiler):
     assert payload["name"] == "a"
     assert payload["calls"] == 1
     assert payload["average_seconds"] == pytest.approx(0.4)
-    assert "min_seconds" in payload and "max_seconds" in payload
+    assert "min_seconds" in payload
+    assert "max_seconds" in payload

@@ -42,7 +42,8 @@ def test_a_used_session_is_evicted_only_when_every_session_is_in_use():
         registry.get(session.id)
     now[0] += 1
     registry.create()
-    assert registry.get(first.id) is None and registry.get(second.id) is second
+    assert registry.get(first.id) is None
+    assert registry.get(second.id) is second
 
 
 def test_state_of_a_session_dropped_mid_request_is_released():

@@ -86,4 +86,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("MultipartFile", "build_multipart", "parse_multipart",
                  "new_boundary"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

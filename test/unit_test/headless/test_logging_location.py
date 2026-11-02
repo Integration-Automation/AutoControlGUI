@@ -64,7 +64,8 @@ def test_a_second_process_appends_instead_of_truncating(tmp_path):
         finally:
             handler.close()
     text = target.read_text(encoding="utf-8")
-    assert "first" in text and "second" in text
+    assert "first" in text
+    assert "second" in text
 
 
 def test_each_line_carries_the_process_id(tmp_path):

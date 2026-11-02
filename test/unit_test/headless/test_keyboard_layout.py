@@ -43,4 +43,5 @@ def test_layout_table_is_empty_off_windows(monkeypatch):
 def test_facade_exports():
     for attr in ("char_table", "vk_to_char", "layout_char_table",
                  "foreground_keyboard_layout"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

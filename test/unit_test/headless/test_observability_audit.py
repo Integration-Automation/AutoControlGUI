@@ -26,7 +26,8 @@ def test_to_otel_emits_otlp_spans():
     trace = AgentTrace()
     trace.record("chat", model="m", system="openai", input_tokens=3, duration_s=0.25)
     span = trace.to_otel()[0]
-    assert len(span["traceId"]) == 32 and len(span["spanId"]) == 16
+    assert len(span["traceId"]) == 32
+    assert len(span["spanId"]) == 16
     assert int(span["endTimeUnixNano"]) - int(span["startTimeUnixNano"]) == 250_000_000
     assert (span["kind"], span["status"]["code"]) == (3, 1)
     assert {"key": "gen_ai.usage.input_tokens", "value": {"intValue": "3"}} in span["attributes"]
@@ -165,6 +166,6 @@ def test_welch_with_no_variance_and_different_means():
 
 
 def test_negative_token_counts_are_refused(tmp_path):
+    store = CostStore(str(tmp_path / "c.jsonl"))
     with pytest.raises(ValueError):
-        CostStore(str(tmp_path / "c.jsonl")).record(provider="p", model="m",
-                                                    input_tokens=-1000, output_tokens=10)
+        store.record(provider="p", model="m", input_tokens=-1000, output_tokens=10)

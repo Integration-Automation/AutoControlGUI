@@ -63,7 +63,8 @@ def test_a_device_that_fails_to_start_is_closed_and_reported(monkeypatch):
     player = AudioPlayer()
     with pytest.raises(AudioBackendError):
         player.start()
-    assert streams[0].closed and not player.is_running
+    assert streams[0].closed
+    assert not player.is_running
     assert issubclass(AudioBackendError, AutoControlException)
 
 
@@ -119,4 +120,5 @@ def test_the_bridge_stops_with_work_pending():
     loop = bridge.start()
     future = bridge.submit(asyncio.sleep(3600))
     bridge.stop()
-    assert future.cancelled() and loop.is_closed()
+    assert future.cancelled()
+    assert loop.is_closed()

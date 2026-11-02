@@ -71,8 +71,9 @@ def test_a_computer_use_turn_cut_short_does_not_run_its_tool(model, name, payloa
     tool_use = _block(type="tool_use", name=name, id="t1", input=payload)
     backend = ComputerUseAgentBackend(display_width_px=100, display_height_px=100, model=model,
                                       client=_Client([_cut_short("max_tokens", tool_use)]))
+    screenshot = _png(100, 100)
     with pytest.raises(base.AgentBackendError, match="max_tokens"):
-        backend.decide_next_action("goal", _png(100, 100), [])
+        backend.decide_next_action("goal", screenshot, [])
 
 
 # --- tool schemas ---------------------------------------------------------------------------------
@@ -83,7 +84,8 @@ def test_tool_schemas_carry_real_types_and_no_private_or_callback_parameters():
     click, _ = infer_parameters(executor.event_dict["AC_click_mouse"])
     assert "integer" in click["x"]["type"]
     execute, _ = infer_parameters(executor.event_dict["AC_execute_action"])
-    assert "_validated" not in execute and "step_callback" not in execute
+    assert "_validated" not in execute
+    assert "step_callback" not in execute
     assert "action_list" in execute
 
 
@@ -107,7 +109,8 @@ def test_the_cursor_position_is_given_in_screenshot_pixels():
 
 def test_ctrl_plus_is_ctrl_and_the_plus_key():
     keys = _parse_combo("ctrl++")
-    assert len(keys) == 2 and keys[0] != keys[1]
+    assert len(keys) == 2
+    assert keys[0] != keys[1]
 
 
 def test_scrolling_up_says_so():
@@ -143,7 +146,8 @@ def test_a_vlm_reply_is_read_in_the_pixels_of_the_image_given():
     backend._client = types.SimpleNamespace(messages=types.SimpleNamespace(create=create))  # noqa: SLF001
     point = backend.locate(_png(1920, 1080), "the button", model="claude-sonnet-4-5")
     _fitted, (sx, sy) = fit_screenshot(_png(1920, 1080), image_tier("claude-sonnet-4-5"))
-    assert sx < 1 and point == (round(728 / sx), round(409 / sy))
+    assert sx < 1
+    assert point == (round(728 / sx), round(409 / sy))
 
 
 @pytest.mark.parametrize("reply, expected", [
@@ -219,7 +223,8 @@ def test_a_reused_backend_starts_each_run_afresh():
     backend.decide_next_action("first goal", None, [])
     backend.decide_next_action("second goal", None, [])
     system = completions.calls[-1]["messages"][0]["content"]
-    assert "second goal" in system and "first goal" not in system
+    assert "second goal" in system
+    assert "first goal" not in system
 
 
 # --- pricing ----------------------------------------------------------------------------------------

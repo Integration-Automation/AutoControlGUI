@@ -17,7 +17,7 @@ pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 
-@pytest.fixture()
+@pytest.fixture
 def qapp():
     return QApplication.instance() or QApplication([])
 
@@ -90,6 +90,7 @@ def test_the_vlm_tab_calls_the_model_off_the_gui_thread(qapp, monkeypatch):
         tab._description.setText("the OK button")
         tab._on_locate()
         assert _pump(qapp, lambda: "10" in tab._last_result.text())
-        assert threads and threads[0] != threading.get_ident()
+        assert threads
+        assert threads[0] != threading.get_ident()
     finally:
         tab.deleteLater()

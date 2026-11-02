@@ -44,8 +44,10 @@ def test_characters_outside_the_alphabet_are_refused():
     ({"alg": "HS256"}, {"aud": 5}),
 ])
 def test_every_malformed_token_is_a_jwt_error(header, payload):
+    token = _token_with(header, payload)
+    policy = ClaimsPolicy(audience="svc")
     with pytest.raises(JwtError):
-        decode_jwt(_token_with(header, payload), KEY, ClaimsPolicy(audience="svc"))
+        decode_jwt(token, KEY, policy)
 
 
 def test_a_nan_expiry_is_refused():
@@ -57,5 +59,6 @@ def test_a_nan_expiry_is_refused():
 def test_extra_headers_cannot_change_the_algorithm():
     token = encode_jwt({"sub": "a"}, KEY, headers={"alg": "none", "kid": "k1"})
     header = json.loads(base64.urlsafe_b64decode(token.split(".")[0] + "=="))
-    assert header["alg"] == "HS256" and header["kid"] == "k1"
+    assert header["alg"] == "HS256"
+    assert header["kid"] == "k1"
     assert decode_jwt(token, KEY) == {"sub": "a"}

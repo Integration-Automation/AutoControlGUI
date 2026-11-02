@@ -99,4 +99,5 @@ def test_wiring():
 
 
 def test_facade_exports():
-    assert hasattr(ac, "act_with_mode") and "act_with_mode" in ac.__all__
+    assert hasattr(ac, "act_with_mode")
+    assert "act_with_mode" in ac.__all__

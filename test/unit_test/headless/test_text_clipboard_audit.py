@@ -78,7 +78,8 @@ def test_pseudo_localize_keeps_placeholders(placeholder):
 
 def test_pseudo_localize_localizes_icu_cases_and_keeps_their_structure():
     out = pseudo_localize("{count, plural, one {# item} other {# items}}", brackets=False, expansion=0)
-    assert out.startswith("{count, plural, one {# ") and " other {# " in out
+    assert out.startswith("{count, plural, one {# ")
+    assert " other {# " in out
     assert "item" not in out, "the case text is localized"
 
 

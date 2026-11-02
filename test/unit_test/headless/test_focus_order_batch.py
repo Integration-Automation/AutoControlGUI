@@ -61,7 +61,7 @@ class _FakeBackend(backend_base.AccessibilityBackend):
     def __init__(self):
         self.focused = []
 
-    def list_elements(self, app_name=None, max_results=200):
+    def list_elements(self, app_name=None, max_results=200, window_title=None):
         return _sample()
 
     def set_focus(self, name=None, role=None, app_name=None, automation_id=None):
@@ -116,4 +116,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("is_interactive_role", "tab_order", "audit_focus_order",
                  "focus_control"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

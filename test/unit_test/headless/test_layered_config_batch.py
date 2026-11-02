@@ -36,9 +36,11 @@ def test_explain_reports_winning_layer():
            .add_layer("defaults", {"db": {"host": "local", "port": 5432}})
            .add_layer("env", {"db": {"host": "prod"}}, priority=10))
     host = cfg.explain("db.host")
-    assert host.value == "prod" and host.layer == "env"
+    assert host.value == "prod"
+    assert host.layer == "env"
     port = cfg.explain("db.port")
-    assert port.value == 5432 and port.layer == "defaults"
+    assert port.value == 5432
+    assert port.layer == "defaults"
 
 
 def test_explain_unknown_key_raises():
@@ -66,7 +68,8 @@ def test_executor_resolve_and_explain():
     rec = ac.execute_action([[
         "AC_resolve_config", {"layers": json.dumps(_LAYERS)}]])
     config = next(v for v in rec.values() if isinstance(v, dict))["config"]
-    assert config["db"]["host"] == "prod" and config["db"]["port"] == 5432
+    assert config["db"]["host"] == "prod"
+    assert config["db"]["port"] == 5432
     rec2 = ac.execute_action([[
         "AC_explain_config", {"layers": json.dumps(_LAYERS), "key": "db.host"}]])
     trace = next(v for v in rec2.values() if isinstance(v, dict))["trace"]
@@ -86,4 +89,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("LayeredConfig", "SourceTrace", "deep_merge"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

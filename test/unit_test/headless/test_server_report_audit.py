@@ -24,7 +24,7 @@ from je_auto_control.utils.rest_api.rest_server import RestApiServer
 _DEEP = "[" * 50_000 + "]" * 50_000
 
 
-@pytest.fixture()
+@pytest.fixture
 def too_deep(monkeypatch):
     """``json.loads`` raising ``RecursionError`` for ``_DEEP``, as it does on most builds.
 
@@ -44,7 +44,7 @@ def too_deep(monkeypatch):
 _LONE_SURROGATE = chr(0xDCFF)
 
 
-@pytest.fixture()
+@pytest.fixture
 def rest():
     server = RestApiServer(host="127.0.0.1", port=0, enable_audit=False)
     server.start()
@@ -75,7 +75,8 @@ def _call(server, method, path, *, body=None, headers=None, token=True):
 def test_a_reply_holding_a_lone_surrogate_is_sent(rest, monkeypatch):
     monkeypatch.setitem(rs._GET_ROUTES, "/jobs", lambda ctx: (200, {"name": _LONE_SURROGATE}))  # noqa: SLF001
     status, _, raw = _call(rest, "GET", "/jobs")
-    assert status == 200 and json.loads(raw) == {"name": _LONE_SURROGATE}
+    assert status == 200
+    assert json.loads(raw) == {"name": _LONE_SURROGATE}
 
 
 def test_a_reply_that_cannot_be_serialised_is_a_500(rest, monkeypatch):
@@ -83,18 +84,21 @@ def test_a_reply_that_cannot_be_serialised_is_a_500(rest, monkeypatch):
     circular["self"] = circular
     monkeypatch.setitem(rs._GET_ROUTES, "/jobs", lambda ctx: (200, circular))  # noqa: SLF001
     status, _, raw = _call(rest, "GET", "/jobs")
-    assert status == 500 and "serialisable" in json.loads(raw)["error"]
+    assert status == 500
+    assert "serialisable" in json.loads(raw)["error"]
 
 
 def test_a_history_limit_too_large_for_sqlite_is_answered(rest):
     status, _, raw = _call(rest, "GET", "/history?limit=" + "9" * 40)
-    assert status == 200 and isinstance(json.loads(raw)["runs"], list)
+    assert status == 200
+    assert isinstance(json.loads(raw)["runs"], list)
 
 
 def test_a_body_nested_too_deeply_is_a_400(rest, too_deep):
     status, _, raw = _call(rest, "POST", "/execute", body=_DEEP.encode(),
                            headers={"Content-Type": "application/json"})
-    assert status == 400 and json.loads(raw) == {"error": "invalid JSON"}
+    assert status == 400
+    assert json.loads(raw) == {"error": "invalid JSON"}
 
 
 def test_conflicting_content_lengths_are_a_400(rest):
@@ -117,9 +121,11 @@ def test_conflicting_content_lengths_are_a_400(rest):
 
 def test_a_known_path_with_the_other_method_is_a_405_with_allow(rest):
     status, headers, _ = _call(rest, "GET", "/execute")
-    assert status == 405 and headers["Allow"] == "POST"
+    assert status == 405
+    assert headers["Allow"] == "POST"
     status, headers, _ = _call(rest, "POST", "/health", body=b"{}")
-    assert status == 405 and headers["Allow"] == "GET"
+    assert status == 405
+    assert headers["Allow"] == "GET"
     status, _, _ = _call(rest, "GET", "/nope")
     assert status == 404
 
@@ -129,7 +135,8 @@ def test_a_401_carries_a_bearer_challenge(rest):
     assert headers["WWW-Authenticate"] == 'Bearer realm="autocontrol"'
     status, headers, _ = _call(rest, "GET", "/jobs", token=False,
                                headers={"Authorization": "Bearer wrong"})
-    assert status == 401 and 'error="invalid_token"' in headers["WWW-Authenticate"]
+    assert status == 401
+    assert 'error="invalid_token"' in headers["WWW-Authenticate"]
 
 
 def test_the_access_log_escapes_control_characters(rest, monkeypatch):
@@ -152,7 +159,8 @@ def test_the_access_log_escapes_control_characters(rest, monkeypatch):
         while conn.recv(65536):
             pass
     access = [line for line in lines if "rest-api 127.0.0.1" in line]
-    assert access and not any(ch in line for line in access for ch in "\x1b\x08")
+    assert access
+    assert not any(ch in line for line in access for ch in "\x1b\x08")
     assert any("\\x1b[2J\\x08" in line for line in access)
 
 
@@ -171,7 +179,8 @@ def test_log_safe_and_wire_json_text():
     assert log_safe("a\nb\\c\x85") == "a\\x0ab\\\\c\\x85"
     assert wire_json_text({"a": "中"}) == '{"a": "中"}'
     text = wire_json_text({"a": _LONE_SURROGATE})
-    assert text.encode("utf-8") and json.loads(text) == {"a": _LONE_SURROGATE}
+    assert text.encode("utf-8")
+    assert json.loads(text) == {"a": _LONE_SURROGATE}
 
 
 # --- socket, MCP, webhook ------------------------------------------------------------------------
@@ -216,7 +225,8 @@ def test_mcp_http_answers_missing_and_wrong_tokens_401_with_a_challenge():
             challenge = response.getheader("WWW-Authenticate") or ""
             response.read()
             conn.close()
-            assert response.status == 401 and challenge.startswith("Bearer realm=")
+            assert response.status == 401
+            assert challenge.startswith("Bearer realm=")
             assert ('error="invalid_token"' in challenge) is error
     finally:
         server.stop(timeout=1.0)
@@ -244,7 +254,7 @@ class _DeepReply(BaseHTTPRequestHandler):
         return
 
 
-@pytest.fixture()
+@pytest.fixture
 def deep_server():
     server = ThreadingHTTPServer(("127.0.0.1", 0), _DeepReply)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -261,9 +271,11 @@ def test_clients_turn_a_reply_nested_too_deeply_into_their_own_error(deep_server
     admin = AdminConsoleClient(persist_path=tmp_path / "hosts.json", timeout_s=5)
     admin.add_host("h", deep_server, "tok")
     [status] = admin.poll_all()
-    assert status.healthy is False and "nested too deeply" in status.error
+    assert status.healthy is False
+    assert "nested too deeply" in status.error
+    sync_client = ConfigSyncClient(deep_server, user_id="u")
     with pytest.raises(ConfigSyncError):
-        ConfigSyncClient(deep_server, user_id="u").fetch()
+        sync_client.fetch()
     with pytest.raises(SignalingError):
         _request("GET", deep_server + "/x")
 
@@ -275,7 +287,8 @@ def test_an_empty_host_filter_runs_on_no_host(tmp_path, monkeypatch):
     called = []
     monkeypatch.setattr(admin, "_execute_one", lambda *a: called.append(a))
     assert admin.broadcast_execute([["AC_sleep", {"seconds": 0}]], labels=[]) == []
-    assert admin.poll_all(labels=[]) == [] and called == []
+    assert admin.poll_all(labels=[]) == []
+    assert called == []
 
 
 # --- config sync, metrics, profiler --------------------------------------------------------------

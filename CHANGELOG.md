@@ -1,5 +1,80 @@
 # Changelog
 
+## [1.1.0] - 2026-11-02
+
+1.1.0 merges the development line into the release line. The development line re-implemented several
+beta subsystems, and 1.1.0 ships those implementations. As the beta rule in
+[docs/API_LIFECYCLE.md](docs/API_LIFECYCLE.md) allows, the replaced names change in this minor release
+with this note and no deprecation window. The stable surface, `je_auto_control.api`, keeps every 1.0
+name; `import je_auto_control` gains 143 names and loses the 65 listed below.
+
+### Removed from `import je_auto_control`
+
+- **Action journal** (15):
+  `ACTION_JOURNAL_SCHEMA_VERSION`, `CandidateDiff`, `JournalFormatError`, `JournalImportError`,
+  `action_journal_status`, `carry_step`, `diff_candidate`, `diff_candidate_against_file`,
+  `list_journal_runs`, `note_artifact`, `note_secret_value`, `only_run_id`, `start_action_journal`,
+  `stop_action_journal`, `write_candidate`
+- **Config sync** (14):
+  `BlobStore`, `CONFIG_SYNC_WIRE_VERSION`, `ConfigSyncConflict`, `HttpAssetTransport`,
+  `OperationMismatchError`, `RevisionConflictError`, `collect_unreferenced_blobs`,
+  `config_sync_collect_blobs`, `config_sync_full_resync`, `config_sync_resolve`, `config_sync_run`,
+  `config_sync_status`, `referenced_blob_digests`, `run_sync`
+- **Healing evaluation and template revisions** (23):
+  `COMPARISON_COLUMNS`, `HEALING_DATASET_SCHEMA_VERSION`, `HEAL_EVENT_SCHEMA_VERSION`,
+  `HealVerificationError`, `LocateRequest`, `ModelUsage`, `TemplateRevision`, `TemplateRevisionStore`,
+  `UsageMeter`, `VERIFY_TYPES`, `accept_template_revision`, `build_verifier`, `check_thresholds`,
+  `comparison_rows`, `evaluate_healing_dataset`, `format_comparison`, `heal_context`,
+  `list_template_revisions`, `preview_template_revision`, `propose_template_revision`,
+  `revert_template_revision`, `template_match_strategy`, `vlm_strategy`
+- **Capability states and Wayland authorisation** (8):
+  `AuthorisationLedger`, `AuthorisationState`, `Capability`, `MacFacts`, `WaylandAuthorisationError`,
+  `WindowsFacts`, `close_input_session`, `reset_input_authorisation`
+- **MCP tool modes** (2):
+  `ToolDisclosureError`, `ToolMode`
+- **Roles** (3):
+  `DeferredOwner`, `capture_owner`, `owner_scope`
+
+### Removed commands and MCP tools
+
+- `AC_*` (16): `AC_config_sync_collect_blobs`, `AC_config_sync_full_resync`, `AC_config_sync_resolve`, `AC_config_sync_run`, `AC_config_sync_status`, `AC_generate_code_from_journal`, `AC_journal_runs`, `AC_journal_start`, `AC_journal_status`, `AC_journal_stop`, `AC_reset_input_authorisation`, `AC_self_heal_revision_accept`, `AC_self_heal_revision_list`, `AC_self_heal_revision_preview`, `AC_self_heal_revision_propose`, `AC_self_heal_revision_revert`.
+- MCP (15): the `ac_` forms of the same commands, with `ac_generate_code_from_log` in place of
+  the journal code generator, and no tool for the Wayland reset.
+
+The development line's own commands replace them: `AC_journal_capture` / `AC_journal_read`, the
+`AC_config_causal_*` / `AC_sync_*` family, and the `AC_self_heal_*` candidate commands.
+
+### Removed environment variables
+
+- `JE_AUTOCONTROL_MCP_TOOL_MODE`: choose the mode with `je_auto_control_mcp --tool-mode` or
+  `MCPServer.configure_tool_disclosure(...)`. `JE_AUTOCONTROL_MCP_TOOL_PROFILE` is still read.
+- `JE_AUTOCONTROL_WAYLAND_EI_WORKER`: the out-of-process libei helper is gone.
+- `JE_AUTOCONTROL_GUI_SETTINGS`: the main window no longer keeps a settings file.
+- `AC_SIGNALING_CONFIG_DB`: the signaling server's config-sync store is the causal sync store.
+
+### Behaviour that follows the development line
+
+- **The RBAC caller is a context variable again.** 1.0.x bound it to the thread that entered the
+  scope. The development line's agent runtime hands the caller to its workers with
+  `contextvars.copy_context()`, which needs a context variable. On a free-threaded build, or under
+  `-X thread_inherit_context=1`, a thread started inside a request now inherits that caller.
+- **Stricter capabilities for some reads.** The file, clipboard and database readers
+  (`ac_read_action_file`, `ac_get_clipboard`, `ac_sql_query`, ...) and the VLM locators need
+  `drive_input`, not `read_data` or `read_screen`. A viewer still cannot call any of them.
+  `ac_jwt_decode` only parses the token the caller gives it, so it is open to viewers again.
+- **MCP refusals.** A tool outside the session's view is refused with "tool is not available in this
+  session", without naming the reason and without an audit row.
+- **The Script Builder's state machine.** Actions in a state machine run on the executor of the list
+  that started the machine, so a machine inside an `AC_parallel` branch sees that branch's variables.
+
+### Kept from the 1.0.x line
+
+Everything else that 1.0.x added is still there: mobile device sessions, stoppable runs
+(`AC_run_stoppable`, `AC_stop_execution`, `AC_list_executions`), user administration (`AC_user_*`),
+the result hook, the split remote-desktop panel, the background script runs of the Script and Script
+Builder tabs, physical recording on Wayland (`PhysicalRecorder`, `InputStepLog`, `StopShortcutSession`)
+and the PySide6 6.12.0 pin.
+
 ## Unreleased: Linux owner service sources
 
 The optional Linux owner service now lives in `native/owner_service/`. It contains the C sources for
@@ -509,8 +584,10 @@ Add experimental MCP summary search and single-tool schema inspection across Pyt
 This file records user-visible compatibility changes. Detailed development
 notes are recorded in `docs/updates/` (index: `docs/updates/README.md`).
 
-The format follows Keep a Changelog. Until 1.0, breaking changes are permitted
-only when documented here with a migration path.
+The format follows Keep a Changelog and, from 1.0.0, semantic versioning as
+`docs/API_LIFECYCLE.md` scopes it: the stable surface is `je_auto_control.api`,
+and a breaking change to it needs a deprecation here first. Beta and
+experimental surfaces change with a release note in this file.
 
 New entries go under `## Unreleased`. The version bump on `main` is automated
 and does not touch this file, so after a release tag appears, move the entries
@@ -984,8 +1061,104 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   its otherwise unused transitive dependencies. Applications importing
   `qt_material` themselves must declare their own dependency.
 
+### Security
+
+- `examples/18_slack_daily_report.py` escapes the Slack messages and the
+  model's summary before they go into the report, and renders the PDF from
+  the written file through a URL fetcher that serves only that file. Unescaped, a message could add markup that made
+  the PDF renderer read a local file.
+
+### Changed
+
+- Web viewer: sending a file and waiting for the host's offer no longer await
+  inside a loop. The order of chunks, the 4 MiB backpressure limit and
+  one-transfer-at-a-time are unchanged; a channel that closes mid-transfer now
+  ends that transfer with an error instead of leaving it pending.
+
+## [1.0.1] - 2026-10-09
+
+### Changed
+
+- `is_package_name` (the gate behind `AC_add_package_to_executor` and
+  `JE_AUTOCONTROL_ALLOWED_PACKAGES`) no longer accepts a name with a trailing
+  newline. The pattern it replaced let one through because `$` matches before
+  a final newline; such a name could never be imported.
+- `agent_trace.operation` records an `error` span when its block is left by a
+  `KeyboardInterrupt`, `SystemExit` or `GeneratorExit`, where it used to record
+  nothing. The exception propagates as before.
+- The signaling server logs a traceback when the config store fails; the HTTP
+  responses are unchanged.
+
+### Security
+
+- `examples/18_slack_daily_report.py` resolves both paths it writes (the HTML
+  report and the PDF) with `os.path.realpath` and refuses one that leaves the
+  report directory. The PDF path was not checked before.
+- The REST dashboard reports a failed refresh on its panels instead of leaving
+  the promise rejection unhandled.
+
+## [1.0.0] - 2026-10-09
+
+The first release under semantic versioning. `docs/API_LIFECYCLE.md` says what
+the number promises: the stable surface is `je_auto_control.api` and the rows
+`docs/CAPABILITY_MATRIX.md` marks stable; everything else keeps its beta or
+experimental label. No name is removed or renamed by this release itself. This
+section also holds what 0.0.223 to 0.0.234 shipped, which was never moved out
+of `Unreleased`.
+
+- The package classifier is `Development Status :: 5 - Production/Stable`
+  (was `2 - Pre-Alpha`).
+- Releases: a merge to `main` still releases the next patch; a minor or major
+  version is released by declaring it in `pyproject.toml`
+  (`scripts/stable_release.py`).
+
 ### Added
 
+- Action journal: `start_action_journal` / `stop_action_journal` /
+  `read_events` / `list_journal_runs` (`AC_journal_*`, `ac_journal_*`), an
+  opt-in JSON-lines record of executed actions with secrets masked before
+  they are written. `generate_candidate_from_log` (`AC_generate_code_from_journal`,
+  `ac_generate_code_from_log`, `je_auto_control codegen --from-log`) builds a
+  reviewable candidate script from one run without executing anything from it.
+- Self-healing measurement: `evaluate_locators`, `evaluate_healing_dataset`,
+  `EvaluationSample`, `HealingComparison`, template revisions
+  (`propose_` / `preview_` / `accept_` / `revert_` / `list_template_revision(s)`),
+  `heal_context`, six `AC_self_heal_*` commands and MCP tools, and
+  `benchmarks/self_healing`.
+- Config sync: `ConfigStore` (SQLite, revision-checked commits), version
+  vectors and `merge_entries`, `SyncOutbox`, `SyncAdapter` / `sync_assets`,
+  `config_sync_run` / `_status` / `_resolve` / `_full_resync` (`AC_config_sync_*`,
+  `ac_config_sync_*`) and a Config Sync tab. Signaling server flags
+  `--config-db` and `--allow-blind-config-writes`, env `AC_SIGNALING_CONFIG_DB`.
+- Mobile: `DeviceContext`, `open_device`, `DeviceSession`, `DeviceFrame`,
+  gestures (`Tap`, `LongPress`, `Swipe`, `Drag`, `Pinch`), app lifecycle,
+  `MobileExtension`, 46 new `AC_android_*` / `AC_ios_*` commands with MCP tools
+  and Script Builder entries, and a Mobile tab. Built against fake ADB / WDA
+  transports only; not run on a device.
+- Wayland: `probe_capabilities` / `AC_probe_capabilities` /
+  `ac_probe_capabilities`, `CapabilityStatus`, `WaylandAuthorisationError`,
+  `reset_input_authorisation`, `PhysicalRecorder`, `InputStepLog`,
+  `StopShortcutSession`, an opt-in libei helper process
+  (`JE_AUTOCONTROL_WAYLAND_EI_WORKER`), `JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES`.
+- MCP tool modes: `JE_AUTOCONTROL_MCP_TOOL_MODE` / `--tool-mode`
+  (`full`, `progressive`, `static`), `JE_AUTOCONTROL_MCP_TOOL_PROFILE`, the
+  session tools `ac_tools_search` / `_schema` / `_enable` / `_disable` /
+  `_state`, `ToolIndex`, `ToolView`, `ToolMode`; `tools/list` is paged in the
+  two new modes.
+- RBAC: user management (`AC_user_*`, `ac_user_*`, `je_auto_control users`,
+  `python -m je_auto_control.utils.rbac`, a Users group in the REST API tab),
+  `Capability.READ_DATA`, `DeferredOwner` / `capture_owner` / `owner_scope`.
+- Signing: optional passphrase for the Ed25519 private key
+  (`passphrase=`, `JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE`);
+  `AutoControlSignatureException`.
+- GUI: `gui/task_controller.py` (cancellable background work),
+  `AutoControlGUIWidget.open_tab` / `close_tab(key, release=False)` and an
+  optional `dispose()` hook on tabs, remembered window state
+  (`JE_AUTOCONTROL_GUI_SETTINGS`), `benchmarks/gui_startup.py` and
+  `gui_workloads.py`.
+- Windows key names that follow the keyboard layout: `slash`, `backslash`,
+  `semicolon`, `quote`, `backquote`, `bracketleft`, `bracketright`, `equal`.
+- `examples/28`–`33` (see `examples/README.md`).
 - Action files can be signed with an Ed25519 key pair, so an endpoint that
   verifies does not hold what signs: `create_signing_keypair(private_path,
   public_path)` / `AC_create_signing_keypair`, `private_key_path=` on
@@ -1164,6 +1337,143 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- RBAC: REST `GET /history` and `GET /usb/acl` need `read_data`; a `viewer`
+  token gets 403 there. MCP `resources/read`, `resources/list` and
+  `resources/subscribe` are gated the same way: `autocontrol://history` and
+  `autocontrol://files/...` need `read_data`, and a resource URI the server
+  does not recognise is treated as stored data.
+- Slack bot: `/run` runs on a worker thread and its reply arrives when the
+  script ends; a second `/run` while one is going is refused instead of queued.
+  `SlackBot.stop()` also stops the running command and returns `bool`.
+- `execute_action` takes `result_callback=`; it is called after every command
+  that returned, nested ones included.
+- Script Builder: every secret-named field of a command's result is masked at
+  any depth, flagged or not (`AC_lease_secret`, `AC_lease_active`,
+  `AC_rest_api_start`, `AC_rest_api_status` were shown in plain text). The
+  executor's result log leaves a secret-named field that is `None` or empty
+  as it is.
+- RBAC: 29 MCP tools that return stored records or configuration (run history,
+  costs, traces, heal logs, journals, the USB ACL, lease tokens, mobile
+  clipboards) now need `read_data` instead of `read_screen`. The built-in
+  `viewer` role can no longer call them; `operator` and `admin` are unaffected.
+- MCP plug-ins: a callable with `mcp_read_only = True` is offered on a
+  read-only server and to `viewer`. The declaration is trusted, not verified.
+- ChatOps: `/run` is ended by a stop-all (`AC_stop_execution` without a run id,
+  the GUI's stop-all, MCP `ac_stop_execution`); `/stop [run-id]` is new.
+- Config sync: a device's first sync against a non-empty bucket no longer
+  commits a revision or adds itself to `peers`. A device that has only read the
+  bucket and first sends an edit more than 30 days after the entry was deleted
+  elsewhere re-creates it without a conflict.
+- Logging: a command's result is masked before it is logged, so fields named
+  `token`, `password`, `secret`, `api_key` and the like read `***` in the
+  `execute: [...] -> ...` line. The returned record is unchanged.
+- Script Builder: the result of `AC_jwt_encode` is masked like the user-token
+  commands; read it through **One-time values**.
+- Stop: inside a stoppable run the polling waits (`AC_wait_window`,
+  `AC_wait_text`, the smart waits, `AC_expect_poll`, `AC_assert_eventually`,
+  `AC_wait_actionable` and others) end with `ExecutionStopped` as soon as a
+  stop is requested instead of running to their timeout. `expect_poll`,
+  `wait_until_app_idle`, `wait_for_unlock`, `build_verifier`,
+  `run_with_budget` and `TokenBucket.acquire` default their `sleep` to
+  `run_control.pause`.
+- ChatOps: a stopped command replies "`<name>` stopped." rather than a failure
+  naming `ExecutionStopped`.
+- USB ACL: while the file fails its integrity check `UsbAcl.decide()` denies
+  every device and `default_policy` reads `"deny"`, also for an instance built
+  with `default_policy="allow"`.
+- Config sync: an acknowledged deletion is kept for 30 days
+  (`tombstone_hold_s=0` restores immediate collection). `HttpAssetTransport`
+  asks the server's blob limit once and refuses a larger file without sending
+  it. Blob listings carry `age_s`.
+- Folder mirror: a file whose size changes at an unchanged modification time,
+  or whose modification time goes backwards, is now pushed.
+- GUI: releasing the Remote Desktop tab (`close_tab(..., release=True)`) ends
+  a running WebRTC host or viewer session; TCP and WebSocket sessions keep
+  running. Releasing any tab stops its background work at once. Callbacks
+  given to `start_worker`, `connect_viewer` and `start_panel_task` are held
+  weakly.
+- Accessibility (Windows): each calling thread gets its own UI Automation
+  object, with COM initialised on that thread at its first call.
+- Threads: a thread started inside `authorization_scope`, `use_device`,
+  `heal_context` or a stoppable run no longer sees that state on builds where
+  threads inherit context (free-threaded Python, `-X thread_inherit_context=1`).
+- Config sync: `ConfigBucket.upsert` / `remove` without `origin=` now store a
+  versioned entry (`{"value", "vector", "origin", ...}`) instead of the flat
+  value. Read values with `bucket.values(section)`, or pass `versioned=False`
+  to keep the flat shape. Sync every machine once with this release before any
+  of them deletes an entry: a deletion waits only for devices already listed
+  under `peers`.
+- Config sync: a sync waiting out a retry delay reports `state="backing_off"`
+  (was `"offline"`); `DrainReport.offline` stays true for old callers.
+  `sections=[]` is an error instead of meaning every section. An operation id
+  reused for different content is answered `409 operation_mismatch`.
+- Remote desktop: `RemoteDesktopViewer.send_input` queues the event and
+  returns; a write failure arrives through `on_error` instead of raising, and
+  queued `mouse_move` events may be dropped under back-pressure.
+  `AC_remote_send_input`'s `{"sent": true}` now means queued. Blocking writes
+  on a viewer socket fail after 10 seconds.
+- Folder mirror: a changed file is pushed one poll later, once its size and
+  mtime repeat; `wait_until_stable=False` restores the old timing. Files ending
+  `.part`, `.partial`, `.tmp` or `.crdownload` are never mirrored.
+- USB ACL: `usb_acl.json` is a single file with its signature inside. Older
+  versions cannot read it and deny everything.
+- MCP: under RBAC a session id that belongs to another user answers 403.
+  Read-only mode is enforced in every tool mode, and a read-only server runs
+  no plug-in tool.
+- Script Builder never displays the token returned by `AC_user_add` /
+  `AC_user_rotate_token`; read it from the Users group, the CLI or a script.
+- GUI: Stop commands that join a thread return at once and show "Stopping…";
+  scripts started from the GUI run on a worker thread and can be stopped.
+
+- **Breaking wire change: config sync PUT `/config/{user_id}` is version 2.**
+  The body is `{"version": 2, "base_revision", "operation_id", "bucket"}`; a
+  stale base answers 409 and writes nothing. An older client's push is refused
+  with HTTP 428 unless the server runs with `--allow-blind-config-writes`; a
+  newer client refuses an older server, so upgrade the server first.
+  `ConfigSyncClient.push` returns the revision and raises `ConfigSyncConflict`
+  instead of overwriting. Buckets are stored in SQLite.
+- **Under RBAC, a viewer no longer gets 42 read-only MCP tools that return
+  data rather than screen state** (clipboard, files, databases, references and
+  tokens, processes); they need the new `read_data` capability, which operator
+  and admin hold. A scheduler job, trigger, hotkey, webhook, e-mail trigger or
+  watchdog rule registered by an authenticated user now runs as that user,
+  with the role re-read when it fires. Without RBAC nothing changes.
+- REST `POST /execute_file` answers 403 with the reason for a refused
+  signature (was 500). `rest_api_registry.status()` reports `rbac` and
+  `users_path`, and `token` is `None` when a user store is in use.
+- **Wayland: a refused portal consent no longer falls back to ydotool.**
+  Input raises `WaylandAuthorisationError` until `reset_input_authorisation()`;
+  a session the compositor disconnected refuses further input the same way.
+  Other portal failures fall back as before.
+- `AdbClient.text()` raises `AdbUnsupportedError` for text `adb input text`
+  cannot carry (non-ASCII, a literal `%s`) instead of reporting success;
+  `AC_android_text` routes such text through ADBKeyBoard or uiautomator2. adb
+  failures are typed (`AdbTimeoutError`, `AdbUnauthorizedError`,
+  `AdbDeviceMissingError`). A device-matrix step without an address targets
+  that worker's own device.
+- `self_heal_locate` / `self_heal_click`: `screen_region` now confines the
+  template match as well as the VLM; `self_heal_click` logs one event after
+  the click; results and `HealEvent` gain optional fields.
+- `je_auto_control codegen`: the positional script is optional (use
+  `--from-log`), and `--style` defaults by source.
+- Variable scope: `run --dry-run --var`, observer callbacks, `AC_llm_run` and
+  `AC_run_state_machine` each get a deliberate scope instead of the process
+  one. A state machine's `on_enter` given as a single action now runs; it was
+  always rejected before.
+- Package gate: a list that loads an allowed package and then uses its
+  commands runs; it used to fail validation with "unknown command".
+- USB passthrough: a transfer waits for its own `timeout_ms` plus
+  `reply_timeout_s`; channel-level errors reach the caller at once.
+  Concurrent changes to one `UsbAcl` no longer lose rules.
+- MCP `ac_window_minimize` / `_maximize` / `_restore` return a tool error
+  when the window refused.
+- GUI: pages scroll in a narrow window instead of being squeezed; Script
+  Builder and Remote Desktop are built when first selected; connecting a
+  remote desktop, WebRTC offer / answer, OCR reads and device-matrix runs no
+  longer freeze the window; `Ctrl+B` works; tab close buttons are drawn in
+  the theme's colours. `gui/remote_desktop/webrtc_panel.py` is split into
+  twelve modules.
+- The `[gui]` extra no longer installs `qt-material`.
 - **Breaking: the package gate refuses by default.**
   `AC_add_package_to_executor` / `AC_add_package_to_callback_executor` (and
   the `package_manager` methods) no longer import a package that has not been
@@ -1249,7 +1559,7 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   An embedder that relied on every tab existing after construction (a tab's
   timer or listener started at start-up) has to open the tab first.
 - The main window no longer imports `qt_material`; it styles itself from
-  `gui/theme.py`. The `[gui]` extra still lists `qt-material` for now.
+  `gui/theme.py`. (The `[gui]` extra listed `qt-material` until 2026-10-09.)
 - GUI text size "Auto" is 10 / 11 / 13 pt by screen height (was 12 / 14 / 16),
   and the default window is 1280×800 (was 1000×760). The font family is the
   platform's UI font instead of Lato.

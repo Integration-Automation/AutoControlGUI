@@ -162,8 +162,9 @@ def test_a_null_backend_with_no_reason_still_says_something():
     lambda b: b.post_click(1, "left", 0, 0),
 ])
 def test_every_action_on_a_null_backend_refuses_loudly(call):
+    backend = NullWindowBackend("no X display")
     with pytest.raises(AutoControlUnsupportedOperationException):
-        call(NullWindowBackend("no X display"))
+        call(backend)
 
 
 # --- the abstract base --------------------------------------------------------
@@ -171,8 +172,9 @@ def test_every_action_on_a_null_backend_refuses_loudly(call):
 def test_the_base_class_has_no_listing_of_its_own():
     # Every backend must answer this one; there is no sensible default, so
     # the base leaves it abstract rather than returning an empty list.
+    backend = WindowManageBackend()
     with pytest.raises(NotImplementedError):
-        WindowManageBackend().list_windows()
+        backend.list_windows()
 
 
 def test_a_refusal_names_the_operation_and_the_backend():

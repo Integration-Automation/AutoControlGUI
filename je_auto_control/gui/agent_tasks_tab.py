@@ -150,7 +150,11 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         self._pages.addTab(self._transfer, _translate("agent_page_transfers"))
         self._page_keys.append("agent_page_transfers")
         self._page("agent_page_observation", (("agent_action", self._action),))
-        self._pages.widget(self._pages.count() - 1).layout().addWidget(self._observation)
+        page = self._pages.widget(self._pages.count() - 1)
+        page_layout = page.layout() if page is not None else None
+        if page_layout is None:
+            raise RuntimeError("the observation page was built without a layout")
+        page_layout.addWidget(self._observation)
 
     def _page(self, key: str, fields: tuple) -> None:
         page = QWidget()
@@ -185,11 +189,11 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         for index in range(self._skill_operation.count()):
             self._skill_operation.setItemText(index, _translate("agent_skill_" + self._skill_operation.itemData(index)))
         for index in range(self._handoff_operation.count()):
-            label = _translate('agent_handoff_op_' + self._handoff_operation.itemData(index))
-            self._handoff_operation.setItemText(index, label)
+            text = _translate('agent_handoff_op_' + self._handoff_operation.itemData(index))
+            self._handoff_operation.setItemText(index, text)
         for index in range(self._target_operation.count()):
-            label = _translate("agent_target_" + self._target_operation.itemData(index))
-            self._target_operation.setItemText(index, label)
+            text = _translate("agent_target_" + self._target_operation.itemData(index))
+            self._target_operation.setItemText(index, text)
 
     def menu_actions(self) -> list:
         """Expose lifecycle commands through the common Actions menu."""
@@ -391,8 +395,9 @@ class AgentTasksTab(TranslatableMixin, QWidget):
 
     def _skill_execution_example(self, operation: str) -> None:
         self._skill_operation.setCurrentIndex(self._skill_operation.findData(operation))
-        request = {'candidate_id': '<candidate-id>', 'task_id': '<original-validation-task-id>',
-                   'execution_task_id': self._task_id.text() or '<final-execution-task-id>'}
+        request: dict[str, object] = {
+            'candidate_id': '<candidate-id>', 'task_id': '<original-validation-task-id>',
+            'execution_task_id': self._task_id.text() or '<final-execution-task-id>'}
         if operation == 'accept':
             request.update(execution_review='<review-token>', expected_version=0, note='')
         self._skill_request.setPlainText(json.dumps(request, ensure_ascii=False, indent=2))

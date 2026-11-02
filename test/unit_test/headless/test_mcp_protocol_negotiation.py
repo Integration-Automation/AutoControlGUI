@@ -53,7 +53,7 @@ def test_sampling_is_refused_at_once_without_the_client_capability():
     assert time.monotonic() - started < 5
 
 
-@pytest.fixture()
+@pytest.fixture
 def http_server():
     server = HttpMCPServer(mcp=MCPServer(tools=[]), host="127.0.0.1", port=0)
     server.start()

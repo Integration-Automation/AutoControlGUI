@@ -57,8 +57,9 @@ def test_alg_none_rejected():
 
 def test_algorithm_allowlist_blocks_other_alg():
     token = encode_jwt({"sub": "u1"}, KEY, alg="HS512")
+    hs256_only = ClaimsPolicy(algorithms=("HS256",))
     with pytest.raises(JwtError):
-        decode_jwt(token, KEY, ClaimsPolicy(algorithms=("HS256",)), now=1000)
+        decode_jwt(token, KEY, hs256_only, now=1000)
     policy = ClaimsPolicy(algorithms=("HS512",))
     assert decode_jwt(token, KEY, policy, now=1000)["sub"] == "u1"
 
@@ -67,10 +68,12 @@ def test_audience_and_issuer():
     token = encode_jwt({"sub": "u1", "aud": "api", "iss": "me"}, KEY)
     policy = ClaimsPolicy(audience="api", issuer="me")
     assert decode_jwt(token, KEY, policy, now=1000)["sub"] == "u1"
+    other_audience = ClaimsPolicy(audience="other")
+    other_issuer = ClaimsPolicy(issuer="someone-else")
     with pytest.raises(JwtError):
-        decode_jwt(token, KEY, ClaimsPolicy(audience="other"), now=1000)
+        decode_jwt(token, KEY, other_audience, now=1000)
     with pytest.raises(JwtError):
-        decode_jwt(token, KEY, ClaimsPolicy(issuer="someone-else"), now=1000)
+        decode_jwt(token, KEY, other_issuer, now=1000)
 
 
 def test_audience_list_membership():

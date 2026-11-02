@@ -91,7 +91,8 @@ def test_the_signaling_store_caps_live_sessions(monkeypatch):
     signaling = pytest.importorskip("je_auto_control.utils.remote_desktop.signaling_server", exc_type=ImportError)
     monkeypatch.setattr(signaling, "_MAX_SESSIONS", 2)
     store = signaling._SessionStore()
-    assert store.upsert_offer("a", "sdp") and store.upsert_offer("b", "sdp")
+    assert store.upsert_offer("a", "sdp")
+    assert store.upsert_offer("b", "sdp")
     assert store.upsert_offer("c", "sdp") is False
     assert store.upsert_offer("a", "new sdp"), "an existing session can still be updated"
 

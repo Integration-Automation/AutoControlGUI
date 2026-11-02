@@ -14,6 +14,7 @@ WDA README for installation. ``facebook-wda`` is an optional pip
 dependency that loads lazily so importing this module on a non-Mac
 host does not fail.
 """
+from je_auto_control.ios.apps import WdaExtension
 from je_auto_control.ios.client import (
     IOSDevice, IOSUnavailableError,
     default_ios_device, reset_default_ios_device,
@@ -22,15 +23,17 @@ from je_auto_control.ios.find import (
     ElementNotFoundError, click_element, dump_source, find_element,
 )
 from je_auto_control.ios.input import (
-    long_press, press_key, swipe, tap, type_text,
+    drag, long_press, pinch, press_key, swipe, tap, type_text,
 )
-from je_auto_control.ios.screen import screen_size, screenshot
+from je_auto_control.ios.screen import capture_frame, screen_size, screenshot
+from je_auto_control.ios.session import IOSSession
 
 
 __all__ = [
-    "ElementNotFoundError", "IOSDevice", "IOSUnavailableError",
-    "click_element", "default_ios_device", "dump_source",
-    "find_element", "long_press", "press_key",
+    "ElementNotFoundError", "IOSDevice", "IOSSession", "IOSUnavailableError",
+    "WdaExtension",
+    "capture_frame", "click_element", "default_ios_device", "drag", "dump_source",
+    "find_element", "long_press", "pinch", "press_key",
     "reset_default_ios_device", "screen_size", "screenshot", "swipe",
     "tap", "type_text",
 ]

@@ -16,7 +16,8 @@ def test_store_save_load_clear(tmp_path):
     assert store.load("r1") is None
     store.save("r1", 2, {"x": 5})
     cp = store.load("r1")
-    assert cp.step_index == 2 and cp.variables == {"x": 5}
+    assert cp.step_index == 2
+    assert cp.variables == {"x": 5}
     store.save("r1", 3, {"x": 6})              # upsert
     assert store.load("r1").step_index == 3
     assert store.clear("r1") is True
@@ -28,7 +29,8 @@ def test_run_resumable_full_run(tmp_path):
     store = CheckpointStore(str(tmp_path / "c.db"))
     result = run_resumable(_program(), run_id="run", store=store)
     assert result["completed"] is True
-    assert result["resumed_from"] == 0 and result["total"] == 3
+    assert result["resumed_from"] == 0
+    assert result["total"] == 3
     assert store.load("run") is None           # cleared on completion
 
 

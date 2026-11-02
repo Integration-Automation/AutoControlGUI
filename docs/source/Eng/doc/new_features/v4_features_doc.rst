@@ -151,11 +151,30 @@ File security & safety
   verifies and cannot sign. ``sign_action_file(path, private_key_path=...)``
   writes a JSON envelope (``version`` 2, ``algorithm`` ``ed25519``) into the
   same ``.sig`` sidecar; ``verify_action_file(path, public_key_path=...)``
-  checks it. Three environment variables configure a process, and
+  checks it. ``create_signing_keypair(..., passphrase="...")`` (the
+  ``passphrase`` field of ``AC_create_signing_keypair``) encrypts the private
+  key file, so a copy of the file alone signs nothing; the signer then passes
+  ``sign_action_file(..., passphrase="...")`` or sets
+  ``JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE``. A key created without a
+  passphrase keeps loading as it is, and verifying never needs one. The
+  private key file is created readable by its owner only: mode ``0600`` on
+  POSIX and, on Windows -- where mode bits do nothing and the file used to
+  take its directory's permissions -- a protected access list naming the
+  current user alone (set in the call that creates the file, without
+  ``icacls``; the public half is left readable). The per-user HMAC and
+  encryption key files are created the same way. A private key or key file
+  that other accounts *can* read -- one made by an earlier version outside
+  your profile, or copied in -- still loads, with one warning per file in the
+  log naming who can read it; restrict it with ``icacls <file>
+  /inheritance:r /grant:r <user>:F`` or ``chmod 600``. These
+  environment variables configure a process, and
   ``action_signing_config()`` reports what it sees:
 
   * ``JE_AUTOCONTROL_ACTION_SIGNING_PRIVATE_KEY`` — path of the private key;
     signing machine only. ``sign_action_file(path)`` then signs with it.
+  * ``JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE`` — passphrase of an encrypted
+    private key; signing machine only, and not part of what
+    ``action_signing_config()`` reports.
   * ``JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY`` — path of the public key, on
     every execution endpoint. With this and no private key the endpoint is
     verify-only: ``AC_sign_action_file`` and ``AC_create_signing_keypair``
@@ -171,7 +190,10 @@ File security & safety
   on the endpoint; sign every file again with the private key; then unset the
   migration variable. Key-pair signing needs ``cryptography`` -- where it is
   absent (Windows arm64) these calls raise ``CryptographyUnavailableError``
-  with the install hint, and HMAC signing still works.
+  with the install hint, and HMAC signing still works. A file refused by
+  enforced signatures raises ``AutoControlSignatureException`` (an
+  ``AutoControlException``); REST ``POST /execute_file`` answers it with 403
+  and the MCP ``ac_execute_action_file`` tool with an error result.
 * **Action-file encryption** — ``encrypt_action_file`` /
   ``decrypt_action_file`` keep a script's contents secret at rest with
   Fernet (AES-128-CBC + HMAC), keyed by a per-user 0600 key or by a

@@ -151,8 +151,8 @@ def win_backend():
 def test_a_new_binding_is_registered_with_its_parsed_combo(win_backend,
                                                             user32):
     win_backend._sync(user32, [_binding()])
-    [(_reg_id, modifiers, vk)] = user32.registered
-    assert (modifiers, vk) == parse_combo("ctrl+alt+k")
+    [registration] = user32.registered
+    assert registration[1:] == parse_combo("ctrl+alt+k")
 
 
 def test_each_registration_gets_its_own_id(win_backend, user32):
@@ -454,7 +454,8 @@ def test_the_tap_is_enabled_while_running_and_disabled_after(mac_backend,
     module = quartz()
     mac_backend.run_forever(_context([_binding()]))
     assert module.enabled == [True, False]
-    assert module.sources_added and module.sources_removed
+    assert module.sources_added
+    assert module.sources_removed
 
 
 def test_a_mac_without_accessibility_permission_gives_up_with_a_reason(

@@ -61,7 +61,8 @@ def test_remove_and_names_and_fired_log():
     obs.add("b", _Source(None), lambda e, v: None)
     assert set(obs.names()) == {"a", "b"}
     obs.poll_once()
-    assert obs.fired and obs.fired[-1]["rule"] == "a"
+    assert obs.fired
+    assert obs.fired[-1]["rule"] == "a"
     assert obs.remove("a") is True
     assert obs.remove("a") is False
     assert obs.names() == ["b"]

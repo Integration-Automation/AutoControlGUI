@@ -35,12 +35,12 @@ class FlakinessTab(TranslatableMixin, QWidget):
         super().__init__(parent)
         self._tr_init()
         self._table = QTableWidget(0, len(_COLUMN_KEYS))
-        self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self._table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self._table.verticalHeader().setVisible(False)
         self._table.horizontalHeader().setStretchLastSection(True)
         self._table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.Interactive,
+            QHeaderView.ResizeMode.Interactive,
         )
         self._limit = QSpinBox()
         self._limit.setRange(1, 100000)
@@ -112,5 +112,5 @@ class FlakinessTab(TranslatableMixin, QWidget):
         )
         for col, text in enumerate(values):
             item = QTableWidgetItem(text)
-            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self._table.setItem(row, col, item)

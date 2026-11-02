@@ -58,7 +58,8 @@ def test_tfidf_mode_differs_from_bm25():
     index = SearchIndex.build(CORPUS)
     bm25 = [h.doc_id for h in index.search("quick dog", mode="bm25")]
     tfidf = [h.doc_id for h in index.search("quick dog", mode="tfidf")]
-    assert bm25 and tfidf            # both return results
+    assert bm25
+    assert tfidf  # both return results
     assert isinstance(bm25, list)
 
 
@@ -97,7 +98,8 @@ def test_executor_round_trip():
         {"docs": json.dumps(CORPUS), "query": "lazy dog", "top_k": 3},
     ]])
     hits = next(v for v in rec.values() if isinstance(v, dict))["hits"]
-    assert hits and all("doc_id" in h and "score" in h for h in hits)
+    assert hits
+    assert all("doc_id" in h and "score" in h for h in hits)
 
 
 def test_wiring():

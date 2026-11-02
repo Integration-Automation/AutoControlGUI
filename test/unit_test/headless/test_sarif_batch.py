@@ -11,12 +11,14 @@ def test_document_shape():
     doc = to_sarif([make_finding("AC101", "boom", level="error",
                                  file="flow.json", line=3)],
                    tool_name="AutoControl")
-    assert doc["version"] == "2.1.0" and "$schema" in doc
+    assert doc["version"] == "2.1.0"
+    assert "$schema" in doc
     run = doc["runs"][0]
     assert run["tool"]["driver"]["name"] == "AutoControl"
     assert [r["id"] for r in run["tool"]["driver"]["rules"]] == ["AC101"]
     result = run["results"][0]
-    assert result["ruleId"] == "AC101" and result["level"] == "error"
+    assert result["ruleId"] == "AC101"
+    assert result["level"] == "error"
     assert result["message"]["text"] == "boom"
     loc = result["locations"][0]["physicalLocation"]
     assert loc["artifactLocation"]["uri"] == "flow.json"
@@ -52,7 +54,8 @@ def test_from_lint_issues():
 def test_from_lint_negative_index_has_no_line():
     findings = from_lint_issues(
         [{"index": -1, "severity": "warning", "code": "E2", "message": "x"}])
-    assert "line" not in findings[0] and findings[0]["level"] == "warning"
+    assert "line" not in findings[0]
+    assert findings[0]["level"] == "warning"
 
 
 def test_from_audit_findings():

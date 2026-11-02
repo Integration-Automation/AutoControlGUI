@@ -43,7 +43,8 @@ def test_an_unclosed_quote_is_its_own_line_and_parsing_stays_linear():
     started = time.perf_counter()
     values = parse_dotenv(text)
     assert time.perf_counter() - started < 2.0          # 20k lines took 190 s
-    assert values["A"] == '"never closed' and values["K19999"] == "v19999"
+    assert values["A"] == '"never closed'
+    assert values["K19999"] == "v19999"
 
 
 def test_each_opening_quote_closes_at_the_next_one_in_linear_time():
@@ -51,7 +52,8 @@ def test_each_opening_quote_closes_at_the_next_one_in_linear_time():
     started = time.perf_counter()
     values = parse_dotenv(text)
     assert time.perf_counter() - started < 2.0
-    assert len(values) == 10000 and values["K0"] == "x\nK1="
+    assert len(values) == 10000
+    assert values["K0"] == "x\nK1="
 
 
 def test_a_leading_byte_order_mark_is_skipped():
@@ -62,7 +64,8 @@ def test_a_leading_byte_order_mark_is_skipped():
 def test_dump_refuses_a_key_the_parser_would_not_read_back(key):
     with pytest.raises(DotenvError) as caught:
         dump_dotenv({key: "v"})
-    assert isinstance(caught.value, AutoControlException) and isinstance(caught.value, ValueError)
+    assert isinstance(caught.value, AutoControlException)
+    assert isinstance(caught.value, ValueError)
 
 
 @pytest.mark.parametrize("value", ["#ff0000", "a # b", " lead", "trail ", 'q"uote', "back\\slash", "x\ny", ""])

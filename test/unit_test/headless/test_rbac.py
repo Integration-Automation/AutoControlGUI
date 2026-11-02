@@ -42,7 +42,8 @@ def test_add_and_authenticate_round_trip(tmp_path):
     plain = store.add_user(
         user_id="alice", display_name="Alice", role=Role.OPERATOR,
     )
-    assert isinstance(plain, str) and len(plain) > 16
+    assert isinstance(plain, str)
+    assert len(plain) > 16
     record = store.authenticate(plain)
     assert record.user_id == "alice"
     assert record.role == Role.OPERATOR
@@ -129,7 +130,8 @@ def test_store_loads_from_disk(tmp_path):
     # Fresh instance should rediscover alice from the JSON file.
     second = UserStore(path=path)
     record = second.authenticate(token)
-    assert record.user_id == "alice" and record.role == Role.OPERATOR
+    assert record.user_id == "alice"
+    assert record.role == Role.OPERATOR
 
 
 def test_explicit_token_is_accepted(tmp_path):

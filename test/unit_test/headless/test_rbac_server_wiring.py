@@ -12,6 +12,7 @@ from threading import Condition
 import urllib.error
 import urllib.request
 
+
 import pytest
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -46,7 +47,7 @@ def _no_ambient_rbac(monkeypatch):
     monkeypatch.delenv("JE_AUTOCONTROL_MCP_TOKEN", raising=False)
 
 
-@pytest.fixture()
+@pytest.fixture
 def users(tmp_path):
     """A store with one user per role; ``tokens`` maps the role to its token."""
     store = UserStore(tmp_path / "users.json")
@@ -79,7 +80,7 @@ class _FakeAudit:
         return list(self.rows)
 
 
-@pytest.fixture()
+@pytest.fixture
 def rest(monkeypatch):
     """Start REST servers on ephemeral ports; ``/execute`` only records its body."""
     executed = []
@@ -316,7 +317,7 @@ def _mcp(tools, audit_path=None):
                      audit_logger=AuditLogger(path=audit_path))
 
 
-@pytest.fixture()
+@pytest.fixture
 def mcp_http(tmp_path):
     """Start MCP HTTP servers over three fake tools; ``calls`` records invocations."""
     calls = []
@@ -393,7 +394,8 @@ def test_mcp_operator_cannot_sign_through_an_action_list(mcp_http, users):
     assert server.calls == []
     _status, body = _rpc(server, "tools/call", {"name": "poke", "arguments": arguments},
                          users.tokens[Role.ADMIN])
-    assert "result" in body and len(server.calls) == 1
+    assert "result" in body
+    assert len(server.calls) == 1
 
 
 def test_user_id_in_audit(mcp_http, users):
@@ -429,6 +431,7 @@ def test_mcp_unconfigured_rbac_keeps_shared_token(mcp_http):
 
 
 def test_default_registry_offers_a_viewer_only_read_only_tools(users):
+    """Read-only, and not one of those listed as needing more than ``read_screen``."""
     registry = build_default_tool_registry(read_only=False)
     with authorization_scope(AuthorizationContext("viewer-user", Role.VIEWER)):
         listed = MCPServer(tools=registry).handle_line(

@@ -162,8 +162,8 @@ pending OPEN, the one pending LIST, the one pending exchange on a
 therefore handed to the *next* request of that kind -- ``open(bbbb)``
 bound the claim the host had opened for ``aaaa``, and a bulk read
 returned the previous read's data. The host accepts a ``timeout_ms`` of
-up to 60 s while the viewer gives up after 10 s by default, so this
-happened in ordinary use.
+up to 60 s while the viewer gave up after 10 s whatever it had asked
+for, so this happened in ordinary use.
 
 Every JSON payload may now carry one extra, optional key::
 
@@ -230,6 +230,34 @@ Two smaller pairing faults were fixed with this. An ``ERROR`` on
 the call it answers. And the tail of a reassembled message dropped for
 exceeding the 2 MiB cap was parsed as a message of its own; it is now
 skipped through its EOF frame.
+
+How long the viewer waits
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A transfer's reply cannot be expected before the device timeout the
+request itself asked for, so the viewer waits ``timeout_ms`` (capped at
+the host's 60 s) **plus** ``reply_timeout_s`` before it raises
+``UsbClientTimeout``. ``reply_timeout_s`` (default 10 s) is therefore
+the allowance for the host and the transport, not a ceiling on the whole
+call: a transfer with ``timeout_ms=30000`` waits up to 40 s. ``OPEN``,
+``RESUME``, ``LIST`` and ``CLOSE`` have no device timeout and wait
+``reply_timeout_s``. Before this, any transfer asked to wait longer than
+``reply_timeout_s`` was abandoned while the host was still waiting on the
+device -- harmless against a host that echoes ids, a forced reconnect
+against one that does not.
+
+Errors sent by the channel adapter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Four ``ERROR`` replies are decided by ``UsbChannelHost`` before any
+session sees the frame: ``usb passthrough disabled``, ``bad frame:
+...``, ``usb backend unavailable: ...`` and ``no usb session on host``.
+They echo the request id whenever the offending message carried a
+readable one -- four header bytes followed by a JSON object of at most
+16 KiB with a valid ``request_id``, whether or not the frame as a whole
+decodes -- so the call that sent it fails with that message instead of
+timing out. A message with no readable id gets the same ``ERROR`` as
+before, without the key.
 
 Backpressure
 ------------
@@ -348,8 +376,11 @@ Stored in ``~/.je_auto_control/usb_acl.json``::
 - Allow rules can be persisted with a "remember" checkbox in the
   prompt.
 
-**Resolved (OQ8):** HMAC-SHA256 implemented. The ACL carries a sidecar
-``<acl>.sig`` signature, verified on load; a mismatch fails closed
+**Resolved (OQ8):** HMAC-SHA256 implemented. The ACL carries its
+signature in the file itself (``"signature"``; earlier versions wrote a
+sidecar ``<acl>.sig``, which is still read and replaced on the next save, so
+that data and signature can no longer be read from two different writes),
+verified on load; changes run under ``<acl>.lock``. A mismatch fails closed
 (default-deny, ``integrity_ok`` False) so a process that silently
 rewrites the JSON cannot grant itself access without also forging the
 signature. The signing key is pluggable — a deployment can pass a

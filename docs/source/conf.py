@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 project = 'AutoControl'
 copyright = '2020 ~ Now, JE-Chen'  # noqa: A001  # pylint: disable=redefined-builtin  # reason: Sphinx-required name
 author = 'JE-Chen'
-release = '0.0.179'
+release = '1.0.0'
 
 # -- General configuration ---------------------------------------------------
 
@@ -40,7 +40,8 @@ html_theme_options = {
     'titles_only': False,
 }
 
-html_static_path = []
+# No `html_static_path`: the tree ships no static files of its own, and naming
+# a directory that does not exist is a warning the docs build treats as an error.
 
 # -- Options for language ----------------------------------------------------
 

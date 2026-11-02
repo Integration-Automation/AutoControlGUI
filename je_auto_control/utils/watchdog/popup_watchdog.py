@@ -16,7 +16,7 @@ injectable so the logic is unit-tested without a real desktop. Imports no
 import threading
 import time
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Deque, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -45,6 +45,10 @@ class WatchdogRule:
     name: str
     matcher: Callable[[], bool]
     action: Callable[[], None]
+    #: The failure last logged for this rule, or ``None`` while it works. A
+    #: rule is polled about once a second: it reports a failure when it
+    #: starts, when it changes and when it ends, not on every poll.
+    last_error: Optional[str] = field(default=None, init=False, repr=False, compare=False)
 
 
 @dataclass(frozen=True)
@@ -149,6 +153,7 @@ class PopupWatchdog:
         try:
             with bound.scope():
                 if not rule.matcher():
+                    _note_working(rule)
                     return False
                 run_counting_failures(rule.action)
         # Any rule error, as ScreenObserver does: a matcher raising something
@@ -156,9 +161,9 @@ class PopupWatchdog:
         # guard thread and every other rule with it.
         except Exception as error:  # noqa: BLE001  # reason: logged; one rule must not stop the others
             raise_if_run_interrupted(error)
-            autocontrol_logger.info(
-                "popup watchdog rule %r error: %r", rule.name, error)
+            _note_failure(rule, repr(error))
             return False
+        _note_working(rule)
         with self._lock:
             self._hits.append({"rule": rule.name, "time": time.time()})
         return True
@@ -167,6 +172,22 @@ class PopupWatchdog:
         while not stop.is_set():
             self.check_once()
             stop.wait(self._poll)
+
+
+def _note_failure(rule: WatchdogRule, failure: str) -> None:
+    """Log ``failure`` unless it is the one this rule already reported."""
+    if rule.last_error == failure:
+        return
+    rule.last_error = failure
+    autocontrol_logger.info("popup watchdog rule %r error: %s", rule.name, failure)
+
+
+def _note_working(rule: WatchdogRule) -> None:
+    """Say once that a rule which had been failing is being applied again."""
+    if rule.last_error is None:
+        return
+    rule.last_error = None
+    autocontrol_logger.info("popup watchdog rule %r recovered", rule.name)
 
 
 def _window_matcher(title: str, case_sensitive: bool) -> Callable[[], bool]:

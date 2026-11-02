@@ -43,14 +43,16 @@ def test_compile_allowlist_returns_none_for_empty():
 
 def test_compile_allowlist_keeps_valid_ips():
     compiled = _compile_ip_allowlist([_LAN_IP, _CORP_NET])
-    assert compiled is not None and len(compiled) == 2
+    assert compiled is not None
+    assert len(compiled) == 2
 
 
 def test_compile_allowlist_drops_garbage_entries():
     compiled = _compile_ip_allowlist(
         [_LAN_IP, "not-an-ip", _CORP_NET],
     )
-    assert compiled is not None and len(compiled) == 2
+    assert compiled is not None
+    assert len(compiled) == 2
 
 
 def test_ip_in_allowlist_with_no_list_accepts_all():

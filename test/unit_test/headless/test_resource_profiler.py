@@ -128,7 +128,8 @@ def test_speedscope_payload_lists_frames_and_weights():
     ])
     payload = prof.speedscope_payload()
     names = [f["name"] for f in payload["shared"]["frames"]]
-    assert "A" in names and "B" in names
+    assert "A" in names
+    assert "B" in names
     profile = payload["profiles"][0]
     assert profile["type"] == "sampled"
     assert len(profile["samples"]) == 3

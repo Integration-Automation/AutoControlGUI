@@ -23,7 +23,7 @@ import json
 import math
 import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 Rect = Tuple[int, int, int, int]
 GeometryProvider = Callable[[str], Optional[Rect]]
@@ -103,7 +103,7 @@ def _default_capture(output_path: str, rect: Rect) -> None:
     screenshot(str(output_path), screen_region=[x, y, x + width, y + height])
 
 
-def capture_window(title: str, output_path: Union[str, Path], *,
+def capture_window(title: str, output_path: str | Path, *,
                    geometry: Optional[GeometryProvider] = None,
                    capture: Optional[Callable[[str, Rect], None]] = None
                    ) -> Optional[str]:
@@ -133,7 +133,7 @@ def _default_lister() -> List[Tuple[int, str]]:
     return list_windows(titled_only=True)
 
 
-def save_window_layout(path: Optional[Union[str, Path]] = None, *,
+def save_window_layout(path: Optional[str | Path] = None, *,
                        lister: Optional[WindowLister] = None,
                        geometry: Optional[GeometryProvider] = None
                        ) -> List[Dict[str, Any]]:
@@ -207,7 +207,7 @@ def _exact_title_mover() -> WindowMover:
     return move
 
 
-def restore_window_layout(layout: Union[List[Dict[str, Any]], str, Path], *,
+def restore_window_layout(layout: List[Dict[str, Any]] | str | Path, *,
                           mover: Optional[WindowMover] = None) -> int:
     """Move each window back to its saved geometry; return the count moved.
 

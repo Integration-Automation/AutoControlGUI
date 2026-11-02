@@ -19,7 +19,8 @@ def test_profile_basic_columns():
     assert profile["row_count"] == 3
     name = profile["columns"]["name"]
     assert name["inferred_type"] == "str"
-    assert name["distinct"] == 2 and name["unique"] is False
+    assert name["distinct"] == 2
+    assert name["unique"] is False
     assert name["null_count"] == 0
     age = profile["columns"]["age"]
     assert age["null_count"] == 1
@@ -31,7 +32,8 @@ def test_profile_basic_columns():
 def test_profile_unique_and_top_values():
     profile = profile_rows(_ROWS)
     ident = profile["columns"]["id"]
-    assert ident["unique"] is True and ident["inferred_type"] == "int"
+    assert ident["unique"] is True
+    assert ident["inferred_type"] == "int"
     top = profile["columns"]["name"]["top_values"]
     assert {"value": "alice", "count": 2} in top
 
@@ -44,7 +46,8 @@ def test_profile_column_subset():
 def test_infer_schema_shape():
     schema = infer_schema(_ROWS)
     ident = schema["id"]
-    assert ident["type"] == "int" and ident["required"] is True
+    assert ident["type"] == "int"
+    assert ident["required"] is True
     assert ident["unique"] is True
     assert ident["min"] == pytest.approx(1.0)
     assert ident["max"] == pytest.approx(3.0)
@@ -55,7 +58,8 @@ def test_infer_schema_shape():
 def test_inferred_schema_validates_its_own_rows():
     schema = infer_schema(_ROWS)
     report = validate_rows(_ROWS, schema)
-    assert report["ok"] is True and report["errors"] == []
+    assert report["ok"] is True
+    assert report["errors"] == []
 
 
 def test_empty_rows():
@@ -91,4 +95,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("profile_rows", "infer_schema"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

@@ -109,7 +109,8 @@ def test_locate_and_click_uses_the_same_centre(monkeypatch):
                         lambda x, y: moved.append((x, y)))
     monkeypatch.setattr(auto_control_image, "click_mouse", clicked.append)
     assert auto_control_image.locate_and_click("any", "mouse_left") == (-3, -3)
-    assert moved == [(-3, -3)] and clicked == ["mouse_left"]
+    assert moved == [(-3, -3)]
+    assert clicked == ["mouse_left"]
 
 
 # --- OCR span matching ------------------------------------------------------

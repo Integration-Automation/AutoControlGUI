@@ -20,8 +20,9 @@ _DEFAULT_HISTOGRAM_BUCKETS: Tuple[float, ...] = (
 _LABEL_KEY_SEPARATOR = "\x1f"  # ASCII unit separator, can't appear in labels
 
 
-_METRIC_NAME = re.compile(r"[a-zA-Z_:][a-zA-Z0-9_:]*")
-_LABEL_NAME = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
+# re.ASCII: "\w" is then exactly [a-zA-Z0-9_], all that Prometheus allows.
+_METRIC_NAME = re.compile(r"[a-zA-Z_:][\w:]*", re.ASCII)
+_LABEL_NAME = re.compile(r"[a-zA-Z_]\w*", re.ASCII)
 
 
 def _validate_name(name: str, kind: str) -> None:
@@ -131,7 +132,7 @@ class Counter(_MetricBase):
     def inc(self, amount: float = 1.0,
             *, labels: Optional[Dict[str, str]] = None) -> None:
         # "not >= 0": NaN passed "amount < 0" and left the counter NaN for good.
-        if not amount >= 0:
+        if not amount >= 0:  # NOSONAR python:S1940  # reason: "amount < 0" is false for NaN
             raise ValueError("Counter increment must be a non-negative number")
         key = self._labels_key(labels)
         with self._lock:
@@ -284,11 +285,11 @@ class Histogram(_MetricBase):
                 bucket_label = self._render_bucket_label(key, boundary)
                 lines.append(f"{self.name}_bucket{bucket_label} {count}")
             inf_label = self._render_bucket_label(key, math.inf)
-            lines.append(f"{self.name}_bucket{inf_label} {series.total_count}")
-            lines.append(f"{self.name}_count{label_str} {series.total_count}")
-            lines.append(
+            lines.extend([
+                f"{self.name}_bucket{inf_label} {series.total_count}",
+                f"{self.name}_count{label_str} {series.total_count}",
                 f"{self.name}_sum{label_str} {_fmt(series.sum_value)}",
-            )
+            ])
         return "\n".join(lines)
 
     def _empty_series(self) -> _HistogramSeries:

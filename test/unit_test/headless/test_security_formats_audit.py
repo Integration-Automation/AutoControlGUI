@@ -50,7 +50,8 @@ def test_a_second_introduced_pair_does_not_clear_the_first():
         {"introduced": "1.0"}, {"fixed": "2.0"}, {"introduced": "3.0"}, {"fixed": "4.0"}]}
     assert is_affected("1.5", osv_range)
     assert is_affected("3.5", osv_range)
-    assert not is_affected("2.5", osv_range) and not is_affected("4.0", osv_range)
+    assert not is_affected("2.5", osv_range)
+    assert not is_affected("4.0", osv_range)
 
 
 @pytest.mark.parametrize("spelling, spdx", [

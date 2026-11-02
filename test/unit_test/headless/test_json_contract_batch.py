@@ -9,7 +9,8 @@ from je_auto_control.utils.json_contract import (
 def test_exact_match():
     report = match_json({"a": 1, "b": [1, 2]}, {"a": 1, "b": [1, 2]})
     assert isinstance(report, MatchReport)
-    assert report.ok is True and report.mismatches == []
+    assert report.ok is True
+    assert report.mismatches == []
 
 
 def test_changed_value():

@@ -13,9 +13,10 @@ that lists nothing and refuses actions with a reason, so importing never
 fails and callers get an answer rather than an ``ImportError``.
 """
 import time
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.executor.run_control import pause
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.wrapper.window_backends import get_backend
 from je_auto_control.utils.timeouts import clamp_poll_interval, deadline_after
@@ -118,7 +119,7 @@ def wait_for_window(title_substring: str,
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             break
-        time.sleep(min(poll, remaining))
+        pause(min(poll, remaining), time.sleep)
     raise AutoControlActionException(
         f"wait_for_window timeout: {title_substring!r}"
     )
@@ -158,7 +159,7 @@ def foreground_window() -> Optional[Tuple[int, str]]:
     return hwnd, titles.get(hwnd, "")
 
 
-def post_key_to_window(title_substring: str, key: Union[int, str],
+def post_key_to_window(title_substring: str, key: int | str,
                        case_sensitive: bool = False) -> bool:
     """Type one key into a window **without focusing it**. ``False`` if no match.
 
@@ -200,7 +201,7 @@ def post_click_to_window(title_substring: str, button: str = "left",
     return backend.post_click(hit[0], _mouse_button_name(button), int(x), int(y))
 
 
-def _resolve_key(key: Union[int, str]) -> Tuple[int, str]:
+def _resolve_key(key: int | str) -> Tuple[int, str]:
     """``(virtual key code, character to also post as WM_CHAR)``."""
     if isinstance(key, int):
         return int(key), ""

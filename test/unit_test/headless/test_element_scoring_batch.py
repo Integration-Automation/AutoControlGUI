@@ -48,7 +48,8 @@ def test_injected_similarity_is_used():
 
     score_candidates(_candidates(), want_name="Save", name_similarity=sim,
                      prefer_enabled=False)
-    assert calls and all(call[0] == "Save" for call in calls)
+    assert calls
+    assert all(call[0] == "Save" for call in calls)
 
 
 def test_best_candidate_and_empty():
@@ -77,4 +78,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("score_candidates", "best_candidate", "ScoredCandidate"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

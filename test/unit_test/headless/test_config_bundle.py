@@ -183,7 +183,7 @@ def test_import_skips_format_mismatch(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 def server():
     s = RestApiServer(host="127.0.0.1", port=0, enable_audit=False)
     s.start()
@@ -206,7 +206,8 @@ def _post(server, path, body, *, token=None):
 def test_rest_config_export_round_trips(server):
     status, body = _post(server, "/config/export", {}, token=server.token)
     assert status == 200
-    assert "manifest" in body and "files" in body
+    assert "manifest" in body
+    assert "files" in body
 
 
 def test_rest_config_export_requires_token(server):

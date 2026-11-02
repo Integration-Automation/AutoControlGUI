@@ -29,18 +29,20 @@ def test_node_rejects_both_payloads():
 
 
 def test_definition_detects_duplicate_ids():
+    nodes = (
+        DagNode(id="a", actions=[]),
+        DagNode(id="a", actions=[]),
+    )
     with pytest.raises(DagDefinitionError, match="duplicate"):
-        DagDefinition(nodes=(
-            DagNode(id="a", actions=[]),
-            DagNode(id="a", actions=[]),
-        ))
+        DagDefinition(nodes=nodes)
 
 
 def test_definition_detects_unknown_dependency():
+    nodes = (
+        DagNode(id="a", actions=[], depends_on=("missing",)),
+    )
     with pytest.raises(DagDefinitionError, match="unknown"):
-        DagDefinition(nodes=(
-            DagNode(id="a", actions=[], depends_on=("missing",)),
-        ))
+        DagDefinition(nodes=nodes)
 
 
 def test_topological_order_diamond():

@@ -20,7 +20,7 @@ from je_auto_control.gui._validators import double_validator, int_validator  # n
 _GUI = Path(__file__).resolve().parents[3] / "je_auto_control" / "gui"
 
 
-@pytest.fixture()
+@pytest.fixture
 def comma_locale():
     previous = QLocale()
     QLocale.setDefault(QLocale("de_DE"))

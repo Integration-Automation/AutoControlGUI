@@ -77,11 +77,13 @@ def test_a_lock_left_by_a_dead_process_is_taken_over(tmp_path, monkeypatch):
 def test_a_held_lock_times_out(tmp_path, monkeypatch):
     monkeypatch.setattr(json_store, "_LOCK_WAIT_S", 0.05)
     (tmp_path / "gate.json.lock").write_text("", encoding="utf-8")
+    gate = ApprovalGate(str(tmp_path / "gate.json"))
     with pytest.raises(TimeoutError):
-        ApprovalGate(str(tmp_path / "gate.json")).request("deploy")
+        gate.request("deploy")
 
 
 def test_without_a_path_the_state_stays_in_memory():
     gate = ApprovalGate()
     token = gate.request("deploy", requester="maker")
-    assert gate.approve(token, "checker") and gate.is_approved(token)
+    assert gate.approve(token, "checker")
+    assert gate.is_approved(token)

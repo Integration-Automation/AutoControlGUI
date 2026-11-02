@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._validators import int_validator
+from je_auto_control.gui._qt_typed import as_widget
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.selector import open_region_selector
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -92,15 +93,15 @@ class ScreenshotTabMixin:
             w, h = screen_size()
             self.screen_size_label.setText(f"{w} x {h}")
         except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
+            QMessageBox.warning(as_widget(self), "Error", str(error))
 
     def _browse_ss_path(self):
-        path, _ = QFileDialog.getSaveFileName(self, _t("save_screenshot"), "", "PNG (*.png);;All (*)")
+        path, _ = QFileDialog.getSaveFileName(as_widget(self), _t("save_screenshot"), "", "PNG (*.png);;All (*)")
         if path:
             self.ss_path_input.setText(path)
 
     def _pick_ss_region(self):
-        region = open_region_selector(self)
+        region = open_region_selector(as_widget(self))
         if region is None:
             return
         x, y, w, h = region

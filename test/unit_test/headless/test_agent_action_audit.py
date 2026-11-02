@@ -68,7 +68,8 @@ def _gate(**kwargs):
 
 def test_a_zero_size_box_is_not_visible():
     report = _gate(bbox_provider=lambda: (-500, -500, 0, 0))
-    assert not report.actionable and not report.visible
+    assert not report.actionable
+    assert not report.visible
 
 
 def test_an_unknown_enabled_state_is_not_disabled():

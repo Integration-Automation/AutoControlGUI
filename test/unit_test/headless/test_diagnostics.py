@@ -28,7 +28,8 @@ def test_each_check_has_required_fields():
     report = run_diagnostics()
     for check in report.checks:
         assert isinstance(check, Check)
-        assert isinstance(check.name, str) and check.name
+        assert isinstance(check.name, str)
+        assert check.name
         assert isinstance(check.ok, bool)
         assert check.severity in ("info", "warn", "error"), check.severity
         assert isinstance(check.detail, str)

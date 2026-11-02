@@ -50,7 +50,8 @@ def test_the_scheduler_records_a_failed_action_as_an_error(monkeypatch):
     job = scheduler.add_job("x.json", 60, job_id="J")
     job.next_run_ts = 0
     scheduler._tick_once()  # noqa: SLF001
-    assert finished == [sm.STATUS_ERROR] and snapshots == [1]
+    assert finished == [sm.STATUS_ERROR]
+    assert snapshots == [1]
 
 
 # --- macros ----------------------------------------------------------------------------------
@@ -79,7 +80,8 @@ def test_retry_backoff_is_capped(monkeypatch):
         flow_control.AutoControlActionException("nope")))
     with pytest.raises(flow_control.AutoControlActionException, match="exhausted"):
         flow_control.exec_retry(object(), {"max_attempts": 1100, "backoff": 0.5, "body": []})
-    assert len(sleeps) == 1099 and max(sleeps) <= flow_control._MAX_RETRY_BACKOFF_S  # noqa: SLF001
+    assert len(sleeps) == 1099
+    assert max(sleeps) <= flow_control._MAX_RETRY_BACKOFF_S  # noqa: SLF001
 
 
 # --- the repeated DST hour ----------------------------------------------------------------------
@@ -183,7 +185,8 @@ def test_a_replacement_trigger_is_not_charged_for_the_old_run(monkeypatch):
     engine._execute = swap  # noqa: SLF001
     engine.add(_Once(trigger_id="T", script_path="old.json", cooldown_seconds=0))
     engine._poll_once()  # noqa: SLF001
-    assert engine._triggers.get("T") is replacement and replacement.fired == 0  # noqa: SLF001
+    assert engine._triggers.get("T") is replacement
+    assert replacement.fired == 0  # noqa: SLF001
 
 
 def test_a_watchdog_rule_error_of_any_kind_is_contained():

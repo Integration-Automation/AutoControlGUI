@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.tools.plugin_tools import (
-    make_plugin_tool,
+    log_read_only_declaration, make_plugin_tool,
 )
 
 
@@ -107,6 +107,7 @@ class PluginWatcher:
         registered: List[str] = []
         for tool in tools:
             self._server.register_tool(tool)
+            log_read_only_declaration(tool)
             registered.append(tool.name)
         self._known[path] = (mtime, registered)
         autocontrol_logger.info(

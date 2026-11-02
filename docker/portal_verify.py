@@ -497,6 +497,46 @@ def _run_grant_scenario(portal: Portal, server, libei, oeffis,
               wayland_portal, portal))
 
 
+def _measure_classification(label: str, oeffis, expect_declined: bool,
+                            timeout: float = GRANT_TIMEOUT) -> None:
+    """Print how one refusal is classified; never count it.
+
+    ``_select_input`` stops falling back to ydotool only when the portal
+    *declined* — recognised from "Portal denied ..." at the start of liboeffis's own error
+    text, which no fake can vouch for. This prints the real text for every
+    way a request can end, so a wording change shows up here as a banner
+    rather than as a silent change in who is allowed to fall back.
+
+    Nothing here touches ``_results``: it informs, it cannot fail the job.
+    """
+    try:
+        oeffis.connect_eis_fd(timeout=timeout)
+    except oeffis.PortalConsentNotGranted as error:
+        found = (f"outcome={error.outcome!r} detail={error.detail!r} "
+                 f"declined={error.declined}")
+        declined = error.declined
+    except oeffis.OeffisUnavailable as error:
+        found = f"a plain OeffisUnavailable ({str(error)[:80]}) declined=False"
+        declined = False
+    except Exception as error:  # noqa: BLE001  # reason: a measurement that cannot run is itself a finding
+        print(f"note  classification of {label} could not be measured: "
+              f"{error!r}")
+        return
+    else:
+        print(f"note  classification of {label}: a session was granted")
+        return
+    print(f"info  classification of {label}  — {found}")
+    if declined != expect_declined:
+        print()
+        print("      *** REVISIT ***  this refusal is classified as "
+              f"declined={declined}")
+        print(f"      but {label} should be declined={expect_declined}. The")
+        print("      rule is PortalConsentNotGranted.declined in oeffis.py;")
+        print("      until it matches, a denied consent still falls back to")
+        print("      ydotool (or an absent portal no longer does).")
+        print()
+
+
 def _run_refusal_scenarios(socket_path: str, libei, oeffis) -> None:
     """Every way a portal says no, and this project's answer to each."""
     with Portal(socket_path, behaviour="deny"):
@@ -504,18 +544,25 @@ def _run_refusal_scenarios(socket_path: str, libei, oeffis) -> None:
               lambda: _check_portal_refuses(oeffis))
         check("a refused portal reaches the caller as LibeiUnavailable",
               lambda: _check_backend_surfaces_the_refusal(libei))
+        _measure_classification("a dismissed consent dialog", oeffis, True)
     with Portal(socket_path, behaviour="stall"):
         check("a consent dialog left open times out on this project's clock",
               lambda: _check_open_dialog_times_out(oeffis))
+        _measure_classification("a dialog left open", oeffis, False,
+                                REFUSAL_TIMEOUT)
     with Portal(socket_path, behaviour="no-fd"):
         check("a portal that withholds the descriptor fails closed",
               lambda: _check_portal_refuses(oeffis))
+        _measure_classification("a withheld descriptor", oeffis, False)
     with Portal(socket_path, behaviour="close"):
         check("a portal that closes the session fails closed",
               lambda: _check_portal_refuses(oeffis))
+        _measure_classification("a session the portal closed", oeffis, False)
     with Portal(socket_path, version=1):
         check("a portal too old to have ConnectToEIS fails closed",
               lambda: _check_portal_refuses(oeffis))
+        _measure_classification("a portal without ConnectToEIS", oeffis,
+                                False)
 
 
 def _run_capture_scenarios(socket_path: str, wayland_portal) -> None:
@@ -564,6 +611,8 @@ def main() -> int:
               lambda: _check_liboeffis_binds(oeffis))
         check("no portal on the bus is refused rather than waited on",
               lambda: _check_no_portal_is_refused(oeffis))
+        _measure_classification("no portal on the bus", oeffis, False,
+                                REFUSAL_TIMEOUT)
         with Portal(socket_path) as portal:
             _run_grant_scenario(portal, server, libei, oeffis, wayland_portal)
         _run_refusal_scenarios(socket_path, libei, oeffis)

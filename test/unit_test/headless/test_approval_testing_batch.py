@@ -21,7 +21,8 @@ def test_approve_then_match(tmp_path):
     approve_artifact("greeting", approvals_dir=d)           # promote baseline
     assert pending_artifacts(d) == []                        # received cleared
     result = verify_artifact("greeting", "hello", approvals_dir=d)
-    assert result.status == "verified" and result.match is True
+    assert result.status == "verified"
+    assert result.match is True
 
 
 def test_mismatch_after_baseline(tmp_path):
@@ -29,7 +30,8 @@ def test_mismatch_after_baseline(tmp_path):
     verify_artifact("greeting", "hello", approvals_dir=d)
     approve_artifact("greeting", approvals_dir=d)
     result = verify_artifact("greeting", "HELLO", approvals_dir=d)
-    assert result.status == "mismatch" and result.match is False
+    assert result.status == "mismatch"
+    assert result.match is False
     assert pending_artifacts(d) == ["greeting"]             # received re-written
 
 

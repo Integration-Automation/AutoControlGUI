@@ -5,7 +5,7 @@ from contextvars import copy_context
 from dataclasses import dataclass
 from functools import partial
 from threading import Event
-from typing import Callable, Literal, Optional, cast
+from typing import Callable, Literal, Optional
 import weakref
 
 from PySide6.QtCore import QCoreApplication, QMetaObject, QObject, QThread, Signal, SignalInstance
@@ -39,7 +39,8 @@ class _TaskState:
 
 
 def _watch_destruction(owner: QObject, callback: Callable[..., None]) -> QMetaObject.Connection:
-    return cast(QMetaObject.Connection, cast(SignalInstance, owner.destroyed).connect(callback))
+    destroyed: SignalInstance = owner.destroyed
+    return destroyed.connect(callback)
 
 
 def _require_gui_thread(owner: QObject) -> None:

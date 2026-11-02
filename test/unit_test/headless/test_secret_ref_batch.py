@@ -10,8 +10,12 @@ from je_auto_control.utils.secret_ref import (
 
 
 def test_is_ref():
-    assert is_ref("env://TOKEN") and is_ref("file://./x") and is_ref("secret://k")
-    assert not is_ref("plain") and not is_ref(42) and not is_ref("https://x")
+    assert is_ref("env://TOKEN")
+    assert is_ref("file://./x")
+    assert is_ref("secret://k")
+    assert not is_ref("plain")
+    assert not is_ref(42)
+    assert not is_ref("https://x")
 
 
 def test_resolve_env_from_injected_reader():
@@ -86,4 +90,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("RefResolver", "SecretRefError", "is_ref", "resolve_ref",
                  "resolve_refs_in"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

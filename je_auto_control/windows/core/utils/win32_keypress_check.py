@@ -1,5 +1,4 @@
 import sys
-from typing import Union
 
 from je_auto_control.utils.exception.exception_tags import windows_import_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -10,7 +9,7 @@ if sys.platform not in ["win32", "cygwin", "msys"]:
 import ctypes
 
 
-def check_key_is_press(keycode: Union[int, str]) -> bool:
+def check_key_is_press(keycode: int | str) -> bool:
     if isinstance(keycode, int):
         temp: int = ctypes.windll.user32.GetAsyncKeyState(  # type: ignore[attr-defined]  # reason: win32-only ctypes
             keycode)

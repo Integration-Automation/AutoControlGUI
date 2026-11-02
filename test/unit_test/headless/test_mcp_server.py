@@ -796,7 +796,8 @@ def test_initialize_does_not_claim_client_capabilities():
         "capabilities": {"roots": {"listChanged": True}, "sampling": {}},
     })))
     capabilities = response["result"]["capabilities"]
-    assert "sampling" not in capabilities and "roots" not in capabilities
+    assert "sampling" not in capabilities
+    assert "roots" not in capabilities
 
 
 def test_tools_call_rejects_missing_required_field():
@@ -966,7 +967,8 @@ def test_diff_screenshots_finds_changed_region(tmp_path):
     assert result["boxes"], "expected at least one diff region"
     # Bounding box should contain the painted rectangle (30..49, 10..19).
     box = result["boxes"][0]
-    assert box[0] <= 30 and box[1] <= 10
+    assert box[0] <= 30
+    assert box[1] <= 10
     assert box[0] + box[2] >= 50
     assert box[1] + box[3] >= 20
 

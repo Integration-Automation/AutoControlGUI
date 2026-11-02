@@ -312,8 +312,9 @@ class MockPortal:
 
     # --- the four RemoteDesktop calls -------------------------------------
 
-    def _do_CreateSession(self, sender: str, parameters: GLib.Variant,  # noqa: N802  # reason: D-Bus method name
-                          invocation: Gio.DBusMethodInvocation) -> None:
+    def _do_CreateSession(  # noqa: N802  # NOSONAR python:S100  # reason: dispatched by its D-Bus method name
+            self, sender: str, parameters: GLib.Variant,
+            invocation: Gio.DBusMethodInvocation) -> None:
         options = parameters.unpack()[0]
         self._note("CreateSession", options)
         request = self._request_path(sender, options)
@@ -340,8 +341,9 @@ class MockPortal:
             GLib.Variant("(a{sv})", ({},)))
         return False
 
-    def _do_SelectDevices(self, sender: str, parameters: GLib.Variant,  # noqa: N802  # reason: D-Bus method name
-                          invocation: Gio.DBusMethodInvocation) -> None:
+    def _do_SelectDevices(  # noqa: N802  # NOSONAR python:S100  # reason: dispatched by its D-Bus method name
+            self, sender: str, parameters: GLib.Variant,
+            invocation: Gio.DBusMethodInvocation) -> None:
         session, options = parameters.unpack()
         self._note("SelectDevices", {"session": session, "options": options})
         types = options.get("types")
@@ -353,8 +355,9 @@ class MockPortal:
         invocation.return_value(GLib.Variant("(o)", (request,)))
         GLib.idle_add(self._respond, sender, request, RESPONSE_SUCCESS, {})
 
-    def _do_Start(self, sender: str, parameters: GLib.Variant,  # noqa: N802  # reason: D-Bus method name
-                  invocation: Gio.DBusMethodInvocation) -> None:
+    def _do_Start(  # noqa: N802  # NOSONAR python:S100  # reason: dispatched by its D-Bus method name
+            self, sender: str, parameters: GLib.Variant,
+            invocation: Gio.DBusMethodInvocation) -> None:
         session, parent_window, options = parameters.unpack()
         self._note("Start", {"session": session, "parent": parent_window,
                              "options": options})
@@ -368,8 +371,9 @@ class MockPortal:
         results = {} if denied else {"devices": GLib.Variant("u", 3)}
         GLib.idle_add(self._respond, sender, request, code, results)
 
-    def _do_ConnectToEIS(self, _sender: str, parameters: GLib.Variant,  # noqa: N802  # reason: D-Bus method name
-                         invocation: Gio.DBusMethodInvocation) -> None:
+    def _do_ConnectToEIS(  # noqa: N802  # NOSONAR python:S100  # reason: dispatched by its D-Bus method name
+            self, _sender: str, parameters: GLib.Variant,
+            invocation: Gio.DBusMethodInvocation) -> None:
         session, options = parameters.unpack()
         self._note("ConnectToEIS", {"session": session, "options": options})
         if self.behaviour == "no-fd":
@@ -396,8 +400,9 @@ class MockPortal:
 
     # --- the Screenshot call ----------------------------------------------
 
-    def _do_Screenshot(self, sender: str, parameters: GLib.Variant,  # noqa: N802  # reason: D-Bus method name
-                       invocation: Gio.DBusMethodInvocation) -> None:
+    def _do_Screenshot(  # noqa: N802  # NOSONAR python:S100  # reason: dispatched by its D-Bus method name
+            self, sender: str, parameters: GLib.Variant,
+            invocation: Gio.DBusMethodInvocation) -> None:
         """Answer the interface every desktop implements, however it captures.
 
         The client here is not a C library but AutoControl's own D-Bus

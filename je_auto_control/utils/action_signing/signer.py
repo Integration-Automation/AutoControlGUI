@@ -27,14 +27,16 @@ import hmac
 import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from je_auto_control.utils.action_signing import asymmetric
 from je_auto_control.utils.action_signing._key_file import load_or_create_key_file
 from je_auto_control.utils.action_signing.config import (
     ACCEPT_LEGACY_ENV, PUBLIC_KEY_ENV, action_signing_config,
 )
-from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlException, AutoControlSignatureException,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -47,8 +49,8 @@ _SIG_SUFFIX = ".sig"
 _REQUIRE_ENV = "JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS"
 _KEY_LENGTH = 32
 
-KeyType = Optional[Union[bytes, str]]
-KeyPath = Optional[Union[str, Path]]
+KeyType = Optional[bytes | str]
+KeyPath = Optional[str | Path]
 
 
 @dataclass(frozen=True)
@@ -89,14 +91,15 @@ def _digest(data: bytes, key: bytes) -> str:
     return hmac.new(key, data, hashlib.sha256).hexdigest()
 
 
-def _signature_text(data: bytes, key: KeyType, private_key_path: KeyPath) -> str:
+def _signature_text(data: bytes, key: KeyType, private_key_path: KeyPath,
+                    passphrase: Optional[bytes | str] = None) -> str:
     """Sign ``data`` with the key pair when one applies, else with HMAC."""
     config = action_signing_config()
     private = private_key_path
     if private is None and key is None:
         private = config.private_key_path
     if private is not None:
-        return asymmetric.sign_envelope(data, private)
+        return asymmetric.sign_envelope(data, private, passphrase)
     if config.verify_only:
         raise AutoControlException(
             "this endpoint verifies only (a public key and no private key are "
@@ -105,8 +108,9 @@ def _signature_text(data: bytes, key: KeyType, private_key_path: KeyPath) -> str
     return _digest(data, _load_or_create_key(key))
 
 
-def sign_action_file(path: Union[str, Path], key: KeyType = None,
-                     *, private_key_path: KeyPath = None) -> str:
+def sign_action_file(path: str | Path, key: KeyType = None,
+                     *, private_key_path: KeyPath = None,
+                     passphrase: Optional[bytes | str] = None) -> str:
     """Write a signature sidecar for the file at ``path``.
 
     With ``private_key_path`` -- or, when no ``key`` is given, the private key
@@ -114,17 +118,19 @@ def sign_action_file(path: Union[str, Path], key: KeyType = None,
     version-2 Ed25519 envelope. Otherwise it is the HMAC-SHA256 of the file
     under ``key`` or the per-user key. An endpoint configured with a public
     key and no private key refuses instead of falling back to HMAC, raising
-    :class:`AutoControlException`. Returns the sidecar path (``<path>.sig``).
+    :class:`AutoControlException`. ``passphrase`` unlocks a private key file
+    created with one; without it ``JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE``
+    is used. Returns the sidecar path (``<path>.sig``).
     """
     target = Path(path)
-    signature = _signature_text(target.read_bytes(), key, private_key_path)
+    signature = _signature_text(target.read_bytes(), key, private_key_path, passphrase)
     sig_path = _sig_path(target)
     sig_path.write_text(signature, encoding="utf-8")
     autocontrol_logger.info("signed action file %s", target)
     return str(sig_path)
 
 
-def verify_action_file(path: Union[str, Path], key: KeyType = None,
+def verify_action_file(path: str | Path, key: KeyType = None,
                        *, raise_on_fail: bool = False,
                        public_key_path: KeyPath = None) -> VerifyResult:
     """Verify the action file at ``path`` against its ``.sig`` sidecar.
@@ -134,7 +140,7 @@ def verify_action_file(path: Union[str, Path], key: KeyType = None,
     ``key`` or the per-user key, and refused when a key pair is configured
     unless migration mode is on. Returns a :class:`VerifyResult`. With
     ``raise_on_fail`` set, an unverified file raises
-    :class:`AutoControlException` instead.
+    :class:`AutoControlSignatureException` (an ``AutoControlException``) instead.
     """
     try:
         data = Path(path).read_bytes()
@@ -166,7 +172,7 @@ def _signature_failure(sidecar: str, data: bytes, key: KeyType,
     return None
 
 
-def _verify_bytes(path: Union[str, Path], data: bytes, key: KeyType,
+def _verify_bytes(path: str | Path, data: bytes, key: KeyType,
                   raise_on_fail: bool, public_key_path: KeyPath = None) -> VerifyResult:
     """Check ``data`` -- the content of ``path`` -- against its sidecar."""
     sig_path = _sig_path(Path(path))
@@ -182,17 +188,17 @@ def _verify_bytes(path: Union[str, Path], data: bytes, key: KeyType,
     return VerifyResult(str(path), True, "signature valid")
 
 
-def _fail(path: Union[str, Path], reason: str,
+def _fail(path: str | Path, reason: str,
           raise_on_fail: bool) -> VerifyResult:
     if raise_on_fail:
-        raise AutoControlException(
+        raise AutoControlSignatureException(
             f"action file {path!r} failed verification: {reason}",
         )
     autocontrol_logger.info("action file %r unverified: %s", path, reason)
     return VerifyResult(str(path), False, reason)
 
 
-def require_signed_actions(path: Union[str, Path],
+def require_signed_actions(path: str | Path,
                            key: KeyType = None) -> None:
     """Verify ``path`` only when signed-action enforcement is enabled.
 
@@ -210,7 +216,7 @@ def signing_required() -> bool:
     return bool(os.environ.get(_REQUIRE_ENV))
 
 
-def read_signed_action_bytes(path: Union[str, Path], key: KeyType = None) -> bytes:
+def read_signed_action_bytes(path: str | Path, key: KeyType = None) -> bytes:
     """Read ``path`` once and, when enforcement is on, verify those bytes.
 
     The caller parses what this returns, so the content that ran is the

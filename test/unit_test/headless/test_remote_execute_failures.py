@@ -18,17 +18,21 @@ def _ctx(body):
 def test_strict_execute_reports_the_first_failure():
     from je_auto_control.utils.rest_api.rest_handlers import handle_execute
     status, body = handle_execute(_ctx({"actions": [["AC_sleep", {}]], "raise_on_error": True}))
-    assert status == 200 and body["ok"] is False
+    assert status == 200
+    assert body["ok"] is False
     assert "KeyError" in body["error"]
     status, body = handle_execute(_ctx({"actions": [["AC_sleep", {"seconds": 0}]],
                                         "raise_on_error": True}))
-    assert status == 200 and body["ok"] is True and "result" in body
+    assert status == 200
+    assert body["ok"] is True
+    assert "result" in body
 
 
 def test_the_default_execute_is_unchanged_and_the_flag_is_validated():
     from je_auto_control.utils.rest_api.rest_handlers import handle_execute
     status, body = handle_execute(_ctx({"actions": [["AC_sleep", {}]]}))
-    assert status == 200 and "ok" not in body
+    assert status == 200
+    assert "ok" not in body
     assert any("KeyError" in str(value) for value in body["result"].values())
     status, _body = handle_execute(_ctx({"actions": [], "raise_on_error": "yes"}))
     assert status == 400
@@ -51,7 +55,8 @@ def test_the_admin_client_turns_a_remote_failure_into_ok_false(client, monkeypat
 
     monkeypatch.setattr(client, "_http_post", post)
     (row,) = client.broadcast_execute([["AC_sleep", {}]], raise_on_error=True)
-    assert row["ok"] is False and row["error"] == "KeyError: 'seconds'"
+    assert row["ok"] is False
+    assert row["error"] == "KeyError: 'seconds'"
     assert sent == [("/execute", {"actions": [["AC_sleep", {}]], "raise_on_error": True})]
 
 
@@ -60,7 +65,8 @@ def test_the_default_broadcast_sends_the_old_body(client, monkeypatch):
     monkeypatch.setattr(client, "_http_post",
                         lambda _h, path, body: sent.append(body) or {"result": {}})
     (row,) = client.broadcast_execute([["AC_x"]])
-    assert row["ok"] is True and sent == [{"actions": [["AC_x"]]}]
+    assert row["ok"] is True
+    assert sent == [{"actions": [["AC_x"]]}]
 
 
 def test_a_dag_remote_node_fails_when_its_actions_fail(monkeypatch):

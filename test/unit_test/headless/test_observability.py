@@ -131,8 +131,9 @@ def test_registry_register_returns_existing_on_collision(registry):
 
 def test_registry_rejects_kind_mismatch(registry):
     registry.register(Counter("hits", "doc"))
+    gauge = Gauge("hits", "doc")
     with pytest.raises(ValueError, match="already registered"):
-        registry.register(Gauge("hits", "doc"))
+        registry.register(gauge)
 
 
 def test_registry_render_concatenates_metrics(registry):
@@ -156,9 +157,16 @@ def test_noop_tracer_yields_a_span_and_ends_it():
 
 def test_noop_tracer_records_exceptions():
     tracer = Tracer(force_noop=True)
-    with pytest.raises(RuntimeError):
-        with tracer.start_as_current_span("boom") as span:
+    spans = []
+
+    def fail_inside_a_span():
+        with tracer.start_as_current_span("boom") as current:
+            spans.append(current)
             raise RuntimeError("nope")
+
+    with pytest.raises(RuntimeError):
+        fail_inside_a_span()
+    [span] = spans
     assert span.attributes["exception.type"] == "RuntimeError"
     assert "nope" in span.attributes["exception.message"]
 

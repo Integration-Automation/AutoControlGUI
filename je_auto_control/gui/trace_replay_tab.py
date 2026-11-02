@@ -41,10 +41,10 @@ class TraceReplayTab(TranslatableMixin, QWidget):
         self._tr_init()
         self._controller: Optional[TraceReplayController] = None
         self._frame_label = QLabel()
-        self._frame_label.setAlignment(Qt.AlignCenter)
+        self._frame_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._frame_label.setMinimumSize(320, 240)
         self._frame_label.setStyleSheet("background-color: #1e1e1e;")
-        self._slider = QSlider(Qt.Horizontal)
+        self._slider = QSlider(Qt.Orientation.Horizontal)
         self._slider.setMinimum(0)
         self._slider.setMaximum(0)
         self._slider.valueChanged.connect(self._on_slider_changed)
@@ -63,7 +63,7 @@ class TraceReplayTab(TranslatableMixin, QWidget):
         # the tab keeps only the slider, frame, table, and status.
         root = QVBoxLayout(self)
         root.addWidget(self._slider)
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self._frame_label)
         splitter.addWidget(self._actions_table)
         splitter.setStretchFactor(0, 3)
@@ -168,8 +168,8 @@ class TraceReplayTab(TranslatableMixin, QWidget):
             self._frame_label.clear()
             return
         scaled = pixmap.scaled(
-            self._frame_label.size(), Qt.KeepAspectRatio,
-            Qt.SmoothTransformation,
+            self._frame_label.size(), Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
         )
         self._frame_label.setPixmap(scaled)
 
@@ -184,7 +184,7 @@ class TraceReplayTab(TranslatableMixin, QWidget):
             )
             for col, text in enumerate(values):
                 item = QTableWidgetItem(text)
-                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
                 self._actions_table.setItem(row, col, item)
         self._actions_table.resizeColumnsToContents()
 

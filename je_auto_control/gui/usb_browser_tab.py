@@ -16,6 +16,7 @@ panel.
 """
 from __future__ import annotations
 
+import functools
 import urllib.error
 import urllib.parse
 from email.message import Message
@@ -27,6 +28,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._worker_thread import CallWorker as _CallWorker, WorkerHandle, start_worker
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
@@ -161,6 +163,14 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
         root.addWidget(self._status_label)
         root.addWidget(self._table, stretch=1)
 
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: the device listing or open still out, whose answer is dropped.
+
+        The request itself cannot be interrupted and runs to its end. Called by
+        ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self)
+
     def menu_actions(self) -> list:
         """Expose tab commands to the window-level Actions menu."""
         return [
@@ -252,12 +262,12 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
 
     def _start_local_open(self, vid: str, pid: str,
                           serial: Optional[str]) -> None:
-        # The lambda below runs on the GUI thread: start_worker relays it.
+        # on_done runs on the GUI thread (start_worker relays it) and is held weakly.
         self._open_thread = start_worker(
             self, _CallWorker(lambda: open_local_descriptor(
                 vendor_id=vid, product_id=pid, serial=serial,
             )),
-            on_done=lambda descriptor: self._on_local_opened(vid, pid, descriptor),
+            on_done=functools.partial(self._on_local_opened, vid, pid),
             on_fail=self._apply_failure, on_thread_done=self._on_open_done)
 
     def _on_open_done(self) -> None:

@@ -11,7 +11,7 @@ from headless._webrtc_doubles import FakePeerConnection
 from headless.test_folder_sync_content import loop
 from headless.test_webrtc_file_commit import bounded_waits as bounded_waits, native_pair as native_pair
 from headless.test_webrtc_file_delivery import bridge as bridge
-from je_auto_control.gui.remote_desktop import webrtc_panel
+from je_auto_control.gui.remote_desktop import webrtc_panel, webrtc_viewer_files
 from je_auto_control.gui.remote_desktop import folder_sync_controls
 from je_auto_control.utils.rbac import AuthorizationContext, Role, UserStore, authorization_scope
 from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
@@ -25,11 +25,15 @@ def folder_panel(native_pair, tmp_path, monkeypatch):
     watch = tmp_path / 'watch'
     watch.mkdir()
     (watch / 'existing.bin').write_bytes(b'initial baseline')
-    button = SimpleNamespace(setChecked=lambda _value: None, setText=lambda _text: None)
+    button = SimpleNamespace(setChecked=lambda _value: None, setText=lambda _text: None,
+                             setEnabled=lambda _value: None)
     owner = SimpleNamespace(_viewer=native_pair.viewer, _sync_engine=None, _offer_worker=None, _answer_worker=None,
                             _recorder=None, _sync_dir_edit=SimpleNamespace(text=lambda: str(watch)), _sync_btn=button,
-                            _stop_stats_polling=lambda: None, watch=watch, warnings=[])
+                            _stop_stats_polling=lambda: None, watch=watch, warnings=[],
+                            # The panel's StopQueue runs shutdowns off the GUI thread; here, at once.
+                            _stops=SimpleNamespace(retire=_retire_now))
     owner._require_viewer = lambda: owner._viewer
+    owner._on_sync_stopped = lambda outcome=None: webrtc_panel._WebRTCViewerPanel._on_sync_stopped(owner, outcome)
     native_pair.viewer._host_fingerprint = 'a' * 64
     monkeypatch.setattr(FolderSyncEngine, 'start', lambda _engine: None)
     monkeypatch.setattr(folder_sync_controls.QMessageBox, 'warning',
@@ -37,6 +41,13 @@ def folder_panel(native_pair, tmp_path, monkeypatch):
     yield owner, native_pair
     if owner._sync_engine is not None:
         owner._sync_engine.stop()
+
+
+def _retire_now(stop, *, on_done=None, args=()):
+    """The panel's StopQueue runs a shutdown off the GUI thread; here it runs at once."""
+    result = stop()
+    if on_done is not None:
+        on_done(*args, result)
 
 
 def toggle(owner, checked=True):
@@ -209,7 +220,7 @@ def test_handoff_waits_for_a_blocked_old_sender_and_late_old_work_cannot_adopt_t
         assert engine.is_running() and engine.stop_requested
         reconnect(owner, pair)
         with monkeypatch.context() as guard:
-            guard.setattr(webrtc_panel, 'make_folder_engine',
+            guard.setattr(webrtc_viewer_files, 'make_folder_engine',
                           lambda *_args: pytest.fail('replacement began before the old sender exited'))
             assert toggle(owner) is None
         assert len(owner.warnings) == 1 and 'retired' in owner.warnings[0]

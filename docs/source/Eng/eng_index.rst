@@ -9,6 +9,7 @@ Comprehensive guides for all AutoControl features.
    :caption: User Guide
 
    doc/installation/installation_doc
+   doc/configuration/configuration_doc
    doc/mouse/mouse_doc
    doc/keyboard/keyboard_doc
    doc/screen/screen_doc
@@ -248,6 +249,7 @@ Comprehensive guides for all AutoControl features.
    doc/new_features/v221_features_doc
    doc/new_features/v222_features_doc
    doc/new_features/v223_features_doc
+   doc/mobile/mobile_doc
    doc/ocr_backends/ocr_backends_doc
    doc/observability/observability_doc
    doc/journal_candidates/journal_candidates_doc

@@ -110,8 +110,9 @@ def test_post_fires_trigger_with_payload(server, tmp_path):
 def test_unknown_path_returns_404(server):
     server.add(path="/known", script_path="x.json")
     host, port = server.start("127.0.0.1", 0)
+    url = _local_url(host, port, "/unknown")
     with pytest.raises(urllib.error.HTTPError) as excinfo:
-        _post(_local_url(host, port, "/unknown"))
+        _post(url)
     assert excinfo.value.code == 404
 
 
@@ -120,11 +121,9 @@ def test_token_mismatch_returns_401(server, tmp_path):
     _write_dummy_script(script)
     server.add(path="/p", script_path=str(script), token="topsecret")
     host, port = server.start("127.0.0.1", 0)
+    url = _local_url(host, port, "/p")
     with pytest.raises(urllib.error.HTTPError) as excinfo:
-        _post(
-            _local_url(host, port, "/p"),
-            headers={"Authorization": "Bearer wrong"},
-        )
+        _post(url, headers={"Authorization": "Bearer wrong"})
     assert excinfo.value.code == 401
 
 
@@ -134,8 +133,9 @@ def test_oversize_body_rejected(server, tmp_path):
     server.add(path="/p", script_path=str(script))
     host, port = server.start("127.0.0.1", 0)
     payload = b"x" * (2 << 20)  # 2 MiB > 1 MiB cap
+    url = _local_url(host, port, "/p")
     with pytest.raises(urllib.error.HTTPError) as excinfo:
-        _post(_local_url(host, port, "/p"), body=payload,
+        _post(url, body=payload,
               headers={"Content-Type": "application/octet-stream"})
     assert excinfo.value.code in (413, 400)
 
@@ -143,8 +143,9 @@ def test_oversize_body_rejected(server, tmp_path):
 def test_method_filter_rejects_other_verbs(server):
     server.add(path="/only-post", script_path="x.json", methods=["POST"])
     host, port = server.start("127.0.0.1", 0)
+    url = _local_url(host, port, "/only-post")
     with pytest.raises(urllib.error.HTTPError) as excinfo:
-        _post(_local_url(host, port, "/only-post"), method="GET")
+        _post(url, method="GET")
     assert excinfo.value.code == 404
 
 

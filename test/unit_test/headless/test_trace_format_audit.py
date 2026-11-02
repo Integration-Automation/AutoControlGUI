@@ -65,7 +65,8 @@ def test_a_box_off_the_frame_scores_nothing():
     current[:, :50] = 255
     for box in ([-60, 0, 20, 100], [0, -60, 20, 20]):
         (entry,) = localize_changes(reference, [box], current=current)
-        assert entry["score"] == 0.0 and entry["changed"] is False, box
+        assert entry["score"] == 0.0, box
+        assert entry["changed"] is False, box
     (partly,) = localize_changes(reference, [[-10, 0, 20, 100]], current=current)
     assert partly["score"] == 1.0
 

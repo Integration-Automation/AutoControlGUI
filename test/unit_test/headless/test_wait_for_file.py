@@ -58,8 +58,9 @@ def test_stability_requires_steady_size():
     {"timeout_s": 0}, {"poll_interval_s": 0}, {"stable_for_s": -1},
 ])
 def test_validation_errors(kwargs):
+    reader = _reader([1])
     with pytest.raises(ValueError):
-        wait_until_file("f", stat_reader=_reader([1]), **kwargs)
+        wait_until_file("f", stat_reader=reader, **kwargs)
 
 
 def test_default_reader_on_real_file(tmp_path):

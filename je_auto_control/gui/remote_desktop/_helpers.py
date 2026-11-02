@@ -2,7 +2,7 @@
 import inspect
 import ssl
 import weakref
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeyEvent
@@ -74,7 +74,7 @@ def _scroll_amount(angle_delta: int) -> int:
     return 0
 
 
-def wire_remote_input(window: QWidget, send: Callable[[dict], None]) -> None:
+def wire_remote_input(window: Any, send: Callable[[dict], None]) -> None:
     """Forward a remote screen window's mouse and keyboard signals to ``send``.
 
     Every viewer that opens a ``RemoteScreenWindow`` wires it here, so one
@@ -201,7 +201,7 @@ class _CollapsibleSection(QGroupBox):
         self._body.setLayout(layout)
 
 
-def displaced_notifier(panel: QWidget) -> Callable[[str, str], None]:
+def displaced_notifier(panel: Any) -> Callable[[str, str], None]:
     """Return the registry ``on_displaced`` callback for ``panel``.
 
     The registry calls it on whichever thread replaced the panel's host or

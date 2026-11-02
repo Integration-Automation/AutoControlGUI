@@ -69,4 +69,5 @@ def test_wiring():
 def test_facade_exports():
     for attr in ("levenshtein", "damerau_levenshtein", "jaro", "jaro_winkler",
                  "jaccard", "dice", "similarity"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

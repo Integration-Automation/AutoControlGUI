@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QFrame, QLabel, QScrollArea, QTabWidget, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.remote_desktop._helpers import _t
 from je_auto_control.gui.remote_desktop.connection_screen import (
@@ -147,8 +148,8 @@ class RemoteDesktopTab(TranslatableMixin, QWidget):
         ]
         webrtc_host, webrtc_viewer = _load_webrtc_panels()
         if webrtc_host is not None and webrtc_viewer is not None:
-            self._webrtc_host_panel = webrtc_host
-            self._webrtc_viewer_panel = webrtc_viewer
+            self._webrtc_host_panel: Optional[QWidget] = webrtc_host
+            self._webrtc_viewer_panel: Optional[QWidget] = webrtc_viewer
             sub_panels.append((webrtc_host, "rd_webrtc_host_tab"))
             sub_panels.append((webrtc_viewer, "rd_webrtc_viewer_tab"))
         else:
@@ -158,6 +159,19 @@ class RemoteDesktopTab(TranslatableMixin, QWidget):
                 (_build_webrtc_placeholder(), "rd_webrtc_unavailable_tab"),
             )
         return sub_panels
+
+    def dispose(self) -> None:
+        """Release what the sub-panels hold beyond their widgets, through each panel's own ``dispose()``.
+
+        Called by ``close_tab(key, release=True)``; safe to call twice.
+        Timers stop, connects and transfers still out are cancelled and the
+        pop-out windows close. A TCP / WebSocket host or session a panel
+        opened is left running -- it belongs to the registry, where scripts
+        and the other panels still see it. A WebRTC host or session belongs to
+        its panel alone and is ended with it.
+        """
+        disposals = [getattr(panel, "dispose", None) for panel in self._sub_panels]
+        release_resources(self, *(dispose for dispose in disposals if callable(dispose)))
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)

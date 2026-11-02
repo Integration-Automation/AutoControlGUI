@@ -6,7 +6,7 @@ import pytest
 from je_auto_control.utils.remote_desktop.audit_log import AuditLog
 
 
-@pytest.fixture()
+@pytest.fixture
 def audit(tmp_path):
     log = AuditLog(path=tmp_path / "audit.db")
     yield log
@@ -109,7 +109,8 @@ def test_query_filters_by_host_id(audit):
     audit.log("test", host_id="alpha", detail="a")
     audit.log("test", host_id="beta", detail="b")
     rows = audit.query(host_id="alpha")
-    assert len(rows) == 1 and rows[0]["host_id"] == "alpha"
+    assert len(rows) == 1
+    assert rows[0]["host_id"] == "alpha"
 
 
 def test_query_returns_rows_in_descending_id_order(audit):

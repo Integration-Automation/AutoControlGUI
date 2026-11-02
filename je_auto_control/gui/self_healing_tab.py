@@ -153,9 +153,10 @@ class SelfHealingTab(TranslatableMixin, QWidget):
                 "self_heal_threshold_label", "self_heal_region_label", "self_heal_verification_label", "",
             )
             for row, key in enumerate(labels):
-                item = layout.itemAt(row, QFormLayout.LabelRole)
-                if item is not None and isinstance(item.widget(), QLabel):
-                    item.widget().setText(_t(key) if key else "")
+                item = layout.itemAt(row, QFormLayout.ItemRole.LabelRole)
+                label = item.widget() if item is not None else None
+                if isinstance(label, QLabel):
+                    label.setText(_t(key) if key else "")
         headers = [_t(f"self_heal_col_{name}") for name in _COLUMNS]
         self._table.setHorizontalHeaderLabels(headers)
 
@@ -221,7 +222,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
         reply = QMessageBox.question(
             self, _t("self_heal_clear"), _t("self_heal_clear_confirm"),
         )
-        if reply != QMessageBox.Yes:
+        if reply != QMessageBox.StandardButton.Yes:
             return
         default_heal_log.clear()
         self.refresh_log()
@@ -242,7 +243,7 @@ class SelfHealingTab(TranslatableMixin, QWidget):
             )
             for col, text in enumerate(values):
                 item = QTableWidgetItem(str(text))
-                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
                 self._table.setItem(row, col, item)
         self._table.resizeColumnsToContents()
         for name in ("template_path", "description"):

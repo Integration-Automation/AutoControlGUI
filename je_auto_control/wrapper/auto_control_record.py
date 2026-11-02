@@ -31,7 +31,7 @@ def record() -> bool:
         recorder.record()
         return True
     except (OSError, RuntimeError, AttributeError, TypeError, ValueError,
-            AutoControlException, AutoControlJsonActionException) as error:
+            AutoControlException) as error:   # covers AutoControlJsonActionException, its subclass
         record_action_to_list("record", None, repr(error))
         autocontrol_logger.error(f"record, failed: {repr(error)}")
         return False
@@ -62,7 +62,7 @@ def stop_record() -> list:
         record_action_to_list("stop_record", None)
         return new_list
     except (OSError, RuntimeError, AttributeError, TypeError, ValueError,
-            AutoControlException, AutoControlJsonActionException) as error:
+            AutoControlException) as error:   # covers AutoControlJsonActionException, its subclass
         record_action_to_list("stop_record", None, repr(error))
         autocontrol_logger.error(f"stop_record, failed: {repr(error)}")
         return []

@@ -18,6 +18,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 
+from headless._qt_settle import settle  # noqa: E402
 from je_auto_control.utils.exception.exceptions import (  # noqa: E402
     AutoControlActionException, AutoControlAssertionException, AutoControlException,
     AutoControlMouseException,
@@ -56,9 +57,21 @@ def test_a_zero_interval_is_refused(monkeypatch):
     assert warned and not started
 
 
+def test_an_assertion_backend_error_is_shown_once_the_run_is_delivered(monkeypatch):
+    # The assertion runs off the GUI thread, so this needs the real tab.
+    from je_auto_control.gui import assertions_tab as module
+    _app()
+    monkeypatch.setattr(module.ac, "assert_pixel", _raiser(AutoControlException("GetPixel failed")))
+    tab = module.AssertionsTab()
+    tab._kind.setCurrentIndex(2)  # pixel
+    tab._xy.setText("1, 2")
+    tab._rgb.setText("0, 0, 0")
+    tab._on_run()
+    assert settle(tab._runs, "task")
+    assert "GetPixel failed" in tab._result.text()
+
+
 @pytest.mark.parametrize("module_name, cls_name, setup", [
-    ("assertions_tab", "AssertionsTab",
-     lambda m, mp: {"_run_assertion": _raiser(AutoControlException("GetPixel failed")), "_result": _Text()}),
     ("data_source_tab", "DataSourceTab",
      lambda m, mp: (mp.setattr(m, "load_rows", _raiser(AutoControlActionException("bad query"))),
                     {"_limit": types.SimpleNamespace(value=lambda: 0), "_build_source": lambda: {},
@@ -71,17 +84,16 @@ def test_a_zero_interval_is_refused(monkeypatch):
                      "_click_check": types.SimpleNamespace(isChecked=lambda: True)})[1]),
 ])
 def test_framework_errors_are_shown_by_the_slot(module_name, cls_name, setup, monkeypatch):
-    from je_auto_control.gui import assertions_tab, data_source_tab, self_healing_tab
-    module = {"assertions_tab": assertions_tab, "data_source_tab": data_source_tab,
-              "self_healing_tab": self_healing_tab}[module_name]
+    from je_auto_control.gui import data_source_tab, self_healing_tab
+    module = {"data_source_tab": data_source_tab, "self_healing_tab": self_healing_tab}[module_name]
     stub = types.SimpleNamespace(**setup(module, monkeypatch))
     cls = getattr(module, cls_name)
-    slot = cls._run if cls_name == "SelfHealingTab" else cls._on_load if cls_name == "DataSourceTab" else cls._on_run
+    slot = cls._run if cls_name == "SelfHealingTab" else cls._on_load
     if cls_name == "SelfHealingTab":
         slot(stub, do_click=True)
     else:
         slot(stub)
-    status = getattr(stub, "_status", None) or getattr(stub, "_result")
+    status = stub._status
     assert status.value, "the slot did not report the error"
     if cls_name == "SelfHealingTab":
         assert "click failed" in status.value
@@ -89,12 +101,16 @@ def test_framework_errors_are_shown_by_the_slot(module_name, cls_name, setup, mo
 
 def test_the_planner_run_slot_shows_an_assertion_failure(monkeypatch):
     from je_auto_control.gui import llm_planner_tab as tab
+    _app()
     warned = []
     monkeypatch.setattr(tab.QMessageBox, "warning", lambda *args: warned.append(args[-1]))
     monkeypatch.setattr(tab, "execute_action", _raiser(AutoControlAssertionException("var mismatch")))
-    stub = types.SimpleNamespace(_planned_actions=[["AC_assert_var", {}]], _status=_Text())
-    tab.LLMPlannerTab._on_run(stub)
-    assert warned and "var mismatch" in stub._status.value
+    planner = tab.LLMPlannerTab()
+    planner._planned_actions = [["AC_assert_var", {}]]
+    planner._on_run()
+    assert settle(planner._runs, "task")
+    assert warned
+    assert "var mismatch" in planner._status.text()
 
 
 def test_a_broken_recording_folder_is_reported(monkeypatch, tmp_path):

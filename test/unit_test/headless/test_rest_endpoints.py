@@ -11,7 +11,7 @@ from je_auto_control.utils.rest_api.rest_server import RestApiServer
 _TEST_SCHEME = "http"  # NOSONAR localhost-only ephemeral test server; TLS is out of scope here
 
 
-@pytest.fixture()
+@pytest.fixture
 def server(monkeypatch):
     # The real pointer read fails while the input desktop is not current (a
     # locked screen): the endpoint answered 500 and the round trip failed.
@@ -73,9 +73,12 @@ def test_authenticated_endpoints_reject_anonymous(server, path):
 
 def test_screen_size_payload_shape(server):
     _, payload = _get(server, "/screen_size", token=server.token)
-    assert "width" in payload and "height" in payload
-    assert isinstance(payload["width"], int) and payload["width"] > 0
-    assert isinstance(payload["height"], int) and payload["height"] > 0
+    assert "width" in payload
+    assert "height" in payload
+    assert isinstance(payload["width"], int)
+    assert payload["width"] > 0
+    assert isinstance(payload["height"], int)
+    assert payload["height"] > 0
 
 
 def test_commands_payload_includes_admin_console_keys(server):
@@ -88,4 +91,5 @@ def test_commands_payload_includes_admin_console_keys(server):
 
 def test_sessions_payload_has_host_and_viewer(server):
     _, payload = _get(server, "/sessions", token=server.token)
-    assert "host" in payload and "viewer" in payload
+    assert "host" in payload
+    assert "viewer" in payload

@@ -126,6 +126,29 @@ For example, ``time.sleep`` becomes ``time_sleep``:
        ["time_sleep", {"secs": 2}]
    ]
 
+An action file may load a package and use it in the same list, provided the
+gate allows that package:
+
+.. code-block:: json
+
+   [
+       ["AC_add_package_to_executor", ["time"]],
+       ["time_sleep", [2]]
+   ]
+
+Every command name is checked before the first action runs, and
+``time_sleep`` does not exist until the load has run, so this list used to be
+refused for an unknown command whatever the gate said. The check now leaves a
+name to run time when all of these hold: it starts with ``<package>_``; an
+``AC_add_package_to_executor`` earlier in the file names that package
+literally (``["time"]`` or ``{"package": "time"}``, not a ``${variable}``);
+and the gate would allow the package. Anything else -- a package that is not
+allowed, a name used before its load, a typo in an ``AC_*`` name -- is still
+rejected before anything runs. A deferred name that turns out not to exist
+(``time_slep``) fails its own action with ``Unknown action`` when the run
+reaches it. ``je_auto_control validate`` and the REST pre-check follow the
+same rule.
+
 To inspect the current executor command dictionary:
 
 .. code-block:: python

@@ -40,7 +40,7 @@ class DataSourceTab(TranslatableMixin, QWidget):
         self._limit = QSpinBox()
         self._limit.setRange(0, 100000)
         self._table = QTableWidget(0, 0)
-        self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self._status = QLabel()
         self._build_layout()
         self._sync_visibility(self._kind.currentText())

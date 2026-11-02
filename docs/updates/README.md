@@ -269,6 +269,36 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | U-20261018-03 | 2026-10-18 | Bind deferred work to its registrant and isolate callbacks | #done #security #rbac | [2026-10](2026-10.md) |
 | U-20261018-02 | 2026-10-18 | Repair Sphinx source markup and remove completed progress history | #done #docs | [2026-10](2026-10.md) |
 | U-20261018-01 | 2026-10-18 | GUI pages scroll and workspace preferences persist without qt-material | #done #gui #F2 | [2026-10](2026-10.md) |
+| U-20261022-01 | 2026-10-22 | Keep dependency metadata aligned | #bugfix #deps #ci | [2026-10](2026-10.md) |
+| U-20261009-43 | 2026-10-09 | The seven SonarCloud issues left on main after U-20261009-42 | #done #quality #sonar #security | [2026-10](2026-10.md) |
+| U-20261009-42 | 2026-10-09 | SonarCloud and Codacy backlog on main: 2,344 and 8 findings worked through | #done #quality #sonar #codacy | [2026-10](2026-10.md) |
+| U-20261009-41 | 2026-10-09 | Release 1.0.0; the publish job releases a hand-set version as written | #release #ci | [2026-10](2026-10.md) |
+| U-20261009-40 | 2026-10-09 | A result hook reports nested command results; secret-named result fields are masked at any depth and offered once | #done #executor #gui #security | [2026-10](2026-10.md) |
+| U-20261009-39 | 2026-10-09 | REST and MCP resources follow the read_data rule; a Slack /stop no longer waits for the run it stops | #done #security #rbac #mcp #chatops | [2026-10](2026-10.md) |
+| U-20261009-38 | 2026-10-09 | Script Builder shows a freshly issued token once; command results are masked before they are logged | #done #gui #security | [2026-10](2026-10.md) |
+| U-20261009-37 | 2026-10-09 | Plug-in tools can declare themselves read-only; stored records need read_data; a chat /run can be stopped; joining a bucket commits nothing | #done #mcp #rbac #chatops #sync | [2026-10](2026-10.md) |
+| U-20261009-36 | 2026-10-09 | GUI: task callbacks held weakly, dispose() on every panel and tab with background work, per-thread UI Automation, 52 fewer typing exemptions | #done #gui #accessibility #typing | [2026-10](2026-10.md) |
+| U-20261009-35 | 2026-10-09 | Config sync: oversize blobs refused before upload, unused blobs collected, a deletion held for 30 days, the mirror sees same-tick edits | #done #sync | [2026-10](2026-10.md) |
+| U-20261009-34 | 2026-10-09 | A stop wakes the polling waits; MCP can stop and list runs; a USB ACL file that fails its check denies everything; per-thread context | #done #executor #mcp #security #rbac | [2026-10](2026-10.md) |
+| U-20261009-33 | 2026-10-09 | The three newer macOS probes are asserted; the Python 3.10 segfault item is closed | #done #macos #ci | [2026-10](2026-10.md) |
+| U-20261009-32 | 2026-10-09 | READMEs list every environment variable, Sphinx builds without warnings, typing is also checked against the real Qt types | #done #docs #ci #typing | [2026-10](2026-10.md) |
+| U-20261009-31 | 2026-10-09 | Journal artifacts and exact-match secret masking, a Robot structure check, a VLM strategy and verified heals, real capability probes | #done #journal #self-healing #capabilities | [2026-10](2026-10.md) |
+| U-20261009-30 | 2026-10-09 | Config sync: reused operation ids are refused, old calls are causal, back-off is its own state, assets over HTTP | #done #sync #protocol | [2026-10](2026-10.md) |
+| U-20261009-29 | 2026-10-09 | MCP sessions belong to their user, read-only holds in every tool mode, one signed USB ACL file, owner-only private keys on Windows | #done #security #mcp #rbac #usb | [2026-10](2026-10.md) |
+| U-20261009-28 | 2026-10-09 | GUI lifecycle: stops that join a thread, queued viewer input, dispose(), one restyle per theme switch | #done #gui #remote-desktop | [2026-10](2026-10.md) |
+| U-20261009-27 | 2026-10-09 | GUI commands run off the GUI thread and a running script can be stopped | #done #gui #executor | [2026-10](2026-10.md) |
+| U-20261009-26 | 2026-10-09 | Six offline-validated examples, a configuration reference, strict typing for every module added this month, end-to-end tests on fakes | #done #docs #typing #examples #H1 #H2 #H3 | [2026-10](2026-10.md) |
+| U-20261009-25 | 2026-10-09 | The Python 3.10 headless segfault: a prompt dialog that was its own reference cycle | #bugfix #gui #ci | [2026-10](2026-10.md) |
+| U-20261009-24 | 2026-10-09 | Follow-ups: USB waits, run-level scopes, load-and-use in one list, layout key names, file splits, Sphinx | #done #followups | [2026-10](2026-10.md) |
+| U-20261009-23 | 2026-10-09 | RBAC: deferred work runs as its owner, users have a management surface, data tools need read_data | #done #security #rbac | [2026-10](2026-10.md) |
+| U-20261009-22 | 2026-10-09 | MCP sessions can start with five tools and enable what they need | #done #mcp #G1 #G2 #G3 | [2026-10](2026-10.md) |
+| U-20261009-21 | 2026-10-09 | Wayland capability states, explicit authorisation, opt-in physical recording and an opt-in libei helper | #wayland #D1 #D2 #D3 | [2026-10](2026-10.md) |
+| U-20261009-20 | 2026-10-09 | GUI: scrolling pages, remembered window state, drawn close buttons, start tabs built on first click, benchmarks | #done #gui #F1 #F4 | [2026-10](2026-10.md) |
+| U-20261009-19 | 2026-10-09 | A cancellable GUI task controller; the WebRTC panel split into twelve modules | #gui #F3 | [2026-10](2026-10.md) |
+| U-20261009-18 | 2026-10-09 | Each mobile device has its own session; gestures, frames, app lifecycle and every surface from one command table | #mobile #E1 #E2 #E3 #E4 | [2026-10](2026-10.md) |
+| U-20261009-17 | 2026-10-09 | Config sync survives restarts, refuses stale writes and merges by causality | #done #sync #protocol #C1 #C2 #C3 | [2026-10](2026-10.md) |
+| U-20261009-16 | 2026-10-09 | Self-healing locator versions are measured on the same labelled frames | #done #self-healing #B2 | [2026-10](2026-10.md) |
+| U-20261009-15 | 2026-10-09 | Opt-in action journal, and candidate scripts built from one run | #done #journal #codegen #B1 #B3 | [2026-10](2026-10.md) |
 | U-20261009-14 | 2026-10-09 | The package gate refuses unlisted packages by default | #done #security #breaking | [2026-10](2026-10.md) |
 | U-20261009-13 | 2026-10-09 | REST routes and MCP tools are authorised by role when a user store is configured | #done #security #rbac #A10 | [2026-10](2026-10.md) |
 | U-20261009-12 | 2026-10-09 | Remote-desktop hosts and viewers have owners | #done #remote-desktop #gui #C4 | [2026-10](2026-10.md) |
@@ -576,11 +606,11 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 |---|---|---:|
 | [2026-11.md](2026-11.md) | 2026-11 | 17 |
 | [2026-10-f.md](2026-10-f.md) | 2026-10 | 5 |
-| [2026-10-e.md](2026-10-e.md) | 2026-10 | 10 |
+| [2026-10-e.md](2026-10-e.md) | 2026-10 | 91 |
 | [2026-10-d.md](2026-10-d.md) | 2026-10 | 15 |
 | [2026-10-c.md](2026-10-c.md) | 2026-10 | 75 |
 | [2026-10-b.md](2026-10-b.md) | 2026-10 | 15 |
-| [2026-10.md](2026-10.md) | 2026-10 | 82 |
+| [2026-10.md](2026-10.md) | 2026-10 | 112 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |

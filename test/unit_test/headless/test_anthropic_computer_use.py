@@ -111,7 +111,8 @@ def test_double_and_triple_click_repeat():
 def test_left_click_without_coordinate_uses_current_cursor():
     out = _decision_from_computer_action({"action": "left_click"})
     assert out["tool"] == "AC_click_mouse"
-    assert "x" not in out["input"] and "y" not in out["input"]
+    assert "x" not in out["input"]
+    assert "y" not in out["input"]
 
 
 def test_drag_requires_both_endpoints():
@@ -275,9 +276,10 @@ def test_backend_rewraps_client_failures_as_AgentBackendError():  # NOSONAR pyth
 
 
 def test_backend_rejects_zero_display_size():
+    client = _StubClient()
     with pytest.raises(AgentBackendError, match="display_width_px"):
         ComputerUseAgentBackend(
-            display_width_px=0, display_height_px=600, client=_StubClient(),
+            display_width_px=0, display_height_px=600, client=client,
         )
 
 

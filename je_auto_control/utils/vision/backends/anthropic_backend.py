@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.vision.backends._parse import (
-    LOCATE_PROMPT, parse_coords,
+    LOCATE_PROMPT, parse_coords, read_usage,
 )
 from je_auto_control.utils.vision.backends.base import VLMBackend, VLMRequestError
 
@@ -62,6 +62,7 @@ class AnthropicVLMBackend(VLMBackend):
             image_bytes, scale = fit_screenshot(image_bytes, image_tier(chosen_model))
         b64 = base64.standard_b64encode(image_bytes).decode("ascii")
         prompt = LOCATE_PROMPT.format(description=description)
+        self.last_usage = None
         try:
             response = self._client.messages.create(
                 model=chosen_model,
@@ -84,6 +85,7 @@ class AnthropicVLMBackend(VLMBackend):
         # the LLM backend already caught them.
         except (*_sdk_errors(), OSError, ValueError, RuntimeError) as error:
             raise VLMRequestError(f"Anthropic VLM request failed: {error!r}") from error
+        self.last_usage = read_usage(response, "input_tokens", "output_tokens")
         coords = parse_coords(_first_text_block(response))
         if coords is None:
             return None
@@ -99,7 +101,7 @@ def _first_text_block(response) -> str:
     return ""
 
 
-def _sdk_errors() -> tuple:
+def _sdk_errors() -> tuple:  # NOSONAR python:S8495  # reason: unpacked into an except tuple; empty with no SDK
     """``(anthropic.AnthropicError,)``, the base of every error the SDK raises.
 
     Evaluated while an exception is being matched, so it must not raise:

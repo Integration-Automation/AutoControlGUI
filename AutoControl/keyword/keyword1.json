@@ -86,38 +86,14 @@
     [
         "AC_write",
         {
-            "write_string": "now i will add time module and sleep 3 sec"
+            "write_string": "now i will sleep 3 sec"
         }
     ],
     [
-        "AC_add_package_to_executor",
-        [
-            "time"
-        ]
-    ],
-    [
-        "time_sleep",
-        [
-            3
-        ]
-    ],
-    [
-        "AC_type_keyboard",
+        "AC_sleep",
         {
-            "keycode": "return"
+            "seconds": 3
         }
-    ],
-    [
-        "AC_write",
-        {
-            "write_string": "also you can use builtin function on executor like print"
-        }
-    ],
-    [
-        "print",
-        [
-            "Google Bye World"
-        ]
     ],
     [
         "AC_type_keyboard",

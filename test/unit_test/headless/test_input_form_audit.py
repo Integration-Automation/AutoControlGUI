@@ -129,7 +129,8 @@ def test_cua_keys_resolve_to_this_platforms_names(monkeypatch):
 
 def test_a_double_click_clicks_twice():
     command = cua_action.to_ac_command({"type": "double_click", "x": 1, "y": 2})
-    assert command[0] == "AC_loop" and command[1]["times"] == 2
+    assert command[0] == "AC_loop"
+    assert command[1]["times"] == 2
 
 
 def test_scrolls_carry_their_direction(monkeypatch):
@@ -142,9 +143,9 @@ def test_scrolls_carry_their_direction(monkeypatch):
         {"action": "scroll", "scroll_direction": "left", "scroll_amount": 3}))
     assert left[1] == {"scroll_value": 3, "scroll_direction": "scroll_left"}
     monkeypatch.setattr(platform_wrapper, "special_mouse_keys_table", None)
+    sideways = cua_action.from_openai_cua({"type": "scroll", "scroll_x": 5, "scroll_y": 0})
     with pytest.raises(AutoControlActionException, match="horizontal"):
-        cua_action.to_ac_command(cua_action.from_openai_cua(
-            {"type": "scroll", "scroll_x": 5, "scroll_y": 0}))
+        cua_action.to_ac_command(sideways)
 
 
 def test_a_compiled_postcondition_uses_its_before_frame():

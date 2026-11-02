@@ -73,11 +73,23 @@ class TabEntry:
                 self.on_build(self._widget)
         return self._widget
 
-    def release(self) -> None:
-        """Drop an owned panel and schedule its Qt cleanup, retaining metadata."""
-        if self._widget is not None and not self.retain_on_close:
-            page, self._widget = self._widget, None
+    def release(self) -> bool:
+        """Drop an owned panel and schedule its Qt cleanup, retaining metadata.
+
+        A panel with a ``dispose()`` method has it called first, so it stops its
+        timers and threads and drops the listeners it registered. ``False`` when
+        there was nothing to release.
+        """
+        if self._widget is None or self.retain_on_close:
+            return False
+        page, self._widget = self._widget, None
+        dispose = getattr(page, "dispose", None)
+        try:
+            if callable(dispose):
+                dispose()  # pylint: disable=not-callable  # reason: guarded by callable()
+        finally:
             page.deleteLater()
+        return True
 
 
 class TabRegistry:
@@ -161,6 +173,7 @@ TAB_SPECS: Tuple[TabSpec, ...] = (
     TabSpec("flakiness", "tab_flakiness", "system", f"{_GUI}.flakiness_tab", "FlakinessTab"),
     TabSpec("a11y_audit", "tab_a11y_audit", "core", f"{_GUI}.a11y_audit_tab", "A11yAuditTab"),
     TabSpec("device_matrix", "tab_device_matrix", "core", f"{_GUI}.device_matrix_tab", "DeviceMatrixTab"),
+    TabSpec("mobile", "tab_mobile", "core", f"{_GUI}.mobile_tab", "MobileTab"),
     TabSpec("media_checks", "tab_media_checks", "core", f"{_GUI}.media_checks_tab", "MediaChecksTab"),
     TabSpec("run_history", "tab_run_history", "automation", f"{_GUI}.run_history_tab", "RunHistoryTab"),
     TabSpec("profiler", "tab_profiler", "automation", f"{_GUI}.profiler_tab", "ProfilerTab"),

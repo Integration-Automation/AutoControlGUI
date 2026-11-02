@@ -31,8 +31,32 @@ Actions 選單
 ``Ctrl+K`` ( **View → Search Features...** ) 從任何地方把游標移到搜尋框,
 ``Ctrl+B`` ( **View → Navigation Panel** ) 隱藏或顯示面板。
 
-分頁在第一次開啟時才建立:視窗啟動時只有三個預設分頁與主元件自己的表單,其他
-分頁的模組要到開啟時才匯入。
+凡是在 widget 之外還握有東西的分頁都實作了 ``dispose()``:排程、觸發器、熱鍵、
+E-mail 觸發器、Webhooks、REST API、Presence、Live HUD、Inspector、Profiler、
+Run History、Admin Console、USB Devices、USB Sharing、Config Sync 與遠端桌面,
+以及每一個會在背景執行指令的分頁(Script Builder、VLM、OCR、LLM Planner、
+Computer Use、DAG、Self Healing、Test Suite、Assertions、Device Matrix、Mobile、
+Media Checks、WebRunner、ChatOps、USB Browser、Accessibility、A11y Audit)。
+它會停掉分頁的計時器、取消背景工作、把監聽從 presence registry 移除、歸還 USB
+watcher 的持有、把 log tail 從 logger 拿掉,並關閉自己開的 loopback——在呼叫當下
+完成,而不是等 Qt 之後刪除 widget。背景工作的取消方式,與稍後刪除分頁時會發生的
+相同:腳本會被停止,Computer Use 或 DAG 的執行會被要求停止,無法中斷的工作(模型
+請求、裝置清單)會跑完,但結果被丟棄。分頁只是顯示的後端(排程器、REST 伺服器、
+遠端桌面 host)會繼續執行。新的分頁用 ``je_auto_control.gui._dispose`` 的
+``release_resources(self, *releases)`` 一行就能做到;已註冊的分頁若建立 ``QTimer``、
+註冊監聽或啟動背景工作卻沒有這個方法,``test_gui_tab_dispose.py`` 會失敗。
+
+遠端桌面的 ``dispose()`` 會逐一呼叫它的五個面板。面板開啟的 TCP 或 WebSocket host
+與連線會繼續執行:它們屬於 registry,腳本(``AC_remote_*``)與其他面板仍看得到、
+也能停止它們;被放掉的只有面板自己的計時器、尚未回應的連線嘗試與彈出視窗。WebRTC
+的 host 與連線只屬於它的面板——面板不在了就沒有人能停止它,host 會在沒有人看得到的
+情況下繼續分享畫面——所以放掉分頁時會結束它,和 Stop 指令一樣在背景進行。
+
+交給背景工作的回呼是弱參照:請傳分頁的方法(或它的 ``functools.partial``),不要傳
+把分頁包進去的 lambda 或巢狀函式。工作的 handle 是分頁的子物件,若回呼讓分頁活著,
+handle 就成了一個沒有其他人參照的分頁的最後持有者——分頁於是在自己子物件的解構子裡
+被銷毀。``je_auto_control.gui._weak_call`` 的 ``weak_slot`` 會做出接到 handle 訊號的
+slot;新增強參照回呼時 ``test_gui_weak_callbacks.py`` 會失敗。
 
 View 選單
 ---------
@@ -67,3 +91,76 @@ View 選單
 新分頁若忘了掛鉤會直接讓 CI 失敗,而不是默默出貨一個沒有任何可觸及指令
 的分頁。探測程序在子行程中建構完整 widget,使 Qt 生命週期不會影響無頭
 測試套件的其餘部分。
+
+``test/unit_test/headless/test_gui_feature_parity.py`` 守其餘的部分:視窗以三個
+工作流程分頁開啟、每個已註冊分頁都能從導覽面板開啟並填入 Actions 選單、640×420
+的視窗會捲動而不是裁切、混合 DPI 的座標換算與 100% + 125% 桌面的實測一致。
+
+量測 GUI
+--------
+
+兩支腳本輸出 JSON 報告,而且不會顯示視窗(使用 Qt 的 ``offscreen`` 平台,也不碰
+GUI 設定檔):
+
+.. code-block:: bash
+
+   python benchmarks/gui_startup.py --runs 5 --output after.json
+   python benchmarks/gui_workloads.py --output workloads.json
+   python benchmarks/gui_startup.py --compare before.json after.json
+
+``gui_startup.py`` 在全新的直譯器裡啟動視窗,回報 ``startup_ms``(從第一行到畫出
+第一個畫面)、各階段時間與行程的記憶體。``gui_workloads.py`` 把每個分頁各開一次
+(每個分頁的 ``first_open_ms``)、再切回去、在搜尋框輸入、切換主題,同時有一個 5 ms
+的計時器在跳;``event_loop_p95_ms`` 就是那些 tick 晚到多久。``theme_switch_ms`` 是
+切換主題時卡住的時間,``theme_deferred_ms`` 是之後把未選取分頁重新套用樣式總共花的
+時間,``theme_deferred_longest_turn_ms`` 是其中最長的一輪。``--compare`` 把兩份
+報告並排,工作量或環境不同時拒絕比較。
+
+分頁裡的背景工作
+----------------
+
+需要等待網路對端或裝置的分頁,透過 ``je_auto_control.gui.task_controller``
+啟動工作,而不是自己開執行緒:
+
+.. code-block:: python
+
+   from je_auto_control.gui.task_controller import CancellationToken, task_controller
+
+   def fetch(url: str, token: CancellationToken) -> dict:
+       token.raise_if_cancelled()
+       return download(url, timeout=token.remaining(default=10.0))
+
+   url = self._url_edit.text()                      # 先把 widget 的值讀出來
+   handle = task_controller().submit(
+       functools.partial(fetch, url), owner=self, timeout_s=30.0)
+   handle.result.connect(self._show)                # 在 GUI 執行緒發出
+   handle.error.connect(self._show_error)           # 例外物件本身
+   handle.finished.connect(self._enable_button)     # 無論結果如何都只發一次
+
+相較於單純的 worker,它多了這些:
+
+* **取消會傳到後端。** 工作會收到 ``CancellationToken``:以
+  ``raise_if_cancelled()`` / ``wait()`` 輪詢、把 ``remaining()`` 交給接受逾時的
+  後端,並用 ``on_cancel()`` 登記如何釋放手上的資源。``handle.cancel()`` 會在
+  呼叫取消的執行緒上立刻執行那些釋放動作。
+* **有型別的結果。** ``result`` 帶回傳值、``error`` 帶例外、``progress`` 帶
+  ``token.report_progress()`` 傳入的內容。逾時回報為 ``TaskTimeout``,取消回報為
+  ``TaskCancelled``。
+* **擁有者消失。** handle 是 ``owner`` 的子物件。分頁被銷毀時工作會被取消,之後
+  才到的結果交給 ``discard=``\ (關掉已經沒人要用的工作階段),絕不會送到已銷毀
+  widget 的 slot。
+* **worker 不碰 widget。** 工作若是 widget 的方法,或閉包裡抓著 widget,會在啟動
+  前以 ``TaskUsageError`` 拒絕。
+
+會 join 執行緒的 Stop 走 ``je_auto_control.gui._slow_op``,它建立在同一個 controller
+上。``SlowOp(self).run(backend.stop, on_done=..., on_error=...)`` 一次只跑一個這樣的
+呼叫:前一個還沒回來時回傳 ``False``\ (第二次點擊不做任何事),結果回來之前 ``busy``
+為 true——分頁這時顯示「正在停止…」——而 ``on_done`` 會在 ``busy`` 變回 false 之後於
+GUI 執行緒執行,原本接在阻塞呼叫後面的程式碼就放在這裡。排程、觸發器、熱鍵、E-mail
+觸發器、Webhooks、REST API、USB Sharing 分頁與遠端桌面的 host 面板都這樣停止(需要
+先停再啟動的也這樣啟動)。WebRTC 面板則是立刻放掉工作階段,把它的關閉交給
+``StopQueue``,所以舊的還在關閉時就能開始下一個。回呼以弱參照持有:請傳方法與
+``args=``,不要傳 ``functools.partial`` 或閉包抓著分頁的 lambda。
+
+這是 GUI 內部 API(會 import ``PySide6``),套件 facade 不會重新匯出;分頁所呼叫的
+無頭函式不需要它也能使用。

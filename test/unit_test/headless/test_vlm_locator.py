@@ -81,21 +81,23 @@ def test_null_backend_raises_with_custom_reason():
     assert "sdk not installed" in str(info.value)
 
 
-def test_reset_backend_cache_clears_cached_instance():
-    backends_mod._cached_backend = _FakeBackend((1, 2))
+def test_reset_backend_cache_clears_cached_instance(monkeypatch):
+    monkeypatch.setattr(backends_mod, "_cached_backend", _FakeBackend((1, 2)))
     assert backends_mod.get_backend() is backends_mod._cached_backend
     backends_mod.reset_backend_cache()
     assert backends_mod._cached_backend is None
 
 
 def test_locate_raises_when_backend_unavailable(stub_screenshot):
+    backend = NullVLMBackend("nope")
     with pytest.raises(VLMNotAvailableError):
-        locate_by_description("anything", backend=NullVLMBackend("nope"))
+        locate_by_description("anything", backend=backend)
 
 
 def test_locate_requires_non_empty_description():
+    backend = _FakeBackend((0, 0))
     with pytest.raises(ValueError):
-        locate_by_description("   ", backend=_FakeBackend((0, 0)))
+        locate_by_description("   ", backend=backend)
 
 
 def test_locate_returns_backend_coords(stub_screenshot):

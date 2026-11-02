@@ -61,7 +61,8 @@ def test_executor_round_trip():
         {"schema": json.dumps({"port": {"type": "int", "required": True}}),
          "config": json.dumps({"port": "9090"})}]])
     report = next(v for v in rec.values() if isinstance(v, dict))
-    assert report["ok"] is True and report["config"] == {"port": 9090}
+    assert report["ok"] is True
+    assert report["config"] == {"port": 9090}
 
 
 def test_wiring():
@@ -74,4 +75,5 @@ def test_wiring():
 
 def test_facade_exports():
     for attr in ("ConfigField", "ConfigSchema", "coerce", "validate_config"):
-        assert hasattr(ac, attr) and attr in ac.__all__
+        assert hasattr(ac, attr)
+        assert attr in ac.__all__

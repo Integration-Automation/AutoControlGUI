@@ -47,8 +47,9 @@ def test_times_out_when_never_present():
 
 @pytest.mark.parametrize("kwargs", [{"timeout_s": 0}, {"poll_interval_s": 0}])
 def test_validation_errors(kwargs):
+    lister = _lister([["x"]])
     with pytest.raises(ValueError):
-        wait_until_process("x", lister=_lister([["x"]]), **kwargs)
+        wait_until_process("x", lister=lister, **kwargs)
 
 
 def test_facade_executor_and_mcp_wiring(monkeypatch):

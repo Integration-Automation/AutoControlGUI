@@ -87,7 +87,8 @@ def test_opus_5_5_gets_the_toolset_without_a_beta():
     first = backend.decide_next_action("goal", screen, [])
     request = client.messages.calls[0]
     assert request["tools"] == [{"type": "computer_toolset_20260801"}]
-    assert "betas" not in request and "tool_choice" not in request
+    assert "betas" not in request
+    assert "tool_choice" not in request
     # 3840x2160 is fitted to 2576x1449 (4784 visual tokens), a scale of
     # about 0.671: model pixel (100, 50) is screen pixel (149, 75).
     assert first == {"tool": "AC_click_mouse",
@@ -138,7 +139,8 @@ def test_screenshots_are_fitted_into_the_image_limits():
     assert (width, height) == (2576, 1449)
     assert max(width, height) <= MAX_LONG_EDGE_PX
     assert visual_tokens(width, height) <= MAX_VISUAL_TOKENS
-    assert sx == pytest.approx(width / 3840) and sy == pytest.approx(height / 2160)
+    assert sx == pytest.approx(width / 3840)
+    assert sy == pytest.approx(height / 2160)
     # A 1080p screen is inside the high-resolution tier: it goes as it is.
     full_hd = _png(1920, 1080)
     assert fit_screenshot(full_hd) == (full_hd, (1.0, 1.0))
@@ -192,12 +194,14 @@ def test_zoom_answers_with_a_full_resolution_crop():
     assert first == {"tool": "AC_screenshot", "input": {}}
     second = backend.decide_next_action("goal", screen, [_step(0, "AC_screenshot")])
     # The click after a zoom is still in the full screenshot's space.
-    assert second["input"]["x"] == 298 and second["input"]["y"] == 149
+    assert second["input"]["x"] == 298
+    assert second["input"]["y"] == 149
     backend.decide_next_action("goal", screen, [_step(0, "AC_screenshot"),
                                                 _step(1, "AC_click_mouse")])
     answers = client.messages.calls[1]["messages"][-2]["content"]
     zoom_answer = answers[0]
-    assert zoom_answer["tool_use_id"] == "z1" and not zoom_answer["is_error"]
+    assert zoom_answer["tool_use_id"] == "z1"
+    assert not zoom_answer["is_error"]
     image_block = zoom_answer["content"][0]
     assert image_block["type"] == "image"
     data = base64.b64decode(image_block["source"]["data"])

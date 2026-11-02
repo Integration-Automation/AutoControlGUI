@@ -49,7 +49,8 @@ def test_to_judge_prompt_mentions_effect():
     before = [_el(0, 0, "A")]
     after = [_el(0, 0, "A"), _el(40, 40, "P", role="dialog")]
     text = to_judge_prompt(build_critic_record({"x": 50, "y": 50}, before, after))
-    assert "Effect:" in text and "changed_near_target" in text
+    assert "Effect:" in text
+    assert "changed_near_target" in text
 
 
 # --- wiring ---------------------------------------------------------------
@@ -67,4 +68,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("build_critic_record", "score_step_rule_based", "to_judge_prompt"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

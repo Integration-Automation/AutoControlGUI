@@ -9,7 +9,9 @@ from typing import Optional
 from je_auto_control.utils.exception.exceptions import AutoControlExecuteActionException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
-_PACKAGE_NAME_RE = re.compile(r"^[A-Za-z_]\w*(\.[A-Za-z_]\w*)*$")
+#: One name of a dotted module name. Each part is matched on its own, so no
+#: pattern here repeats a group that itself repeats.
+_PACKAGE_PART_RE = re.compile(r"[A-Za-z_]\w*")
 
 #: Comma-separated package names the gate allows, for hosts with no Python of
 #: their own to call ``executor.allow_packages``: the CLIs, the socket / REST /
@@ -19,7 +21,9 @@ ALLOWED_PACKAGES_ENV = "JE_AUTOCONTROL_ALLOWED_PACKAGES"
 
 def is_package_name(name: object) -> bool:
     """Whether ``name`` is a dotted Python module name, the only thing the gate lists."""
-    return isinstance(name, str) and bool(_PACKAGE_NAME_RE.match(name))
+    if not isinstance(name, str):
+        return False
+    return all(_PACKAGE_PART_RE.fullmatch(part) for part in name.split("."))
 
 
 def _packages_from_environment() -> set[str]:
@@ -79,6 +83,16 @@ class PackageManager:
         return any(package == allowed or package.startswith(allowed + ".")
                    for allowed in self.allowed_packages)
 
+    def would_allow(self, package: object) -> bool:
+        """
+        閘門是否會放行這個套件（不匯入任何東西）
+        Whether the gate would let ``package`` be loaded. Nothing is imported: this is
+        what lets an action list be validated before the load command in it has run.
+        """
+        if not isinstance(package, str) or not is_package_name(package):
+            return False
+        return self.allow_arbitrary_packages or self._is_allowlisted(package)
+
     def _check_allowed(self, package: object) -> None:
         """Refuse ``package`` before it is imported, unless the gate lets it through."""
         if isinstance(package, str) and self._is_allowlisted(package):
@@ -101,7 +115,7 @@ class PackageManager:
         :param package: 套件名稱 Package name (must match a Python dotted identifier)
         :return: 套件模組 ModuleType 或 None
         """
-        if not isinstance(package, str) or not _PACKAGE_NAME_RE.match(package):
+        if not is_package_name(package):
             autocontrol_logger.error("rejected invalid package name: %r", package)
             return None
         if package not in self.installed_package_dict:

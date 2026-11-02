@@ -4,11 +4,14 @@ Three surfaces, one rule each:
 
 * **REST routes** are listed one by one. A route missing from the list needs
   ``manage_hosts``, so a route added without a decision is admin-only rather
-  than open.
+  than open. A ``GET`` route that returns records or configuration the host
+  keeps needs ``read_data`` like the MCP tool reading the same thing; one
+  that observes live state needs ``read_screen``.
 * **MCP tools** default to ``read_screen`` for a read-only annotation and
   ``drive_input`` otherwise. Named overrides separate non-mutating sensitive
   reads (clipboard, local data, credentials, network and audio) from screen
-  observation, and protect administration of the host itself.
+  observation, hand the host's records to ``read_data``, manage users, and
+  protect administration of the host itself.
 * **``AC_*`` commands** reach the executor through anything that runs an
   action list (``POST /execute``, ``ac_execute_actions``, an action file).
   Being allowed to run actions is ``drive_input``; the commands named here
@@ -34,6 +37,8 @@ _READ = Capability.READ_SCREEN
 _DRIVE = Capability.DRIVE_INPUT
 _HOSTS = Capability.MANAGE_HOSTS
 _AUDIT = Capability.READ_AUDIT
+_USERS = Capability.MANAGE_USERS
+_DATA = Capability.READ_DATA
 
 REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
     ("POST", "/agent/target"): _HOSTS,
@@ -44,7 +49,7 @@ REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
     ("POST", "/agent/recover_target"): _HOSTS,
     ("GET", "/metrics"): _READ,
     ("GET", "/jobs"): _READ,
-    ("GET", "/history"): _READ,
+    ("GET", "/history"): _DATA,  # run history, as ac_list_run_history
     ("GET", "/screenshot"): _READ,
     ("GET", "/mouse_position"): _READ,
     ("GET", "/screen_size"): _READ,
@@ -56,7 +61,7 @@ REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
     ("GET", "/usb/devices"): _READ,
     ("GET", "/usb/events"): _READ,
     ("GET", "/usb/passthrough/status"): _READ,
-    ("GET", "/usb/acl"): _READ,
+    ("GET", "/usb/acl"): _DATA,  # the stored ACL, as ac_usb_acl_list
     ("GET", "/usb/loopback/devices"): _READ,
     ("GET", "/usb/remote/devices"): _READ,
     ("GET", "/diagnose"): _READ,
@@ -79,6 +84,12 @@ REST_ROUTE_CAPABILITIES.update({("POST", f"/agent/{operation}"): _DRIVE
                                                   "cancel", "draft", "stop_all", "receipts", "reconcile",
                                                   "prune", "trigger", "skill", "lookup", "recovery", "dag",
                                                   "transfer", "transfer/peer")})
+
+#: The routes that need ``read_data``: the ones returning records or
+#: configuration the host keeps, by the rule :data:`DATA_TOOLS` states. Each
+#: has an MCP tool reading the same thing, and the two must agree.
+DATA_ROUTES = frozenset(
+    route for route, needed in REST_ROUTE_CAPABILITIES.items() if needed == _DATA)
 
 #: Commands that need more than ``drive_input``. Every other command is
 #: covered by the capability of the surface that submitted the action list.
@@ -163,7 +174,62 @@ COMMAND_CAPABILITIES: Dict[str, str] = {
     "AC_secret_remove": _HOSTS,
     "AC_secret_unlock": _HOSTS,
     "AC_secret_lock": _HOSTS,
+    "AC_user_add": _USERS,
+    "AC_user_remove": _USERS,
+    "AC_user_set_role": _USERS,
+    "AC_user_rotate_token": _USERS,
+    "AC_user_list": _USERS,
 }
+
+#: Read-only MCP tools that expose data rather than screen state. "Read-only"
+#: says a tool changes nothing; it does not say that what it returns is
+#: something a viewer of the desktop was meant to see.
+#:
+#: The rule: a tool that returns records or configuration the host keeps --
+#: history, traces, cost ledgers, healing logs, journals, saved libraries, ACL
+#: contents -- is listed here; a tool that only observes the live screen (or
+#: computes on what the caller sent) is not. What a tool costs to run is a
+#: separate question this table does not answer: ``ac_vlm_locate`` and
+#: ``ac_self_heal_locate`` read the screen and stay ``read_screen`` although a
+#: call may be billed by a model provider.
+DATA_TOOLS = frozenset({
+    # the clipboard and its history, a connected device's included
+    "ac_get_clipboard", "ac_get_clipboard_csv", "ac_get_clipboard_files",
+    "ac_get_clipboard_html", "ac_get_clipboard_image", "ac_get_clipboard_rtf",
+    "ac_clipboard_formats", "ac_assert_clipboard",
+    "ac_clip_history_list", "ac_clip_history_search",
+    "ac_android_get_clipboard", "ac_ios_get_clipboard",
+    # records the host keeps of what ran: run history and what is derived
+    # from it, agent traces, the cost ledger, action journals
+    "ac_list_run_history", "ac_flaky_report", "ac_rank_tests", "ac_select_tests",
+    "ac_shard_suite", "ac_trace_export", "ac_trace_summary",
+    "ac_costs_list", "ac_costs_summary", "ac_journal_read",
+    # the self-healing log, its statistics, stored revisions and datasets;
+    # locator strategy history and repairs; saved locators and skills
+    "ac_self_heal_log_list", "ac_heal_stats",
+    "ac_self_heal_evaluate", "ac_ab_report", "ac_ab_best_strategy",
+    "ac_repair_pending", "ac_repair_resolved", "ac_element_list",
+    "ac_skill_list", "ac_skill_search",
+    # stored policy and state: the USB ACL, lease tokens, quarantine,
+    # artifacts awaiting approval
+    "ac_usb_acl_list", "ac_lease_active", "ac_quarantine_list",
+    "ac_pending_artifacts",
+    # files: their content, or an oracle on it (substring, digest)
+    "ac_load_dotenv", "ac_load_data", "ac_read_action_file", "ac_read_document",
+    "ac_read_presentation", "ac_read_workbook", "ac_extract_pdf_text",
+    "ac_assert_pdf_text", "ac_assert_file", "ac_build_provenance",
+    "ac_verify_provenance",
+    # databases and the named stores kept on the host
+    "ac_sql_query", "ac_assert_db", "ac_get_asset", "ac_list_assets",
+    "ac_cas_get", "ac_outbox_pending", "ac_checkpoint_status",
+    "ac_memory_recall", "ac_memory_recent", "ac_s3_list",
+    # references into the environment, files and the secrets vault; tokens
+    "ac_resolve_ref", "ac_resolve_refs", "ac_generate_otp",
+    "ac_jwt_encode",
+    # the process list, the network as seen from the host, the microphone
+    "ac_list_processes", "ac_assert_process", "ac_wait_for_process",
+    "ac_assert_http", "ac_wait_for_port", "ac_assert_audio",
+})
 
 #: MCP tools whose capability is not the one their read-only hint implies.
 TOOL_CAPABILITIES: Dict[str, str] = {
@@ -198,6 +264,12 @@ TOOL_CAPABILITIES: Dict[str, str] = {
     "ac_egress_allow": _HOSTS,
     "ac_egress_reset": _HOSTS,
     "ac_load_plugins": _HOSTS,
+    "ac_user_add": _USERS,
+    "ac_user_remove": _USERS,
+    "ac_user_set_role": _USERS,
+    "ac_user_rotate_token": _USERS,
+    "ac_user_list": _USERS,
+    **dict.fromkeys(DATA_TOOLS, _DATA),
     # A non-mutating hint does not grant access to the desktop user's private
     # clipboard, files, credentials, network endpoints or microphone. Assertion
     # containers may invoke those same reads through their nested specs.
@@ -359,7 +431,8 @@ def _leading_names(node: Any, depth: int) -> Iterator[str]:
 
 
 __all__ = [
-    "COMMAND_CAPABILITIES", "REST_ROUTE_CAPABILITIES", "TOOL_CAPABILITIES",
+    "COMMAND_CAPABILITIES", "DATA_ROUTES", "DATA_TOOLS", "REST_ROUTE_CAPABILITIES",
+    "TOOL_CAPABILITIES",
     "authorize_command", "capability_for_command", "capability_for_route",
     "capability_for_tool", "denied_command_in",
 ]

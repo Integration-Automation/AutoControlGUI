@@ -80,4 +80,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("cofailure_pairs", "failure_clusters"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

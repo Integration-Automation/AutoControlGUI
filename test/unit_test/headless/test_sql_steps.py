@@ -15,7 +15,7 @@ from je_auto_control.utils.executor.flow_data_commands import (
 from je_auto_control.utils.sql.sql_query import query_sqlite
 
 
-@pytest.fixture()
+@pytest.fixture
 def users_db(tmp_path):
     path = tmp_path / "app.db"
     with sqlite3.connect(str(path)) as conn:

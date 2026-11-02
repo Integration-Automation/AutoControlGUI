@@ -26,8 +26,9 @@ def test_trim_slices_returns_copy():
 
 
 def test_insert_rejects_out_of_range():
+    actions = _sample()
     with pytest.raises(IndexError):
-        insert_action(_sample(), 99, ["AC_noop"])
+        insert_action(actions, 99, ["AC_noop"])
 
 
 def test_remove_drops_index():

@@ -1,16 +1,15 @@
-from typing import Tuple, Union
+from typing import Tuple
 
 from defusedxml.minidom import parseString  # nosec B405  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml  # reason: defusedxml is the safe replacement
 
 from je_auto_control.utils.exception.exceptions import XMLException
 from je_auto_control.utils.generate_report.generate_json_report import generate_json
-from je_auto_control.utils.generate_report.report_path import report_path
-from je_auto_control.utils.json_store.json_store import atomic_write_text
+from je_auto_control.utils.generate_report.report_path import write_report
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.xml.change_xml_structure.change_xml_structure import dict_to_elements_tree
 
 
-def generate_xml() -> Tuple[Union[str, bytes], Union[str, bytes]]:
+def generate_xml() -> Tuple[str | bytes, str | bytes]:
     """
     Generate XML strings from test records.
     從測試紀錄生成 XML 字串
@@ -34,7 +33,7 @@ def _write_xml_file(file_name: str, xml_content: str) -> None:
     on as if the report existed.
     """
     try:
-        atomic_write_text(report_path(file_name), xml_content)
+        write_report(file_name, xml_content)
     except OSError as error:
         raise XMLException(f"cannot write report {file_name!r}: {error!r}") from error
 

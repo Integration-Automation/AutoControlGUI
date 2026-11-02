@@ -66,8 +66,9 @@ def test_decrypt_with_wrong_key_raises(tmp_path):
     )["entries"][0]["filename"]
     ciphertext = (manifest_path.parent / entry_name).read_bytes()
     from cryptography.exceptions import InvalidTag
+    wrong_key = secrets.token_bytes(32)
     with pytest.raises(InvalidTag):
-        decrypt_frame(ciphertext, secrets.token_bytes(32))
+        decrypt_frame(ciphertext, wrong_key)
 
 
 def test_explicit_session_key_round_trip(tmp_path):
@@ -103,8 +104,9 @@ def test_derive_key_from_passphrase_deterministic():
 
 
 def test_derive_key_validates_inputs():
+    salt = secrets.token_bytes(16)
     with pytest.raises(ValueError):
-        derive_key_from_passphrase("", secrets.token_bytes(16))
+        derive_key_from_passphrase("", salt)
     with pytest.raises(ValueError):
         derive_key_from_passphrase("pass", b"too-short")
 

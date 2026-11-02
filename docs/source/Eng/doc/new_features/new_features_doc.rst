@@ -44,6 +44,25 @@ Run an action list through the executor without invoking any side effects
 
    executor.execute_action(actions, step_callback=lambda a: print(a))
 
+``result_callback`` is told the result of every command that returned,
+including the ones inside a block (``AC_loop``, ``AC_try``, ``AC_if_*``...),
+whose results are in no execution record::
+
+   def seen(command, arguments, result, path):
+       # path: one (run, position, command) per enclosing action list,
+       # e.g. step 2 (AC_loop) > iteration 3, step 1
+       ...
+
+   executor.execute_action(actions, result_callback=seen)
+
+The hook lasts for that run on the calling thread only (a thread the run
+starts, such as an ``AC_parallel`` branch, is not followed), a failed command
+and a ``dry_run`` report nothing, and a callback that raises is logged by its
+exception type and ignored. The run returns and logs the same with or without
+it. ``result`` is the recorded object: do not change it. To observe several
+runs, use ``with observe_results(seen):`` from
+``je_auto_control.utils.executor.result_hook``.
+
 From the CLI::
 
    python -m je_auto_control.cli run script.json --dry-run
@@ -420,6 +439,54 @@ New threads inherit context when Python's thread context inheritance is enabled
 (the free-threaded default), or when the caller explicitly copies the context.
 Use a fresh ``execution_scope`` in an independent worker to isolate its variables.
 
+A thread you start inside the block does **not** join the run: it sees the
+process scope, as do pool workers and timers. This holds on every build --
+including free-threaded Python and ``-X thread_inherit_context=1``, where a
+new thread begins with a copy of its creator's context -- because a binding
+counts only on the thread that made it. To run something on another thread on
+behalf of the run, hand it the values (or open an ``execution_scope`` there).
+Coroutines and tasks on the binding thread share the run.
+
+The same rule holds for the other state that belongs to the calling thread:
+the RBAC caller a request is served as (``authorization_scope`` /
+``current_authorization``), the device bound by ``use_device``, the labels of
+``heal_context`` and the stop token of a stoppable run. A thread started
+inside one of them starts without it on every build, so a scheduler or
+observer thread first started while an admin's request was being served does
+not go on running as that admin on free-threaded Python. Code that hands work
+to another thread on purpose passes the value along and binds it there, as
+``AC_parallel`` does for the caller and the stop token.
+
+Four more callers have a scope chosen for them rather than the process scope:
+
+* ``je_auto_control run --dry-run --var name=value`` seeds the variables into
+  the dry run's own scope, as a real ``run --var`` does.
+* **Observer callbacks** (``AC_observe_add`` and the MCP ``ac_observe_add``)
+  fire long after the run that registered them has ended, so they cannot
+  share its scope. A callback keeps a *snapshot* of the variables visible
+  when it was registered, and every firing runs on the module executor in a
+  fresh scope seeded from that snapshot -- whether the observer's thread or
+  an ``AC_observe_poll`` in some other run fired it. The actions see what
+  the registering run had set (later changes to those variables are not
+  seen); what they set reaches neither the process scope, the run that
+  polled, nor the next firing. A callback registered through MCP starts
+  with no variables, because a tool call's scope is empty. To keep state
+  between firings, keep it outside the scope (a file, the secrets vault).
+* **A plan run from a description** (``run_from_description``, ``AC_llm_run``)
+  and **a state machine** (``run_state_machine``, ``AC_run_state_machine``)
+  are a run of their own when called from Python: each gets a fresh scope
+  -- shared by all of the machine's ``on_enter`` actions -- that is dropped
+  when the call returns, and neither reads what an earlier call left in the
+  process scope. Called from an action list, or inside an
+  ``execution_scope`` block, they are a step of that run and share its
+  variables; that is how you hand them values::
+
+     with ac.execution_scope({"user": "alice"}):
+         ac.run_state_machine(spec)       # on_enter actions can use ${user}
+
+  A state machine inside an ``AC_parallel`` branch uses the branch's
+  variables.
+
 ::
 
    import je_auto_control as ac
@@ -483,6 +550,106 @@ Action-JSON commands: ``AC_set_var``, ``AC_get_var``, ``AC_inc_var``,
 GUI: **Variables** tab — live view of ``executor.variables`` with
 single-set, JSON seed, and clear-all controls; reflects what
 ``AC_set_var`` / ``AC_for_each`` mutate at runtime.
+
+
+Stopping a running script
+=========================
+
+A run can be stopped from outside once it is a *stoppable run*. Plain
+``executor.execute_action(...)`` is unchanged: without a stop token nothing is
+checked and nothing can interrupt it.
+
+::
+
+   import threading
+   import je_auto_control as ac
+
+   def job():
+       try:
+           ac.execute_action_with_vars(actions, {}, run_id="nightly")
+       except ac.ExecutionStopped as stopped:
+           print("stopped:", stopped.reason)
+
+   threading.Thread(target=job).start()
+   ...
+   ac.stop_execution("nightly", reason="operator")   # returns at once
+   ac.active_executions()   # [{"run_id": ..., "started_at": ..., "stopping": ...}]
+
+``stoppable_run(run_id=None, token=None)`` is the context manager behind it;
+it yields the run's ``StopToken`` (``stop()``, ``stopped``, ``run_id``). From
+an action list -- a JSON file, a REST / socket / MCP request, a scheduler job
+-- wrap the part that should be stoppable in the ``AC_run_stoppable`` block
+and stop it from any other entry point of the same process::
+
+   [["AC_run_stoppable", {"run_id": "nightly", "body": [
+       ["AC_loop", {"times": 1000, "body": [["AC_sleep", {"seconds": 5}]]}]
+   ]}]]
+
+   [["AC_stop_execution", {"run_id": "nightly", "reason": "operator"}]]
+   [["AC_list_executions"]]
+
+``AC_stop_execution`` without ``run_id`` (and ``stop_execution()``) stops every
+stoppable run except the caller's own.
+
+Over MCP the same two are the tools ``ac_stop_execution`` (``run_id``,
+``reason``; needs ``drive_input`` and is absent from a read-only server) and
+``ac_list_executions`` (read-only). There is no separate "run stoppably" tool:
+``ac_execute_actions`` and ``ac_execute_action_file`` take any action list, so
+the list itself carries the ``AC_run_stoppable`` block shown above. A ChatOps
+``/run`` is a stoppable run by itself, named ``chatops-<script>-<id>``, so
+every stop above reaches it -- a stop that names no run included -- and the
+chat command ``/stop [run-id]`` does too. A ChatOps command whose run is
+stopped replies ``<command> stopped.`` (with the reason in parentheses)
+instead of reporting a failure.
+
+What a stop does:
+
+* **Checked** before every action, at every pass of ``AC_loop`` /
+  ``AC_while_image`` / ``AC_while_var`` / ``AC_for_each`` / ``AC_for_each_row``
+  (also with an empty body), and inside the waits of ``AC_sleep``,
+  ``AC_wait_image``, ``AC_wait_pixel`` and the ``AC_retry`` back-off, which
+  wake at once. ``AC_parallel`` branches stop with their run.
+* **Wakes the polling waits** as well -- they sleep between two probes on
+  ``run_control.pause``, which is a plain ``time.sleep`` outside a stoppable
+  run: ``AC_wait_window``, ``AC_wait_text``, ``AC_expect_poll``,
+  ``AC_assert_eventually``, the smart waits (``AC_wait_screen_stable``,
+  ``AC_wait_pixel_changes``, ``AC_wait_region_idle``,
+  ``AC_wait_clipboard_change``, ``AC_wait_image_gone``, ``AC_wait_text_gone``,
+  ``AC_wait_color``, ``AC_wait_window_title``, ``AC_wait_window_closed``,
+  ``AC_wait_for_file``, ``AC_wait_for_port``, ``AC_wait_for_process``),
+  ``AC_wait_actionable``, ``AC_wait_until_app_idle``, ``AC_wait_for_unlock``,
+  ``AC_wait_for_composition_commit``, ``AC_android_wait_for_app`` /
+  ``AC_ios_wait_for_app``, the dialog wait of ``AC_handle_file_dialog``, the
+  ``verify`` poll of ``AC_self_heal_click``, an ``after`` timer of
+  ``AC_run_state_machine``, and the timed holds of ``AC_hold_key``,
+  ``AC_input_sequence`` (``wait`` steps) and ``AC_replay_timeline`` (which
+  release what they hold on the way out).
+* **Raises** ``ExecutionStopped`` (an ``AutoControlException``) on the run's
+  own thread. It is never recorded-and-continued, whatever ``raise_on_error``
+  says, and ``AC_try`` / ``AC_retry`` do not catch it: ``catch`` is skipped.
+  A test suite stops as a whole instead of marking the case as errored.
+* **Unwinds** through every ``finally``: ``AC_type_keyboard``, ``AC_hotkey``
+  and ``AC_with_modifiers`` release what they hold, and an ``AC_try``
+  ``finally`` branch runs to its end. A second stop request interrupts that
+  cleanup as well, so cleanup that never returns cannot make a run unstoppable.
+* **Releases** the keys and mouse buttons the run pressed with
+  ``AC_press_keyboard_key`` / ``AC_press_mouse`` and had not released.
+* **Is sticky**: a command that swallows the exception only delays it to the
+  next checkpoint.
+
+What it does not do: interrupt a command that is already inside its backend
+(one image search, one OCR read, one HTTP request, one shell command, a
+wrapper's own ``time.sleep``). The run ends when that command returns. Also
+not woken: ``AC_wait_for_focus_change`` (a single native UI Automation wait),
+the sub-second settle waits after focusing a window, and the pacing sleeps
+inside one gesture (``AC_click_mouse`` with ``interval``, humanized moves and
+typing, tween drags). Two active runs cannot share a ``run_id``.
+
+GUI: the Script, Script Builder, LLM Planner, Record (playback), Test Suites
+and ChatOps tabs execute off the GUI thread, one run at a time per tab, and
+each has a **Stop run** (**Stop playback**) action. ``Ctrl+4`` and the
+Auto Click tab's **Stop** also stop every running script. A stop returns
+immediately; the tab shows *Stopping...* until the script has really ended.
 
 
 LLM action planner
@@ -562,6 +729,18 @@ Headless viewer (control someone else)::
    viewer.send_input({"action": "mouse_move", "x": 100, "y": 200})
    viewer.send_input({"action": "type", "text": "hello"})
    viewer.disconnect()
+
+``send_input`` does not wait for the socket. It puts the event on a bounded
+queue (``RemoteDesktopViewer.INPUT_QUEUE_LIMIT``, 256 events) that one writer
+thread drains, so a caller on a GUI thread is never held by a host that
+stopped reading. When the writer falls behind, queued ``mouse_move`` events
+give way to newer ones -- only the latest position matters; key, button,
+scroll and text events are never dropped. A write that fails, or that the
+host has not taken within ``RemoteDesktopViewer.SEND_TIMEOUT_S`` (10 s),
+is reported through ``on_error``; the viewer then reads as not connected and
+``send_input`` raises ``ConnectionError``. ``viewer.input_backlog()`` returns
+``{"pending": ..., "dropped_moves": ...}``. The same applies to
+``WebSocketDesktopViewer``.
 
 Input message allowlist (validated on the host before dispatch):
 

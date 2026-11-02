@@ -1,5 +1,6 @@
 _TOKEN_LABEL_ZH = "Token："
 _BROWSE = "瀏覽..."  # NOSONAR python:S1192 — shared button label
+_RUNNING = "執行中..."
 
 traditional_chinese_word_dict = {
     # Main
@@ -85,6 +86,76 @@ traditional_chinese_word_dict = {
     "diag_col_detail": "詳情",
     "diag_status_ok": "正常",
     "diag_status_fail": "失敗",
+    # 診斷分頁:能力與授權狀態
+    "diag_capabilities_title": "這個工作階段現在能做什麼",
+    "diag_capabilities_refresh": "重新整理能力狀態",
+    "diag_input_reask": "重新要求輸入授權",
+    "diag_input_close": "結束輸入工作階段",
+    "diag_cap_col_name": "能力",
+    "diag_cap_col_state": "狀態",
+    "diag_cap_col_backend": "後端",
+    "diag_cap_col_scope": "作用範圍",
+    "diag_cap_col_detail": "詳情",
+    "diag_cap_col_fix": "怎麼處理",
+    "cap_name_input": "鍵盤與滑鼠輸入",
+    "cap_name_capture": "螢幕擷取",
+    "cap_name_recording": "錄製自己的輸入",
+    "cap_name_stop_shortcut": "全域停止鍵",
+    "cap_state_available": "可用",
+    "cap_state_not_requested": "尚未要求",
+    "cap_state_requesting": "等待您回應",
+    "cap_state_needs_permission": "需要授權",
+    "cap_state_needs_setup": "需要設定",
+    "cap_state_session_closed": "工作階段已關閉",
+    "cap_state_revoked": "已被桌面撤銷",
+    "cap_state_compositor_restarted": "桌面已重新啟動",
+    "cap_state_unsupported": "不支援",
+    "cap_state_unknown": "未檢查",
+    "cap_scope_desktop": "整個桌面",
+    "cap_scope_xwayland": "僅 X11 應用程式 (XWayland)",
+    "cap_fix_input_consent": (
+        "選擇「操作」>「重新要求輸入授權」,重做一次動作並允許要求。"
+        "若要改用 ydotool,請在啟動前設定 "
+        "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli。"),
+    "cap_fix_answer_dialog": "請回應桌面上的授權對話框。",
+    "cap_fix_ydotool": (
+        "安裝 ydotool 1.0 或更新版本,並以可存取 /dev/uinput 的權限執行 "
+        "ydotoold;或安裝 libei 與 liboeffis。"),
+    "cap_fix_xwayland": (
+        "安裝 Wayland 工具(ydotool 或 libei,以及 grim、gnome-screenshot "
+        "或 spectacle),讓 Wayland 後端可以載入。"),
+    "cap_fix_display": "請把 DISPLAY 設為執行中的 X 伺服器。",
+    "cap_fix_win_session0": (
+        "請在已登入使用者的工作階段中執行——使用設為「只有使用者登入時才執行」的排程工作,而不是服"
+        "務。"
+    ),
+    "cap_fix_win_locked": "請解除鎖定工作階段,或回應畫面上的提示。",
+    "cap_fix_win_integrity": "請從一般(中完整性等級)的處理程序啟動。",
+    "cap_fix_win_capture": "已中斷連線的遠端桌面工作階段沒有螢幕:請保持連線,或把工作階段移到主控台。",
+    "cap_fix_mac_accessibility": (
+        "系統設定 › 隱私權與安全性 › 輔助使用:啟用執行 Python 的應用程式(終端機、IDE),然後重新啟動"
+        "它。"
+    ),
+    "cap_fix_mac_screen_recording": (
+        "系統設定 › 隱私權與安全性 › 螢幕錄製:啟用執行 Python 的應用程式(終端機、IDE),然後重新啟動"
+        "它。"
+    ),
+    "cap_fix_mac_input_monitoring": (
+        "系統設定 › 隱私權與安全性 › 輸入監控:啟用執行 Python 的應用程式(終端機、IDE),然後重新啟動"
+        "它。"
+    ),
+    "cap_backend_version": "後端:{backend} — {version}",
+    "cap_backend_version_unknown": "未回報版本",
+    "cap_fix_capture": (
+        "允許截圖要求,安裝 grim、gnome-screenshot 或 spectacle,或設定 "
+        "JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND。"),
+    "cap_fix_record_setup": (
+        "在 JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES 指定要讀取的裝置"
+        "(以逗號分隔的 /dev/input/event* 路徑)。"),
+    "cap_fix_record_permission": (
+        "把使用者加入 input 群組後重新登入,或新增 udev 規則。"
+        "不要為此以 root 執行整個程式。"),
+    "cap_fix_stop_manual": "請從「操作」選單停止執行中的腳本,或結束行程。",
 
     # USB 裝置分頁
     "usb_backend_label": "後端:",
@@ -131,6 +202,21 @@ traditional_chinese_word_dict = {
 
     # USB 分享面板（AnyDesk 風）
     "tab_usb_share": "USB 分享",
+    "tab_mobile": "行動裝置",
+    "mob_platform": "平台",
+    "mob_device": "裝置（adb serial / WebDriverAgent URL）",
+    "mob_adb_path": "adb 路徑（留空 = PATH）",
+    "mob_command": "指令",
+    "mob_params": "參數（JSON 物件）",
+    "mob_result": "結果",
+    "mob_probe": "探測裝置",
+    "mob_run": "執行指令",
+    "mob_fill_params": "填入參數範本",
+    "mob_col_capability": "能力",
+    "mob_col_state": "狀態",
+    "mob_col_reason": "原因",
+    "mob_error": "失敗：{error}",
+    "mob_untested": "以假的 ADB / WebDriverAgent 開發；尚未在實機上驗證。",
     "usb_share_host_group": "分享本機 USB",
     "usb_share_viewer_group": "使用 USB 裝置",
     "usb_share_enable": "啟用分享",
@@ -252,6 +338,34 @@ traditional_chinese_word_dict = {
     "rest_config_export_done": "已將 {count} 個檔案寫入 {path}。",
     "rest_config_import_confirm": "用此設定包覆寫使用者設定？既有檔案會先被改名為 .bak.<時間戳>。",
     "rest_config_import_done": "已寫入 {written} 個檔案；略過 {skipped} 個。",
+    "rest_token_rbac": "每位使用者各自的 token（使用者檔：{path}）",
+    "rest_users_group": "使用者（RBAC）",
+    "rest_users_path": "使用者檔：",
+    "rest_users_path_ph": "users.json 的路徑（JE_AUTOCONTROL_RBAC_USERS）",
+    "rest_users_enable": "REST 請求以這個使用者檔驗證",
+    "rest_users_col_id": "使用者 ID",
+    "rest_users_col_name": "名稱",
+    "rest_users_col_role": "角色",
+    "rest_users_id": "使用者 ID：",
+    "rest_users_name": "名稱：",
+    "rest_users_role": "角色：",
+    "rest_users_new_token": "新 token（只顯示一次）：",
+    "rest_users_refresh": "重新載入使用者",
+    "rest_users_add": "新增使用者",
+    "rest_users_set_role": "設定角色",
+    "rest_users_rotate": "更換 token",
+    "rest_users_remove": "移除使用者",
+    "rest_users_copy_token": "複製新 token",
+    "rest_users_remove_confirm": (
+        "要移除使用者 {user} 嗎？其 token 會失效，"
+        "他排定的工作也不會再執行。"
+    ),
+    "rest_users_no_store": "請先輸入使用者檔的路徑。",
+    "rest_users_no_user": "請先輸入或選取使用者 ID。",
+    "rest_users_count": "{path} 內有 {count} 位使用者",
+    "rest_users_token_issued": (
+        "已發出 {user} 的 token。請立即複製，之後無法再顯示。"
+    ),
 
     # Remote Desktop — WebRTC 子分頁
     "rd_webrtc_host_tab": "WebRTC 被遠端",
@@ -753,6 +867,33 @@ traditional_chinese_word_dict = {
     "rh_col_artifact": "截圖",
     "rh_open_artifact": "開啟截圖",
     "rh_no_artifact": "所選紀錄沒有截圖。",
+    "rh_journal_start": "開始動作日誌…",
+    "rh_journal_stop": "停止動作日誌",
+    "rh_journal_candidate": "從日誌產生候選腳本…",
+    "rh_journal_off": "動作日誌：未啟用",
+    "rh_journal_on": "動作日誌：執行 {run}，{n} 個步驟 → {path}",
+    "rh_journal_link": "日誌執行 {run},位於 {path}",
+    "re_import_journal": "匯入日誌的執行…",
+    "sb_import_journal": "匯入日誌",
+    "sb_one_time_show": "一次性的值",
+    "sb_one_time_title": "上次執行的一次性的值",
+    "sb_one_time_notice": (
+        "這些值不存在於其他任何地方，而且只顯示這一次。請現在複製需要的值："
+        "關閉這個視窗或開始下一次執行後就會被捨棄。"
+    ),
+    "sb_one_time_step": "步驟 {step}",
+    "sb_one_time_copy": "複製",
+    "sb_one_time_available": "有 {count} 個一次性的值：按「一次性的值」查看，只能看一次。",
+    "sb_one_time_inside": "{block} 第 {run} 次，步驟 {step}",
+    "sb_one_time_shown": "一次性的值已經顯示過，不再保留。",
+    "sb_one_time_limit": "這次執行只保留了前 {limit} 個一次性的值；之後的值無法顯示。",
+    "sb_one_time_close_clear": "關閉並清除剪貼簿",
+    "jr_dialog_open": "開啟動作日誌",
+    "jr_dialog_start": "要附加寫入的日誌檔",
+    "jr_dialog_save_code": "儲存候選腳本",
+    "jr_pick_run": "執行",
+    "jr_no_runs": "這份日誌沒有任何執行紀錄。",
+    "jr_observed_only": "僅為已觀察路徑：此候選腳本重播的是該次執行實際做的事，不是腳本的控制流程。",
     "rh_artifact_missing": "截圖檔案已不存在。",
     "rh_timeline_heading": "時間軸（左舊右新）",
     "rh_preview_heading": "預覽",
@@ -768,6 +909,13 @@ traditional_chinese_word_dict = {
     "eml_poll_done": "本次共觸發 {n} 封郵件。",
     "eml_running": "輪詢中。",
     "eml_stopped": "輪詢已停止。",
+    "jr_diff_title": "候選腳本的變更",
+    "jr_diff_summary": "新增 {added} 行，刪除 {removed} 行。以 + 開頭的是候選腳本，以 - 開頭的是目前內容。",
+    "jr_diff_identical": "候選腳本與目前內容相同。",
+    "jr_diff_replace": "取代",
+    "jr_diff_keep": "保留目前內容",
+    "gui_op_stopping": "正在停止…",
+    "gui_op_starting": "正在啟動…",
     "eml_host_label": "主機：",
     "eml_port_label": "埠號：",
     "eml_user_label": "使用者：",
@@ -900,6 +1048,20 @@ traditional_chinese_word_dict = {
     "self_heal_desc_placeholder": "失敗時用的自然語言備援（選填）",
     "self_heal_threshold_label": "比對門檻：",
     "self_heal_click_check": "定位後自動點擊",
+    "self_heal_verify_label": "點擊後驗證",
+    "self_heal_verify_placeholder": "選用的 JSON 檢查,例如 {\"type\": \"image_gone\"}",
+    "self_heal_verify_invalid": "檢查必須是 JSON 物件",
+    "self_heal_cmp_version": "版本",
+    "self_heal_cmp_located": "定位到",
+    "self_heal_cmp_accuracy": "準確率",
+    "self_heal_cmp_false_positive": "誤報",
+    "self_heal_cmp_recovery": "復原",
+    "self_heal_cmp_p50_ms": "p50 (ms)",
+    "self_heal_cmp_p95_ms": "p95 (ms)",
+    "self_heal_cmp_model_calls": "模型呼叫",
+    "self_heal_cmp_tokens": "Token 輸入 / 輸出",
+    "self_heal_cmp_cost": "成本",
+    "self_heal_cmp_baseline": "{name}(基準)",
     "self_heal_browse": _BROWSE,
     "self_heal_locate_btn": "定位",
     "self_heal_click_btn": "定位並點擊",
@@ -916,6 +1078,34 @@ traditional_chinese_word_dict = {
     "self_heal_col_template_path": "樣板",
     "self_heal_col_description": "描述",
     "self_heal_col_duration_ms": "毫秒",
+    "self_heal_col_locator_version": "版本",
+    "self_heal_col_action_verified": "已驗證",
+    "self_heal_verified_yes": "已驗證",
+    "self_heal_verified_no": "驗證失敗",
+    "self_heal_verified_unknown": "未檢查",
+    "self_heal_measure_title": "量測版本與修訂樣板",
+    "self_heal_dataset_label": "資料集：",
+    "self_heal_dataset_placeholder": "已標註的資料集 JSON",
+    "self_heal_candidate_label": "候選影像：",
+    "self_heal_candidate_placeholder": "要提出的新樣板影像",
+    "self_heal_revision_label": "修訂編號：",
+    "self_heal_revision_placeholder": "提出後自動填入",
+    "self_heal_report_placeholder": "評估與修訂結果顯示於此",
+    "self_heal_browse_dataset": "選擇資料集…",
+    "self_heal_browse_candidate": "選擇候選影像…",
+    "self_heal_evaluate": "評估資料集",
+    "self_heal_rev_propose": "提出樣板修訂",
+    "self_heal_rev_preview": "預覽修訂",
+    "self_heal_rev_accept": "接受修訂",
+    "self_heal_rev_revert": "回復修訂",
+    "self_heal_rev_list": "列出修訂",
+    "self_heal_done": "完成",
+    "self_heal_dataset_required": "請提供資料集 JSON 路徑",
+    "self_heal_revision_required": "請提供修訂編號",
+    "self_heal_propose_required": "請提供樣板與候選影像",
+    "self_heal_eval_passed": "評估完成 — 達到門檻",
+    "self_heal_eval_failed": "評估完成 — 未達門檻",
+    "self_heal_accept_unvalidated": "此候選尚未用已標註的畫面驗證，仍要接受嗎？",
 
     # WebRunner Tab
     "web_available": "WebRunner 已安裝。",
@@ -953,7 +1143,7 @@ traditional_chinese_word_dict = {
     "computer_use_run_btn": "執行",
     "computer_use_stop_btn": "停止",
     "computer_use_stopping": "目前步驟結束後停止…",
-    "computer_use_running": "執行中...",
+    "computer_use_running": _RUNNING,
     "computer_use_already_running": "已有任務執行中，請稍候。",
     "computer_use_success": "成功達成目標。",
     "computer_use_failure": "未達目標即停止。",
@@ -1010,6 +1200,61 @@ traditional_chinese_word_dict = {
     "presence_col_cursor": "游標",
     "presence_col_last_seen_iso": "最後活躍",
 
+    # Config Sync Tab
+    "tab_config_sync": "設定同步",
+    "config_sync_server_label": "同步伺服器 URL:",
+    "config_sync_user_label": "使用者 ID:",
+    "config_sync_secret_label": "共享密鑰:",
+    "config_sync_scripts_label": "腳本資料夾(選填):",
+    "config_sync_assets_label": "共享資產資料夾(選填):",
+    "config_sync_locators_label": "定位器儲存庫檔案(選填):",
+    "config_sync_sections_label": "要同步的區段:",
+    "config_sync_section_hotkeys": "快捷鍵",
+    "config_sync_section_triggers": "觸發器",
+    "config_sync_section_address_book": "通訊錄",
+    "config_sync_section_scripts": "腳本(需要資料夾)",
+    "config_sync_section_locators": "定位器(需要檔案)",
+    "config_sync_assets_server_label": "把大型腳本存放在同步伺服器上,而不是共享資料夾",
+    "config_sync_no_sections": "請至少勾選一個要同步的區段(腳本與定位器需要填寫路徑)",
+    "config_sync_sections_covered": "已同步的區段",
+    "config_sync_collect_btn": "刪除伺服器上未使用的 blob",
+    "config_sync_collect_confirm":
+        "刪除此帳號在同步伺服器上、已沒有任何同步項目引用的 blob?最近一天內存入的 blob 會保留"
+        "。",
+    "config_sync_collect_done":
+        "Blob:已刪除 {deleted} 個(釋放 {freed} 位元組),使用中 {kept} 個,{recent} 個太新尚不判"
+        "定",
+    "config_sync_conflicts_title": "衝突:兩台機器同時修改的項目",
+    "config_sync_col_entry": "項目",
+    "config_sync_col_choice": "候選",
+    "config_sync_col_origin": "修改來源",
+    "config_sync_col_value": "值",
+    "config_sync_run_btn": "立即同步",
+    "config_sync_cancel_btn": "取消同步",
+    "config_sync_refresh_btn": "重新整理同步狀態",
+    "config_sync_resolve_btn": "保留所選候選",
+    "config_sync_resync_btn": "完整重新同步(捨棄待送出的變更)",
+    "config_sync_required": "必須填寫伺服器 URL 與使用者 ID",
+    "config_sync_busy": "同步正在進行中",
+    "config_sync_resync_confirm": "採用伺服器的狀態並捨棄本機待送出的變更?",
+    "config_sync_no_conflict_selected": "請先選擇一個衝突候選",
+    "config_sync_error": "錯誤",
+    "config_sync_deleted": "(已刪除)",
+    "config_sync_state_label": "狀態",
+    "config_sync_state_never": "尚未同步",
+    "config_sync_state_syncing": "同步中...",
+    "config_sync_state_synced": "已同步",
+    "config_sync_state_pending": "有變更等待送出",
+    "config_sync_state_conflict": "衝突:需要選擇",
+    "config_sync_state_offline": "離線:變更已排入佇列",
+    "config_sync_state_backing_off": "等待重試:尚未再次連線伺服器",
+    "config_sync_retry_in": "{seconds} 秒後自動重試",
+    "config_sync_state_cancelled": "已取消",
+    "config_sync_state_resync_required": "已退休:需要完整重新同步",
+    "config_sync_revision": "最後合併的修訂版",
+    "config_sync_pending": "待送出的變更",
+    "config_sync_last_success": "上次成功同步",
+
     # Chat-Ops Tab
     "chatops_root_label": "腳本目錄：",
     "chatops_root_placeholder": "可被 /run 執行的 .json 腳本目錄",
@@ -1059,6 +1304,8 @@ traditional_chinese_word_dict = {
     "ocr_min_conf_invalid": "信心度需為數字",
     "ocr_regex_required": "請先輸入 regex 樣式",
     "ocr_regex_invalid": "Regex 不正確",
+    "ocr_running": "辨識中...",
+    "dm_running": _RUNNING,
 
     # Variables Tab
     "vars_current_group": "目前作用域",
@@ -1097,8 +1344,18 @@ traditional_chinese_word_dict = {
     "llm_planning": "規劃中...",
     "llm_plan_count": "已規劃 {n} 個指令",
     "llm_no_plan": "請先按下「規劃」",
-    "llm_running": "執行中...",
+    "llm_running": _RUNNING,
     "llm_run_done": "完成",
+    # Background runs shared by the tabs (gui/_tab_task.py)
+    "task_running": _RUNNING,
+    "task_busy": "已在執行中：請等它結束，或先停止。",
+    "task_stopping": "正在停止...",
+    "task_stopped": "已停止。",
+    "task_stop": "停止執行",
+    "stop_playback": "停止回放",
+    "record_playing": "回放中...",
+    "rd_file_sending": "正在傳送 {name}...",
+    "rd_file_busy": "已有傳輸在進行中。",
 
     # Remote Desktop Tab
     "rd_quick_tab": "快速連線",
@@ -1177,6 +1434,7 @@ traditional_chinese_word_dict = {
     "rd_badge_running": "RUNNING · :{port} · {n} 個 viewer",
     "rd_badge_stopped": "STOPPED",
     "rd_badge_idle": "尚未連線",
+    "rd_viewer_connecting": "連線中...",
     "rd_badge_live": "連線中",
     "rd_host_id_group": "Host ID（給遠端的人）",
     "rd_host_id_label": "Host ID：",

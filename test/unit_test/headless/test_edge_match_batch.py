@@ -28,7 +28,8 @@ def test_finds_shape_despite_different_fill():
     match = edge_match(_template_different_fill(), haystack=_scene(), min_score=0.5)
     assert match is not None
     assert match.score >= 0.9                 # edges align even at a different grey
-    assert abs(match.x - 45) <= 2 and abs(match.y - 45) <= 2
+    assert abs(match.x - 45) <= 2
+    assert abs(match.y - 45) <= 2
 
 
 def test_chamfer_distance_near_zero_on_alignment():
@@ -63,4 +64,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("edge_match", "edge_match_all", "chamfer_distance"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

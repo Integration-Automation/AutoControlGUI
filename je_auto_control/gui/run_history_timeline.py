@@ -43,7 +43,7 @@ class RunHistoryTimeline(QWidget):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setMinimumHeight(96)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._records: List[RunRecord] = []
         self._bars: List[_Bar] = []
         self._range: Tuple[float, float] = (0.0, 0.0)
@@ -65,7 +65,7 @@ class RunHistoryTimeline(QWidget):
         del event
         painter = QPainter(self)
         try:
-            painter.setRenderHint(QPainter.Antialiasing, True)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
             painter.fillRect(self.rect(), self.palette().window())
             self._bars = self._layout_bars()
             self._draw_axis(painter)
@@ -75,7 +75,7 @@ class RunHistoryTimeline(QWidget):
             painter.end()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        if event.button() != Qt.LeftButton:
+        if event.button() != Qt.MouseButton.LeftButton:
             super().mousePressEvent(event)
             return
         for bar in self._bars:
@@ -126,7 +126,7 @@ class RunHistoryTimeline(QWidget):
     def _draw_axis(self, painter: QPainter) -> None:
         if not self._records:
             painter.setPen(self.palette().text().color())
-            painter.drawText(self.rect(), Qt.AlignCenter, "no runs yet")
+            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "no runs yet")
             return
         font = QFont(painter.font())
         font.setPointSize(max(7, font.pointSize() - 1))
@@ -154,6 +154,6 @@ class RunHistoryTimeline(QWidget):
         if bar.record.id == self._highlight_id:
             painter.setPen(QColor(255, 255, 255, 220))
         else:
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(colour)
         painter.drawRoundedRect(bar.rect, 3, 3)

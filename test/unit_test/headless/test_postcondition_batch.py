@@ -23,7 +23,8 @@ def test_appears_fails_if_already_present():
     after = [_el("Saved", role="dialog")]
     report = check_postcondition(after, {"appears": {"role": "dialog"}},
                                  before=before)
-    assert report.ok is False and "appears" in report.failed
+    assert report.ok is False
+    assert "appears" in report.failed
 
 
 def test_disabled_and_text_present_clauses():
@@ -53,7 +54,8 @@ def test_disappears_needs_before_and_works():
 
 def test_unknown_clause_fails_cleanly():
     report = check_postcondition([_el("X")], {"levitates": {"name": "X"}})
-    assert report.ok is False and "levitates" in report.failed
+    assert report.ok is False
+    assert "levitates" in report.failed
 
 
 def test_compile_postcondition_predicate():
@@ -77,4 +79,5 @@ def test_wiring():
 def test_facade_exports():
     for name in ("check_postcondition", "compile_postcondition",
                  "PostconditionReport"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

@@ -64,7 +64,7 @@ def _serve(handler):
     return server, "http://127.0.0.1:%d" % server.server_address[1]  # NOSONAR loopback test server
 
 
-@pytest.fixture()
+@pytest.fixture
 def two_origins():
     first_handler = type("First", (_Recorder,), {"seen": []})
     second_handler = type("Second", (_Recorder,), {"seen": []})
@@ -82,7 +82,8 @@ def test_an_api_key_does_not_follow_a_redirect_to_another_origin(two_origins):
     from je_auto_control.utils.http_client.http_client import http_request
     first_url, _first, second = two_origins
     http_request(first_url + "/start", headers={"X-Api-Key": _SECRET, "Authorization": _SECRET})
-    assert second.seen and all(_SECRET not in repr(headers) for _path, headers in second.seen)
+    assert second.seen
+    assert all(_SECRET not in repr(headers) for _path, headers in second.seen)
 
 
 def test_config_sync_does_not_carry_its_secret_through_a_redirect(two_origins):
@@ -114,7 +115,7 @@ def _fetch_through_redirect(first_url, client_cls):
         redirecting.server_close()
 
 
-@pytest.fixture()
+@pytest.fixture
 def locked_egress():
     from je_auto_control.utils.egress.egress_policy import set_egress_policy
     set_egress_policy(allow=["api.example.com"])
@@ -144,9 +145,10 @@ def test_a_truncated_error_body_is_an_oserror():
         conn.close()
 
     threading.Thread(target=serve, daemon=True).start()
+    url = "http://127.0.0.1:%d/t500" % listener.getsockname()[1]  # NOSONAR loopback test server
     try:
         with pytest.raises(OSError):
-            http_request("http://127.0.0.1:%d/t500" % listener.getsockname()[1])  # NOSONAR loopback test server
+            http_request(url)
     finally:
         listener.close()
 

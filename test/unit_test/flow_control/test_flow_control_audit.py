@@ -18,7 +18,7 @@ _SET_X = ["AC_set_var", {"name": "x", "value": 1}]
 _ASSERT_X_IS_2 = ["AC_assert_var", {"name": "x", "value": 2}]
 
 
-@pytest.fixture()
+@pytest.fixture
 def ex():
     executor = Executor()
     executor.event_dict["AC_noop"] = lambda: "ran"
@@ -40,7 +40,8 @@ def test_a_parallel_branch_that_errors_is_still_recorded_not_raised(ex):
 def test_an_empty_parallel_branch_is_a_no_op(ex):
     record = ex.execute_action([["AC_parallel", {"branches": [[], [["AC_noop"]]]}]])
     result = next(iter(record.values()))
-    assert result["branches"] == 2 and result["results"][0] is None
+    assert result["branches"] == 2
+    assert result["results"][0] is None
 
 
 def test_an_exhausted_retry_re_raises_the_assertion(ex):
@@ -91,7 +92,8 @@ def test_a_self_calling_macro_stops_at_the_depth_limit(ex, monkeypatch):
     # Without raise_on_error it is recorded at the top level, not buried
     # in the deepest body, and the rest of the script still runs.
     values = list(ex.execute_action(script).values())
-    assert "nested deeper" in values[1] and values[2] == "ran"
+    assert "nested deeper" in values[1]
+    assert values[2] == "ran"
 
 
 def test_a_macro_without_a_body_is_a_no_op(ex):

@@ -36,9 +36,11 @@ the list as you type — by title, by key (``usb_devices``) or by category — a
 puts the cursor in the search box from anywhere, and ``Ctrl+B``
 (**View → Navigation Panel**) hides or shows the panel.
 
-A tab is built the first time it is opened: the window starts with the three
-default tabs and the forms the main widget owns, and imports the module of
-any other tab only when you open it.
+A tab is built the first time it is on screen. The window starts with three
+tabs in its bar — Record, Script Builder and Remote Desktop — and Record in
+front; the other two are built on the first click, and every other tab when
+you open it. Nothing of Script Builder or Remote Desktop (which loads the
+WebRTC stack) is imported before that.
 
 The View menu
 -------------
@@ -80,3 +82,86 @@ non-empty ``label_key`` string paired with a callable. A new tab that forgets
 the hook fails CI instead of silently shipping with no reachable commands. The
 probe runs the full widget construction in a subprocess so the Qt lifetime
 cannot destabilise the rest of the headless suite.
+
+``test/unit_test/headless/test_gui_feature_parity.py`` holds the rest: the
+window opens on the three workflow tabs, every registered tab opens from the
+navigation panel and fills the Actions menu, a window of 640×420 scrolls
+instead of clipping, and the mixed-DPI geometry helpers agree with a
+100% + 125% desktop.
+
+Measuring the GUI
+-----------------
+
+Two scripts print a JSON report and never show a window (they run on Qt's
+``offscreen`` platform and leave the GUI settings file alone):
+
+.. code-block:: bash
+
+   python benchmarks/gui_startup.py --runs 5 --output after.json
+   python benchmarks/gui_workloads.py --output workloads.json
+   python benchmarks/gui_startup.py --compare before.json after.json
+
+``gui_startup.py`` starts the window in fresh interpreters and reports
+``startup_ms`` (first line to first painted frame), its phases, and the
+process's memory. ``gui_workloads.py`` opens every tab once
+(``first_open_ms`` per tab), revisits them, types in the search box and
+switches theme while a 5 ms timer ticks; ``event_loop_p95_ms`` is how late
+those ticks arrive. ``theme_switch_ms`` is the stall of a switch,
+``theme_deferred_ms`` how long the pages of the unselected tabs took to be
+restyled afterwards and ``theme_deferred_longest_turn_ms`` the longest single
+turn of that. ``--compare`` sets two reports side by side and refuses
+when the workload or the environment differs.
+
+Background work in a tab
+------------------------
+
+A tab that waits on a network peer or a device starts that work through
+``je_auto_control.gui.task_controller`` instead of a bare thread:
+
+.. code-block:: python
+
+   from je_auto_control.gui.task_controller import CancellationToken, task_controller
+
+   def fetch(url: str, token: CancellationToken) -> dict:
+       token.raise_if_cancelled()
+       return download(url, timeout=token.remaining(default=10.0))
+
+   url = self._url_edit.text()                      # read the widget first
+   handle = task_controller().submit(
+       functools.partial(fetch, url), owner=self, timeout_s=30.0)
+   handle.result.connect(self._show)                # emitted on the GUI thread
+   handle.error.connect(self._show_error)           # the exception object
+   handle.finished.connect(self._enable_button)     # once, whatever happened
+
+What it adds to a plain worker:
+
+* **Cancellation reaches the backend.** The work receives a
+  ``CancellationToken``: it polls ``raise_if_cancelled()`` / ``wait()``, hands
+  ``remaining()`` to a backend that takes a timeout, and registers how to let
+  go of what it holds with ``on_cancel()``. ``handle.cancel()`` runs those at
+  once, on the cancelling thread.
+* **Typed outcomes.** ``result`` carries the return value, ``error`` the
+  exception, ``progress`` whatever ``token.report_progress()`` was given. A
+  timeout is reported as ``TaskTimeout``, a cancellation as ``TaskCancelled``.
+* **Owner death.** The handle is a child of ``owner``. Destroying the tab
+  cancels the work, and a result that arrives afterwards goes to ``discard=``
+  (close the session nobody will use), never to a slot of the dead widget.
+* **No worker touches a widget.** Work that is a widget's method, or closes
+  over one, is refused with ``TaskUsageError`` before it starts.
+
+A Stop that joins a thread goes through ``je_auto_control.gui._slow_op``, which
+sits on the controller. ``SlowOp(self).run(backend.stop, on_done=...,
+on_error=...)`` runs one such call at a time: it returns ``False`` while an
+earlier one is out (a second click does nothing), ``busy`` is true until the
+outcome arrives -- the tab shows "Stopping…" meanwhile -- and ``on_done`` runs
+on the GUI thread once it is false again, which is where the code that used to
+follow the blocking call goes. The Scheduler, Triggers, Hotkeys, E-mail
+Triggers, Webhooks, REST API and USB Sharing tabs and the Remote Desktop host
+panel stop (and, where a start first stops, start) this way. The WebRTC panels
+let go of their session at once and hand its shutdown to a ``StopQueue``, so
+the next session can start while the old one closes. Callbacks are held
+weakly: pass a method and ``args=``, not a ``functools.partial`` or a lambda
+that closes over the tab.
+
+This is a GUI-internal API (it imports ``PySide6``) and is not re-exported by
+the package facade; the headless functions a tab calls stay usable without it.

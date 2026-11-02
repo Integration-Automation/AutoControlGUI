@@ -7,12 +7,21 @@ import pytest
 pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 from PySide6.QtWidgets import QApplication, QLineEdit, QTextEdit
 
+from headless._qt_settle import settle
+
 import je_auto_control as ac
 from je_auto_control.gui.manual_run_controls import ManualRunControls
 from je_auto_control.gui._script_tab import ScriptTabMixin
 from je_auto_control.gui.script_builder.builder_tab import ScriptBuilderTab
 from je_auto_control.gui.script_builder.step_model import action_to_step
 from je_auto_control.utils.run_history import manual as manual_module
+
+
+def _host(output, **widgets):
+    """A stand-in tab: the real one runs the script off the GUI thread; this runs it at once."""
+    def start(work):
+        output.setPlainText(json.dumps(work(), default=str))
+    return SimpleNamespace(script_result_text=output, _start_script_run=start, **widgets)
 
 
 @pytest.fixture
@@ -47,7 +56,7 @@ def test_editor_capture_preserves_result_and_links_opted_in_owner(app, store, tm
     controls.journal_path.setText(str(journal))
     editor, output = QTextEdit(), QTextEdit()
     editor.setPlainText(json.dumps([["AC_set_var", {"name": "x", "value": 1}]]))
-    host = SimpleNamespace(script_editor=editor, script_result_text=output, script_history_controls=controls)
+    host = _host(output, script_editor=editor, script_history_controls=controls)
     try:
         ScriptTabMixin._execute_manual_script(host)
         assert json.loads(output.toPlainText()) and len(ac.read_events(journal)) == 2
@@ -67,7 +76,7 @@ def test_file_execution_records_its_source_path(app, store, tmp_path):
     script = tmp_path / "script.json"
     script.write_text('[["AC_set_var", {"name": "x", "value": 1}]]', encoding="utf-8")
     source, output = QLineEdit(str(script)), QTextEdit()
-    host = SimpleNamespace(script_path_input=source, script_result_text=output, script_history_controls=controls)
+    host = _host(output, script_path_input=source, script_history_controls=controls)
     try:
         ScriptTabMixin._execute_script(host)
         assert store.list_runs()[0].script_path == str(script)
@@ -85,6 +94,7 @@ def test_builder_records_with_optional_journal_without_result_wrapper(app, store
         builder._capture.journal_path.setText(str(path))
         builder._tree.add_step(action_to_step(["AC_set_var", {"name": "x", "value": 1}]))
         builder._on_run()
+        assert settle(builder._runs, "task")
         result = json.loads(builder._result.toPlainText())
         assert result and "history_id" not in result
         row = store.list_runs()[0]
@@ -119,7 +129,7 @@ def test_directory_execution_records_one_batch_and_all_snapshots(app, store, tmp
     journal = tmp_path / "directory.jsonl"
     controls.journal_path.setText(str(journal))
     source, output = QLineEdit(str(directory)), QTextEdit()
-    host = SimpleNamespace(script_dir_input=source, script_result_text=output, script_history_controls=controls)
+    host = _host(output, script_dir_input=source, script_history_controls=controls)
     try:
         ScriptTabMixin._execute_dir(host)
         assert len(json.loads(output.toPlainText())) == 2

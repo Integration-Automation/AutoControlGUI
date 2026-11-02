@@ -81,7 +81,7 @@ class FakeBackend(WindowManageBackend):
         return True
 
 
-@pytest.fixture()
+@pytest.fixture
 def backend(monkeypatch):
     """Point the facade at a fake backend, on every platform."""
     fake = FakeBackend()

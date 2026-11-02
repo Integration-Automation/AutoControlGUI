@@ -22,20 +22,24 @@ _BELOW = [(0, 100, 10, 110), (0, 200, 10, 210), (0, 300, 10, 310)]
 def test_ordinal_selects_nth_nearest(monkeypatch):
     _patch(monkeypatch, (0, 0), _BELOW)
     first = anchor_locate(anchor=_ANCHOR, target=_TARGET, relation="below")
-    assert first.found and first.target_coords == (5, 105)        # nearest
+    assert first.found
+    assert first.target_coords == (5, 105)  # nearest
     second = anchor_locate(anchor=_ANCHOR, target=_TARGET, relation="below",
                            ordinal=2)
-    assert second.found and second.target_coords == (5, 205)
+    assert second.found
+    assert second.target_coords == (5, 205)
     third = anchor_locate(anchor=_ANCHOR, target=_TARGET, relation="below",
                           ordinal=3)
-    assert third.found and third.target_coords == (5, 305)
+    assert third.found
+    assert third.target_coords == (5, 305)
 
 
 def test_ordinal_out_of_range_not_found(monkeypatch):
     _patch(monkeypatch, (0, 0), _BELOW)
     outcome = anchor_locate(anchor=_ANCHOR, target=_TARGET, relation="below",
                             ordinal=9)
-    assert outcome.found is False and "ordinal" in outcome.error
+    assert outcome.found is False
+    assert "ordinal" in outcome.error
 
 
 def test_locate_all_returns_sorted(monkeypatch):

@@ -59,7 +59,7 @@ class ScrollableTabs(QTabWidget):
         container = self.scroll_area(index)
         return container.widget() if container is not None else None
 
-    def currentWidget(self) -> QWidget | None:  # noqa: N802  # reason: Qt override
+    def currentWidget(self) -> QWidget | None:  # type: ignore[override]  # noqa: N802  # reason: Qt override; None with no page open
         """Return the original active page."""
         return self.widget(self.currentIndex())
 

@@ -46,7 +46,8 @@ def test_table_cell_by_index(monkeypatch):
     _inject(monkeypatch, _FakeBackend(grid=dict(_GRID)))
     cell = table_cell(0, 1, name="Orders")
     assert cell["value"] == "Shipped"
-    assert cell["row"] == 0 and cell["column"] == 1
+    assert cell["row"] == 0
+    assert cell["column"] == 1
     assert table_cell(9, 9, name="Orders") is None
 
 
@@ -88,7 +89,8 @@ def test_executor_adapters(monkeypatch):
     assert _table_headers(name="Orders")["headers"]["columns"][1] == "Status"
     assert _table_cell(0, 2, name="Orders")["cell"]["value"] == "$10"
     out = _cell_by_header(0, "Status", name="Orders")
-    assert out["found"] is True and out["value"] == "Shipped"
+    assert out["found"] is True
+    assert out["value"] == "Shipped"
 
 
 def test_wiring():
@@ -104,4 +106,5 @@ def test_wiring():
 
 def test_facade_exports():
     for name in ("table_headers", "table_cell", "cell_by_header"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

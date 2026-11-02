@@ -101,7 +101,8 @@ def test_a_standard_tier_model_gets_a_smaller_screen_on_1080p():
     tool = request["tools"][0]
     declared = (tool["display_width_px"], tool["display_height_px"])
     assert declared == _sent_image_size(request)
-    assert max(declared) <= 1568 and visual_tokens(*declared) <= 1568
+    assert max(declared) <= 1568
+    assert visual_tokens(*declared) <= 1568
     assert declared[0] < 1920
 
 

@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.executor.run_control import pause
 
 Bbox = Tuple[int, int, int, int]
 BboxProvider = Callable[[], Optional[Bbox]]
@@ -29,7 +30,7 @@ class GateConfig:
     stable_for_s: float = 0.3
     poll_interval_s: float = 0.1
     clock: Callable[[], float] = time.monotonic
-    sleep: Callable[[float], None] = time.sleep
+    sleep: Callable[[float], None] = pause
 
 
 @dataclass(frozen=True)

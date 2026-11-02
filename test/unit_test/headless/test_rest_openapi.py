@@ -14,7 +14,7 @@ from je_auto_control.utils.rest_api.rest_server import RestApiServer
 _TEST_SCHEME = "http"  # NOSONAR localhost-only ephemeral test server
 
 
-@pytest.fixture()
+@pytest.fixture
 def server():
     s = RestApiServer(host="127.0.0.1", port=0, enable_audit=False)
     s.start()

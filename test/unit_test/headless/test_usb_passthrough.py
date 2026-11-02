@@ -416,7 +416,8 @@ def test_open_emits_resume_token():
     session = UsbPassthroughSession(FakeUsbBackend(devices=[_SAMPLE_DEVICE]))
     body = json.loads(session.handle_frame(_make_open_frame())[0].payload)
     assert body["ok"] is True
-    assert isinstance(body["resume_token"], str) and body["resume_token"]
+    assert isinstance(body["resume_token"], str)
+    assert body["resume_token"]
 
 
 def test_resume_rebinds_same_claim():

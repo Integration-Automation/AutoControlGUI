@@ -117,4 +117,5 @@ def test_facade_exports():
     for name in ("expand_control", "collapse_control", "control_expand_state",
                  "select_control_item", "control_range", "set_control_range",
                  "scroll_control_into_view"):
-        assert hasattr(ac, name) and name in ac.__all__
+        assert hasattr(ac, name)
+        assert name in ac.__all__

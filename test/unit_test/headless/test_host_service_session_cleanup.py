@@ -45,9 +45,9 @@ def test_a_failed_attempt_stops_its_session(monkeypatch, failing):
         raise TimeoutError("no answer within 300 s")
 
     monkeypatch.setattr(signaling_client, failing, boom)
-    multi = _Multi()
+    multi, config = _Multi(), _config()
     with pytest.raises(TimeoutError):
-        host_service._serve_one_viewer(multi, _config())
+        host_service._serve_one_viewer(multi, config)
     assert multi.stopped == ["sid-1"]
 
 

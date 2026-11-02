@@ -20,7 +20,8 @@ def test_validate_rows_reports_errors():
     }
     report = validate_rows(rows, schema)
     assert report["ok"] is False
-    assert report["valid_count"] == 2 and report["invalid_count"] == 1
+    assert report["valid_count"] == 2
+    assert report["invalid_count"] == 1
     fields = {e["field"] for e in report["errors"] if e["row"] == 1}
     assert {"name", "age", "email"} <= fields
 
@@ -37,7 +38,8 @@ def test_validate_rows_unique_and_allowed():
 
 def test_validate_rows_all_valid():
     report = validate_rows([{"n": 5}], {"n": {"type": "int", "min": 1}})
-    assert report["ok"] is True and report["invalid_count"] == 0
+    assert report["ok"] is True
+    assert report["invalid_count"] == 0
 
 
 # --- extract_fields -------------------------------------------------------

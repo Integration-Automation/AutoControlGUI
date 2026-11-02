@@ -31,7 +31,8 @@ def test_the_stylesheet_is_complete(tokens):
     assert sheet.count("{") == sheet.count("}")
     for colour in (tokens.window, tokens.surface, tokens.text, tokens.accent, tokens.border, tokens.selection):
         assert colour in sheet
-    assert "#NavigationPanel" in sheet and "QTabBar::tab:selected" in sheet
+    assert "#NavigationPanel" in sheet
+    assert "QTabBar::tab:selected" in sheet
 
 
 def test_the_two_themes_differ_and_an_unknown_name_falls_back():
@@ -99,9 +100,11 @@ def test_search_matches_title_key_and_category(panel):
 
 def test_no_match_shows_the_empty_state_instead_of_a_blank_list(panel):
     assert panel.apply_filter("zzz") == 0
-    assert panel.tree.isHidden() and not panel.empty.isHidden()
+    assert panel.tree.isHidden()
+    assert not panel.empty.isHidden()
     panel.apply_filter("")
-    assert not panel.tree.isHidden() and panel.empty.isHidden()
+    assert not panel.tree.isHidden()
+    assert panel.empty.isHidden()
 
 
 def test_return_in_the_search_box_opens_the_first_match(panel):
@@ -202,7 +205,8 @@ def test_search_reaches_every_registered_feature(window):
 
 
 def test_choosing_a_feature_opens_it_and_marks_it_open(window):
-    assert window["opened"] == "variables" and window["listed_open"]
+    assert window["opened"] == "variables"
+    assert window["listed_open"]
 
 
 def test_the_search_shortcut_reveals_a_hidden_panel(window):
@@ -211,7 +215,8 @@ def test_the_search_shortcut_reveals_a_hidden_panel(window):
 
 
 def test_switching_theme_keeps_the_text_size(window):
-    assert window["light"] and window["dark"]
+    assert window["light"]
+    assert window["dark"]
 
 
 def test_rebuilding_the_menus_for_a_language_switch_adds_no_shortcut(window):
@@ -223,4 +228,5 @@ def test_rebuilding_the_menus_for_a_language_switch_adds_no_shortcut(window):
 def test_the_window_shrinks_to_a_small_screen_with_both_panes_usable(window):
     width, height, workspace_width, panel_visible = window["small"]
     assert (width, height) == (640, 420), "the window refused to shrink"
-    assert panel_visible and workspace_width >= 300
+    assert panel_visible
+    assert workspace_width >= 300

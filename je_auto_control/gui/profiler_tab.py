@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -37,12 +38,12 @@ class ProfilerTab(TranslatableMixin, QWidget):
         super().__init__(parent)
         self._tr_init()
         self._table = QTableWidget(0, _COLUMN_COUNT)
-        self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self._table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self._table.verticalHeader().setVisible(False)
         self._apply_table_headers()
         header = self._table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Interactive)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setStretchLastSection(True)
         self._totalbar = QProgressBar()
         self._totalbar.setRange(0, 100)
@@ -54,6 +55,13 @@ class ProfilerTab(TranslatableMixin, QWidget):
         self._timer.timeout.connect(self._refresh)
         self._timer.start()
         self._refresh()
+
+    def dispose(self) -> None:
+        """Release what the tab holds beyond its widgets: its refresh timer.
+
+        Called by ``close_tab(key, release=True)`` before the widget is deleted; safe to call twice.
+        """
+        release_resources(self)
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
@@ -126,5 +134,5 @@ class ProfilerTab(TranslatableMixin, QWidget):
         )
         for col, text in enumerate(values):
             item = QTableWidgetItem(text)
-            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self._table.setItem(row, col, item)
