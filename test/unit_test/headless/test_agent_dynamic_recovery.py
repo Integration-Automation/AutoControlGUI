@@ -58,7 +58,8 @@ def test_preview_does_not_invent_remaining_actions_or_contact_a_model(dynamic_so
     assert template["actions"] == []
     assert template["options"] == runtime.store.get(source)["spec"]["options"]
     assert target.calls == ["AC_increment"]
-    assert (runtime.store.get(source), runtime.receipts(source)) == before
+    after = runtime.store.get(source), runtime.receipts(source)
+    assert after == before
     network.assert_not_called()
 
 
@@ -221,7 +222,8 @@ def test_explicit_local_replan_uses_the_pinned_http_model_with_fresh_goal_and_hi
         while runtime.get(child).state in {"queued", "running", "verifying"} and time.monotonic() < deadline:
             time.sleep(0.01)
         assert runtime.get(child).state == "succeeded"
-        assert [path for path, _ in server.calls] == ["/api/show", "/api/chat", "/api/chat"]
+        paths = [path for path, _ in server.calls]
+        assert paths == ["/api/show", "/api/chat", "/api/chat"]
         assert all(body["model"] == "fixture-tools" for _, body in server.calls)
         first = json.loads(server.calls[1][1]["messages"][1]["content"])
         second = json.loads(server.calls[2][1]["messages"][1]["content"])

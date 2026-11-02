@@ -76,8 +76,9 @@ def test_mcp_confines_the_target_hidden_inside_bundle(revision_files, tmp_path):
     target, bundle, _ = revision_files
     command("create", template_path=str(target), candidate_path=str(FIXTURES / "new.png"), bundle_path=str(bundle))
     ctx = ToolCallContext("preview", path_policy=PathPolicy([bundle]))
+    preview, bundle_path = tool("preview").handler, str(bundle)
     with pytest.raises(PathNotAllowedError):
-        tool("preview").handler(str(bundle), ctx=ctx)
+        preview(bundle_path, ctx=ctx)
 
 
 def test_preview_rechecks_roots_after_progress_notification(revision_files):
@@ -92,8 +93,9 @@ def test_preview_rechecks_roots_after_progress_notification(revision_files):
             policy.set_client_roots([])
 
     ctx.notifier = revoke
+    preview, bundle_path = tool("preview").handler, str(bundle)
     with pytest.raises(PathNotAllowedError):
-        tool("preview").handler(str(bundle), ctx=ctx)
+        preview(bundle_path, ctx=ctx)
 
 
 @pytest.mark.parametrize("operation", ["verify", "accept", "revert"])
@@ -109,5 +111,6 @@ def test_cancelled_tool_checks_before_reading_private_bundle(operation, monkeypa
         arguments["dataset_path"] = "private-dataset.json"
     if operation != "verify":
         arguments["expected_revision"] = "0" * 64
+    handler = tool(operation).handler
     with pytest.raises(OperationCancelledError):
-        tool(operation).handler(**arguments)
+        handler(**arguments)

@@ -129,13 +129,20 @@ def test_staging_cleanup_refuses_unrecognized_or_replaced_objects(tmp_path, chan
     journal, retired = [], []
     staging = ImportStaging(root, [status.st_dev, status.st_ino], journal.append, retired.append)
     manifest = AssetManifest((AssetFile('report.txt', sha256(b'x').hexdigest(), 1),))
-    with pytest.raises(AgentTaskError, match='identity|unrecognized'):
+    created = []
+
+    def leave_an_unrecognized_object():
         with staging.directory(root, manifest) as directory:
             if change == 'replacement-directory':
                 directory.rename(root / 'preserved-original')
                 directory.mkdir()
             unexpected = directory / 'user-journal.json'
             unexpected.write_bytes(b'preserve unrelated data')
+            created.append(unexpected)
+
+    with pytest.raises(AgentTaskError, match='identity|unrecognized'):
+        leave_an_unrecognized_object()
+    [unexpected] = created
     assert unexpected.read_bytes() == b'preserve unrelated data'
     assert retired == []
     assert journal
@@ -161,8 +168,9 @@ def test_shared_publisher_uses_journaled_nested_empty_and_multichunk_files(tmp_p
     def check():
         return cancelled and bool(staging._state.used)
     if cancelled:
+        transport = DirectoryAssetTransport(source, root)
         with pytest.raises(CancelledError):
-            _sync_assets(manifest, DirectoryAssetTransport(source, root), cancelled=check, staging=staging)
+            _sync_assets(manifest, transport, cancelled=check, staging=staging)
         assert list(root.iterdir()) == []
     else:
         result = _sync_assets(manifest, DirectoryAssetTransport(source, root), staging=staging)

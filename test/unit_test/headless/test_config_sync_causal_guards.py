@@ -83,9 +83,14 @@ def test_entry_changes_require_an_honest_origin_and_causal_floor(tmp_path, chang
     else:
         args.update(version=entry.version, operation_id=entry.operation_id)
     proposed = ac.SyncEntry(**args)
-    with pytest.raises(ac.ConfigSyncError):
+    claim = actor('desktop')
+
+    def commit_proposal():
         candidate = current.with_entries((proposed,))
-        store.commit('alice', candidate, base_revision=current.revision, operation_id=change, actor=actor('desktop'))
+        store.commit('alice', candidate, base_revision=current.revision, operation_id=change, actor=claim)
+
+    with pytest.raises(ac.ConfigSyncError):
+        commit_proposal()
     assert store.get('alice') == current
 
 
@@ -168,8 +173,9 @@ def test_legacy_tombstones_never_expire_during_upgrade_and_opaque_data_is_not_lo
     assert state.live_entries == ()
     assert state.entries[0].value == {'value': 'previous'}
     legacy.put_legacy('bob', {'user_id': 'bob', 'opaque': {'important': True}})
+    upgraded = ac.CausalConfigStore(path)
     with pytest.raises(ac.ConfigSyncError):
-        ac.CausalConfigStore(path).get('bob')
+        upgraded.get('bob')
     assert legacy.get_document('bob')['opaque'] == {'important': True}
 
 

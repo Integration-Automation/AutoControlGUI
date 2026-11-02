@@ -242,8 +242,9 @@ def test_materialization_refuses_an_escaping_custom_profile_before_creating_file
             pass
         def profile_files(self):
             return {'../outside.txt': b'not allowed'}
+    profile = EscapingProfile()
     with pytest.raises(ac.ConfigSyncError):
-        ac.materialize_sync_profile((EscapingProfile(),), tmp_path / 'cache')
+        ac.materialize_sync_profile((profile,), tmp_path / 'cache')
     assert not (tmp_path / 'outside.txt').exists()
     assert not (tmp_path / 'cache').exists()
 

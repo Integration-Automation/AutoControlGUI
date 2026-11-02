@@ -28,8 +28,9 @@ def test_gui_package_caption_and_total_use_the_same_tree():
 
 
 def test_unknown_gui_source_cannot_silently_escape_measurement():
+    document = _document("| missing | `no_such_gui_file.py` | 1 | missing |")
     with pytest.raises(ValueError, match="no_such_gui_file"):
-        measure.rewrite(_document("| missing | `no_such_gui_file.py` | 1 | missing |"))
+        measure.rewrite(document)
 
 
 def test_unresolved_rows_reports_gui_sources(tmp_path, monkeypatch):

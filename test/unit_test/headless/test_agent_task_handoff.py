@@ -36,8 +36,9 @@ def assert_no_dag(runtime):
 @pytest.mark.parametrize('recording', ['named_caller'], indirect=True)
 def test_source_owner_records_other_caller_completion_only_with_an_explicit_task_grant(recording, monkeypatch):
     runtime = recording.runtime
+    request = request_for(recording)
     with pytest.raises(AgentTaskError, match='another caller'):
-        runtime.skills.control('record', request_for(recording))
+        runtime.skills.control('record', request)
     before = runtime.store.actions(recording.task_id)
     manifest = recording.manifest.read_bytes()
     monkeypatch.setattr(NativeDesktopTarget, '_launch', no_helper)
@@ -58,16 +59,18 @@ def test_source_owner_records_other_caller_completion_only_with_an_explicit_task
         runtime.get(recording.child_id)
     assert_no_dag(runtime)
     runtime.recovery.control('revoke_handoff', {'handoff_id': grant['id']})
+    request = request_for(recording, handoff_id=grant['id'], name='Revoked grant')
     with pytest.raises(AgentTaskError):
-        runtime.skills.control('record', request_for(recording, handoff_id=grant['id'], name='Revoked grant'))
+        runtime.skills.control('record', request)
     assert len(runtime.skills.control('list')['candidates']) == 1
 
 
 @pytest.mark.parametrize('trial', ['named_caller'], indirect=True)
 def test_original_validation_trial_publishes_with_other_caller_task_evidence_without_replay(trial, monkeypatch):
     runtime = trial.runtime
+    request = acceptance(trial)
     with pytest.raises(AgentTaskError, match='another caller'):
-        runtime.skills.control('accept', acceptance(trial))
+        runtime.skills.control('accept', request)
     before = runtime.store.actions(trial.task_id)
     manifest = trial.manifest.read_bytes()
     monkeypatch.setattr(NativeDesktopTarget, '_launch', no_helper)

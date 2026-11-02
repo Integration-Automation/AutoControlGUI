@@ -101,9 +101,10 @@ def test_fresh_remote_resolution_refuses_a_different_original_coordinator_witnes
         identifier = grant(value)
         binding = actual_binding(value.runtime, value.source)
         binding[change] = 'different-node' if change == 'node_id' else ('f' * (32 if change == 'batch_id' else 64))
+        coordinator_binding = value.coordinator.batches.transfer_binding('source')
         with pytest.raises(AgentTaskError):
             resolve_remote_evidence(value.coordinator.transfers.remote, 'source',
-                value.coordinator.batches.transfer_binding('source'), identifier, binding)
+                coordinator_binding, identifier, binding)
 
 
 @pytest.mark.parametrize('boundary', ['reserve', 'consume_review'])
@@ -166,10 +167,11 @@ def test_revoked_wire_consent_never_recreates_wire_authority(tmp_path, monkeypat
         assert revoked['evidence']['state'] == 'revoked'
         status, denied = evidence_create(value.server, reviewed, token=value.reviewer_token)
         assert status == 409, denied
+        coordinator_binding = value.coordinator.batches.transfer_binding('source')
+        binding = actual_binding(value.runtime, value.source)
         with pytest.raises(AgentTaskError):
             resolve_remote_evidence(value.coordinator.transfers.remote, 'source',
-                value.coordinator.batches.transfer_binding('source'), identifier,
-                actual_binding(value.runtime, value.source))
+                coordinator_binding, identifier, binding)
         with value.runtime.store.connection() as connection:
             record = value.runtime.transfers.source.records.find(connection, identifier)
             assert record['state'] == 'revoked'

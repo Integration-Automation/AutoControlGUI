@@ -125,8 +125,9 @@ def test_the_console_is_usable_only_on_console_and_unlocked(opened, session, int
 
 
 def test_a_missing_permission_refuses_to_start():
+    api = QuartzPresenceAPI(lambda: FakeQuartz(tap=False))
     with pytest.raises(AgentTaskError, match='Accessibility'):
-        QuartzPresenceAPI(lambda: FakeQuartz(tap=False)).open(lambda: None)
+        api.open(lambda: None)
 
 
 def test_a_disabled_tap_fails_the_source(opened):

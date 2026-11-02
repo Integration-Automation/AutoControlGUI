@@ -74,11 +74,12 @@ def test_actual_coordinator_reopen_preserves_consent_identity_and_revalidates_re
                 record = value.runtime.transfers.source.records.find(database, identifier)
             assert record['expires'] == expires, 'Coordinator restart cannot renew the source evidence deadline'
         else:
+            if phase == 'provisional':
+                step, arguments = approve, (value, reviewed)
+            else:
+                step, arguments = start, (value, reviewed, approved)
             with pytest.raises(AgentTaskError):
-                if phase == 'provisional':
-                    approve(value, reviewed)
-                else:
-                    start(value, reviewed, approved)
+                step(*arguments)
             with value.coordinator.store.connection() as database:
                 assert database.execute('SELECT state FROM agent_dag_batches').fetchone()[0] != 'running'
         with value.coordinator.store.connection() as database:

@@ -332,11 +332,15 @@ def test_actual_reader_revision_checks_fence_worker_ack_and_pointer_preparation(
     harness.reader.ready()
     boundary.worker._activity = harness.reader
     setattr(boundary, boundary_name, harness.source.state.physical)
-    with pytest.raises(AutoControlException):
+
+    def press_through_the_boundary():
         if boundary_name == 'on_prepare':
             boundary.worker._input({'kind': 'mouse_press', 'keycode': 'left', 'move_before_press': True})
         else:
             boundary.press()
+
+    with pytest.raises(AutoControlException):
+        press_through_the_boundary()
     assert 'pressed' not in boundary.events
     assert harness.notice.wait(0.3)
     assert harness.events.count('connect') == 1

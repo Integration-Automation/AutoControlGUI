@@ -118,8 +118,9 @@ def test_changed_candidate_before_write_admission_cannot_commit_a_publication(tr
         with original(write=write) as connection:
             yield connection
     monkeypatch.setattr(runtime.store, 'connection', changed)
+    request = acceptance(trial)
     with pytest.raises(AgentTaskError):
-        runtime.skills.control('accept', acceptance(trial))
+        runtime.skills.control('accept', request)
     with original() as connection:
         state = connection.execute('SELECT state FROM agent_skill_candidates WHERE id=?',
                                    (trial.candidate['id'],)).fetchone()[0]

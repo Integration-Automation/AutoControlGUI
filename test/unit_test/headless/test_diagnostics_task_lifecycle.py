@@ -231,13 +231,11 @@ def test_synchronous_submission_cancellation_keeps_the_original_control_and_rest
         raise original
 
     monkeypatch.setattr(widget._task_controller, 'submit', failed_start)
+    run = dict(widget.menu_actions())['diag_run']
     try:
-        try:
-            dict(widget.menu_actions())['diag_run']()
-        except OperationCancelledError as caught:
-            assert caught is original
-        else:
-            pytest.fail('submission cancellation was converted into an ordinary failure')
+        with pytest.raises(OperationCancelledError) as caught:
+            run()
+        assert caught.value is original
     finally:
         original.__traceback__ = None
     assert widget._active_task is None

@@ -113,8 +113,9 @@ def test_view_request_cancellation_only_detaches_from_service_work(monkeypatch):
 
     monkeypatch.setattr("je_auto_control.gui.agent_tasks_tab.AgentRuntimeClient", Client)
     monkeypatch.setattr("je_auto_control.utils.agent_runtime.api.AgentRuntimeClient", Client)
+    token = CancellationToken(1)
     with pytest.raises(CancelledError):
-        _request("observe", {"task_id": "fixture"}, CancellationToken(1))
+        _request("observe", {"task_id": "fixture"}, token)
     assert calls == ["observe"]
 
 

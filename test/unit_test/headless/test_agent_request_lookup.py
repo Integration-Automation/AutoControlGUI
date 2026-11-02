@@ -118,8 +118,9 @@ def test_real_http_lost_submit_reply_is_recovered_by_lookup_without_resubmission
     monkeypatch.setattr(client_module, "request_json", lose_submit)
     try:
         with authorization_scope(AuthorizationContext("alice", "operator")):
+            spec = specification().to_dict()
             with pytest.raises(AgentTaskError, match="lost accepted reply"):
-                client.call("submit", {"spec": specification().to_dict(), "idempotency_key": "lost-reply"})
+                client.call("submit", {"spec": spec, "idempotency_key": "lost-reply"})
             result = client.call("lookup", {"idempotency_key": "lost-reply"})
         assert result["found"] is True
         assert result["task"]["state"] == "queued"

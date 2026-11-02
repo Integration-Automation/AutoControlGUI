@@ -67,8 +67,9 @@ def test_remote_failures_are_bounded_fixed_diagnostics(monkeypatch):
 @pytest.mark.parametrize("role,host", [("viewer", "local"), ("operator", "remote")])
 def test_role_failure_prevents_opening_a_connection(role, host, monkeypatch):
     monkeypatch.setattr(managed_tasks, "_connection", lambda *_args: pytest.fail("opened forbidden connection"))
-    with authorization_scope(AuthorizationContext("caller", role)), pytest.raises(AuthorizationError):
-        inspect_agent_dag(definition(host=host))
+    caller, graph = AuthorizationContext("caller", role), definition(host=host)
+    with authorization_scope(caller), pytest.raises(AuthorizationError):
+        inspect_agent_dag(graph)
 
 
 def test_owner_revocation_during_lookup_discards_the_reply(tmp_path, monkeypatch):
@@ -81,8 +82,9 @@ def test_owner_revocation_during_lookup_discards_the_reply(tmp_path, monkeypatch
 
     monkeypatch.setattr(managed_tasks, "_connection", lambda _host: lookup)
     owner = AuthorizationContext("caller", "operator", store_path=str(store.path))
+    graph = definition()
     with authorization_scope(owner), pytest.raises(AuthorizationError):
-        inspect_agent_dag(definition())
+        inspect_agent_dag(graph)
 
 
 def test_cancellation_and_explicit_stop_do_not_send_control_requests(monkeypatch):
@@ -95,21 +97,24 @@ def test_cancellation_and_explicit_stop_do_not_send_control_requests(monkeypatch
         return {"found": True, "task": completed()}
 
     monkeypatch.setattr(managed_tasks, "_connection", lambda _host: lookup)
+    graph = definition()
     with cancellation_scope(token), pytest.raises(CancelledError):
-        inspect_agent_dag(definition())
+        inspect_agent_dag(graph)
     assert calls == ["lookup"]
     stop = threading.Event()
     stop.set()
+    graph = definition()
     with managed_tasks.managed_stop_scope(stop), pytest.raises(AgentTaskError, match="stopped"):
-        inspect_agent_dag(definition())
+        inspect_agent_dag(graph)
     assert calls == ["lookup"]
 
 
 @pytest.mark.parametrize("timeout", [False, 0, 301, float("inf")])
 def test_invalid_budgets_fail_before_queries(timeout, monkeypatch):
     monkeypatch.setattr(managed_tasks, "_connection", lambda *_args: pytest.fail("invalid budget made a request"))
+    graph = definition()
     with pytest.raises(AgentTaskError):
-        inspect_agent_dag(definition(), timeout)
+        inspect_agent_dag(graph, timeout)
 
 
 def test_graph_bounds_and_cycles_are_checked_before_queries(monkeypatch):
@@ -163,8 +168,9 @@ def test_managed_task_cannot_inspect_other_task_keys(monkeypatch):
 
     monkeypatch.setattr(managed_tasks, "_connection", lambda *_args: pytest.fail("nested lookup"))
     parent = TaskOperation(AgentTaskSpec.from_dict(task()["spec"]), lambda: None, None)
+    graph = definition()
     with operation_scope(parent), pytest.raises(AgentTaskError, match="cannot inspect"):
-        inspect_agent_dag(definition())
+        inspect_agent_dag(graph)
 
 
 def test_real_registered_host_lookup_does_not_submit_even_when_reviewed_spec_differs(tmp_path, monkeypatch):

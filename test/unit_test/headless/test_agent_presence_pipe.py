@@ -179,8 +179,9 @@ def test_open_failure_never_wraps_or_borrows_a_foreign_handle(monkeypatch, liste
     api, native, _ = factory(monkeypatch)
     native.fail_create = True
     native.error = 5
+    open_pipe = api.listen if listen else api.connect
     with pytest.raises(AgentControlBusy if listen else AgentTaskError):
-        api.listen() if listen else api.connect()
+        open_pipe()
     assert len(native.kernel.CreateNamedPipeW.calls if listen else native.kernel.CreateFileW.calls) == 1
     assert not native.handles
     assert not native.async_api.ConnectNamedPipe.calls
@@ -241,8 +242,9 @@ def test_internal_factory_refuses_unowned_native_handles_before_any_native_opera
     listener = api.listen()
     try:
         before = list(native.calls)
+        method = getattr(api, operation)
         with pytest.raises(AgentTaskError):
-            getattr(api, operation)(123)
+            method(123)
         assert native.calls == before
     finally:
         listener.close()

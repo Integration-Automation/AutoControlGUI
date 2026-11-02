@@ -122,8 +122,9 @@ def test_atomic_registration_rolls_back_graph_and_nodes(runtime):
     with runtime.store.connection(write=True) as connection:
         connection.execute("CREATE TRIGGER fail_node BEFORE INSERT ON agent_dag_nodes "
                            "BEGIN SELECT RAISE(ABORT, 'fixture rollback'); END")
+    definition = graph()
     with pytest.raises(AgentTaskError, match="database operation failed"):
-        runtime.batches.control("register", {"definition": graph()})
+        runtime.batches.control("register", {"definition": definition})
     assert runtime.batches.control("list")["batches"] == []
 
 
@@ -142,8 +143,10 @@ def test_claim_survives_restart_and_never_becomes_proof_of_non_delivery(runtime)
         with pytest.raises(AgentTaskError, match="inactive"):
             restored.batches.control("claim", {"batch_id": value["batch_id"],
                                                 "attempt": started["attempt"], "node_id": "b"})
+        definition = graph()
         with pytest.raises(AgentTaskError, match="explicit recovery"):
-            restored.batches.control("begin", {"batch_id": value["batch_id"], "definition": graph(), "max_parallel": 4})
+            restored.batches.control("begin", {"batch_id": value["batch_id"], "definition": definition,
+                                               "max_parallel": 4})
     finally:
         restored.close()
 
@@ -176,8 +179,9 @@ def test_graph_tampering_and_closed_runtime_fail_closed(runtime):
     with pytest.raises(AgentTaskError, match="digest mismatch"):
         runtime.batches.control("get", {"batch_id": value["batch_id"]})
     runtime.close()
+    definition = graph()
     with pytest.raises(AgentTaskError, match="closed"):
-        runtime.batches.control("register", {"definition": graph()})
+        runtime.batches.control("register", {"definition": definition})
 
 
 def test_changed_registered_host_is_refused_without_revealing_credentials(runtime, monkeypatch):
@@ -202,9 +206,11 @@ def test_original_owner_revocation_blocks_admin_delivery_of_registered_work(runt
     with authorization_scope(AuthorizationContext("owner", "operator", store_path=str(users.path))):
         value = runtime.batches.control("register", {"definition": graph()})
     users.set_role("owner", "viewer")
+    definition = graph()
     with authorization_scope(AuthorizationContext("admin", "admin")):
         with pytest.raises(AuthorizationError):
-            runtime.batches.control("begin", {"batch_id": value["batch_id"], "definition": graph(), "max_parallel": 4})
+            runtime.batches.control("begin", {"batch_id": value["batch_id"], "definition": definition,
+                                               "max_parallel": 4})
 
 
 def test_nested_managed_operation_is_refused_before_batch_client_contact(monkeypatch):
@@ -212,6 +218,7 @@ def test_nested_managed_operation_is_refused_before_batch_client_contact(monkeyp
     client = Mock(side_effect=AssertionError("nested batch contacted the coordinator"))
     monkeypatch.setattr(batch_execution, "current_operation", lambda: object())
     monkeypatch.setattr(batch_execution, "AgentRuntimeClient", client)
+    definition = graph()
     with pytest.raises(AgentTaskError, match="cannot coordinate"):
-        run_dag(graph(), batch_id="registered-batch")
+        run_dag(definition, batch_id="registered-batch")
     client.assert_not_called()

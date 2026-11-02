@@ -60,8 +60,9 @@ def test_revocation_inside_publication_sql_rolls_back_acceptance_and_its_provena
         connection.execute('CREATE TRIGGER owned_publication_revoke AFTER INSERT ON agent_skill_publications '
                            "BEGIN UPDATE agent_task_handoffs SET state='revoked'; "
                            "INSERT INTO agent_task_handoff_revocations SELECT id,'{}',0 FROM agent_task_handoffs; END")
+    request = {**acceptance(trial), 'handoff_id': grant['id']}
     with pytest.raises(AgentTaskError, match='revoked'):
-        runtime.skills.control('accept', {**acceptance(trial), 'handoff_id': grant['id']})
+        runtime.skills.control('accept', request)
     candidate = runtime.skills.control('get', {'candidate_id': trial.candidate['id']})
     assert candidate['state'] == 'draft'
     assert candidate['publication'] is None

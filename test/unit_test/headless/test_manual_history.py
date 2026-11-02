@@ -101,8 +101,9 @@ def test_start_failure_has_no_body_effect_and_restores_parent(store, monkeypatch
         raise HistoryStoreError("start unavailable")
     monkeypatch.setattr(store, "start_run", fail)
     with bound_history(parent):
+        scope = ac.manual_history_scope(store=store)
         with pytest.raises(HistoryStoreError):
-            with ac.manual_history_scope(store=store):
+            with scope:
                 pytest.fail("body executed after failed start")
         assert current_history() is parent
 
@@ -154,8 +155,9 @@ def test_metadata_and_failure_text_are_masked_before_sqlite(store):
     secret = "manual-private-marker"
     with secret_log_scope():
         remember_secret(secret)
+        scope = ac.manual_history_scope(store=store, source_id=secret, script_path=secret)
         with pytest.raises(ValueError):
-            with ac.manual_history_scope(store=store, source_id=secret, script_path=secret) as owner:
+            with scope as owner:
                 raise ValueError(secret)
     row = store.get_run(owner.run_id)
     assert row.source_id == row.script_path == "***"
@@ -167,8 +169,9 @@ def test_ambient_journal_policy_is_checked_before_linking(store, tmp_path):
     policy.set_client_roots([tmp_path])
     with ac.journal_scope(ac.ActionJournal(tmp_path / "events.jsonl"), path_policy=policy):
         policy.set_client_roots([tmp_path / "elsewhere"])
+        scope = ac.manual_history_scope(store=store)
         with pytest.raises(ac.PathNotAllowedError):
-            with ac.manual_history_scope(store=store):
+            with scope:
                 pytest.fail("body executed outside active roots")
     assert store.list_runs()[0].status == "error"
     assert store.journals_for_run(store.list_runs()[0].id) == []
@@ -208,8 +211,9 @@ def test_existing_journal_secret_metadata_is_refused_before_link(store, tmp_path
     with secret_log_scope():
         with ac.journal_scope(ac.ActionJournal(tmp_path / (secret + ".jsonl")), run_id="ambient"):
             remember_secret(secret)
+            scope = ac.manual_history_scope(store=store)
             with pytest.raises(HistoryStoreError, match="resolved secret"):
-                with ac.manual_history_scope(store=store):
+                with scope:
                     pytest.fail("unsafe provenance reached body")
     row = store.list_runs()[0]
     assert row.status == "error"
@@ -219,8 +223,9 @@ def test_existing_journal_secret_metadata_is_refused_before_link(store, tmp_path
 
 @pytest.mark.parametrize("field,value", [("source_id", ""), ("source_id", None), ("script_path", "")])
 def test_invalid_labels_have_no_store_effects(store, field, value):
+    scope = ac.manual_history_scope(store=store, **{field: value})
     with pytest.raises(HistoryStoreError):
-        with ac.manual_history_scope(store=store, **{field: value}):
+        with scope:
             pytest.fail("invalid labels executed")
     assert store._conn is None
 

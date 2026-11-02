@@ -98,8 +98,9 @@ def test_capture_preserves_break_and_cancellation_signals(tmp_path, monkeypatch)
         raise signal
     monkeypatch.setitem(executor.event_dict, "AC_journal_command_probe", cancel)
     cancelled = tmp_path / "cancelled.jsonl"
+    actions = [_capture(cancelled, [["AC_journal_command_probe"]])]
     with pytest.raises(asyncio.CancelledError) as caught:
-        executor.execute_action([_capture(cancelled, [["AC_journal_command_probe"]])])
+        executor.execute_action(actions)
     assert caught.value is signal
     assert current_journal() is None
     assert [event.status for event in read_events(cancelled)] == ["incomplete", "cancelled"]
@@ -144,8 +145,9 @@ def test_schema_exposes_capture_body_and_linter_checks_it(tmp_path):
     actions = [_capture(tmp_path / "bad.jsonl", [["AC_unknown_journal_body"]])]
     issues = lint_actions(actions)
     assert any(issue.code == "unknown-command" for issue in issues)
+    known = executor.known_commands()
     with pytest.raises(AutoControlActionException):
-        validate_actions(actions, executor.known_commands())
+        validate_actions(actions, known)
 
 
 @pytest.mark.parametrize("name", ["AC_journal_capture", "AC_journal_read"])
@@ -209,10 +211,10 @@ def test_resolved_secrets_cannot_enter_capture_identifiers_or_destination(tmp_pa
     monkeypatch.setattr(default_secret_manager, "get", lambda name: "fake-private-metadata")
     path = tmp_path / ("leaked-${secrets.PRIVATE}.jsonl" if field == "path" else "metadata.jsonl")
     metadata = {} if field == "path" else {field: "${secrets.PRIVATE}"}
+    actions = [_capture(path, [["AC_set_var", {"name": "effect", "value": 1}]], **metadata)]
     with execution_scope():
         with pytest.raises(ActionJournalError, match="resolved secret"):
-            executor.execute_action([_capture(path, [["AC_set_var", {"name": "effect", "value": 1}]], **metadata)],
-                                    raise_on_error=True)
+            executor.execute_action(actions, raise_on_error=True)
         assert "effect" not in executor.variables
     assert list(tmp_path.glob("*.jsonl")) == []
 

@@ -92,8 +92,9 @@ def test_failed_queue_acceptance_fences_attempt_without_input(service, monkeypat
     client, instance, target = service
     batch = client.call("dag", {"operation": "register", "request": {"definition": graph()}})
     monkeypatch.setattr(instance._dag_jobs.queue, "add", Mock(side_effect=AgentTaskError("fixture queue failure")))
+    definition = graph()
     with pytest.raises(AgentTaskError, match="fixture queue failure"):
-        submit(client, batch, graph())
+        submit(client, batch, definition)
     assert read(instance, batch)["state"] == "waiting_review"
     assert target.count == 0
 
@@ -102,9 +103,10 @@ def test_background_requires_an_explicit_service_and_never_runs_on_import(tmp_pa
     instance = AgentRuntime(tmp_path / "runtime.sqlite", targets={"fixture": object()})
     try:
         batch = instance.batches.control("register", {"definition": graph()})
+        definition = graph()
         with pytest.raises(AgentTaskError, match="explicitly started service"):
             instance.batches.control("run_background", {"batch_id": batch["batch_id"],
-                "definition": graph(), "max_parallel": 4})
+                "definition": definition, "max_parallel": 4})
         assert instance.batches.control("get", {"batch_id": batch["batch_id"]})["state"] == "registered"
     finally:
         instance.close()

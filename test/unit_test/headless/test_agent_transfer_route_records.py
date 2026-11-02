@@ -12,8 +12,9 @@ def test_only_128_durable_routes_can_be_retained(tmp_path, monkeypatch):
     with records.store.connection(write=True) as connection:
         for number in range(128):
             records.reserve(connection, record(number, kind='route', account=None))
+    extra = record(129, kind='route', account=None)
     with records.store.connection(write=True) as connection, pytest.raises(AgentTaskError, match='quota'):
-        records.reserve(connection, record(129, kind='route', account=None))
+        records.reserve(connection, extra)
 
 
 def test_route_expiry_frees_only_its_metadata_and_keeps_key_revocation_fences(tmp_path, monkeypatch):

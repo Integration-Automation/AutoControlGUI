@@ -214,8 +214,9 @@ def test_a_live_control_lease_prevents_a_second_worker_from_sending_the_same_int
 def test_pre_cancelled_peer_control_never_opens_an_outbox(tmp_path):
     path = tmp_path / 'never-opened.sqlite3'
     client = ac.CausalSyncClient('https://controlled.invalid', user_id='alice')
+    queue = ac.SyncOutbox(path)
     with pytest.raises(CancelledError):
-        client.control(ac.SyncOutbox(path), 'register', cancelled=lambda: True)
+        client.control(queue, 'register', cancelled=lambda: True)
     assert not path.exists()
 
 
@@ -336,8 +337,9 @@ def test_historical_control_request_id_never_retires_work_queued_after_its_first
     assert len(calls) == before_calls
     assert server.get('alice').revision == before_revision
     assert queue.pending(endpoint=fresh.endpoint, user_id='alice') == (fresh,)
+    reused = ac.SyncControlRequest('ack', operation_id='reviewed-resync')
     with pytest.raises(ac.ConfigSyncError):
-        client.control(queue, ac.SyncControlRequest('ack', operation_id='reviewed-resync'))
+        client.control(queue, reused)
 
 
 def test_adoption_and_pending_retirement_roll_back_when_local_receipt_storage_fails(tmp_path, monkeypatch):
@@ -373,8 +375,9 @@ def test_invalid_owned_version_one_schema_is_refused_before_migration_writes(tmp
         connection.execute('PRAGMA user_version=1')
         connection.execute('CREATE TABLE important (value TEXT)')
         connection.execute("INSERT INTO important VALUES ('preserve')")
+    queue = ac.SyncOutbox(path)
     with pytest.raises(ac.ConfigStoreError):
-        ac.SyncOutbox(path).status(endpoint='https://controlled.invalid', user_id='alice')
+        queue.status(endpoint='https://controlled.invalid', user_id='alice')
     with sqlite3.connect(path) as connection:
         assert connection.execute('PRAGMA user_version').fetchone()[0] == 1
         assert connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall() == [('important',)]

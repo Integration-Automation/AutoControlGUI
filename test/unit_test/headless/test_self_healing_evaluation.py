@@ -159,13 +159,17 @@ def test_strategy_and_observer_errors_propagate_without_partial_report():
             seen.append(sample.sample_id)
             raise signal
 
+    def observer(_):
+        raise signal
+
     samples = [EvaluationSample("first", png()), EvaluationSample("second", png())]
+    strategies = {"v1": Failure()}
     with pytest.raises(RuntimeError) as caught:
-        evaluate_locators(samples, {"v1": Failure()})
+        evaluate_locators(samples, strategies)
     assert caught.value is signal
     assert seen == ["first"]
     with pytest.raises(RuntimeError) as caught:
-        evaluate_locators(samples, {"v1": Failure()}, observer=lambda _: (_ for _ in ()).throw(signal))
+        evaluate_locators(samples, strategies, observer=observer)
     assert caught.value is signal
     assert seen == ["first"]
 
@@ -236,8 +240,9 @@ def test_masked_snapshot_remains_safe_after_secret_scope_closes(tmp_path):
 
 def test_constant_template_and_outside_vlm_point_are_refused():
     sample = EvaluationSample("probe", png())
+    template_locator = TemplateFrameLocator(png())
     with pytest.raises(HealingEvaluationError, match="constant"):
-        TemplateFrameLocator(png()).locate(sample)
+        template_locator.locate(sample)
 
     class Backend(VLMBackend):
         available = True
@@ -245,8 +250,9 @@ def test_constant_template_and_outside_vlm_point_are_refused():
         def locate(self, *_args, **_kwargs):
             return 10000, 0
 
+    vlm_locator = VLMFrameLocator(Backend(), "probe")
     with pytest.raises(HealingEvaluationError, match="outside"):
-        VLMFrameLocator(Backend(), "probe").locate(sample)
+        vlm_locator.locate(sample)
 
 
 @pytest.mark.parametrize("payload", [

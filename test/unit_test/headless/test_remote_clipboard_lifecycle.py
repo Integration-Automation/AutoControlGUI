@@ -147,8 +147,9 @@ def test_clipboard_receiver_cannot_retarget_a_dead_original_peer_or_accept_unown
     peer = type('Peer', (), {})()
     receiver.bind(peer)
     del peer
+    replacement = type('Replacement', (), {})()
     with pytest.raises(ClipboardSyncError, match='already bound'):
-        receiver.bind(type('Replacement', (), {})())
+        receiver.bind(replacement)
     receiver = ClipboardReceiver(DeferredAuthorization.capture(), pending.append)
     with pytest.raises(ClipboardSyncError, match='weak references'):
         receiver.bind(object())
@@ -170,8 +171,9 @@ def test_clipboard_callback_boundaries_preserve_wrapped_original_control_objects
     else:
         receiver = host_handler(encode_text('text'), [])
         receiver._host._apply_clipboard = interrupted
+    payload = encode_text('text')
     with pytest.raises(type(original)) as caught:
-        receiver._handle_clipboard_payload(encode_text('text'))
+        receiver._handle_clipboard_payload(payload)
     assert caught.value is original
 
 
@@ -189,8 +191,9 @@ def test_clipboard_send_does_not_migrate_to_a_replacement_channel_during_encodin
         return encode(data)
 
     monkeypatch.setattr(viewer_module, 'encode_' + kind, replaced)
+    send = getattr(viewer, 'send_clipboard_' + kind)
     with pytest.raises(ConnectionError):
-        getattr(viewer, 'send_clipboard_' + kind)(value)
+        send(value)
     assert old == [], 'a clipboard send adopted the replacement transport'
     assert new == [], 'a clipboard send adopted the replacement transport'
 

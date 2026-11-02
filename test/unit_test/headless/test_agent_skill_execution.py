@@ -157,8 +157,9 @@ def test_multiple_real_recovery_segments_match_the_complete_original_plan(execut
 @pytest.mark.parametrize('execution', ['extra'], indirect=True)
 def test_a_successful_different_recovery_plan_cannot_publish_the_original_candidate(execution):
     assert execution.runtime.get(execution.child_id).state == 'succeeded'
+    request = review_request(execution)
     with pytest.raises(AgentTaskError, match='outside the original candidate'):
-        execution.runtime.skills.control('review_execution', review_request(execution))
+        execution.runtime.skills.control('review_execution', request)
     assert execution.runtime.skills.control('get', {'candidate_id': execution.candidate['id']})['state'] == 'draft'
 
 

@@ -219,8 +219,9 @@ def test_configured_network_credential_is_known_before_capturing_source_data(tmp
     config['profiles'] = [{'kind': 'settings', 'state_path': str(tmp_path / 'desktop/state.sqlite3'),
                            'source': {'path': str(source)}}]
     monkeypatch.setenv('WORKSPACE_CREDENTIAL', 'short-lease-key')
+    workspace = ac.SyncWorkspace(config)
     with pytest.raises(ac.ConfigSyncError, match='credential'):
-        ac.SyncWorkspace(config).synchronize(options={**OPTIONS, 'secret_env': 'WORKSPACE_CREDENTIAL'})
+        workspace.synchronize(options={**OPTIONS, 'secret_env': 'WORKSPACE_CREDENTIAL'})
     assert not transport['calls']
     for path in (tmp_path / 'desktop').glob('*.sqlite3'):
         assert b'short-lease-key' not in path.read_bytes()
@@ -239,8 +240,9 @@ def test_credential_rotation_is_revalidated_before_preparing_or_sending_an_edit(
             monkeypatch.setenv('WORKSPACE_CREDENTIAL', 'becomes-secret')
     transport['after'] = rotate
     transport['calls'].clear()
+    reloaded = ac.SyncWorkspace(config)
     with pytest.raises(ac.SyncWorkspaceError, match='snapshot'):
-        ac.SyncWorkspace(config).synchronize(options={**OPTIONS, 'secret_env': 'WORKSPACE_CREDENTIAL'})
+        reloaded.synchronize(options={**OPTIONS, 'secret_env': 'WORKSPACE_CREDENTIAL'})
     assert all(call['method'] == 'GET' for call in transport['calls'])
     queue = ac.SyncOutbox(config['outbox_path'])
     assert all(item.prepared is None for item in queue.pending(endpoint=ENDPOINT, user_id='alice'))
@@ -281,8 +283,9 @@ def test_second_coordinator_cannot_capture_while_the_first_owns_the_namespace(tm
     worker.start()
     try:
         assert entered.wait(5)
+        second = ac.SyncWorkspace(config)
         with pytest.raises(ac.SyncWorkspaceError, match='active'):
-            ac.SyncWorkspace(config).capture()
+            second.capture()
     finally:
         release.set()
         worker.join(timeout=10)
@@ -400,8 +403,10 @@ def test_resync_baseline_and_control_intent_roll_back_together_on_a_late_failure
     with sqlite3.connect(config['outbox_path']) as connection:
         connection.execute("CREATE TRIGGER reject_second_baseline BEFORE INSERT ON sync_workspace_baselines "
                            "WHEN NEW.kind='settings' BEGIN SELECT RAISE(ABORT,'controlled baseline failure'); END")
+    workspace = ac.SyncWorkspace(config)
+    request = ac.SyncControlRequest('full_resync', discard_pending=True)
     with pytest.raises(ac.ConfigStoreError):
-        ac.SyncWorkspace(config).control(ac.SyncControlRequest('full_resync', discard_pending=True), options=OPTIONS)
+        workspace.control(request, options=OPTIONS)
     with sqlite3.connect(config['outbox_path']) as connection:
         assert connection.execute('SELECT count(*) FROM sync_workspace_baselines').fetchone()[0] == 0
         assert connection.execute('SELECT count(*) FROM sync_controls').fetchone()[0] == 0
