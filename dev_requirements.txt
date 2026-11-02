@@ -22,7 +22,7 @@ python-pptx==1.0.2
 # Quality tooling — used by .github/workflows/quality.yml and locally.
 ruff==0.17.1
 bandit==1.9.4
-pytest==9.1.1
+pytest==9.2.0
 pytest-timeout==2.4.0
 pytest-rerunfailures==16.7
 # `coverage`, not `pytest-cov`: this package registers a `pytest11` entry
