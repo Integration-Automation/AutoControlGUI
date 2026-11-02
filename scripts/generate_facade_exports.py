@@ -21,6 +21,8 @@ SPECIAL = {
     PACKAGES[0]: {"keyboard_keys_table", "start_autocontrol_gui"},
     PACKAGES[1]: {"registry", "is_webrtc_available"},
 }
+_PACKAGE_INIT = "__init__.py"
+_SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
 
 
 @dataclass(frozen=True)
@@ -38,6 +40,9 @@ class Binding:
         return f"AttributeBinding({owners.get(self.owner, repr(self.owner))}, {self.attribute!r})"
 
 
+Inspection = tuple[list[str], dict[str, Binding], dict[str, Binding]]
+
+
 def owner_constants(bindings: dict[str, Binding]) -> dict[str, str]:
     """Name every owner module that more than one attribute binding repeats."""
     uses: dict[str, int] = {}
@@ -51,7 +56,7 @@ def owner_constants(bindings: dict[str, Binding]) -> dict[str, str]:
 def source_path(module: str) -> Path:
     """Require an actual package or module source file."""
     path = ROOT.joinpath(*module.split("."))
-    for candidate in (path.with_suffix(".py"), path / "__init__.py"):
+    for candidate in (path.with_suffix(".py"), path / _PACKAGE_INIT):
         if candidate.is_file():
             return candidate
     raise ValueError(f"missing owner source: {module}")
@@ -63,39 +68,58 @@ def read_tree(module: str) -> ast.Module:
     return ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
 
 
+def _import_binds(node: ast.Import | ast.ImportFrom, module: str, name: str) -> bool:
+    """Whether an import binds ``name``; a package importing its own child file does not count."""
+    for alias in node.names:
+        if (alias.asname or alias.name.split(".")[0]) != name:
+            continue
+        if isinstance(node, ast.ImportFrom) and node.module == module and alias.name == name:
+            continue
+        return True
+    return False
+
+
+def _assigns(node: ast.stmt, name: str) -> bool:
+    """Whether a plain assignment, or an annotated one with a value, binds ``name``."""
+    if isinstance(node, ast.Assign):
+        return any(name in target_names(target) for target in node.targets)
+    if isinstance(node, ast.AnnAssign):
+        return node.value is not None and name in target_names(node.target)
+    return False
+
+
+def _nested_statements(node: ast.stmt) -> list[ast.stmt]:
+    """Statements of every block nested in ``node`` that still runs in the module namespace."""
+    statements = [statement for field in ("body", "orelse", "finalbody") for statement in getattr(node, field, [])]
+    if isinstance(node, ast.Try):
+        statements.extend(statement for handler in node.handlers for statement in handler.body)
+    return statements
+
+
 def defines_attribute(module: str, name: str) -> bool:
     """A package's re-export takes precedence over a same-named child file."""
     pending = list(read_tree(module).body)
     while pending:
         node = pending.pop()
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        if isinstance(node, _SCOPES):
             if node.name == name:
                 return True
             continue
-        if isinstance(node, (ast.ImportFrom, ast.Import)):
-            for alias in node.names:
-                if (alias.asname or alias.name.split(".")[0]) == name:
-                    if isinstance(node, ast.ImportFrom) and node.module == module and alias.name == name:
-                        continue
-                    return True
-        if isinstance(node, ast.Assign) and any(name in target_names(target) for target in node.targets):
+        if isinstance(node, (ast.ImportFrom, ast.Import)) and _import_binds(node, module, name):
             return True
-        if isinstance(node, ast.AnnAssign) and node.value is not None and name in target_names(node.target):
+        if _assigns(node, name):
             return True
-        for field in ("body", "orelse", "finalbody"):
-            pending.extend(getattr(node, field, []))
-        if isinstance(node, ast.Try):
-            pending.extend(statement for handler in node.handlers for statement in handler.body)
+        pending.extend(_nested_statements(node))
     return False
 
 
 def child_module(module: str, name: str) -> bool:
     """Use exact source spelling even on case-insensitive filesystems."""
     parent = source_path(module)
-    if parent.name != "__init__.py":
+    if parent.name != _PACKAGE_INIT:
         return False
     return any((path.name == name + ".py" and path.is_file())
-               or (path.name == name and (path / "__init__.py").is_file())
+               or (path.name == name and (path / _PACKAGE_INIT).is_file())
                for path in parent.parent.iterdir())
 
 
@@ -122,25 +146,36 @@ def public_names(tree: ast.Module) -> list[str]:
     return names
 
 
+def _source_module(node: ast.ImportFrom) -> str:
+    """Require an absolute import from a module that has a source file."""
+    if node.level or node.module is None:
+        raise ValueError("export declarations must use absolute source modules")
+    source_path(node.module)
+    return node.module
+
+
+def _alias_binding(module: str, attribute: str) -> Binding:
+    """Resolve an imported name to the owner's attribute, or to its child module when it defines none."""
+    is_module = not defines_attribute(module, attribute) and child_module(module, attribute)
+    if not is_module and not defines_attribute(module, attribute):
+        raise ValueError(f"missing source attribute: {module}.{attribute}")
+    return Binding(module, attribute, is_module)
+
+
 def imported_bindings(nodes: Sequence[ast.stmt]) -> dict[str, Binding]:
     """Preserve the exact imported attribute behind every explicit alias."""
     result: dict[str, Binding] = {}
     for node in nodes:
         if not isinstance(node, ast.ImportFrom):
             continue
-        if node.level or node.module is None:
-            raise ValueError("export declarations must use absolute source modules")
-        source_path(node.module)
+        module = _source_module(node)
         for alias in node.names:
             if alias.name == "*":
                 raise ValueError("wildcard export declaration")
             name = alias.asname or alias.name
             if name in result:
                 raise ValueError(f"duplicate export declaration: {name}")
-            is_module = not defines_attribute(node.module, alias.name) and child_module(node.module, alias.name)
-            if not is_module and not defines_attribute(node.module, alias.name):
-                raise ValueError(f"missing source attribute: {node.module}.{alias.name}")
-            result[name] = Binding(node.module, alias.name, is_module)
+            result[name] = _alias_binding(module, alias.name)
     return result
 
 
@@ -163,9 +198,8 @@ def return_names(value: ast.expr | None) -> list[str]:
     return names
 
 
-def optional_owners(module: str) -> dict[str, Binding]:
-    """Verify each all-or-None outcome and trace it to the original owner."""
-    tree = read_tree(module)
+def _optional_loader(module: str, tree: ast.Module) -> ast.FunctionDef:
+    """Require exactly one concretely typed ``_load`` function."""
     loaders = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "_load"]
     if len(loaders) != 1:
         raise ValueError(f"{module}: expected one _load function")
@@ -173,13 +207,22 @@ def optional_owners(module: str) -> dict[str, Binding]:
     if loader.returns is None or any(isinstance(node, ast.Name) and node.id == "Any"
                                      for node in ast.walk(loader.returns)):
         raise ValueError(f"{module}: optional result requires concrete types")
+    return loader
+
+
+def _loader_statements(module: str, loader: ast.FunctionDef) -> tuple[ast.Try, ast.Return]:
+    """Require one import ``try`` followed by one ``return``, after an optional docstring."""
     body = loader.body
     if (body and isinstance(body[0], ast.Expr)
             and isinstance(body[0].value, ast.Constant) and isinstance(body[0].value.value, str)):
         body = body[1:]
     if len(body) != 2 or not isinstance(body[0], ast.Try) or not isinstance(body[1], ast.Return):
         raise ValueError(f"{module}: optional loader must be one import try and an object return")
-    attempt = body[0]
+    return body[0], body[1]
+
+
+def _failure_handler(module: str, attempt: ast.Try) -> ast.ExceptHandler:
+    """Require that only ImportError, through one plain return, ends the direct-import attempt."""
     if attempt.orelse or attempt.finalbody or len(attempt.handlers) != 1:
         raise ValueError(f"{module}: unsupported optional failure policy")
     handler = attempt.handlers[0]
@@ -189,89 +232,129 @@ def optional_owners(module: str) -> dict[str, Binding]:
         raise ValueError(f"{module}: failure must return the complete None outcome")
     if not all(isinstance(node, ast.ImportFrom) for node in attempt.body):
         raise ValueError(f"{module}: optional loader must import original owners directly")
-    imports = imported_bindings(attempt.body)
-    returned = return_names(body[1].value)
-    failed = ast.literal_eval(handler.body[0].value)
-    if failed != (None if len(returned) == 1 else (None,) * len(returned)):
-        raise ValueError(f"{module}: failure changes the all-None group")
+    return handler
+
+
+def _outcome_targets(module: str, tree: ast.Module) -> list[str]:
+    """Require one module-level assignment that unpacks the whole ``_load()`` outcome at once."""
     assignments = [node for node in tree.body if isinstance(node, ast.Assign)
                    and isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name)
                    and node.value.func.id == "_load"]
     if len(assignments) != 1 or len(assignments[0].targets) != 1:
         raise ValueError(f"{module}: expected one atomic outcome assignment")
-    exported = target_names(assignments[0].targets[0])
+    return target_names(assignments[0].targets[0])
+
+
+def optional_owners(module: str) -> dict[str, Binding]:
+    """Verify each all-or-None outcome and trace it to the original owner."""
+    tree = read_tree(module)
+    attempt, result = _loader_statements(module, _optional_loader(module, tree))
+    handler = _failure_handler(module, attempt)
+    imports = imported_bindings(attempt.body)
+    returned = return_names(result.value)
+    failed = ast.literal_eval(handler.body[0].value)
+    if failed != (None if len(returned) == 1 else (None,) * len(returned)):
+        raise ValueError(f"{module}: failure changes the all-None group")
+    exported = _outcome_targets(module, tree)
     if len(exported) != len(returned) or set(returned) != set(imports):
         raise ValueError(f"{module}: incomplete optional owner/result mapping")
     return dict(zip(exported, (imports[name] for name in returned)))
 
 
-def inspect_package(package: str) -> tuple[list[str], dict[str, Binding], dict[str, Binding]]:
+def _resolved_owners(bindings: dict[str, Binding]) -> dict[str, Binding]:
+    """Replace each optional-group declaration by the original owner its loader imports."""
+    owners = dict(bindings)
+    for name, binding in bindings.items():
+        if not binding.owner.startswith(OPTIONAL):
+            continue
+        group = optional_owners(binding.owner)
+        if binding.attribute not in group:
+            raise ValueError(f"{name}: missing optional outcome")
+        owners[name] = group[binding.attribute]
+        declared_group = {item.attribute for item in bindings.values() if item.owner == binding.owner}
+        if declared_group != set(group):
+            raise ValueError(f"{binding.owner}: facade does not declare the complete optional group")
+    return owners
+
+
+def _check_child_collisions(package: str, names: list[str]) -> None:
+    """Every public name that is also a child module's name must be a known, classified one."""
+    directory = source_path(package).parent
+    children = {path.stem for path in directory.glob("*.py") if path.stem != "__init__"}
+    children |= {path.name for path in directory.iterdir() if (path / _PACKAGE_INIT).is_file()}
+    collisions = set(names) & children
+    expected = {"registry", "signaling_client"} if package == PACKAGES[1] else set()
+    if collisions != expected:
+        raise ValueError(f"{package}: unclassified child collisions: {collisions ^ expected}")
+
+
+def _remote_eager_bindings(package: str, tree: ast.Module, bindings: dict[str, Binding]) -> dict[str, Binding]:
+    """The remote desktop package keeps its eager registry and its actual signaling_client module."""
+    eager = imported_bindings([node for node in tree.body if isinstance(node, ast.ImportFrom)
+                               and node.module == package + ".registry"])
+    if eager != {"registry": Binding(package + ".registry", "registry")}:
+        raise ValueError("remote registry must retain its eager singleton binding")
+    if bindings["signaling_client"] != Binding(package, "signaling_client", True):
+        raise ValueError("signaling_client must remain the actual child module")
+    return eager
+
+
+def inspect_package(package: str) -> Inspection:
     """Classify every public export and every immediate child-name collision."""
     tree = read_tree(package)
     names = public_names(tree)
     bindings = declarations(tree)
     if set(bindings) | SPECIAL[package] != set(names) or set(bindings) & SPECIAL[package]:
         raise ValueError(f"{package}: public declarations differ from __all__ or special exports")
-    owners = dict(bindings)
-    for name, binding in bindings.items():
-        if binding.owner.startswith(OPTIONAL):
-            group = optional_owners(binding.owner)
-            if binding.attribute not in group:
-                raise ValueError(f"{name}: missing optional outcome")
-            owners[name] = group[binding.attribute]
-            declared_group = {item.attribute for item in bindings.values() if item.owner == binding.owner}
-            if declared_group != set(group):
-                raise ValueError(f"{binding.owner}: facade does not declare the complete optional group")
-    directory = source_path(package).parent
-    children = {path.stem for path in directory.glob("*.py") if path.stem != "__init__"}
-    children |= {path.name for path in directory.iterdir() if (path / "__init__.py").is_file()}
-    collisions = set(names) & children
-    expected = {"registry", "signaling_client"} if package == PACKAGES[1] else set()
-    if collisions != expected:
-        raise ValueError(f"{package}: unclassified child collisions: {collisions ^ expected}")
+    owners = _resolved_owners(bindings)
+    _check_child_collisions(package, names)
     if package == PACKAGES[1]:
-        eager = imported_bindings([node for node in tree.body if isinstance(node, ast.ImportFrom)
-                                  and node.module == package + ".registry"])
-        if eager != {"registry": Binding(package + ".registry", "registry")}:
-            raise ValueError("remote registry must retain its eager singleton binding")
-        owners.update(eager)
-        if bindings["signaling_client"] != Binding(package, "signaling_client", True):
-            raise ValueError("signaling_client must remain the actual child module")
+        owners.update(_remote_eager_bindings(package, tree, bindings))
     return names, bindings, owners
 
 
-def compare_baseline(path: Path, assignments_path: Path,
-                     inspected: dict[str, tuple[list[str], dict[str, Binding], dict[str, Binding]]]) -> None:
+def _original_loader_groups(package: str, original: dict, assignments: dict,
+                            owners: dict[str, Binding]) -> set[frozenset[Binding]]:
+    """Check every original optional alias against the current owners; return the original groups."""
+    previous = set()
+    for loader_name, loader in original["optional_loaders"].items():
+        loader_tree = ast.parse(loader["source"])
+        imported = imported_bindings([node for node in ast.walk(loader_tree)
+                                      if isinstance(node, ast.ImportFrom)])
+        previous.add(frozenset(imported.values()))
+        returned = return_names(loader_tree.body[0].body[-1].value)
+        targets = assignments[loader_name]
+        if len(targets) != len(returned):
+            raise ValueError(f"{loader_name}: incomplete original assignment contract")
+        for public, local in zip(targets, returned):
+            if owners.get(public) != imported[local]:
+                raise ValueError(f"{package}.{public}: original optional owner or alias changed")
+    return previous
+
+
+def _compare_package(package: str, inspection: Inspection, original: dict, assignments: dict) -> None:
+    """Compare one package's public order, required owners and optional groups with its baseline."""
+    names, bindings, owners = inspection
+    if names != original["ordered_exports"]:
+        raise ValueError(f"{package}: ordered public contract changed")
+    for name, expected in original["required_bindings"].items():
+        actual = owners.get(name)
+        if actual is None or (actual.owner, actual.attribute) != (expected["owner"], expected["attribute"]):
+            raise ValueError(f"{package}.{name}: original owner or alias changed")
+    current_groups = {binding.owner for binding in bindings.values() if binding.owner.startswith(OPTIONAL)}
+    current = {frozenset(optional_owners(group).values()) for group in current_groups}
+    if current != _original_loader_groups(package, original, assignments, owners):
+        raise ValueError(f"{package}: original optional ownership or grouping changed")
+
+
+def compare_baseline(path: Path, assignments_path: Path, inspected: dict[str, Inspection]) -> None:
     """Compare all original aliases and loader group membership, not just counts."""
     # Both paths are this repository's own baseline files, named on the command line by the maintainer.
     baseline = json.loads(path.read_text(encoding="utf-8"))["packages"]  # NOSONAR pythonsecurity:S8707
     assignments_text = assignments_path.read_text(encoding="utf-8")  # NOSONAR pythonsecurity:S8707
     assignments = json.loads(assignments_text)["optional_assignments"]
-    for package, (names, _bindings, owners) in inspected.items():
-        original = baseline[package.replace(".", "/")]
-        if names != original["ordered_exports"]:
-            raise ValueError(f"{package}: ordered public contract changed")
-        for name, expected in original["required_bindings"].items():
-            actual = owners.get(name)
-            if actual is None or (actual.owner, actual.attribute) != (expected["owner"], expected["attribute"]):
-                raise ValueError(f"{package}.{name}: original owner or alias changed")
-        current_groups = {binding.owner for binding in _bindings.values() if binding.owner.startswith(OPTIONAL)}
-        current = {frozenset(optional_owners(group).values()) for group in current_groups}
-        previous = set()
-        for loader_name, loader in original["optional_loaders"].items():
-            loader_tree = ast.parse(loader["source"])
-            imported = imported_bindings([node for node in ast.walk(loader_tree)
-                                          if isinstance(node, ast.ImportFrom)])
-            previous.add(frozenset(imported.values()))
-            returned = return_names(loader_tree.body[0].body[-1].value)
-            targets = assignments[loader_name]
-            if len(targets) != len(returned):
-                raise ValueError(f"{loader_name}: incomplete original assignment contract")
-            for public, local in zip(targets, returned):
-                if owners.get(public) != imported[local]:
-                    raise ValueError(f"{package}.{public}: original optional owner or alias changed")
-        if current != previous:
-            raise ValueError(f"{package}: original optional ownership or grouping changed")
+    for package, inspection in inspected.items():
+        _compare_package(package, inspection, baseline[package.replace(".", "/")], assignments)
 
 
 def binding_lines(name: str, binding: Binding, owners: dict[str, str]) -> list[str]:
