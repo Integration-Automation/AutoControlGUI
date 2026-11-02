@@ -137,9 +137,9 @@ def test_unknown_history_owner_prevents_the_action_before_any_effect(store, tmp_
     from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
     reached = []
     monkeypatch.setitem(executor.event_dict, "AC_history_probe", lambda: reached.append(True))
-    with bound_history(HistoryBinding(store, 999)), pytest.raises(ActionJournalError, match="history"):
-        with journal_scope(ActionJournal(tmp_path / "no-effect.jsonl")):
-            executor.execute_action([["AC_history_probe"]])
+    scope = journal_scope(ActionJournal(tmp_path / "no-effect.jsonl"))
+    with bound_history(HistoryBinding(store, 999)), pytest.raises(ActionJournalError, match="history"), scope:
+        executor.execute_action([["AC_history_probe"]])
     assert reached == []
 
 
@@ -148,10 +148,10 @@ def test_history_bindings_restore_on_nested_failure_and_explicitly_clear_ambient
     first = HistoryBinding(store, 1)
     second = HistoryBinding(store, 2)
     with bound_history(first):
-        with pytest.raises(RuntimeError):
-            with bound_history(second):
-                assert current_history() is second
-                raise RuntimeError("controlled")
+        nested, failure = bound_history(second), RuntimeError("controlled")
+        with pytest.raises(RuntimeError), nested:
+            assert current_history() is second
+            raise failure
         assert current_history() is first
         with bound_history(None):
             assert current_history() is None

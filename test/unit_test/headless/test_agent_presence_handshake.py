@@ -127,8 +127,9 @@ def test_client_refuses_invalid_first_frame_without_disclosing_proof(field, valu
     frame = hello()
     frame[field] = value
     channel = Channel(security, [frame])
+    handshake = module()
     with pytest.raises(AgentTaskError):
-        module().client_handshake(channel, security)
+        handshake.client_handshake(channel, security)
     assert not channel.sent
     assert channel.closed
     assert security.process.closed
@@ -145,8 +146,9 @@ def test_client_refuses_buffered_or_changed_final_proof(field, value):
         return frame
 
     channel = Channel(security, [hello(), forged])
+    handshake = module()
     with pytest.raises(AgentTaskError):
-        module().client_handshake(channel, security)
+        handshake.client_handshake(channel, security)
     assert channel.closed
     assert security.process.closed
 
@@ -162,8 +164,9 @@ def test_server_refuses_old_challenge_wrong_native_birth_and_unknown_fields(fiel
         return frame
 
     channel = Channel(security, [forged])
+    handshake = module()
     with pytest.raises(AgentTaskError):
-        module().server_handshake(channel, security, GENERATION)
+        handshake.server_handshake(channel, security, GENERATION)
     assert len(channel.sent) == 1
     assert channel.closed
     assert security.process.closed
@@ -178,11 +181,13 @@ def test_peer_that_exits_during_challenge_cannot_authenticate(server):
         return server_proof(channel) if server else client_final(channel)
 
     channel = Channel(security, [dying] if server else [hello(), dying])
+    handshake = module()
+    if server:
+        perform, arguments = handshake.server_handshake, (channel, security, GENERATION)
+    else:
+        perform, arguments = handshake.client_handshake, (channel, security)
     with pytest.raises(AgentTaskError):
-        if server:
-            module().server_handshake(channel, security, GENERATION)
-        else:
-            module().client_handshake(channel, security)
+        perform(*arguments)
     assert channel.closed
     assert security.process.closed
 
@@ -192,7 +197,8 @@ def test_peer_that_exits_during_challenge_cannot_authenticate(server):
 def test_handshake_uses_closed_bounded_json_frames_and_closes_on_parse_failure(raw):
     security = Security()
     channel = Channel(security, [raw])
+    handshake = module()
     with pytest.raises(AgentTaskError):
-        module().client_handshake(channel, security)
+        handshake.client_handshake(channel, security)
     assert channel.closed
     assert security.process.closed

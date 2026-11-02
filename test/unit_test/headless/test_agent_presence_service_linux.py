@@ -46,8 +46,9 @@ def test_an_endpoint_round_trips_through_its_wire_form():
     {"listener_process": {"pid": 42, "uid": 1000, "gid": 1000, "birth": 99, "user_namespace": "n"}},
 ])
 def test_a_malformed_endpoint_is_refused_before_any_connection(change):
+    malformed = _wire(**change)
     with pytest.raises(AgentTaskError):
-        endpoint_from_wire(_wire(**change))
+        endpoint_from_wire(malformed)
 
 
 def test_the_wire_form_names_every_field_of_the_endpoint_types():
@@ -68,8 +69,9 @@ def test_without_an_owned_launch_there_is_nothing_to_connect_to():
 
 
 def test_listening_needs_a_private_runtime_directory():
+    pipe = LinuxPresencePipe(runtime_directory="")
     with pytest.raises(AgentTaskError, match="XDG_RUNTIME_DIR"):
-        LinuxPresencePipe(runtime_directory="").listen()
+        pipe.listen()
 
 
 def _broker_script(clock):

@@ -94,7 +94,8 @@ def test_source_process_is_inert_and_uses_fixed_owned_channel_argv_before_bootst
                                b'{"id":"x","id":"x"}\n', b'[]\n'])
 def test_private_owner_envelope_refuses_incomplete_or_invalid_identity_before_startup(raw):
     calls = []
+    worker, incoming, outgoing = module(), io.BytesIO(raw), io.BytesIO()
     with pytest.raises(AgentTaskError):
-        module().run(io.BytesIO(raw), io.BytesIO(), source_factory=lambda: calls.append('source'),
-                     pipe_factory=lambda **_kwargs: calls.append('pipe'))
+        worker.run(incoming, outgoing, source_factory=lambda: calls.append('source'),
+                   pipe_factory=lambda **_kwargs: calls.append('pipe'))
     assert not calls

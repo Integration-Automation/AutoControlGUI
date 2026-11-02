@@ -106,8 +106,9 @@ def test_pending_connect_cancellation_restores_socket_mode_without_waiting_for_c
         return [], [], []
 
     monkeypatch.setattr(cancellable_io, 'select', SimpleNamespace(select=pending))
+    connection = PendingSocket()
     with cancellation_scope(token), pytest.raises(CancelledError):
-        cancellable_io.connect(PendingSocket(), '/controlled', 10)
+        cancellable_io.connect(connection, '/controlled', 10)
     assert calls[-1] == ('timeout', 10)
     assert len([item for item in calls if item[0] == 'connect']) == 1
     assert 0 < next(value for kind, value in calls if kind == 'poll') <= 0.1

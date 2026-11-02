@@ -66,7 +66,8 @@ def test_asset_mcp_live_authority_change_stops_before_publication(tmp_path, monk
     monkeypatch.setattr(ac.DirectoryAssetTransport, 'open', revoke)
     tool = next(item for item in build_default_tool_registry() if item.name == 'ac_sync_assets')
     expected = OperationCancelledError if change == 'cancel' else PathNotAllowedError
+    arguments = (manifest.to_dict(), str(source), str(transport.target_root))
     with pytest.raises(expected):
-        tool.handler(manifest.to_dict(), str(source), str(transport.target_root), ctx=ctx)
+        tool.handler(*arguments, ctx=ctx)
     assert not list(transport.target_root.glob('generation-*'))
     assert not list(transport.target_root.glob('.incoming-*'))

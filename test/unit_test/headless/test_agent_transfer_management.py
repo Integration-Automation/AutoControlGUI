@@ -49,8 +49,9 @@ def test_foreign_review_reply_is_exact_typed_and_binds_the_requested_source(chan
     peer = TransferPeer(lambda *_args: deepcopy(reply))
     manage = getattr(peer, 'manage', None)
     assert callable(manage), 'a bounded closed management method must validate replies before routing'
+    request = source_request()
     with pytest.raises(AgentTaskError):
-        manage('source', 'f' * 64, 'review_export', source_request(), 3)
+        manage('source', 'f' * 64, 'review_export', request, 3)
 
 
 def test_valid_closed_management_review_preserves_only_the_exact_public_envelope():

@@ -232,11 +232,12 @@ def test_receive_cleanup_removes_partial_and_preserves_wrapped_control(tmp_path,
                 raise OSError('wrapped close') from original
 
     receiver._current['fh'] = FailedStream()
+    if boundary == 'write':
+        attempt, arguments = receiver.handle_message, (b'half',)
+    else:
+        attempt, arguments = receiver.close, ()
     with pytest.raises(signal) as caught:
-        if boundary == 'write':
-            receiver.handle_message(b'half')
-        else:
-            receiver.close()
+        attempt(*arguments)
     assert caught.value is original
     assert list(tmp_path.iterdir()) == []
 
@@ -253,8 +254,9 @@ def test_native_file_received_callback_preserves_wrapped_control_after_publicati
     owner.set_file_received_callback(failed)
     channel.fire('message', begin(size=4))
     channel.fire('message', b'done')
+    finished = end()
     with pytest.raises(signal) as caught:
-        channel.fire('message', end())
+        channel.fire('message', finished)
     assert caught.value is original
     assert (inbox / 'payload.bin').read_bytes() == b'done'
     assert list(inbox.glob('*.part')) == []
@@ -276,8 +278,9 @@ def test_native_file_audit_preserves_wrapped_control_after_publication(endpoint,
     monkeypatch.setattr(webrtc_host, 'default_audit_log', lambda: SimpleNamespace(log=failed))
     channel.fire('message', begin(size=4))
     channel.fire('message', b'done')
+    finished = end()
     with pytest.raises(signal) as caught:
-        channel.fire('message', end())
+        channel.fire('message', finished)
     assert caught.value is original
     assert (inbox / 'payload.bin').read_bytes() == b'done'
     assert list(inbox.glob('*.part')) == []

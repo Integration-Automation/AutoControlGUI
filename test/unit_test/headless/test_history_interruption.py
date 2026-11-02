@@ -107,8 +107,9 @@ def test_history_outage_cannot_replace_a_pending_hard_interruption(kind, environ
     def unavailable(*_args, **_kwargs):
         raise HistoryStoreError("controlled history outage")
     monkeypatch.setattr(history, "finish_run", unavailable)
+    fire = _fire(kind, script, execute)
     with pytest.raises(KeyboardInterrupt) as raised:
-        _fire(kind, script, execute)()
+        fire()
     assert raised.value is failure
     assert history.list_runs()[0].status == STATUS_RUNNING
     assert snapshots == []

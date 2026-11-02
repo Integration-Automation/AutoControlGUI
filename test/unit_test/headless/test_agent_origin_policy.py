@@ -79,9 +79,10 @@ def test_live_origin_survives_runtime_restart_and_task_scope_never_expands(tmp_p
 @pytest.mark.parametrize("value", ["not-an-array", [{}], [True], ["../outside"], ["a" * 32] * 17])
 def test_malformed_origin_references_fail_at_submission(tmp_path, value):
     runtime = AgentRuntime(tmp_path / "tasks.sqlite", targets={"fixture": FakeTarget()})
+    malformed = specification(options={"origin_policies": value})
     try:
         with pytest.raises(AgentTaskError):
-            runtime.submit(specification(options={"origin_policies": value}))
+            runtime.submit(malformed)
     finally:
         runtime.close()
 
@@ -163,8 +164,9 @@ def test_nested_origin_scopes_intersect_instead_of_overriding_outer_authority(tm
     runtime = AgentRuntime(tmp_path / "tasks.sqlite", targets={"fixture": FakeTarget()})
     try:
         with origin_scope(restrictive.managed_origin()), origin_scope(broad.managed_origin()):
+            escaping = specification(roots=[str(outside)])
             with pytest.raises(AgentTaskError, match="origin roots changed"):
-                runtime.submit(specification(roots=[str(outside)]))
+                runtime.submit(escaping)
             task = runtime.submit(specification(roots=[str(allowed)]))
         assert len(runtime.store.get(task.task_id)["spec"]["options"]["origin_policies"]) == 2
     finally:

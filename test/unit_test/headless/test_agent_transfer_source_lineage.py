@@ -120,16 +120,17 @@ def test_actual_ancestor_damage_invalidates_source_at_every_boundary(tmp_path, b
         exported = create_for(runtime, review) if boundary in {'export', 'chunk'} else None
         with runtime.store.connection(write=True) as connection:
             damage_lineage(connection, runtime, source, child, change)
+        if boundary == 'review':
+            attempt, arguments = review_for, (runtime, child)
+        elif boundary == 'create':
+            attempt, arguments = create_for, (runtime, review)
+        else:
+            request = {'export_id': exported['export_id']}
+            if boundary == 'chunk':
+                request['sha256'] = exported['manifest']['files'][0]['chunks'][0]
+            attempt, arguments = runtime.transfers.peer, (boundary, request)
         with pytest.raises(AgentTaskError):
-            if boundary == 'review':
-                review_for(runtime, child)
-            elif boundary == 'create':
-                create_for(runtime, review)
-            else:
-                request = {'export_id': exported['export_id']}
-                if boundary == 'chunk':
-                    request['sha256'] = exported['manifest']['files'][0]['chunks'][0]
-                runtime.transfers.peer(boundary, request)
+            attempt(*arguments)
 
 
 @pytest.mark.parametrize('boundary', ['review', 'export'])
@@ -143,11 +144,12 @@ def test_completed_original_node_rechecks_its_actual_admitting_admin(tmp_path, b
         runtime, _source, child, _output, _body, _batch = values
         exported = create_for(runtime, review_for(runtime, child)) if boundary == 'export' else None
         users.remove_user('admitting-admin')
+        if boundary == 'review':
+            attempt, arguments = review_for, (runtime, child)
+        else:
+            attempt, arguments = runtime.transfers.peer, ('export', {'export_id': exported['export_id']})
         with pytest.raises(AgentTaskError):
-            if boundary == 'review':
-                review_for(runtime, child)
-            else:
-                runtime.transfers.peer('export', {'export_id': exported['export_id']})
+            attempt(*arguments)
 
 
 def test_actual_admitting_admin_store_is_private_even_when_its_path_differs_from_the_owner(tmp_path):

@@ -187,5 +187,6 @@ def test_stdio_eof_retires_the_view_and_its_existing_callback():
     callback = server._build_call_context(1, {}).tool_catalog
     server.serve_stdio(io.StringIO(""), io.StringIO())
     assert server._disclosure_views == {}
+    view = callback()
     with pytest.raises(ToolDiscoveryError, match="closed"):
-        callback().state()
+        view.state()

@@ -53,13 +53,14 @@ def test_another_process_invalidates_existing_dag_host_authority(tmp_path, monke
         if boundary == 'binding' and change != 'removed':
             assert managed_tasks.task_host_binding('source') != pinned
             return
+        if boundary == 'binding':
+            attempt, arguments = managed_tasks.task_host_binding, ('source',)
+        elif boundary == 'connection':
+            attempt, arguments = managed_tasks.bound_task_connection, ('source', pinned)
+        else:
+            attempt, arguments = connection, ('get', {'task_id': exported['manifest']['source_task']}, 3)
         with pytest.raises(AgentTaskError):
-            if boundary == 'binding':
-                managed_tasks.task_host_binding('source')
-            elif boundary == 'connection':
-                managed_tasks.bound_task_connection('source', pinned)
-            else:
-                connection('get', {'task_id': exported['manifest']['source_task']}, 3)
+            attempt(*arguments)
 
 
 @pytest.mark.parametrize('change', ['registration', 'caller'])

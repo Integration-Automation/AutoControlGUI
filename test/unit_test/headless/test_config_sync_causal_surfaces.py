@@ -61,13 +61,14 @@ def test_private_queue_access_is_drive_but_supplied_data_transforms_are_observab
 def test_cancelled_or_confined_queue_tools_do_not_create_a_database(tmp_path,monkeypatch):
     monkeypatch.setenv('AUTOCONTROL_ALLOWED_PATH_ROOTS',str(tmp_path))
     args={'path':str(tmp_path/'queue.sqlite3'),'operation':operation().to_dict()}
+    enqueue=tools()['ac_sync_outbox_enqueue'].handler
     ctx=ToolCallContext('cancelled')
     ctx.cancelled_event.set()
     with pytest.raises(OperationCancelledError):
-        tools()['ac_sync_outbox_enqueue'].handler(**args,ctx=ctx)
+        enqueue(**args,ctx=ctx)
     ctx=ToolCallContext('confined',path_policy=PathPolicy([tmp_path/'elsewhere']))
     with pytest.raises(PathNotAllowedError):
-        tools()['ac_sync_outbox_enqueue'].handler(**args,ctx=ctx)
+        enqueue(**args,ctx=ctx)
     assert not (tmp_path/'queue.sqlite3').exists()
 
 

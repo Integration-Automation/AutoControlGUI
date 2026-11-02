@@ -53,7 +53,8 @@ def test_preview_is_passive_reports_progress_and_does_not_reuse_receipts(stopped
     assert first["approval_required"] is True
     assert first["source_completion_inherited"] is False
     assert first["source_receipts"][0]["status"] == "confirmed"
-    assert (runtime.store.get(source), runtime.store.actions(source)) == before
+    after = runtime.store.get(source), runtime.store.actions(source)
+    assert after == before
     assert target.calls == ["AC_increment"]
 
 
@@ -230,8 +231,9 @@ def test_retention_preserves_parent_evidence_until_the_successor_is_retired(stop
     with runtime.store.connection(write=True) as connection:
         connection.execute("UPDATE agent_tasks SET state='cancelled',updated=? WHERE id=?", (old, child))
     assert runtime.prune()["deleted"] == [child]
+    request = approval(runtime, source)
     with pytest.raises(AgentTaskError):
-        runtime.recovery.control("create", approval(runtime, source))
+        runtime.recovery.control("create", request)
     assert runtime.prune()["deleted"] == [source]
 
 

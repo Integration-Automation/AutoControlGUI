@@ -45,8 +45,9 @@ def test_custom_worker_retains_cancellation():
         token.cancel()
         cancellation_checkpoint()
 
+    graph = definition()
     with cancellation_scope(token), pytest.raises(CancelledError):
-        run_dag(definition(), local_runner=runner)
+        run_dag(graph, local_runner=runner)
 
 
 @pytest.mark.parametrize("change", ["remove", "demote"])

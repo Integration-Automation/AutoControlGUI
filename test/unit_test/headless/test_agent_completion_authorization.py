@@ -135,9 +135,10 @@ def test_explicit_renewal_finishes_real_files_without_reviving_the_original_orig
     assert runtime.store.get(source)['spec']['roots'] == [str(renewal.allowed)]
     assert runtime.store.get(child)['spec']['roots'] == [str(renewal.reports)]
     assert runtime.recovery.control('create_authorized_completion', request)['task_id'] == child
+    upgrade = {'task_id': child, 'snapshot': 'irrelevant',
+               'spec': runtime.store.get(child)['spec'], 'note': 'Cannot upgrade to executable recovery'}
     with pytest.raises(AgentTaskError, match='read-only'):
-        runtime.recovery.control('create', {'task_id': child, 'snapshot': 'irrelevant',
-            'spec': runtime.store.get(child)['spec'], 'note': 'Cannot upgrade to executable recovery'})
+        runtime.recovery.control('create', upgrade)
 
 
 def test_original_effect_change_inside_admission_sql_rolls_back_the_entire_reader(renewal):

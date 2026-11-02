@@ -53,9 +53,9 @@ def test_unknown_input_journal_is_never_cleared_by_opening_a_reader(tmp_path):
     before = journal.path.read_bytes()
     source = NativeDesktopTarget(resource_path=path)
     definition = spec(tmp_path)
-    with (operation_scope(TaskOperation(definition, lambda: None, None)),
-          pytest.raises(AgentTaskError, match="recovery")):
-        with source.completion_reader(definition):
+    with operation_scope(TaskOperation(definition, lambda: None, None)):
+        session = source.completion_reader(definition)
+        with pytest.raises(AgentTaskError, match="recovery"), session:
             pytest.fail("unknown witness was accepted")
     assert journal.path.read_bytes() == before
 
@@ -102,9 +102,9 @@ def test_unexpected_input_from_a_helper_is_not_acked_and_retains_quarantine(tmp_
     adapter = ReadOnlyNativeTarget(argv=[sys.executable, "-u", "-c", HELPER], resource_path=path)
     with operation_scope(TaskOperation(definition, lambda: None, None)):
         reader = CompletionReader(adapter, definition)
-        with pytest.raises(AgentTaskError):
-            with reader.session():
-                reader.observe()
+        session = reader.session()
+        with pytest.raises(AgentTaskError), session:
+            reader.observe()
         assert not reader.retired
         with pytest.raises(AgentTaskError, match="closed"):
             reader.observe()
@@ -123,9 +123,9 @@ def test_reader_refuses_nonexact_capabilities_before_any_configuration(tmp_path,
     definition = spec(tmp_path)
     with operation_scope(TaskOperation(definition, lambda: None, None)):
         reader = CompletionReader(adapter, definition)
-        with pytest.raises(AgentTaskError, match="contract"):
-            with reader.session():
-                pytest.fail("bad capability accepted")
+        session = reader.session()
+        with pytest.raises(AgentTaskError, match="contract"), session:
+            pytest.fail("bad capability accepted")
     adapter.ready.assert_not_called()
     adapter.cleanup.assert_called_once()
 
@@ -265,8 +265,9 @@ def test_reader_cannot_be_borrowed_under_another_owner_even_in_the_same_operatio
 def test_direct_readonly_proxy_uses_only_the_readonly_worker_and_refuses_unscoped_startup(tmp_path):
     adapter = ReadOnlyNativeTarget(resource_path=tmp_path / "input.lock")
     assert adapter._argv[-1] == "je_auto_control.utils.agent_runtime.readonly_worker"
+    definition = spec(tmp_path)
     with pytest.raises(AgentTaskError, match="scope"):
-        adapter.ready(spec(tmp_path))
+        adapter.ready(definition)
     assert not InputJournal(tmp_path / "input.lock").path.exists()
 
 

@@ -26,8 +26,9 @@ def test_public_facades_and_cli_forward_the_same_review_request(tmp_path, monkey
     arguments = build_parser().parse_args(["agent-task", "recovery", "preview", str(path)])
     assert run(arguments) == {"approval_required": True}
     assert call.call_count == 2
+    parser = build_parser()
     with pytest.raises(SystemExit):
-        build_parser().parse_args(["agent-task", "recovery", "preview"])
+        parser.parse_args(["agent-task", "recovery", "preview"])
 
 
 def test_real_service_authenticates_preview_and_deduplicates_explicit_creation(service, monkeypatch):

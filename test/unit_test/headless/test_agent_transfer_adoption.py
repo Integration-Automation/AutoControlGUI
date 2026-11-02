@@ -99,11 +99,12 @@ def test_source_authority_loss_after_provisional_write_prevents_approval_or_star
                 value.server.stop()
             return original(checks, approval_id, pending, commit)
         monkeypatch.setattr(DagTransferChecks, 'finish', finish)
+        if phase == 'provisional':
+            consent, arguments = approve, (value, reviewed)
+        else:
+            consent, arguments = start, (value, reviewed, approved)
         with pytest.raises(AgentTaskError):
-            if phase == 'provisional':
-                approve(value, reviewed)
-            else:
-                start(value, reviewed, approved)
+            consent(*arguments)
         with value.coordinator.store.connection() as connection:
             assert connection.execute('SELECT state FROM agent_dag_approvals').fetchone()[0] == 'cancelled'
             assert connection.execute('SELECT state FROM agent_dag_batches').fetchone()[0] == 'waiting_review'
@@ -243,11 +244,12 @@ def test_stop_all_cancels_pending_remote_consent_before_it_can_publish_an_attemp
             value.coordinator.batches.stop_all()
             return original(checks, identifier, pending, commit)
         monkeypatch.setattr(DagTransferChecks, 'finish', finish)
+        if phase == 'provisional':
+            consent, arguments = approve, (value, reviewed)
+        else:
+            consent, arguments = start, (value, reviewed, approved)
         with pytest.raises(AgentTaskError):
-            if phase == 'provisional':
-                approve(value, reviewed)
-            else:
-                start(value, reviewed, approved)
+            consent(*arguments)
         with value.coordinator.store.connection() as connection:
             assert connection.execute('SELECT state FROM agent_dag_approvals').fetchone()[0] == 'cancelled'
             assert connection.execute('SELECT state FROM agent_dag_batches').fetchone()[0] == 'waiting_review'

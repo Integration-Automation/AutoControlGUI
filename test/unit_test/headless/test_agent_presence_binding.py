@@ -61,8 +61,9 @@ def payload(binding=BINDING):
 @pytest.mark.parametrize('binding', [None, {}, {'generation': 'a' * 32},
     {'generation': True, 'lease_id': 'b' * 32}, {**BINDING, 'pid': 42}])
 def test_standard_desktop_requires_exact_host_binding_without_starting_old_fallback(worker, binding):
+    unbound = payload(binding)
     with pytest.raises(AgentTaskError):
-        worker._dispatch('configure', payload(binding))
+        worker._dispatch('configure', unbound)
     assert not Gate.instances
 
 
@@ -95,8 +96,9 @@ def test_release_only_cleanup_retires_reader_and_notice_thread_without_rearming(
     assert worker._release_owned({'keys': [], 'buttons': []}) == {'cleaned': True}
     assert Gate.instances[0].retired
     assert not worker._notice_thread.is_alive()
+    rearm = payload()
     with pytest.raises(AgentTaskError):
-        worker._dispatch('configure', payload())
+        worker._dispatch('configure', rearm)
     assert len(Gate.instances) == 1
 
 
@@ -115,11 +117,12 @@ def test_notice_start_failure_is_typed_and_closes_unstarted_reader_without_rearm
             raise RuntimeError('notice admission failed')
         original(thread)
 
+    first, rearm = payload(), payload()
     with monkeypatch.context() as patch:
         patch.setattr(threading.Thread, 'start', start)
         with pytest.raises(AgentTaskError, match='notice'):
-            worker._dispatch('configure', payload())
+            worker._dispatch('configure', first)
     assert Gate.instances[0].retired
     with pytest.raises(AgentTaskError):
-        worker._dispatch('configure', payload())
+        worker._dispatch('configure', rearm)
     assert len(Gate.instances) == 1

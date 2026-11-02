@@ -77,11 +77,12 @@ def test_intervening_edits_are_not_overwritten(revision_files, operation):
     created = create(revision_files)
     replacement = (FIXTURES / "absent.png").read_bytes()
     target.write_bytes(replacement)
+    if operation == "accept":
+        apply, arguments = ac.accept_template_candidate, (bundle, dataset, created.revision)
+    else:
+        apply, arguments = ac.revert_template_candidate, (bundle, created.revision)
     with pytest.raises(ac.TemplateRevisionConflict):
-        if operation == "accept":
-            ac.accept_template_candidate(bundle, dataset, created.revision)
-        else:
-            ac.revert_template_candidate(bundle, created.revision)
+        apply(*arguments)
     assert target.read_bytes() == replacement
 
 
@@ -100,8 +101,9 @@ def test_bundle_cannot_overwrite_existing_artifact_or_active_template(revision_f
     with pytest.raises(ac.TemplateRevisionConflict):
         create(revision_files)
     assert ac.preview_template_candidate(bundle).state.revision == created.revision
+    image = (FIXTURES / "new.png").read_bytes()
     with pytest.raises(ac.TemplateRevisionError):
-        ac.create_template_candidate(target, (FIXTURES / "new.png").read_bytes(), target)
+        ac.create_template_candidate(target, image, target)
 
 
 @pytest.mark.parametrize("labels", ["unknown", "positive_only", "miss_only", "wrong"])
@@ -321,9 +323,10 @@ def test_bundle_changed_at_final_checkpoint_cannot_commit(revision_files, monkey
             bundle.write_text(json.dumps(payload), encoding="utf-8")
 
     monkeypatch.setattr("je_auto_control.utils.self_healing.template_candidates._file_lock", lock)
+    if operation == "accept":
+        apply, arguments = ac.accept_template_candidate, (bundle, dataset, created.revision)
+    else:
+        apply, arguments = ac.revert_template_candidate, (bundle, created.revision)
     with pytest.raises(ac.TemplateRevisionConflict):
-        if operation == "accept":
-            ac.accept_template_candidate(bundle, dataset, created.revision, observer=checkpoint)
-        else:
-            ac.revert_template_candidate(bundle, created.revision, observer=checkpoint)
+        apply(*arguments, observer=checkpoint)
     assert target.read_bytes() == before

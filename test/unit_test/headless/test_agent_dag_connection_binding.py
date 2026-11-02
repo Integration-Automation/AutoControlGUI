@@ -69,9 +69,9 @@ def test_replaced_owner_file_stops_future_dispatch_and_never_sends_control_to_re
         assert other.runtime.list() == []
         saved = source.runtime.batches.control("get", {"batch_id": batch["batch_id"]})
         assert [row["phase"] for row in saved["nodes"]] == ["confirmed", "pending"]
+        restart = {"batch_id": batch["batch_id"], "definition": graph(), "max_parallel": 4}
         with pytest.raises(AgentTaskError, match="already started"):
-            source.runtime.batches.control("begin", {"batch_id": batch["batch_id"],
-                "definition": graph(), "max_parallel": 4})
+            source.runtime.batches.control("begin", restart)
     finally:
         path.write_text(json.dumps(metadata))
         other.close()

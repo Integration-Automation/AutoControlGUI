@@ -115,8 +115,9 @@ def test_asset_object_count_quotas_bound_chunk_and_manifest_growth(tmp_path):
     one, two = descriptor(body), descriptor(body * 2)
     store.put_chunk('alice', one.chunks[0], body)
     store.commit('alice', one)
+    new_digest = sha256(b'new').hexdigest()
     with pytest.raises(ac.ConfigStoreFull):
-        store.put_chunk('alice', sha256(b'new').hexdigest(), b'new')
+        store.put_chunk('alice', new_digest, b'new')
     with pytest.raises(ac.ConfigStoreFull):
         store.commit('alice', two)
     assert not store.put_chunk('alice', one.chunks[0], body)
@@ -134,8 +135,9 @@ def test_foreign_or_future_asset_database_is_never_modified(tmp_path, future):
         if future:
             connection.execute(f'PRAGMA application_id={_APPLICATION}')
             connection.execute('PRAGMA user_version=2')
+    store = ac.SyncAssetStore(path)
     with pytest.raises(ac.ConfigStoreError):
-        ac.SyncAssetStore(path).status('alice')
+        store.status('alice')
     with sqlite3.connect(path) as connection:
         assert connection.execute('SELECT value FROM important').fetchone()[0] == 'preserve'
         assert connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall() == [('important',)]

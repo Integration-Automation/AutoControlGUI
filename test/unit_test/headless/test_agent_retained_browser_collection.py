@@ -58,8 +58,9 @@ def test_distinct_effect_tasks_keep_their_own_process_on_one_profile():
     pool.discard("first")
     assert first.channel.retired
     assert not second.channel.retired
+    discarded = source()
     with pytest.raises(AgentTaskError, match="unavailable"):
-        pool.require(source())
+        pool.require(discarded)
     pool.close()
     assert second.channel.retired
 
@@ -86,8 +87,9 @@ def test_absolute_300_second_expiry_does_not_extend_on_borrow():
     assert pool.borrow(source()) is entry
     pool.release(entry)
     clock[0] = 310
+    expired = source()
     with pytest.raises(AgentTaskError, match="unavailable"):
-        pool.borrow(source())
+        pool.borrow(expired)
     assert entry.channel.retired
 
 
@@ -132,8 +134,9 @@ def test_unconfirmed_reaping_stays_tracked_unavailable_and_counts_against_capaci
     with pytest.raises(AgentTaskError):
         pool.discard("failed")
     assert pool.full
+    failed = source("failed")
     with pytest.raises(AgentTaskError):
-        pool.require(source("failed"))
+        pool.require(failed)
     entry.channel.failure = False
     entry.channel.confirmed = True
     pool.close()
@@ -149,8 +152,9 @@ def test_collection_close_invalidates_borrow_and_closes_other_owned_processes_af
     with pytest.raises(AgentTaskError):
         pool.close()
     assert second.channel.retired
+    closed = source("borrowed")
     with pytest.raises(AgentTaskError):
-        pool.require(source("borrowed"))
+        pool.require(closed)
     pool.release(borrowed)
     first.channel.failure = False
     pool.close()
@@ -160,20 +164,22 @@ def test_collection_close_invalidates_borrow_and_closes_other_owned_processes_af
 def test_invalid_proof_cannot_leave_an_orphaned_detached_process():
     pool = collection([0])
     process = OwnedProcess()
-    with pytest.raises(AgentTaskError):
-        with pool.reserve(source()) as entry:
-            pool.commit(entry, process, {**PROOF, "input_supported": True})
+    row = source()
+    reservation = pool.reserve(row)
+    with pytest.raises(AgentTaskError), reservation as entry:
+        pool.commit(entry, process, {**PROOF, "input_supported": True})
     assert process.retired
     with pytest.raises(AgentTaskError):
-        pool.require(source())
+        pool.require(row)
 
 
 def test_lost_owned_process_never_launches_or_recreates_a_context():
     pool = collection([0])
     entry = retain(pool, source())
     entry.channel.close()
+    lost = source()
     with pytest.raises(AgentTaskError, match="unavailable"):
-        pool.borrow(source())
+        pool.borrow(lost)
     assert entry.channel.retired
     pool.close()
 
@@ -181,9 +187,9 @@ def test_lost_owned_process_never_launches_or_recreates_a_context():
 def test_closed_collection_cannot_create_new_context_reservations():
     pool = collection([0])
     pool.close()
-    with pytest.raises(AgentTaskError, match="closed"):
-        with pool.reserve(source("new")):
-            pytest.fail("A closed owner cannot accept more retained process ownership")
+    reservation = pool.reserve(source("new"))
+    with pytest.raises(AgentTaskError, match="closed"), reservation:
+        pytest.fail("A closed owner cannot accept more retained process ownership")
 
 
 def test_source_binding_preserves_json_value_types():
@@ -209,9 +215,10 @@ def test_detachment_time_cannot_extend_the_absolute_retained_lifetime():
         clock[0] = 20
         pool.commit(entry, process, PROOF)
     clock[0] = 300
+    expired = source()
     try:
         with pytest.raises(AgentTaskError, match="unavailable"):
-            pool.borrow(source())
+            pool.borrow(expired)
         assert process.retired
     finally:
         pool.close()

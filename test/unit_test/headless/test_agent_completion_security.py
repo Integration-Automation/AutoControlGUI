@@ -122,8 +122,9 @@ def test_duplicate_approvals_create_exactly_one_private_bound_successor(complete
 
 def test_stale_approval_and_unreviewed_spec_fields_never_create_a_successor(completed):
     runtime, request = completed.runtime, approval(completed)
+    unreviewed = {**request, 'spec': runtime.store.get(completed.task_id)['spec']}
     with pytest.raises(AgentTaskError, match='fields'):
-        runtime.recovery.control('create_completion', {**request, 'spec': runtime.store.get(completed.task_id)['spec']})
+        runtime.recovery.control('create_completion', unreviewed)
     runtime.store.update(completed.task_id, 'paused', reason='changed after preview')
     with pytest.raises(AgentTaskError, match='snapshot'):
         runtime.recovery.control('create_completion', request)
