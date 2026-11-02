@@ -1,6 +1,7 @@
 import threading
 import types
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from je_auto_control.utils.diagnostics.capability_commands import probe_current_capabilities as _probe_capabilities
 
 from je_auto_control.utils.exception.exception_tags import (
     action_is_null_error_message, add_command_exception_error_message,
@@ -29,6 +30,8 @@ from je_auto_control.utils.executor.action_schema import (
     unknown_command_names, validate_actions,
 )
 from je_auto_control.utils.executor.flags import as_bool as _as_bool
+from je_auto_control.utils.executor.dispatch import dispatch_checkpoint
+from je_auto_control.utils.agent_runtime.commands import COMMANDS as AGENT_TASK_COMMANDS
 from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue, MacroDepthExceeded,
 )
@@ -38,15 +41,36 @@ from je_auto_control.utils.executor.action_redaction import (
 from je_auto_control.utils.executor.result_hook import (
     ResultHook, enter_list, leave_list, observe_results, report_result,
 )
-from je_auto_control.utils.action_journal.recorder import step as _journal_step
+from je_auto_control.utils.action_journal.capture import action_step
+from je_auto_control.utils.action_journal.commands import _capture_body, _read_journal
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
+from je_auto_control.utils.run_history.run_outcome import raise_if_run_interrupted
+from je_auto_control.utils.run_history.commands import _history_capture_body
+from je_auto_control.utils.self_healing.evaluation_io import _evaluate_manifest_command
+from je_auto_control.utils.self_healing.commands import _run_self_heal_command
+from je_auto_control.utils.self_healing.source_inspection import _read_heal_source_command
+from je_auto_control.utils.self_healing.template_commands import (
+    _create_candidate_command, _preview_candidate_command, _verify_candidate_command,
+    _accept_candidate_command, _revert_candidate_command,
+)
+from je_auto_control.utils.codegen.journal_commands import _generate_candidate_command
+from je_auto_control.utils.config_sync.commands import _commit_config_store, _get_config_store
+from je_auto_control.utils.config_sync.workspace_commands import _sync_workspace
+from je_auto_control.utils.config_sync.profile_commands import _load_sync_profile
+from je_auto_control.utils.config_sync.asset_commands import _build_sync_asset_manifest, _sync_asset_generation
+from je_auto_control.utils.config_sync.adapter_commands import (
+    _apply_sync_adapter, _materialize_sync_profile, _resolve_sync_adapter, _snapshot_sync_adapter,
+)
+from je_auto_control.utils.config_sync.http_commands import (
+    _commit_causal_config, _control_sync_peer, _fetch_causal_config, _flush_sync_outbox,
+)
+from je_auto_control.utils.config_sync.causal_commands import (
+    _enqueue_sync_outbox, _merge_sync_entry, _status_sync_outbox, _sync_peer_state,
+)
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.executor.run_control import (
     ExecutionStopped, active_executions, checkpoint, note_command, stop_execution,
     stoppable_run,
-)
-from je_auto_control.utils.config_sync.session import (
-    config_sync_collect_blobs, config_sync_full_resync, config_sync_resolve,
-    config_sync_run, config_sync_status,
 )
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
@@ -83,6 +107,7 @@ from je_auto_control.utils.generate_report.generate_xml_report import generate_x
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.http_transport import start_mcp_http_server
+from je_auto_control.utils.mcp_server.discovery import search_mcp_tools, get_mcp_tool_schema
 from je_auto_control.utils.rbac.policy import authorize_command
 from je_auto_control.utils.mcp_server.server import start_mcp_stdio_server
 from je_auto_control.utils.package_manager.package_manager_class import package_manager
@@ -181,21 +206,14 @@ def _self_heal_locate(template_path: Optional[str] = None,
                       detect_threshold: float = 0.9,
                       screen_region: Optional[List[int]] = None,
                       model: Optional[str] = None,
-                      raise_on_miss: bool = False,
-                      context: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
-    """Executor adapter: template-first locate with VLM fallback.
-
-    ``context`` stamps ``run_id`` / ``step_id`` / ``locator_id`` /
-    ``locator_version`` / ``backend`` on the logged event.
-    """
-    from je_auto_control.utils.self_healing import heal_context
-    with heal_context(**(context or {})):
-        outcome = _self_heal_locate_impl(
-            template_path=template_path, description=description,
-            detect_threshold=float(detect_threshold),
-            screen_region=screen_region, model=model,
-            raise_on_miss=_as_bool(raise_on_miss),
-        )
+                      raise_on_miss: bool = False) -> Dict[str, Any]:
+    """Executor adapter: template-first locate with VLM fallback."""
+    outcome = _self_heal_locate_impl(
+        template_path=template_path, description=description,
+        detect_threshold=float(detect_threshold),
+        screen_region=screen_region, model=model,
+        raise_on_miss=_as_bool(raise_on_miss),
+    )
     return outcome.to_dict()
 
 
@@ -205,24 +223,15 @@ def _self_heal_click(template_path: Optional[str] = None,
                      detect_threshold: float = 0.9,
                      screen_region: Optional[List[int]] = None,
                      model: Optional[str] = None,
-                     raise_on_miss: bool = False,
-                     context: Optional[Dict[str, str]] = None,
-                     verify: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Executor adapter: locate with self-heal, then click.
-
-    ``verify`` is the declarative post-click check (``{"type": "image_gone" |
-    "image_present" | "text_present", ...}``) that fills ``action_verified``;
-    without it the click is recorded as located and unverified (``None``).
-    """
-    from je_auto_control.utils.self_healing import heal_context
-    with heal_context(**(context or {})):
-        outcome = _self_heal_click_impl(
-            template_path=template_path, description=description,
-            mouse_keycode=mouse_keycode,
-            detect_threshold=float(detect_threshold),
-            screen_region=screen_region, model=model,
-            raise_on_miss=_as_bool(raise_on_miss), verify=verify,
-        )
+                     raise_on_miss: bool = False) -> Dict[str, Any]:
+    """Executor adapter: locate with self-heal, then click."""
+    outcome = _self_heal_click_impl(
+        template_path=template_path, description=description,
+        mouse_keycode=mouse_keycode,
+        detect_threshold=float(detect_threshold),
+        screen_region=screen_region, model=model,
+        raise_on_miss=_as_bool(raise_on_miss),
+    )
     return outcome.to_dict()
 
 
@@ -237,57 +246,12 @@ def _self_heal_log_clear() -> Dict[str, Any]:
     return {"cleared": True, "path": str(default_heal_log.path)}
 
 
-def _self_heal_evaluate(dataset_path: str,
-                        versions: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Executor adapter: score strategy versions on a labelled dataset file."""
-    from je_auto_control.utils.self_healing import evaluate_healing_dataset
-    return evaluate_healing_dataset(dataset_path, versions=versions)
-
-
-def _self_heal_revision_propose(template_path: str, candidate_path: str,
-                                source: str = "manual",
-                                note: Optional[str] = None) -> Dict[str, Any]:
-    """Executor adapter: store a candidate template; the template is untouched."""
-    from je_auto_control.utils.self_healing import propose_template_revision
-    return propose_template_revision(
-        template_path, candidate_path, source=source, note=note).to_dict()
-
-
-def _self_heal_revision_preview(revision_id: str,
-                                dataset_path: Optional[str] = None,
-                                detect_threshold: float = 0.9) -> Dict[str, Any]:
-    """Executor adapter: current vs candidate, validated when given a dataset."""
-    from je_auto_control.utils.self_healing import preview_template_revision
-    return preview_template_revision(
-        revision_id, dataset_path=dataset_path or None,
-        detect_threshold=float(detect_threshold))
-
-
-def _self_heal_revision_accept(revision_id: str,
-                               allow_unvalidated: bool = False) -> Dict[str, Any]:
-    """Executor adapter: replace the template with a validated candidate."""
-    from je_auto_control.utils.self_healing import accept_template_revision
-    return accept_template_revision(
-        revision_id, allow_unvalidated=_as_bool(allow_unvalidated)).to_dict()
-
-
-def _self_heal_revision_revert(revision_id: str) -> Dict[str, Any]:
-    """Executor adapter: restore the template an accepted revision replaced."""
-    from je_auto_control.utils.self_healing import revert_template_revision
-    return revert_template_revision(revision_id).to_dict()
-
-
-def _self_heal_revision_list() -> List[Dict[str, Any]]:
-    """Executor adapter: every stored template revision, oldest first."""
-    from je_auto_control.utils.self_healing import list_template_revisions
-    return [revision.to_dict() for revision in list_template_revisions()]
-
-
 def _run_dag(definition: Dict[str, Any],
-             max_parallel: int = 4) -> Dict[str, Any]:
+             max_parallel: int = 4, batch_id: Optional[str] = None,
+             recovery: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Executor adapter: run a cross-host DAG definition."""
     from je_auto_control.utils.dag import run_dag
-    return run_dag(definition, max_parallel=int(max_parallel)).to_dict()
+    return run_dag(definition, max_parallel=int(max_parallel), batch_id=batch_id, recovery=recovery).to_dict()
 
 
 _AX_RECORDER_SINGLETON = None
@@ -1591,21 +1555,6 @@ def _diagnose() -> Dict[str, Any]:
     return run_diagnostics().to_dict()
 
 
-def _probe_capabilities() -> Dict[str, Any]:
-    """Executor adapter: capability and authorisation states, no side effect."""
-    from je_auto_control.wrapper.capabilities import probe_capabilities
-    return probe_capabilities().to_dict()
-
-
-def _reset_input_authorisation() -> Dict[str, Any]:
-    """Executor adapter: forget a refused or revoked Wayland input session."""
-    from je_auto_control.linux_wayland._select_input import (
-        reset_input_authorisation,
-    )
-    reset_input_authorisation()
-    return _probe_capabilities()
-
-
 def _config_export() -> Dict[str, Any]:
     """Executor adapter: build the config bundle dict in-memory."""
     from je_auto_control.utils.config_bundle import export_config_bundle
@@ -2290,8 +2239,6 @@ def _history_list_as_dicts(limit: int = 100,
             "started_at": r.started_at, "finished_at": r.finished_at,
             "status": r.status, "error_text": r.error_text,
             "duration_seconds": r.duration_seconds,
-            "journal_path": r.journal_path,
-            "journal_run_id": r.journal_run_id,
         }
         for r in rows
     ]
@@ -2560,65 +2507,6 @@ def _generate_code(source: Any, output: Optional[str] = None,
                                   name=name, style=style)
     actions = source if isinstance(source, list) else read_action_json(source)
     return generate_code(actions, target=target, name=name, style=style)
-
-
-def _journal_start(path: Optional[str] = None, run_id: Optional[str] = None,
-                   session: Optional[str] = None) -> Dict[str, Any]:
-    """Start journalling every executed action to ``path``."""
-    from je_auto_control.utils.action_journal.recorder import start_action_journal
-    return start_action_journal(path or None, run_id=run_id or None,
-                                session=session or None)
-
-
-def _journal_stop() -> Dict[str, Any]:
-    """Stop the action journal."""
-    from je_auto_control.utils.action_journal.recorder import stop_action_journal
-    return stop_action_journal()
-
-
-def _journal_status() -> Dict[str, Any]:
-    """Report whether an action journal is started."""
-    from je_auto_control.utils.action_journal.recorder import action_journal_status
-    return action_journal_status()
-
-
-def _journal_read(path: str, run_id: Optional[str] = None,
-                  limit: int = 0) -> List[Dict[str, Any]]:
-    """Read a journal's events as dicts (the last ``limit`` when positive)."""
-    from je_auto_control.utils.action_journal.store import read_events
-    events = read_events(path, run_id=run_id or None)
-    return [event.to_dict() for event in events[-int(limit):]]
-
-
-def _journal_runs(path: str) -> List[Dict[str, Any]]:
-    """Summarise each run a journal file holds."""
-    from je_auto_control.utils.action_journal.store import list_journal_runs
-    return list_journal_runs(path)
-
-
-def _generate_code_from_journal(path: str, run_id: Optional[str] = None,
-                                target: str = "pytest", style: str = "actions",
-                                output: Optional[str] = None,
-                                diff_against: Optional[str] = None) -> Dict[str, Any]:
-    """Build a candidate script from one journal run, optionally diffing and writing it.
-
-    ``diff_against`` names what the candidate would replace -- a ``.json``
-    action file or a script -- and adds ``"diff"`` (a unified diff with
-    counts) to the result.
-    """
-    from je_auto_control.utils.codegen.journal_import import (
-        generate_candidate_from_log, only_run_id, write_candidate,
-    )
-    candidate = generate_candidate_from_log(
-        path, run_id=run_id or only_run_id(path), target=target, style=style)
-    result = candidate.to_dict()
-    if diff_against:
-        # Before the write below: output and diff_against may be the same file.
-        from je_auto_control.utils.codegen.candidate_diff import diff_candidate_against_file
-        result["diff"] = diff_candidate_against_file(candidate, diff_against).to_dict()
-    if output:
-        result.update(write_candidate(candidate, output))
-    return result
 
 
 def _send_email(message: Any, smtp: Any) -> Dict[str, Any]:
@@ -2943,7 +2831,7 @@ def _plan_open(target: str, verb: str = "open") -> Dict[str, Any]:
 
 
 def _open_path(target: str, verb: str = "open") -> Dict[str, Any]:
-    """Adapter: open a file with its default app / a URL in the browser."""
+    """Adapter: open a file with its registered app / a URL through je_web_runner."""
     from je_auto_control.utils.shell_open import open_path
     return {"opened": bool(open_path(str(target), verb=str(verb)))}
 
@@ -7441,6 +7329,7 @@ class Executor:
         self.macros: Dict[str, Any] = {}
         # 事件字典，對應字串名稱到函式
         self.event_dict: dict = {
+            **AGENT_TASK_COMMANDS,
             # Mouse 滑鼠相關
             **MOUSE_BUTTON_COMMANDS,
             "AC_click_mouse": click_mouse,
@@ -7483,12 +7372,25 @@ class Executor:
             "AC_generate_json_report": generate_json_report,
             "AC_generate_xml_report": generate_xml_report,
             "AC_generate_code": _generate_code,
-            "AC_generate_code_from_journal": _generate_code_from_journal,
-            "AC_journal_start": _journal_start,
-            "AC_journal_stop": _journal_stop,
-            "AC_journal_status": _journal_status,
-            "AC_journal_read": _journal_read,
-            "AC_journal_runs": _journal_runs,
+            "AC_generate_candidate_from_log": _generate_candidate_command,
+            "AC_config_store_get": _get_config_store,
+            "AC_config_store_commit": _commit_config_store,
+            "AC_config_causal_fetch": _fetch_causal_config,
+            "AC_config_causal_commit": _commit_causal_config,
+            "AC_sync_outbox_flush": _flush_sync_outbox,
+            "AC_sync_peer_control": _control_sync_peer,
+            "AC_sync_asset_manifest": _build_sync_asset_manifest,
+            "AC_sync_assets": _sync_asset_generation,
+            "AC_sync_adapter_snapshot": _snapshot_sync_adapter,
+            "AC_sync_workspace": _sync_workspace,
+            "AC_sync_adapter_apply": _apply_sync_adapter,
+            "AC_sync_adapter_resolve": _resolve_sync_adapter,
+            "AC_sync_profile_materialize": _materialize_sync_profile,
+            "AC_sync_profile_load": _load_sync_profile,
+            "AC_sync_entry_merge": _merge_sync_entry,
+            "AC_sync_outbox_enqueue": _enqueue_sync_outbox,
+            "AC_sync_outbox_status": _status_sync_outbox,
+            "AC_sync_peer_state": _sync_peer_state,
             "AC_send_email": _send_email,
             "AC_assert_pdf_text": _assert_pdf_text,
             "AC_take_golden": _take_golden,
@@ -7691,6 +7593,8 @@ class Executor:
             "AC_queue_stats": _queue_stats,
             "AC_generate_data": _generate_data,
             "AC_mcp_manifest": _mcp_manifest,
+            "AC_mcp_tool_search": search_mcp_tools,
+            "AC_mcp_tool_schema": get_mcp_tool_schema,
             "AC_rank_tests": _rank_tests,
             "AC_select_tests": _select_tests,
             "AC_element_save": _element_save,
@@ -7734,6 +7638,9 @@ class Executor:
             "AC_check_overflow": _check_overflow,
             "AC_check_catalog": _check_catalog,
             "AC_run_resumable": _run_resumable,
+            "AC_journal_capture": _capture_body,
+            "AC_history_capture": _history_capture_body,
+            "AC_journal_read": _read_journal,
             "AC_checkpoint_status": _checkpoint_status,
             "AC_checkpoint_clear": _checkpoint_clear,
             "AC_mark_screen": _mark_screen,
@@ -7811,11 +7718,6 @@ class Executor:
             "AC_parse_sse": _parse_sse,
             "AC_resolve_config": _resolve_config,
             "AC_explain_config": _explain_config,
-            "AC_config_sync_run": config_sync_run,
-            "AC_config_sync_status": config_sync_status,
-            "AC_config_sync_resolve": config_sync_resolve,
-            "AC_config_sync_full_resync": config_sync_full_resync,
-            "AC_config_sync_collect_blobs": config_sync_collect_blobs,
             "AC_check_compatibility": _check_compatibility,
             "AC_ts_rate": _ts_rate,
             "AC_ts_downsample": _ts_downsample,
@@ -8061,15 +7963,17 @@ class Executor:
 
             # Self-healing locator (template-first, VLM fallback, audit log)
             "AC_self_heal_locate": _self_heal_locate,
+            "AC_self_heal_run": _run_self_heal_command,
+            "AC_self_heal_source": _read_heal_source_command,
+            "AC_template_candidate_create": _create_candidate_command,
+            "AC_template_candidate_preview": _preview_candidate_command,
+            "AC_template_candidate_verify": _verify_candidate_command,
+            "AC_template_candidate_accept": _accept_candidate_command,
+            "AC_template_candidate_revert": _revert_candidate_command,
+            "AC_self_heal_evaluate": _evaluate_manifest_command,
             "AC_self_heal_click": _self_heal_click,
             "AC_self_heal_log_list": _self_heal_log_list,
             "AC_self_heal_log_clear": _self_heal_log_clear,
-            "AC_self_heal_evaluate": _self_heal_evaluate,
-            "AC_self_heal_revision_propose": _self_heal_revision_propose,
-            "AC_self_heal_revision_preview": _self_heal_revision_preview,
-            "AC_self_heal_revision_accept": _self_heal_revision_accept,
-            "AC_self_heal_revision_revert": _self_heal_revision_revert,
-            "AC_self_heal_revision_list": _self_heal_revision_list,
 
             # Assertion DSL (verify screen state; raise on mismatch)
             "AC_assert_text": _assert_text,
@@ -8325,9 +8229,8 @@ class Executor:
             "AC_usb_remote_open": _usb_remote_open,
 
             # System diagnostics
-            "AC_diagnose": _diagnose,
             "AC_probe_capabilities": _probe_capabilities,
-            "AC_reset_input_authorisation": _reset_input_authorisation,
+            "AC_diagnose": _diagnose,
 
             # Config bundle export / import
             "AC_config_export": _config_export,
@@ -8440,7 +8343,9 @@ class Executor:
                 raise AutoControlActionException(
                     f"{name} requires a dict of arguments"
                 )
-            return block_handler(self, self._resolve_runtime_args(args, name))
+            resolved = self._resolve_runtime_args(args, name)
+            dispatch_checkpoint(name, resolved)
+            return block_handler(self, resolved)
 
         event = self.event_dict.get(name)
         if event is None:
@@ -8448,16 +8353,23 @@ class Executor:
 
         if len(action) == 2:
             resolved = self._resolve_runtime_args(action[1], name)
+            dispatch_checkpoint(name, resolved)
             result = event(**resolved) if isinstance(resolved, dict) else event(*resolved)
             # Inside a stoppable run: remember what a press leaves held, so a
             # stop can let go of it. Nothing happens outside one.
             note_command(name, resolved)
             return result
         if len(action) == 1:
+            dispatch_checkpoint(name, {})
             return event()
         raise AutoControlActionException(cant_execute_action_error_message + " " + describe_action(action))
 
-    def execute_action(self, action_list: list | dict,
+    def execute_one(self, name: str, arguments: Optional[Dict[str, Any]] = None) -> Any:
+        """Execute one public command through validation, policy and journal boundaries."""
+        from je_auto_control.utils.executor.dispatch import execute_one
+        return execute_one(self, name, arguments)
+
+    def execute_action(self, action_list: Union[list, dict],
                        raise_on_error: bool = False,
                        _validated: bool = False,
                        dry_run: bool = False,
@@ -8482,7 +8394,6 @@ class Executor:
             with observe_results(result_callback):
                 return self.execute_action(action_list, raise_on_error, _validated,
                                            dry_run, step_callback)
-        autocontrol_logger.info(f"execute_action, action_list: {redact_actions(action_list)}")
         # A nested body inherits the strictness of the list that runs it, so
         # a failure inside an AC_loop / AC_if_* / macro under raise_on_error
         # reaches the enclosing AC_try / AC_retry / caller instead of being
@@ -8496,8 +8407,10 @@ class Executor:
         running = getattr(_RUNNING, "value", None)
         _RUNNING.value = self
         try:
-            return self._execute_list(action_list, raise_on_error, _validated,
-                                      dry_run, step_callback)
+            with secret_log_scope():
+                autocontrol_logger.info(f"execute_action, action_list: {redact_actions(action_list)}")
+                return self._execute_list(action_list, raise_on_error, _validated,
+                                          dry_run, step_callback)
         finally:
             _STRICT_BODIES.value = inherited
             _RUNNING.value = running
@@ -8518,10 +8431,8 @@ class Executor:
                 checkpoint()  # a stop requested for this run ends it between actions
                 if frame is not None:
                     frame.advance(position, action)
-                if step_callback is not None:
-                    step_callback(action)
-                self._run_listed_action(action, execute_record_dict,
-                                        (raise_on_error, _validated, dry_run))
+                self._execute_list_step(action, execute_record_dict, raise_on_error, _validated, dry_run,
+                                        step_callback)
         finally:
             leave_list(frame)
 
@@ -8530,20 +8441,25 @@ class Executor:
             autocontrol_logger.info("%s -> %s", key, redact_result(record_command(key), value))
         return execute_record_dict
 
-    def _run_listed_action(self, action: list, record: Dict[str, Any],
-                           modes: Tuple[bool, bool, bool]) -> None:
-        """Run one action of a list under ``modes`` (raise_on_error, _validated, dry_run)."""
-        raise_on_error, _validated, dry_run = modes
-        if dry_run:
-            record[_unique_key(record, "dry-run: " + describe_action(action))] = "(not executed)"
-            return
-        key = _unique_key(record, "execute: " + describe_action(action))
-        try:
-            self._run_one_action(action, record, raise_on_error, key)
-        except (LoopBreak, LoopContinue, MacroDepthExceeded) as signal:
-            if _validated:
-                raise  # a nested body: the enclosing block handles it
-            self._record_unwound_signal(signal, record, raise_on_error, key)
+    def _execute_list_step(self, action: list, record: Dict[str, Any], raise_on_error: bool,
+                           validated: bool, dry_run: bool, callback: Optional[Callable[[list], None]]) -> None:
+        """Dispatch one step inside its optional journal capture boundary."""
+        if callback is not None:
+            callback(action)
+        with action_step(action, dry_run=dry_run) as capture:
+            if dry_run:
+                key = _unique_key(record, "dry-run: " + describe_action(action))
+                record[key] = "(not executed)"
+                return
+            key = _unique_key(record, "execute: " + describe_action(action))
+            try:
+                self._run_one_action(action, record, raise_on_error, key)
+            except (LoopBreak, LoopContinue, MacroDepthExceeded) as signal:
+                if validated:
+                    raise  # a nested body: the enclosing block handles it
+                self._record_unwound_signal(signal, record, raise_on_error, key)
+            if capture is not None:
+                capture.outcome = record.get(key)
 
     @staticmethod
     def _record_unwound_signal(signal: Exception, record: Dict[str, Any],
@@ -8591,9 +8507,8 @@ class Executor:
         action_name = action[0] if action and isinstance(action[0], str) else "<invalid>"
         started = _time.monotonic()
         try:
-            with default_profiler.measure(action_name), _journal_step(action) as step:
+            with default_profiler.measure(action_name):
                 record[key] = self._execute_event(action)
-                step.outcome(record[key])
             report_result(action, record[key])  # a no-op unless a result hook watches this run
             _observe_executor_metrics(action_name, started, error=None)
         except (LoopBreak, LoopContinue, ExecutionStopped):
@@ -8616,6 +8531,7 @@ class Executor:
             # under raise_on_error=False — otherwise the assertion would be
             # silently neutralised. ``AC_try``/``AC_retry`` run their body with
             # raise_on_error=True and still catch it via their own tuples.
+            raise_if_run_interrupted(error)
             if raise_on_error or isinstance(
                     error, (AutoControlAssertionException, MacroDepthExceeded)):
                 raise

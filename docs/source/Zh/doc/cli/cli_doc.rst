@@ -4,6 +4,45 @@
 
 AutoControl 可以直接從命令列執行自動化腳本。
 
+子命令 ``python -m je_auto_control.cli run script.json`` 可加上 ``--var name=value``
+與 ``--dry-run``。每次呼叫都有獨立變數範圍，不論是否傳入 ``--var``；種子與動作寫入的
+變數在成功或出錯後都會捨棄，包含在同一個 Python 行程中重複呼叫與預演。
+
+擷取與查閱動作日誌
+==================
+
+.. code-block:: bash
+
+   python -m je_auto_control.cli run script.json --journal run.jsonl --journal-run-id example
+   python -m je_auto_control.cli journal run.jsonl --run-id example --limit 100
+
+``run --journal PATH`` 附加結構化生命週期快照，保留原有 stdout 紀錄與動作失敗的退出碼，
+也支援 ``--dry-run`` 與 ``--var``。未傳入 ``--journal-run-id ID`` 時會產生新的 run ID；
+該選項必須搭配 ``--journal``。此操作不會自動建立 history 列或資料庫。
+
+``journal PATH`` 驗證整份檔案，再以 JSON 陣列按附加順序輸出遮罩後的快照。
+``--run-id`` 篩選指定執行；``--limit`` 在篩選後限制輸出筆數，允許 1–10,000，預設 100。
+驗證仍會讀取整份檔案。開始與結束快照分開呈現，未完成項目不會被推定成功。
+檔案不存在時回傳空陣列且不建立檔案；已提交的資料損壞時在任何 JSON 輸出前報錯。
+查閱會再次套用日誌遮罩規則，不修改來源檔。兩個入口皆沿用既有的允許根目錄檢查；
+預設範圍以外的位置可透過 ``AUTOCONTROL_ALLOWED_PATH_ROOTS`` 設定。
+
+明確記錄手動執行歷史
+------------------------
+
+.. code-block:: bash
+
+   python -m je_auto_control.cli run script.json --history
+   python -m je_auto_control.cli run script.json --history --history-db history.sqlite --journal run.jsonl
+   python -m je_auto_control.cli run script.json --history --dry-run
+
+``--history`` 在預設 Run History store 建立手動擁有者。``--history-db PATH``
+必須搭配該旗標，沿用允許根目錄檢查，離開時關閉 custom store，不會切換 GUI 的預設 store。
+既有或巢狀 journal 擷取會連結到此擁有者；原本 stdout 紀錄、變數範圍與失敗 exit code
+保持不變。executor 記錄的失敗，以及傳遞出的錯誤／取消，會結算為 ``error``。
+預覽使用 ``cli.preview``，實際執行使用 ``cli.run``；沒有選用 history 時，包含僅使用
+journal 的情況，都不會開啟 history 資料庫。
+
 執行單一動作檔案
 ================
 

@@ -23,11 +23,12 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
 )
 from je_auto_control.gui._slow_op import stop_each
 from je_auto_control.gui._weak_call import weak_slot
-from je_auto_control.gui.task_controller import CancellationToken, task_controller
+from je_auto_control.gui.tab_task_controller import CancellationToken, task_controller
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.utils.remote_desktop import (
-    MultiViewerHost,
-)
+if TYPE_CHECKING:  # the facade types optional members as possibly None
+    from je_auto_control.utils.remote_desktop.multi_viewer import MultiViewerHost
+else:
+    from je_auto_control.utils.remote_desktop import MultiViewerHost
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
     _PanelPart,
     _read_webrtc_config,

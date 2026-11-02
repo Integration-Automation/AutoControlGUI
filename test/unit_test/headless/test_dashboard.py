@@ -23,10 +23,14 @@ def _get(server, path):
     req = urllib.request.Request(
         f"{_TEST_SCHEME}://{host}:{port}{path}", method="GET",
     )
-    with urllib.request.urlopen(req, timeout=3) as response:  # nosec B310  # reason: localhost test server
-        return (response.status,
-                response.headers.get("Content-Type", ""),
-                response.read())
+    try:
+        with urllib.request.urlopen(req, timeout=3) as response:  # nosec B310  # reason: localhost test server
+            return (response.status,
+                    response.headers.get("Content-Type", ""),
+                    response.read())
+    except urllib.error.HTTPError as error:
+        error.close()
+        raise
 
 
 def test_dashboard_page_is_unauthenticated(server):

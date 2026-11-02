@@ -1,0 +1,7 @@
+{
+  "candidate_id": "reviewed-candidate",
+  "task_id": "original-validation-trial",
+  "completion_task_id": "verified-read-only-child",
+  "expected_version": 0,
+  "note": "Reviewed the original validation trial and separate completion evidence"
+}

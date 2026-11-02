@@ -1,9 +1,9 @@
 """Run a battery of small subsystem checks and report status.
 
 Each check is a small function returning a :class:`Check`. The runner
-catches *every* exception per-check so one broken probe never poisons
-the rest — diagnostics that fail to run are themselves diagnostic
-information, so we surface them as a check with ``ok=False``.
+catches ordinary exceptions per-check so one broken probe never poisons
+the rest. Explicit direct or wrapped cancellation and hard controls stop the
+run unchanged; ordinary failures become a check with ``ok=False``.
 """
 from __future__ import annotations
 
@@ -14,6 +14,12 @@ import shutil
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Tuple
 
+from je_auto_control.utils.agent_runtime.transfer_models import (
+    MAX_MANIFEST_BYTES, MAX_TRANSFER_BYTES, MAX_TRANSFER_FILES, TransferManifest,
+)
+from je_auto_control.utils.agent_runtime.transfer_operations import OPERATIONS
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
+from je_auto_control.utils.exception.cancellation import cancellation_checkpoint, cancellation_progress
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -69,12 +75,16 @@ CheckFn = Callable[[], Check]
 
 
 def run_diagnostics() -> DiagnosticsReport:
-    """Run every registered check; return a :class:`DiagnosticsReport`."""
+    """Run registered checks; preserve explicit interruption before any later check."""
     checks: List[Check] = []
-    for runner in _ALL_CHECKS:
+    cancellation_progress(0, len(_ALL_CHECKS), 'diagnostics')
+    for index, runner in enumerate(_ALL_CHECKS, 1):
+        cancellation_checkpoint()
         try:
             checks.append(runner())
         except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: never let one probe poison the rest
+            raise_caused_run_interruption(error)
+            cancellation_checkpoint()
             autocontrol_logger.warning(
                 "diagnostics check %s crashed: %r", runner.__name__, error,
             )
@@ -83,6 +93,7 @@ def run_diagnostics() -> DiagnosticsReport:
                 ok=False, severity=_SEVERITY_ERROR,
                 detail=f"check raised: {error!r}",
             ))
+        cancellation_progress(index, len(_ALL_CHECKS), 'diagnostics')
     return DiagnosticsReport(checks=checks)
 
 
@@ -271,7 +282,17 @@ def _check_executor() -> Check:
     )
 
 
+def _check_agent_transfer_contract() -> Check:
+    return Check(name='agent_transfer_contract', ok=True, severity=_SEVERITY_INFO,
+        detail='Local transfer contract only; no live grant, remote peer or native capability was verified.',
+        extra={'contract': TransferManifest.contract, 'operations': list(OPERATIONS),
+               'max_manifest_bytes': MAX_MANIFEST_BYTES, 'max_transfer_bytes': MAX_TRANSFER_BYTES,
+               'max_files': MAX_TRANSFER_FILES, 'state': 'contract_only', 'authority_granted': False,
+               'remote_verified': False, 'native_verified': False})
+
+
 _ALL_CHECKS: Tuple[CheckFn, ...] = (
+    _check_agent_transfer_contract,
     _check_platform,
     _check_optional_deps,
     _check_executor,

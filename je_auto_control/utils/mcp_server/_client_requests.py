@@ -22,6 +22,7 @@ from typing import (
 )
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.mcp_server._protocol import (
     _confirm_destructive_enabled, _file_uri_to_path, _MCPError,
 )
@@ -62,7 +63,9 @@ class ClientRequestMixin:
         _writer: Optional[Callable[[str], None]]
         _client_capabilities: Dict[str, Any]
         _resources: Any
-        argument_policy: Any
+        _active_argument_policy: Any
+        _local: Any
+        _root_refresh_worker: Callable[[], Callable[[], None]]
         _outbound_lock: threading.Lock
         _pending_outbound: Dict[Any, Dict[str, Any]]
         _outbound_id_counter: "itertools.count[int]"
@@ -114,14 +117,14 @@ class ClientRequestMixin:
         if self._writer is None:
             return
         threading.Thread(
-            target=self._refresh_roots_safely, daemon=True,
+            target=self._root_refresh_worker(), daemon=True,
             name="MCPRootsRefresh",
         ).start()
 
     def _refresh_roots_safely(self) -> None:
         try:
             self.refresh_roots(timeout=5.0)
-        except (RuntimeError, TimeoutError) as error:
+        except (AutoControlException, OSError, RuntimeError, TimeoutError) as error:
             autocontrol_logger.info("MCP roots refresh skipped: %r", error)
 
     def refresh_roots(self, timeout: float = 10.0) -> List[Dict[str, Any]]:
@@ -131,20 +134,21 @@ class ClientRequestMixin:
         is offered to the tool-argument path policy, which keeps them only
         when ``JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT`` opted in.
         """
+        policy = getattr(self._local, "root_refresh_policy", None) or self._active_argument_policy
         result = self._send_outbound_request(
             "roots/list", params={}, timeout=timeout,
         )
         roots_list = (result or {}).get("roots") or []
         if not isinstance(roots_list, list):
             roots_list = []
-        self.argument_policy.path_policy.set_client_roots(_root_paths(roots_list))
+        policy.path_policy.set_client_roots(_root_paths(roots_list))
         if not roots_list:
             return []
         first_uri = roots_list[0].get("uri") if isinstance(roots_list[0],
                                                             dict) else None
         if isinstance(first_uri, str):
             local_path = _file_uri_to_path(first_uri)
-            if local_path:
+            if local_path and self._connection_id is None:
                 self._resources.set_workspace_root(local_path)
                 autocontrol_logger.info("MCP workspace root → %s", local_path)
         return roots_list

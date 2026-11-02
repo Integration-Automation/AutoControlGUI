@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui.task_controller import TaskHandle, task_controller
+from je_auto_control.gui.tab_task_controller import TaskHandle, task_controller
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )

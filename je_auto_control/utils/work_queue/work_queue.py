@@ -151,6 +151,10 @@ class WorkQueue:
         reclaimed meanwhile cannot settle it.
         """
         with self._connect() as conn:
+            if stale_after_s is None and conn.execute(
+                    "SELECT 1 FROM work_items WHERE queue=? AND status=? LIMIT 1",
+                    (self._name, STATUS_NEW)).fetchone() is None:
+                return None
             conn.execute(_BEGIN_IMMEDIATE)
             row = self._claimable(conn, stale_after_s, max_retries)
             if row is None:
@@ -186,6 +190,11 @@ class WorkQueue:
             "SELECT * FROM work_items WHERE queue=? AND (status=? OR "
             "(status=? AND updated<?)) ORDER BY id LIMIT 1",
             (self._name, STATUS_NEW, STATUS_IN_PROGRESS, cutoff)).fetchone()
+
+    @sqlite_errors_as(WorkQueueError)
+    def defer(self, item_id: int, *, claim: int) -> None:
+        """Return an owned item to the queue without spending an application retry."""
+        self._set_status(item_id, STATUS_NEW, claim=claim)
 
     @sqlite_errors_as(WorkQueueError)
     def complete(self, item_id: int, *, output: Any = None,

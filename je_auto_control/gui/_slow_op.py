@@ -2,7 +2,7 @@
 
 A Stop that joins a thread holds the GUI thread for as long as the join takes
 (2-6 s for the servers and engines the tabs drive). Two helpers hand that call
-to the :mod:`~je_auto_control.gui.task_controller` and keep what the tabs need
+to the :mod:`~je_auto_control.gui.tab_task_controller` and keep what the tabs need
 around it.
 
 :class:`SlowOp`, for a tab that drives one backend:
@@ -22,7 +22,7 @@ around it.
 open the next one straight away (the WebRTC panels).
 
 The work must not hold a widget: read what it needs first and pass plain
-values, as for any :class:`~je_auto_control.gui.task_controller.TaskController`
+values, as for any :class:`~je_auto_control.gui.tab_task_controller.TaskController`
 work.
 
 Callbacks are held weakly. ``on_done`` / ``on_error`` are normally methods of
@@ -39,7 +39,7 @@ from typing import Any, Callable, Optional, Tuple
 from PySide6.QtCore import QObject, Signal
 
 from je_auto_control.gui._weak_call import Callback, WeakCall as _WeakCall, weak_slot
-from je_auto_control.gui.task_controller import (
+from je_auto_control.gui.tab_task_controller import (
     CancellationToken, TaskController, TaskUsageError, _widgets_reachable_from, task_controller,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger

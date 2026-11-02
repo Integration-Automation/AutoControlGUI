@@ -8,7 +8,7 @@ import inspect
 import os
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Mapping, Optional
 
 
 @dataclass(frozen=True)
@@ -75,6 +75,35 @@ class MCPToolAnnotations:
         if self.title is not None:
             annotations["title"] = self.title
         return annotations
+
+
+class MCPToolResult(dict[str, object]):
+    """A JSON object with explicit tool-failure metadata outside its data fields."""
+
+    __slots__ = ("_is_error", "_error_text")
+
+    def __init__(self, value: Mapping[str, object], *, is_error: bool = False,
+                 error_text: Optional[str] = None) -> None:
+        super().__init__(value)
+        self._is_error = is_error
+        self._error_text = error_text
+
+    @property
+    def is_error(self) -> bool:
+        """Whether the tool reports a controlled execution failure."""
+        return self._is_error
+
+    @property
+    def error_text(self) -> Optional[str]:
+        """Optional audit detail; it is not added to the JSON data object."""
+        return self._error_text
+
+
+def _tool_result_error(value: Any) -> Optional[str]:
+    """Only explicit result objects can set the protocol's error status."""
+    if isinstance(value, MCPToolResult) and value.is_error:
+        return value.error_text or "tool reported an execution failure"
+    return None
 
 
 @dataclass(frozen=True)
@@ -150,9 +179,15 @@ class MCPTool:
         actions (``ac_execute_actions``, the circuit / bulkhead / saga
         tools) used to leave its variables in the module executor for the
         next call, possibly another client's.
+
+        A source path policy follows managed submissions through legacy wrappers.
+        Task-aware dispatch resolves this lazily carried policy's private metadata.
         """
         from je_auto_control.utils.script_vars.execution import execution_scope
-        with execution_scope():
+        from je_auto_control.utils.agent_runtime.origin_policy import source_policy_scope
+        from je_auto_control.utils.mcp_server._call_authority import invocation_authority
+        policy = getattr(ctx, "path_policy", None)
+        with execution_scope(), source_policy_scope(policy), invocation_authority(self, arguments, ctx):
             if ctx is not None and _handler_accepts_ctx(self.handler):
                 return self.handler(ctx=ctx, **arguments)
             return self.handler(**arguments)

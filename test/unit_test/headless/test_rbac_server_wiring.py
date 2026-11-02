@@ -8,10 +8,10 @@ Nothing here touches the real mouse, keyboard or screen: REST handlers that
 would are replaced by recorders, and the MCP tools are local fakes.
 """
 import json
+from threading import Condition
 import urllib.error
 import urllib.request
 
-import time
 
 import pytest
 
@@ -63,9 +63,18 @@ class _FakeAudit:
 
     def __init__(self):
         self.rows = []
+        self._changed = Condition()
 
     def log(self, event_type, **fields):
-        self.rows.append({"event_type": event_type, **fields})
+        with self._changed:
+            self.rows.append({"event_type": event_type, **fields})
+            self._changed.notify_all()
+
+    def completed_rows(self, count):
+        """Wait for post-response auditing before asserting its exact row count and identities."""
+        with self._changed:
+            assert self._changed.wait_for(lambda: len(self.rows) >= count, timeout=2.0)
+            return list(self.rows)
 
     def query(self, **_kwargs):
         return list(self.rows)
@@ -217,13 +226,9 @@ def test_executor_check_is_typed_and_silent_outside_a_scope():
 def test_rest_audit_rows_name_the_user(rest, users):
     server = rest(user_store=users)
     _call(server, "GET", "/commands", users.tokens[Role.OPERATOR])
+    server._audit_log.completed_rows(1)
     _call(server, "POST", "/execute", users.tokens[Role.VIEWER], {"actions": []})
-    # The row is written after the response is sent, so the client can be
-    # back here before the second one exists.
-    deadline = time.monotonic() + 5.0
-    while len(server._audit_log.rows) < 2 and time.monotonic() < deadline:
-        time.sleep(0.01)
-    allowed, refused = server._audit_log.rows
+    allowed, refused = server._audit_log.completed_rows(2)
     assert allowed["viewer_id"] == "operator-user"
     assert "user=operator-user role=operator" in allowed["detail"]
     assert refused["viewer_id"] == "viewer-user"
@@ -417,12 +422,12 @@ def test_mcp_rbac_refuses_the_shared_token_and_unknown_roles(mcp_http, users):
 def test_mcp_unconfigured_rbac_keeps_shared_token(mcp_http):
     server = mcp_http(auth_token="shared-secret")
     assert _rpc(server, "tools/list")[0] == 401
-    assert _tool_names(server, "shared-secret") == ["peek", "poke", "ac_load_plugins"]
+    assert _tool_names(server, "shared-secret") == ["peek", "poke"]
     _status, body = _rpc(server, "tools/call", {"name": "ac_load_plugins", "arguments": {}},
                          "shared-secret")
     assert "result" in body
     assert "user_id" not in _audit_entries(server)[0]
-    assert _tool_names(mcp_http(), None) == ["peek", "poke", "ac_load_plugins"]
+    assert _tool_names(mcp_http(), None) == ["peek", "poke"]
 
 
 def test_default_registry_offers_a_viewer_only_read_only_tools(users):
@@ -432,8 +437,8 @@ def test_default_registry_offers_a_viewer_only_read_only_tools(users):
         listed = MCPServer(tools=registry).handle_line(
             json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}))
     names = {tool["name"] for tool in json.loads(listed)["result"]["tools"]}
-    read_only = {tool.name for tool in registry if tool.annotations.read_only}
-    assert names == read_only - set(TOOL_CAPABILITIES)
-    assert names < read_only, "data tools and user listing are held back"
-    assert "ac_execute_actions" not in names
-    assert "ac_click_mouse" not in names
+    assert names == {tool.name for tool in registry if tool.annotations.read_only
+                     and capability_for_tool(tool.name, True) == Capability.READ_SCREEN}
+    assert {"ac_get_mouse_position", "ac_screen_size"} <= names
+    assert not {"ac_get_clipboard", "ac_sql_query", "ac_load_dotenv", "ac_jwt_encode"} & names
+    assert "ac_execute_actions" not in names and "ac_click_mouse" not in names

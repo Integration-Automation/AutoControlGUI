@@ -28,15 +28,16 @@ from je_auto_control.utils.platform_id import is_windows, is_x11_unix
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.utils.text_unicode.text_unicode import CONTROL_KEYS, unicode_code_units
 from je_auto_control.wrapper.platform_wrapper import (
-    keyboard, keyboard_check, keyboard_key_aliases, keyboard_keys_table,
+    keyboard, keyboard_check, keyboard_key_aliases, get_keyboard_keys_table as _get_platform_key_table,
 )
+from je_auto_control.wrapper._input_observer import input_event, has_input_observer
 
 def get_keyboard_keys_table() -> dict:
     """
     取得鍵盤對應表
     Get keyboard keys table
     """
-    return keyboard_keys_table
+    return globals()["keyboard_keys_table"] if "keyboard_keys_table" in globals() else _get_platform_key_table()
 
 
 #: A key name a user can type back: lower case, digits, underscore.
@@ -57,7 +58,7 @@ def keyboard_key_name(keycode: int) -> Optional[str]:
     then the shortest, then the alphabetically first, so every machine with
     the same table gives the same answer.
     """
-    names = [name for name, code in keyboard_keys_table.items()
+    names = [name for name, code in get_keyboard_keys_table().items()
              if code == keycode and name not in keyboard_key_aliases]
     if not names:
         return None
@@ -70,7 +71,7 @@ def _resolve_keycode(keycode: int | str) -> int:
     Resolve string key name to keycode
     """
     if isinstance(keycode, str):
-        resolved = keyboard_keys_table.get(keycode)
+        resolved = get_keyboard_keys_table().get(keycode)
         if resolved is None:
             raise AutoControlCantFindKeyException(table_cant_find_key_error_message)
         return resolved
@@ -133,6 +134,7 @@ def press_keyboard_key(keycode: int | str, is_shift: bool = False,
     autocontrol_logger.info(f"press_keyboard_key, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
     try:
         keycode = _resolve_keycode(keycode)
+        input_event("key_press", keycode=keycode, is_shift=_backend_shift(is_shift))
         # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
         # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
         # Branch spelling explained in the module docstring.
@@ -169,6 +171,7 @@ def release_keyboard_key(keycode: int | str, is_shift: bool = False,
     autocontrol_logger.info(f"release_keyboard_key, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
     try:
         keycode = _resolve_keycode(keycode)
+        input_event("key_release", keycode=keycode, is_shift=_backend_shift(is_shift))
         # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
         # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
         # Branch spelling explained in the module docstring.
@@ -182,6 +185,7 @@ def release_keyboard_key(keycode: int | str, is_shift: bool = False,
 
         if not skip_record:
             record_action_to_list("release_key", {"keycode": keycode, "is_shift": is_shift})
+        input_event("key_released", keycode=keycode, is_shift=_backend_shift(is_shift))
         return str(keycode)
 
     except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
@@ -265,7 +269,7 @@ def check_key_is_press(keycode: int | str) -> Optional[bool]:
     """
     autocontrol_logger.info(f"check_key_is_press, keycode={keycode}")
     try:
-        get_key_code = keycode if isinstance(keycode, int) else keyboard_keys_table.get(keycode)
+        get_key_code = keycode if isinstance(keycode, int) else get_keyboard_keys_table().get(keycode)
         if get_key_code is None:
             # 表裡沒有這個鍵名。原本會把 None 送進後端，讓它自己去炸——
             # Windows 後端會 TypeError，X11 後端則是安靜地回 False。
@@ -310,7 +314,7 @@ def _needs_shift(single_char: str, key: int) -> bool:
         return False
     lowered = single_char.lower()
     partner = lowered if lowered != single_char else _SHIFT_PARTNERS.get(single_char)
-    return partner is not None and keyboard_keys_table.get(partner) == key
+    return partner is not None and get_keyboard_keys_table().get(partner) == key
 
 
 def _write_char_via_unicode(single_char: str) -> bool:
@@ -325,15 +329,40 @@ def _write_char_via_unicode(single_char: str) -> bool:
     if not callable(type_unicode_unit):
         return False
     for unit in unicode_code_units(single_char):
-        type_unicode_unit(unit)
+        input_event("text")
+        if has_input_observer():
+            _tracked_unicode_unit(unit)
+        else:
+            type_unicode_unit(unit)
     return True
+
+
+def _release_unicode_unit(unit: int) -> None:
+    """Release one host-owned Unicode packet, with the same ownership acknowledgements."""
+    release = getattr(keyboard, "release_unicode", None)
+    if not callable(release):
+        raise AutoControlKeyboardException("managed Unicode release is unavailable")
+    input_event("key_release", keycode=unit, is_shift=False, unicode=True)
+    release(unit)
+    input_event("key_released", keycode=unit, is_shift=False, unicode=True)
+
+
+def _tracked_unicode_unit(unit: int) -> None:
+    press = getattr(keyboard, "press_unicode", None)
+    if not callable(press) or not callable(getattr(keyboard, "release_unicode", None)):
+        raise AutoControlKeyboardException("managed Unicode input needs individually tracked press and release")
+    input_event("key_press", keycode=unit, is_shift=False, unicode=True)
+    try:
+        press(unit)
+    finally:
+        _release_unicode_unit(unit)
 
 
 def _write_one_char(single_char: str, is_shift: bool) -> None:
     """Type one character of ``write``'s string, or raise if nothing can."""
-    key = keyboard_keys_table.get(single_char)
+    key = get_keyboard_keys_table().get(single_char)
     control_key = WRITE_CONTROL_KEYS.get(single_char)
-    if control_key is not None and control_key in keyboard_keys_table:
+    if control_key is not None and control_key in get_keyboard_keys_table():
         # Before the table lookup: a newline must press Enter, not type
         # U+000A and not fall through to the space fallback below.
         type_keyboard(control_key, is_shift, skip_record=True)
@@ -389,9 +418,9 @@ _RECORD_MASK = "***"
 
 
 def _note_secret_for_journal(secret: str) -> None:
-    """Tell a started action journal to mask ``secret`` wherever it appears."""
-    from je_auto_control.utils.action_journal import recorder
-    recorder.note_secret_value(secret)
+    """Tell the current run to mask ``secret`` wherever it appears."""
+    from je_auto_control.utils.logging.secret_scope import remember_secret
+    remember_secret(secret)
 
 
 def write_secret(secret: str) -> None:
@@ -423,7 +452,7 @@ def write_secret(secret: str) -> None:
     try:
         for single_char in secret.replace("\r\n", "\n"):
             control_key = WRITE_CONTROL_KEYS.get(single_char)
-            if control_key is not None and control_key in keyboard_keys_table:
+            if control_key is not None and control_key in get_keyboard_keys_table():
                 type_keyboard(control_key, skip_record=True)
             else:
                 _write_char_via_unicode(single_char)
@@ -528,3 +557,10 @@ def send_key_event_to_window(window_title: str, keycode: int | str) -> None:
         autocontrol_logger.error(
             f"send_key_event_to_window failed, window={window_title}, keycode={keycode}, error={repr(error)}"
         )
+
+
+def __getattr__(name: str) -> dict:
+    """Preserve explicit table access and caller replacement of that attribute."""
+    if name == "keyboard_keys_table":
+        return get_keyboard_keys_table()
+    raise AttributeError(name)

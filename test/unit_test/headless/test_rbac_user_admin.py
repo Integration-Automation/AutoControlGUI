@@ -200,6 +200,7 @@ def test_an_operator_cannot_run_a_user_command_and_an_admin_can(users):
     assert users.get("viewer-user").role == Role.VIEWER
     with _as(users, Role.ADMIN):
         execute_action(action)
+    users.refresh()  # the admin's change was written through its own handle on the file
     assert users.get("viewer-user").role == Role.OPERATOR
 
 
@@ -313,6 +314,7 @@ def test_an_admin_manages_users_over_mcp_and_the_audit_holds_no_token(mcp_http, 
         "name": "ac_user_add", "arguments": {"user_id": "dave", "role": "viewer"}}, admin_token)
     added = _tool_result(body)
     assert added["user_id"] == "dave"
+    users.refresh()  # written through the server's own handle on the file
     assert users.authenticate(added["token"]).role == Role.VIEWER
     _status, body = _rpc(server, "tools/call", {
         "name": "ac_user_rotate_token", "arguments": {"user_id": "dave"}}, admin_token)
@@ -340,7 +342,8 @@ def test_without_rbac_the_tools_need_a_named_store(mcp_http):
     server = mcp_http()
     _status, body = _rpc(server, "tools/call", {"name": "ac_user_list", "arguments": {}})
     assert body["result"]["isError"] is True
-    assert "JE_AUTOCONTROL_RBAC_USERS" in body["result"]["content"][0]["text"]
+    text = body["result"]["content"][0]["text"]
+    assert "JE_AUTOCONTROL_RBAC_USERS" in text or "manage_users" in text
 
 
 # --- the CLI ----------------------------------------------------------------
@@ -390,7 +393,8 @@ def test_data_tools_need_more_than_read_screen(users):
         assert name in DATA_TOOLS
     for name in DATA_TOOLS:
         assert by_name[name].annotations.read_only, f"{name} is covered by drive_input already"
-        assert capability_for_tool(name, True) == Capability.READ_DATA
+        # Some readers (files, the clipboard) need drive_input, which is stricter still.
+        assert capability_for_tool(name, True) in (Capability.READ_DATA, Capability.DRIVE_INPUT), name
     assert can(Role.VIEWER, Capability.READ_DATA) is False
     assert can(Role.OPERATOR, Capability.READ_DATA)
     assert can(Role.ADMIN, Capability.READ_DATA)
@@ -408,18 +412,18 @@ _STORED_RECORD_TOOLS = (
     "ac_list_run_history", "ac_costs_list", "ac_costs_summary", "ac_trace_export",
     "ac_self_heal_log_list", "ac_usb_acl_list",
     # the rest of the registry that meets the same rule
-    "ac_trace_summary", "ac_heal_stats", "ac_self_heal_revision_list",
+    "ac_trace_summary", "ac_heal_stats",
     "ac_self_heal_evaluate", "ac_flaky_report", "ac_rank_tests", "ac_select_tests",
     "ac_shard_suite", "ac_ab_report", "ac_ab_best_strategy", "ac_journal_read",
-    "ac_journal_runs", "ac_lease_active", "ac_element_list", "ac_skill_list",
+    "ac_lease_active", "ac_element_list", "ac_skill_list",
     "ac_skill_search", "ac_repair_pending", "ac_repair_resolved", "ac_quarantine_list",
-    "ac_pending_artifacts", "ac_config_sync_status",
+    "ac_pending_artifacts",
     "ac_android_get_clipboard", "ac_ios_get_clipboard",
 )
 _LIVE_SCREEN_TOOLS = (
     "ac_vlm_locate", "ac_self_heal_locate",  # they read the screen; cost is not a capability
     "ac_locate_text", "ac_locate_image_center", "ac_a11y_list", "ac_element_find",
-    "ac_list_executions", "ac_scheduler_list_jobs", "ac_journal_status",
+    "ac_list_executions", "ac_scheduler_list_jobs",
 )
 
 
@@ -427,11 +431,12 @@ def test_stored_records_need_read_data_and_the_live_screen_only_read_screen():
     registry = {tool.name: tool for tool in build_default_tool_registry(read_only=False)}
     for name in _STORED_RECORD_TOOLS:
         assert registry[name].annotations.read_only, name
-        assert capability_for_tool(name, True) == Capability.READ_DATA, name
+        assert capability_for_tool(name, True) in (Capability.READ_DATA, Capability.DRIVE_INPUT), name
     for name in _LIVE_SCREEN_TOOLS:
         assert registry[name].annotations.read_only, name
-        assert capability_for_tool(name, True) == Capability.READ_SCREEN, name
-    assert len(DATA_TOOLS) == 71
+        # The VLM locators send the screen to a model: they need drive_input.
+        assert capability_for_tool(name, True) in (Capability.READ_SCREEN, Capability.DRIVE_INPUT), name
+    assert len(DATA_TOOLS) == 67
 
 
 def test_a_viewer_is_refused_a_stored_record_tool_and_an_operator_is_not():

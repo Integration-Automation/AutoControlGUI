@@ -17,9 +17,8 @@ keyboard input, image recognition, screen capture, action scripting, and report 
    allows no global input hook, so recording your own keyboard and mouse is an
    opt-in ``evdev`` reader. ``probe_capabilities()`` reports where input,
    capture, recording and the stop shortcut each stand, without asking the
-   desktop for anything: see
-   :doc:`Eng/doc/wayland/wayland_capabilities_doc`, and
-   :doc:`getting_started/run_in_ci` for compositor / install notes. Set
+   desktop for anything. See :doc:`getting_started/run_in_ci` for
+   compositor / install notes. Set
    ``JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11`` to force the XWayland
    fallback, which reaches X11 applications only.
 

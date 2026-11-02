@@ -153,9 +153,9 @@ class RefResolver:
         if scheme == "file":
             return self._resolve_file(target)
         value = self._resolve_secret(target)
-        # A started action journal masks it by exact match from here on.
-        from je_auto_control.utils.action_journal import recorder
-        recorder.note_secret_value(value)
+        # The current run masks it by exact match from here on (journal, audit, logs).
+        from je_auto_control.utils.logging.secret_scope import remember_secret
+        remember_secret(value)
         return value
 
     def resolve_all(self, obj: Any) -> Any:

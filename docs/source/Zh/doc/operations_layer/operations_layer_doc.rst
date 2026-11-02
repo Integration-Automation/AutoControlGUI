@@ -132,6 +132,14 @@ CLI::
 角色（選用的 RBAC）
 --------------------
 
+REST GUI 會標示 RBAC 模式並停用共用 token 輸入。Registry 狀態提供 ``rbac_enabled``，
+使用者存放檔啟用時回報 ``token: null``；請改用個別使用者的 token。停止伺服器會恢復共用
+token 控制項。Python 伺服器的 ``token`` 屬性仍保留設定的共用 token，RBAC 不接受它。
+
+只實作 ``check(client_ip=..., header_value=...)`` 的自製 REST gate 在共用 token 模式下
+保留原本的判定與限流行為。伺服器設定使用者存放檔時，成功結果必須包含已驗證的
+``AuthorizationContext``；沒有身分的成功判定會回覆 HTTP 401。
+
 預設情況下所有呼叫端共用同一個 token，可以使用所有端點。把伺服器指向一個使用者
 存放檔之後，每個呼叫端改為擁有自己的 token 與角色：
 
@@ -260,32 +268,18 @@ token 現在在這兩個路由會得到 403**\ ；``operator`` 與 ``admin`` 不
 同樣的指令若來自動作檔，則由 executor 拒絕。
 
 角色不是沙箱：operator 操作的是真實鍵盤，也能啟動程式，桌面使用者手動做得到的事
-它都做得到。角色保護的是主機自身的特權狀態。
+它都做得到。角色保護的是主機自身的特權狀態。間隔／cron 排程、觸發器、熱鍵、watchdog
+規則、webhook、e-mail 觸發器與 observer 回呼會保留註冊者身分。啟動或重新啟用 daemon
+不會把工作改成該操作者擁有。每次觸發會重新讀取來源使用者檔：刪除使用者、檔案遺失或
+損壞、降為 viewer 都會阻止執行；特權指令依目前角色檢查。
 
-**延後執行的工作會記住擁有者。** 已驗證的呼叫者註冊的排程工作、觸發器、熱鍵綁定、
-webhook、e-mail 觸發器或 watchdog 規則，會連同該使用者一起存下來（``job.owner`` 等，
-型別為 ``DeferredOwner``），之後以該使用者的身分執行。角色是在工作觸發時到使用者
-存放檔查的，不是記下來的：之後被降級的使用者，已註冊的工作也失去特權；不再有
-``drive_input`` 或已被移除的使用者，其工作完全不會執行（該次執行記為失敗）；被升級
-的使用者則取得新角色。沒有 RBAC 時註冊的工作（GUI、腳本、沒有使用者存放檔的伺服器）
-沒有擁有者，行為與以前相同。
-
-螢幕 observer 的監看（``AC_observe_add``、MCP 工具 ``ac_observe_add``、
-``ScreenObserver.add``）是同一類延後工作：不論是誰呼叫 ``AC_observe_poll``、或由哪條
-執行緒偵測到變化，回呼都以加入它的使用者（``rule.owner``）的身分執行；擁有者被移除或
-降級時回呼會被拒絕。狀態機（``StateMachine``、``AC_run_state_machine``）與 planner 的
-執行（``run_from_description``、``AC_llm_run``）通常就在提出要求的那個請求裡執行，身分
-就是該請求的；``StateMachine`` 另外會記住建立它的使用者，``run_from_description`` 則
-接受 ``owner=capture_owner()``，所以交給另一條執行緒執行時仍以該使用者的身分執行，而
-不是沒有身分。
-
-使用者存放檔啟用時，狀態查詢（``AC_rest_api_status``、REST API 分頁）回報
-``"rbac": true``、``"users_path"`` 與 ``"token": null``：共用 token 會被拒絕，所以不再
-顯示它。
-
-只實作 ``check(client_ip=, header_value=)`` 的自製 gate 物件仍可使用：採用它的判定，
-請求以沒有使用者身分的方式處理，與共用 token 相同。要提供身分，請實作回傳
-``AuthResult`` 的 ``authenticate(...)``。
+``resolve_token`` 只在 ``AuthorizationContext`` 記錄來源 ``store_path``，不保存 bearer token。
+由 Python 明確建立且未帶來源路徑的 context 則維持角色快照。未在 RBAC 下註冊的工作會
+清除 worker 原有身分，保留本機直接使用的行為。observer 與 watchdog 回呼也會取得獨立
+變數範圍；watchdog 的 executor 動作失敗時不會算成成功排除彈窗。observer 事件仍表示
+偵測到的狀態轉換，回呼失敗會另行記錄。
+巢狀回呼不會清除呼叫端原有的失敗計數。webhook 的擁有者被撤銷權限後，回應為 HTTP 403
+與 ``fired: false``。
 
 RBAC 請求的每一筆稽核紀錄都會記下使用者：``viewer_id`` 欄位存使用者 id，detail 為
 ``POST /execute -> ok:200 user=alice role=operator``\ （被拒絕時為

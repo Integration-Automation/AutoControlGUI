@@ -58,6 +58,217 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261101-17 | 2026-11-01 | Patch the dependencies named in Dependabot security alerts | #bugfix #deps #security #ci | [2026-11](2026-11.md) |
+| U-20261101-16 | 2026-11-01 | Accept either refusal when a revocation races the lease watch | #incident #ci #test | [2026-11](2026-11.md) |
+| U-20261101-15 | 2026-11-01 | Observe only the maintenance call's own writes in the receipt test | #incident #ci #test | [2026-11](2026-11.md) |
+| U-20261101-14 | 2026-11-01 | Carry the listener's pid namespace in the Linux endpoint | #incident #ci #linux | [2026-11](2026-11.md) |
+| U-20261101-13 | 2026-11-01 | Run the Linux presence chain over the owned Linux channel | #snapshot #agent #presence #linux | [2026-11](2026-11.md) |
+| U-20261101-12 | 2026-11-01 | Build the Android helper's protocol handler and app | #snapshot #agent #android | [2026-11](2026-11.md) |
+| U-20261101-11 | 2026-11-01 | Start the Android device-side helper with its fence ledger | #snapshot #agent #android | [2026-11](2026-11.md) |
+| U-20261101-10 | 2026-11-01 | Audit the role boundaries against injected page text | #done #agent #security | [2026-11](2026-11.md) |
+| U-20261101-09 | 2026-11-01 | Read the XInput opcode through the public Display API | #incident #ci #x11 | [2026-11](2026-11.md) |
+| U-20261101-08 | 2026-11-01 | Hold a first action until fresh state is re-established | #done #agent #recovery | [2026-11](2026-11.md) |
+| U-20261101-07 | 2026-11-01 | Write the deployment and rollback plan for the agent runtime | #docs #agent #deployment | [2026-11](2026-11.md) |
+| U-20261101-06 | 2026-11-01 | Add macOS and X11 physical-activity sources | #snapshot #agent #presence #macos #x11 | [2026-11](2026-11.md) |
+| U-20261101-05 | 2026-11-01 | Report each managed-task area's readiness passively | #done #agent #diagnostics | [2026-11](2026-11.md) |
+| U-20261101-04 | 2026-11-01 | Widen the presence reader test's safety gate | #incident #agent #ci #test | [2026-11](2026-11.md) |
+| U-20261101-03 | 2026-11-01 | Bind the HTTP servers without a reverse lookup | #incident #ci #macos #server | [2026-11](2026-11.md) |
+| U-20261101-02 | 2026-11-01 | Move every macOS square from macos-14 to macos-15 | #decision #ci #macos | [2026-11](2026-11.md) |
+| U-20261101-01 | 2026-11-01 | Give the shared managed-task helper twenty seconds | #incident #agent #ci #test | [2026-11](2026-11.md) |
+| U-20261031-05 | 2026-10-31 | Cap the transfer peer's remaining time at its bound | #incident #agent #ci #windows | [2026-10-f](2026-10-f.md) |
+| U-20261031-04 | 2026-10-31 | Wait for the service's maintenance pass in two ownership tests | #incident #agent #ci #test | [2026-10-f](2026-10-f.md) |
+| U-20261031-03 | 2026-10-31 | Cap the helper's retirement deadline; contain a failed fixture | #incident #agent #ci #windows | [2026-10-f](2026-10-f.md) |
+| U-20261031-02 | 2026-10-31 | Give the Dev CI squares a 120-minute limit | #decision #ci #windows | [2026-10-f](2026-10-f.md) |
+| U-20261031-01 | 2026-10-31 | One-transaction agent schema; a racing resolve is no escape | #incident #agent #ci #windows | [2026-10-f](2026-10-f.md) |
+| U-20261030-41 | 2026-10-30 | Test the poll fallback and the SIGCHLD reset | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-42 | 2026-10-30 | Give each epoch private temporary roots, and accept the installed service on a WSL host | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-43 | 2026-10-30 | Close the twenty-seventh review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-44 | 2026-10-30 | Close the twenty-eighth review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-45 | 2026-10-30 | Close the twenty-ninth review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-46 | 2026-10-30 | Close the thirtieth review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-47 | 2026-10-30 | Close the thirty-first review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-48 | 2026-10-30 | Close the thirty-second review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-49 | 2026-10-30 | Close the thirty-third review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-50 | 2026-10-30 | Close the thirty-fourth review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-51 | 2026-10-30 | Close the thirty-fifth review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-52 | 2026-10-30 | Close the thirty-sixth review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-53 | 2026-10-30 | Close the thirty-seventh review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-54 | 2026-10-30 | Close the thirty-eighth review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-55 | 2026-10-30 | Close the thirty-ninth review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-56 | 2026-10-30 | Close the fortieth review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-57 | 2026-10-30 | Close the forty-first review of the private epoch roots | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-58 | 2026-10-30 | Record the WSL host requirements as a finding | #decision #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261030-40 | 2026-10-30 | Reset SIGCHLD at guardian start, and fall back to the pid watch when a pidfd cannot be polled | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-39 | 2026-10-30 | Close the twenty-fourth review's notes on the stall watch and the fault fixtures | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-38 | 2026-10-30 | Test the purge's fault paths and stall watch, close the manifest load gaps, and split the long test file | #snapshot #agent #linux #test | [2026-10-e](2026-10-e.md) |
+| U-20261030-37 | 2026-10-30 | Record the clean review of the owner service | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261030-36 | 2026-10-30 | Judge manifest roots by what they resolve to, and test the anchoring | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261030-35 | 2026-10-30 | Anchor purge roots without the sticky exception, and recheck what they resolve to | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261030-34 | 2026-10-30 | Anchor manifest purge roots, and keep the purge's trust verdict out of errno | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261030-33 | 2026-10-30 | Run the purge again for roots that exist but cannot be opened, and keep Progress.md to open items | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261030-32 | 2026-10-30 | Close the eighteenth review's notes on crash handlers, roots and line lengths | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-31 | 2026-10-30 | Purge /var/crash by default, and warn about unknown core_pattern handlers | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-30 | 2026-10-30 | Start helpers with no core dump, and keep purges completing without message queues | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-29 | 2026-10-30 | Re-detach mounts placed during the purge walk, and purge message queues through a detached mqueue mount | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-28 | 2026-10-30 | Open purge entries without crossing mounts, and let stalled purges back off | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-27 | 2026-10-30 | Read mount IDs from fdinfo, and kill purge children that stop making progress | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-26 | 2026-10-30 | Read mount IDs without asking the filesystem, so other users' FUSE mounts are detached | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-25 | 2026-10-30 | Detach mounts by descriptor during the purge walk, and refuse payload btrfs subvolumes | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-24 | 2026-10-30 | Test the purge's mount boundary, walk btrfs subvolumes, and check SipHash against the reference | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-23 | 2026-10-30 | Key the purge's directory identity, stay on the root's mount, and refuse passed-in io_uring rings | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-22 | 2026-10-30 | Know directories by file handle, skip ones met again, and refuse io_uring | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-21 | 2026-10-30 | Read every quarantine pass from the start, stop purges only on churn, and refuse set-ID bits | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-20 | 2026-10-30 | Recognise the quarantine by inode, rerun short purges, and retry starts from the main loop | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-19 | 2026-10-30 | Quarantine stubborn leftovers, bound epoch-N, and route helpers to their own epoch | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-18 | 2026-10-30 | Treat a revoke during a protected launch as cancellation, not an error | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261030-17 | 2026-10-30 | Keep a stubborn leftover from stopping the owner service, and never wait on a purge | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-16 | 2026-10-30 | Purge off the guardian's loop, four payload slices, and a remote helper under the owner service | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261030-15 | 2026-10-30 | Fix the third review's owner-service findings | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-14 | 2026-10-30 | Keep display helpers local and route only display-free helpers to the owner service | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261030-13 | 2026-10-30 | Let a spent owner-service epoch retire beside the next one | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261030-12 | 2026-10-30 | Run the package's native worker under the owner service | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261030-11 | 2026-10-30 | Remove what payload IDs left behind before reusing them | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-10 | 2026-10-30 | Cap the owner service's whole epoch and keep helper files private | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-09 | 2026-10-30 | Give each owner-service helper its own account and bound child leases and connection floods | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-08 | 2026-10-30 | Keep idle connections from holding the owner service's epoch | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261030-07 | 2026-10-30 | Confine the owner service's identity calls with seccomp | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-06 | 2026-10-30 | Bound the owner service's drain and prove the guardian reclaims a dead service | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261030-05 | 2026-10-30 | Check every ancestor of the guardian's state and cgroup paths | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-04 | 2026-10-30 | Replay a lost START's ticket and pin nested children to the parent's account | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-03 | 2026-10-30 | Trust the owner-service binding and endpoint only from root | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-02 | 2026-10-30 | Cap each account's share of owner-service connections | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261030-01 | 2026-10-30 | Bound each owner-service helper's processes and memory | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261029-23 | 2026-10-29 | Fix the owner service blockers from independent review | #snapshot #agent #linux #security | [2026-10-e](2026-10-e.md) |
+| U-20261029-22 | 2026-10-29 | Move the Linux owner service sources into the repository | #snapshot #agent #linux #packaging | [2026-10-e](2026-10-e.md) |
+| U-20261029-21 | 2026-10-29 | Cap each client's share of an epoch's lease positions | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261029-20 | 2026-10-29 | Stress revocation racing protected launches | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-19 | 2026-10-29 | Verify sibling sessions and a nested helper under a protected parent | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-18 | 2026-10-29 | Run the protected owner-service acceptance in WSL | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-17 | 2026-10-29 | Let the guardian verify client namespaces and hand over connections | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-16 | 2026-10-29 | Report helper containment in runtime status | #snapshot #agent #diagnostics | [2026-10-e](2026-10-e.md) |
+| U-20261029-15 | 2026-10-29 | Signal a POSIX helper group only while its leader still holds the ID | #snapshot #agent #reliability | [2026-10-e](2026-10-e.md) |
+| U-20261029-14 | 2026-10-29 | Let nested helpers open child leases with their delivered grant | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261029-13 | 2026-10-29 | Add the guardian process with refusal and recovery evidence | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-12 | 2026-10-29 | Add the guardian's durable epoch journal | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-11 | 2026-10-29 | Route the five helper consumers through one channel factory | #snapshot #agent #linux | [2026-10-e](2026-10-e.md) |
+| U-20261029-10 | 2026-10-29 | Add the Linux owner-service client and observe it end to end | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-09 | 2026-10-29 | Relay helper application traffic through worker-owned pipes | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-08 | 2026-10-29 | Let a channel close stop a waiting request and fence late replies | #snapshot #agent #reliability | [2026-10-e](2026-10-e.md) |
+| U-20261029-07 | 2026-10-29 | Deliver the nested capability through the worker bootstrap pipe | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-06 | 2026-10-29 | Answer the independent review of the native service issuer | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-05 | 2026-10-29 | Implement the isolated native service issuer with peer and lease evidence | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-04 | 2026-10-29 | Review isolated native ownership without enabling production | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-02 | 2026-10-29 | Verify lazy exports and refine source and documentation gates | #snapshot #agent #startup #verification | [2026-10-e](2026-10-e.md) |
+| U-20261029-01 | 2026-10-29 | Verify native owner fixtures and retain full-suite failures | #snapshot #agent #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261028-09 | 2026-10-28 | Defer X11 resources until explicit desktop use | #snapshot #agent #linux #startup #verification | [2026-10-e](2026-10-e.md) |
+| U-20261028-08 | 2026-10-28 | Verify atomic Linux spawn attributes and private pipes | #snapshot #agent #presence #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261028-07 | 2026-10-28 | Verify literal source links and missing export chunks | #done #agent #transfer #verification | [2026-10-e](2026-10-e.md) |
+| U-20261028-06 | 2026-10-28 | Verify Linux transport in the corrected full suite | #snapshot #agent #presence #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261028-05 | 2026-10-28 | Own Linux packet lifetime and preserve uncertain cleanup | #snapshot #agent #presence #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261028-04 | 2026-10-28 | Keep completed Linux peer regression out of pending work | #decision #agent #verification | [2026-10-e](2026-10-e.md) |
+| U-20261028-03 | 2026-10-28 | Verify Linux peer evidence in the complete fixed-source suite | #snapshot #agent #presence #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261028-02 | 2026-10-28 | Retain Linux connected peer evidence without desktop authority | #snapshot #agent #presence #linux #verification | [2026-10-e](2026-10-e.md) |
+| U-20261028-01 | 2026-10-28 | Verify corrected import source and audit finite cross-host delivery | #done #agent #handoff #verification | [2026-10-e](2026-10-e.md) |
+| U-20261027-16 | 2026-10-27 | Reject changed destination output before import acceptance | #done #agent #handoff #integrity #verification | [2026-10-e](2026-10-e.md) |
+| U-20261027-15 | 2026-10-27 | Verify corrected Windows presence through the full configured suite | #done #agent #presence #windows #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-14 | 2026-10-27 | Preserve readiness scope and optional imports in shipped task packages | #done #agent #scope #packaging #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-13 | 2026-10-27 | Bind persistent Windows presence to runtime and standard input lifetimes | #done #agent #presence #windows #ownership #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-12 | 2026-10-27 | Fence input-helper presence readers with live bounded checks | #done #agent #presence #windows #ownership #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-11 | 2026-10-27 | Keep shared Windows presence independent of caller cancellation | #done #agent #presence #windows #ownership #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-10 | 2026-10-27 | Share an owned Windows presence source through private brokers | #done #agent #presence #windows #ownership #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-09 | 2026-10-27 | Bind native presence pipes and verify owned process retirement | #snapshot #agent #presence #windows #ownership #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-08 | 2026-10-27 | Add closed presence protocol and native security primitives | #snapshot #agent #presence #windows #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-07 | 2026-10-27 | Implement header-only Windows presence source | #snapshot #agent #presence #windows #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-06 | 2026-10-27 | Revalidate native input after owner acknowledgement | #done #agent #input #ownership #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-05 | 2026-10-27 | Verify evidence ownership and USB full regression | #done #agent #persistence #usb #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-04 | 2026-10-27 | Preserve USB Unicode diagnostics and define evidence rollback | #snapshot #agent #usb #compatibility #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-03 | 2026-10-27 | Bind task evidence cache to its owning database | #snapshot #agent #persistence #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-02 | 2026-10-27 | Align transfer guides with the verified shared surfaces | #docs #agent #handoff #compatibility #verification | [2026-10-d](2026-10-d.md) |
+| U-20261027-01 | 2026-10-27 | Verify cross-host outcomes and isolated browser helper | #snapshot #agent #handoff #browser #verification | [2026-10-d](2026-10-d.md) |
+| U-20261026-07 | 2026-10-26 | Bind source exports and routed consent to current host authority | #snapshot #agent #handoff #authority #routing #verification | [2026-10-c](2026-10-c.md) |
+| U-20261026-06 | 2026-10-26 | Separate authenticated source peer reads from local delegation | #snapshot #agent #handoff #http #verification | [2026-10-c](2026-10-c.md) |
+| U-20261026-05 | 2026-10-26 | Bind reviewed local artifact snapshots to current source authority | #snapshot #agent #handoff #source #verification | [2026-10-c](2026-10-c.md) |
+| U-20261026-04 | 2026-10-26 | Bind private transfer reservations and owned cleanup | #snapshot #agent #handoff #storage #verification | [2026-10-c](2026-10-c.md) |
+| U-20261026-03 | 2026-10-26 | Validate immutable cross-host transfer data models | #snapshot #agent #handoff #verification | [2026-10-c](2026-10-c.md) |
+| U-20261026-02 | 2026-10-26 | Define cross-host artifact and evidence handoff contracts | #decision #agent #handoff #P8 | [2026-10-c](2026-10-c.md) |
+| U-20261026-01 | 2026-10-26 | Preserve original browser context for bounded completion | #snapshot #agent #browser #recovery #verification | [2026-10-c](2026-10-c.md) |
+| U-20261023-07 | 2026-10-23 | Persist scoped task triggers and atomically deduplicate submissions | #done #agent #scheduling | [2026-10-c](2026-10-c.md) |
+| U-20261023-06 | 2026-10-23 | Add reviewed receipts and owned task evidence retention | #done #agent #persistence | [2026-10-c](2026-10-c.md) |
+| U-20261023-05 | 2026-10-23 | Gate shared desktop acquisition and preserve cancellation budgets | #done #agent #ownership | [2026-10-c](2026-10-c.md) |
+| U-20261023-04 | 2026-10-23 | Add reviewable managed workflow templates and semantic read-back | #done #agent #workflows | [2026-10-c](2026-10-c.md) |
+| U-20261023-03 | 2026-10-23 | Isolate native agent calls and retire owned input before transfer | #done #agent #runtime | [2026-10-c](2026-10-c.md) |
+| U-20261023-02 | 2026-10-23 | Add experimental managed task core and service surfaces | #done #agent #runtime | [2026-10-c](2026-10-c.md) |
+| U-20261023-01 | 2026-10-23 | Share agent and executor command boundaries | #done #agent #P0 | [2026-10-c](2026-10-c.md) |
+| U-20261021-14 | 2026-10-21 | Reject inconclusive live EI cleanup and inspect native evidence | #done #ci #D2 | [2026-10-b](2026-10-b.md) |
+| U-20261021-13 | 2026-10-21 | Collect bounded native EI teardown evidence on dev | #done #ci #D2 | [2026-10-b](2026-10-b.md) |
+| U-20261021-12 | 2026-10-21 | Run cancellable diagnostics through owned GUI tasks and scoped I/O | #done #diagnostics #D1 #F3 | [2026-10-b](2026-10-b.md) |
+| U-20261021-11 | 2026-10-21 | Add owner-bound cooperative task infrastructure without retaining widgets | #done #gui #workers #F3 | [2026-10-b](2026-10-b.md) |
+| U-20261021-10 | 2026-10-21 | Preserve explicit cancellation before later diagnostic checks | #done #diagnostics #cancellation #D1 | [2026-10-b](2026-10-b.md) |
+| U-20261021-09 | 2026-10-21 | Stop implicit CLI fallback after native pointer region refusal | #done #wayland #authority #D1 | [2026-10-b](2026-10-b.md) |
+| U-20261021-08 | 2026-10-21 | Expose passive input and capture capabilities across SDK, commands and Diagnostics | #done #capabilities #wayland #D1 | [2026-10-b](2026-10-b.md) |
+| U-20261021-07 | 2026-10-21 | Keep Diagnostics idle until its explicit Actions command | #done #diagnostics #gui #D1 | [2026-10-b](2026-10-b.md) |
+| U-20261021-06 | 2026-10-21 | Close abandoned screenshot requests and partial D-Bus connections within I/O budgets | #done #wayland #portal #D1 | [2026-10-b](2026-10-b.md) |
+| U-20261021-05 | 2026-10-21 | Release disconnected clipboard viewers without cyclic Qt garbage collection | #done #clipboard #qt-lifetime #F3 | [2026-10-b](2026-10-b.md) |
+| U-20261021-04 | 2026-10-21 | Preserve native diagnostic argv and handled interrupts before tracing the suite | #done #ci #native-diagnostics | [2026-10-b](2026-10-b.md) |
+| U-20261021-03 | 2026-10-21 | Retain CI child output and Linux native backtraces after crashes | #done #ci #native-diagnostics #D3 | [2026-10-b](2026-10-b.md) |
+| U-20261021-02 | 2026-10-21 | Keep Wayland native permission and session refusals from selecting CLI | #done #wayland #input #D1 | [2026-10-b](2026-10-b.md) |
+| U-20261021-01 | 2026-10-21 | Release retained Qt clipboard fixture tracebacks | #done #validation-only #qt-lifetime | [2026-10-b](2026-10-b.md) |
+| U-20261020-12 | 2026-10-20 | Bind explicit clipboard transfers to original connections and authority | #done #remote-desktop #clipboard #C3 | [2026-10-b](2026-10-b.md) |
+| U-20261020-11 | 2026-10-20 | Retain folder pending and offline changes through explicit GUI reconnect | #done #remote-desktop #folder-sync #C3 | [2026-10](2026-10.md) |
+| U-20261020-10 | 2026-10-20 | Confirm native folder delivery after remote atomic publication | #done #remote-desktop #file-commit #C3 | [2026-10](2026-10.md) |
+| U-20261020-09 | 2026-10-20 | Bind native folder receipts to the originally received bytes | #done #remote-desktop #folder-sync #C3 | [2026-10](2026-10.md) |
+| U-20261020-08 | 2026-10-20 | Observe original cancellation before Python Task normalization | #done #validation-only #remote-desktop #python310 | [2026-10](2026-10.md) |
+| U-20261020-07 | 2026-10-20 | Retire native file receives with their original peer and channel | #done #remote-desktop #file-receive #C3 | [2026-10](2026-10.md) |
+| U-20261020-06 | 2026-10-20 | Confirm cancellable file writes and preserve connection ownership | #done #remote-desktop #folder-sync #C3 | [2026-10](2026-10.md) |
+| U-20261020-05 | 2026-10-20 | Preserve folder content and stopped-worker ownership | #done #remote-desktop #folder-sync #C3 | [2026-10](2026-10.md) |
+| U-20261020-04 | 2026-10-20 | Verify native root revocation inside default temporary roots | #done #config-sync #validation #ci | [2026-10](2026-10.md) |
+| U-20261020-03 | 2026-10-20 | Load reviewed native profiles without activating engines | #done #config-sync #native #C3 | [2026-10](2026-10.md) |
+| U-20261020-02 | 2026-10-20 | Release rejected authentication slots before terminal replies | #done #remote-desktop #auth #ci | [2026-10](2026-10.md) |
+| U-20261020-01 | 2026-10-20 | Add reviewed workspace Sync UI with explicit live GUI preferences | #done #config-sync #gui #C3 | [2026-10](2026-10.md) |
+| U-20261019-25 | 2026-10-19 | Synchronize referenced assets with causal definitions and complete inert profiles | #done #config-sync #assets #C3 | [2026-10](2026-10.md) |
+| U-20261019-24 | 2026-10-19 | Coordinate source workspaces with causal outboxes and prepared recovery baselines | #done #config-sync #C3 | [2026-10](2026-10.md) |
+| U-20261019-23 | 2026-10-19 | Bridge saved native workspace preferences into inert causal profiles | #done #config-sync #workspace #C3 | [2026-10](2026-10.md) |
+| U-20261019-22 | 2026-10-19 | Keep sync validation portable and typed for paths and numeric bounds | #bugfix #config-sync #validation | [2026-10](2026-10.md) |
+| U-20261019-21 | 2026-10-19 | Capture six causal source adapters and publish inert native profiles | #done #config-sync #adapters #C3 | [2026-10](2026-10.md) |
+| U-20261019-20 | 2026-10-19 | Complete hash-verified local asset generations | #done #config-sync #assets #C3 | [2026-10](2026-10.md) |
+| U-20261019-19 | 2026-10-19 | Durable peer controls and atomic local full-resync adoption | #done #config-sync #C2 | [2026-10](2026-10.md) |
+| U-20261019-18 | 2026-10-19 | Deliver causal outboxes with exact HTTP retries and atomic snapshot receipts | #done #config-sync #causal | [2026-10](2026-10.md) |
+| U-20261019-17 | 2026-10-19 | Validate causal server transitions and retain deletion fences | #done #config-sync #causal | [2026-10](2026-10.md) |
+| U-20261019-16 | 2026-10-19 | Add causal review models and durable local sync queues | #done #config-sync #causal | [2026-10](2026-10.md) |
+| U-20261019-15 | 2026-10-19 | Persist config buckets with atomic revisions and durable operation receipts | #done #config-sync #sqlite | [2026-10](2026-10.md) |
+| U-20261019-14 | 2026-10-19 | Generate sealed observed-path script candidates from selected journal runs | #done #journal #codegen | [2026-10](2026-10.md) |
+| U-20261019-13 | 2026-10-19 | Review and verify template candidates before atomic acceptance or exact rollback | #done #self-healing #templates | [2026-10](2026-10.md) |
+| U-20261019-12 | 2026-10-19 | Trace healing records to their original journal steps | #done #self-healing #journal | [2026-10](2026-10.md) |
+| U-20261019-11 | 2026-10-19 | Keep progress focused on unfinished work and active exemptions | #docs #progress | [2026-10](2026-10.md) |
+| U-20261019-10 | 2026-10-19 | Verify explicit healing operations using fresh logical evidence | #done #self-healing #verification | [2026-10](2026-10.md) |
+| U-20261019-09 | 2026-10-19 | Share runtime healing frames and record unverified operation evidence | #done #self-healing #capture | [2026-10](2026-10.md) |
+| U-20261019-08 | 2026-10-19 | Compare locator versions on provided frames across execution surfaces | #done #self-healing #gui | [2026-10](2026-10.md) |
+| U-20261019-07 | 2026-10-19 | Preserve self-healing cancellation and mask audit secrets | #bugfix #self-healing | [2026-10](2026-10.md) |
+| U-20261019-06 | 2026-10-19 | Record explicit manual runs across API, CLI and GUI | #done #history #journal | [2026-10](2026-10.md) |
+| U-20261019-05 | 2026-10-19 | Browse journal snapshots and history links in Run History | #done #journal #gui | [2026-10](2026-10.md) |
+| U-20261019-04 | 2026-10-19 | Add observed journal runs and dedicated MCP operations | #done #journal #mcp | [2026-10](2026-10.md) |
+| U-20261019-03 | 2026-10-19 | Add scoped journal commands and shared safe inspection | #done #journal #executor | [2026-10](2026-10.md) |
+| U-20261019-02 | 2026-10-19 | Expose journal capture and bounded CLI inspection | #done #journal #cli | [2026-10](2026-10.md) |
+| U-20261019-01 | 2026-10-19 | Keep complete DAG node diagnostics inside their owner mask | #incident #security #dag | [2026-10](2026-10.md) |
+| U-20261018-19 | 2026-10-18 | Preserve interrupted execution through history, workers and recovery guards | #done #executor #cancellation | [2026-10](2026-10.md) |
+| U-20261018-18 | 2026-10-18 | Link explicit journals to existing run-history owners | #done #journal #history | [2026-10](2026-10.md) |
+| U-20261018-17 | 2026-10-18 | Release SQLite connections after failed history initialization | #incident #history #storage | [2026-10](2026-10.md) |
+| U-20261018-16 | 2026-10-18 | Retain callback-owner secret masks through final error logging | #done #security #callbacks | [2026-10](2026-10.md) |
+| U-20261018-15 | 2026-10-18 | Keep secret masking alive through outer errors and diagnostic writes | #done #security #diagnostics | [2026-10](2026-10.md) |
+| U-20261018-14 | 2026-10-18 | Isolate the legacy CLI dispatch boundary without changing flags | #done #cli #refactor | [2026-10](2026-10.md) |
+| U-20261018-13 | 2026-10-18 | Mask resolved vault values during executor application logging | #done #security #logging | [2026-10](2026-10.md) |
+| U-20261018-12 | 2026-10-18 | Capture executor action lifecycles with worker parent links | #done #journal #executor | [2026-10](2026-10.md) |
+| U-20261018-11 | 2026-10-18 | Preserve foreign files when recovering journal tails | #incident #journal #storage | [2026-10](2026-10.md) |
+| U-20261018-10 | 2026-10-18 | Build versioned, redacted and durable action-journal storage | #done #journal #storage | [2026-10](2026-10.md) |
+| U-20261018-09 | 2026-10-18 | Separate sensitive MCP reads from viewer observation | #done #mcp #rbac | [2026-10](2026-10.md) |
+| U-20261018-08 | 2026-10-18 | Present REST RBAC mode and preserve legacy gate compatibility | #done #rest #rbac | [2026-10](2026-10.md) |
+| U-20261018-07 | 2026-10-18 | Release factory-built GUI panels on explicit tab close | #done #gui #lifecycle | [2026-10](2026-10.md) |
+| U-20261018-06 | 2026-10-18 | Isolate CLI previews, planner runs and state-machine variables | #done #executor #variables | [2026-10](2026-10.md) |
+| U-20261018-05 | 2026-10-18 | Report refused MCP window-state operations as tool errors | #done #mcp #window | [2026-10](2026-10.md) |
+| U-20261018-04 | 2026-10-18 | Recheck platform wheel gaps without lowering security floors | #snapshot #deps #platforms | [2026-10](2026-10.md) |
+| U-20261018-03 | 2026-10-18 | Bind deferred work to its registrant and isolate callbacks | #done #security #rbac | [2026-10](2026-10.md) |
+| U-20261018-02 | 2026-10-18 | Repair Sphinx source markup and remove completed progress history | #done #docs | [2026-10](2026-10.md) |
+| U-20261018-01 | 2026-10-18 | GUI pages scroll and workspace preferences persist without qt-material | #done #gui #F2 | [2026-10](2026-10.md) |
 | U-20261022-01 | 2026-10-22 | Keep dependency metadata aligned | #bugfix #deps #ci | [2026-10](2026-10.md) |
 | U-20261009-43 | 2026-10-09 | The seven SonarCloud issues left on main after U-20261009-42 | #done #quality #sonar #security | [2026-10](2026-10.md) |
 | U-20261009-42 | 2026-10-09 | SonarCloud and Codacy backlog on main: 2,344 and 8 findings worked through | #done #quality #sonar #codacy | [2026-10](2026-10.md) |
@@ -393,7 +604,13 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-10.md](2026-10.md) | 2026-10 | 53 |
+| [2026-11.md](2026-11.md) | 2026-11 | 17 |
+| [2026-10-f.md](2026-10-f.md) | 2026-10 | 5 |
+| [2026-10-e.md](2026-10-e.md) | 2026-10 | 91 |
+| [2026-10-d.md](2026-10-d.md) | 2026-10 | 15 |
+| [2026-10-c.md](2026-10-c.md) | 2026-10 | 75 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 15 |
+| [2026-10.md](2026-10.md) | 2026-10 | 112 |
 | [2026-09-e.md](2026-09-e.md) | 2026-09 | 7 |
 | [2026-09-d.md](2026-09-d.md) | 2026-09 | 55 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 38 |
@@ -410,3 +627,105 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 | [2026-06-b.md](2026-06-b.md) | 2026-06 | 4 |
 | [2026-06.md](2026-06.md) | 2026-06 | 6 |
 | [2026-05.md](2026-05.md) | 2026-05 | 1 |
+
+| U-20261023-08 | 2026-10-23 | Persist crash input witnesses and separate workspace launch lifetime | #done #agent #recovery | [2026-10-c](2026-10-c.md) |
+
+| U-20261023-09 | 2026-10-23 | Record managed skills and require verified trials before version publication | #done #agent #skills | [2026-10-c](2026-10-c.md) |
+
+| U-20261023-10 | 2026-10-23 | Retain live origin ceilings and isolate MCP client root lifetimes | #done #agent #scope | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-01 | 2026-10-24 | Resolve observation-local targets and audit native coordinate grounding | #done #agent #observation | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-02 | 2026-10-24 | Task observation and action editor | #done #agent #gui | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-03 | 2026-10-24 | Finite workflow progress and fresh evidence | #done #agent #workflow | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-04 | 2026-10-24 | Dialog review and native window scope | #done #agent #scope | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-05 | 2026-10-24 | Host target ceilings and MCP session authority | #done #agent #targets #auth | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-06 | 2026-10-24 | Legacy URL opening through je_web_runner | #done #browser #migration | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-07 | 2026-10-24 | Authorized MCP summary and schema discovery | #done #mcp #discovery | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-08 | 2026-10-24 | MCP session availability and snapshot pages | #done #mcp #sessions | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-09 | 2026-10-24 | MCP worker authority, notifications and measurements | #done #mcp #scope | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-10 | 2026-10-24 | Managed WebRunner targets and DOM references | #done #agent #browser | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-11 | 2026-10-24 | Browser forms, transfers and bounded readback | #done #agent #workflow | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-12 | 2026-10-24 | Exact WebRunner readback compatibility | #done #agent #verification | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-13 | 2026-10-24 | Independent pinned browser completion | #done #agent #verification | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-14 | 2026-10-24 | Rooted WebRunner browser transfers | #done #agent #transfers | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-15 | 2026-10-24 | Runtime authority, exports and budget race closure | #done #agent #contracts | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-16 | 2026-10-24 | Fence retired browser skill contexts | #done #agent #recovery | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-17 | 2026-10-24 | Fence retired desktop skill contexts | #done #agent #recovery | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-18 | 2026-10-24 | Isolated browser helper dependency diagnostics | #done #agent #readiness | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-19 | 2026-10-24 | Preserve DAG caller authority before remote dispatch | #done #agent #security | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-20 | 2026-10-24 | Confirm input retirement before publishing task success | #done #agent #completion | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-21 | 2026-10-24 | Coordinate verified managed tasks through existing DAG surfaces | #done #agent #dag | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-22 | 2026-10-24 | Inspect accepted requests without resubmitting tasks | #done #agent #recovery | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-23 | 2026-10-24 | Inspect registered-host DAG requests without scheduling effects | #done #agent #dag | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-24 | 2026-10-24 | Bind DAG inspection to destination request-spec digests | #done #agent #recovery | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-25 | 2026-10-24 | Preserve remaining delivery steps before the requested pause | #docs #agent #handoff | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-26 | 2026-10-24 | Quarantine remote effects independently of local helper retirement | #done #agent #devices | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-27 | 2026-10-24 | Bound managed ADB transport without daemon management or command replay | #done #agent #android | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-28 | 2026-10-24 | Pin Android identity before finite host-only command proposals | #done #agent #scope | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-29 | 2026-10-24 | Bind Android proposals to native routing and keyguard evidence | #done #agent #input_scope | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-30 | 2026-10-24 | Record remaining device integration and pause after handoff | #docs #agent #handoff | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-31 | 2026-10-24 | Distinguish complete Android pre-input refusal from possible effects | #done #agent #android | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-32 | 2026-10-24 | Gate owned remote SDK calls on durable ACK and trusted settlement | #done #agent #devices | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-33 | 2026-10-24 | Connect checked Android SDK dispatch to leased owned workers | #done #agent #android | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-34 | 2026-10-24 | Bind Android semantic observations to reviewed text and fresh app readback | #done #agent #observations | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-35 | 2026-10-24 | Declare built-in screen coverage and reject synthetic completion labels | #done #agent #verification | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-36 | 2026-10-24 | Review stopped workflow remainders through one durable successor | #done #agent #recovery | [2026-10-c](2026-10-c.md) |
+
+| U-20261024-37 | 2026-10-24 | Replan external and local-model tasks with fresh successor evidence | #done #agent #recovery #models | [2026-10-c](2026-10-c.md) |
+| U-20261024-38 | 2026-10-24 | Explicitly reauthorize a successor within the original root ceiling | #done #agent #recovery #authorization | [2026-10-c](2026-10-c.md) |
+| U-20261024-39 | 2026-10-24 | Renew published skill authority through a fresh validated version | #done #agent #skills #authorization | [2026-10-c](2026-10-c.md) |
+| U-20261024-40 | 2026-10-24 | Renew trigger authority without replaying accepted events | #done #agent #triggers #authorization | [2026-10-c](2026-10-c.md) |
+| U-20261024-41 | 2026-10-24 | Bind initial managed DAG execution to a durable whole-graph batch | #done #agent #dag #recovery | [2026-10-c](2026-10-c.md) |
+| U-20261024-42 | 2026-10-24 | Require whole-graph review before managed DAG continuation | #done #agent #dag #recovery | [2026-10-c](2026-10-c.md) |
+| U-20261025-01 | 2026-10-25 | Delegate managed DAG coordination to the owning service | #done #agent #dag #persistence | [2026-10-c](2026-10-c.md) |
+| U-20261025-02 | 2026-10-25 | Pin caller DAG transport and local evidence to its source runtime | #done #agent #dag #security | [2026-10-c](2026-10-c.md) |
+| U-20261025-03 | 2026-10-25 | Admit local DAG nodes as their original owner with live caller authority | #done #agent #dag #authorization | [2026-10-c](2026-10-c.md) |
+| U-20261025-04 | 2026-10-25 | Retain unresolved DAG evidence and collect only settled expired batches | #done #agent #dag #retention | [2026-10-c](2026-10-c.md) |
+| U-20261025-05 | 2026-10-25 | Keep reviewed recovery successors under their source owner with live reviewer checks | #done #agent #recovery #authorization | [2026-10-c](2026-10-c.md) |
+| U-20261025-06 | 2026-10-25 | Reduce Android guard subprocess overhead without extending input deadlines | #done #agent #android #latency | [2026-10-c](2026-10-c.md) |
+| U-20261025-07 | 2026-10-25 | Add permanently read-only helpers for fresh completion observations | #done #agent #recovery #readonly | [2026-10-c](2026-10-c.md) |
+| U-20261025-08 | 2026-10-25 | Review confirmed effects through independent read-only completion tasks | #done #agent #recovery #verification | [2026-10-c](2026-10-c.md) |
+| U-20261025-09 | 2026-10-25 | Reserve bounded authenticated stop admission independently of status polling | #done #agent #control #http | [2026-10-c](2026-10-c.md) |
+| U-20261025-10 | 2026-10-25 | Publish exact skill validation trials with explicit read-only completion evidence | #done #agent #skills #recovery #verification | [2026-10-c](2026-10-c.md) |
+| U-20261025-11 | 2026-10-25 | Record stopped semantic workflows with explicit independent completion evidence | #done #agent #skills #recording #verification | [2026-10-c](2026-10-c.md) |
+| U-20261025-12 | 2026-10-25 | Review complete original skill effects across executable recovery | #done #agent #skills #recovery #verification | [2026-10-c](2026-10-c.md) |
+| U-20261025-13 | 2026-10-25 | Grant revocable local DAG completion evidence across existing callers | #done #agent #handoff #recovery #authorization | [2026-10-c](2026-10-c.md) |
+| U-20261025-14 | 2026-10-25 | Renew completion consent without restoring input authority | #done #agent #recovery #authorization | [2026-10-c](2026-10-c.md) |
+| U-20261025-15 | 2026-10-25 | Hand renewed read-only completion to its original local DAG | #done #agent #handoff #recovery #authorization | [2026-10-c](2026-10-c.md) |
+| U-20261025-16 | 2026-10-25 | Adopt explicit non-DAG completion evidence without widening task access | #done #agent #handoff #recovery #authorization | [2026-10-c](2026-10-c.md) |
+| U-20261029-03 | 2026-10-29 | Verify lazy facade delivery against the complete suite | #done #agent #startup #verification | [2026-10-e](2026-10-e.md) |

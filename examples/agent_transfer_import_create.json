@@ -1,0 +1,6 @@
+{
+  "host": "<registered-destination-host>",
+  "review": "<coordinator-review-token>",
+  "idempotency_key": "<same-key-as-review>",
+  "note": ""
+}

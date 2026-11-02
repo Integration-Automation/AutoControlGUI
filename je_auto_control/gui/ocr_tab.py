@@ -20,7 +20,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.gui.selector import open_region_selector
-from je_auto_control.gui.task_controller import CancellationToken, TaskHandle, task_controller
+from je_auto_control.gui.tab_task_controller import CancellationToken, TaskHandle, task_controller
 from je_auto_control.utils.ocr.ocr_engine import (
     find_text_regex, read_text_in_region,
 )

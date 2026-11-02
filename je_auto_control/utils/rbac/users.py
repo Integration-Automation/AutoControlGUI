@@ -102,6 +102,30 @@ def default_users_path() -> Path:
     return Path(os.path.expanduser("~")) / _DEFAULT_PATH_RELATIVE
 
 
+# Saves of each user-store file made by this process, by normalised path. The
+# file's (mtime, size) cannot tell two saves apart when they land in the same
+# clock tick at the same size -- a rotated token is the same length as the old
+# one -- so a store this process wrote through another handle (the admin tools
+# open their own) is also re-read when this count moved.
+_SAVES: Dict[str, int] = {}
+_SAVES_LOCK = threading.Lock()
+
+
+def _saves_key(path: Path) -> str:
+    return os.path.normcase(os.path.abspath(path))
+
+
+def _saves_of(key: str) -> int:
+    with _SAVES_LOCK:
+        return _SAVES.get(key, 0)
+
+
+def _count_save(key: str) -> int:
+    with _SAVES_LOCK:
+        _SAVES[key] = _SAVES.get(key, 0) + 1
+        return _SAVES[key]
+
+
 class UserStore:
     """JSON-backed thread-safe user store."""
 
@@ -115,6 +139,8 @@ class UserStore:
         # What the file looked like when it was last read or written, so
         # refresh() can tell that another process has changed it.
         self._loaded_stamp: Optional[Tuple[int, int]] = None
+        self._saves_key = _saves_key(self._path)
+        self._loaded_saves = 0
         self._load()
 
     @property
@@ -204,8 +230,9 @@ class UserStore:
         lowered role kept working until that server was restarted.
         """
         stamp = self._stamp()
+        saves = _saves_of(self._saves_key)
         with self._lock:
-            if stamp == self._loaded_stamp:
+            if stamp == self._loaded_stamp and saves == self._loaded_saves:
                 return False
         self._load()
         return True
@@ -219,12 +246,16 @@ class UserStore:
         return status.st_mtime_ns, status.st_size
 
     def _load(self) -> None:
+        # Counted before the read: a save that lands during it moves the count
+        # again, so the next refresh() reads once more instead of missing it.
+        saves = _saves_of(self._saves_key)
         stamp = self._stamp()
         users, problem = self._read()
         with self._lock:
             self._users = users
             self._unreadable = problem
             self._loaded_stamp = stamp
+            self._loaded_saves = saves
         if problem is not None:
             autocontrol_logger.error(
                 "user store %s unreadable (%s); no user can sign in and it will not be overwritten",
@@ -279,6 +310,7 @@ class UserStore:
             raise UserAuthError(f"could not save user store {self._path}: {error}") from error
         self._users = users
         self._loaded_stamp = self._stamp()
+        self._loaded_saves = _count_save(self._saves_key)
 
 
 def _copy(record: UserRecord) -> UserRecord:

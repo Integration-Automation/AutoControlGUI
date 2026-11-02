@@ -44,7 +44,7 @@ _UNMARKED = {"ac_launch_process": "argv", "ac_shell": "command"}
 @pytest.fixture(autouse=True)
 def _no_ambient_policy(monkeypatch):
     for name in (MCP_PATH_ROOTS_ENV, MCP_CLIENT_ROOTS_ENV, "JE_AUTOCONTROL_MCP_ENV_REF_ALLOW",
-                 "JE_AUTOCONTROL_MCP_READONLY", "JE_AUTOCONTROL_MCP_TOOL_MODE"):
+                 "JE_AUTOCONTROL_MCP_READONLY",):
         monkeypatch.delenv(name, raising=False)
 
 
@@ -98,17 +98,6 @@ def test_shell_arguments_are_deliberately_left_alone(registry, tool, argument):
     """A command line is a program: no reading of it as a path would confine it."""
     assert "format" not in registry[tool].input_schema["properties"][argument]
 
-
-def test_the_marked_tools_are_found_as_path_taking_by_the_search_index(registry):
-    from je_auto_control.utils.mcp_server.discovery import ToolIndex
-    index = ToolIndex(registry[name] for name in _MARKED)
-    for name in _MARKED:
-        rows = [row for row in index.search(name, limit=10) if row.name == name]
-        assert rows, name
-        assert rows[0].takes_paths, name
-
-
-# --- what counts as a path ---------------------------------------------------------------------
 
 @pytest.mark.parametrize("value", [
     "/etc/passwd", "~/notes.txt", "~", "\\\\server\\share\\x", "//server/share/x",

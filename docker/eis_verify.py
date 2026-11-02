@@ -20,9 +20,9 @@ they are answered here:
     the key codes, coordinates, button codes and scroll signs intended —
     including the axis flip ``mouse.scroll()`` applies between the kernel's
     ``REL_WHEEL`` frame and libei's, and the negative value that flip makes;
-  * tearing down a *live* context is finally testable — it is safe, which is
-    what lets ``_teardown`` release a completed session instead of leaking a
-    context and an fd per process, and this file is the sentinel for that.
+  * live cleanup is measured in a bounded child after releasing owned device
+    refs; successful process exit and both native boundary markers are required.
+    Unrelated child failures cannot count as evidence for safe teardown.
 
 Two things it measures but cannot settle, and says so rather than claiming
 either way: ``eis_device_pause()`` puts nothing on the wire for a sender
@@ -386,283 +386,44 @@ def _check_resume_recovers(backend, server) -> str:
 
 
 def _live_teardown_sentinel(path: str) -> str:
-    """Is ``ei_unref`` safe once the handshake has actually completed?
-
-    ``libei_verify.py`` established that it segfaults on a context whose
-    backend opened but never handshook. Whether a *live* context is safe was
-    untestable without a peer; it is testable now, and it is safe — which is
-    what lets ``_teardown`` release a completed session rather than leaking
-    its context. This is therefore a regression sentinel for that decision,
-    and it runs in a subprocess because the answer is a signal, not an
-    exception.
-    """
-    program = (
-        "import sys; sys.path.insert(0, '/opt/verify');"
-        "from eis_server import RecordingEisServer;"
-        "from je_auto_control.linux_wayland import libei;"
-        f"srv = RecordingEisServer({path + '-teardown'!r}); srv.start();"
-        "b = libei.LibeiBackend();"
-        f"b.connect(timeout=5.0, socket_path={(path + '-teardown').encode()!r});"
-        "assert b.is_connected;"
-        "sym = libei._load_symbols();"
-        "sym.ei_unref(b._ei);"
-        "print('survived')"
+    """Measure live cleanup after owned device refs are released; unrelated failures never pass."""
+    program = f"""
+import sys
+sys.path.insert(0, '/opt/verify')
+from eis_server import RecordingEisServer
+from je_auto_control.linux_wayland import libei
+server = RecordingEisServer({path+'-teardown'!r})
+server.start()
+backend = libei.LibeiBackend()
+backend.connect(timeout=5.0, socket_path={(path+'-teardown').encode()!r})
+if not backend.is_connected:
+    raise RuntimeError('live cleanup never reached a connected device')
+symbols = libei._load_symbols()
+if symbols is None:
+    raise RuntimeError('libei symbols did not resolve for live cleanup')
+for device in sorted(backend._refs):
+    symbols.ei_device_unref(device)
+print('ei_unref live: begin', flush=True)
+symbols.ei_unref(backend._ei)
+print('ei_unref live: end', flush=True)
+"""
+    finished = subprocess.run(  # nosec B603  # nosemgrep  # reason: fixed interpreter/program, isolate native teardown
+        [sys.executable, '-X', 'faulthandler', '-c', program], capture_output=True,
+        timeout=60, text=True, encoding='utf-8', errors='replace', check=False,
     )
-    # This interpreter, running a program built from literals above; no shell.
-    finished = subprocess.run([sys.executable, "-c", program],  # nosec B603  # nosemgrep
-                              capture_output=True, timeout=60)
-    if finished.returncode == 0:
-        return ("safe, which is what _teardown now relies on to release a "
-                "completed session instead of leaking its context")
+    print(finished.stdout, end='')
+    print(finished.stderr, end='')
+    began = 'ei_unref live: begin' in finished.stdout.splitlines()
+    ended = 'ei_unref live: end' in finished.stdout.splitlines()
     if finished.returncode == -11:
-        print()
-        print("      *** REVISIT ***  ei_unref now SEGFAULTS on a live")
-        print("      context too. LibeiBackend._teardown releases completed")
-        print("      sessions on the measurement that it is safe, so that")
-        print("      must go back to abandoning them — this is a crash in a")
-        print("      library that drives the user's desktop. See Progress.md.")
-        print()
-        raise AssertionError(
-            "ei_unref segfaults on a live context (rc=-11); _teardown's "
-            "release path is no longer safe on this libei")
-    detail = finished.stderr.decode("utf-8", "replace").strip().splitlines()
-    return f"inconclusive (rc={finished.returncode}): {detail[-1] if detail else ''}"
-
-
-def measure(name: str, fn: Callable[[], Any]) -> Any:
-    """Run a measurement and print what it found; never count it.
-
-    The checks decide this script's exit status. What follows are numbers and
-    classifications about the *opt-in* helper process — printed for whoever
-    reads the log, and unable to turn the job red.
-    """
-    try:
-        detail = fn()
-    except Exception:  # noqa: BLE001  # reason: a measurement that cannot run is itself a finding
-        print(f"note  {name} — could not be measured:")
-        print("        " + traceback.format_exc(limit=4).strip().replace(
-            "\n", "\n        "))
-        return None
-    print(f"info  {name}  — {detail}")
-    return detail
-
-
-def _describe_exit(returncode: Any) -> str:
-    """An exit status as a reader wants it: clean, a code, or a signal."""
-    import signal
-    if returncode is None:
-        return "still running"
-    if returncode == 0:
-        return "clean (rc=0)"
-    if returncode < 0:
-        try:
-            name = signal.Signals(-returncode).name
-        except ValueError:
-            name = "signal"
-        return f"{name} (rc={returncode})"
-    return f"exit status {returncode}"
-
-
-def _percentile(samples: List[float], fraction: float) -> float:
-    ordered = sorted(samples)
-    return ordered[min(len(ordered) - 1, int(len(ordered) * fraction))]
-
-
-def _timed_keystrokes(backend, count: int) -> List[float]:
-    """Milliseconds per press+release pair, ``count`` times."""
-    samples = []
-    for _ in range(count):
-        started = time.perf_counter()
-        backend.press_key(KEY_A)
-        backend.release_key(KEY_A)
-        samples.append((time.perf_counter() - started) * 1000.0)
-    return samples
-
-
-def _helper_session(path, server_class, ei_client):
-    """A helper process with a live session against a server of its own."""
-    if os.path.exists(path):
-        os.unlink(path)
-    server = server_class(path)
-    server.start()
-    client = ei_client.EiWorkerClient(socket_path=path,
-                                      handshake_timeout_s=5.0,
-                                      start_timeout_s=120.0)
-    client.start()
-    return client, server
-
-
-def _measure_helper_emits(path, server_class) -> str:
-    """Does input sent through the helper reach the EIS server at all?"""
-    from je_auto_control.linux_wayland import ei_client
-    client, server = _helper_session(path, server_class, ei_client)
-    try:
-        backend = ei_client.WorkerBackend(client)
-        backend.press_key(KEY_A)
-        backend.release_key(KEY_A)
-        backend.set_position(*TARGET_POSITION)
-        backend.click_button(BTN_LEFT)
-        backend.scroll(0, 1)
-        _wait_for(lambda: len(server.recording.keys) >= 2
-                  and server.recording.absolute_motions
-                  and len(server.recording.buttons) >= 2
-                  and server.recording.scrolls, 3.0,
-                  "the helper's events at the server")
-        record = server.recording
-        return (f"keys {record.keys[:2]}, motion "
-                f"{record.absolute_motions[-1]}, buttons {record.buttons[:2]}, "
-                f"scroll {record.scrolls[-1]} (in-process: (0, {SCROLL_UNIT}))")
-    finally:
-        client.close()
-        server.stop()
-
-
-def _measure_helper_latency(path, libei, server_class) -> str:
-    """What a pipe round trip per emission costs, next to none."""
-    from je_auto_control.linux_wayland import ei_client
-    count = 200
-    if os.path.exists(path + "-direct"):
-        os.unlink(path + "-direct")
-    direct_server = server_class(path + "-direct")
-    direct_server.start()
-    direct = libei.LibeiBackend()
-    direct.connect(timeout=5.0, socket_path=(path + "-direct").encode())
-    try:
-        in_process = _timed_keystrokes(direct, count)
-    finally:
-        direct.disconnect()
-        direct_server.stop()
-
-    client, server = _helper_session(path, server_class, ei_client)
-    try:
-        helper = _timed_keystrokes(ei_client.WorkerBackend(client), count)
-    finally:
-        client.close()
-        server.stop()
-
-    def summary(samples: List[float]) -> str:
-        return (f"median {_percentile(samples, 0.5):.3f} ms, "
-                f"p95 {_percentile(samples, 0.95):.3f} ms, "
-                f"max {max(samples):.3f} ms")
-
-    return (f"{count} press+release pairs — in-process: {summary(in_process)}"
-            f"; through the helper: {summary(helper)}")
-
-
-def _measure_helper_clean_close(path, server_class) -> str:
-    """A key held when the helper is closed: is it released, and how?"""
-    from je_auto_control.linux_wayland import ei_client
-    client, server = _helper_session(path, server_class, ei_client)
-    try:
-        ei_client.WorkerBackend(client).press_key(KEY_A)
-        _wait_for(lambda: server.recording.keys, 2.0, "the held key")
-        before = server.recording.disconnects
-        client.close()
-        try:
-            _wait_for(lambda: server.recording.disconnects > before, 3.0,
-                      "the helper to disconnect")
-        except AssertionError:
-            pass
-        released = (KEY_A, False) in server.recording.keys
-        return (f"helper exit {_describe_exit(client.returncode)}; key-up "
-                f"{'reached' if released else 'did NOT reach'} the server "
-                f"before it left; server saw "
-                f"{server.recording.disconnects - before} disconnect(s)")
-    finally:
-        client.close()
-        server.stop()
-
-
-def _measure_helper_killed(path, server_class) -> str:
-    """A key held when the helper is killed outright: who releases it?
-
-    Nothing in the helper runs after SIGKILL, so whatever the server sees is
-    libeis reacting to a client that vanished. This is the measurement behind
-    "the compositor is expected to release them" in ``ei_worker``.
-    """
-    import signal
-    from je_auto_control.linux_wayland import ei_transport, ei_client
-    client, server = _helper_session(path, server_class, ei_client)
-    try:
-        backend = ei_client.WorkerBackend(client)
-        backend.press_key(KEY_A)
-        _wait_for(lambda: server.recording.keys, 2.0, "the held key")
-        before = server.recording.disconnects
-        os.kill(client._process.pid, signal.SIGKILL)
-        try:
-            _wait_for(lambda: server.recording.disconnects > before, 3.0,
-                      "the server to notice the helper is gone")
-        except AssertionError:
-            pass
-        try:
-            backend.release_key(KEY_A)
-            reported = "the parent did NOT notice the helper died"
-        except ei_transport.EiWorkerDied as died:
-            reported = (f"the parent raised EiWorkerDied with pressed_keys="
-                        f"{died.pressed_keys}, exit "
-                        f"{_describe_exit(died.returncode)}")
-        released = (KEY_A, False) in server.recording.keys
-        return (f"{reported}; the server saw "
-                f"{server.recording.disconnects - before} disconnect(s) and "
-                f"{'a' if released else 'NO'} key-up for the held key — so "
-                "release on a dead client is "
-                f"{'done by libeis' if released else 'left to the compositor'}")
-    finally:
-        client.close()
-        server.stop()
-
-
-_HELPER_FLAG = "--helper-measurements"
-
-
-def _helper_measurements_in_a_child() -> None:
-    """Run the helper measurements where a crash cannot reach the checks.
-
-    They kill a client mid-session on purpose, which is a thing libeis might
-    not survive; in a child of its own, the worst that can happen is one more
-    line in the log saying so.
-    """
-    print("-" * 72)
-    print("      The libei helper process (JE_AUTOCONTROL_WAYLAND_EI_WORKER=1,")
-    print("      off by default). Measured here, never counted as a check:",
-          flush=True)
-    try:
-        # This interpreter running this file with a fixed flag; no shell.
-        finished = subprocess.run(  # nosec B603  # nosemgrep
-            [sys.executable, os.path.abspath(__file__), _HELPER_FLAG],
-            timeout=900)
-    except subprocess.TimeoutExpired:
-        print("note  the helper measurements did not finish within 900s")
-        return
+        if not began:
+            raise AssertionError('native fault before live ei_unref boundary; inspect native trace')
+        raise AssertionError('live ei_unref probe exited with SIGSEGV; inspect its recorded boundary and native trace')
     if finished.returncode != 0:
-        print("note  the helper measurements ended with "
-              f"{_describe_exit(finished.returncode)} — see above; this is "
-              "about the opt-in helper only and is not counted")
-
-
-def _helper_measurements_main() -> None:
-    """Entry point of the measurement child; nothing here is counted, so it has no status."""
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from eis_server import RecordingEisServer, load_symbols
-    from je_auto_control.linux_wayland import libei
-    if load_symbols() is None:
-        print("note  libeis is not installed; nothing to measure")
-        return
-    _run_helper_measurements(os.path.join(_scratch_dir(), "eis-helper"),
-                             libei, RecordingEisServer)
-
-
-def _run_helper_measurements(path, libei, server_class) -> None:
-    """Everything about the opt-in helper, as measurements only."""
-    measure("input sent through the helper reaches the EIS server",
-            lambda: _measure_helper_emits(path + "-emit", server_class))
-    measure("emission latency, in-process against through the helper",
-            lambda: _measure_helper_latency(path + "-latency", libei,
-                                            server_class))
-    measure("a key held when the helper is closed",
-            lambda: _measure_helper_clean_close(path + "-close", server_class))
-    measure("a key held when the helper is killed",
-            lambda: _measure_helper_killed(path + "-kill", server_class))
+        raise AssertionError(f'unexpected live ei_unref probe exit {finished.returncode}')
+    if not began or not ended:
+        raise AssertionError('live ei_unref did not reach completed native cleanup')
+    return 'safe in this probe: owned device refs released, live ei_unref completed (rc=0)'
 
 
 #: An offset region layout: the shape a compositor must advertise for a
@@ -737,18 +498,19 @@ def _check_libei_drops_out_of_region_motion(backend, server, libei) -> str:
 
 
 def _check_out_of_region_move_is_refused(backend, server, libei) -> str:
-    """AutoControl turns that silence into something the CLI path can act on."""
+    """AutoControl refuses an invalid native coordinate without selecting another provider."""
     before = len(server.recording.absolute_motions)
     try:
         backend.set_position(9000, 9000)
     except libei.LibeiUnavailable as error:
         _require("outside every region" in str(error),
                  f"refused, but with an unhelpful message: {error}")
+        _require(error.state == 'failed' and not error.status.fallback_allowed,
+                 "a region refusal was misclassified as optional backend absence")
         time.sleep(0.3)
         _require(len(server.recording.absolute_motions) == before,
                  "the refusal still put a motion on the wire")
-        return f"refused with {str(error)[:60]}... — _select_input.emitted "\
-               "hands it to ydotool"
+        return f"refused with {str(error)[:60]}... — native request stopped without CLI fallback"
     raise AssertionError(
         "set_position(9000, 9000) returned as though the pointer had moved; "
         "libei dropped it and nobody was told")
@@ -886,9 +648,6 @@ def main() -> int:
     if server.error is not None:
         print(f"      NOTE: the server thread ended with {server.error!r}")
 
-    # Last, and outside the checks: nothing below can change the exit status.
-    _helper_measurements_in_a_child()
-
     failed = [name for name, ok in _results if not ok]
     print("=" * 72)
     print(f"{len(_results) - len(failed)}/{len(_results)} checks passed")
@@ -899,7 +658,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    if _HELPER_FLAG in sys.argv[1:]:
-        _helper_measurements_main()
-        sys.exit(0)
     sys.exit(main())

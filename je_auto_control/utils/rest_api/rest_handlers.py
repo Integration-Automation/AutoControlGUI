@@ -19,6 +19,7 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlSignatureException,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.script_vars.execution import execution_scope
 
 
@@ -29,6 +30,8 @@ class RouteContext:
     query: str
     body: Optional[Any]
     client_ip: str
+    agent_runtime: Any = None
+    agent_origin: Optional[str] = None
 
     def query_params(self) -> Dict[str, List[str]]:
         return parse_qs(self.query) if self.query else {}
@@ -184,6 +187,7 @@ def _execute_strict(actions: Any) -> HandlerResult:
     return 200, {"ok": True, "result": result}
 
 
+@secret_log_scope()
 def handle_execute(ctx: RouteContext) -> HandlerResult:
     if not isinstance(ctx.body, dict):
         return 400, {"error": "body must be JSON object"}
@@ -209,6 +213,7 @@ def handle_execute(ctx: RouteContext) -> HandlerResult:
     return 200, {"result": result}
 
 
+@secret_log_scope()
 def handle_execute_file(ctx: RouteContext) -> HandlerResult:
     if not isinstance(ctx.body, dict):
         return 400, {"error": "body must be JSON object"}
@@ -245,8 +250,6 @@ def _serialize_history_row(row: Any) -> Dict[str, Any]:
         "finished_at": str(row.finished_at) if row.finished_at else None,
         "status": row.status, "error_text": row.error_text,
         "duration_seconds": row.duration_seconds,
-        "journal_path": row.journal_path,
-        "journal_run_id": row.journal_run_id,
     }
 
 

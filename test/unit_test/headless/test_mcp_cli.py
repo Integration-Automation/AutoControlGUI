@@ -30,6 +30,14 @@ def test_list_tools_with_read_only_drops_destructive(monkeypatch):
     assert "ac_get_mouse_position" in names
 
 
+def test_search_and_single_schema_flags_do_not_start_the_server(monkeypatch):
+    results = json.loads(_capture(monkeypatch, ["--search-tools", "ac_mcp_tool_schema", "--limit", "1"]))
+    assert len(results) == 1 and results[0]["name"] == "ac_mcp_tool_schema"
+    assert "inputSchema" not in results[0]
+    schema = json.loads(_capture(monkeypatch, ["--tool-schema", "ac_mcp_tool_schema"]))
+    assert schema["name"] == "ac_mcp_tool_schema" and "inputSchema" in schema
+
+
 def test_list_resources_emits_json(monkeypatch):
     output = _capture(monkeypatch, ["--list-resources"])
     descriptors = json.loads(output)
@@ -57,3 +65,12 @@ def test_no_flags_starts_stdio_server(monkeypatch):
     main(["--read-only"])
     # None leaves JE_AUTOCONTROL_MCP_READONLY in charge; the flag forces it on.
     assert started == [None, True]
+
+
+def test_disclosure_start_options_reach_the_existing_stdio_entry_point(monkeypatch):
+    import je_auto_control.utils.mcp_server.__main__ as cli_mod
+    started = []
+    monkeypatch.setattr(cli_mod, "start_mcp_stdio_server", lambda **options: started.append(options))
+    main(["--tool-mode", "static", "--tool-profile", "ac_screen_size,ac_get_mouse_position", "--tool-page-size", "5"])
+    assert started == [{"read_only": None, "disclosure": "static", "page_size": 5,
+                        "tool_profile": ["ac_screen_size", "ac_get_mouse_position"]}]

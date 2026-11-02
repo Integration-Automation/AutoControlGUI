@@ -30,187 +30,156 @@
 Executor：``AC_self_heal_locate / _click / _log_list / _log_clear``。
 MCP：``ac_self_heal_*``。GUI：**Self-Healing** 分頁。
 
-``screen_region`` 是螢幕座標的 ``[x1, y1, x2, y2]``，\ **兩種**\ 策略都受它限制；
-以前只有 VLM 收到它，樣板比對可能在區域之外回報命中。
+取消會原樣傳遞，中止後備定位、點擊與失敗紀錄。
+稽核記錄在寫入與讀取時遮蔽本次執行已解析的秘密值。
+定位結果保留原值；讀取時不會改寫既有紀錄檔。
 
-**找到不等於驗證過。** ``HealOutcome.found`` 只表示某個策略回傳了一個點。
-點擊有沒有達到目的是另一個欄位 ``action_verified``，由呼叫端傳入的檢查填入——
-沒有檢查時是 ``None``，絕不從命中推論::
+兩條策略共用一次延遲邏輯截圖。``screen_region`` 均為 ``[左, 上, 右, 下]``，
+裁切至實際桌面。未指定區域且有樣板時搜尋所有螢幕，只有 VLM 時保留主螢幕請求；
+自行擷取整個版面的 backend 即使收到主螢幕請求，也會保留其發布的原點。
+無效 bbox 在截圖前拒絕，擷取失敗也不會再為後備策略重截。
 
-    outcome = self_heal_click(
+Schema 2 增加 run／step ID（沿用作用中的動作日誌）、定位器身份、解碼樣板／設定版本、
+frame hash、實際原點／尺寸、邏輯縮放、各策略與擷取耗時，以及 backend 與實際 model。
+未知資料與無法取得的美元成本維持 null，舊記錄仍以 schema 1 載入。
+PNG 只暫存在範圍內，離開時釋放。首個策略耗時包含擷取；擷取時間是其中一部分，不能重複相加。
+原有結果格式與 ``duration_ms`` 只計定位的語意不變。
+
+點擊紀錄在送出後結算：``issued`` 只表示輸入已送出，``error`` 記錄一般失敗並原樣傳遞例外。
+沒有明確操作後證據時，``verified`` 維持 null。取消不追加完成事件。
+GUI 可輸入區域，查看操作狀態與所選記錄的 JSON 證據；即時控制項放在執行紀錄子分頁，
+與固定影像比較分開。Script Builder 提供兩個即時命令，JSON 欄位可保留結構化區域。
+
+
+明確的點擊後驗證
+^^^^^^^^^^^^^^^^
+
+實驗性不可變請求 API 預設只定位。驗證須明確指定 ``operation="click"``。
+Python ``VerificationRequest`` 必須擇一提供回傳 bool 的 ``verifier`` callback，
+或交由已設定 VLM 檢查的 ``description``。VLM 檢查可能產生 API 費用::
+
+    from je_auto_control import SelfHealRequest, VerificationRequest, self_heal_run
+
+    result = self_heal_run(SelfHealRequest(
         template_path="submit.png",
-        description="綠色的 Submit 按鈕",
-        verify=lambda result: dialog_is_open(),
-    )
-    outcome.found            # 回傳了一個點
-    outcome.action_verified  # 檢查結果 True / False，沒有檢查則為 None
+        operation="click",
+        verification=VerificationRequest(description="確認訊息已顯示"),
+    ))
+    # result.verified 為 True、False 或 None；找到元素本身不是操作驗證。
 
-自愈記錄新增選用欄位（``schema_version``、``run_id``、``step_id``、``locator_id``、
-``locator_version``、``backend``、``model``、``screen_region``、``image_ms``、
-``vlm_ms``、``action``、``action_verified``）。這些欄位出現之前寫入的記錄仍可讀取，
-缺少的欄位為 ``None``。識別資訊由呼叫端標註::
+在送出輸入前檢查 VLM 是否可用。只有點擊成功送出後才執行驗證，並重新取得邏輯 PNG。
+驗證 bbox 獨立於定位 bbox；未指定驗證區域時請求主螢幕。驗證 model 未指定時沿用定位的
+明確 model。Callback 在點擊前影像範圍之外執行，VLM 與其巢狀視覺助手只共用新影像。
+驗證失敗、例外或取消均不會重試點擊。
 
-    from je_auto_control import heal_context
+``AC_self_heal_run`` 與 MCP ``ac_self_heal_run`` 接受巢狀 JSON ``request``::
 
-    with heal_context(run_id="nightly-42", locator_id="submit", locator_version="v2"):
-        self_heal_click(template_path="submit.png")
+    [["AC_self_heal_run", {"request": {
+        "template_path": "submit.png", "operation": "click",
+        "verification": {"description": "確認訊息已顯示"}
+    }}]]
 
-從 JSON 動作或 MCP 呼叫時，把同樣的鍵放在 ``AC_self_heal_locate`` /
-``AC_self_heal_click`` 的 ``context`` 參數。
+JSON 驗證支援 description、model、screen_region，不接受任意 Python callback／backend。
+樣板受作用中路徑根目錄限制，進度通知前後也會重新檢查。明確 false 驗證使 AC／CLI 拋出
+保留結果的 ``SelfHealVerificationError``（CLI exit 1），MCP 則回傳結構化結果與 ``isError``。
+Python 請求 API 將 false 當成結果資料；例外與取消均原樣傳遞。
 
-JSON 步驟無法攜帶 callable，所以 ``verify`` 也可以是一個物件——用在
-``AC_self_heal_click``、MCP 工具 ``ac_self_heal_click``、自愈分頁的「點擊後驗證」欄位，以及
-Python::
+稽核區分 ``verified``、``verification_failed``、``verification_error`` 與 ``issued``／未知。
+新增可選驗證描述、frame hash、backend／model、錯誤欄位及獨立的 verify 耗時；
+``duration_ms`` 仍只計定位。Callback 不宣稱影像來源證據，舊記錄保持可讀。
+GUI **Self-Healing** 提供選填的操作後條件，提示使用已設定 VLM 可能產生費用，並要求選擇點擊。
+Script Builder 的新命令提供結構化 JSON 請求欄位。
 
-    ["AC_self_heal_click", {
-        "template_path": "submit.png",
-        "verify": {"type": "image_gone", "timeout_s": 3}}]
+獨立 VLM 擷取也改用記憶體邏輯影像及 Retina 正規化，保留裁切／非零原點。
+``verify_description`` 會拒絕非 bool 後端回覆。Framework assertion 會在後備前中止定位復原。
+上述行為有受控測試，真機與付費 API 驗收仍暫緩。
 
-==================  ==========================================================
-``type``            成立的條件
-==================  ==========================================================
-``image_gone``      找不到 ``template_path``\ （預設：被點擊的那張樣板）
-``image_present``   找得到 ``template_path``
-``text_present``    OCR 引擎讀到 ``text``\ （\ ``lang``\ 、\ ``min_confidence``\ 、
-                    ``case_sensitive`` 與 ``find_text_matches`` 相同）
-==================  ==========================================================
 
-共用選項：``screen_region``（``[x1, y1, x2, y2]``；預設為點擊本身的區域）、``timeout_s``
-（預設 2，檢查會重複到成立或時間用完）與 ``poll_s``（預設 0.2）；影像類型另有
-``detect_threshold``（預設 0.9）。物件會在點擊之前驗證——未知的類型或選項會丟
-``HealVerificationError``，而且不會點擊。無法執行的檢查（樣板讀不到、沒有 OCR 引擎、擷取
-失敗）會在點擊\ *之後*\ 丟同一個錯誤，事件記錄的 ``action_verified`` 是 ``None``：「沒辦法
-看」絕不回報成「不見了」。沒有 ``verify`` 時該欄位維持 ``None``。``AC_heal_stats`` 另外回報
-``action_verification``（``actions`` / ``verified`` / ``failed`` / ``unchecked``），
-與只計算「有回傳座標」的 ``healed`` 分開。
+原始步驟追溯
+^^^^^^^^^^^^
 
-量測定位器版本
-~~~~~~~~~~~~~~
+在已擷取的 executor 動作中，自癒紀錄會保存可選 ``journal_path`` 與 run／step ID。
+直接呼叫、舊紀錄或沒有動作步驟綁定的 run scope 不會產生來源路徑。
+正規路徑若含本次已解析的秘密文字，也不保存。明確查閱只會讀取資料::
 
-``evaluate_locators`` 讓每個策略版本跑同一批已標註的畫面——每個樣本只有一張
-擷取畫面、一個區域、一組原點與縮放，所有版本收到同一個 request 物件——再替答案計分::
+    from je_auto_control import inspect_heal_source
 
+    snapshots = inspect_heal_source(event.journal_path, event.run_id, event.step_id)
+
+``AC_self_heal_source`` 與 MCP ``ac_self_heal_source`` 接受 ``path``（紀錄的 journal_path）、
+``run_id``、``step_id`` 及可選 ``limit``。CLI 動作檔可使用相同指令，Script Builder 提供欄位。
+MCP 的唯讀標記不會授予 viewer 讀取私有日誌的權限。
+
+在 **Self-Healing → 執行紀錄** 選取紀錄後，使用 **動作 → 檢視原始步驟**。
+原始步驟子分頁沿用共用背景讀取器；Run History 也能選填步驟 ID。
+變更所選自癒紀錄會清除並取消舊來源檢視，關閉時取消讀取，舊結果不能覆蓋新目標。新目標會在舊讀取停止後啟動，保留請求者脈絡；
+關閉也會取消待處理的讀取。
+舊紀錄會顯示來源不可用，不捏造連結。檔案不存在或 ID 不符時回傳空快照；格式錯誤則驗證失敗。
+
+``inspect_journal`` 新增可選 ``step_id``；run／step 篩選先於 1–10,000 的輸出上限，
+整份檔案仍須驗證。進入、每次進度通知前後及回傳前都重查作用中路徑根目錄。
+取消原樣傳遞且不回傳部分結果；開始／完成快照維持分開並經過清理。
+來源查閱不會執行任何已記錄指令。
+
+
+審閱候選模板
+^^^^^^^^^^^^
+
+實驗性候選流程只使用明確提供的檔案，不截圖、不輸入，也不呼叫模型。
+新的不可變 schema-1 JSON 版本包保存精確原始位元組、依目標 PNG／JPEG／BMP
+格式編碼的候選、雜湊、標準化目標路徑及比對閾值::
+
+    from pathlib import Path
     from je_auto_control import (
-        EvaluationSample, evaluate_locators, template_match_strategy,
+        create_template_candidate, preview_template_candidate,
+        verify_template_candidate, accept_template_candidate,
+        revert_template_candidate, write_healing_report,
     )
 
-    samples = [
-        EvaluationSample("submit", frame, expected_box=(100, 60, 156, 92),
-                         template="submit.png"),
-        EvaluationSample("left-monitor-150", hidpi_frame,
-                         expected_box=(-1880, -180, -1824, -148),
-                         origin=(-1920, -300), scale=1.5, template="submit.png"),
-        EvaluationSample("dialog-closed", other_frame, expect_miss=True,
-                         template="submit.png"),
-    ]
-    comparison = evaluate_locators(samples, {
-        "v1": template_match_strategy(0.9),
-        "v2": template_match_strategy(0.9, scales=(1.0, 1.25, 1.5, 2.0)),
-    })
-    report = comparison.report("v2")
-    report.accuracy          # Ratio(分子, 分母)；分母為 0 時 .value 是 None
-    report.recovery_rate     # v1 失敗而 v2 正確命中的目標
-    report.p50_ms, report.p95_ms
-    comparison.failures("v2")
+    create_template_candidate("submit.png", Path("candidate.png").read_bytes(),
+                              "candidate.json", threshold=0.9)
+    reviewed = preview_template_candidate("candidate.json")
+    checked = verify_template_candidate("candidate.json", "dataset.json")
+    write_healing_report(checked.comparison, "comparison.html")
+    if checked.eligible:
+        accepted = accept_template_candidate("candidate.json", "dataset.json",
+                                             reviewed.state.revision)
+        reverted = revert_template_candidate("candidate.json", reviewed.state.revision)
 
-計分方式：
+預覽回傳每邊最多 512 像素的兩張 PNG 縮圖與完整尺寸資訊。
+影像上限為 16 MiB／1,600 萬像素，版本包上限 48 MiB；建立時拒絕覆寫既有版本包，
+也不更動目標。驗證沿用固定影像評估的 schema-1 樣本清單（清單 1 MiB、最多 500 樣本，
+影像合計 64 MiB）。可省略 ``versions``；即使提供也會忽略，兩個固定版本均來自版本包::
 
-* 命中點落在 ``expected_box`` 內才是 ``correct``；落在別處，或樣本標為
-  ``expect_miss`` 卻命中，都是 ``false_positive``——有找到，但不算恢復；
-* 既沒有 ``expected_box`` 也沒有 ``expect_miss`` 的樣本是 ``unknown``，
-  只計入命中率，不計入任何宣稱正確的比率；
-* 策略拋出例外記為 ``error``，即使該樣本預期 miss；
-* 策略若修改了畫面，會以 ``HealingEvaluationError`` 拒絕：下一個版本量到的
-  就不是同一張圖了。
+    {"schema_version": 1, "samples": [
+        {"id": "hit", "frame": "frame.png", "expected_box": [20, 16, 37, 29]},
+        {"id": "miss", "frame": "absent.png", "expected_miss": true},
+        {"id": "unknown", "frame": "unlabelled.png"}
+    ]}
 
-座標一律是螢幕座標。``origin`` 是畫面左上角像素的螢幕位置（在主螢幕左方或上方的
-螢幕為負值），``scale`` 是每一個螢幕單位對應的畫面像素數。
+資格要求至少一個已標註目標、一個預期 miss，且全部已標註樣本正確。
+未標註維持未知，原生操作是否成功另行驗證。JPEG 使用目標格式編碼後的實際像素驗證。
+解碼／比對錯誤（包含正規化後的常數模板）會阻止接受。驗證使用記錄的閾值；啟用影像
+不修改腳本的定位閾值，腳本應使用相符設定。
 
-資料集也可以是一個 JSON 檔，畫面影像放在它旁邊；Executor 指令、MCP 工具與 GUI
-評估的就是這種檔案::
+接受一定重新驗證資料集，並要求審閱時取得的 ``expected_revision``。
+這是整份版本包位元組的 SHA-256，與執行時定位器版本雜湊不同。
+取得目標鎖後，在最後進度檢查點之後再次檢查版本包雜湊、路徑與目前內容，才執行一次原子替換。
+狀態依目前位元組判定為 original／candidate／conflict／missing，不代表核准歷史。
+重複相同結果回傳 ``changed=False``；回復只在目前內容仍為此候選或原始版本時精確還原，
+拒絕覆寫後續修改或缺失檔案。提交前取消會阻止替換；已完成替換不因後來取消而復原或改標失敗，
+提交之後不再通知 observer。
 
-    {"schema_version": 1,
-     "samples": [{"id": "submit", "frame": "frames/submit.png",
-                  "template": "submit.png",
-                  "expected_box": [100, 60, 156, 92],
-                  "origin": [0, 0], "scale": 1.0, "region": null}],
-     "versions": {"v1": {"strategy": "template", "threshold": 0.9},
-                  "v2": {"strategy": "template", "threshold": 0.9,
-                         "scales": [1.0, 1.5]}},
-     "thresholds": {"v2": {"min_correct": 1, "max_false_positive": 0}}}
-
-    from je_auto_control import evaluate_healing_dataset
-    payload = evaluate_healing_dataset("dataset.json")
-    payload["passed"], payload["violations"]
-
-影像路徑相對於資料集檔案，且不得離開它所在的目錄。
-
-版本也可以指名 ``vlm`` 策略：把樣本自己的畫面（區域裁切後的 PNG，絕不重新截圖）交給
-``utils/vision`` 的後端，詢問樣本的 ``description``::
-
-    "samples": [{"id": "submit", "frame": "frames/submit.png",
-                 "description": "綠色的送出按鈕",
-                 "expected_box": [100, 60, 156, 92]}],
-    "versions": {"v1": {"strategy": "template", "threshold": 0.9},
-                 "v3": {"strategy": "vlm", "backend": "anthropic",
-                        "model": "…",
-                        "price": {"input_per_mtok": 5.0,
-                                  "output_per_mtok": 25.0}}},
-    "thresholds": {"v3": {"max_model_calls": 50, "max_cost": 0.25}}
-
-``backend`` 可為 ``anthropic``、``openai`` 或 ``null``；省略時使用
-``AUTOCONTROL_VLM_BACKEND`` 與 API 金鑰選出的後端。``null`` 不送出任何請求，每個樣本都是
-``error``——沒有金鑰的機器就該量到這個結果。從 Python 呼叫時，
-``evaluate_healing_dataset(path, backends={"fake": my_backend})`` 可以讓版本指名你自己的
-後端物件，``vlm_strategy(backend, model=..., price=...)`` 則是給 ``evaluate_locators`` 的
-callable。**對真的後端跑 ``vlm`` 版本會把每張畫面送到該服務，並由它計費。**
-
-每份報告與每一列結果都多了 ``model_calls``、``input_tokens``、``output_tokens`` 與
-``cost``。呼叫次數由評估本身計算（失敗的請求仍然算一次；沒有 description 的樣本或不可用的
-後端不算）。token 來自後端的 ``last_usage``——Anthropic 與 OpenAI 後端會從回應填入——
-``cost`` 則是後端自己回報的數字，或 token × ``price``。沒有回報的地方是 ``None``，不是
-``0``，也不估算；template 版本回報 ``model_calls: 0``，其餘為 ``None``。只要有一個版本是
-``vlm``，畫面就以彩色載入（template 策略會自己轉成灰階），所以每個版本拿到的仍是同一張畫面。
-
-自愈分頁把結果顯示成比較表——每個版本一列、基準版在最前面；定位到、準確率、誤報與復原各以
-``次數/總數 (比率)`` 呈現，接著是 p50 / p95、模型呼叫次數、輸入 / 輸出 token 與成本，沒有
-回報的地方是 ``-``——完整的 JSON 報告（失敗的樣本、門檻違規）仍保留在表格下方。同樣的列可以
-用 ``comparison_rows(payload)`` 在沒有 GUI 的情況下取得（欄位：``COMPARISON_COLUMNS``）。
-
-``benchmarks/self_healing/run.py`` 是固定的回歸資料集：十張在記憶體中繪製的畫面
-（一般、125%／150% 縮放、負原點螢幕、必須選中兩個相同目標中第二個的區域、
-改版後的控制項、目標不存在、相似的鄰近控制項、一張未標註畫面）與三個版本。
-它不擷取螢幕::
-
-    python benchmarks/self_healing/run.py --check --json report.json
-
-候選樣板修訂
-~~~~~~~~~~~~
-
-自愈得到的點絕不直接覆寫樣板。新影像只是候選，必須先預覽才能取代任何東西::
-
-    from je_auto_control import (
-        propose_template_revision, preview_template_revision,
-        accept_template_revision, revert_template_revision,
-    )
-
-    revision = propose_template_revision("submit.png", "submit_new.png")
-    preview = preview_template_revision(revision.revision_id,
-                                        dataset_path="dataset.json")
-    preview["revision"]["validated"]
-    accept_template_revision(revision.revision_id)   # 保留備份
-    revert_template_revision(revision.revision_id)   # 還原備份
-
-``propose`` 與 ``preview`` 都不會動到樣板。給了資料集（或 ``samples=``）時，
-preview 會讓現行樣板與候選樣板跑同一批畫面；候選必須至少正確一次、正確次數不少於
-現行樣板、且沒有 false positive 或 error，才會標為 ``validated``。``accept`` 會拒絕
-未驗證的候選，除非傳入 ``allow_unvalidated=True``；樣板檔在修訂之後被別人改過時，
-``accept`` 與 ``revert`` 都會拒絕。修訂存放在 ``~/.je_auto_control/template_revisions``。
-
-Executor：``AC_self_heal_evaluate``、``AC_self_heal_revision_propose /
-_preview / _accept / _revert / _list``。MCP：``ac_self_heal_evaluate``、
-``ac_self_heal_revision_*``。GUI：**Self-Healing** 分頁 → Actions 選單
-（*評估資料集*、*提出／預覽／接受／回復修訂*）。
+Python 提供上述五個函式；JSON 動作／CLI 使用
+``AC_template_candidate_create/preview/verify/accept/revert``，MCP 使用對應
+``ac_template_candidate_*``。建立接受 ``template_path``、``candidate_path``（PNG）、
+``bundle_path`` 與可選 ``threshold``；驗證／接受需要 ``dataset_path``，接受／回復需要
+``expected_revision``。MCP 預覽另外回傳兩個影像區塊，JSON 入口回傳資訊。
+所有操作均要求 drive 權限並遵守目前與外層路徑根目錄，包含版本包內的目標與已載入樣本。
+Script Builder 提供五個命令；**Self-Healing → 候選模板** 以背景工作顯示縮圖、JSON 證據、
+進度與取消，五項操作位於動作選單，四種介面語言均可使用。
+``python -m examples.template_candidates`` 提供只使用合成影像和暫存檔案的範例。
+真機與付費 API 驗收仍暫緩。
 
 
 錨點定位器
@@ -486,9 +455,108 @@ Wayland libei native backend
 
 對 ``libei.so.*`` 的 ctypes 綁定，繞過 CLI shim 取得微秒級延遲。
 以 ``JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei|cli|auto`` 啟用；
-``auto``\ （預設）在 libei 可載入時用 libei，否則用 CLI，現有
-部署不會中斷。
+``auto`` （預設）只在選用原生後端缺席時改用 CLI。portal 拒絕／逾時、
+握手失敗、裝置暫停或權限撤銷會停止原生按鍵／按鈕／指標輸入，不會自動改走 CLI。
+重複失敗呼叫不重開同意對話框。``libei`` 強制原生輸入，``cli`` 明確選擇工具。
+解決權限問題後，明確呼叫
+``je_auto_control.linux_wayland.libei.reset_default_backend()`` 才允許重新請求。
+組合鍵中斷會在同一後端嘗試釋放每個已按下的按鍵，並保留原始取消。
+明確的 wtype 文字輸入路徑與螢幕擷取選擇不變。
 
+
+原生 Wayland 指標座標在原始座標與版面原點換算後仍不屬於任何授權 EIS 區域時，
+會以 ``state="failed"`` 的 ``LibeiUnavailable`` 拒絕，停止自動 CLI 備援，
+不送出移動、frame 或後續點擊。有效座標、未提供區域的裝置、同一 sender 的後續有效請求，
+以及明確選擇 CLI 的既有行為維持不變。
+
+無副作用的能力快照提供 ``je_auto_control.api`` 與套件根目錄匯出的
+``BackendContext``、``CapabilityStatus``、``CapabilitySnapshot``、``probe_capabilities``。
+輸入項描述按鍵／指標事件，與 wtype 文字路徑獨立。
+
+.. code-block:: python
+
+   from je_auto_control.api import BackendContext, probe_capabilities
+   snapshot = probe_capabilities(BackendContext.current())
+   print(snapshot.to_dict())
+
+無參數 ``AC_probe_capabilities``、唯讀 ``ac_probe_capabilities``、Builder 與
+**Diagnostics → Actions → 檢視輸入與擷取能力** 共用相同契約。
+``python -m examples.capabilities`` 不操作桌面。探測只讀環境、PATH 與不等待鎖的既有原生狀態，
+不載入選用原生函式庫、不連線、不讀事件、不擷取或要求同意。前置條件僅為 ``unverified``；
+``available`` 僅代表最近的本機觀測，可能過時。其他狀態為 ``needs_permission``、
+``needs_dependency``、``unsupported``、``paused``、``revoked``、``failed``。
+實際操作仍重驗權限。快取 libei 須完成握手，且鍵盤／絕對指標／按鈕／滾輪種類都在運作才回報可用；
+部分授權維持未驗證，事件種類暫停或必要裝置移除則回報暫停／撤銷。XWayland 一律 ``desktop_wide=False``；其他範圍仍受授權區域限制，
+不代表已驗證每個螢幕。
+
+Context 複製前置資料，可由擁有者提供無原生物件的觀測，但不授權。AC／MCP 不接受外部觀測；
+預設本機結果不含環境值、命令參數、執行檔路徑或原生錯誤文字。拒絕／暫停／撤銷／失敗不代表改走 CLI；
+只有明確選擇 CLI 或觀測到選用原生依賴缺失才描述該替代路徑。輸入／擷取獨立診斷，重繪與切換語系
+不再探測。原生恢復／重啟、擷取結果與 context 的接合、原生 session 的重試／取消／停止控制仍列於 ``Progress.md``。
+
+
+GUI 工作基礎提供 ``gui.task_controller.TaskController``：
+``submit(work, owner=widget)`` 回傳呼叫者持有的 ``TaskHandle``，透過
+``TaskOutcome``／``TaskProgress`` 傳遞終態與進度。工作取得不依賴 Qt 的
+``CancellationToken``，提供 checkpoint、有界且可被取消喚醒的等待與進度回報。
+提交時捕捉 context，執行前重讀 store 使用者；工作須持有資料、不引用 widget，並驗證自身操作所需的 capability。
+既有 ``DeferredAuthorization.scope()`` 維持輸入權限要求，``context_scope()`` 僅更新與綁定身分。
+
+擁有者、handle 或 controller 銷毀時會要求協作式停止並丟棄延遲結果；每項工作有獨立 ID／token，
+回呼在 GUI 執行緒執行。不強制中斷不合作的呼叫，也不把已成功提交的結果改標為取消。
+錯誤與進度使用捕捉的秘密遮罩 scope，終態不保留例外 traceback；執行緒啟動失敗會回復兩層登記並保留原失敗。
+Diagnostics 已接入此共用控制器；其餘面板／backend 遷移與原生 session 操作仍列於 ``Progress.md``。
+
+主動 **Diagnostics → Actions → 執行診斷** 以共用控制器在 GUI 執行緒外執行。
+**停止診斷** 要求協作式停止；四語狀態區分執行中、清理中、已取消與失敗，並顯示已完成檢查數。
+重複執行不另開工作，關閉後丟棄延遲進度／結果，明確重試會建立新的擁有者工作。
+GUI 以不保留例外 traceback 的 typed outcome 呈現取消；核心／SDK／CLI 與 MCP handler
+維持原始直接／包裝取消物件。普通檢查錯誤仍列入報告並繼續其餘項目。
+
+兩個 SDK namespace 匯出 ``CancellationToken``、``TaskProgress``、``cancellation_scope``。
+使用 ``with cancellation_scope(token): report = run_diagnostics()``，擁有者可由另一執行緒呼叫
+``token.cancel()``；既有無參數診斷簽章不變。Scope 不授予權限，``cancellation_scope(None)``
+只在有時限的自有資源清理期間暫停取消。``AC_diagnose`` 與新增的唯讀 ``ac_diagnose`` 共用報告；
+MCP 不接受參數，使用請求取消／進度，與明確 GUI 操作同樣需要 ``read_screen``，拒絕外部 token／授權資料。
+這些是主動檢查，擷取可能要求同意；``ac_probe_capabilities`` 維持獨立的被動選項。
+
+Scoped Wayland D-Bus 的連線／讀取／部分寫入，以至多 0.1 秒的區間輪詢，維持原本總時限。
+取消時在原 bus 以獨立 0.25 秒預算嘗試 Request.Close，再釋放連線；取消的已回傳圖片會刪除。
+Scoped CLI 擷取會停止並回收自己建立的 helper／process group，清理有時限，pipe close 失敗也不蓋掉原取消，
+已回收的數字 PID 不再作為訊號目標。liboeffis 取得 session 時會觀察停止並釋放自身 context。
+不強制中斷不合作或原生呼叫，清理期間 GUI 仍可操作；restore／重啟、原生 session 控制、
+擷取擁有者 metadata 與其餘面板／backend 遷移保留於 ``Progress.md``。
+
+``python -m examples.cancellable_diagnostics`` 預設只做受控取消示範，不呼叫 provider。
+``--active --cancel-after 2`` 才明確執行診斷並在兩秒後要求停止；真機／裝置／API 驗收另外列管。
+
+Diagnostics 開啟時先顯示已翻譯的「尚未執行」狀態。選擇 **Actions → 執行診斷**
+才會啟動既有主動檢查，可能擷取螢幕或要求 portal 同意。開啟或切換語系不啟動檢查。
+明確的 headless／AC／MCP 診斷維持主動行為，無副作用的能力檢視使用下方獨立操作。
+
+
+未完成的 screenshot 請求會在原始 bus 上以獨立 0.25 秒 I/O 預算嘗試
+``org.freedesktop.portal.Request.Close``，跟隨替代 handle，回覆不確定時使用預測 handle。
+已完成的 Response 不重複關閉；原始取消與強制中斷物件穿過包裝及清理繼續傳播。
+D-Bus 寫入與回覆共用預算，connect／驗證／Hello 中斷時，即使 ``__enter__`` 未完成
+也會釋放描述元。原生合成器／對話框、restore 與重啟驗收仍列於 Progress.md。
+
+
+repo 的 dev／main 無頭工作在原生失敗後仍保留合併測試輸出與執行環境版本。
+Linux 經 GDB 擷取各執行緒原生堆疊，其他平台保留 Python faulthandler 輸出。
+``native-<os>-<python>`` artifact 保留七天；子行程失敗仍使 CI 失敗。
+Linux 先在完整套件的 debugger 外檢查工具，保留原始 argv 與已處理的 SIGINT。
+重現方法見 :doc:`/getting_started/run_in_ci`。蒐集證據不代表完成尚缺的 portal／原生生命週期驗收。
+
+
+選定的 dev 推送由 ``.github/workflows/ei-lifecycle.yml`` 在隔離 libei／libeis
+容器執行，將版本及兩份原生紀錄保留於 ``ei-lifecycle-<run>-<attempt>`` artifact 十四天。
+半開與 live 釋放子行程分別有十／六十秒時限與 faulthandler；其他子行程失敗使 CI 失敗，
+釋放成功必須有 begin／end 標記。半開探測另須有相同整數 fd 數量，live 清理先釋放擁有的
+device refs。run 39507190704 在 libei／libeis 1.3.901-1 通過 9/9 與 20/20 檢查，
+包含座標越界拒絕且不轉用 CLI。半開 ``ei_unref`` 仍會 SIGSEGV，因此保留 runtime 保護，
+helper 隔離仍待完成。裝置暫停與序號回讀仍未驗證；受控 socket peer 不代表合成器授權、
+真機或多螢幕驗收。
 
 macOS Accessibility：tree dump + recorder
 -----------------------------------------
@@ -577,7 +645,7 @@ helper（``je_auto_control.gui.flow_editor.layout_steps``）可單元
 （規劃 → 執行 → 驗證 → 重試）開放給 JSON action 與 MCP。參數：
 
 * ``goal`` — 自然語言目標。
-* ``backend`` — ``"anthropic"`` 或 ``"openai"``。``AC_run_agent`` 預設只提供聚焦、低風險的
+* ``backend`` — ``"anthropic"`` 或 ``"openai"`` 。 ``AC_run_agent`` 預設只提供聚焦、低風險的
   computer-use allow-list，不再把完整的 ``AC_*`` 命令目錄交給模型。需要自訂工具集時，
   可直接用 ``export_anthropic_tools(only=[...])`` 或 ``export_openai_tools(only=[...])`` 建立 backend。
 * ``max_steps``\ （預設 25）、``wall_seconds``\ （預設 300.0）。

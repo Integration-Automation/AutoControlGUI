@@ -2,17 +2,14 @@
 
 Without flags this starts the stdio MCP server. With one of the
 ``--list-*`` flags it prints the requested catalogue to stdout and
-exits — useful for inspection in CI or manual debugging. ``--tool-mode``
-chooses how much of the registry ``tools/list`` offers (see
-:mod:`.disclosure`); ``--list-tools`` then prints what a new session sees.
+exits — useful for inspection in CI or manual debugging.
 """
 import argparse
 import json
 import sys
-from typing import Optional
+from typing import Any, Optional
 
 from je_auto_control.utils.cli_output import utf8_stdout
-from je_auto_control.utils.mcp_server.disclosure import MODE_ENV, ToolMode
 from je_auto_control.utils.mcp_server.fake_backend import (
     install_fake_backend, maybe_install_from_env,
 )
@@ -20,7 +17,7 @@ from je_auto_control.utils.mcp_server.prompts import default_prompt_provider
 from je_auto_control.utils.mcp_server.resources import (
     default_resource_provider,
 )
-from je_auto_control.utils.mcp_server.server import MCPServer, start_mcp_stdio_server
+from je_auto_control.utils.mcp_server.server import start_mcp_stdio_server
 from je_auto_control.utils.mcp_server.tools import (
     build_default_tool_registry,
 )
@@ -36,6 +33,18 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Print all tool descriptors as JSON and exit.",
     )
     parser.add_argument(
+        "--search-tools", metavar="QUERY", help="Search permitted tool summaries and exit.",
+    )
+    parser.add_argument(
+        "--tool-schema", metavar="NAME", help="Print one permitted tool descriptor and exit.",
+    )
+    parser.add_argument("--limit", type=int, default=10, help="Tool search result limit (1-50).")
+    parser.add_argument("--tool-mode", choices=("full", "progressive", "static"), default=None,
+                        help="Tool availability mode (default: environment or full).")
+    parser.add_argument("--tool-profile", default=None, metavar="NAMES",
+                        help="Comma-separated tool names for the initial/static profile.")
+    parser.add_argument("--tool-page-size", type=int, default=None, help="Progressive/static list page size (1-100).")
+    parser.add_argument(
         "--list-resources", action="store_true",
         help="Print all resource descriptors as JSON and exit.",
     )
@@ -46,12 +55,6 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--read-only", action="store_true",
         help="Restrict tools to those marked readOnlyHint=true.",
-    )
-    parser.add_argument(
-        "--tool-mode", choices=[mode.value for mode in ToolMode], default=None,
-        help=("How much of the registry tools/list offers: full (every tool, the "
-              "default), progressive (a small core; a session searches and enables "
-              f"what it needs) or static (a fixed profile). Default: ${MODE_ENV}."),
     )
     parser.add_argument(
         "--fake-backend", action="store_true",
@@ -69,15 +72,12 @@ def main(argv: Optional[list] = None) -> None:
         install_fake_backend()
     else:
         maybe_install_from_env()
-    listing_modes = (args.list_tools, args.list_resources, args.list_prompts)
+    listing_modes = (args.list_tools, args.list_resources, args.list_prompts,
+                     args.search_tools is not None, args.tool_schema is not None)
     if any(listing_modes):
         _print_listings(args)
         return
-    read_only = True if args.read_only else None
-    if args.tool_mode is None:
-        start_mcp_stdio_server(read_only=read_only)
-        return
-    start_mcp_stdio_server(read_only=read_only, tool_mode=args.tool_mode)
+    start_mcp_stdio_server(read_only=True if args.read_only else None, **_server_options(args))
 
 
 def _print_listings(args: argparse.Namespace) -> None:
@@ -87,12 +87,10 @@ def _print_listings(args: argparse.Namespace) -> None:
     catalogue -- two arrays back to back were not one JSON document. The
     output is UTF-8 whatever the console's code page.
     """
-    listings = {}
+    listings = _discovery_listings(args)
     if args.list_tools:
-        read_only = True if args.read_only else None
-        server = MCPServer(tools=build_default_tool_registry(read_only=read_only),
-                           tool_mode=args.tool_mode, read_only=read_only)
-        listings["tools"] = [tool.to_descriptor() for tool in server.disclosure.initial_tools()]
+        listings["tools"] = [tool.to_descriptor() for tool in
+                             build_default_tool_registry(read_only=True if args.read_only else None)]
     if args.list_resources:
         listings["resources"] = [item.to_descriptor() for item in default_resource_provider().list()]
     if args.list_prompts:
@@ -101,6 +99,27 @@ def _print_listings(args: argparse.Namespace) -> None:
     utf8_stdout()
     json.dump(document, sys.stdout, ensure_ascii=False, indent=2)
     sys.stdout.write("\n")
+
+
+def _discovery_listings(args: argparse.Namespace) -> dict[str, Any]:
+    from je_auto_control.utils.mcp_server.discovery import ToolIndex
+    listings: dict[str, Any] = {}
+    if args.search_tools is None and args.tool_schema is None:
+        return listings
+    index = ToolIndex(build_default_tool_registry(read_only=True if args.read_only else None))
+    if args.search_tools is not None:
+        listings["matches"] = index.search(args.search_tools, limit=args.limit)
+    if args.tool_schema is not None:
+        listings["schema"] = index.get_schema(args.tool_schema)
+    return listings
+
+
+def _server_options(args: argparse.Namespace) -> dict[str, Any]:
+    options = {key: value for key, value in (("disclosure", args.tool_mode), ("page_size", args.tool_page_size))
+               if value is not None}
+    if args.tool_profile is not None:
+        options["tool_profile"] = [item.strip() for item in args.tool_profile.split(",") if item.strip()]
+    return options
 
 
 if __name__ == "__main__":

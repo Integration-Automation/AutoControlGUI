@@ -11,6 +11,7 @@ instead defers the failure to the first call that actually opens one.
 """
 import functools
 from contextlib import contextmanager
+from types import ModuleType
 from typing import Any, Callable, Iterator, Tuple, Type, TypeVar
 
 from je_auto_control.utils.exception.exceptions import (
@@ -99,7 +100,7 @@ def sqlite3_available() -> bool:
     return _sqlite3 is not None
 
 
-def require_sqlite3():
+def require_sqlite3() -> ModuleType:
     """Return the ``sqlite3`` module, raising if this build does not have it.
 
     Raises ``AutoControlUnsupportedOperationException`` -- the same type the

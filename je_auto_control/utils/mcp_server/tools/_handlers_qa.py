@@ -10,6 +10,7 @@ flaky detection and quarantine, the suite runner, accessibility audits, the
 device matrix and media assertions.
 """
 from typing import Any, Dict, List, Optional
+from je_auto_control.utils.mcp_server.context import ToolCallContext
 
 
 # --- Assertion DSL ---------------------------------------------------------
@@ -236,26 +237,206 @@ def generate_code(source: Any, target: str = "pytest",
     return {"code": _gen(actions, target=target, name=name, style=style)}
 
 
-def generate_code_from_log(path: str, run_id: Optional[str] = None,
-                           target: str = "pytest", style: str = "actions",
-                           output: Optional[str] = None,
-                           diff_against: Optional[str] = None) -> Dict[str, Any]:
-    from je_auto_control.utils.codegen.journal_import import (
-        generate_candidate_from_log, only_run_id, write_candidate,
-    )
-    candidate = generate_candidate_from_log(
-        path, run_id=run_id or only_run_id(path), target=target, style=style)
-    result = candidate.to_dict()
-    if diff_against:
-        # Before the write below: output and diff_against may be the same file.
-        from je_auto_control.utils.codegen.candidate_diff import diff_candidate_against_file
-        result["diff"] = diff_candidate_against_file(candidate, diff_against).to_dict()
-    if output:
-        result.update(write_candidate(candidate, output))
-    return result
+def generate_candidate_from_log(path: str, run_id: str, target: str = "pytest", style: str = "actions",
+                                  output: Optional[str] = None, *,
+                                  ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Generate source/provenance without dispatch; optional output is an atomic ZIP review artifact."""
+    from je_auto_control.utils.codegen.journal_import import generate_candidate_from_log as generate
+    from je_auto_control.utils.codegen.candidate_archive import write_candidate_archive
+    event_count = -1
+
+    def progress(_count: int) -> None:
+        nonlocal event_count
+        if ctx is not None:
+            ctx.check_cancelled()
+            event_count += 1
+            ctx.progress(event_count, message="journal candidate review")
+            ctx.check_cancelled()
+
+    policy = ctx.path_policy if ctx is not None else None
+    candidate = generate(path, run_id=run_id, target=target, style=style, observer=progress, path_policy=policy)
+    data = candidate.to_dict()
+    if output is not None:
+        data["output"] = str(write_candidate_archive(candidate, output, observer=progress, path_policy=policy))
+    return data
 
 
-# --- Visual regression + state machine -------------------------------------
+def config_store_get(path: str, user_id: str, *, ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Read one private persistent bucket through the caller's path policy."""
+    from je_auto_control.utils.config_sync.commands import _get_config_store
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _get_config_store(path, user_id, path_policy=ctx.path_policy if ctx is not None else None)
+
+
+def config_store_commit(path: str, user_id: str, bucket: dict[str, object], base_revision: int, operation_id: str, *,
+                          ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Commit conditionally; a completed SQLite commit is not relabelled cancelled."""
+    from je_auto_control.utils.config_sync.commands import _commit_config_store
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _commit_config_store(path, user_id, bucket, base_revision, operation_id,
+                               path_policy=ctx.path_policy if ctx is not None else None)
+
+
+def sync_entry_merge(left: dict[str, object], right: dict[str, object]) -> dict[str, object]:
+    """Merge supplied causal snapshots without I/O or choosing a wall-clock winner."""
+    from je_auto_control.utils.config_sync.causal_commands import _merge_sync_entry
+    return _merge_sync_entry(left, right)
+
+
+def sync_outbox_enqueue(path: str, operation: dict[str, object], *,
+                          ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Persist local work only; no network request or configuration apply occurs."""
+    from je_auto_control.utils.config_sync.causal_commands import _enqueue_sync_outbox
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _enqueue_sync_outbox(path, operation, path_policy=ctx.path_policy if ctx is not None else None)
+
+
+def sync_outbox_status(path: str, endpoint: str, user_id: str, include_pending: bool = False, limit: int = 100, *,
+                         ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Read private queue counts and an optional bounded prefix under the current roots."""
+    from je_auto_control.utils.config_sync.causal_commands import _status_sync_outbox
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _status_sync_outbox(path, endpoint, user_id, include_pending, limit,
+                              path_policy=ctx.path_policy if ctx is not None else None)
+
+
+def sync_peer_state(state: dict[str, object], operation: str, peer_id: Optional[str] = None,
+                       revision: Optional[int] = None, epoch: Optional[int] = None,
+                       full_resync: bool = False) -> dict[str, object]:
+    """Transform only the caller's JSON ledger; no remote membership or configuration changes."""
+    from je_auto_control.utils.config_sync.causal_commands import _sync_peer_state
+    return _sync_peer_state(state, operation, peer_id, revision, epoch, full_resync)
+
+
+def config_causal_fetch(endpoint: str, user_id: str, options: Optional[dict[str, object]] = None, *,
+                         ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Fetch a private remote snapshot using live credential references and current egress authority."""
+    # pylint: disable-next=import-outside-toplevel  # reason: MCP adapters load optional capabilities only when called
+    from je_auto_control.utils.config_sync.http_commands import _fetch_causal_config
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _fetch_causal_config(endpoint, user_id, options, cancelled=lambda: _causal_cancelled(ctx))
+
+
+def config_causal_commit(endpoint: str, user_id: str, bucket: dict[str, object], actor: dict[str, object],
+                          operation_id: str, options: Optional[dict[str, object]] = None, *,
+                          ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Commit an explicit actor request; keep the supplied ID/body when retrying an uncertain result."""
+    # pylint: disable-next=import-outside-toplevel  # reason: MCP adapters load optional capabilities only when called
+    from je_auto_control.utils.config_sync.http_commands import _commit_causal_config
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _commit_causal_config(endpoint, user_id, bucket, actor, operation_id, options,
+                                cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_outbox_flush(path: str, endpoint: str, user_id: str, options: Optional[dict[str, object]] = None, *,
+                       ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Drain bounded private durable work with current path roots and cancellation checkpoints."""
+    # pylint: disable-next=import-outside-toplevel  # reason: MCP adapters load optional capabilities only when called
+    from je_auto_control.utils.config_sync.http_commands import _flush_sync_outbox
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _flush_sync_outbox(path, endpoint, user_id, options, path_policy=ctx.path_policy if ctx else None,
+                              cancelled=lambda: _causal_cancelled(ctx))
+
+
+def _causal_cancelled(ctx: Optional[ToolCallContext]) -> bool:
+    if ctx is not None:
+        ctx.check_cancelled()
+    return False
+
+
+def sync_peer_control(path: str, endpoint: str, user_id: str, operation: str = "status",
+                        options: Optional[dict[str, object]] = None, *,
+                        ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Control durable peer state with explicit pending-retirement consent, or review cached local status."""
+    # pylint: disable-next=import-outside-toplevel  # reason: MCP adapters load optional capabilities only when called
+    from je_auto_control.utils.config_sync.http_commands import _control_sync_peer
+    if ctx is not None:
+        ctx.check_cancelled()
+    return _control_sync_peer(path, endpoint, user_id, operation, options,
+                              path_policy=ctx.path_policy if ctx else None,
+                              cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_asset_manifest(source_root: str, paths: list[str], *,
+                          ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Hash an explicit selection under current roots without executing the selected data."""
+    # pylint: disable-next=import-outside-toplevel  # reason: MCP adapters load feature implementations on use
+    from je_auto_control.utils.config_sync.asset_commands import _build_sync_asset_manifest
+    return _build_sync_asset_manifest(source_root, paths, path_policy=ctx.path_policy if ctx else None,
+                                       cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_assets(manifest: dict[str, object], source_root: str, target_root: str, *,
+                  ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Publish one complete local asset generation under live roots/cancellation authority."""
+    # pylint: disable-next=import-outside-toplevel  # reason: MCP adapters load feature implementations on use
+    from je_auto_control.utils.config_sync.asset_commands import _sync_asset_generation
+    return _sync_asset_generation(manifest, source_root, target_root, path_policy=ctx.path_policy if ctx else None,
+                                   cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_workspace(configuration: dict[str, object], operation: str = 'status',
+                   options: Optional[dict[str, object]] = None, *,
+                   ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Coordinate explicit profiles with durable causal delivery and recovery; received definitions stay inert."""
+    # pylint: disable-next=import-outside-toplevel  # reason: load coordination only for the invoked private tool
+    from je_auto_control.utils.config_sync.workspace_commands import _sync_workspace
+    return _sync_workspace(configuration, operation, options, path_policy=ctx.path_policy if ctx else None,
+                           cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_adapter_snapshot(profile: dict[str, object], *,
+                            ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Capture real source definitions under live private-profile authority."""
+    # pylint: disable-next=import-outside-toplevel  # reason: feature implementations load only for the invoked tool
+    from je_auto_control.utils.config_sync.adapter_commands import _snapshot_sync_adapter
+    return _snapshot_sync_adapter(profile, path_policy=ctx.path_policy if ctx else None,
+                                    cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_adapter_apply(profile: dict[str, object], entries: dict[str, dict[str, object]], *,
+                         ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Merge received profile versions without touching an active source or daemon."""
+    # pylint: disable-next=import-outside-toplevel  # reason: feature implementations load only for the invoked tool
+    from je_auto_control.utils.config_sync.adapter_commands import _apply_sync_adapter
+    return _apply_sync_adapter(profile, entries, path_policy=ctx.path_policy if ctx else None,
+                                cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_adapter_resolve(profile: dict[str, object], entry_id: str, value: dict[str, object], observed: list[str],
+                           is_deleted: bool = False, *, ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Resolve a reviewed profile head set explicitly, preserving tombstone choices and protocol cancellation."""
+    # pylint: disable-next=import-outside-toplevel  # reason: feature implementations load only for the invoked tool
+    from je_auto_control.utils.config_sync.adapter_commands import _resolve_sync_adapter
+    return _resolve_sync_adapter(profile, entry_id, value, observed, is_deleted,
+                                  path_policy=ctx.path_policy if ctx else None,
+                                  cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_profile_load(directory: str, target_root: str, expected_digest: str, *,
+                        ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Load an exact reviewed native generation into a separate workspace with no runtime activation."""
+    # pylint: disable-next=import-outside-toplevel  # reason: private native loading runs only for the invoked tool
+    from je_auto_control.utils.config_sync.profile_commands import _load_sync_profile
+    return _load_sync_profile(directory, target_root, expected_digest, path_policy=ctx.path_policy if ctx else None,
+                               cancelled=lambda: _causal_cancelled(ctx))
+
+
+def sync_profile_materialize(profiles: list[dict[str, object]], target_root: str, *,
+                               ctx: Optional[ToolCallContext] = None) -> dict[str, object]:
+    """Publish a complete inert generation while retaining every selected profile's live authority."""
+    # pylint: disable-next=import-outside-toplevel  # reason: feature implementations load only for the invoked tool
+    from je_auto_control.utils.config_sync.adapter_commands import _materialize_sync_profile
+    return _materialize_sync_profile(profiles, target_root, path_policy=ctx.path_policy if ctx else None,
+                                      cancelled=lambda: _causal_cancelled(ctx))
+
 
 def take_golden(path: str, region: Optional[List[int]] = None) -> str:
     from je_auto_control.utils.visual_regression import (

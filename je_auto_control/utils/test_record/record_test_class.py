@@ -1,6 +1,8 @@
 import datetime
 from typing import Optional
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import scrub_secret_data, scrub_secret_text
+from je_auto_control.utils.executor.action_redaction import redact_actions
 
 
 class TestRecord:
@@ -59,12 +61,12 @@ def record_action_to_list(function_name: str, local_param,
     test_record_instance.test_record_list.append(
         {
             "function_name": function_name,
-            "local_param": local_param,
+            "local_param": redact_actions(scrub_secret_data(local_param)),
             "time": datetime.datetime.now().isoformat(),  # 使用 ISO 格式更標準
             # Callers already pass repr(error); a second repr() showed it in
             # every report as '"ValueError(\'boom\')"'. repr(None) stays "None",
             # which is how the reports tell a success from a failure.
-            "program_exception": (program_exception if isinstance(program_exception, str)
-                                  else repr(program_exception)),
+            "program_exception": scrub_secret_text(program_exception if isinstance(program_exception, str)
+                                                   else repr(program_exception)),
         }
     )

@@ -26,7 +26,7 @@ keeps each worker alive until the GUI thread has seen its thread end.
 
 This module is the thread layer only. Work that waits on a network peer or a
 device, and so needs a timeout, cancellation that reaches the backend, typed
-errors or progress, goes through :mod:`je_auto_control.gui.task_controller`,
+errors or progress, goes through :mod:`je_auto_control.gui.tab_task_controller`,
 which runs on :func:`start_worker` and shares this registry -- there is one
 mechanism, with two levels of use.
 """
@@ -263,5 +263,11 @@ def start_worker(owner: QObject, worker: QObject, *,
     thread = threading.Thread(target=_run, args=(handle, relay, reaper),
                               name=f"gui-worker-{type(worker).__name__}", daemon=True)
     handle._thread = thread  # noqa: SLF001  # reason: set once, before start
-    thread.start()
+    try:
+        thread.start()
+    except BaseException:  # reason: roll back ownership before preserving any failed thread-start control
+        _RUNNING.pop(handle, None)
+        relay.deleteLater()
+        worker.deleteLater()
+        raise
     return handle

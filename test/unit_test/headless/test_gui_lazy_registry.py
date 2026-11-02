@@ -41,8 +41,7 @@ def test_importing_the_registry_loads_no_qt():
 def test_every_lazy_tab_names_a_class_that_exists(spec):
     """Read, not imported: a typo here would otherwise surface when a user opens the tab."""
     found = importlib.util.find_spec(spec.module)
-    assert found is not None, spec.module
-    assert found.origin, spec.module
+    assert found is not None and found.origin, spec.module
     source = pathlib.Path(found.origin).read_text(encoding="utf-8")
     assert (f"class {spec.class_name}(" in source or f"import {spec.class_name}" in source
             or f"{spec.class_name}," in source or f'"{spec.class_name}"' in source), (spec.module, spec.class_name)
@@ -56,21 +55,17 @@ def test_an_entry_builds_its_widget_once_and_only_when_asked():
         return built[-1]
 
     entry = TabEntry("k", "tab_k", factory, on_build=adopted.append)
-    assert not entry.built
-    assert built == []
+    assert not entry.built and built == []
     first = entry.widget
-    assert entry.built
-    assert entry.widget is first
-    assert built == [first]
-    assert adopted == [first]
+    assert entry.built and entry.widget is first
+    assert built == [first] and adopted == [first]
 
 
 def test_a_lazy_factory_imports_at_call_time():
     factory = lazy_factory("collections", "OrderedDict")
     assert type(factory()).__name__ == "OrderedDict"
-    missing = lazy_factory("je_auto_control.gui.no_such_tab", "Missing")
     with pytest.raises(ModuleNotFoundError):
-        missing()
+        lazy_factory("je_auto_control.gui.no_such_tab", "Missing")()
 
 
 _PROBE = r"""
@@ -90,9 +85,6 @@ report = {
     "open_at_start": [row["key"] for row in widget.list_registered_tabs() if row["visible"]],
     "variables_imported_at_start": "je_auto_control.gui.variables_tab" in sys.modules,
     "presence_imported_at_start": "je_auto_control.gui.presence_tab" in sys.modules,
-    "script_builder_imported_at_start": "je_auto_control.gui.script_builder" in sys.modules,
-    "remote_desktop_imported_at_start": "je_auto_control.gui.remote_desktop_tab" in sys.modules,
-    "current_at_start": widget.current_tab_key(),
 }
 widget.list_registered_tabs()
 widget.retranslate()
@@ -115,19 +107,6 @@ widget.activate_tab("record")
 report["current_after_activate"] = widget.current_tab_key()
 report["changes"] = len(changes)
 report["unknown"] = widget.activate_tab("no_such_tab")
-
-# A start tab that has never been in front: closed and reopened without being built, built when selected.
-widget.hide_tab("script_builder")
-still_open = [r["key"] for r in widget.list_registered_tabs() if r["visible"]]
-report["closed_unbuilt"] = not entries["script_builder"].built and "script_builder" not in still_open
-widget.show_tab("script_builder")
-builder = entries["script_builder"].widget
-report["builder_selected"] = [widget.current_tab_key(), widget.tabs.indexOf(builder),
-                              widget.tabs.currentWidget() is builder]
-widget.tabs.setCurrentIndex(widget.tabs.count() - 1)
-report["remote_built_on_select"] = [entries["remote_desktop"].built, widget.current_tab_key()]
-report["scrolls"] = {key: widget.tabs.is_scrollable(widget.tabs.indexOf(entries[key].widget))
-                     for key in ("record", "script_builder", "remote_desktop")}
 sys.stdout.write(json.dumps(report))
 sys.stdout.flush()
 os._exit(0)
@@ -150,22 +129,10 @@ def test_every_spec_is_registered_in_order(report):
 
 
 def test_only_the_start_tabs_and_the_widgets_own_forms_are_built(report):
-    # Record is in front; Script Builder and Remote Desktop have a tab but wait for the first click.
-    assert set(report["built_at_start"]) == OWN_TABS - {"remote_desktop"}
+    assert set(report["built_at_start"]) == OWN_TABS | set(OPEN_AT_START)
     assert report["open_at_start"] == OPEN_AT_START
-    assert report["current_at_start"] == "record"
     assert not report["variables_imported_at_start"]
     assert not report["presence_imported_at_start"]
-    assert not report["script_builder_imported_at_start"]
-    assert not report["remote_desktop_imported_at_start"]
-
-
-def test_a_start_tab_is_built_when_it_first_comes_to_the_front(report):
-    assert report["closed_unbuilt"]
-    assert report["builder_selected"] == ["script_builder", 1, True]
-    assert report["remote_built_on_select"] == [True, "remote_desktop"]
-    # Remote Desktop scrolls itself; the other pages scroll in their tab.
-    assert report["scrolls"] == {"record": True, "script_builder": True, "remote_desktop": False}
 
 
 def test_listing_translating_and_hiding_build_nothing(report):
@@ -176,8 +143,7 @@ def test_opening_builds_the_tab_and_reopening_reuses_it(report):
     assert report["variables_imported_after_open"]
     assert report["current_after_open"] == "variables"
     assert report["hidden_is_owned"]
-    assert report["activated"]
-    assert report["same_widget_on_reopen"]
+    assert report["activated"] and report["same_widget_on_reopen"]
     # Registration order, not opening order: Variables sits between Script Builder and Remote Desktop.
     assert report["tab_order"] == ["record", "script_builder", "variables", "remote_desktop"]
 

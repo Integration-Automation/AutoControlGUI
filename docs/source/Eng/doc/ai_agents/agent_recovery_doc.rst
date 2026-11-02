@@ -1,0 +1,195 @@
+Task recovery and reauthorization
+================================================
+
+Explicit source-owner successors
+--------------------------------
+
+An administrator can explicitly keep a recovered task under its source owner. Pass
+``{"task_id": source_id, "owner_policy": "source_owner"}`` to ``preview`` or
+``review_authorization``. The passive response adds ``ownership`` with contract/policy/review/owner UID/
+actor UID. Creation requires the same ``owner_policy`` and its ``ownership.review`` as
+``ownership_review``, alongside the existing snapshot/spec/note and optional authorization review.
+The token binds the source snapshot, both user-store namespaces and current roles; changed authority
+requires a fresh review. Callers cannot supply an arbitrary owner or reviewer identity.
+
+The service atomically creates the child as the fresh source owner and stores the actual reviewer,
+lineage, ownership proof and any separately reviewed origin renewal. Existing input scope, roots,
+plan review, independent completion and quarantine rules still apply. Both principals need current
+Drive authority and the reviewer must still manage the source owner's work at dispatch/checkpoints,
+nested guards, immediately before input and maintenance. Downgrading an admin to operator blocks further
+input into another owner's task. Exact matching retries keep the accepted policy; another reviewer,
+changed ownership or a legacy caller-owned child cannot be backfilled into the new policy.
+
+``metadata.recovery.ownership`` exposes bounded audit fields without private user-store paths. The proof
+survives child retention with the recovery tombstone until source retention. A genuine independently
+completed source-owned child is readable to its original owner, allowing normal DAG successor adoption
+without broader task read permissions. Default recovery remains caller-owned. Explicit read-only handoff
+for already existing caller-owned evidence remains in Progress.md.
+
+All existing recovery API/AC/MCP/REST/CLI/Builder surfaces accept the additive request fields. The recovery
+GUI provides an owner selector; preview only fills the review JSON with a blank note. Explicit creation
+rejects a changed owner selection until reviewed again. No view action implicitly transfers an old task.
+
+Reviewed successor tasks
+------------------------
+
+A retired desktop/browser context cannot safely continue from historical field receipts.
+``manage_agent_recovery("preview", {"task_id": source_id})`` reads a stopped finite skill without
+observing or operating its target. It returns source receipt summaries, per-row outcomes, attempted
+and verified step counts, remaining actions and a ``snapshot`` binding the exact source task,
+receipts and review witnesses. Issues such as unknown effects, failed read-back, old coordinates or
+missing capture producers withhold the draft. Unknown counts are not reported as completed steps.
+
+Review the application state and reconstruct any necessary preparation with semantic actions and
+fresh captures, within the source scope. Explicitly call ``manage_agent_recovery("create", request)``
+with ``task_id``, ``snapshot``, ``spec`` and a nonempty operator ``note``. Only goal/actions may change;
+target, tools, roots, apps, inputs, budgets, options and independent completion conditions remain fixed.
+Private skill publication pins are removed. Missing captures, copied observation indexes and coordinate
+steps are rejected. Unreconciled source effects must first use the existing receipt review operation.
+A changed source requires another preview and approval; an active input lease prevents replacement.
+
+Creation and the unique source link commit in one SQLite transaction. Repeated identical approval
+returns the same successor, including after restart or a lost reply; different approval conflicts.
+The source retains its state, receipts, reviews and row outcomes. The child starts with no receipts and
+must satisfy fresh completion evidence; success does not complete its parent. The delegated source cannot resume. Task/list metadata exposes
+``recovery`` provenance. Retention keeps source evidence while a child exists; removal leaves a tombstone
+until the source is pruned, so replaying an old approval cannot resurrect a retired child.
+
+The shared surfaces are ``AC_agent_task_recovery``, MCP ``ac_agent_task_recovery``,
+``POST /agent/recovery`` with ``{operation, request}``, Builder, and
+``agent-task recovery preview|create request.json``. Both operations require operator ``drive_input``.
+Agent tasks Actions provides **Review remaining work / replan** and **Create reviewed successor task**.
+A successful preview prepares a separate Recovery JSON editor with an empty review note. It never fills
+or submits the ordinary task form. Change the plan/note, then explicitly create. Changing the selected
+task clears the draft and late replies are ignored. Creation uses normal durable background dispatch;
+closing the view only detaches requests. Login/window restoration, arbitrary pointer regrounding and
+real application/native acceptance remain separate work; no browser engine or paid dependency is added.
+
+External-agent and local-model replanning
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Recovery also supports stopped ``external`` and ``ollama`` tasks. These modes do not define an
+executable finite prefix, so preview reports ``completed_steps=null``, no remaining action array or
+row progress, ``draft=null`` and ``new_plan_required``. A separate ``review_template`` preserves source
+scope, mode, model/endpoint, budgets and completion criteria while leaving goal/actions empty. Even a
+dormant action array in the old specification is never treated as executed or remaining work.
+
+The operator must explicitly supply a nonempty goal and review note. The original wording may be
+retained after review; no completed progress is thereby inherited. Dynamic successors cannot carry
+dormant actions or switch execution modes/model settings. Unknown effects
+still require reconciliation and another source snapshot. No completed receipt, old observation or
+model history is copied, and a model stop without fresh completion evidence remains unknown.
+
+Use the same API/AC/MCP/REST/CLI/Builder surfaces. GUI Actions **Review remaining work / replan**
+prepares the separate Recovery editor with blank goal/note; it does not submit anything. External
+children wait for client-driven observe/act. Explicitly approved Ollama children use normal background
+dispatch, fresh observations and a new backend with the original pinned local model/endpoint. Preview
+makes no model HTTP call. A test-owned Ollama-compatible loopback endpoint verifies show/chat ordering,
+model identity, the new goal and empty first history. This fixture is not installed-model acceptance;
+actual model/native evidence remains in Progress.md; authorization renewal is described below.
+
+Explicit successor authorization
+--------------------------------
+
+Origin witnesses can expire when a client session retires. Ordinary ``preview``/``create`` still require
+the original live authority. Explicit renewal uses two additional operations on the same recovery API:
+
+1. ``manage_agent_recovery("review_authorization", {"task_id": source_id})`` returns the source
+   ``snapshot``, ``authorization_review`` digest, clipped authorization context and a draft or editable
+   ``review_template``. Review does not start a target or contact a model.
+2. Review the remaining work and supply ``task_id``, ``snapshot``, ``spec``, nonempty ``note`` and
+   ``authorization_review`` to ``manage_agent_recovery("create_authorized", request)``.
+
+The original normalized roots remain the upper bound. Every still-live source policy is retained;
+current caller policies are added and intersected with that bound. Unavailable old witnesses may be
+replaced only for this successor; their files and the stopped source are never rewritten or resumed.
+Current unavailable authority is rejected. Trusted host calls without a session policy still require
+explicit approval within the original roots and host profile. Review metadata clips unrelated roots.
+Operators may keep or narrow the proposed roots; tools, apps, inputs, mode/model/endpoint, budgets,
+completion conditions and other options cannot expand or change. Retained policies cannot be removed.
+
+The digest binds the source snapshot and effective authorization context. Changed roots or sessions
+require another review; changed source receipts also require another snapshot. Completion criteria
+outside the new scope withhold a runnable template. Incompatible remaining actions require editing
+and full validation; criteria are never silently dropped. Dynamic templates still require an explicit
+goal. Unknown effects need reconciliation, and unsettled input ownership continues to block creation.
+Renewal neither clears quarantine nor certifies login, window state or native readiness.
+
+The task, unique recovery link and authorization evidence commit atomically. ``recovery.reauthorization``
+records the review digest, bounded context, approved roots and actor. Audit survives child retention
+until the source is pruned. ``existing_successor`` reports the previous child even after retirement;
+replaying approval cannot create another child or switch approval modes.
+
+All four operations require owner/operator ``drive_input``. API/AC/MCP/REST/Builder share the protocol;
+CLI uses ``agent-task recovery review_authorization|create_authorized request.json``. Agent tasks Actions
+adds **Review successor authorization** and **Create reauthorized successor**. Review fills the dedicated
+Recovery editor, with an empty note; creation always requires the separate explicit action.
+Deterministic targets, authenticated loopback HTTP and offscreen Qt validate these contracts. Skill and
+trigger renewal are described below; application-state restoration and actual model/native acceptance
+remain open.
+
+Published skill authorization renewal
+-------------------------------------
+
+Skills use a separate protocol from stopped-task recovery. Call
+``manage_agent_skill("review_authorization", {"candidate_id": published_id})`` for the current published
+version. Review returns ``snapshot``, ``authorization_review``, clipped ``authorization`` and ``spec``.
+It does not observe, execute or publish. If fixed actions/criteria are incompatible with the narrowed
+scope, ``spec=null`` and ``authorization_scope_unavailable`` prevent a runnable approval.
+
+Explicit ``manage_agent_skill("create_authorized", request)`` requires ``candidate_id``, ``snapshot``,
+``authorization_review``, reviewed ``spec`` and a nonempty ``note``. Every live old restriction remains;
+unavailable references may be replaced by current authority, with equal/narrower roots inside the
+original ceiling. Goal, full actions, tools, apps, inputs, mode/settings, budgets, completion criteria
+and parameter schema stay fixed. Changing semantic data uses a later reviewed repair candidate.
+
+The result is a draft in the same skill lineage, version zero, with parent version and actor/context/
+approved-root provenance. It inherits neither publication nor validation trials. Run ``validate``,
+verify independent success, then explicitly ``accept`` with the parent ``expected_version`` and note.
+Old trials cannot publish this candidate. Old versions and running task pins remain immutable.
+After publication, ``run`` must explicitly select the new version; revoked old versions still refuse.
+
+Candidate insertion and unique approval linkage commit together. Identical context/spec approval
+reuses the draft after restart/lost replies or concurrent caller requests. Stale parent versions or
+changed current authority require another review; publication races are checked in the insert
+transaction as well as review. Four-operation task recovery and trigger registration stay separate.
+Skill surfaces are ``AC_agent_skill``, MCP ``ac_agent_skill``, ``POST /agent/skill``, Builder and
+``agent-task skill review_authorization|create_authorized request.json``. GUI Skills offers both
+operations through its selector and explicit **Apply skill operation** Action; review never submits
+a task or publishes a version. Owner/operator ``drive_input`` is required even for direct review.
+Controlled fake application, authenticated loopback and offscreen GUI evidence do not replace native
+acceptance. Explicit trigger re-registration is described below; actual application/native acceptance remains open.
+
+Trigger authorization and event continuity
+------------------------------------------------------------
+
+Call ``manage_agent_trigger("review_authorization", {"trigger_id": source_id})`` to review the original
+template, fixed schedule/configuration and accepted event count without target access. Review returns
+``snapshot``, ``authorization_review``, clipped context and ``spec``. The snapshot includes the source
+row and a streamed digest of accepted event identities. Changed source/config/events or current authority
+require another review; an inaccessible fixed watch path or criterion withholds a runnable specification.
+
+Explicit ``create_authorized`` requires ``trigger_id``, ``snapshot``, ``authorization_review``, reviewed
+``spec`` and nonempty ``note``. Only unavailable old origins and equal/narrower roots may change, within
+the original/live/current intersection. Goal, full actions, inputs, tools/apps/settings/budgets/criteria,
+kind/config and ``max_pending`` stay fixed. Both caller and original owner must retain ``drive_input``.
+Creation atomically enables one new binding for future events, disables/retires its source and stores
+actor/context/approved-root proof. No task is resumed, no target acquired and no input quarantine cleared.
+Ordinary ``enable`` revalidates the original live authority; retired bindings cannot be enabled again.
+
+Accepted keys, payload hashes and original task IDs share one lineage history. Duplicates inherited from
+an earlier generation only return that task, including its expired tombstone, and never redispatch queued
+old work. New events count outstanding tasks across the lineage against the original pending limit.
+Events accepted by the current binding retain normal queued retry dispatch. Task creation, local event
+receipt and lineage receipt commit together. Schedule windows restart after creation without replaying
+missed slots; file configuration/checkpoints remain. Multiple renewals, restart and ancestor removal keep
+deduplication. Matching approval retries return the same replacement; a removed child stays retired.
+Proof/history remains while any lineage binding exists and clears after explicit removal of the family.
+``get`` exposes child ``reauthorization`` and parent ``replacement`` metadata, without mutating old specs.
+
+Use ``AC_agent_trigger``, MCP ``ac_agent_trigger``, ``POST /agent/trigger``, Builder or
+``agent-task trigger review_authorization|create_authorized request.json``. GUI Trigger operations
+provides both choices. Review prepares its authorization JSON request with an empty note; creation
+requires the separate explicit Action. Selection changes and late replies cannot apply another source's
+request, and review never fills the ordinary task form. Controlled fake/loopback/offscreen evidence
+does not replace actual source/application/native acceptance.

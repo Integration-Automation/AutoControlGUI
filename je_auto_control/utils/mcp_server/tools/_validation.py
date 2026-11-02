@@ -2,7 +2,7 @@
 
 The default tool registry only references a handful of schema
 features — ``type``, ``properties``, ``required``, ``items``,
-``enum`` — so a 50-line validator is enough and avoids pulling in
+``enum`` and explicit ``additionalProperties: false`` — so a small validator avoids pulling in
 ``jsonschema`` as a runtime dependency. The validator intentionally
 returns the first violation it finds rather than collecting them
 all, which keeps the JSON-RPC error message short.
@@ -84,6 +84,8 @@ def _validate_object(schema: Dict[str, Any], value: Dict[str, Any],
     for name, child_value in value.items():
         child_schema = properties.get(name)
         if child_schema is None:
+            if schema.get("additionalProperties") is False:
+                return f"{path}: unknown property {name!r}"
             continue
         error = _validate(child_schema, child_value, f"{path}.{name}")
         if error is not None:

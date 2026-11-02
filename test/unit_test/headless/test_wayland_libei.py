@@ -608,9 +608,8 @@ def test_region_enumeration_stops_at_the_ceiling():
     assert len(backend._device_regions(POINTER_DEVICE)) == libei_mod._MAX_REGIONS
 
 
-def test_a_motion_refused_for_its_region_reaches_the_cli(monkeypatch):
-    """End to end: the refusal is the *point*, because ``emitted`` turns it
-    into the ydotool move that libei would have swallowed."""
+def test_a_motion_refused_for_its_region_stops_before_the_cli(monkeypatch):
+    """An invalid native coordinate is a failed operation, not optional backend absence."""
     from je_auto_control.linux_wayland import mouse as wayland_mouse
     monkeypatch.setattr(libei_mod, "layout_origin", lambda: (0, 0))
     backend, fake = _with_regions([(0, 0, 1920, 1080)])
@@ -619,10 +618,11 @@ def test_a_motion_refused_for_its_region_reaches_the_cli(monkeypatch):
     binary, run = _cli_capture(wayland_mouse, captured)
     with patch.object(wayland_mouse, "_try_libei", return_value=backend), \
          binary, run:
-        wayland_mouse.set_position(4000, 30)
+        with pytest.raises(LibeiUnavailable, match='outside every region') as caught:
+            wayland_mouse.set_position(4000, 30)
+    assert caught.value.state == 'failed' and not caught.value.status.fallback_allowed
     assert not [call for call in fake.calls if call[0] == "motion"]
-    assert captured[0][1:] == ["mousemove", "--absolute",
-                               "-x", "4000", "-y", "30"]
+    assert captured == []
 
 
 def test_click_button_presses_then_releases():
@@ -634,8 +634,7 @@ def test_click_button_presses_then_releases():
 
 
 def test_a_paused_device_stops_accepting_emissions():
-    """Pause arrives asynchronously; emitting into a paused device would be
-    silently dropped, so it has to raise and let the CLI take over."""
+    """Pause arrives asynchronously; emitting into a paused device must raise without implicit CLI fallback."""
     backend, fake = _connected()
     fake.pending = [(libei_mod.EI_EVENT_DEVICE_PAUSED, KEYBOARD_DEVICE)]
     with pytest.raises(LibeiUnavailable, match="no libei device"):

@@ -1,10 +1,12 @@
 """Workspace widget: owns the tab bar and the registry of every tab it can open."""
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from PySide6.QtCore import QTimer, Signal, QObject
 from PySide6.QtGui import QKeyEvent, Qt
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel,
+)
 
 from je_auto_control.gui._auto_click_tab import AutoClickTabMixin
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -15,12 +17,11 @@ from je_auto_control.gui._screenshot_tab import ScreenshotTabMixin
 from je_auto_control.gui._script_tab import ScriptTabMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.tab_registry import (
-    TAB_SPECS, MenuActions, TabEntry, WidgetFactory, lazy_factory,
+    TAB_SPECS, MenuActions, TabEntry, TabRegistry, WidgetFactory, lazy_factory,
 )
-from je_auto_control.gui.workspace_tabs import WorkspaceTabWidget
+from je_auto_control.gui.workspace import ScrollableTabs
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_action_json
-from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 # Kept under its old name: tests and embedders read ``_tab_entries`` rows as this.
 _TabEntry = TabEntry
@@ -51,10 +52,9 @@ class AutoControlGUIWidget(
         layout.setContentsMargins(0, 0, 0, 0)
 
         self._tab_entries: List[TabEntry] = []
+        self.tab_registry = TabRegistry(self._tab_entries, on_close=self._detach_closed_tab)
 
-        # Pages scroll inside their tab when the window is smaller than they
-        # are; ``tabs.indexOf(entry.widget)`` and friends still speak in pages.
-        self.tabs = WorkspaceTabWidget()
+        self.tabs = ScrollableTabs()
         self.tabs.setTabsClosable(True)
         self.tabs.setDocumentMode(True)
         self.tabs.setUsesScrollButtons(True)
@@ -63,23 +63,20 @@ class AutoControlGUIWidget(
         self.tabs.setMinimumSize(360, 240)
         self.tabs.tabCloseRequested.connect(self._on_tab_close_requested)
 
-        # The window opens on record / script_builder / remote_desktop, with
-        # Record in front. Every tab but this widget's own forms is registered
-        # without being built: its module is imported and its widget
-        # constructed the first time it is on screen, which for the two other
-        # start tabs is the first click on them.
+        # The window opens on record / script_builder / remote_desktop. Every
+        # other tab is registered but not built: its module is imported and
+        # its widget constructed the first time it is opened, from the
+        # navigation panel or the View menu.
         own_tabs = self._own_tab_builders()
         for spec in TAB_SPECS:
             builder, actions = own_tabs.get(spec.key, (None, ()))
             self._add_tab(spec.key, spec.title_key,
                           builder or lazy_factory(spec.module, spec.class_name),
-                          category=spec.category, default_visible=spec.default_visible, actions=actions,
-                          scrollable=spec.scrollable)
+                          category=spec.category, default_visible=spec.default_visible, actions=actions)
         layout.addWidget(self.tabs)
 
         self.setLayout(layout)
 
-        self._build_current_tab()
         self.tabs.currentChanged.connect(self._on_current_tab_changed)
 
         self.timer = QTimer()
@@ -175,42 +172,26 @@ class AutoControlGUIWidget(
     # --- tab registry API ----------------------------------------------------
 
     def _add_tab(
-            self, key: str, title_key: str, widget: QWidget | WidgetFactory,
+            self, key: str, title_key: str, widget: Union[QWidget, WidgetFactory],
             category: str = "core", default_visible: bool = False,
-            actions: MenuActions = (), scrollable: bool = True,
+            actions: MenuActions = (),
     ) -> None:
-        """Register a tab from a widget, or from a factory called the first time it is on screen."""
-        title = language_wrapper.translate(title_key, title_key)
+        """Register a tab from a widget, or from a factory called on first open."""
         if isinstance(widget, QWidget):
             built = widget
             entry = TabEntry(key=key, title_key=title_key, factory=lambda: built,
                              category=category, default_visible=default_visible, actions=actions,
-                             scrollable=scrollable, releasable=False)
-            self._tab_entries.append(entry)
-            if default_visible:
-                self.tabs.addTab(entry.widget, title, scrollable=scrollable)
-            else:
-                AutoControlGUIWidget._adopt_hidden_tab(self, entry.widget)
-            return
-        entry = TabEntry(key=key, title_key=title_key, factory=widget,
-                         category=category, default_visible=default_visible, actions=actions,
-                         scrollable=scrollable,
-                         on_build=lambda page: AutoControlGUIWidget._place_built_tab(self, key, page))
+                             retain_on_close=True)
+        else:
+            entry = TabEntry(key=key, title_key=title_key, factory=widget,
+                             category=category, default_visible=default_visible, actions=actions,
+                             retain_on_close=key == "remote_desktop",
+                             on_build=lambda page: AutoControlGUIWidget._adopt_hidden_tab(self, page))
         self._tab_entries.append(entry)
         if default_visible:
-            self.tabs.insert_deferred_tab(self.tabs.count(), key, title, scrollable)
-
-    def _place_built_tab(self, key: str, page: QWidget) -> None:
-        """Put a page built just now where it belongs: its waiting tab, or kept hidden."""
-        if not self.tabs.fill_deferred(key, page):
-            AutoControlGUIWidget._adopt_hidden_tab(self, page)
-
-    def _build_current_tab(self) -> None:
-        """Build the selected tab's page if it is still waiting for its first show."""
-        key = self.tabs.deferred_key(self.tabs.currentIndex())
-        entry = self._find_entry(key) if key else None
-        if entry is not None:
-            _ = entry.widget
+            self.tabs.addTab(entry.widget, language_wrapper.translate(title_key, title_key))
+        elif isinstance(widget, QWidget):
+            AutoControlGUIWidget._adopt_hidden_tab(self, entry.widget)
 
     def _adopt_hidden_tab(self, widget: QWidget) -> None:
         # Owned from the start: an unparented hidden tab outlived this
@@ -227,17 +208,10 @@ class AutoControlGUIWidget(
     def _built_entries(self) -> List[Any]:
         return [entry for entry in self._tab_entries if self._is_built(entry)]
 
-    def _tab_index(self, entry: Any) -> int:
-        """Where ``entry`` is in the tab bar, or -1; never builds the tab."""
-        if self._is_built(entry):
-            return int(self.tabs.indexOf(entry.widget))
-        return int(self.tabs.index_of_deferred(entry.key))
-
     def _is_open(self, entry: Any) -> bool:
-        return self._tab_index(entry) != -1
+        return self._is_built(entry) and self.tabs.indexOf(entry.widget) != -1
 
     def _on_current_tab_changed(self, _index: int) -> None:
-        self._build_current_tab()
         self.current_tab_changed.emit()
 
     def current_tab_menu_actions(self) -> list:
@@ -314,40 +288,10 @@ class AutoControlGUIWidget(
             if self._is_open(candidate):
                 target_index += 1
         title = language_wrapper.translate(entry.title_key, entry.title_key)
-        self.tabs.insertTab(target_index, entry.widget, title, scrollable=entry.scrollable)
-        self.tabs.setCurrentWidget(entry.widget)
+        page = self.tab_registry.open(key)
+        self.tabs.insertTab(target_index, page, title)
+        self.tabs.setCurrentWidget(page)
         self.tabs_changed.emit()
-
-    def open_tab(self, key: str) -> Optional[QWidget]:
-        """Open and select the tab ``key``; return its widget, or ``None`` for an unknown key."""
-        entry = self._find_entry(key)
-        if entry is None:
-            return None
-        self.activate_tab(key)
-        widget: QWidget = entry.widget
-        return widget
-
-    def close_tab(self, key: str, release: bool = False) -> bool:
-        """Close the tab ``key``; with ``release`` also let go of its widget.
-
-        Without ``release`` this is :meth:`hide_tab`: the widget is kept and
-        the next open shows it as it was left. With it, the widget's optional
-        ``dispose()`` is called and the widget deleted, so what it held
-        (timers, threads, listeners) goes with it and the next open builds a
-        new one. Returns whether a widget was released; the forms this widget
-        builds for itself are never released.
-        """
-        entry = self._find_entry(key)
-        if entry is None:
-            return False
-        self.hide_tab(key)
-        if not release:
-            return False
-        try:
-            return bool(entry.release())
-        except Exception as error:  # noqa: BLE001  # reason: a failing dispose() must not undo the release
-            autocontrol_logger.error("dispose() of tab %s failed: %r", key, error)
-            return True
 
     def activate_tab(self, key: str) -> bool:
         """Bring the tab ``key`` to the front, opening it first if needed."""
@@ -355,7 +299,7 @@ class AutoControlGUIWidget(
         if entry is None:
             return False
         if self._is_open(entry):
-            self.tabs.setCurrentIndex(self._tab_index(entry))
+            self.tabs.setCurrentWidget(entry.widget)
         else:
             self.show_tab(key)
         return True
@@ -363,44 +307,49 @@ class AutoControlGUIWidget(
     def hide_tab(self, key: str) -> None:
         """Close the tab ``key``; its widget is kept for the next time it is opened."""
         entry = self._find_entry(key)
-        if entry is None:
+        if entry is None or not self._is_built(entry):
             return
-        index = self._tab_index(entry)
+        index = self.tabs.indexOf(entry.widget)
         if index != -1:
             self.tabs.removeTab(index)
             self.tabs_changed.emit()
 
     def _on_tab_close_requested(self, index: int) -> None:
-        waiting = self.tabs.deferred_key(index)
-        if waiting:
-            self.hide_tab(waiting)
-            return
         widget = self.tabs.widget(index)
         for entry in self._built_entries():
             if entry.widget is widget:
-                self.hide_tab(entry.key)
+                self.close_tab(entry.key)
                 return
+
+    def close_tab(self, key: str) -> None:
+        """Release a feature; keep legacy forms and Remote Desktop reusable.
+
+        Unlike ``hide_tab``, closing a feature discards its local UI state and
+        schedules cleanup of subscriptions and timers. Reopening rebuilds it.
+        Remote Desktop retains live sessions until its lifecycle is migrated.
+        """
+        self.tab_registry.close(key)
+
+    def _detach_closed_tab(self, page: QWidget) -> None:
+        """Remove a closed page before its deferred Qt destruction."""
+        index = self.tabs.indexOf(page)
+        if index != -1:
+            self.tabs.removeTab(index)
+        self.tabs_changed.emit()
 
     def _translate(self, key: str) -> str:
         return language_wrapper.translate(key, key)
 
     def retranslate(self) -> None:
         """Relabel tab titles and propagate into every child tab."""
-        for entry in self._tab_entries:
-            index = self._tab_index(entry)
+        self.tabs.retranslate()
+        for entry in self._built_entries():
+            index = self.tabs.indexOf(entry.widget)
             if index != -1:
                 self.tabs.setTabText(
                     index, language_wrapper.translate(entry.title_key, entry.title_key),
                 )
-        # Widgets registered via TranslatableMixin on this widget (screenshot,
-        # image-detect, record, script, screen-record, shell, report tabs).
-        TranslatableMixin.retranslate(self)
-        if hasattr(self, "_auto_click_retranslate"):
-            self._auto_click_retranslate()
-        if hasattr(self, "_screenshot_retranslate"):
-            self._screenshot_retranslate()
-        if hasattr(self, "_record_retranslate"):
-            self._record_retranslate()
+        self._retranslate_core_tabs()
         # Child class tabs get their own retranslate if they implement one.
         for entry in self._built_entries():
             callback = getattr(entry.widget, "retranslate", None)
@@ -409,6 +358,16 @@ class AutoControlGUIWidget(
                     callback()
                 except (RuntimeError, AttributeError):
                     continue
+
+    def _retranslate_core_tabs(self) -> None:
+        """Relabel retained core forms and their optional manual capture controls."""
+        TranslatableMixin.retranslate(self)
+        capture = getattr(self, "script_history_controls", None)
+        if capture is not None:
+            capture.retranslate()
+        for name in ("_auto_click_retranslate", "_screenshot_retranslate", "_record_retranslate"):
+            if hasattr(self, name):
+                getattr(self, name)()
 
     def open_script_file(self, path: str) -> None:
         """Load a JSON script into the Script Executor tab and focus it."""
@@ -426,7 +385,7 @@ class AutoControlGUIWidget(
             self.tabs.setCurrentWidget(entry.widget)
 
     # =========================================================================
-    # Global keyboard shortcut: Ctrl+4 stops the auto-clicker and every running script
+    # Global keyboard shortcut: Ctrl+4 to stop
     # =========================================================================
     def keyPressEvent(self, event: QKeyEvent):
         if event.modifiers() == Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_4:

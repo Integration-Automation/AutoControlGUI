@@ -7,21 +7,21 @@ configured turns a bearer token into an :class:`AuthorizationContext` with
 dispatcher, the audit writers -- asks :func:`current_authorization` who the
 caller is instead of having the identity threaded through every signature.
 
-No scope means no RBAC: a deployment that never configured a user store, the
-stdio MCP transport, a script calling the library directly. Nothing is
-checked there, which is what keeps those callers working exactly as before.
+Unscoped trusted Python callers retain their existing behavior. MCP tool
+calls with a live session bind an operator principal when no authenticated
+user is present, so nested wrappers cannot borrow trusted host authority.
 """
 from __future__ import annotations
 
 import contextlib
 import os
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.rbac.users import UserAuthError, UserStore, can
-from je_auto_control.utils.thread_bound import ThreadBoundVar
 
 #: Names the user store file. Setting it is what switches RBAC on for the
 #: REST API and the MCP HTTP transport; unset or empty leaves both on their
@@ -39,13 +39,18 @@ class AuthorizationError(AutoControlException, PermissionError):
 
 @dataclass(frozen=True)
 class AuthorizationContext:
-    """One authenticated caller: who it is and the role it holds."""
+    """One caller and its role; resolved tokens also carry their source store path.
+
+    ``store_path`` lets deferred work refresh the user's current role without
+    saving credentials. Manually constructed contexts without a path are
+    explicit trusted Python role snapshots.
+    """
 
     user_id: str
     role: str
-    #: The store that identified the caller. Deferred work registered by the
-    #: caller looks its role up there again when it fires.
-    store: Optional[UserStore] = field(default=None, compare=False, repr=False)
+    # A provenance path, never a bearer token. Deferred work re-reads the
+    # authoritative store instead of retaining a request's role indefinitely.
+    store_path: Optional[str] = field(default=None, repr=False, compare=False)
 
     def allows(self, capability: str) -> bool:
         """``True`` when this caller's role grants ``capability``."""
@@ -76,23 +81,16 @@ def resolve_token(store: UserStore, token: str) -> Optional[AuthorizationContext
         record = store.authenticate(token)
     except UserAuthError:
         return None
-    return AuthorizationContext(user_id=record.user_id, role=record.role, store=store)
+    return AuthorizationContext(user_id=record.user_id, role=record.role,
+                                store_path=str(store.path.resolve()))
 
 
-# Bound to the thread that entered the scope: on a free-threaded build (and
-# under ``-X thread_inherit_context=1``) a new thread starts with a copy of its
-# creator's context, and a scheduler or observer thread first started while an
-# admin's request was being served would have gone on running as that admin.
-_CURRENT: ThreadBoundVar[Optional[AuthorizationContext]] = ThreadBoundVar(
-    "je_auto_control_authorization", None)
+_CURRENT: ContextVar[Optional[AuthorizationContext]] = ContextVar(
+    "je_auto_control_authorization", default=None)
 
 
 def current_authorization() -> Optional[AuthorizationContext]:
-    """The caller this thread is serving, or ``None`` outside any RBAC scope.
-
-    ``None`` also on a thread that was merely started inside a scope: the
-    scope counts on the thread that entered it, on every build.
-    """
+    """The caller this thread is serving, or ``None`` outside any RBAC scope."""
     return _CURRENT.get()
 
 
@@ -100,12 +98,9 @@ def current_authorization() -> Optional[AuthorizationContext]:
 def authorization_scope(context: Optional[AuthorizationContext]) -> Iterator[None]:
     """Serve the enclosed work as ``context``; ``None`` clears any outer scope.
 
-    The scope belongs to the calling thread, also where a new thread inherits
-    its creator's context variables (a free-threaded build). Work handed to
-    another thread --
-    a scheduler job, a trigger, a hotkey -- runs outside it, which is why
-    those registries store the caller and re-enter a scope when the work
-    fires (:mod:`je_auto_control.utils.rbac.deferred`).
+    The scope belongs to the calling context. Delayed work explicitly binds
+    its captured registrant through ``DeferredAuthorization.scope()``; it
+    must not depend on a worker thread's ambient context or inheritance.
     """
     token = _CURRENT.set(context)
     try:

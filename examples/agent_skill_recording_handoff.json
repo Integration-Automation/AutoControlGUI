@@ -1,0 +1,6 @@
+{
+  "task_id": "<original-workflow-task-id>",
+  "completion_task_id": "<verified-read-only-task-id>",
+  "handoff_id": "<explicit-evidence-handoff-id>",
+  "name": "<new-skill-name>"
+}

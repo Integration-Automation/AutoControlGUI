@@ -1,22 +1,12 @@
-"""Structured, append-only journal of the actions the executor ran."""
-from je_auto_control.utils.action_journal.events import (
-    SCHEMA_VERSION, STATUS_ERROR, STATUS_INCOMPLETE, STATUS_OK, ActionEvent,
-    JournalFormatError,
+"""Versioned storage and explicitly scoped structured-action capture."""
+from je_auto_control.utils.action_journal.events import ActionEvent, ActionJournalError
+from je_auto_control.utils.action_journal.store import ActionJournal, read_events
+from je_auto_control.utils.action_journal.inspection import inspect_journal
+from je_auto_control.utils.action_journal.capture import (
+    JournalBinding, JournalRunResult, execute_action_with_journal, journal_scope,
 )
-from je_auto_control.utils.action_journal.recorder import (
-    ActionJournalError, action_journal_status, carry_step, note_artifact,
-    note_secret_value, start_action_journal, stop_action_journal,
-)
-from je_auto_control.utils.action_journal.store import (
-    ActionJournal, JournalContents, default_journal_path, list_journal_runs,
-    load_journal, read_events,
-)
+from je_auto_control.utils.action_journal.run import JournalRunOptions, execute_journal_run
 
-__all__ = [
-    "SCHEMA_VERSION", "STATUS_ERROR", "STATUS_INCOMPLETE", "STATUS_OK",
-    "ActionEvent", "ActionJournal", "ActionJournalError", "JournalContents",
-    "JournalFormatError", "action_journal_status", "carry_step",
-    "default_journal_path", "list_journal_runs", "load_journal", "note_artifact",
-    "note_secret_value", "read_events", "start_action_journal",
-    "stop_action_journal",
-]
+__all__ = ["ActionEvent", "ActionJournal", "ActionJournalError", "JournalBinding", "JournalRunResult",
+           "read_events", "inspect_journal", "execute_action_with_journal", "journal_scope",
+           "JournalRunOptions", "execute_journal_run"]

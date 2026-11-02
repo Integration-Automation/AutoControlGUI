@@ -11,6 +11,7 @@ from typing import Any, List, Optional, Sequence, Tuple
 
 from je_auto_control.utils.cv2_utils.image_file import read_image
 from je_auto_control.utils.cv2_utils.optional import require_cv2, require_je_open_cv
+from je_auto_control.utils.cv2_utils.locator_frame import current_locator_frame
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
 from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
 
@@ -43,7 +44,14 @@ def _prepare(image: Any, detect_threshold: float,
     require_je_open_cv()
     cv2 = require_cv2()
     template = _gray_template(cv2, image)
-    grab_image, origin_x, origin_y = grab_logical(screen_region, all_screens=all_screens)
+    owner = current_locator_frame()
+    if owner is None:
+        grab_image, origin_x, origin_y = grab_logical(screen_region, all_screens=all_screens)
+    else:
+        owner.record_template(template)
+        snapshot = owner.snapshot()
+        grab_image = snapshot.image()
+        origin_x, origin_y = snapshot.origin
     try:
         frame = _to_gray(cv2, grab_image)
         if template.shape[0] > frame.shape[0] or template.shape[1] > frame.shape[1]:
@@ -53,6 +61,9 @@ def _prepare(image: Any, detect_threshold: float,
         # An input OpenCV cannot match (an empty frame, a pixel type it does
         # not take) is a search that found nothing, in the type callers catch.
         raise ImageNotFoundException(f"cannot match template image: {error}") from error
+    finally:
+        if owner is not None:
+            grab_image.close()
     effective = min(threshold, 1.0 - _SCORE_EPSILON)
     return (frame, scores), template, effective, (origin_x, origin_y)
 

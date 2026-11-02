@@ -57,11 +57,11 @@ class _RestApiRegistry:
         return self.status()
 
     def status(self) -> Dict[str, Any]:
-        """What is running and how a client authenticates to it.
+        """Report the active auth mode; expose shared credentials only when usable.
 
-        ``token`` is the shared bearer token, or ``None`` when ``rbac`` is
-        true -- then each user has their own, and ``users_path`` names the
-        store they are checked against.
+        ``token`` is the shared bearer token, or ``None`` when RBAC is on
+        (``rbac_enabled``, also reported as ``rbac``) -- then each user has their
+        own, and ``users_path`` names the store they are checked against.
         """
         with self._lock:
             server = self._server
@@ -69,17 +69,18 @@ class _RestApiRegistry:
             return {
                 "running": False, "host": None, "port": 0,
                 "token": None, "url": None,  # nosec B105  # reason: dict key, value None means server stopped
-                "rbac": False, "users_path": None,
+                "rbac_enabled": False, "rbac": False, "users_path": None,
             }
         host, port = server.address
         users = server.user_store
+        rbac_enabled = users is not None
         return {
             "running": server.is_running, "host": host, "port": int(port),
             # With a user store the shared token opens nothing: reporting it
             # handed out a credential the server refuses.
-            "token": server.token if users is None else None,
-            "url": server.base_url,
-            "rbac": users is not None,
+            "token": None if rbac_enabled else server.token, "url": server.base_url,
+            "rbac_enabled": rbac_enabled,
+            "rbac": rbac_enabled,
             "users_path": None if users is None else str(users.path),
         }
 

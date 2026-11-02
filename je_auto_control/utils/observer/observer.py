@@ -20,12 +20,14 @@ has no owner and fires as before.
 """
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.utils.rbac.deferred import DeferredOwner, capture_owner, owner_scope
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
+from je_auto_control.utils.run_history.run_outcome import raise_if_run_interrupted, run_counting_failures
 from je_auto_control.utils.timeouts import clamp_poll_interval
 
 EVENT_APPEAR = "appear"
@@ -50,8 +52,8 @@ class WatchRule:
     on_event: Callable[[str, Any], None]
     events: Sequence[str] = _ALL_EVENTS
     last: Any = _UNSET
-    #: Who registered the watch; its callback runs as them. ``None`` outside RBAC.
-    owner: Optional[DeferredOwner] = None
+    _authorization: DeferredAuthorization = field(
+        default_factory=DeferredAuthorization.capture, init=False, repr=False, compare=False)
 
 
 def _transition(last: Any, value: Any) -> Optional[str]:
@@ -90,13 +92,14 @@ class ScreenObserver:
     def add(self, name: str, predicate: Callable[[], Any],
             on_event: Callable[[str, Any], None], *,
             events: Optional[Sequence[str]] = None) -> WatchRule:
-        """Register a watch; ``events`` defaults to all three transitions.
+        """Watch as the current caller; callbacks get a fresh variable scope.
 
-        The caller being served, if any, becomes the watch's owner.
+        ``events`` defaults to all three transitions. Registrations without
+        RBAC explicitly clear worker identity; store-backed users are refreshed
+        at dispatch, including before predicates run.
         """
         rule = WatchRule(name=name, predicate=predicate, on_event=on_event,
-                         events=tuple(events) if events else _ALL_EVENTS,
-                         owner=capture_owner())
+                         events=tuple(events) if events else _ALL_EVENTS)
         with self._lock:
             self._rules.append(rule)
         return rule
@@ -140,14 +143,17 @@ class ScreenObserver:
             return [event for event in (self._evaluate(rule) for rule in rules)
                     if event is not None]
 
+    @secret_log_scope()
     def _evaluate(self, rule: WatchRule) -> Optional[Dict[str, Any]]:
         # The transition is inside the guard too: a predicate returning, say,
         # a numpy array raised from bool() there. One rule may not stop the
         # poll thread -- and with it every other rule -- whatever it raises.
         try:
-            value = rule.predicate()
-            event = _transition(rule.last, value)
+            with rule._authorization.scope():
+                value = rule.predicate()
+                event = _transition(rule.last, value)
         except Exception as error:  # noqa: BLE001  # reason: logged; the other rules keep running
+            raise_if_run_interrupted(error)
             autocontrol_logger.info(
                 "observer %r predicate error: %r", rule.name, error)
             return None
@@ -164,14 +170,13 @@ class ScreenObserver:
             self._events.append(record)
         return record
 
+    @secret_log_scope()
     def _fire(self, rule: WatchRule, event: str, value: Any) -> None:
         try:
-            # As the user who registered the watch, with the role they hold
-            # now -- whoever's poll this is. A removed or demoted owner's
-            # callback is refused here, once per transition.
-            with owner_scope(rule.owner):
-                rule.on_event(event, value)
+            with rule._authorization.scope():
+                run_counting_failures(lambda: rule.on_event(event, value))
         except Exception as error:  # noqa: BLE001  # reason: logged; the other rules keep running
+            raise_if_run_interrupted(error)
             autocontrol_logger.info(
                 "observer %r handler error: %r", rule.name, error)
 

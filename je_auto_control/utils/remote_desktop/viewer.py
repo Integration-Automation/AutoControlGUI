@@ -7,6 +7,7 @@ import threading
 import time as _time_module
 from typing import Any, Callable, Deque, Dict, Mapping, Optional, Tuple
 
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.auth import compute_response
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
@@ -341,30 +342,42 @@ class RemoteDesktopViewer:
         self._channel.send_typed(MessageType.PING, b"")
 
     def send_clipboard_text(self, text: str, *, automatic: bool = False) -> bool:
-        """Push ``text`` onto the host's clipboard; whether it was sent.
+        """Push ``text`` onto the originally selected host's clipboard; whether it was sent.
 
         ``automatic=True`` is for code that forwards clipboard *changes* by
         itself: the text is then not sent when it is exactly what the host
         just sent here, or what was already sent, so two machines watching
         each other's clipboard settle after one transfer. Without it (a
-        person asking) the text is always sent.
+        person asking) the text is always sent. A replaced connection is refused.
         """
-        return self._send_clipboard(encode_text(text), "text", text, automatic)
+        channel = self._clipboard_channel()
+        return self._send_clipboard_payload(channel, encode_text(text), "text", text, automatic)
 
     def send_clipboard_image(self, png_bytes: bytes, *, automatic: bool = False) -> bool:
-        """Push a PNG image onto the host's clipboard; whether it was sent.
+        """Push PNG bytes onto the originally selected host's clipboard; whether it was sent.
 
         ``automatic`` as in :meth:`send_clipboard_text`.
         """
-        return self._send_clipboard(encode_image(png_bytes), "image", bytes(png_bytes),
-                                    automatic)
+        channel = self._clipboard_channel()
+        return self._send_clipboard_payload(channel, encode_image(png_bytes), "image",
+                                            bytes(png_bytes), automatic)
 
-    def _send_clipboard(self, payload: bytes, kind: str, data: Any, automatic: bool) -> bool:
+    def _clipboard_channel(self) -> MessageChannel:
         if not self._connected or self._channel is None:
+            raise ConnectionError(_NOT_CONNECTED_MESSAGE)
+        return self._channel
+
+    def _send_clipboard_payload(self, channel: MessageChannel, payload: bytes,
+                                kind: str, data: Any, automatic: bool) -> bool:
+        if not self._connected or not self._receive_active(channel):
             raise ConnectionError(_NOT_CONNECTED_MESSAGE)
         if automatic and not self._clipboard_guard.should_send(kind, data):
             return False
-        self._channel.send_typed(MessageType.CLIPBOARD, payload)
+        try:
+            channel.send_typed(MessageType.CLIPBOARD, payload)
+        except (OSError, RuntimeError) as error:
+            raise_caused_run_interruption(error)
+            raise
         self._clipboard_guard.note_sent(kind, data)
         return True
 
@@ -411,13 +424,16 @@ class RemoteDesktopViewer:
                 "remote_desktop viewer bad file message: %r", error,
             )
 
-    def _handle_clipboard_payload(self, payload: bytes) -> None:
+    def _handle_clipboard_payload(self, payload: bytes, channel: Optional[MessageChannel] = None) -> None:
         try:
             kind, data = decode_clipboard(payload)
         except ClipboardSyncError as error:
+            raise_caused_run_interruption(error)
             autocontrol_logger.info(
                 "remote_desktop viewer bad CLIPBOARD: %r", error,
             )
+            return
+        if channel is not None and not self._receive_active(channel):
             return
         # Noted before the callback applies it: a watcher that sees the
         # clipboard change the moment it is set must already find the note.
@@ -425,7 +441,8 @@ class RemoteDesktopViewer:
         if self._on_clipboard is not None:
             try:
                 self._on_clipboard(kind, data)
-            except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
+            except Exception as error:  # noqa: BLE001  # reason: callback isolation while preserving explicit controls
+                raise_caused_run_interruption(error)
                 autocontrol_logger.exception(
                     "remote_desktop viewer on_clipboard callback raised"
                 )
@@ -501,6 +518,11 @@ class RemoteDesktopViewer:
             if self._channel is channel:
                 self._notify_error(error)
             return False
+        if not self._receive_active(channel):
+            return False
+        if msg_type is MessageType.CLIPBOARD:
+            self._handle_clipboard_payload(payload, channel)
+            return True
         handler = _RECV_HANDLERS.get(msg_type)
         if handler is None:
             autocontrol_logger.info(
@@ -509,6 +531,10 @@ class RemoteDesktopViewer:
             return True
         handler(self, payload, msg_type)
         return True
+
+    def _receive_active(self, channel: MessageChannel) -> bool:
+        """A buffered read and its decoded clipboard belong only to their still-live concrete channel."""
+        return self._channel is channel and not self._shutdown.is_set()
 
     # --- per-message dispatch helpers ---------------------------------
 
@@ -581,11 +607,6 @@ class RemoteDesktopViewer:
             autocontrol_logger.exception(
                 "remote_desktop viewer on_audio callback raised"
             )
-
-    def _on_recv_clipboard(self, payload: bytes,
-                           msg_type: MessageType) -> None:
-        del msg_type
-        self._handle_clipboard_payload(payload)
 
     def _on_recv_file(self, payload: bytes,
                       msg_type: MessageType) -> None:
@@ -712,7 +733,6 @@ class RemoteDesktopViewer:
 _RECV_HANDLERS = {
     MessageType.FRAME: RemoteDesktopViewer._on_recv_frame,
     MessageType.AUDIO: RemoteDesktopViewer._on_recv_audio,
-    MessageType.CLIPBOARD: RemoteDesktopViewer._on_recv_clipboard,
     MessageType.FILE_BEGIN: RemoteDesktopViewer._on_recv_file,
     MessageType.FILE_CHUNK: RemoteDesktopViewer._on_recv_file,
     MessageType.FILE_END: RemoteDesktopViewer._on_recv_file,

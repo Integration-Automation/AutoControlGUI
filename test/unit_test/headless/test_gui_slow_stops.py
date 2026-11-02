@@ -26,7 +26,7 @@ from je_auto_control.gui import (  # noqa: E402
 from je_auto_control.gui._slow_op import SlowOp, StopQueue, stop_each  # noqa: E402
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper  # noqa: E402
 from je_auto_control.gui.remote_desktop import host_panel  # noqa: E402
-from je_auto_control.gui.task_controller import TaskUsageError  # noqa: E402
+from je_auto_control.gui.tab_task_controller import TaskUsageError  # noqa: E402
 from je_auto_control.utils.remote_desktop.registry import SLOT_HOST, registry  # noqa: E402
 from headless._qt_settle import deleting, pump_until, settle_op  # noqa: E402
 

@@ -41,7 +41,7 @@ from je_auto_control.gui.remote_desktop.remote_screen_window import (
     RemoteScreenWindow,
 )
 from je_auto_control.gui._tab_task import TabTask
-from je_auto_control.gui.task_controller import TaskHandle
+from je_auto_control.gui.tab_task_controller import TaskHandle
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.remote_desktop import (
     PendingViewer, RemoteDesktopHost, RemoteDesktopViewer,

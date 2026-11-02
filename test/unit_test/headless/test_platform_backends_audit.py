@@ -8,6 +8,7 @@ swallowed; an unknown button posted nothing silently; the event tap was
 re-enabled through the wrong handle.
 """
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -61,8 +62,9 @@ def test_x11_send_to_window_sends_press_then_release(monkeypatch):
     from je_auto_control.linux_with_x11.mouse import x11_linux_mouse_control as mouse
     window = _Window()
     for module in (keyboard, mouse):
-        monkeypatch.setattr(module.display, "create_resource_object", lambda _kind, _id: window)
-        monkeypatch.setattr(module.display, "flush", lambda: None)
+        display = SimpleNamespace(create_resource_object=lambda _kind, _id: window,
+                                  flush=lambda: None, screen=lambda: SimpleNamespace(root=window))
+        monkeypatch.setattr(module, "get_display", lambda: display)
     keyboard.send_key_event_to_window(7, 38)
     mouse.send_mouse_event_to_window(7, 1)       # x / y default to None
     assert [kind for kind, _mask in window.sent] == [

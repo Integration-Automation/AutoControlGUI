@@ -1,30 +1,29 @@
-"""System diagnostics tab: subsystem checks, and what this session can do.
+"""Explicit, cancellable diagnostics run off the GUI thread and publish only to their live owner."""
+from dataclasses import dataclass
+from functools import partial
+from typing import Callable, Literal, Optional
 
-Two tables. The first is the battery of subsystem checks. The second is the
-capability snapshot from :func:`probe_capabilities` — input, capture,
-recording and the stop key, each with its state and, where something stands
-in the way, what to do about it. Both are read-only views of headless data:
-the same snapshot is what ``AC_probe_capabilities`` and the MCP tool return.
-"""
-from typing import List, Optional
-
-from PySide6.QtGui import QBrush, QColor
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QBrush, QColor, QCloseEvent, QShowEvent
 from PySide6.QtWidgets import (
     QHeaderView, QLabel, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui.diagnostics_capabilities import CapabilityView
+from je_auto_control.gui.mcp_discovery_view import MCPDiscoveryView
+from je_auto_control.gui.task_controller import TaskController, TaskHandle, TaskOutcome
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
-from je_auto_control.linux_wayland._select_input import (
-    close_input_session, reset_input_authorisation,
-)
-from je_auto_control.utils.diagnostics.diagnostics import run_diagnostics
-from je_auto_control.wrapper.capabilities import (
-    Capability, CapabilityStatus, probe_capabilities,
-)
+from je_auto_control.utils.diagnostics.diagnostics import DiagnosticsReport, run_diagnostics
+from je_auto_control.utils.exception.cancellation import CancellationToken, TaskProgress
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
+from je_auto_control.utils.logging.secret_scope import scrub_secret_text
+from je_auto_control.utils.rbac.policy import authorize_command
+from je_auto_control.utils.run_history.run_outcome import _ordinary_error_text
+from je_auto_control.wrapper.capabilities import BackendContext, probe_capabilities
 
 
 _SEVERITY_COLOR = {
@@ -33,49 +32,26 @@ _SEVERITY_COLOR = {
     "error": QColor("#c0392b"),
 }
 
-#: Capability states by how much attention they want.
-_STATE_SEVERITY = {
-    CapabilityStatus.AVAILABLE: "info",
-    CapabilityStatus.NOT_REQUESTED: "info",
-    CapabilityStatus.SESSION_CLOSED: "info",
-    CapabilityStatus.REQUESTING: "warn",
-    CapabilityStatus.NEEDS_SETUP: "warn",
-    CapabilityStatus.UNKNOWN: "warn",
-    CapabilityStatus.NEEDS_PERMISSION: "error",
-    CapabilityStatus.REVOKED: "error",
-    CapabilityStatus.COMPOSITOR_RESTARTED: "error",
-    CapabilityStatus.UNSUPPORTED: "error",
-}
-
-_CAPABILITY_COLUMNS = ("diag_cap_col_name", "diag_cap_col_state",
-                       "diag_cap_col_backend", "diag_cap_col_scope",
-                       "diag_cap_col_detail", "diag_cap_col_fix")
-
 
 def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
 
 
-def capability_cells(capability: Capability) -> List[str]:
-    """The six cells of one capability row, translated.
+@dataclass
+class _DiagnosticViewState:
+    kind: Literal['idle', 'running', 'stopping', 'cancelled', 'error', 'result'] = 'idle'
+    report: Optional[DiagnosticsReport] = None
+    error: str = ''
+    completed: int = 0
+    total: int = 0
+    closed: bool = False
+    accept_result: bool = True
 
-    The advice comes from the catalogue when the capability names a key and
-    falls back to the headless English text, so a state added without a
-    translation still tells the user something.
-    """
-    advice = ""
-    if capability.recovery_key:
-        advice = language_wrapper.translate(capability.recovery_key,
-                                            capability.recovery)
-    return [
-        _t(f"cap_name_{capability.name}"),
-        _t(f"cap_state_{capability.state.value}"),
-        capability.backend,
-        _t("cap_scope_desktop" if capability.desktop_wide
-           else "cap_scope_xwayland"),
-        capability.detail,
-        advice or capability.recovery,
-    ]
+
+def _diagnostic_work(runner: Callable[[], DiagnosticsReport], token: CancellationToken) -> object:
+    authorize_command('AC_diagnose')
+    token.checkpoint()
+    return runner()
 
 
 class DiagnosticsTab(TranslatableMixin, QWidget):
@@ -84,71 +60,148 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
-        self._summary_label = QLabel("-")
+        self._view = _DiagnosticViewState()
+        self._task_controller = TaskController(self)
+        self._active_task: Optional[TaskHandle] = None
+        self._summary_label = QLabel(_t("diag_summary_idle"))
+        self._summary_label.setTextFormat(Qt.TextFormat.PlainText)
+        self._summary_label.setWordWrap(True)
+        self._progress_label = QLabel()
+        self._progress_label.setWordWrap(True)
+        self._capability_view = CapabilityView()
+        self._mcp_discovery = MCPDiscoveryView()
         self._table = QTableWidget(0, 4)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.horizontalHeader().setSectionResizeMode(
             3, QHeaderView.ResizeMode.Stretch,
         )
-        self._capabilities_label = QLabel()
-        self._backend_label = QLabel()
-        self._capabilities = QTableWidget(0, len(_CAPABILITY_COLUMNS))
-        self._capabilities.setEditTriggers(
-            QTableWidget.EditTrigger.NoEditTriggers)
-        self._capabilities.setWordWrap(True)
-        self._capabilities.horizontalHeader().setSectionResizeMode(
-            len(_CAPABILITY_COLUMNS) - 1, QHeaderView.ResizeMode.Stretch,
-        )
         self._build_layout()
         self._apply_table_headers()
-        self._refresh()
-        self._refresh_capabilities()
 
     def _build_layout(self) -> None:
         # The run command runs from the Actions menu; the tab keeps only
-        # the summary label and the result tables.
+        # the summary label and the results table.
         root = QVBoxLayout(self)
+        root.addWidget(self._capability_view)
         root.addWidget(self._summary_label)
-        root.addWidget(self._table, stretch=2)
-        root.addWidget(self._tr(self._capabilities_label,
-                                "diag_capabilities_title"))
-        root.addWidget(self._backend_label)
-        root.addWidget(self._capabilities, stretch=1)
+        root.addWidget(self._progress_label)
+        root.addWidget(self._table, stretch=1)
+        root.addWidget(self._mcp_discovery)
 
-    def menu_actions(self) -> list:
+    def menu_actions(self) -> list[tuple[str, Callable[[], None]]]:
         """Expose tab commands to the window-level Actions menu."""
         return [
+            ("diag_probe", self._probe_capabilities),
             ("diag_run", self._refresh),
-            ("diag_capabilities_refresh", self._refresh_capabilities),
-            ("diag_input_reask", self._ask_input_again),
-            ("diag_input_close", self._end_input_session),
-        ]
+            ("diag_stop", self._stop),
+        ] + self._mcp_discovery.menu_actions()
 
     def retranslate(self) -> None:
-        """Re-apply the registered keys and both tables' own text."""
+        """Translate idle instructions and headers without starting a diagnostic run."""
         super().retranslate()
         self._apply_table_headers()
-        self._refresh_capabilities()
+        self._capability_view.retranslate()
+        self._mcp_discovery.retranslate()
+        self._render_summary()
+        if self._view.report is not None:
+            self._fill_table(self._view.report)
+
+    def _probe_capabilities(self) -> None:
+        snapshot = probe_capabilities(BackendContext.current())
+        self._capability_view.set_snapshot(snapshot)
 
     def _apply_table_headers(self) -> None:
         self._table.setHorizontalHeaderLabels([
             _t("diag_col_name"), _t("diag_col_severity"),
             _t("diag_col_status"), _t("diag_col_detail"),
         ])
-        self._capabilities.setHorizontalHeaderLabels(
-            [_t(key) for key in _CAPABILITY_COLUMNS])
 
     def _refresh(self) -> None:
-        report = run_diagnostics()
-        summary = report.to_dict()
-        if report.ok:
-            self._summary_label.setText(_t("diag_summary_ok").format(
-                count=summary["count"],
-            ))
+        if self._active_task is not None or self._view.closed:
+            return
+        self._view = _DiagnosticViewState(kind='running')
+        self._table.setRowCount(0)
+        self._render_summary()
+        try:
+            handle = self._task_controller.submit(partial(_diagnostic_work, run_diagnostics), owner=self)
+        # pylint: disable-next=broad-exception-caught  # reason: restore UI state before preserving failed-start controls
+        except BaseException as error:  # reason: display submit failures after preserving hard/cancel controls
+            self._submission_failed(error)
+            return
+        self._active_task = handle
+        handle.finished.connect(self._on_outcome)
+        handle.progress.connect(self._on_progress)
+
+    def _submission_failed(self, error: BaseException) -> None:
+        self._view.kind = 'cancelled'
+        self._render_summary()
+        raise_caused_run_interruption(error)
+        if not isinstance(error, Exception):
+            raise error
+        self._view.kind, self._view.error = 'error', scrub_secret_text(_ordinary_error_text(error))
+        self._render_summary()
+
+    def _stop(self) -> None:
+        if self._active_task is not None:
+            self._view.kind = 'stopping'
+            self._active_task.cancel()
+            self._render_summary()
+
+    def _on_progress(self, progress: TaskProgress) -> None:
+        if (self._active_task is None or progress.task_id != self._active_task.task_id
+                or not self._view.accept_result or self._view.closed):
+            return
+        self._view.completed, self._view.total = progress.completed, progress.total or 0
+        self._render_summary()
+
+    def _on_outcome(self, outcome: TaskOutcome) -> None:
+        if self._active_task is None or outcome.task_id != self._active_task.task_id:
+            return
+        self._active_task = None
+        if not self._view.accept_result:
+            self._view.kind = 'cancelled'
+        elif outcome.status == 'cancelled':
+            self._view.kind = 'cancelled'
+        elif outcome.status == 'ok' and isinstance(outcome.value, DiagnosticsReport):
+            self._view.kind, self._view.report = 'result', outcome.value
+            self._fill_table(outcome.value)
         else:
-            self._summary_label.setText(_t("diag_summary_failed").format(
-                failed=summary["failed"], count=summary["count"],
-            ))
+            self._view.kind, self._view.error = 'error', outcome.error
+        if not self._view.closed:
+            self._render_summary()
+
+    def _render_summary(self) -> None:
+        report = self._view.report
+        if self._view.kind == 'result' and report is not None:
+            values = report.to_dict()
+            key = 'diag_summary_ok' if report.ok else 'diag_summary_failed'
+            text = _t(key).format(count=values['count'], failed=values['failed'])
+        else:
+            key = {'idle': 'diag_summary_idle', 'running': 'diag_summary_running',
+                   'stopping': 'diag_summary_stopping', 'cancelled': 'diag_summary_cancelled',
+                   'error': 'diag_summary_error', 'result': 'diag_summary_idle'}[self._view.kind]
+            text = _t(key).format(error=self._view.error)
+        self._summary_label.setText(text)
+        progress = ''
+        if self._active_task is not None and self._view.total:
+            progress = _t('diag_progress').format(completed=self._view.completed, total=self._view.total)
+        self._progress_label.setText(progress)
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Abandon this run's display and request cleanup without blocking or closing another owner."""
+        self._view.closed, self._view.accept_result = True, False
+        if self._active_task is not None:
+            self._view.kind = 'stopping'
+            self._active_task.cancel()
+        super().closeEvent(event)
+
+    def showEvent(self, event: QShowEvent) -> None:
+        """Reopening never reaccepts a result from the run abandoned on close."""
+        self._view.closed = False
+        self._render_summary()
+        super().showEvent(event)
+
+    def _fill_table(self, report: DiagnosticsReport) -> None:
         self._table.setRowCount(len(report.checks))
         for row, check in enumerate(report.checks):
             cells = [
@@ -164,31 +217,5 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
                     item.setForeground(QBrush(color))
                 self._table.setItem(row, col, item)
 
-    def _refresh_capabilities(self) -> None:
-        """Show the current snapshot. Asks the desktop for nothing."""
-        snapshot = probe_capabilities()
-        self._backend_label.setText(
-            _t("cap_backend_version").replace("{backend}", snapshot.display_server).replace(
-                "{version}", snapshot.backend_version or _t("cap_backend_version_unknown")))
-        self._capabilities.setRowCount(len(snapshot.capabilities))
-        for row, capability in enumerate(snapshot.capabilities):
-            color = _SEVERITY_COLOR[_STATE_SEVERITY[capability.state]]
-            for col, text in enumerate(capability_cells(capability)):
-                item = QTableWidgetItem(text)
-                if col == 1:
-                    item.setForeground(QBrush(color))
-                self._capabilities.setItem(row, col, item)
-        self._capabilities.resizeRowsToContents()
 
-    def _ask_input_again(self) -> None:
-        """Forget a refused or revoked input session; the next action asks."""
-        reset_input_authorisation()
-        self._refresh_capabilities()
-
-    def _end_input_session(self) -> None:
-        """Close the input session now, which revokes the portal grant."""
-        close_input_session()
-        self._refresh_capabilities()
-
-
-__all__ = ["DiagnosticsTab", "capability_cells"]
+__all__ = ["DiagnosticsTab"]

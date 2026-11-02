@@ -19,6 +19,9 @@ Rate limit:
     with a burst of ``_BURST``. Failures over a short window are counted
     separately and trigger a 429 rather than a 401, so a brute-force scan
     is forced to slow down even when the token is wrong.
+  * Closed runtime stop routes use a second per-IP bucket with the same
+    limits. Ordinary polling cannot consume its reserve; authentication and
+    the failed-token lockout remain mandatory and shared between lanes.
 """
 from __future__ import annotations
 
@@ -89,6 +92,7 @@ class RestAuthGate:
         self._rate_per_s = float(requests_per_minute) / 60.0
         self._burst = float(burst)
         self._buckets: Dict[str, _Bucket] = {}
+        self._control_buckets: Dict[str, _Bucket] = {}
         self._lock = threading.Lock()
 
     @property
@@ -105,15 +109,17 @@ class RestAuthGate:
         return self.authenticate(client_ip=client_ip, header_value=header_value).verdict
 
     def authenticate(self, *, client_ip: str,
-                     header_value: Optional[str]) -> AuthResult:
+                     header_value: Optional[str], control: bool = False) -> AuthResult:
         """Rate-limit, then authenticate; a valid token is never locked out.
 
         The lockout used to be checked first, keyed by IP alone -- and every
         local client is 127.0.0.1, every proxied one the proxy -- so eight bad
         requests a minute from anyone kept the real token holder out. It now
         only answers wrong tokens; the per-IP rate limit still applies to all.
+        ``control`` selects an independent bounded stop reserve; only the
+        server's closed stop routes may select it for an HTTP request.
         """
-        if not self._consume_token(client_ip):
+        if not self._consume_token(client_ip, control=control):
             return AuthResult("rate_limited")
         accepted, context = self._identify(header_value)
         if accepted:
@@ -135,13 +141,14 @@ class RestAuthGate:
         context = resolve_token(self._users, provided)
         return context is not None, context
 
-    def _consume_token(self, client_ip: str) -> bool:
+    def _consume_token(self, client_ip: str, *, control: bool = False) -> bool:
         now = time.monotonic()
         with self._lock:
-            bucket = self._buckets.get(client_ip)
+            buckets = self._control_buckets if control else self._buckets
+            bucket = buckets.get(client_ip)
             if bucket is None:
                 bucket = _Bucket(tokens=self._burst, last_refill=now)
-                self._buckets[client_ip] = bucket
+                buckets[client_ip] = bucket
             elapsed = now - bucket.last_refill
             bucket.last_refill = now
             bucket.tokens = min(

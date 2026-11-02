@@ -1,10 +1,11 @@
-"""Wayland mouse backend via the ydotool CLI.
+"""Wayland mouse backend via granted libei or explicitly selected/optional ydotool CLI.
 
 Wayland compositors do not let arbitrary clients move the cursor or
 synthesise buttons; the ydotool daemon owns ``/dev/uinput`` and
 arbitrates on our behalf. Buttons here are the BTN_* codes that
 ydotool consumes (``0xC0`` left, ``0xC1`` right, ``0xC2`` middle —
-ydotool's documented values for the ``click`` verb).
+ydotool's documented values for the ``click`` verb). Permission, device pause
+or revocation never implicitly select a different input provider.
 """
 from __future__ import annotations
 
@@ -17,6 +18,7 @@ from typing import Mapping, Optional, Tuple
 from je_auto_control.linux_wayland._detect import WAYLAND_YDOTOOL, binary_path
 from je_auto_control.linux_wayland._layout import layout_origin
 from je_auto_control.linux_wayland._select_input import emitted
+from je_auto_control.linux_wayland._input_state import raise_if_input_blocked
 from je_auto_control.linux_wayland._ydotool_cli import reject_legacy_cli
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -219,7 +221,8 @@ def _try_libei():
     try:
         from je_auto_control.linux_wayland._select_input import active_backend
         return active_backend()
-    except (ImportError, RuntimeError, OSError):
+    except (ImportError, RuntimeError, OSError) as error:
+        raise_if_input_blocked(error)
         return None
 
 
@@ -293,8 +296,8 @@ def click_mouse(mouse_keycode: int, x: Optional[int] = None,
     if x is not None and y is not None:
         set_position(int(x), int(y))
     if _emit_button(mouse_keycode, press=True):
-        # Not _emit_button: a refused release has to reach the CLI, or the
-        # button stays down for the rest of the session.
+        # Use the normal release path so authority/device refusals propagate;
+        # a native press must not be released through a different provider.
         release_mouse(mouse_keycode)
         return
     time.sleep(0.01)

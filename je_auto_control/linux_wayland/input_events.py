@@ -116,8 +116,6 @@ class InputDevice:
 class InputEvent:
     """One evdev event: ``type`` / ``code`` / ``value`` as the kernel has them.
 
-    The same shape is what :mod:`ei_worker` accepts for emission, so a
-    recorded stream and a stream to send are one vocabulary.
     """
 
     type: int

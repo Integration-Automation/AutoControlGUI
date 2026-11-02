@@ -7,11 +7,11 @@ Three surfaces, one rule each:
   than open. A ``GET`` route that returns records or configuration the host
   keeps needs ``read_data`` like the MCP tool reading the same thing; one
   that observes live state needs ``read_screen``.
-* **MCP tools** follow their own annotation -- a tool marked read-only needs
-  ``read_screen``, any other ``drive_input`` -- except the ones named here:
-  those that change how the host itself is exposed, those that manage users,
-  and the read-only tools that hand back the host's data rather than what is
-  on its screen (``read_data``).
+* **MCP tools** default to ``read_screen`` for a read-only annotation and
+  ``drive_input`` otherwise. Named overrides separate non-mutating sensitive
+  reads (clipboard, local data, credentials, network and audio) from screen
+  observation, hand the host's records to ``read_data``, manage users, and
+  protect administration of the host itself.
 * **``AC_*`` commands** reach the executor through anything that runs an
   action list (``POST /execute``, ``ac_execute_actions``, an action file).
   Being allowed to run actions is ``drive_input``; the commands named here
@@ -41,6 +41,12 @@ _USERS = Capability.MANAGE_USERS
 _DATA = Capability.READ_DATA
 
 REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
+    ("POST", "/agent/target"): _HOSTS,
+    ("GET", "/agent/targets"): _DRIVE,
+    ("GET", "/agent/tasks"): _DRIVE,
+    ("GET", "/agent/task"): _DRIVE,
+    ("POST", "/agent/shutdown"): _HOSTS,
+    ("POST", "/agent/recover_target"): _HOSTS,
     ("GET", "/metrics"): _READ,
     ("GET", "/jobs"): _READ,
     ("GET", "/history"): _DATA,  # run history, as ac_list_run_history
@@ -73,6 +79,11 @@ REST_ROUTE_CAPABILITIES: Dict[Tuple[str, str], str] = {
     ("POST", "/usb/acl/remove"): _HOSTS,
     ("POST", "/usb/acl/default"): _HOSTS,
 }
+REST_ROUTE_CAPABILITIES.update({("POST", f"/agent/{operation}"): _DRIVE
+                                for operation in ("submit", "observe", "act", "finish", "pause", "resume",
+                                                  "cancel", "draft", "stop_all", "receipts", "reconcile",
+                                                  "prune", "trigger", "skill", "lookup", "recovery", "dag",
+                                                  "transfer", "transfer/peer")})
 
 #: The routes that need ``read_data``: the ones returning records or
 #: configuration the host keeps, by the rule :data:`DATA_TOOLS` states. Each
@@ -83,6 +94,44 @@ DATA_ROUTES = frozenset(
 #: Commands that need more than ``drive_input``. Every other command is
 #: covered by the capability of the surface that submitted the action list.
 COMMAND_CAPABILITIES: Dict[str, str] = {
+    "AC_agent_target": _HOSTS,
+    "AC_agent_target_recover": _HOSTS,
+    "AC_agent_runtime_stop": _HOSTS,
+    "AC_agent_runtime_start": _HOSTS,
+    "AC_probe_capabilities": _READ,
+    "AC_diagnose": _READ,
+    "AC_mcp_tool_search": _READ,
+    "AC_mcp_tool_schema": _READ,
+    "AC_history_capture": _DRIVE,
+    "AC_self_heal_evaluate": _DRIVE,
+    "AC_self_heal_run": _DRIVE,
+    "AC_self_heal_source": _DRIVE,
+    "AC_generate_candidate_from_log": _DRIVE,
+    "AC_config_store_get": _DRIVE,
+    "AC_config_store_commit": _DRIVE,
+    "AC_config_causal_fetch": _DRIVE,
+    "AC_config_causal_commit": _DRIVE,
+    "AC_sync_outbox_flush": _DRIVE,
+    "AC_sync_peer_control": _DRIVE,
+    "AC_sync_asset_manifest": _DRIVE,
+    "AC_sync_assets": _DRIVE,
+    "AC_sync_adapter_snapshot": _DRIVE,
+    "AC_sync_workspace": _DRIVE,
+    "AC_sync_adapter_apply": _DRIVE,
+    "AC_sync_adapter_resolve": _DRIVE,
+    "AC_sync_profile_materialize": _DRIVE,
+    "AC_sync_profile_load": _DRIVE,
+    "AC_sync_entry_merge": _READ,
+    "AC_sync_peer_state": _READ,
+    "AC_sync_outbox_enqueue": _DRIVE,
+    "AC_sync_outbox_status": _DRIVE,
+    "AC_template_candidate_create": _DRIVE,
+    "AC_template_candidate_preview": _DRIVE,
+    "AC_template_candidate_verify": _DRIVE,
+    "AC_template_candidate_accept": _DRIVE,
+    "AC_template_candidate_revert": _DRIVE,
+    "AC_journal_capture": _DRIVE,
+    "AC_journal_read": _DRIVE,
     "AC_sign_action_file": Capability.SIGN_ACTIONS,
     "AC_audit_log_list": _AUDIT,
     "AC_audit_log_verify": _AUDIT,
@@ -154,17 +203,17 @@ DATA_TOOLS = frozenset({
     # from it, agent traces, the cost ledger, action journals
     "ac_list_run_history", "ac_flaky_report", "ac_rank_tests", "ac_select_tests",
     "ac_shard_suite", "ac_trace_export", "ac_trace_summary",
-    "ac_costs_list", "ac_costs_summary", "ac_journal_read", "ac_journal_runs",
+    "ac_costs_list", "ac_costs_summary", "ac_journal_read",
     # the self-healing log, its statistics, stored revisions and datasets;
     # locator strategy history and repairs; saved locators and skills
-    "ac_self_heal_log_list", "ac_heal_stats", "ac_self_heal_revision_list",
+    "ac_self_heal_log_list", "ac_heal_stats",
     "ac_self_heal_evaluate", "ac_ab_report", "ac_ab_best_strategy",
     "ac_repair_pending", "ac_repair_resolved", "ac_element_list",
     "ac_skill_list", "ac_skill_search",
     # stored policy and state: the USB ACL, lease tokens, quarantine,
-    # artifacts awaiting approval, the recorded config-sync state
+    # artifacts awaiting approval
     "ac_usb_acl_list", "ac_lease_active", "ac_quarantine_list",
-    "ac_pending_artifacts", "ac_config_sync_status",
+    "ac_pending_artifacts",
     # files: their content, or an oracle on it (substring, digest)
     "ac_load_dotenv", "ac_load_data", "ac_read_action_file", "ac_read_document",
     "ac_read_presentation", "ac_read_workbook", "ac_extract_pdf_text",
@@ -176,7 +225,7 @@ DATA_TOOLS = frozenset({
     "ac_memory_recall", "ac_memory_recent", "ac_s3_list",
     # references into the environment, files and the secrets vault; tokens
     "ac_resolve_ref", "ac_resolve_refs", "ac_generate_otp",
-    "ac_jwt_encode", "ac_jwt_decode",
+    "ac_jwt_encode",
     # the process list, the network as seen from the host, the microphone
     "ac_list_processes", "ac_assert_process", "ac_wait_for_process",
     "ac_assert_http", "ac_wait_for_port", "ac_assert_audio",
@@ -184,6 +233,28 @@ DATA_TOOLS = frozenset({
 
 #: MCP tools whose capability is not the one their read-only hint implies.
 TOOL_CAPABILITIES: Dict[str, str] = {
+    "ac_browser_link": _DRIVE,
+    "ac_browser_wait": _DRIVE,
+    "ac_browser_read": _DRIVE,
+    "ac_agent_target": _HOSTS,
+    "ac_agent_target_list": _DRIVE,
+    "ac_workflow_wait": _DRIVE,
+    "ac_agent_target_recover": _HOSTS,
+    "ac_agent_runtime_stop": _HOSTS,
+    "ac_agent_runtime_start": _HOSTS,
+    "ac_agent_runtime_status": _DRIVE,
+    "ac_agent_runtime_readiness": _DRIVE,
+    "ac_agent_skill_list": _DRIVE,
+    "ac_agent_task_get": _DRIVE,
+    "ac_agent_task_lookup": _DRIVE,
+    "ac_agent_dag_inspect": _DRIVE,
+    "ac_agent_task_list": _DRIVE,
+    "ac_agent_task_draft": _DRIVE,
+    "ac_agent_task_receipts": _DRIVE,
+    "ac_agent_task_recovery": _DRIVE,
+    "ac_agent_trigger_list": _DRIVE,
+    "ac_journal_capture": _DRIVE,
+    "ac_journal_read": _DRIVE,
     "ac_remote_host_start": _HOSTS,
     "ac_remote_host_stop": _HOSTS,
     "ac_usb_acl_add": _HOSTS,
@@ -199,6 +270,91 @@ TOOL_CAPABILITIES: Dict[str, str] = {
     "ac_user_rotate_token": _USERS,
     "ac_user_list": _USERS,
     **dict.fromkeys(DATA_TOOLS, _DATA),
+    # A non-mutating hint does not grant access to the desktop user's private
+    # clipboard, files, credentials, network endpoints or microphone. Assertion
+    # containers may invoke those same reads through their nested specs.
+    "ac_get_clipboard": _DRIVE,
+    "ac_get_clipboard_image": _DRIVE,
+    "ac_get_clipboard_html": _DRIVE,
+    "ac_get_clipboard_files": _DRIVE,
+    "ac_get_clipboard_rtf": _DRIVE,
+    "ac_get_clipboard_csv": _DRIVE,
+    "ac_clipboard_formats": _DRIVE,
+    "ac_clip_history_list": _DRIVE,
+    "ac_clip_history_search": _DRIVE,
+    "ac_assert_clipboard": _DRIVE,
+    "ac_read_action_file": _DRIVE,
+    "ac_load_dotenv": _DRIVE,
+    "ac_sql_query": _DRIVE,
+    "ac_assert_db": _DRIVE,
+    "ac_read_workbook": _DRIVE,
+    "ac_read_document": _DRIVE,
+    "ac_read_presentation": _DRIVE,
+    "ac_extract_pdf_text": _DRIVE,
+    "ac_assert_pdf_text": _DRIVE,
+    "ac_load_data": _DRIVE,
+    "ac_assert_file": _DRIVE,
+    "ac_resolve_ref": _DRIVE,
+    "ac_resolve_refs": _DRIVE,
+    "ac_jwt_encode": _DRIVE,
+    "ac_generate_otp": _DRIVE,
+    "ac_assert_http": _DRIVE,
+    "ac_wait_for_port": _DRIVE,
+    "ac_s3_list": _DRIVE,
+    "ac_assert_all": _DRIVE,
+    "ac_assert_any": _DRIVE,
+    "ac_assert_eventually": _DRIVE,
+    "ac_assert_audio": _DRIVE,
+    "ac_get_asset": _DRIVE,
+    "ac_list_assets": _DRIVE,
+    "ac_cas_get": _DRIVE,
+    "ac_outbox_pending": _DRIVE,
+    "ac_checkpoint_status": _DRIVE,
+    "ac_memory_recall": _DRIVE,
+    "ac_memory_recent": _DRIVE,
+    "ac_memory_stats": _DRIVE,
+    "ac_queue_stats": _DRIVE,
+    "ac_rank_tests": _DRIVE,
+    "ac_select_tests": _DRIVE,
+    "ac_shard_suite": _DRIVE,
+    "ac_element_find": _DRIVE,
+    "ac_element_list": _DRIVE,
+    "ac_skill_list": _DRIVE,
+    "ac_skill_search": _DRIVE,
+    "ac_pending_artifacts": _DRIVE,
+    "ac_approval_status": _DRIVE,
+    "ac_repair_resolved": _DRIVE,
+    "ac_repair_pending": _DRIVE,
+    "ac_vlm_locate": _DRIVE,
+    "ac_self_heal_locate": _DRIVE,
+    "ac_self_heal_evaluate": _DRIVE,
+    "ac_self_heal_run": _DRIVE,
+    "ac_self_heal_source": _DRIVE,
+    "ac_generate_candidate_from_log": _DRIVE,
+    "ac_config_store_get": _DRIVE,
+    "ac_config_store_commit": _DRIVE,
+    "ac_config_causal_fetch": _DRIVE,
+    "ac_config_causal_commit": _DRIVE,
+    "ac_sync_outbox_flush": _DRIVE,
+    "ac_sync_peer_control": _DRIVE,
+    "ac_sync_asset_manifest": _DRIVE,
+    "ac_sync_assets": _DRIVE,
+    "ac_sync_adapter_snapshot": _DRIVE,
+    "ac_sync_workspace": _DRIVE,
+    "ac_sync_adapter_apply": _DRIVE,
+    "ac_sync_adapter_resolve": _DRIVE,
+    "ac_sync_profile_materialize": _DRIVE,
+    "ac_sync_profile_load": _DRIVE,
+    "ac_sync_entry_merge": _READ,
+    "ac_sync_peer_state": _READ,
+    "ac_sync_outbox_enqueue": _DRIVE,
+    "ac_sync_outbox_status": _DRIVE,
+    "ac_template_candidate_create": _DRIVE,
+    "ac_template_candidate_preview": _DRIVE,
+    "ac_template_candidate_verify": _DRIVE,
+    "ac_template_candidate_accept": _DRIVE,
+    "ac_template_candidate_revert": _DRIVE,
+    "ac_describe_screen": _DRIVE,
 }
 
 

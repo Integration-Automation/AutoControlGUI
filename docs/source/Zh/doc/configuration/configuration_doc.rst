@@ -52,8 +52,7 @@ AutoControl 讀取的每一個環境變數都列在這裡。每一列會指向�
 Wayland
 =======
 
-請參考 :doc:`../wayland/wayland_capabilities_doc`。``probe_capabilities()``
-可以在沒有任何副作用的情況下看到下列每一項的效果。
+``probe_capabilities()`` 可以在沒有任何副作用的情況下看到下列每一項的效果。
 
 .. list-table::
    :header-rows: 1
@@ -66,9 +65,6 @@ Wayland
      - ``auto`` / ``cli``
      - ``cli`` 透過 ``ydotool`` 送出輸入，完全不向桌面 portal 提出要求。這是
        啟動前就做好的選擇：使用者拒絕授權後，AutoControl 不會自行切換過去。
-   * - ``JE_AUTOCONTROL_WAYLAND_EI_WORKER``
-     - 未設定 / ``1``
-     - 把 libei 工作階段放到輔助行程裡執行，而不是放在本行程。
    * - ``JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL``
      - ``warn`` / ``flat`` / ``strict``
      - 只影響 ``ydotool`` 路徑的絕對移動（那其實是會被合成器加速的相對位移）。
@@ -99,12 +95,6 @@ Wayland
        ``~/.je_auto_control/logs/AutoControlGUI.log``。指定空裝置
        （``/dev/null``、``NUL``）即可關閉檔案輸出。在寫入第一筆記錄時才讀取，
        而不是在 import 時。
-   * - ``JE_AUTOCONTROL_GUI_SETTINGS``
-     - 未設定 / 路徑 / ``off``
-     - 主視窗保存佈景主題、文字大小、導覽面板與視窗位置的檔案；Config Sync 分頁
-       的伺服器、使用者與資料夾欄位也存在這裡（共用密鑰絕不保存：這是純文字檔）。
-       未設定時為 ``~/.je_auto_control/gui_settings.ini``。設成 ``off``、``0``、
-       ``none``、``false`` 或空字串時，不讀也不寫。
    * - ``JE_AUTOCONTROL_ENV``
      - ``default`` / 名稱
      - 資產庫目前使用的環境（``active_environment()``），讓同一份腳本在
@@ -171,10 +161,6 @@ MCP 伺服器
    * - ``JE_AUTOCONTROL_MCP_READONLY``
      - 未設定 / ``1``
      - 只提供、也只能呼叫標示為唯讀的工具。
-   * - ``JE_AUTOCONTROL_MCP_TOOL_MODE``
-     - ``full`` / ``progressive`` / ``static``
-     - ``tools/list`` 要提供登錄表的多少內容。未知的值會報錯，不會被當成
-       ``full``。
    * - ``JE_AUTOCONTROL_MCP_TOOL_PROFILE``
      - 未設定 / 以逗號分隔的項目
      - ``static`` 模式的工具清單：工具名稱與 ``category:<名稱>``。
@@ -218,7 +204,7 @@ MCP 伺服器
 ================
 
 請參考 :doc:`../operations_layer/operations_layer_doc` 與
-:doc:`../config_sync/config_sync_doc`。
+:doc:`../causal_sync/causal_sync_doc`。
 
 .. list-table::
    :header-rows: 1
@@ -241,12 +227,4 @@ MCP 伺服器
    * - ``AC_SIGNALING_SECRET``
      - 未設定 / 密鑰
      - 信令／設定同步伺服器的共用密鑰（``X-Signaling-Secret``）。伺服器在沒有
-       ``--shared-secret`` 時讀取它，``config_sync_run`` 在沒有 ``secret``
-       時也讀取它。
-   * - ``AC_SIGNALING_CONFIG_DB``
-     - 未設定 / 路徑
-     - 信令伺服器存放設定同步資料的 SQLite 檔案。未設定時為
-       ``~/.je_auto_control/config_sync.sqlite3``。資產 blob(``/blobs``)
-       放在同一路徑加上 ``.blobs`` 的資料夾,除非以 ``--blob-dir`` 指定;
-       ``--max-blob-bytes`` 與 ``--blob-quota-bytes`` 限制它們的大小
-       (只有旗標,沒有對應的環境變數)。
+       ``--shared-secret`` 時讀取它。

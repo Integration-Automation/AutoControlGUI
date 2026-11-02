@@ -101,21 +101,3 @@ def test_a_renderer_defect_is_refused_instead_of_written(monkeypatch):
         generate_code([["AC_set_var", {"name": "a", "value": 1}]], target="robot")
 
 
-def test_the_candidate_manifest_says_which_check_ran(tmp_path):
-    from je_auto_control.utils.action_journal import recorder
-    from je_auto_control.utils.codegen.journal_import import generate_candidate_from_log
-    from je_auto_control.utils.executor.action_executor import Executor
-    recorder.stop_action_journal()
-    journal = tmp_path / "journal.jsonl"
-    recorder.start_action_journal(journal, run_id="robot-run")
-    try:
-        Executor().execute_action([["AC_set_var", {"name": "a", "value": 1}]])
-    finally:
-        recorder.stop_action_journal()
-    robot = generate_candidate_from_log(journal, run_id="robot-run", target="robot")
-    checks = robot.manifest["validation"]
-    assert checks["ast"] is None
-    assert checks["robot_structure"] is True
-    assert checks["robot_parser"] is False
-    python = generate_candidate_from_log(journal, run_id="robot-run", target="pytest")
-    assert "robot_structure" not in python.manifest["validation"]

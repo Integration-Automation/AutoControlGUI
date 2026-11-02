@@ -32,216 +32,190 @@ locators can be tuned over time::
 Executor: ``AC_self_heal_locate / _click / _log_list / _log_clear``.
 MCP: ``ac_self_heal_*``. GUI: **Self-Healing** tab.
 
-``screen_region`` is ``[x1, y1, x2, y2]`` in screen coordinates and confines
-**both** strategies; it used to reach only the VLM, so the template match
-could answer from outside the region.
+Cancellation propagates unchanged before fallback, clicking or miss logging.
+Audit writes and reads mask secret values already resolved in the active run.
+The original locator outcome remains unchanged; reads do not rewrite legacy logs.
 
-**Located is not verified.** ``HealOutcome.found`` says a strategy returned a
-point. Whether the click did what it was for is a separate field,
-``action_verified``, filled from a check the caller passes — ``None`` when no
-check ran, never inferred from the hit::
+Both strategies now reuse one lazy logical capture. ``screen_region`` means
+``[left, top, right, bottom]`` for both, clipped to the actual desktop.
+An omitted region searches all monitors when a template is supplied; VLM-only
+calls retain a primary capture request. Self-capturing backends that return a
+whole layout retain their published origin even for that request. Invalid bboxes
+fail before capture. A capture failure is reused rather than retried for fallback.
 
-    outcome = self_heal_click(
+Audit schema 2 adds run/step IDs (reusing an active action journal), locator identity,
+decoded-template/configuration version, frame hash, actual origin/size, logical
+scale, per-strategy/capture timing, backend and resolved model. Unknown values and
+unavailable USD costs stay null. Old records load as schema 1. PNGs stay transient
+and are released at scope exit. First-strategy timing includes capture; capture
+time is a subset, not an additional summand. The historical result shape and
+``duration_ms`` locate-only meaning remain unchanged.
+
+Click records settle after dispatch: ``issued`` confirms input dispatch only,
+``error`` records an ordinary failure and preserves the original exception.
+``verified`` stays null without explicit post-operation evidence. Cancellation
+does not append a completion event. The GUI accepts a region, displays operation
+state and selected-record JSON evidence. Runtime controls live in the Runtime log
+subview, separate from fixed-frame comparison. Script Builder provides both live
+commands and a JSON field that preserves structured regions while editing.
+
+
+Explicit post-click verification
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The experimental immutable request API defaults to locating. Verification is
+opt-in and requires ``operation="click"``. A Python ``VerificationRequest``
+accepts exactly one ``verifier`` callback returning bool, or a ``description``
+checked by a configured VLM. A VLM check may incur API cost::
+
+    from je_auto_control import SelfHealRequest, VerificationRequest, self_heal_run
+
+    result = self_heal_run(SelfHealRequest(
         template_path="submit.png",
-        description="the green Submit button",
-        verify=lambda result: dialog_is_open(),
-    )
-    outcome.found            # a point was returned
-    outcome.action_verified  # True / False from the check, None without one
+        operation="click",
+        verification=VerificationRequest(description="The confirmation is visible"),
+    ))
+    # result.verified is True, False or None; found alone is not verification.
 
-Heal-log lines gained optional fields (``schema_version``, ``run_id``,
-``step_id``, ``locator_id``, ``locator_version``, ``backend``, ``model``,
-``screen_region``, ``image_ms``, ``vlm_ms``, ``action``, ``action_verified``).
-Lines written before they existed still load, with those fields ``None``.
-Stamp the ids from the caller's side::
+VLM availability is checked before input. Verification only runs after successful
+click dispatch and obtains a fresh logical PNG. Its optional bbox is independent
+of the locator bbox; omitted verification regions request the primary display.
+The verification model inherits the locator's explicit model unless overridden.
+Callbacks execute outside the pre-click frame scope. Backend checks and their
+nested visual helpers share only the new frame. Nothing retries a click after
+failed verification, an exception or cancellation.
 
-    from je_auto_control import heal_context
+``AC_self_heal_run`` and MCP ``ac_self_heal_run`` accept a nested JSON ``request``::
 
-    with heal_context(run_id="nightly-42", locator_id="submit", locator_version="v2"):
-        self_heal_click(template_path="submit.png")
+    [["AC_self_heal_run", {"request": {
+        "template_path": "submit.png", "operation": "click",
+        "verification": {"description": "The confirmation is visible"}
+    }}]]
 
-From a JSON action or MCP, pass the same keys as ``context`` on
-``AC_self_heal_locate`` / ``AC_self_heal_click``.
+JSON verification supports description, model and screen_region; arbitrary
+Python callbacks/backends are not accepted. Templates honor active path roots,
+including changes at progress checkpoints. Explicit false verification raises
+``SelfHealVerificationError`` on AC/CLI (CLI exits 1), retaining its result.
+MCP returns structured data with ``isError``. The Python request API returns a
+false verdict as data. Exceptions and cancellation propagate unchanged.
 
-A JSON step cannot carry a callable, so ``verify`` may also be an object —
-on ``AC_self_heal_click``, on the ``ac_self_heal_click`` MCP tool, in the
-Self-Healing tab's *Verify after click* field, and from Python::
+Audit rows distinguish ``verified``, ``verification_failed`` and
+``verification_error`` from ``issued``/unknown. New optional fields include the
+verification description, frame hash, backend/model and error; verify timing is
+separate from locate-only ``duration_ms``. Callback checks make no image provenance
+claim. Old rows remain readable. GUI **Self-Healing** has an optional post-condition
+input, with the configured-VLM cost indicated; click must be selected. Script
+Builder provides a structured JSON request field for the new command.
 
-    ["AC_self_heal_click", {
-        "template_path": "submit.png",
-        "verify": {"type": "image_gone", "timeout_s": 3}}]
+Standalone VLM capture also uses logical geometry and Retina normalization in
+memory, including clipped/nonzero origins. ``verify_description`` rejects non-bool
+backend replies. Framework assertions stop locator recovery before fallback.
+These behaviors have controlled tests; native-device and paid-API acceptance
+remain deferred.
 
-==================  ==========================================================
-``type``            holds when
-==================  ==========================================================
-``image_gone``      ``template_path`` (default: the clicked template) is no
-                    longer found
-``image_present``   ``template_path`` is found
-``text_present``    the OCR engine reads ``text`` (``lang``,
-                    ``min_confidence``, ``case_sensitive`` as for
-                    ``find_text_matches``)
-==================  ==========================================================
 
-Common options: ``screen_region`` (``[x1, y1, x2, y2]``; default: the click's
-own region), ``timeout_s`` (default 2, the check is repeated until it holds or
-the time is up) and ``poll_s`` (default 0.2); image types also take
-``detect_threshold`` (default 0.9). The object is validated before anything is
-clicked — an unknown type or option raises ``HealVerificationError`` and no
-click happens. A check that cannot be carried out (unreadable template, no OCR
-engine, failed capture) raises the same error *after* the click and the event
-is logged with ``action_verified`` ``None``: "could not look" is never
-reported as "gone". Without ``verify`` the field stays ``None``.
-``AC_heal_stats`` reports
-``action_verification`` (``actions`` / ``verified`` / ``failed`` /
-``unchecked``) apart from ``healed``, which only counts returned points.
+Original-step source inspection
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Measuring locator versions
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+A self-healing call inside a captured executor action records optional
+``journal_path`` plus its run/step IDs. Direct calls, legacy rows and a run scope
+without an action-step binding have no source path. A canonical path containing
+known resolved-secret text is omitted. Explicit inspection is read-only::
 
-``evaluate_locators`` runs every strategy version over the same labelled
-frames — one captured frame, one region, one origin and scale per sample, the
-same request object for every version — and scores the answers::
+    from je_auto_control import inspect_heal_source
 
+    snapshots = inspect_heal_source(event.journal_path, event.run_id, event.step_id)
+
+``AC_self_heal_source`` and MCP ``ac_self_heal_source`` take ``path`` (the row's
+journal_path), ``run_id``, ``step_id`` and optional ``limit``. CLI action files
+can invoke the same command; Script Builder exposes the fields. The read-only
+MCP annotation does not grant viewer access to private journal data.
+
+Select a row in **Self-Healing → Runtime log**, then use **Actions → Inspect
+original step**. The Original step subview uses the shared background reader;
+Run History's reader also accepts an optional step ID. Changing the selected
+healing record clears/cancels its prior source view, closing cancels the reader,
+and late results cannot replace a newer target. A newly opened target starts
+after the older reader stops, retaining its requester context; closing also
+discards pending reads. Old rows report unavailable
+source instead of inventing a link. Missing files or unmatched IDs return no
+snapshots; malformed journals fail validation.
+
+``inspect_journal`` adds optional ``step_id`` filtering. Both run and step
+filters precede the 1–10,000 output limit; the whole file still validates.
+Current roots apply at entry, around every progress callback and before return.
+Cancellation propagates without a partial result. Start/completion snapshots
+remain separate and sanitized. No source inspection executes recorded commands.
+
+
+Reviewed template candidates
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The experimental candidate workflow uses only explicitly supplied files. It never
+captures a screen, sends input or invokes a model. Create a new immutable schema-1
+JSON bundle containing exact original bytes, candidate bytes encoded in the
+target's PNG/JPEG/BMP format, hashes, canonical target and match threshold::
+
+    from pathlib import Path
     from je_auto_control import (
-        EvaluationSample, evaluate_locators, template_match_strategy,
+        create_template_candidate, preview_template_candidate,
+        verify_template_candidate, accept_template_candidate,
+        revert_template_candidate, write_healing_report,
     )
 
-    samples = [
-        EvaluationSample("submit", frame, expected_box=(100, 60, 156, 92),
-                         template="submit.png"),
-        EvaluationSample("left-monitor-150", hidpi_frame,
-                         expected_box=(-1880, -180, -1824, -148),
-                         origin=(-1920, -300), scale=1.5, template="submit.png"),
-        EvaluationSample("dialog-closed", other_frame, expect_miss=True,
-                         template="submit.png"),
-    ]
-    comparison = evaluate_locators(samples, {
-        "v1": template_match_strategy(0.9),
-        "v2": template_match_strategy(0.9, scales=(1.0, 1.25, 1.5, 2.0)),
-    })
-    report = comparison.report("v2")
-    report.accuracy          # Ratio(numerator, denominator); .value is None over 0
-    report.recovery_rate     # targets v1 failed on that v2 hit correctly
-    report.p50_ms, report.p95_ms
-    comparison.failures("v2")
+    create_template_candidate("submit.png", Path("candidate.png").read_bytes(),
+                              "candidate.json", threshold=0.9)
+    reviewed = preview_template_candidate("candidate.json")
+    checked = verify_template_candidate("candidate.json", "dataset.json")
+    write_healing_report(checked.comparison, "comparison.html")
+    if checked.eligible:
+        accepted = accept_template_candidate("candidate.json", "dataset.json",
+                                             reviewed.state.revision)
+        reverted = revert_template_candidate("candidate.json", reviewed.state.revision)
 
-How a result is counted:
+Preview returns two PNG thumbnails bounded to 512 pixels per side and full-size
+metadata. Input images are limited to 16 MiB/16 million pixels; bundles to 48 MiB.
+Creation refuses an existing bundle and leaves the target untouched. Verification
+uses the same schema-1 sample manifest as fixed-frame evaluation (1 MiB manifest,
+500 samples, shared 64 MiB asset budget). ``versions`` may be omitted; if present
+it is ignored because the bundle supplies both frozen versions. For example::
 
-* a hit inside ``expected_box`` is ``correct``; a hit anywhere else, or on a
-  sample marked ``expect_miss``, is a ``false_positive`` — located, and not a
-  recovery;
-* a sample with neither ``expected_box`` nor ``expect_miss`` is ``unknown``.
-  It counts in the hit rate and in no rate that claims correctness;
-* a strategy that raises is ``error``, including on a sample that expects a
-  miss;
-* a strategy that modifies the frame is refused with
-  ``HealingEvaluationError``: the next version would be measured on a
-  different image.
+    {"schema_version": 1, "samples": [
+        {"id": "hit", "frame": "frame.png", "expected_box": [20, 16, 37, 29]},
+        {"id": "miss", "frame": "absent.png", "expected_miss": true},
+        {"id": "unknown", "frame": "unlabelled.png"}
+    ]}
 
-Coordinates are screen coordinates. ``origin`` is the screen position of the
-frame's top-left pixel (negative on a monitor left of or above the primary)
-and ``scale`` is frame pixels per screen unit.
+Eligibility requires at least one labelled target, one expected miss and all
+labelled cases correct. Unknown samples stay unknown and native operation success
+remains separate. JPEG candidates are verified after target-format encoding.
+Decoding/matching errors, including constant normalized templates, block acceptance.
+The bundle's recorded threshold controls validation; activating an image does
+not change a script's locator threshold, which should use the matching setting.
 
-A dataset can also be a JSON file with frame images beside it, which is what
-the executor command, the MCP tool and the GUI evaluate::
+Acceptance always reverifies the dataset and requires ``expected_revision`` from
+review. This is SHA-256 of the complete bundle bytes, distinct from the runtime
+locator-version hash. Under the target lock, the final progress checkpoint is
+followed by bundle-revision, current-path and file-content checks, then one atomic
+replacement. State is derived from bytes: original/candidate/conflict/missing,
+not approval history. A repeated desired result returns ``changed=False``.
+Revert restores exact original bytes only while current content still matches
+this candidate or original; later edits and missing files cause conflicts.
+Cancellation before commit prevents replacement; cancellation after a completed
+replacement does not undo it or relabel success. No observer runs after commit.
 
-    {"schema_version": 1,
-     "samples": [{"id": "submit", "frame": "frames/submit.png",
-                  "template": "submit.png",
-                  "expected_box": [100, 60, 156, 92],
-                  "origin": [0, 0], "scale": 1.0, "region": null}],
-     "versions": {"v1": {"strategy": "template", "threshold": 0.9},
-                  "v2": {"strategy": "template", "threshold": 0.9,
-                         "scales": [1.0, 1.5]}},
-     "thresholds": {"v2": {"min_correct": 1, "max_false_positive": 0}}}
-
-    from je_auto_control import evaluate_healing_dataset
-    payload = evaluate_healing_dataset("dataset.json")
-    payload["passed"], payload["violations"]
-
-Image paths are relative to the dataset file and may not leave its directory.
-
-A version can also name the ``vlm`` strategy, which shows a ``utils/vision``
-backend the sample's own frame (the region crop, as PNG — never a new
-screenshot) and asks for the sample's ``description``::
-
-    "samples": [{"id": "submit", "frame": "frames/submit.png",
-                 "description": "the green Submit button",
-                 "expected_box": [100, 60, 156, 92]}],
-    "versions": {"v1": {"strategy": "template", "threshold": 0.9},
-                 "v3": {"strategy": "vlm", "backend": "anthropic",
-                        "model": "…",
-                        "price": {"input_per_mtok": 5.0,
-                                  "output_per_mtok": 25.0}}},
-    "thresholds": {"v3": {"max_model_calls": 50, "max_cost": 0.25}}
-
-``backend`` is ``anthropic``, ``openai`` or ``null``; left out, it is the
-backend ``AUTOCONTROL_VLM_BACKEND`` and the API keys select. ``null`` makes no
-request and turns every sample into an ``error``, which is what a machine with
-no key should measure. From Python, ``evaluate_healing_dataset(path,
-backends={"fake": my_backend})`` lets a version name a backend object of your
-own, and ``vlm_strategy(backend, model=..., price=...)`` is the callable for
-``evaluate_locators``. **A ``vlm`` version against a real backend sends every
-frame to that service and is billed by it.**
-
-Every report and every result row gains ``model_calls``, ``input_tokens``,
-``output_tokens`` and ``cost``. Calls are counted by the evaluation (a request
-that failed was still made; a sample with no description, or an unavailable
-backend, makes none). Tokens come from the backend's ``last_usage`` — the
-Anthropic and OpenAI backends fill it from the response — and ``cost`` is the
-backend's own figure or tokens × ``price``. Where nothing was reported the
-value is ``None``, never ``0`` and never an estimate; a template version
-reports ``model_calls: 0`` and ``None`` for the rest. When any version is
-``vlm`` the frames are loaded in colour (the template strategy converts them
-to gray itself), so every version is still given the same frame.
-
-The Self-Healing tab shows the result as a comparison table — one version per
-row, the baseline first; located, accuracy, false positives and recovery each
-as ``count/total (rate)``, then p50 / p95, model calls, tokens in / out and
-cost, with ``-`` where nothing was reported — and keeps the full JSON report
-(failing samples, threshold violations) beneath it. The same rows are
-available headlessly as ``comparison_rows(payload)`` (columns:
-``COMPARISON_COLUMNS``).
-
-``benchmarks/self_healing/run.py`` is the fixed regression set: ten frames
-drawn in memory (plain, 125% / 150% scale, negative-origin monitor, a region
-that must pick the second of two identical targets, a redesigned control, an
-absent target, a look-alike neighbour, one unlabelled frame) and three
-versions. It captures no screen::
-
-    python benchmarks/self_healing/run.py --check --json report.json
-
-Candidate template revisions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-A healed point is never written over a template. A new image is a candidate
-that has to be previewed before it replaces anything::
-
-    from je_auto_control import (
-        propose_template_revision, preview_template_revision,
-        accept_template_revision, revert_template_revision,
-    )
-
-    revision = propose_template_revision("submit.png", "submit_new.png")
-    preview = preview_template_revision(revision.revision_id,
-                                        dataset_path="dataset.json")
-    preview["revision"]["validated"]
-    accept_template_revision(revision.revision_id)   # backup kept
-    revert_template_revision(revision.revision_id)   # backup restored
-
-``propose`` and ``preview`` never touch the template. With a dataset (or
-``samples=``), preview runs the current and the candidate template over the
-same frames; the candidate is ``validated`` only when it is correct at least
-once, at least as often as the current template, and raises no false positive
-or error. ``accept`` refuses an unvalidated candidate unless
-``allow_unvalidated=True``, and both ``accept`` and ``revert`` refuse when the
-template file changed underneath the revision. Revisions live under
-``~/.je_auto_control/template_revisions``.
-
-Executor: ``AC_self_heal_evaluate``, ``AC_self_heal_revision_propose /
-_preview / _accept / _revert / _list``. MCP: ``ac_self_heal_evaluate``,
-``ac_self_heal_revision_*``. GUI: **Self-Healing** tab → Actions menu
-(*Evaluate dataset*, *Propose / Preview / Accept / Revert revision*).
+Python exposes the five functions above. JSON actions and CLI use
+``AC_template_candidate_create/preview/verify/accept/revert``; MCP uses the matching
+``ac_template_candidate_*`` names. Create takes ``template_path``,
+``candidate_path`` (PNG), ``bundle_path`` and optional ``threshold``. Verify/accept
+take ``dataset_path``; accept/revert require ``expected_revision``. MCP preview
+adds two image blocks; JSON adapters return metadata. All operations require drive
+permission and obey current/enclosing roots, including embedded targets and loaded
+samples. Script Builder exposes all five commands. **Self-Healing → Template
+candidates** provides previews, JSON evidence and Actions-menu operations with
+background progress/cancellation in all four interface languages. Run
+``python -m examples.template_candidates`` for a synthetic temporary-file example.
+Native-device and paid-API acceptance remain deferred.
 
 
 Anchor-based locator
@@ -549,9 +523,149 @@ Wayland libei native backend
 ctypes binding to ``libei.so.*`` that bypasses the CLI shims for
 microsecond-latency input. Opt-in via
 ``JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei|cli|auto``; the
-``auto`` default uses libei when loadable and CLI otherwise, so
-existing deployments keep working.
+``auto`` default uses CLI only for optional native-backend absence. Portal
+refusal/timeout, failed handshake, device pause or revocation stops native
+key/button/pointer input without implicit CLI replay. Repeated refused calls
+do not reopen consent. ``libei`` requires native input; ``cli`` explicitly
+selects the helpers. After resolving permission, explicitly call
+``je_auto_control.linux_wayland.libei.reset_default_backend()`` to permit a
+fresh request. Interrupted chords attempt every owned release on the same
+backend and preserve the original cancellation. The explicit wtype text path
+and screen-capture selection are unchanged.
 
+
+A native Wayland pointer coordinate outside every granted EIS region, after
+raw-coordinate and layout-origin mapping, raises ``LibeiUnavailable`` with
+``state="failed"`` and disables automatic CLI fallback. A rejected move emits
+no motion/frame or subsequent click. Valid coordinates, devices without
+regions, later valid requests on the same sender and explicit CLI selection
+retain their existing behavior.
+
+Passive capability snapshots use ``BackendContext``, ``CapabilityStatus``,
+``CapabilitySnapshot`` and ``probe_capabilities`` from ``je_auto_control.api``
+or the package root. Input covers key/pointer events, independently of wtype text.
+
+.. code-block:: python
+
+   from je_auto_control.api import BackendContext, probe_capabilities
+   snapshot = probe_capabilities(BackendContext.current())
+   print(snapshot.to_dict())
+
+No-argument ``AC_probe_capabilities`` and read-only ``ac_probe_capabilities``
+share that contract with Builder and **Diagnostics → Actions → Inspect input
+and capture capabilities**. ``python -m examples.capabilities`` is passive.
+The probe reads environment/PATH and cached local state without loading optional
+native libraries, connecting, polling, capturing or requesting consent.
+Prerequisites remain ``unverified``; ``available`` means last local observation,
+which can be stale. Other states are ``needs_permission``, ``needs_dependency``,
+``unsupported``, ``paused``, ``revoked`` and ``failed``. Actual operations still
+enforce authority. Cached libei availability requires completed handshake plus
+active keyboard/absolute-pointer/button/scroll families. Partial grants remain
+unverified; paused families and removed required devices report paused/revoked.
+XWayland is always ``desktop_wide=False``; other scope flags
+remain limited by grants/regions and do not verify every monitor.
+
+Contexts detach facts and allow owner-supplied inert observations without granting
+authority. AC/MCP accept no supplied observations; default live results omit
+environment values, command arguments, executable paths and native error text.
+Permission/pause/revocation/failure cannot imply CLI fallback. Only explicit CLI
+selection or observed optional native absence describes that alternative.
+Input/capture select independently. Rendering/language changes reuse metadata;
+native restore/restart, capture-result/context integration and native session
+controls remain pending in ``Progress.md``.
+
+
+The GUI task infrastructure provides ``gui.task_controller.TaskController``:
+``submit(work, owner=widget)`` returns a caller-owned ``TaskHandle`` with
+typed ``TaskOutcome`` and ``TaskProgress`` observations. Work receives a
+Qt-free ``CancellationToken`` with checkpoints, bounded interruptible waits
+and progress reporting. Submission captures context; dispatch refreshes
+store-backed identity. Work must receive plain data, avoid widget references
+and authorize its own operation. Existing
+``DeferredAuthorization.scope()`` still requires input privilege, while
+``context_scope()`` only refreshes/binds identity for independently authorized work.
+
+Owner/handle/controller destruction requests cooperative stop and drops
+late delivery. Each task has a separate ID/token; callbacks run on the GUI
+thread. Cancellation does not forcibly interrupt an uncooperative call
+or relabel a successful committed return. Errors/progress use the captured
+secret scope; terminal errors retain no exception traceback. Failed thread
+starts roll back both registries and preserve the original failure.
+Diagnostics now adopts this controller. Remaining panel/backend migrations
+and native session operations stay in ``Progress.md``.
+
+Active **Diagnostics → Actions → Run diagnostics** uses the shared task
+controller off the GUI thread. **Stop diagnostics** requests cooperative stop;
+the view distinguishes running, stopping, canceled and failed states in four
+languages. Progress counts completed checks. Duplicate runs are ignored, close
+abandons late progress/results, and a deliberate retry starts a new owned run.
+GUI cancellation is a typed outcome without retained exception tracebacks;
+headless core/SDK/CLI and the MCP handler preserve original direct/wrapped controls.
+Ordinary probe failures still become report rows and allow remaining checks.
+
+``CancellationToken``, ``TaskProgress`` and ``cancellation_scope`` are exported by both
+SDK namespaces. Bind ``with cancellation_scope(token): report = run_diagnostics()``;
+the owning caller can call ``token.cancel()`` from another thread. The existing
+no-argument diagnostics signature remains. Scope binding grants no authority;
+``cancellation_scope(None)`` only suspends cancellation for bounded owned cleanup.
+``AC_diagnose`` and the new read-only ``ac_diagnose`` share the report. The MCP tool
+accepts no arguments, uses request cancellation/progress and requires
+``read_screen``, as does the explicit GUI action. Caller-supplied tokens or
+authority metadata are rejected. These are active checks: capture may request
+consent. ``ac_probe_capabilities`` remains the separate passive alternative.
+
+Scoped Wayland D-Bus connect/read/partial-write waits poll at intervals capped
+at 0.1s within the original total deadline. Cancellation attempts Request.Close
+on the originating bus with its separate 0.25s budget, then releases that
+connection; a canceled returned image is discarded. Scoped CLI captures stop
+and reap their newly owned helper/process group with bounded cleanup, preserving
+the original control even if pipe close fails; reaped numeric PIDs are never
+signaled. liboeffis acquisition observes scoped stop and releases its own context.
+Uncooperative/native calls are not forcibly preempted; the GUI remains responsive
+while cleanup completes. Restore/restart, native session controls, capture-owner
+metadata and remaining panel/backend migrations stay in ``Progress.md``.
+
+``python -m examples.cancellable_diagnostics`` runs a controlled cancellation demo
+without providers. ``--active --cancel-after 2`` explicitly runs diagnostics and
+requests stop after two seconds; native/device/API acceptance remains separate.
+
+The Diagnostics tab opens in a localized not-run state. Use **Actions → Run
+diagnostics** to start active checks, which can capture the screen or require
+portal consent. Opening or retranslating the tab does not start checks.
+Explicit headless/AC/MCP diagnostics retain their active behavior. Passive
+capability inspection uses its separate action described below.
+
+
+Abandoned screenshot requests attempt ``org.freedesktop.portal.Request.Close``
+on their originating bus with a separate 0.25-second I/O budget. Returned
+alternate handles are followed; uncertain replies use the predicted handle.
+Completed responses are not closed twice. Original controls survive wrappers
+and cleanup. D-Bus writes and reply waits share one budget; interrupted bus
+connect/authentication/Hello releases its descriptor even before ``__enter__``
+returns. Native compositor/dialog, restore and restart acceptance remain open.
+
+
+The repository's dev/main headless jobs retain merged test output and runtime
+versions even after a native failure. Linux runs under GDB for all-thread
+native backtraces; other platforms retain Python faulthandler output. The
+``native-<os>-<python>`` artifacts expire after seven days. Failed child exits
+still fail CI. Linux first checks the runner outside the suite's debugger;
+literal argv and handled SIGINT are preserved. See
+:doc:`/getting_started/run_in_ci` for reproduction. Collecting
+evidence does not mark pending portal/native lifecycle acceptance complete.
+
+
+Selected dev pushes run ``.github/workflows/ei-lifecycle.yml`` in an isolated
+libei/libeis container, retaining versions and both native logs for 14 days in
+``ei-lifecycle-<run>-<attempt>`` artifacts. Half-open and live cleanup children
+have 10/60-second deadlines and faulthandler. Unrelated child failures fail CI;
+successful cleanup requires begin/end markers. The half-open probe also requires
+equal integer descriptor counts; live cleanup releases owned device refs first.
+Run 39507190704 on libei/libeis 1.3.901-1 passes 9/9 and 20/20 checks, including
+native out-of-region refusal without CLI fallback. Half-open ``ei_unref`` still
+segfaults, so runtime protection remains and helper isolation is pending.
+Device pause and sequence readback remain unverified. These controlled socket
+peers do not establish compositor consent, physical or multi-monitor acceptance.
 
 macOS Accessibility: tree dump + recorder
 -----------------------------------------

@@ -1,0 +1,90 @@
+name: AutoControl EI lifecycle evidence
+
+on:
+  push:
+    branches: ["dev"]
+    paths:
+      - "je_auto_control/linux_wayland/**"
+      - "docker/Dockerfile.eis"
+      - "docker/libei_verify.py"
+      - "docker/eis_verify.py"
+      - "docker/eis_server.py"
+      - "pyproject.toml"
+      - ".github/workflows/ei-lifecycle.yml"
+      - "test/unit_test/headless/test_ei_native_verification.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ei-lifecycle-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ei-lifecycle:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Prepare evidence directory
+        run: mkdir -p native-ei
+
+      - name: Set up Docker Buildx
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/setup-buildx-action@v4  # NOSONAR githubactions:S7637
+
+      - name: Build the isolated EI image
+        id: build
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/build-push-action@v7  # NOSONAR githubactions:S7637
+        with:
+          context: .
+          file: docker/Dockerfile.eis
+          tags: autocontrol-ei-lifecycle:ci
+          load: true
+          cache-from: type=gha,scope=ei-lifecycle
+          cache-to: type=gha,scope=ei-lifecycle,mode=max
+
+      - name: Record native versions
+        shell: bash
+        run: |
+          docker run --rm --entrypoint sh autocontrol-ei-lifecycle:ci \
+            -c 'python -VV && dpkg-query -W libei1 libeis1' 2>&1 | tee native-ei/versions.log
+
+      - name: Verify half-open teardown and native refusal
+        if: always() && steps.build.outcome == 'success'
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          docker run --rm --name ac-libei-probe --stop-timeout 5 --entrypoint python \
+            autocontrol-ei-lifecycle:ci /opt/verify/libei_verify.py 2>&1 | tee native-ei/libei.log
+
+      - name: Verify the live EIS peer independently
+        if: always() && steps.build.outcome == 'success'
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          docker run --rm --name ac-eis-peer --stop-timeout 5 --entrypoint python \
+            autocontrol-ei-lifecycle:ci /opt/verify/eis_verify.py 2>&1 | tee native-ei/eis.log
+
+      - name: Remove owned verification containers
+        if: always()
+        shell: bash
+        run: |
+          for name in ac-libei-probe ac-eis-peer; do
+            if docker container inspect "$name" >/dev/null 2>&1; then
+              docker rm -f "$name"
+            fi
+          done
+
+      - name: Retain native EI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ei-lifecycle-${{ github.run_id }}-${{ github.run_attempt }}
+          path: native-ei/
+          retention-days: 14

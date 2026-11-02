@@ -26,7 +26,7 @@ from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
     _JSON_FILE_FILTER,
     start_panel_task,
 )
-from je_auto_control.gui.task_controller import CancellationToken
+from je_auto_control.gui.tab_task_controller import CancellationToken
 
 
 class _HostTrustMixin(_PanelPart):

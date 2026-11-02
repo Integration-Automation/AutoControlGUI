@@ -511,13 +511,14 @@ def _measure_classification(label: str, oeffis, expect_declined: bool,
     """
     try:
         oeffis.connect_eis_fd(timeout=timeout)
-    except oeffis.PortalConsentNotGranted as error:
-        found = (f"outcome={error.outcome!r} detail={error.detail!r} "
-                 f"declined={error.declined}")
-        declined = error.declined
     except oeffis.OeffisUnavailable as error:
-        found = f"a plain OeffisUnavailable ({str(error)[:80]}) declined=False"
-        declined = False
+        # A refusal is one OeffisUnavailable whose structured state says what
+        # the portal answered; needs_permission is the consent that was not given.
+        state = getattr(error, "state", "unavailable")
+        fallback = getattr(getattr(error, "status", None), "fallback_allowed", None)
+        declined = state == "needs_permission"
+        found = (f"state={state!r} fallback_allowed={fallback!r} declined={declined} "
+                 f"({str(error)[:80]})")
     except Exception as error:  # noqa: BLE001  # reason: a measurement that cannot run is itself a finding
         print(f"note  classification of {label} could not be measured: "
               f"{error!r}")
@@ -531,7 +532,7 @@ def _measure_classification(label: str, oeffis, expect_declined: bool,
         print("      *** REVISIT ***  this refusal is classified as "
               f"declined={declined}")
         print(f"      but {label} should be declined={expect_declined}. The")
-        print("      rule is PortalConsentNotGranted.declined in oeffis.py;")
+        print("      rule is the OeffisUnavailable state oeffis.py raises;")
         print("      until it matches, a denied consent still falls back to")
         print("      ydotool (or an absent portal no longer does).")
         print()

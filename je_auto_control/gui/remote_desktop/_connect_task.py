@@ -13,7 +13,7 @@ from typing import Any, Callable
 from PySide6.QtCore import QObject
 
 from je_auto_control.gui._weak_call import weak_slot
-from je_auto_control.gui.task_controller import CancellationToken, TaskHandle, task_controller
+from je_auto_control.gui.tab_task_controller import CancellationToken, TaskHandle, task_controller
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 #: Seconds the backend gets for each step of the connect.

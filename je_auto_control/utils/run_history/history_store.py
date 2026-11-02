@@ -10,10 +10,11 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Callable, Iterable, List, Optional, Sequence, cast
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import scrub_secret_text
 from je_auto_control.utils.sqlite_support import (
     SQLITE_ERRORS, last_row_id, require_sqlite3, sqlite_errors_as,
 )
@@ -54,12 +55,16 @@ CREATE TABLE IF NOT EXISTS runs (
     finished_at REAL,
     status TEXT NOT NULL,
     error_text TEXT,
-    artifact_path TEXT,
-    journal_path TEXT,
-    journal_run_id TEXT
+    artifact_path TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_runs_started_at ON runs(started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_runs_source ON runs(source_type, source_id);
+CREATE TABLE IF NOT EXISTS run_journals (
+    run_id INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    journal_path TEXT NOT NULL,
+    journal_run_id TEXT NOT NULL,
+    PRIMARY KEY (run_id, journal_path, journal_run_id)
+);
 """
 
 
@@ -75,11 +80,6 @@ class RunRecord:
     status: str
     error_text: Optional[str]
     artifact_path: Optional[str] = None
-    #: The action-journal file and run this row's actions were written to,
-    #: when a journal was started while it ran. The file is never deleted
-    #: with the row: a journal holds other runs too.
-    journal_path: Optional[str] = None
-    journal_run_id: Optional[str] = None
 
     @property
     def duration_seconds(self) -> Optional[float]:
@@ -87,6 +87,15 @@ class RunRecord:
         if self.finished_at is None:
             return None
         return max(0.0, self.finished_at - self.started_at)
+
+
+@dataclass(frozen=True)
+class JournalLink:
+    """Non-owning provenance from a history row to one run in an external journal."""
+
+    run_id: int
+    journal_path: str
+    journal_run_id: str
 
 
 def _default_history_path() -> Path:
@@ -112,15 +121,6 @@ def _validate_status(status: str) -> None:
 def _status_clause(count: int) -> str:
     """``AND status IN (?, ...)`` with ``count`` placeholders: the only text a query is ever built from."""
     return f"AND status IN ({', '.join('?' * count)}) "
-
-
-def _active_journal() -> Tuple[Optional[str], Optional[str]]:
-    """``(path, run_id)`` of the action journal now started, else two ``None``."""
-    from je_auto_control.utils.action_journal.recorder import action_journal_status
-    status = action_journal_status()
-    if not status.get("active"):
-        return None, None
-    return str(status["path"]), str(status["run_id"])
 
 
 class HistoryStoreError(AutoControlException):
@@ -162,13 +162,18 @@ class HistoryStore:
         driver = require_sqlite3()
         if self.path != _IN_MEMORY_DB:
             os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
-        conn = driver.connect(
+        conn = cast("sqlite3.Connection", driver.connect(
             self.path, check_same_thread=False, isolation_level=None,
-        )
-        conn.row_factory = driver.Row
-        conn.executescript(_SCHEMA)
+        ))
+        try:
+            conn.row_factory = driver.Row
+            conn.execute("PRAGMA foreign_keys = ON")
+            conn.executescript(_SCHEMA)
+            self._migrate_schema_locked(conn)
+        except BaseException:  # reason: release a failed initialization, then propagate original control flow
+            conn.close()
+            raise
         self._conn = conn
-        self._migrate_schema_locked(conn)
         return conn
 
     def _migrate_schema_locked(self, conn: "sqlite3.Connection") -> None:
@@ -176,11 +181,10 @@ class HistoryStore:
         cols = {row["name"] for row in conn.execute(
             "PRAGMA table_info(runs)",
         ).fetchall()}
-        for column in ("artifact_path", "journal_path", "journal_run_id"):
-            if column not in cols:
-                # nosemgrep  # reason: the column names are the three literals above, nothing a caller supplies
-                conn.execute(  # nosec B608  # reason: column names are the literals above
-                    f"ALTER TABLE runs ADD COLUMN {column} TEXT")
+        if "artifact_path" not in cols:
+            conn.execute(
+                "ALTER TABLE runs ADD COLUMN artifact_path TEXT",
+            )
 
     @property
     def path(self) -> str:
@@ -193,38 +197,17 @@ class HistoryStore:
     @sqlite_errors_as(HistoryStoreError)
     def start_run(self, source_type: str, source_id: str,
                   script_path: str, started_at: Optional[float] = None,
-                  *, journal_path: Optional[str] = None,
-                  journal_run_id: Optional[str] = None) -> int:
-        """Record a run that has just begun; return its row id.
-
-        The row is linked to an action-journal run: the one named by
-        ``journal_path`` / ``journal_run_id``, or -- when neither is given --
-        the journal that is started right now, if any.
-        """
+                  ) -> int:
+        """Record a run that has just begun; return its row id."""
         _validate_source(source_type)
         ts = float(started_at) if started_at is not None else time.time()
-        if journal_path is None and journal_run_id is None:
-            journal_path, journal_run_id = _active_journal()
         with self._lock:
             cursor = self._connection().execute(
                 "INSERT INTO runs (source_type, source_id, script_path,"
-                " started_at, status, journal_path, journal_run_id)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (source_type, source_id, script_path, ts, STATUS_RUNNING,
-                 journal_path, journal_run_id),
+                " started_at, status) VALUES (?, ?, ?, ?, ?)",
+                (source_type, source_id, script_path, ts, STATUS_RUNNING),
             )
             return last_row_id(cursor)
-
-    @sqlite_errors_as(HistoryStoreError)
-    def link_journal(self, run_id: int, journal_path: Optional[str],
-                     journal_run_id: Optional[str]) -> bool:
-        """Point a row at the journal run holding its actions; False if unknown."""
-        with self._lock:
-            cursor = self._connection().execute(
-                "UPDATE runs SET journal_path = ?, journal_run_id = ? WHERE id = ?",
-                (journal_path, journal_run_id, int(run_id)),
-            )
-            return cursor.rowcount > 0
 
     @sqlite_errors_as(HistoryStoreError)
     def finish_run(self, run_id: int, status: str,
@@ -236,6 +219,7 @@ class HistoryStore:
         if status == STATUS_RUNNING:
             raise ValueError("cannot finish a run with status=running")
         ts = float(finished_at) if finished_at is not None else time.time()
+        error_text = scrub_secret_text(error_text) if error_text is not None else None
         with self._lock:
             cursor = self._connection().execute(
                 "UPDATE runs SET finished_at = ?, status = ?, error_text = ?,"
@@ -253,6 +237,37 @@ class HistoryStore:
                 (artifact_path, int(run_id)),
             )
             return cursor.rowcount > 0
+
+    @sqlite_errors_as(HistoryStoreError)
+    def attach_journal(self, run_id: int, journal_path: str, journal_run_id: str) -> bool:
+        """Idempotently link a journal run to an existing row without owning its file."""
+        for value in (journal_path, journal_run_id):
+            if not isinstance(value, str) or not value:
+                raise HistoryStoreError("journal metadata must contain non-empty strings")
+        with self._lock:
+            conn = self._connection()
+            conn.execute(
+                "INSERT OR IGNORE INTO run_journals(run_id, journal_path, journal_run_id)"
+                " SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM runs WHERE id = ?)",
+                (int(run_id), journal_path, journal_run_id, int(run_id)),
+            )
+            row = conn.execute(
+                "SELECT 1 FROM run_journals j JOIN runs r ON r.id = j.run_id"
+                " WHERE j.run_id = ? AND j.journal_path = ? AND j.journal_run_id = ?",
+                (int(run_id), journal_path, journal_run_id),
+            ).fetchone()
+            return row is not None
+
+    @sqlite_errors_as(HistoryStoreError)
+    def journals_for_run(self, run_id: int) -> List[JournalLink]:
+        """List a history row's journal links in attachment order, without reading files."""
+        with self._lock:
+            rows = self._connection().execute(
+                "SELECT j.run_id, j.journal_path, j.journal_run_id FROM run_journals j"
+                " JOIN runs r ON r.id = j.run_id WHERE j.run_id = ? ORDER BY j.rowid",
+                (int(run_id),),
+            ).fetchall()
+        return [JournalLink(int(row["run_id"]), str(row["journal_path"]), str(row["journal_run_id"])) for row in rows]
 
     @sqlite_errors_as(HistoryStoreError)
     def list_runs(self, limit: int = 100,
@@ -369,10 +384,7 @@ class HistoryStore:
 
 
 def _row_to_record(row: "sqlite3.Row") -> RunRecord:
-    names = row.keys()
-    artifact = row["artifact_path"] if "artifact_path" in names else None
-    journal_path = row["journal_path"] if "journal_path" in names else None
-    journal_run = row["journal_run_id"] if "journal_run_id" in names else None
+    artifact = row["artifact_path"] if "artifact_path" in row.keys() else None
     return RunRecord(
         id=int(row["id"]),
         source_type=str(row["source_type"]),
@@ -385,12 +397,10 @@ def _row_to_record(row: "sqlite3.Row") -> RunRecord:
         error_text=(str(row["error_text"])
                     if row["error_text"] is not None else None),
         artifact_path=str(artifact) if artifact is not None else None,
-        journal_path=str(journal_path) if journal_path is not None else None,
-        journal_run_id=str(journal_run) if journal_run is not None else None,
     )
 
 
-def _remove_artifact_files(paths) -> None:
+def _remove_artifact_files(paths: Iterable[Optional[str]]) -> None:
     """Best-effort delete of artifact files; ignore missing entries."""
     for raw in paths:
         if not raw:

@@ -9,35 +9,78 @@ per-thread failure count ``je_auto_control run`` already uses for its exit code.
 
 Each such run also gets its own variable scope: a job's ``AC_set_var`` used to
 stay in the module executor for whichever job, trigger or hotkey fired next.
-
-A run whose entry was registered by an authenticated user is executed as that
-user (``owner``), with the role the user store gives them at that moment.
 """
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from dataclasses import dataclass
+from typing import Any, Callable, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.exception.control_signals import (
+    is_run_interruption as is_run_interruption,
+    raise_if_run_interrupted as raise_if_run_interrupted,
+)
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.history_store import HistoryStore, STATUS_ERROR, STATUS_OK
+from je_auto_control.utils.script_vars.execution import execution_scope
 
-if TYPE_CHECKING:
-    from je_auto_control.utils.rbac.deferred import DeferredOwner
+
+@dataclass
+class RunOutcome:
+    """A run's final history state and permission to take an error snapshot."""
+
+    status: str = STATUS_OK
+    error_text: Optional[str] = None
+    hard_abort: bool = False
+    cancelled: bool = False
+
+    def fail(self, error: BaseException) -> None:
+        """Record failure without formatting a pending hard/cancellation signal."""
+        self.status = STATUS_ERROR
+        self.hard_abort = not isinstance(error, Exception)
+        self.cancelled = is_run_interruption(error)
+        self.error_text = (f"{type(error).__name__}: run interrupted" if self.hard_abort or self.cancelled
+                           else _ordinary_error_text(error))
+
+    @property
+    def should_capture(self) -> bool:
+        """Ordinary failures may capture; cancellation and hard exits may not."""
+        return self.status == STATUS_ERROR and not self.hard_abort and not self.cancelled
 
 
-def run_counting_failures(run: Callable[[], Any],
-                          owner: "Optional[DeferredOwner]" = None) -> Any:
-    """Call ``run()`` in a fresh variable scope; raise if an action it ran failed.
+def _ordinary_error_text(error: BaseException) -> str:
+    """Keep a broken exception formatter from replacing the original run failure."""
+    try:
+        return repr(error)
+    except Exception:  # pylint: disable=broad-exception-caught  # reason: preserve the original failure
+        return f"{type(error).__name__}: exception detail unavailable"
 
-    ``owner`` is who registered the work; ``None`` runs it with no identity,
-    as before. An owner who was removed, or whose role no longer allows
-    running actions, raises ``AuthorizationError`` before anything runs.
+
+def finish_history_run(store: HistoryStore, run_id: int, outcome: RunOutcome,
+                       capture: Callable[[int], Optional[str]]) -> None:
+    """Settle history while preserving any hard interruption already propagating."""
+    artifact = capture(run_id) if outcome.should_capture else None
+    try:
+        store.finish_run(run_id, outcome.status, outcome.error_text, artifact_path=artifact)
+    except Exception:  # pylint: disable=broad-exception-caught  # reason: preserve pending hard interruption
+        if not outcome.hard_abort:
+            raise
+        autocontrol_logger.error("run history completion unavailable; preserving hard interruption")
+
+
+def run_counting_failures(run: Callable[[], Any]) -> Any:
+    """Run in fresh variables and count new failures without resetting the caller.
+
+    Manual observer/watchdog polls may run inside another action list. Resetting
+    the thread's counter here erased that caller's previous failures and could
+    make the CLI report success. A per-run delta keeps both outcomes intact.
     """
+    # pylint: disable-next=import-outside-toplevel  # reason: executor imports this outcome helper
     from je_auto_control.utils.executor.action_executor import (
-        recorded_failures, reset_recorded_failures,
+        recorded_failures,
     )
-    from je_auto_control.utils.rbac.deferred import owner_scope
-    from je_auto_control.utils.script_vars.execution import execution_scope
-    reset_recorded_failures()
-    with owner_scope(owner), execution_scope():
+    before = recorded_failures()
+    with execution_scope():
         result = run()
-    failures = recorded_failures()
+    failures = recorded_failures() - before
     if failures:
         raise AutoControlActionException(
             f"{failures} action(s) failed; see this run's record for which")

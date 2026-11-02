@@ -75,16 +75,25 @@ def _try_json(text: str) -> Any:
         return None
 
 
-def _read_response(response: Any, want_bytes: bool = False) -> Dict[str, Any]:
+def _response_limit(value: Any = None) -> int:
+    limit = MAX_RESPONSE_BYTES if value is None else value
+    if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= MAX_RESPONSE_BYTES:
+        raise ValueError('invalid HTTP response byte limit')
+    return limit
+
+
+def _read_response(response: Any, want_bytes: bool = False, *,
+                   limit: Optional[int] = None) -> Dict[str, Any]:
     """The response as a dict; with ``want_bytes`` the undecoded body is ``content``."""
+    limit = _response_limit(limit)
     raw_status: Any = getattr(response, "status", None)
     if raw_status is None:
         raw_status = getattr(response, "code", 0)
     status = int(raw_status)
-    body = response.read(MAX_RESPONSE_BYTES + 1)
-    if len(body) > MAX_RESPONSE_BYTES:
+    body = response.read(limit + 1)
+    if len(body) > limit:
         raise urllib.error.URLError(
-            f"response body exceeds {MAX_RESPONSE_BYTES} bytes")
+            f"response body exceeds {limit} bytes")
     text = body.decode("utf-8", errors="replace")
     raw_headers = getattr(response, "headers", None)
     headers, set_cookie = _collect_headers(raw_headers)
@@ -188,6 +197,7 @@ def urllib_transport(call: Mapping[str, Any]) -> Dict[str, Any]:
     with ``call["want_bytes"]`` true the reply also carries the undecoded
     body as ``content`` (for binary downloads).
     """
+    limit = _response_limit(call.get('max_response_bytes'))
     request = urllib.request.Request(
         call["url"], data=call.get("body"), method=call["method"],
         headers=dict(call.get("headers") or {}))
@@ -197,15 +207,15 @@ def urllib_transport(call: Mapping[str, Any]) -> Dict[str, Any]:
         with opener.open(  # nosec B310 — scheme allow-listed, redirects too
                 request, timeout=float(call.get("timeout", _DEFAULT_TIMEOUT))) \
                 as response:
-            return _read_response(response, want_bytes)
+            return _read_response(response, want_bytes, limit=limit)
     except urllib.error.HTTPError as error:
-        return _read_error_response(error, want_bytes)
+        return _read_error_response(error, want_bytes, limit=limit)
     except http.client.HTTPException as error:
         raise urllib.error.URLError(f"malformed HTTP response: {error!r}") from error
 
 
-def _read_error_response(error: urllib.error.HTTPError,
-                         want_bytes: bool = False) -> Dict[str, Any]:
+def _read_error_response(error: urllib.error.HTTPError, want_bytes: bool = False, *,
+                         limit: Optional[int] = None) -> Dict[str, Any]:
     """A 4xx / 5xx response, read and closed like any other.
 
     Read inside the ``except HTTPError`` clause, a truncated error body raised
@@ -214,7 +224,7 @@ def _read_error_response(error: urllib.error.HTTPError,
     """
     try:
         with error:
-            return _read_response(error, want_bytes)
+            return _read_response(error, want_bytes, limit=limit)
     except http.client.HTTPException as bad:
         raise urllib.error.URLError(f"malformed HTTP response: {bad!r}") from bad
 

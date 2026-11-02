@@ -56,8 +56,7 @@ Platform backends
 Wayland
 =======
 
-See :doc:`../wayland/wayland_capabilities_doc`. ``probe_capabilities()`` shows
-the effect of each of these without side effects.
+``probe_capabilities()`` shows the effect of each of these without side effects.
 
 .. list-table::
    :header-rows: 1
@@ -71,9 +70,6 @@ the effect of each of these without side effects.
      - ``cli`` sends input through ``ydotool`` and never asks the desktop
        portal. It is a choice made before starting: after a refused consent
        AutoControl does not switch to it by itself.
-   * - ``JE_AUTOCONTROL_WAYLAND_EI_WORKER``
-     - unset / ``1``
-     - Runs the libei session in a helper process instead of in-process.
    * - ``JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL``
      - ``warn`` / ``flat`` / ``strict``
      - Applies to absolute moves on the ``ydotool`` path only, which are
@@ -106,13 +102,6 @@ Logging and local state
        ``~/.je_auto_control/logs/AutoControlGUI.log``. The null device
        (``/dev/null``, ``NUL``) switches the file off. Read when the first
        record is written, not at import.
-   * - ``JE_AUTOCONTROL_GUI_SETTINGS``
-     - unset / a path / ``off``
-     - File the main window keeps its theme, text size, navigation panel and
-       geometry in, and the Config Sync tab its server, user and folder
-       fields (never the shared secret: the file is plain text). Unset:
-       ``~/.je_auto_control/gui_settings.ini``. ``off``, ``0``, ``none``,
-       ``false`` or empty: nothing is read or written.
    * - ``JE_AUTOCONTROL_ENV``
      - ``default`` / a name
      - The active environment of the asset store (``active_environment()``),
@@ -184,10 +173,6 @@ See :doc:`../mcp_server/mcp_server_doc`.
    * - ``JE_AUTOCONTROL_MCP_READONLY``
      - unset / ``1``
      - Only tools marked read-only are offered and callable.
-   * - ``JE_AUTOCONTROL_MCP_TOOL_MODE``
-     - ``full`` / ``progressive`` / ``static``
-     - How much of the registry ``tools/list`` offers. An unknown value is an
-       error rather than ``full``.
    * - ``JE_AUTOCONTROL_MCP_TOOL_PROFILE``
      - unset / comma-separated entries
      - Tool names and ``category:<name>`` entries of the ``static`` profile.
@@ -234,7 +219,7 @@ Access control and servers
 ==========================
 
 See :doc:`../operations_layer/operations_layer_doc` and
-:doc:`../config_sync/config_sync_doc`.
+:doc:`../causal_sync/causal_sync_doc`.
 
 .. list-table::
    :header-rows: 1
@@ -259,11 +244,4 @@ See :doc:`../operations_layer/operations_layer_doc` and
      - unset / a secret
      - Shared secret of the signaling / config-sync server
        (``X-Signaling-Secret``). Read by the server when ``--shared-secret``
-       is not given, and by ``config_sync_run`` when ``secret`` is not.
-   * - ``AC_SIGNALING_CONFIG_DB``
-     - unset / a path
-     - SQLite file the signaling server keeps config-sync buckets in. Unset:
-       ``~/.je_auto_control/config_sync.sqlite3``. Asset blobs (``/blobs``)
-       go in a folder of the same path with ``.blobs`` added unless
-       ``--blob-dir`` says otherwise; ``--max-blob-bytes`` and
-       ``--blob-quota-bytes`` bound them (flags only, no variable).
+       is not given.

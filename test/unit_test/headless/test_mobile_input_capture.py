@@ -15,7 +15,6 @@ from je_auto_control.android import AdbClient, UIAutomatorDevice
 from je_auto_control.ios import IOSDevice
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
 from je_auto_control.utils.ocr.ocr_engine import TextMatch
-from je_auto_control.utils.self_healing.locator import self_heal_locate
 from je_auto_control.wrapper.device_context import (
     DeviceContext, DeviceError, DeviceUnsupportedError, Drag, LongPress, Pinch,
     Swipe, Tap, open_device,
@@ -314,11 +313,9 @@ def test_mobile_pipeline_uses_device_frame(monkeypatch, tmp_path):
     assert frame.locate_description("the blue button") == (300, 200)
     assert vlm.images == [(1170, 2532)]
 
-    from je_auto_control.utils.self_healing.heal_log import HealEventLog
-    log = HealEventLog(str(tmp_path / "heal.jsonl"))
-    hit = self_heal_locate(template_path=str(template), frame=frame, log=log)
-    healed = self_heal_locate(template_path=str(missing), description="the blue button",
-                              frame=frame, log=log)
+    from je_auto_control.wrapper.mobile_commands import _heal_on_frame
+    hit = _heal_on_frame(frame, str(template), None, 0.9, None)
+    healed = _heal_on_frame(frame, str(missing), "the blue button", 0.9, None)
     assert (hit.method, hit.coordinates) == ("image", (115, 310))
     assert (healed.method, healed.coordinates) == ("vlm", (300, 200))
     session.perform(Tap(*healed.coordinates))

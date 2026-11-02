@@ -574,10 +574,6 @@ class _Writes:
 @pytest.mark.parametrize("nested", [False, True], ids=["top-level", "inside a block"])
 def test_the_token_reaches_no_log_record_journal_history_script_or_setting(
         builder, tmp_path, monkeypatch, caplog, nested):
-    from je_auto_control.gui.window_settings import WindowSettings
-    from je_auto_control.utils.action_journal.recorder import (
-        start_action_journal, stop_action_journal,
-    )
     from je_auto_control.utils.run_history.history_store import HistoryStore
     from je_auto_control.utils.test_record.record_test_class import test_record_instance
 
@@ -586,15 +582,14 @@ def test_the_token_reaches_no_log_record_journal_history_script_or_setting(
     journal = tmp_path / "journal.jsonl"
     saved = tmp_path / "saved.json"
     writes = _Writes()
-    for name in ("start_run", "finish_run", "attach_artifact", "link_journal"):
+    for name in ("start_run", "finish_run", "attach_artifact"):
         monkeypatch.setattr(HistoryStore, name, writes.recorder(f"history.{name}", result=1))
-    for name in ("save", "save_form"):
-        monkeypatch.setattr(WindowSettings, name, writes.recorder(f"settings.{name}"))
     monkeypatch.setattr(test_record_instance, "init_record", True)
     monkeypatch.setattr(test_record_instance, "test_record_list", [])
     steps = _user_steps(users) + ([_loop_step(users, times=2)] if nested else [])
     autocontrol_logger.addHandler(caplog.handler)
-    start_action_journal(journal)
+    # The tab's own journal field: the run reads it on the GUI thread and journals on the worker.
+    tab._capture.journal_path.setText(str(journal))
     try:
         with caplog.at_level(logging.DEBUG, logger=autocontrol_logger.name):
             _run(tab, steps)
@@ -606,7 +601,7 @@ def test_the_token_reaches_no_log_record_journal_history_script_or_setting(
             dialog.close_and_clear()
             save_action_file(str(saved), tab._tree.root_steps(), tab._file_extras)
     finally:
-        stop_action_journal()
+        tab._capture.journal_path.setText("")
         autocontrol_logger.removeHandler(caplog.handler)
     assert len(tokens) == (4 if nested else 2), "the nested tokens were collected too"
     assert clipboard.copied == tokens, "the values were really revealed and copied"

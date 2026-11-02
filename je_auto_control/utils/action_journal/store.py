@@ -1,142 +1,177 @@
-"""Append-only JSON-lines store for :class:`ActionEvent` records.
+"""Append-only action JSONL with interprocess order and torn-tail recovery."""
+from __future__ import annotations
 
-A started action is written at once as a whole ``start`` line with status
-``incomplete``; how it ended follows as a short ``end`` line. Reading folds
-the two together, so an action whose end never reached the file -- the
-process died, the run was interrupted -- reads back as ``incomplete`` instead
-of looking like a success. Lines are parsed with ``json`` only.
-
-Pure standard library; imports no ``PySide6``.
-"""
 import json
 import os
-import threading
-from dataclasses import dataclass, field
+from contextlib import closing
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import BinaryIO, Callable, Generator, Iterator, Optional
 
-from je_auto_control.utils.action_journal.events import (
-    RECORD_END, STATUS_ERROR, STATUS_INCOMPLETE, STATUS_OK, ActionEvent,
-    JournalFormatError, apply_end, check_record, event_from_dict,
-)
-from je_auto_control.utils.json_store.json_store import append_json_line
+from je_auto_control.utils.action_journal.events import ActionEvent, ActionJournalError
+from je_auto_control.utils.action_journal.redaction import sanitize_event
+from je_auto_control.utils.json_store.json_store import _file_lock, append_json_line
 
-
-def default_journal_path() -> Path:
-    """``~/.je_auto_control/action_journal.jsonl``, resolved at call time."""
-    return Path.home() / ".je_auto_control" / "action_journal.jsonl"
+_MAX_RECORD_BYTES = 8 * 1024 * 1024
 
 
 class ActionJournal:
-    """Thread-safe append-only journal file. Appending creates it."""
+    """Persist lifecycle snapshots in one ordered journal shared by writers.
 
-    def __init__(self, path: str | Path | None = None) -> None:
-        self._path = Path(path) if path is not None else default_journal_path()
-        self._lock = threading.Lock()
+    Each append redacts before acquiring a file handle, assigns sequence under
+    the shared JSON-store lock, appends one complete line and fsyncs it. Only an
+    unterminated crash fragment is discarded on recovery; committed lines stay.
+    """
+
+    def __init__(self, path: Path) -> None:
+        try:
+            self._path = Path(path)
+        except (OSError, TypeError, ValueError):
+            raise ActionJournalError("invalid action journal path") from None
 
     @property
     def path(self) -> Path:
-        """The file this journal appends to."""
+        """The explicit journal destination; no global log is opened implicitly."""
         return self._path
 
     def append(self, event: ActionEvent) -> None:
-        """Append ``event`` as one whole line (the start of an action)."""
-        self._write(event.to_dict())
-
-    def append_end(self, event: ActionEvent) -> None:
-        """Append how the already-written ``event`` ended."""
-        self._write(event.end_dict())
-
-    def _write(self, record: Dict[str, Any]) -> None:
-        # default=str is never reached for a sanitised event; it only keeps a
-        # hand-built one from raising half-way through a run.
-        line = json.dumps(record, ensure_ascii=False, default=str)
-        with self._lock:
-            append_json_line(self._path, line)
-
-    def read(self, *, run_id: Optional[str] = None) -> List[ActionEvent]:
-        """The events of this journal, in the order they started."""
-        return read_events(self._path, run_id=run_id)
+        """Validate and sanitize an event before appending it durably."""
+        event.validate()
+        payload = sanitize_event(event)
+        # Validate encoding/size before creating directories or lock files.
+        _encode(payload)
+        try:
+            with _file_lock(self.path):
+                payload["sequence"] = _next_sequence(self.path)
+                append_json_line(self.path, _encode(payload))
+                with self.path.open("ab") as handle:
+                    os.fsync(handle.fileno())
+        except ActionJournalError:
+            raise
+        except (OSError, ValueError) as error:
+            raise ActionJournalError("could not append action journal") from error
 
 
-@dataclass(frozen=True)
-class JournalContents:
-    """What a journal file holds: the folded events and what could not be read."""
-
-    events: Tuple[ActionEvent, ...]
-    #: ``step_id`` -> 1-based line number of the event's ``start`` line.
-    lines: Dict[str, int] = field(default_factory=dict)
-    #: 1-based numbers of lines that are not JSON (a write cut off mid-line).
-    torn_lines: Tuple[int, ...] = ()
-
-
-def _fold(path: Path, run_id: Optional[str]) -> JournalContents:
-    """Parse every line of ``path`` and fold ``end`` lines into their starts."""
-    events: Dict[Tuple[str, str], ActionEvent] = {}
-    lines: Dict[str, int] = {}
-    torn: List[int] = []
-    # The journal path is the operator's own (start_action_journal / --from-log).
-    with path.open("r", encoding="utf-8", errors="replace") as handle:  # NOSONAR pythonsecurity:S8707
-        for number, raw in enumerate(handle, start=1):
-            if not raw.strip():
-                continue
-            where = f"{path.name} line {number}"
-            try:
-                data = json.loads(raw)
-            except ValueError:
-                torn.append(number)
-                continue
-            record = check_record(data, where)
-            if run_id is not None and data["run_id"] != run_id:
-                continue
-            key = (data["run_id"], data["step_id"])
-            if record == RECORD_END:
-                # An end whose start is missing has nothing to describe.
-                if key in events:
-                    events[key] = apply_end(events[key], data, where)
-                continue
-            if key in events:
-                raise JournalFormatError(f"{where}: step {key[1]!r} is recorded twice")
-            events[key] = event_from_dict(data, where)
-            lines[key[1]] = number
-    return JournalContents(tuple(events.values()), lines, tuple(torn))
+def _encode(payload: dict[str, object]) -> str:
+    try:
+        line = json.dumps(payload, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+        size = len(line.encode("utf-8"))
+    except (TypeError, ValueError):
+        raise ActionJournalError("invalid action journal payload encoding") from None
+    if size > _MAX_RECORD_BYTES:
+        raise ActionJournalError("action journal record exceeds 8 MiB")
+    return line
 
 
-def load_journal(path: str | Path, *, run_id: Optional[str] = None
-                 ) -> JournalContents:
-    """Read ``path`` with line numbers and the torn lines it skipped.
+def _next_sequence(path: Path) -> int:
+    """Verify journal identity and its committed tail before repairing anything."""
+    fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_APPEND, 0o600)
+    with os.fdopen(fd, "a+b") as handle:
+        offset, tail = _tail(handle)
+        if not tail:
+            return 1
+        first, head_end = _journal_head(handle)
+        boundary = len(tail) if tail.endswith(b"\n") else tail.rfind(b"\n") + 1
+        committed = tail[:boundary]
+        if not committed:
+            raise ActionJournalError("destination has no committed journal record")
+        last = _decode(committed[:-1].rsplit(b"\n", 1)[-1], 0)
+        if last.sequence < first.sequence or (last.sequence == first.sequence and offset + boundary > head_end):
+            raise ActionJournalError("unordered action journal tail")
+        sequence = last.sequence + 1
+        if sequence > 2 ** 63 - 1:
+            raise ActionJournalError("action journal sequence exhausted")
+        # Reaching here proved both the file's format and the preceding record.
+        # A mistaken destination or corrupt committed line must remain intact.
+        if boundary != len(tail):
+            handle.truncate(offset + boundary)
+        return sequence
 
-    A line that is not JSON is skipped and reported (an append cut off by a
-    crash is expected in an append-only file); a JSON line that is not a
-    journal record of this schema raises :class:`JournalFormatError`.
+
+def _journal_head(handle: BinaryIO) -> tuple[ActionEvent, int]:
+    """Refuse foreign files and ambiguous torn first records without modifying them."""
+    handle.seek(0)
+    line = handle.readline(_MAX_RECORD_BYTES + 2)
+    if len(line) > _MAX_RECORD_BYTES + 1 or not line.endswith(b"\n"):
+        raise ActionJournalError("destination has no committed journal header")
+    return _decode(line, 1), handle.tell()
+
+
+def _tail(handle: BinaryIO) -> tuple[int, bytes]:
+    position = handle.seek(0, os.SEEK_END)
+    chunks: list[bytes] = []
+    separators = total = 0
+    while position > 0 and separators < 2:
+        size = min(4096, position)
+        position -= size
+        handle.seek(position)
+        chunk = handle.read(size)
+        chunks.append(chunk)
+        separators += chunk.count(b"\n")
+        total += len(chunk)
+        if total > 2 * _MAX_RECORD_BYTES + 4096:
+            raise ActionJournalError("action journal tail exceeds record limit")
+    return position, b"".join(reversed(chunks))
+
+
+def _decode(raw: bytes, line_number: int) -> ActionEvent:
+    try:
+        payload: object = json.loads(raw.decode("utf-8"))
+        return ActionEvent.from_dict(payload)
+    except (ValueError, TypeError, UnicodeError):
+        # Do not include raw data or JSON decoder messages: external journals
+        # may contain secrets even though this writer never emits those bytes.
+        raise ActionJournalError(f"invalid action journal record at line {line_number}") from None
+
+
+def read_events(path: Path, *, run_id: Optional[str] = None,
+                 observer: Optional[Callable[[int], None]] = None) -> list[ActionEvent]:
+    """Read validated snapshots in append order, optionally selecting one run.
+
+    A final unterminated fragment after a valid record is uncommitted and ignored.
+    Ambiguous first fragments, malformed complete lines, unsupported schemas and
+    non-increasing sequences are rejected. Start
+    snapshots remain incomplete; reading never infers successful completion.
+    An observer receives the validated record count before filtering, and may
+    raise to cancel. The handle closes before its original exception propagates.
     """
-    file_path = Path(os.path.realpath(os.fspath(path)))
-    if not file_path.is_file():
-        raise JournalFormatError(f"no journal file at {file_path}")
-    return _fold(file_path, run_id)
+    selected = []
+    with closing(_iter_events(path)) as events:
+        for count, event in enumerate(events, 1):
+            if observer is not None:
+                observer(count)
+            if run_id is None or event.run_id == run_id:
+                selected.append(event)
+    return selected
 
 
-def read_events(path: str | Path, *, run_id: Optional[str] = None
-                ) -> List[ActionEvent]:
-    """The events in the journal at ``path``, in the order they started.
+def _iter_events(path: Path) -> Generator[ActionEvent, None, None]:
+    """Own the handle and translate storage failures without wrapping observers."""
+    try:
+        with Path(path).open("rb") as handle:
+            yield from _snapshots(handle)
+    except FileNotFoundError:
+        return
+    except (OSError, TypeError, ValueError) as error:
+        if isinstance(error, ActionJournalError):
+            raise
+        raise ActionJournalError("could not read action journal") from error
 
-    ``run_id`` keeps one run's events. An action with no recorded end has
-    status ``incomplete``.
-    """
-    return list(load_journal(path, run_id=run_id).events)
 
-
-def list_journal_runs(path: str | Path) -> List[Dict[str, Any]]:
-    """One summary per run in the journal at ``path``, oldest first."""
-    runs: Dict[str, Dict[str, Any]] = {}
-    for event in load_journal(path).events:
-        run = runs.setdefault(event.run_id, {
-            "run_id": event.run_id, "session": event.session,
-            "started_at": event.started_at, "finished_at": None, "events": 0,
-            STATUS_OK: 0, STATUS_ERROR: 0, STATUS_INCOMPLETE: 0,
-        })
-        run["events"] += 1
-        run[event.status] += 1
-        if event.finished_at is not None:
-            run["finished_at"] = max(run["finished_at"] or 0.0, event.finished_at)
-    return list(runs.values())
+def _snapshots(handle: BinaryIO) -> Iterator[ActionEvent]:
+    """Stream complete, bounded JSON lines and validate ordering across all runs."""
+    previous = 0
+    index = 0
+    while True:
+        line = handle.readline(_MAX_RECORD_BYTES + 2)
+        if len(line) > _MAX_RECORD_BYTES + 1:
+            raise ActionJournalError("action journal record exceeds 8 MiB")
+        if not line.endswith(b"\n"):
+            if line and index == 0:
+                raise ActionJournalError("destination has no committed journal record")
+            return  # EOF or the uncommitted final fragment
+        index += 1
+        event = _decode(line, index)
+        if event.sequence <= previous:
+            raise ActionJournalError(f"unordered action journal record at line {index}")
+        previous = event.sequence
+        yield event

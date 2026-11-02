@@ -62,13 +62,13 @@ def management_store(users_path: Optional[str] = None) -> UserStore:
             f"user {caller.user_id!r} has role {caller.role!r}",
             capability=Capability.MANAGE_USERS)
     requested = _real(users_path) if users_path else None
-    if caller is not None and caller.store is not None:
-        if requested is not None and requested != _real(str(caller.store.path)):
+    if caller is not None and caller.store_path is not None:
+        if requested is not None and requested != _real(caller.store_path):
             raise AuthorizationError(
                 "an authenticated caller manages the user store that authenticated it; "
                 "users_path may not name another file", capability=Capability.MANAGE_USERS)
-        caller.store.refresh()  # another process may have changed the file
-        return caller.store
+        # Opened afresh: another process may have changed the file.
+        return UserStore(Path(caller.store_path))
     if requested is not None:
         return UserStore(requested)
     store = user_store_from_env()

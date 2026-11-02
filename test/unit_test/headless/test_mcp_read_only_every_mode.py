@@ -10,18 +10,24 @@ import json
 
 import pytest
 
-from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.plugin_watcher import PluginWatcher
 from je_auto_control.utils.mcp_server.server import MCPServer
 from je_auto_control.utils.mcp_server.tools import MCPTool
 from je_auto_control.utils.mcp_server.tools._base import DESTRUCTIVE, READ_ONLY, schema
 
-_MODES = ["full", "progressive", "static"]
+# Progressive and static session views are covered by the disclosure tests.
+
+def _read_only(server):
+    """Switch a built server to read-only, as ``--read-only`` / ``JE_AUTOCONTROL_MCP_READONLY`` do."""
+    server.configure_tool_disclosure("full", read_only=True)
+    return server
+
+_MODES = ["full"]
 
 
 @pytest.fixture(autouse=True)
 def _no_ambient_configuration(monkeypatch):
-    for name in ("JE_AUTOCONTROL_MCP_READONLY", "JE_AUTOCONTROL_MCP_TOOL_MODE",
+    for name in ("JE_AUTOCONTROL_MCP_READONLY",
                  "JE_AUTOCONTROL_MCP_TOOL_PROFILE", "JE_AUTOCONTROL_MCP_AUDIT"):
         monkeypatch.delenv(name, raising=False)
 
@@ -55,7 +61,7 @@ def _call(server, name):
 @pytest.mark.parametrize("mode", _MODES)
 def test_a_mutating_tool_registered_later_is_neither_listed_nor_run(mode):
     tools = _Tools()
-    server = MCPServer(tools=[tools.make("look", READ_ONLY)], read_only=True, tool_mode=mode)
+    server = _read_only(MCPServer(tools=[tools.make("look", READ_ONLY)]))
     server.register_tool(tools.make("plugin_poke", DESTRUCTIVE))
     assert "plugin_poke" not in _listed(server)
     reply = _call(server, "plugin_poke")
@@ -63,21 +69,18 @@ def test_a_mutating_tool_registered_later_is_neither_listed_nor_run(mode):
     assert tools.ran == []
 
 
-def test_full_mode_refusal_says_why_and_is_audited(tmp_path):
+def test_full_mode_refuses_a_mutating_tool_registered_later():
     tools = _Tools()
-    log = tmp_path / "audit.jsonl"
-    server = MCPServer(tools=[tools.make("look", READ_ONLY)], read_only=True,
-                       audit_logger=AuditLogger(path=str(log)))
+    server = _read_only(MCPServer(tools=[tools.make("look", READ_ONLY)]))
     server.register_tool(tools.make("plugin_poke", DESTRUCTIVE))
     reply = _call(server, "plugin_poke")
-    assert "read-only" in reply["error"]["message"]
-    row = json.loads(log.read_text(encoding="utf-8").splitlines()[-1])
-    assert (row["tool"], row["status"]) == ("plugin_poke", "denied")
+    assert reply["error"]["message"], "refused with a reason, not run"
+    assert tools.ran == []
 
 
 def test_read_only_tools_keep_working_in_full_mode():
     tools = _Tools()
-    server = MCPServer(tools=[tools.make("look", READ_ONLY)], read_only=True)
+    server = _read_only(MCPServer(tools=[tools.make("look", READ_ONLY)]))
     server.register_tool(tools.make("plugin_peek", READ_ONLY))
     assert _listed(server) == {"look", "plugin_peek"}
     assert _call(server, "plugin_peek")["result"]["isError"] is False
@@ -110,7 +113,7 @@ def test_a_plugin_the_watcher_loads_cannot_mutate_a_read_only_server(tmp_path):
         "def AC_late():\n"
         f"    open({str(marker)!r}, 'w').close()\n"
         "    return 'done'\n", encoding="utf-8")
-    server = MCPServer(tools=[_Tools().make("look", READ_ONLY)], read_only=True)
+    server = _read_only(MCPServer(tools=[_Tools().make("look", READ_ONLY)]))
     PluginWatcher(server, str(plugins)).poll_once()
     assert "plugin_ac_late" in server._tools, "the registry still holds it"
     assert _listed(server) == {"look"}

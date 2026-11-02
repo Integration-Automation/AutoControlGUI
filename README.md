@@ -1,5 +1,645 @@
 # AutoControl
 
+Transfer management now shares `manage_agent_transfer(operation, request)`, `AC_agent_transfer`,
+`ac_agent_transfer`, authenticated `POST /agent/transfer`, and Script Builder metadata. The CLI uses
+`agent-task transfer --operation review_export --request request.json`. Review returns an approval
+token; creation requires that token, the original request key and an explicit note. Export/import
+management and portable evidence management support registered hosts, with source-local authority checks.
+The Transfers page exposes these operations through explicit Actions, editable JSON and four locales.
+Review never sends approval; preparing approval preserves the original host, review token and request
+key with an empty note. Changed selections and closed views reject late replies; accepted imports
+remain service-owned. Routed evidence consent is persisted before forwarding; exact retries after lost
+replies or a coordinator
+restart reuse the same grant. Passive diagnostics describe only the local contract, not a live grant
+or verified remote/native capability. Read-only completion grants revalidate their retained private
+consent at creation and resolution, without reviving original input authority.
+Implementation verification is recorded in docs/updates/README.md; remaining delivery and acceptance
+are tracked in Progress.md.
+Editable request templates are provided in examples/agent_transfer_export_review.json,
+agent_transfer_import_review.json and agent_transfer_evidence_review.json, with separate create templates.
+
+Experimental source-host skill operations may select a portable grant with the existing
+`handoff_id` and explicit completion/execution task. The source rechecks its actual consent,
+recipient and private proof in the skill transaction, including after candidate/publication writes.
+Original actions, the candidate's own validation trial and explicit version approval remain required.
+New skill trials receive a fresh service-generated request key; legacy unkeyed trials are not backfilled.
+Selected evidence retains the source host's actual actions, trials and versions under current authority.
+Remaining cross-host acceptance and production delivery are tracked in Progress.md.
+Runtime ownership is retained throughout the selected-evidence skill operation and released afterward.
+
+Destination import remains experimental. An explicitly started service accepts
+`review_import` / `create_import` / `get_import` / `run_import` / `cancel_import` / `list_imports`
+through its runtime transfer controller and authenticated `/agent/transfer` route. A coordinator can
+route these finite operations through its own opaque consent token. The destination resolves the
+source using its own registry and account; coordinator principals, origins and source credentials
+are not forwarded. Approval commits before dispatch, and exact lost-ACK retries retain one import.
+Startup resumes accepted never-claimed work and fences unsettled claims for review. Explicit
+`run_import` rechecks the original recipient, profile, live origins and source grant under a new
+queue generation. Verified private chunks can be reused; an owned complete generation is inspected
+and hashed without downloading or publishing again. Additional attempt origins remain restrictive.
+An explicitly queued, never-claimed inspection survives another restart; current bytes, profile
+and retained attempt origins are rechecked before accepting its result.
+Before accepting a published import receipt, the destination rechecks the complete file list
+and content digests after its final source response. Changed, missing or extra files leave
+the import in requires_review, preserving user edits and the original publication for review.
+Changed ownership, bytes or authority cannot confirm publication. Cancellation fences the producer;
+unaccepted publication remains requires_review, and confirmed published files remain user output.
+Cancelled or expired private chunk accounts are cleaned only after their exact producer retires;
+failed cleanup retains capacity until a confirmed retry. Receipts keep their original fixed expiry.
+Staging directories and preallocated files are journaled by filesystem identity before bytes
+are copied. Expiry retries their exact cleanup after the producer retires, including after restart;
+replaced or unrecognized objects retain capacity for review and are never recursively deleted.
+Source maintenance retires expired or revoked private export accounts, including after restart
+or issuer removal. Failed cleanup retains its reservation. Runtime ownership remains held until
+source or destination cleanup finishes; idle maintenance takes no runtime writer.
+Create/run replies describe the committed receipt assembled before waking new delivery work;
+a later get_import reads current progress. This avoids reading that receipt behind the new writer.
+A later maintenance sweep prunes already-cleaned, revoked and expired source metadata to reclaim
+its record quota, preserving consent/revocation tombstones and other record families. Cold runtime
+maintenance discovers pending source records through a read-only probe; unused controllers stay lazy.
+Final runtime owner release is serialized with lazy controller construction and rechecks any late
+controller. Active construction or cleanup keeps ownership held for a later close attempt.
+Redirected private cache paths are refused before storage opens; failed cleanup retains capacity.
+Subsequent maintenance also prunes expired destination import/delivery metadata and its terminal queue
+rows after confirmed private cleanup. Active, rebound or unknown queue work prevents pruning; original
+consent/revocation tombstones and published user files remain. Cold maintenance performs this retirement
+without a listener or producer. Cleanup scans held accounts independently of retained unexpired metadata.
+Portable evidence retention and shared surfaces are implemented; remaining fault acceptance and delivery
+are tracked in Progress.md.
+Experimental source evidence now supports review_evidence/create_evidence/get_evidence/revoke_evidence/
+list_evidence through the owning runtime and authenticated local transfer route. Separate durable
+consent reuses real recovery/completion proof, current accounts and original local DAG admission.
+The registered peer evidence operation matches the actual accepted key/spec and optional DAG node;
+it returns only IDs, hashes and finite verification, with evidence_only=true/input_authorized=false.
+Review summaries omit the node request_digest; live resolution supplies it for the exact reviewed
+accepted key. Source grants do not grant ordinary task reads or input. Selected source-owned skill evidence, routed management and shared public surfaces are implemented.
+Remaining fault acceptance and production delivery are tracked in Progress.md.
+Experimental coordinator continuation accepts a separately reviewed live remote recovery grant for
+the exact original source/key/spec/graph/node and pinned host. Approval and start persist provisional
+states, resolve again outside the coordinator writer, then recheck immutable local consent and claims
+before activation. Stop cancels pending states; an interrupted provisional approval requires the same
+explicit request. Runtime ownership remains held during confirmation without serializing peer readers.
+Dependency checks repeat around claim/record and final remote adoption acceptance. A failed grant
+fences scheduling and requests bounded pause only for independently matched accepted dependents;
+unknown or lost acknowledgements retain claims and require review. Completed effects and unrelated
+tasks remain intact. This does not certify native input retirement or complete the full fault matrix.
+Legacy delivery-schema upgrade preserves the accepted origin and fixed expiry. Additional origins
+remain cumulative across resumes. Stopping an attached REST observer leaves the same service-owned
+delivery and runtime owner intact; reattachment reads its result without redispatch.
+Actual two-host and separate-process three-host tests independently verify bytes and account scope.
+Further restart/cancellation faults, further staging faults, full retention, portable evidence,
+client/GUI surfaces and complete-stage verification remain in Progress.md. A receipt grants no
+task-input authority or task-completion evidence.
+
+Registered source management now routes review/create/get/list/revoke through a coordinator-owned
+opaque review. Consent binds the actual local caller, current host fingerprint, peer review, manifest
+digest and original key. Approved intent commits before forwarding; lost replies and coordinator
+restart retry the same source grant. Changed actor/host/token/note/key or a different reply manifest
+is refused. Pending reviews and retained route records each cap at128; expiry removes only local
+route metadata while preserving consent fences. Runtime closure discards unapproved cached reviews;
+durable approvals remain recoverable. The source uses its own account, and local principal/
+origin headers stay local. Destination lifecycle, source-owned skill evidence and shared surfaces are implemented; remaining
+acceptance and production delivery are tracked in Progress.md.
+
+Existing remote DAG calls now read the actual persisted host book when pinning a host and before
+and after each retained connection call. Another process replacing/removing the endpoint or token,
+damaged configuration or revoked captured local authority invalidates the operation. Reads neither
+initialize nor quarantine the book; local service delegation and the closed remote routes stay compatible.
+
+Cross-host outcome handoff remains experimental and incomplete. The runtime-owned local source core reviews
+selected completed file outcomes and commits consent-bound immutable blobs with actual issuer and
+recipient checks. Authenticated source management and peer-read HTTP routes now expose those reviewed
+manifests/chunks. Peer reads use the receiving server's ordinary bearer/RBAC gate and rate limits;
+local principal/origin headers are refused before foreign principal/store lookup. The local service
+client preserves real owner delegation for management only. Transfer requests are capped at1MiB before
+server reads; the bounded client refuses oversized request dispatch and success/error reply decoding
+without changing ordinary HTTP limits. Destination publication, live evidence adoption and shared public surfaces are implemented.
+Remaining lifecycle acceptance and production delivery are tracked in Progress.md. A transfer receipt grants no task-input authority.
+
+Source export excludes actual runtime/transfer databases and sidecars, current source-owner and
+issuer user stores, service-owned connection files and owned evidence directories before opening
+selected bytes. The service registers its actual private files; ordinary same-named outputs remain
+valid. Manifest checks apply to selected outputs. Peer reads and exact retries recheck current path
+authority without rehashing historical user output, and path checks retain the operation deadline.
+DAG artifacts follow at most sixteen real recovery links to the original submitted task, binding
+actual accepted requests and local DAG admission. The admitting actor is reauthorized, and its actual
+user store is private even when distinct from the source owner. Recovery children need no fabricated
+submission row; genuine standalone sources need no DAG row. A private lineage digest is rechecked at
+review, creation, exact retry and peer reads. Actual private recovery ownership/reviewer bindings
+also join the digest and their user stores stay private. Source operations honor cooperative
+cancellation around byte access and grant writes; a committed intent remains exactly recoverable
+after a cancelled reply. Artifact expiry is its completed source updated+30days; retries/restarts do
+not refresh it or substitute an older ancestor deadline. Real local renewed readers use their current
+private completion authority while old input remains revoked. Cross-host commit races, automatic cleanup and destination lifecycle/evidence remain open.
+
+Runtime owns a TransferPeer through its actual batch host adapter. Registered transfer reads pin the
+persisted endpoint/credential and reread the book before and after HTTP, with current local caller
+checks. Source authentication uses the receiving host's own credential; local principal/origin headers
+are absent. Actual configured credential-book paths stay private without initializing or reloading the
+console. Closed manifests and canonical base64 chunks require matching export IDs/hashes, at most256KiB
+per chunk and a fixed deadline. The1MiB transfer wire cap also applies behind URL path prefixes;
+ordinary HTTP keeps its existing limit. Invalid numeric budgets, including oversized integers, fail
+with typed errors before dispatch. Remaining cross-host fault acceptance and production delivery are tracked in Progress.md.
+
+Idle background workers check empty work queues without reserving a database writer, reducing
+contention with task status and completion transactions. A nonempty hint still requires the original
+transaction to recheck and claim the work. Claim generations, stale-work recovery and retry limits
+remain enforced; task and transport deadlines are unchanged.
+
+Lease maintenance binds expiry/revocation stops to the actual input owner and generation in the
+same stop transaction. A delayed watcher cannot rewrite retired recovery evidence or cancel a newer
+lease. The accepted final state and cancellation token are set before the stop becomes visible;
+current revocation and the original deadlines remain enforced.
+
+Stopped browser tasks with confirmed effects can now use the existing completion review and
+skill workflow with their actual original WebRunner context. The owned worker permanently freezes
+SDK input/network before its input journal and lease release; the runtime retains at most 16
+contexts for at most 300 absolute seconds, starting before detachment. Preview/new admission probe that exact effect task's live SDK view.
+The verifier borrows it for fresh bounded DOM/value reads, without configure, input ACKs, transfers
+or another browser/helper. Retirement, capability probes and cleanup deny nested tools and native input.
+Same-profile tasks keep separate contexts. A saved context ID grants nothing.
+Private completion authorization can explicitly renew the verification scope within the original
+ceiling while the original input specification stays immutable. Expired input origins grant no reads;
+bounded private custody alone is not authority. Removed owners, disabled targets, changed sources,
+expiry and failed reads invalidate contexts. Confirmed process reaping is required to free ownership;
+failed cleanup stays tracked. Restart cannot restore a page. Network-retired DOM is not new server data.
+Existing Python/AC/MCP/REST/CLI/Builder and GUI Actions share the same review requests. Skill recording
+keeps original actions; publication requires its own actual validation trial and selected completion.
+See `examples/agent_browser_retained_completion.py`. Cold browser-prefix reconstruction, remote
+readers, production deployment and deferred native/browser/device/24-hour acceptance remain open.
+
+Stopped tasks with confirmed effects can use `manage_agent_recovery("preview_completion", {"task_id": id})`
+to review a separate verification task. Call `create_completion` with the exact task_id/snapshot and a
+review note, then finish the returned task. A private atomic binding selects a permanently read-only
+helper; source actions never replay and fresh independent criteria plus input retirement prove success.
+Skill plans must be fully confirmed; dynamic tasks must have no dormant finite plan or unknown effects.
+Observe may precede finish: identical helper configuration reruns readiness without replacing its authority.
+Source/reviewer authority stays live, including after helper cleanup and across explicit retries/restarts.
+Existing API/AC/MCP/REST/CLI/Builder and GUI Actions share the workflow. Remote readers and
+production deployment remain in Progress.md; desktop capability still requires separate native evidence.
+
+Managed-only DAGs can register a durable whole-graph batch with
+`manage_agent_dag("register", {"definition": graph, "max_parallel": 4})`, then explicitly call
+`run_dag(graph, batch_id=batch["batch_id"])`. Registration performs no target operation. The stored
+graph pins topology, node contracts, host configuration and parallelism; destination keys/spec tags
+bind each node to that batch. A claim commits before possible delivery, and exact destination spec /
+completion / input-retirement evidence gates dependants. Repeated begin is refused after success,
+interruption or a lost submit reply. `get/list/inspect` retain coordination identity across restart.
+Use API/AC/MCP/REST/CLI/Builder or the DAG Actions batch register/read controls and optional batch ID.
+For a stopped batch, `review_continuation` returns a read-only whole-graph snapshot and explicit node
+decisions. Pass its reviewed `snapshot`, `decisions` and a nonempty `note` through
+`run_dag(graph, batch_id=id, recovery=request)` to approve and consume one continuation attempt.
+Only independently completed originals or genuine completed recovery successors can be adopted;
+dispatch requires a never-claimed pending node with no accepted destination request. Local authority
+can be renewed within equal/narrower roots. Unknown claims are never replayed. DAG Actions exposes
+fencing, review and explicit continuation; fencing stops new dispatch and leaves accepted tasks under
+their own lifecycle. To delegate coordination to an explicitly started service, call
+`manage_agent_dag("run_background", {"batch_id": id, "definition": graph, "max_parallel": 4})`.
+Add `approval_id` for an explicitly approved continuation. DAG Actions exposes both background actions;
+closing the view leaves accepted service work alive. `get.background` reports bounded queue state.
+Restart fences old attempts and requires review, without replaying queued or unknown deliveries.
+Both original owner and submitting actor remain live checks; local tasks use their owning runtime.
+The existing `prune_agent_tasks()` and hourly maintenance also collect expired unused registrations
+and settled successful batches (30 days by default). Unresolved batches retain task/recovery evidence
+and admission gates. Results add `deleted_batches` and `deleted_dag_deliveries`; foreign queues and
+user outputs remain untouched. Remote evidence retention still requires an explicit handoff contract.
+Caller-coordinated bound runs pin the local service path, endpoint, credential fingerprint and generation.
+All local node calls reuse that client; replaced metadata stops future calls and requires explicit review.
+Server-side batch evidence reads its owning runtime directly. No bearer credential is cached by binding.
+Ordinary non-batch clients retain adaptive discovery; bound batches require generation-bearing metadata.
+Local batch nodes now use the source service's closed `local_task` transport after a durable claim.
+The exact spec/key is admitted as the original owner, with the real caller recorded atomically. Runtime
+checks refresh both identities and the live attempt before input; losing admin authority over another
+owner's work also blocks execution. Existing requests without this trusted admission are never backfilled.
+Task metadata exposes bounded `local_dag_admission` audit data; accepted input retains its cleanup contract.
+For a reviewed recovery successor that must remain readable to its original owner, pass
+`owner_policy="source_owner"` to recovery preview/review_authorization, then carry its
+`ownership.review` as `ownership_review` into explicit create/create_authorized. The child retains the
+source owner and records the real reviewer atomically; both identities remain live input checks.
+The recovery GUI offers this owner selection. Omitted policy keeps caller ownership and ordinary read
+isolation. DAGs can adopt an independently completed source-owned child through normal recovery evidence.
+Existing caller-owned children are not automatically transferred or backfilled into this policy.
+See [the continuation protocol](docs/source/Eng/doc/ai_agents/agent_dag_batches_doc.rst).
+
+Triggers can explicitly use `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`,
+then `create_authorized` with `trigger_id`, `snapshot`, `authorization_review`, reviewed `spec` and `note`.
+The new registration preserves its full template/config/pending limit within original/live/current
+authority, retires the old binding atomically and enables future notifications. Shared lineage history
+keeps accepted keys and outstanding tasks across renewal, removal and restart; inherited queued events
+are never redispatched. Schedule windows restart in the future and file checkpoints remain. API/AC/MCP/
+REST/CLI/Builder and the GUI trigger selector share this explicit flow; ordinary enable cannot replace
+expired authority. Review only prepares a request with a blank note.
+
+Published skills can use `manage_agent_skill("review_authorization", {"candidate_id":"..."})`,
+then explicit `create_authorized` with `candidate_id`, `snapshot`, `authorization_review`, reviewed
+`spec` and `note`. Renewal preserves the whole plan/parameter schema and source root ceiling, retaining
+live restrictions and intersecting current authority. It creates an audited draft in the same skill
+lineage; fresh validation and explicit next-version publication are required. Old versions remain
+unchanged. Identical approval deduplicates; stale versions/context fail. API/AC/MCP/REST/CLI/Builder and
+the GUI Skills operation selector share this flow. Trigger renewal uses the separate flow above.
+
+Stopped tasks with retired origin authority can explicitly use `review_authorization`, then
+`create_authorized` with `task_id`, `snapshot`, reviewed `spec`, `note` and `authorization_review`.
+The successor retains every live source restriction and intersects current authority with the original
+root ceiling; roots may only stay equal or shrink. Other permissions, mode/model, budgets and completion
+conditions stay fixed. Approval is audited atomically with the unique successor; the source and its
+revoked witnesses stay unchanged. All recovery surfaces include these operations, with separate GUI
+Actions for authorization review and creation. See the [recovery guide](docs/source/Eng/doc/ai_agents/agent_recovery_doc.rst).
+Task recovery does not clear input quarantine or restore application state; skills and triggers use their separate renewal flows above.
+
+Stopped tasks can use `manage_agent_recovery("preview", {"task_id": "..."})` to review source
+receipts and a source snapshot without touching an application. Finite skills expose remaining actions
+and row outcomes. External-agent and local-model tasks provide `review_template` with a blank goal;
+operators must explicitly supply a remaining-work goal, with no copied action list. Explicit `create` approval
+supplies the snapshot, reviewed spec and note, creating one linked successor with fresh observations
+and receipts. Repeated approval returns that task. Execution mode, model/endpoint, scope, budgets and
+completion conditions stay fixed, and unknown effects require reconciliation. Old captures, indexes,
+coordinates and completed history are not transplanted. Use `AC_agent_task_recovery`, MCP/REST,
+`agent-task recovery preview|create request.json` or Agent tasks → Actions → Review remaining work /
+replan / Create reviewed successor task. Delegated sources cannot resume; continue from the successor.
+Login and window-state restoration is declared, never inferred: a successor (or any task) may list
+`resume_conditions` — `screen`, `browser` or `file_*` clauses only, since receipts are history — and its
+first action is admitted only on a fresh observation that passes all of them. A failed or unknown
+condition puts the task in `waiting_user` instead of acting; once any action receipt exists the gate is spent.
+
+Built-in Android/iOS managed profiles remain unavailable. Their internal remote-effect guard records
+before/after acknowledgements against a physical-device identity and retains quarantine when a local
+helper exits with an unconfirmed effect. Recovery requires a trusted device proof after writer retirement
+and a later epoch invalidating old commands. No built-in SDK proof, device profile or native acceptance
+is implied; remaining integration is in `Progress.md`.
+The internal Android transport connects only to an explicit existing loopback ADB server, with no CLI,
+daemon management, retry or legacy-shell fallback. Shell-v2 exit evidence has bounded framing/output;
+it does not establish app completion, physical-device identity or input retirement.
+Internal Android sessions now inspect an exact endpoint, validate physical serial/boot/default-display
+focus and pin one boot atomically. Finite input proposals recheck identity and focus on the selected
+command connection, with literal bounded text and fixed results. Proposals grant no input authority;
+input-window, occlusion, lock/presence and owned-worker integration remain required.
+Android checked proposals now bind current native input-window/queue and keyguard evidence. Pointer
+checks cover entire half-open touch-region paths and foreign interception/overlays; hashes are rechecked
+on the command connection. Old ANR/history cannot certify current state. Human presence and global-monitor
+review still require trusted providers; built-in managed device execution remains unavailable.
+Internal Android action protocol v2 distinguishes complete pre-input refusal from input failure,
+post-input refusal and returned input. Missing/malformed phases or mismatched shell exits remain unknown;
+even returned input does not certify remote input retirement or task completion. No retry is authorized.
+The internal owned remote SDK worker now checks exact task/owner scope, refreshed authority and physical
+takeover; parent monitoring starts before the trusted host factory. Calls require a durable begin ACK,
+then matching device/epoch settlement before an end ACK. Missing proof keeps effects quarantined.
+Trusted device-control providers, the WDA adapter and managed profile wiring remain required.
+The command compiler reads the three native focus fields in one labeled extraction, accepting their
+six possible orders while refusing missing/duplicate/empty fields. Pre/post identity and input-security
+checks remain, and action deadlines are unchanged. Owned POSIX fixtures avoid extra Git Bash reader
+processes without changing file bytes; bounded phase/timing diagnostics exclude commands and output.
+Internal AndroidRemoteAdapter now connects checked sessions to this worker through explicit per-command
+AndroidCommandLease grants. A fresh identity/routing/security observation is consumed per action; the SDK
+recompiles the finite command before sending it once over ADB. Device fencing must suppress old writes
+after physical takeover, cancellation or expiry. No default provider exists: standard ADB and killing
+the local helper cannot supply that guarantee. Settlement additionally binds one random request ID and
+boot to independent input/queue proof. An optional explicit host hierarchy_reader supplies bounded
+app-only semantic elements and reviewed non-sensitive text; without it observations remain metadata-only.
+XML cannot grant text access; editable/password values and protected descendants stay masked. Raw XML
+and private freshness hashes are never published; random observation revisions change after actions and
+source changes. Android element references require a current actionable semantic element. Fresh screen
+readback can confirm a reviewed positive label; missing/partial/masked content cannot prove text absent.
+No CLI/SDK startup or capture fallback is added. Real capture/control providers, protected field-value
+verification, Unicode/IME and managed profile delivery remain open.
+
+Managed screen completion now treats built-in desktop and WebRunner previews as partial text evidence.
+File targets and desktop window bootstrap supply no semantic screen evidence. Known safe labels can
+confirm presence or contradict absence; masked and explicitly hidden labels cannot. Combined conditions
+remain unknown if any required evidence is missing, or fail on a known contradiction. Use explicit
+browser completion reads for exact DOM/value checks. Custom targets without coverage flags keep legacy behavior.
+
+`lookup_agent_task("key", reviewed_spec)` optionally compares the destination-normalized specification
+with the immutable digest stored for the original owner's request. The response advertises
+`spec_match_contract=1` and reports `spec_match=matches|differs|unverifiable|not_found` when a spec is supplied.
+CLI lookup accepts `--spec reviewed.json`; AC/MCP/REST/Builder share the optional object. Inspection first
+queries the key, then compares the reviewed node spec only when the destination advertises the exact
+contract. Old destinations stay `unverified`; local origin witnesses are never sent to remote matching.
+Changed request identity invalidates the earlier snapshot. Matched nodes also require the exact count,
+kinds and passed status of independent criterion reports before confirming recorded completion.
+`request_match` binds the node's task spec;
+DAG topology/batch approval and continuation remain separate, with `resume_permitted=false`.
+
+`inspect_agent_dag(definition, timeout_seconds=30)` looks up existing local/registered-host requests
+without submitting, pausing or resuming tasks. Use `AC_agent_dag_inspect`, MCP `ac_agent_dag_inspect`,
+REST action execution, CLI `agent-task inspect-dag reviewed.json`, Script Builder or DAG Actions.
+At most 100 nodes and a 300-second maximum budget bound inspection. Remote lookup needs host-management
+authority; local principal/store/origin metadata stays local. Results omit remote paths and raw errors.
+`recorded_completion` describes the found task only. Node-spec matching is optional; `resume_permitted=false`
+explicitly leaves graph/batch approval and continuation unapproved. A missing record
+does not prove rejection. GUI inspection is read-only and discards results after graph edits.
+
+Use `lookup_agent_task("original-key")` (`AC_agent_task_lookup`, MCP `ac_agent_task_lookup`,
+`POST /agent/lookup`, CLI `agent-task lookup original-key`, or the task view's Actions menu) to inspect
+a submission whose reply was lost. It reads only the original principal/store namespace and never
+submits, resumes or acquires input. `found=false` is a current snapshot; a late request may still arrive.
+GUI lookup results cannot replace a task/key selected while the request was pending. DAG inspection
+shares this lookup; specification-bound recovery approval remains separate work. The query requires task access.
+
+Existing `run_dag` / `AC_run_dag` / MCP `ac_run_dag`, REST action execution, CLI action files,
+Script Builder and the DAG Actions menu accept nodes with a `task` payload instead of actions:
+
+DAG types and functions are also exported from `je_auto_control.api` and `je_auto_control.api.core`.
+
+```python
+run_dag({"nodes": [{"id": "collect", "host": "reviewed-host", "task": {
+    "spec": reviewed_spec, "idempotency_key": "batch-20261024-collect", "wait_seconds": 300}}]})
+```
+
+`reviewed_spec` must use skill or an explicitly configured local-model mode, with tools, destination
+roots and completion criteria. The host must already expose an authenticated agent runtime with
+background dispatch; this does not deploy listeners. Omit `host` for the explicit local service.
+The destination validates scope and coordinates resource ownership. Nodes submit once, poll bounded
+status and advance only with matching passed criteria, durable completion contract 1 and confirmed input
+retirement. Keys are required and must stay stable when recovering the same reviewed batch; rerunning
+does not resume paused tasks or replay effects. Stop, timeout or transport/authority failure requests
+bounded pause when the task ID is known. A lost acknowledgement stays uncertain; failed nodes retain
+the task ID/key and block dependants. The GUI displays retained task IDs. Remote credentials come from
+the administrator's registered host; local principal/store paths and origin witnesses stay local.
+Production multi-host setup and native/device acceptance remain separately tracked.
+
+Managed HTTP pause/cancel/stop-all/shutdown requests have a separate per-IP reserve with the same
+120-per-minute rate and 30-request burst as ordinary traffic, so polling cannot exhaust stop admission.
+Authentication, live roles, task ownership, audit and bounded input retirement still apply. The shared
+client also reserves transport capacity for DAG batch/node pauses; its control marker admits only closed
+pause requests on `/agent/dag`. Other marked DAG operations fail before dispatch. Custom auth gates
+retain their own admission contract. This does not guarantee priority over a saturated OS/network.
+
+Managed task success is published after input cleanup is confirmed. If cleanup fails or remains busy,
+the task requires review and keeps its input lease; a crash before confirmation remains recoverable.
+Completion uses conditional state transitions so concurrent cancellation retains priority. Status and
+the existing GUI/API task results expose `metadata.input_released` and durable `completion_contract=1`
+for newly confirmed success (legacy records retain zero); final artifacts reflect the settled
+state. This supplies local retirement evidence for subsequent DAG coordination.
+
+DAG nodes retain the caller's authorization, cancellation and command ceilings on pool threads,
+including custom runners. Each node refreshes store-backed users before execution; removed users fail
+that node and dependent nodes are skipped. Individual operations check the refreshed role. Default
+remote nodes require `manage_hosts` before opening the host address book or action files, because
+registered host credentials may grant more access than local action permissions. Trusted local Python
+and administrators retain remote dispatch. Managed task nodes add the closed lifecycle described above;
+production multi-host deployment and native acceptance remain separate work.
+
+Browser host profiles can select a reviewed installed Python environment through optional
+`settings.helper_python` (an absolute local interpreter path). Explicit helpers run with `-I`, using
+installed packages rather than the caller's `PYTHONPATH` or working directory. Virtualenv executable
+symlinks retain their environment identity. Task options cannot select the interpreter.
+Host managers can call `manage_agent_target("probe", {"name":"reviewed-browser"})` or use
+`AC_agent_target`, MCP/REST, `agent-task target probe request.json` and the GUI Host targets operation.
+The probe uses a separate bounded owned helper, imports browser dependencies through `je_web_runner`,
+then retires it without acquiring input ownership or starting a browser. Its result can say
+`python_dependencies_ready`; `browser_launch=not_probed` and `native_evidence=not_recorded` stay explicit.
+`last_probe` is an in-memory timestamped diagnostic snapshot; passive readiness and task permissions
+are unchanged by probing. Disabled targets stay disabled. Desktop/device native probes remain open.
+The prepared isolated environment installs wheels from both feature worktrees. Shared environments
+and production checkouts remain untouched; production service configuration and real-browser acceptance
+remain separate work. Browser automation still belongs entirely to WebRunner (`je_web_runner`).
+
+Desktop finite skills now use the same context-continuity fence as browser skills. Retiring a
+desktop scope or its owned helper requires review before an old prefix can continue; paused form/window
+state is not established by historical receipts. Live uninterrupted contexts continue normally. File
+adapters retain their persistent-artifact recovery. Target checks run before helper replacement, and
+existing resume/status/receipt interfaces expose the human-review result. Draft/authentication/window
+state restoration and reviewed remaining-step reconstruction remain open; native acceptance stays paused.
+
+A finite browser skill's verified prefix now requires its original live browser/helper context.
+After pause, cleanup, helper loss or runtime restart, retained action history cannot prove that the
+form still contains its previous values. Continuation enters human review before launching a replacement
+helper or sending the next action. Review the remaining steps and create a new task explicitly.
+Pausing before any retained attempt and attempts reviewed as failed/not-applied permit a fresh start.
+External owners can reobserve a new context and plan fresh scoped actions; ordinary uninterrupted skills
+continue on their existing session. Restoring authenticated/draft browser state remains open work.
+
+Local runtime principal and live-root forwarding now requires an explicit local-service call.
+Generic authenticated HTTP requests carry the supplied bearer token; local user/store/witness metadata
+is attached only by the runtime client after validating the loopback service destination and route.
+The versioned `je_auto_control.api` namespace exposes every advertised `api.core` name, including
+managed browser commands, target recovery and skills. Executor typing stubs include all shipped commands;
+unresolved postponed project types use the generator's existing `Any` fallback instead of invalid names.
+Concurrent budget readers sample clocks inside the exclusive database transaction, preventing false
+task timeouts when readers acquire locks in a different order. Actual clock rollback remains fail-closed.
+GUI/MCP/REST/CLI share these repaired client and API contracts. Production checkouts and existing
+native/browser/device/24-hour acceptance pauses remain unchanged.
+
+Managed browser file commands `browser_link`, `browser_download` and `browser_upload` (with matching
+`AC_browser_*` commands) delegate to WebRunner transfer contract version 1. Download and upload grants
+require explicit host/task roots. Downloads preserve scoped browser cookies inside the owned SDK/helper,
+check complete length and optional SHA256, and publish without overwriting an existing file; reuse
+requires its matching SHA256. Uploads read one regular file up to 4 MiB into a checked immutable snapshot,
+verify optional SHA256 and SDK metadata, and never submit a form. Network operations remain in `je_web_runner`.
+The browser `download_archive` preview accepts a query `url`, explicit `allowed_origins`, rooted `directory`
+and `files` with a plain `name` and either `url` or link `selector`/optional `frame`; `page_url` can override
+the query page per file. It captures fresh links, downloads at most 16 MiB per file and writes a manifest
+whose names/sizes/hashes are independently verified. GUI Actions draft file target/workflow/upload examples
+without starting resources. MCP/REST/CLI/Builder/model tools share these commands; link reads still require
+drive-input authority. Deployment and real-browser acceptance remain open; existing acceptance pauses hold.
+
+Browser tasks accept pinned completion clauses such as
+`{"kind":"browser","operation":"value","selector":"#field","value":"expected"}`.
+Operations are exact `text`, `value`, `visible` (boolean), or `url` (no locator). They require an explicit
+`AC_browser_read` grant and task origins; completion cannot add permissions. At finish, the same owned
+helper checks a current allowed HTTP(S) page and independently reads the full SDK value through guarded
+read commands. Receipts, bounded previews and model stop messages do not substitute for those reads.
+Blank/unavailable/out-of-scope pages, refused readbacks and invalid verifier replies remain unknown;
+failed comparisons remain failed. Cancellation, authority revocation and human-review errors propagate.
+GUI Actions can draft an inert browser completion example; API/MCP/REST/CLI finish share the verifier.
+SPA URL fragments remain intact while origin checks exclude only the fragment. Browser/native
+application acceptance and reviewed transfers remain open.
+
+Managed browser startup now requires the exact WebRunner `ManagedBrowserSession.contract_version == 1`
+contract before constructing its policy or opening a proxy/browser. Missing, boolean, string, older or
+unknown markers fail with an actionable readiness reason. SDK source `575e5d2` provides complete text/value
+readback: at most 8,000 UTF-16 code units, with over-limit/invalid Unicode refusal instead of truncation.
+AutoControl applies matching Unicode bounds to browser arguments and workflow preview data before effects.
+The consumer/SDK source contract is tested through the real owned helper with fake Chromium; deployment
+and real-browser/native acceptance remain separate from that evidence.
+
+
+`draft_agent_workflow("batch_form", config)` and `transfer` accept `backend: browser` with
+explicit `allowed_origins` and a reviewed browser target. CSV/XLSX sources stay rooted; browser drafts
+emit only `AC_browser_*` actions and never fall back to desktop input. Forms take `url`, CSS `fields`,
+optional frame selectors/new-record control, and submit plus confirmation selectors. Each fill has an
+independent exact value readback. Optional `confirmation_column` supplies a per-row expected marker.
+Transfers take `source_url`/`destination_url`, capture text/value fields, apply an allowlisted transform,
+fill and read back destination fields, then verify saving. A stale confirmation is refused before submit.
+`AC_browser_wait` / `browser_wait` polls text/value reads only, including a newly visible element;
+`wait_seconds` defaults to 5, is capped by the action budget, and late matching replies are refused.
+It never repeats a fill or click. Python/core, catalog/model schemas, MCP, CLI/REST task operations,
+Builder and GUI workflow preview use the shared compiler. Browser readback can serve as independent
+skill evidence. Actual application acceptance and production upload/download configuration remain open.
+Managed browser startup requires WebRunner contract version 1 with complete bounded readback.
+
+Managed browser profiles (`kind: browser`) now delegate to the owned `je_web_runner` SDK from
+WebRunner (`D:\Codes\WebRunner`; integration source on its isolated managed-session branch).
+Profiles require exact `settings.allowed_origins`, browser-only tools and no desktop apps; every task
+also declares a narrower nonempty `options.allowed_origins`. Profile/task grants are checked again on
+activation. Registration stays inert. Install the reviewed managed-session SDK and its Chromium runtime
+in the helper environment explicitly; absent dependencies fail readiness and nothing is installed automatically.
+`AC_browser_navigate`, `AC_browser_click`, `AC_browser_fill`, `AC_browser_select`, `AC_browser_check`
+and `AC_browser_read` share Python/core, executor, MCP and Builder schemas. They operate inside the
+managed helper; drive them through the existing task submit/observe/act lifecycle, not an ambient browser.
+The read operation is `text`, `value` or `visible`; secret form controls are refused by WebRunner.
+Observation-local DOM indexes resolve selectors and frames after the runtime's freshness check.
+Failed effects remain uncertain and require reconciliation; pause/cancel retire owned resources.
+GUI Actions can draft a browser target example for review, and DOM selection only edits the action request.
+The dedicated helper preserves one fresh session across readiness checks. Ordinary cleanup acknowledges
+browser cleanup and reaps its owned process tree; eligible completion sources instead transfer their
+actual frozen context to the bounded runtime collection. Browser tasks acquire no desktop input ownership.
+Controlled cross-source tests use the real SDK with fake Chromium and owned IPC/loopback. Browser/native
+acceptance, production transfer configuration and additional browser workflow kinds remain tracked in `Progress.md`.
+
+MCP asynchronous calls preserve the accepting caller's role, session, exact root policy and
+disclosure view; retired sessions and path policies reject late dispatch. Stateless async calls keep
+their fixed profile. HTTP tool-list changes reach all live session streams for plugin updates, while
+session enable/disable targets one owner and avoids duplicate delivery. Stream registration and HTTP
+headers share one lock so an early notification cannot precede the response headers.
+The metadata-only `benchmarks/mcp_discovery.py --repeats 20` benchmark records count, JSON bytes,
+warm in-process handshake, search and enable latency. The captured Windows/Python 3.14.4 run has
+732 permitted tools / 358,029 initial response bytes in full mode and 5 / 2,029 in progressive mode
+(99.43% fewer response bytes). Handshake is 58.263 / 47.439 ms; search median is 16.243 / 19.718 ms.
+Progressive enable median is 42.486 ms. These local timings exclude cold imports and native work.
+See the dated JSON report under `docs/benchmarks/`; argument-policy coverage limits remain in `Progress.md`.
+
+MCP supports opt-in session disclosure: `je_auto_control_mcp --tool-mode progressive` starts
+with five discovery controls; `ac_mcp_tools_enable` / `ac_mcp_tools_disable` change only that session.
+`--tool-mode static --tool-profile ac_screen_size,ac_list_windows` supplies a fixed profile for clients
+that do not refresh tool lists. The default `full` mode retains its unpaginated permitted list.
+Progressive/static pages use opaque, single-use cursors bound to a snapshot and caller; changed tools,
+roles, view configuration or expired cursors require restarting `tools/list`. Enable/disable notify
+the owning connection. Session closure retires outstanding metadata callbacks and clears cursors.
+Use `MCPServer.configure_tool_disclosure(...)` for HTTP/embedded servers, or host environment
+`JE_AUTOCONTROL_MCP_DISCLOSURE` and comma-separated `JE_AUTOCONTROL_MCP_TOOL_PROFILE`.
+`plan_mcp_tool_profile(...)` and Diagnostics Actions preview startup arguments without starting a server.
+Stateless requests use a fixed, unpaginated initial profile; they do not retain session enablement.
+Read-only ceilings cover later plugin registrations. Unauthenticated/shared-token peers see operator
+tools, matching their existing invocation ceiling; host-management tools require authenticated authority.
+
+MCP tool discovery is available through `search_mcp_tools(query, limit=10)` and
+`get_mcp_tool_schema(name)`, corresponding AC/MCP commands, and Diagnostics → Actions.
+Search returns bounded summaries with category and required capability; full schemas require a
+single-tool lookup. Both queries refresh role authority and respect the registry's read-only filter.
+MCP queries use that server's live registry, including plugin changes. CLI inspection:
+`je_auto_control_mcp --search-tools document --limit 5` or `--tool-schema ac_mcp_tool_search`.
+Full mode remains the default; opt-in session disclosure is described alongside this metadata API.
+
+Agent tool calls use `executor.execute_one(name, arguments)`, returning the raw result through
+the same authorization, variable interpolation, cancellation and journal boundaries as action scripts.
+Private executor arguments are rejected. Managed task delivery is tracked in `Progress.md`.
+
+Crash-safe input ownership uses a durable resource witness before dispatch/input ACK. After host death, explicitly review and recover the target with `recover_agent_target(target, note)` (host management), after manually releasing held input; task receipts still require separate reconciliation. Workspace document handoff runs outside the disposable input helper, and approved focus steps wait for the scoped application window.
+
+Managed skills record verified semantic flows into immutable candidates. `manage_agent_skill` previews typed parameters, runs a separate validation task, and publishes a numbered version only after explicit review of that candidate's verified success. Repairs are new selector candidates with fresh validation; tasks pin their version and digest. AC/MCP/REST/CLI and the Agent Tasks Actions menu share these operations.
+
+For an interrupted validation trial whose actions are all confirmed, explicitly review/create and
+finish a separate read-only completion task, then call `manage_agent_skill("accept", {...})` with the
+original `task_id` and optional `completion_task_id`. Publication retains the exact candidate/trial
+hash/pin, up to sixteen real read-only recovery links, fresh authority and independently verified
+retirement. The original stays stopped; its actions are not replayed. The Actions menu can prepare
+the request for review. Publication keeps historical completion IDs/hashes after transient reader
+evidence expires; unpublished adoption still needs retained evidence.
+
+`manage_agent_skill("record", request)` also accepts `completion_task_id` for a stopped original
+workflow. Keep `task_id` equal to that workflow: its confirmed semantic actions become a draft,
+while the separate reader supplies private, independently verified completion evidence. Recording
+does not replay actions or change the source state. Source/proof checks and draft insertion share
+one transaction with live authority rechecks. Historical `provenance.completion_review` survives
+reader retention without granting current authority. The draft, including added validation criteria,
+still needs its own new exact validation trial before publication. The Actions menu prepares the
+record request without executing it.
+
+For a partially executed validation trial, first call `manage_agent_skill("review_execution", request)`
+with `candidate_id`, the original `task_id` and a separate final `execution_task_id`. Then explicitly
+`accept` those same IDs with the returned `execution_review`, `expected_version` and a nonempty `note`.
+At most sixteen actual executable recovery links must confirm the complete original semantic plan;
+a successful different remainder is insufficient. Comparison includes JSON types, captured values,
+expectations and grounding, without restoring captures or rebuilding historical UI state. Each task
+retains its existing limits and separate approval. Current callers, all owners and actual admission
+reviewers must remain authorized. Version, publication and historical `publication.execution_review`
+commit atomically, with post-write evidence/authority checks. The original stays stopped and retains
+`publication.task_id`; no recovery child becomes a fabricated validation trial. An optional
+`completion_task_id` must verify the final executable effect and is nested in this execution audit.
+Expired evidence cannot approve an unpublished candidate. Two Actions examples prepare review and
+accept requests without executing them; `agent_skill_execution_review.json` and
+`agent_skill_execution_accept.json` are editable request examples.
+
+Managed tasks retain live origin path ceilings: removing a source root blocks later actions, trigger fires and skill trials. MCP client roots are isolated per session; retiring that client authority revokes its ceilings. Static host policy remains valid until explicitly replaced. Worker shutdown cancels actual running work, including model initialization before input acquisition, while unstarted deliveries remain durable.
+
+Experimental [managed agent tasks](docs/AGENT_TASKS.md) provide owner-scoped submit/observe/act/verify,
+pause/resume/cancel, fenced target control, durable action receipts, WorkQueue delivery, local Ollama
+inference and a background service shared by Python, AC, MCP, REST, CLI and the Agent Tasks view.
+Start explicitly with `je_auto_control agent-task start`; new flows have no mandatory external service.
+Four reviewable templates cover download/archive, CSV/XLSX forms, cross-app transfer and workspace
+preparation. Use `agent-task draft` or Actions → Preview workflow before submitting.
+Durable interval/cron/file/event bindings capture approved task scopes, reauthorize each fire and
+deduplicate notifications. Submission keys prevent duplicate tasks across retries and restart.
+Owner-scoped receipts and explicit uncertain-outcome review link to run history, journals and task
+reports. Generated cache expires after 30 days; user outputs and external journals are preserved.
+Evidence caches bind the complete database path and a persistent database identity under
+`.agent-evidence-cache/`. Restored databases and legacy caches retain their original history references;
+the next action or report starts a new owned journal segment without reading or moving historical files.
+Task metadata reports `artifact_cache_state` as `owned` or `historical`. Retention removes only the current
+database's recognized cache files; historical files remain, and retained private roots cannot be exported.
+
+On Linux, helper processes can run under the optional [owner service](native/owner_service/README.md).
+A root guardian runs each helper in its own cgroup v2 tree, which the helper's account cannot leave.
+Closing the channel kills the whole tree, escaped descendants included, and a restarted guardian
+recovers after a crash. A root-owned `/etc/je_auto_control/owner_service.json` binding routes
+exactly listed helper argv through it. Helpers that drive your desktop or browser always run as
+local processes, because a protected helper runs as its own ID with an empty environment and
+cannot reach your display. Without that binding, helpers keep running as local
+processes, and `agent-task status` reports the mode under `helper_containment`. The Python
+package never builds, installs or starts the service, and its builds refuse protected launches
+until a reviewed release opens the gate.
+
+`agent-task readiness` (`agent_runtime_readiness`, `AC_agent_runtime_readiness`, the MCP tool and the
+Agent Tasks view's Actions menu) reports, for the desktop input and capture, the human-presence source,
+Android and iOS control, the browser and the local model, one of `unsupported`, `missing_dependency`,
+`unauthorized`, `not_probed`, `not_recorded` or `measured`. It reads only the environment, `PATH` and
+installed packages: it contacts no device, launches no helper and asks for no permission, so it never
+reports `measured` and every area carries `native_evidence: not_recorded`. An installed tool is
+`not_probed`, not ready.
+
+Before deployment or rollback, compare exact source and artifact hashes; the unchanged version number alone does
+not identify private-cache compatibility. A runtime without this private-root protection must not reuse the
+newer database/cache. A reviewed restore must use matching pre-upgrade state at its recorded locations, retire
+owned input first, and exclude retained newer private files from every legacy task root. Preserve uncertain
+journals and avoid replay. Keep the compatible runtime if these conditions cannot be established.
+
+Windows USB enumeration emits and decodes UTF-8 explicitly and keeps its PowerShell process hidden.
+Unicode device names and diagnostics are preserved in both Python UTF-8 modes; enumeration remains read-only.
+Native calls use an owned helper with cancellation/deadlines, recorded input cleanup and per-session
+exclusion across runtime databases. Windows shared-desktop tasks share a persistent session source across
+runtime/task/helper lifetimes and wait for sixty seconds of fresh unlocked inactivity after monitoring starts.
+Only an active supported local console can acquire input; remote, shadowed and unknown sessions fail closed.
+Each helper freshly checks its fixed host lease before and after input ACK. Source/reader loss pauses input;
+unconfirmed held-input cleanup stays fenced for explicit retry. Closing one runtime preserves another's source.
+Target descriptions expose coarse `presence` metadata with `native_evidence=not_recorded` and start no probes.
+`agent-task stop-all` stops visible tasks. Other shared desktops require a trusted activity adapter.
+Native acceptance and the remaining workflows are in `Progress.md`.
+
+Linux's internal presence_peer_linux retains a noninheritable pidfd for the original connected
+Unix stream or sequenced-packet peer. It checks account, birth, namespaces and liveness without
+reopening a PID. This process identity does not establish desktop or input authority.
+
+The internal LinuxListener and LinuxChannel transport owns its protected Unix endpoint, socket
+and peer. Each bounded JSON packet requires the live original writer's kernel credentials and
+pidfd. Extra, missing, negative or truncated descriptor controls are refused; received descriptors
+retire before delivery. Admission and I/O share one deadline. Cancellation revokes delivery, and
+unfinished or failed cleanup stays unconfirmed. Unknown filesystem objects remain untouched.
+Pathname permissions do not isolate hostile processes sharing a UID. Bounded userspace waits
+do not promise hard realtime kernel syscall completion.
+
+Physical-activity sources now exist for X11 and macOS. X11 counts XInput2 raw events from real
+devices, never from XTEST slaves, and reads `Active`/`LockedHint` from logind: without logind or
+`XDG_SESSION_ID` the seat counts as locked. macOS uses a listen-only session event tap (it needs the
+Accessibility permission). An event counts as injected only when a process posted it from a non-HID
+source state, so a doubt keeps a task waiting rather than letting it take over. Wayland has no
+trusted source. On Linux the presence broker, worker and server now run over this transport: the owned
+worker binds a fresh private endpoint and reports it in its bootstrap reply, the broker adopts only that
+endpoint, and connecting pins the listener to the process it names before the presence challenge. macOS has
+no presence transport yet, and the runtime still refuses non-Windows shared desktop tasks until native
+acceptance. This transport is not full Linux application or native input acceptance.
+
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -18,11 +658,17 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 852 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 911 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
   optional extra that wraps the same headless core.
+  Public exports load their source modules when requested. `__all__` and `dir()` list names
+  without loading every feature; wildcard import requests them all. Unresolved names are absent
+  from `vars(je_auto_control)`.
+  On X11, plain package import opens no display or input device and starts no keyboard listener.
+  Desktop operations acquire resources when called. Reading `keyboard_keys_table` or calling
+  `get_keyboard_keys_table()` resolves actual server keycodes and requires an X connection.
 - **Locate things four ways.** Template matching, OCR, the accessibility tree, and a
   vision-language model — composable through anchor locators and self-healing fallbacks.
 - **Light dependency floor.** The REST server, JSON Schema validator, JWT, TOTP,
@@ -120,13 +766,15 @@ Optional extras, installed only when you need them:
 
 | Extra | Enables |
 |---|---|
-| `gui` | PySide6 desktop application (50 tabs): a searchable navigation panel (`Ctrl+K`) lists every feature by category, tabs are built the first time they are opened, and **View → Theme** switches dark / light |
+| `gui` | PySide6 desktop application (51 tabs): a searchable navigation panel (`Ctrl+K`) lists every feature by category, tabs are built the first time they are opened, and **View → Theme** switches dark / light. Pages scroll in narrow windows; theme, text size, navigation visibility (`Ctrl+B`) and width are saved in `~/.je_auto_control/gui.ini` on close. Themes use Qt directly; `qt-material` is not required. |
 | `webrtc` | WebRTC remote desktop, USB passthrough (`aiortc`, `av`) |
 | `signaling` | Standalone signaling / rendezvous server (`fastapi`, `uvicorn`) |
 | `discovery` | mDNS / Zeroconf LAN host discovery |
 | `pdf` / `office` | PDF and Excel / Word / PowerPoint reading |
 | `fuzzy` / `locale` | `rapidfuzz` matching, `babel` locale parsing |
 | `s3` / `audio` | S3 artifact store, system volume control |
+
+Closing a factory-built feature with the tab cross releases its widget, subscriptions and timers on the next Qt event-loop turn; reopening starts a new panel. **View → Tabs** and the embedding `hide_tab` API only hide it and preserve state. `tab_registry.open/close` and `close_tab` expose explicit lifecycle operations. Legacy owner-built forms and Remote Desktop remain reusable on close while their lifecycle migration is pending.
 
 **Windows on arm64** installs and runs, minus what upstream cannot ship
 there: neither `opencv-python` nor `cryptography` publishes a `win_arm64`
@@ -227,11 +875,11 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Accessibility tree | `find_accessibility_element`, `click_accessibility_element` | `AC_a11y_find`, `AC_a11y_click` | Accessibility |
 | Vision-model locator | `locate_by_description`, `click_by_description` | `AC_vlm_locate`, `AC_vlm_click` | VLM |
 | Anchor locator | — | `AC_anchor_click`, `AC_anchor_locate` | — |
-| Self-healing locators | `self_heal_click`, `self_heal_locate` | `AC_self_heal_click` | Self-Healing |
+| Self-healing locators | `self_heal_run`, `self_heal_locate`, `self_heal_click` | `AC_self_heal_click` | Self-Healing |
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 852 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 911 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -245,10 +893,49 @@ desktop app; tab commands live in the window's **Actions** menu.
 | USB enumeration & passthrough | `list_usb_devices`, `enable_usb_passthrough` | `AC_usb_*` (16 commands) | USB Devices, USB Share |
 | Secrets vault | `default_secret_manager` | `AC_secret_set` + `${secrets.NAME}` | Secrets |
 | Reports (HTML / JSON / XML) | `generate_html_report` | `AC_generate_html_report` | Report |
-| Run history | — | — | Run History |
+| Run history | `HistoryStore`, `manual_history_scope` | `AC_history_list`, `AC_history_capture` | Run History, Script Executor, Script Builder |
+| Action journals | `execute_journal_run`, `inspect_journal` | `AC_journal_capture`, `AC_journal_read` | Run History, Script Builder |
 | Metrics & tracing | `default_metric_registry`, `render_metrics_text` | — | — |
 | Diagnostics | `run_diagnostics` | `AC_diagnose` | Diagnostics |
 | Test-code generation | `generate_code` | — | — |
+
+Self-healing propagates cancellation before fallback or clicking. Its audit log masks secrets already resolved in the current run before writing or returning records; returned locator outcomes retain their original values. Legacy log files are not rewritten.
+
+Live image/VLM self-healing now shares one lazy logical capture, including its actual clipped origin. `screen_region` is `[left, top, right, bottom]` for both strategies. Schema-v2 audit records add run/step identity, content/configuration version, frame hash, strategy/capture timing and resolved backend/model; old records still load. Click dispatch without a verifier is recorded as issued or failed, with verification left unknown. The GUI exposes region input and selected-record evidence; Script Builder keeps region JSON structured. Historical `healed`/`heal_rate` count located candidates; separate operation metrics require explicit verification.
+
+Experimental `self_heal_run(SelfHealRequest(...))` defaults to locating. Choose `operation="click"` and `VerificationRequest(verifier=...)` (a Python bool callback) or `VerificationRequest(description=...)` (a configured VLM) to check the post-condition after input dispatch. VLM verification obtains a fresh logical frame and may incur API cost. `verified` is true, false or unknown; `found` and `issued` alone do not verify the operation. Exceptions and cancellation propagate without retrying the click. `AC_self_heal_run` and MCP `ac_self_heal_run` accept a nested `request`; explicit false verification fails the command/CLI or returns MCP `isError` with the structured result. GUI **Self-Healing** offers an optional post-condition field, and Script Builder edits the JSON request. Standalone VLM capture now uses the same logical origin/Retina normalization in memory. Framework assertions stop lookup recovery.
+
+Captured self-healing rows now include an optional `journal_path` alongside run/step IDs. Experimental `inspect_heal_source(path, run_id, step_id)`, `AC_self_heal_source` and MCP `ac_self_heal_source` read only the original step’s sanitized lifecycle snapshots. In **Self-Healing**, select a row and choose **Actions → Inspect original step** to open the background reader. Switching targets waits for the older reader to stop and retains the requester’s context; closing cancels pending work. Run History’s reader also accepts an optional step ID. Run/step filtering precedes the output limit, the whole file is validated, current path roots are rechecked around progress callbacks, and cancellation returns no partial result. Legacy or uncaptured rows have no original-source link; inspection never replays a command.
+
+Experimental causal synchronization provides `CausalBucket`, `CausalConfigStore`, `SyncActor`, conflict-preserving entry versions and a durable local `SyncOutbox`. The dedicated authenticated `GET/PUT /config/{user_id}/causal` protocol (version 3) validates peer registration, acknowledgements, retirement/full-sync epochs and collection in the same CAS transaction as retry receipts. Collected deletions retain permanent minimal fences; legacy writers cannot overwrite upgraded accounts. Private `AC_config_store_get` / `AC_config_store_commit` and matching MCP/Builder commands read and commit causal JSON with an explicit `_actor`. Pure merge/peer commands and private outbox commands remain available. The explicit `CausalSyncClient` and `AC_config_causal_fetch`, `AC_config_causal_commit`, `AC_sync_outbox_flush` (matching MCP/Builder commands) now deliver v3 HTTP requests: uncertain sends reuse the frozen request; only definite stale-base errors rebase within a bounded budget. `CausalReceipt` confirms the original receipt and latest complete snapshot atomically in the outbox. Command credentials use a live `options.secret_env` reference. `CausalSyncClient.control` and private `AC_sync_peer_control` / `ac_sync_peer_control` / Builder Data commands durably register, acknowledge, collect, retire and perform full resync. `SyncControlRequest(operation_id=...)` makes completed RPC retries idempotent; full resync requires explicit `discard_pending=True` before atomically adopting a new generation and archiving pending old edits. Local `status` reads no credential or network. Run `python -m examples.causal_peer_control` for the temporary loopback workflow; explicit local asset generations are available through `AssetManifest`, `DirectoryAssetTransport`, `build_asset_manifest`, `sync_assets` and private `AC_sync_asset_manifest` / `AC_sync_assets` (MCP/Builder). All assets stage and pass SHA-256/size checks before one directory publication; damaged caches are refused and scripts stay inert. `python -m examples.sync_assets` uses temporary directories only. Seven experimental adapters now capture selected scripts, locators, hotkeys, triggers, address-book entries, JSON settings and saved native GUI preferences into durable causal profiles. `SyncBindings` replaces explicit secrets and machine values with named references; `materialize_sync_profile` publishes a complete inert native-format generation. Private `AC_sync_adapter_snapshot`, `AC_sync_adapter_apply`, `AC_sync_adapter_resolve`, `AC_sync_profile_materialize` and matching MCP/Builder commands share the workflow. `python -m examples.sync_adapters` uses temporary files only. Private absolute path bindings accept high-entropy directory names while recognized credential formats remain refused. Native numeric definitions reject out-of-range values, including extreme JSON integers, with typed errors before storage. `WorkspaceSettingsSyncAdapter` captures only theme, font size, navigation visibility/width from native GUI INI files and publishes an inert `workspace.ini`; explicitly copy it to a separate working file before opening a new GUI. `python -m examples.sync_workspace` stays Qt-free. `SyncWorkspace` now coordinates selected sources, durable offline capture, causal HTTP, exact conflict review and full-resync source baselines. Private `AC_sync_workspace` / `ac_sync_workspace` / Builder Data share status/capture/sync/review/resolve/preferences/materialize and explicit peer controls; all require DRIVE. Runtime network credentials use `options.secret_env`. `python -m examples.sync_workspace_http` demonstrates two temporary sources over loopback, conflict resolution, restart and no replay of retired edits. Received definitions remain inert. Referenced asset transport is described below; explicit native working-copy loading is described below; `ConfigSyncClient` retains its timestamp merge. See the [causal/outbox guide](docs/source/Eng/doc/causal_sync/causal_sync_doc.rst) and `python -m examples.causal_sync`.
+
+The lazy **Workspace Sync** tab exposes local status/capture, network synchronization and peer controls, exact causal review/resolution, and complete inert publication through **Actions**. Paste an explicit private workspace descriptor; credentials are environment variable names. Sync never applies received preferences automatically. Select `workspace`, review its current heads, then choose **Apply reviewed GUI preferences** to update theme, font and navigation in the running window. `SyncWorkspace.preferences(observed=change_ids)` and the existing AC/MCP/Builder `preferences` operation return four canonical values only when the exact reviewed heads remain conflict-free; missing/deleted values use safe defaults. Workers preserve caller context, refresh DRIVE authority, support cancellation and discard stale results on close. The view shows revision/pending/conflict/reference counts and the last successful sync revision; no connection starts when opened.
+
+Explicit native loading uses `load_sync_profile(directory, target_root, expected_digest=...)` and `LoadedSyncProfile`, with private `AC_sync_profile_load` / `ac_sync_profile_load` / Builder Data equivalents. The published `files` directory and exact reviewed manifest digest create a fresh editable workspace. Full verified bytes, canonical native files and sealed heads must agree before atomic publication. Loaded hotkeys and every trigger node are disabled native objects; locator and address-book handles use the working files. Typed asset references and native hotkey/trigger paths resolve against that working root, while literal script strings keep their meaning and secrets stay placeholders. In **Workspace Sync**, materialization fills the directory/digest fields; choose a working-copy container and **Load reviewed native profile**. Separate Actions inspect the selected native kind, open a loaded script snapshot in Builder, or apply its preference snapshot. These actions recheck both the current caller and captured owner; opening a script keeps Run explicit. Builder renders imported command names and positional data as literal text. `python -m examples.sync_profile_load` uses seven temporary domains and a real PNG with no network or device calls.
+
+Folder mirroring now compares SHA-256 content instead of increasing modification times: metadata-only touches do not resend, while same-time/older-time edits do. FolderSyncEngine retains pending/offline edits across restarts, checks stop between files, and owns a blocked sender until it exits. Transport owners can explicitly call record_received(path) after publication to prevent echoing received bytes. Native GUI frozen-receipt handling is described below.
+
+File sends now wait for each DataChannel callback, bound buffered data to 1 MiB and propagate channel failures to the caller. Optional `cancelled` predicates stop queued writes; announced byte counts detect source truncation/growth. Native folder jobs capture their authorization, engine, viewer and peer connection, and stop when ownership changes. Inbox downloads run outside the event loop through a per-channel queue capped at 32 requests. Default manual-mode channel acceptance is not publication acknowledgement; confirmed mode is described below. GUI reconnect handoff is described below.
+
+Native file receivers now discard unfinished bytes on shutdown, files/control channel close, terminal connection state, replacement channel or revoked file permission. Closed receivers reject late frames; current peer/channel and authentication checks protect replacement transfers, including viewer receives before authentication. State cleanup precedes user callbacks so callback-driven reconnection survives an old failure. File/audit/state callbacks preserve original cancellation and hard-interruption objects. Filesystem cleanup failures are logged after both close and unlink are attempted. Existing Remote Desktop controls use this lifecycle automatically; completed targets and the legacy wire format remain available.
+
+Local `FileReceiveReceipt(path, sha256, size)` metadata now freezes the original received bytes after atomic publication. `FileTransferReceiver.handle_message(on_receipt=...)` and native host/viewer `set_file_receipt_callback()` expose it without rereading the published file. `FolderSyncEngine.record_receipt()` prevents echo while retaining later local edits; legacy `record_received(path)` explicitly snapshots current content. The GUI folder toggle captures its engine and viewer for receipt delivery and refreshes its original authorization before touching the watch. Relative inbox/watch paths bind to their creation working directory; existing path notices use absolute paths. These local receipts feed the confirmed native mode below; GUI reconnect handoff is described below.
+
+Native `FileTransferSender.send`, viewer `send_file` and host `push_file` now accept keyword-only `require_commit=True`. Confirmed mode probes an authenticated native peer before source metadata/content reads, sends version-2 begin/end metadata and verifies the matching transfer ID, unpredictable end nonce, SHA-256 and byte size after atomic publication. Relative source paths bind before the exchange. Each file rechecks peer support/permission; waits are bounded and cancellation, channel/loop replacement or permission loss retain failure. GUI folder sends always require this mode, so accepted-but-dropped bytes do not advance delivery state and uncertain sends retry on the same engine. Legacy manual mode remains the default and sends its original envelopes. Both peers need confirmed-transfer support for GUI folder delivery; unsupported peers fail before file content is sent. Explicit GUI reconnect/resume is described below.
+
+GUI reconnect retains one in-memory folder baseline per panel. After reconnecting, press Start sync again: the same authenticated host fingerprint, absolute watch path and local principal resume failed/offline edits through a new authorised sender. A missing/changed host fingerprint, different root or principal starts a fresh baseline; a still-running old worker blocks handoff until it exits. Explicitly disabling folder sync resets the baseline, while stopping/reconnecting the viewer retains it. Closing the application clears it. The fingerprint follows the existing authenticated host-metadata trust model, not a new cryptographic identity guarantee. SDK callers can stop a FolderSyncEngine, export checkpoint() after actual worker retirement and pass that immutable FolderSyncCheckpoint to a replacement engine with the same path/recursion mode and an explicitly authorised sender. The baseline includes initially ignored files and received bytes; it is not a list of remote acknowledgements.
+
+TCP/WebSocket clipboard transfers use the existing explicit SDK methods and GUI Push clipboard button. Received text/images do not automatically send or broadcast onward; deliberate repeated sends of identical content remain valid. Buffered viewer/host reads recheck the original connection, authentication and full-control permission before applying clipboard data. Viewer sends pin the original channel before encoding and refuse replacement. Queued GUI deliveries retain their concrete viewer and connecting user; permissions and ownership are refreshed before native clipboard writes, before explicit clipboard reads and again before sending. Stale/revoked work is discarded or reports its permission error. Ordinary provider/callback errors stay contained; original cancellation and hard-control objects propagate. Text/image JSON envelopes and existing APIs remain unchanged. Callback registration binds the original viewer weakly once, so a disconnected viewer does not keep itself and its Qt panel alive until cyclic GC. Actual queued deliveries still retain the original peer and authority until consumed or discarded. Controlled local protocol, loopback and offscreen tests replace native clipboard providers; real-device and paid-API acceptance remain deferred.
+
+Experimental referenced assets use `SyncAssetBlob`, `SyncAssetReference`, `SyncAssetStore` and `SyncAssetHTTPClient`. Explicit `SyncBindings.assets` aliases freeze selected files into immutable SHA-256 references; asset-only changes create new causal versions. `SyncWorkspace` uploads verified chunks before preparing new definition requests, resumes interrupted transfers and downloads referenced bytes before complete inert publication. Existing private AC/MCP/Builder workspace/profile commands share these fields. `asset_cache_path` selects the client cache; signaling `--asset-store` / `AUTOCONTROL_SYNC_ASSET_STORE` select the separate server database. Authenticated version-one asset routes use 256-KiB chunks, a 64-MiB per-file bound and default per-account limits of 256 MiB, 8,192 chunks and 4,096 blob receipts. Quota exhaustion fails explicitly; immutable history has no automatic garbage collection. Paths in native output are relative to the generation root. `python -m examples.sync_referenced_assets` sends a real PNG and script through temporary loopback HTTP with no execution or active workspace change.
+
+Experimental persistent configuration uses `ConfigStore.commit(..., base_revision=..., operation_id=...)` and a version-two signaling PUT envelope. SQLite transactions preserve buckets and retry receipts across restart; stale revisions or changed operation identities conflict. `ConfigSyncClient` defaults to conditional writes; blind legacy writes require explicit client/server opt-in. `--config-store` selects the lazy database. Private `AC_config_store_get` / `AC_config_store_commit` and matching MCP tools share explicit Script Builder Data commands. This stores data without running scripts or enabling triggers; causal merge and offline outbox remain separate. See the [persistent config guide](docs/source/Eng/doc/config_store/config_store_doc.rst) and `python -m examples.config_store`.
+
+Experimental journal-to-code candidates use `generate_candidate_from_log(path, run_id=...)`, `AC_generate_candidate_from_log`, and MCP `ac_generate_candidate_from_log`. They reconcile lifecycle snapshots, retain recorded control sources and retry evidence, and mark partial reconstructions as observed paths. Failed/incomplete invocations and unknown or redacted inputs remain explicit exclusions; parallel order is never invented. Generated Python/pytest/Robot source passes static, command and non-dispatching dry-run checks. `codegen --from-log run.jsonl --run-id selected` prints a JSON review bundle; `-o review.zip` or `write_candidate_archive` atomically exports code, actions and provenance together. **Actions → Review journal candidate** in Recording Editor or Script Builder opens source/diff/manifest/warnings; Builder import is separate and refuses intervening editor changes. Neither generation nor import runs the candidate. See the [journal candidate guide](docs/source/Eng/doc/journal_candidates/journal_candidates_doc.rst) and `python -m examples.journal_candidates`.
+
+Experimental template-candidate revisions use `create_template_candidate`, `preview_template_candidate`, `verify_template_candidate`, `accept_template_candidate` and `revert_template_candidate`, with matching `AC_template_candidate_*` / `ac_template_candidate_*` operations. A new immutable JSON bundle retains original bytes and the candidate encoded in the target’s PNG/JPEG/BMP format. Preview returns bounded thumbnails. Verification compares both frozen versions on a local sample manifest; acceptance requires a labelled hit, an expected miss and every labelled case correct, plus the reviewed bundle SHA-256. Acceptance rechecks the dataset and atomically replaces only matching original bytes; revert restores exact original bytes and refuses later edits. Unknowns and native-operation success remain separate. The recorded threshold applies to verification; activating image bytes does not edit script thresholds. **Self-Healing → Template candidates** offers all five Actions, background work, cancellation and JSON evidence. Run `python -m examples.template_candidates` for a temporary-file-only example.
+
+Experimental fixed-frame comparisons use `evaluate_locators` or `evaluate_healing_manifest`, `AC_self_heal_evaluate`, MCP `ac_self_heal_evaluate`, and **Self-Healing → Version comparison**. Reports separate labelled accuracy, wrong predictions, unknowns and verified recovery, include p50/p95 and provenance, and export JSON/HTML through `write_healing_report` or GUI Actions. The local manifest operation never captures, clicks or selects a network backend. See the [dataset, populations and limits](benchmarks/self_healing/README.md).
 
 Beyond this table, `utils/` holds 311 headless packages covering assertions, resilience,
 data quality, i18n auditing, redaction, governance, observability, and more. The full
@@ -256,7 +943,17 @@ per-module map is in **[architecture_explore.md](architecture_explore.md)**.
 
 ---
 
+Experimental structured journal capture is exported from `je_auto_control` (also available in `utils.action_journal`): `journal_scope` captures existing executor calls, and `execute_action_with_journal` isolates one run. Local loop/parallel/DAG steps retain parent IDs; failures, cancellation and dry-runs are distinct. Existing history owners automatically link explicit captures, including captures opened by local parallel/DAG workers; `HistoryStore.journals_for_run` returns the non-owning links. Clearing/pruning history leaves journal files intact. The CLI supports `run script.json --journal run.jsonl [--journal-run-id ID]` and `journal run.jsonl [--run-id ID] [--limit 100]`. Journal reads show sanitized lifecycle snapshots in append order; output defaults to 100 snapshots (maximum 10,000). `AC_journal_capture` accepts named parameters and runs a nested `body` on the owning executor without replacing its variables; `AC_journal_read` shares sanitized, bounded inspection with the CLI and public `inspect_journal`. Both commands are editable in Script Builder. Capture rejects identifiers or destinations containing secrets known to the run before history linking, file creation or action effects. MCP `ac_journal_capture` and `ac_journal_read` provide structured results, progress and cooperative cancellation. Captured journal roots and observers survive nested captures and local workers; reads can cancel between validated records. `JournalRunOptions` and `execute_journal_run` expose the same controls in Python.
+
+Manual runs can opt into history with `manual_history_scope`, `AC_history_capture`, CLI `run --history [--history-db PATH]`, or **Record in Run History** in Script Executor / Script Builder. An optional GUI journal path also works independently of history. GUI/CLI result JSON and existing variable scopes are preserved; the command returns `history_id`, `record` and `failed_actions`. Existing and nested captures link to the new manual row. CLI previews use the `cli.preview` source label; ordinary runs use `cli.run`.
+
+Run History includes a read-only journal browser. Use **Actions → Use Journals from Selected Run** to select a provenance link, or **Choose Journal** for an external file. Set a run ID and snapshot limit, then **Read Journal**; start/completion snapshots stay separate and their full sanitized data appears on selection. **Cancel Journal Read** and closing the view request cancellation between records. File parsing runs in a background worker; selecting a link opens no file.
+
+Values resolved from `${secrets.NAME}` are masked in application diagnostics during executor runs, including nested actions and local parallel/DAG workers. CLI/REST/MCP requests and scheduled, trigger, hotkey and email runs retain the mask through error handling and audit/history writes; report records capture redacted snapshots. DAG calls retain the owner mask through complete node diagnostics, including standalone calls and custom local runners. Watchdog, observer and callback-executor calls also retain it through final diagnostics; independent rules have separate masks. CLI stderr is masked, while API outcomes, raised exceptions and CLI result payloads retain their original values. Masks are discarded when the owning request or run exits. Interrupted history runs are recorded as `error`, while journal steps remain `cancelled`; no error screenshot is taken. Cancellation propagates through non-strict execution, recovery/retry, callbacks and local workers. Hard exits retain their original signal even if history completion fails.
+
 ## Command-line interface
+
+Each `je_auto_control run` invocation, including `--dry-run` and runs without `--var`, gets a fresh variable scope. Top-level `run_from_description` and `StateMachine.run()` also isolate variables while sharing them across their own actions and states; nested calls reuse an existing execution scope. A caller-owned `Executor()` keeps its own variables.
 
 ```bash
 je_auto_control run script.json [--var name=value] [--dry-run] [--allow-package NAME]
@@ -287,7 +984,7 @@ under a relative name are written below that directory.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 757 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 820 tools for Claude Desktop / Claude Code / custom tool loops: the full `ac_*` surface plus short model-friendly aliases for common GUI actions. Speaks the stateless MCP 2026-07-28 beside the `initialize`-based revisions. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |
@@ -296,13 +993,21 @@ under a relative name are written below that directory.
 
 All servers bind to `127.0.0.1` unless you opt in explicitly.
 
+The MCP window-state tools `ac_window_minimize`, `ac_window_maximize` and `ac_window_restore` return the window handle on accepted requests and `isError: true` on backend refusal (including a stale handle or rejected activation). Raw Win32 `ShowWindow` previous visibility is normalized by the backend.
+
 **Package gate.** `AC_add_package_to_executor` and `AC_add_package_to_callback_executor` import a Python package and register its members as commands, so an action list arriving over any of these surfaces could load `os` or `subprocess`. No package loads unless it has been allowed: a package that is not on the allowlist is refused before it is imported, and that action fails with `AutoControlExecuteActionException`. Allow packages (submodules included) from Python with `executor.allow_packages("name", …)`, for every entry point — both CLIs, the socket / REST / MCP servers and the scheduler — with the `JE_AUTOCONTROL_ALLOWED_PACKAGES` environment variable (comma-separated names, read when the process starts), or for one CLI run with `je_auto_control run script.json --allow-package NAME` (repeatable). `executor.set_allow_arbitrary_packages(True)` opens the gate for every package, which is what earlier releases did by default (with a `DeprecationWarning`). None of these is an `AC_*` command, so an action list cannot open its own gate.
 
 **Opt-in hardening.** Each of these is off until configured, and a server without them behaves as before. `JE_AUTOCONTROL_RBAC_USERS=<user store file>` makes the REST API and the MCP HTTP transport resolve the bearer token to a user and authorise each route, tool and privileged `AC_*` command by role (viewer / operator / admin); the shared token is then refused. `JE_AUTOCONTROL_MCP_PATH_ROOTS` (directories separated by the OS path separator) confines every MCP tool argument that is a file path to those directories, `JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT=1` adds the client's `roots/list`, and `JE_AUTOCONTROL_MCP_ENV_REF_ALLOW` limits which `env://` names `ac_resolve_ref` may read. `JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY` makes an endpoint verify Ed25519-signed action files without being able to sign them (`create_signing_keypair`; the private key stays on the signing machine). A remote-desktop viewer writes files pushed by a host only below `~/Downloads/AutoControl` (`JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR`); that one is on by default.
 
-**Also configurable.** `JE_AUTOCONTROL_MCP_TOOL_MODE=progressive` (or `je_auto_control_mcp --tool-mode`) starts an MCP session with five core tools that search, describe and enable the rest; `static` serves a fixed profile (`JE_AUTOCONTROL_MCP_TOOL_PROFILE`); the default `full` mode is unchanged. Users for RBAC are managed with `je_auto_control users add|remove|set-role|rotate-token|list`, the `AC_user_*` commands or the REST API tab. `JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE` unlocks a passphrase-protected signing key. The action journal (`start_action_journal`, `AC_journal_*`) records executed actions with secrets masked, and `je_auto_control codegen --from-log` turns one run into a candidate script. Config sync keeps buckets in SQLite with revision-checked writes (`--config-db`, `AC_SIGNALING_CONFIG_DB`; older clients need `--allow-blind-config-writes`). Android and iOS devices get their own sessions (`open_device`, `AC_android_*`, `AC_ios_*`); none of the mobile code has been run on a device yet. On Wayland, `probe_capabilities` / `AC_probe_capabilities` report what input and capture can do and why, and `JE_AUTOCONTROL_WAYLAND_EI_WORKER=1` moves libei into a helper process. The GUI remembers theme, text size, panel and window geometry in `~/.je_auto_control/gui_settings.ini` (`JE_AUTOCONTROL_GUI_SETTINGS`).
+The REST GUI shows RBAC mode and disables the shared-token field while a user store is active. `rest_api_registry.status()` includes `rbac_enabled` and returns `token: null` in that mode; use an individual user token. Custom REST gates that only implement `check()` remain supported in shared-token mode; RBAC requires an authenticated user context and refuses an identityless success.
+
+RBAC viewers do not receive the named sensitive-read tools, even when their MCP `readOnlyHint` is true: clipboard/history, local document/data/SQL and dotenv reads, reference resolution, credential generation, persistent store readers, outbound checks, microphone capture and external VLM requests require operator/admin. Assertion containers also require operator because their specs can read those resources. Screen observation and pure input parsing keep their existing classification. `ac_realize_item`, `ac_idempotency_begin` and `ac_rate_limit` change state and are excluded from `--read-only` mode.
+
+Delayed interval/cron jobs, triggers, hotkeys, watchdog rules, webhooks, e-mail triggers and observer callbacks retain their registrant’s identity. Store-backed users and roles are checked again on dispatch; deleted users, unavailable stores and viewers cannot execute deferred work. Starting a daemon does not transfer its registrations to the starter. Ownership metadata retains no RBAC bearer token; explicit Python `AuthorizationContext` values without `store_path` keep their captured role, and work registered outside RBAC clears worker identity. Observer/watchdog callbacks get fresh variable scopes, and failed watchdog actions do not count as dismissed popups. Nested callbacks retain the caller’s failure count; a webhook with a revoked owner returns HTTP 403 and `fired: false`.
 
 ### How the remote-desktop wire protocol works
+
+TCP hosts release a rejected authentication attempt’s client slot before sending `AUTH_FAIL`. A viewer can retry immediately, including after a bad token, wrong handshake message or denied approval, while socket cleanup/logging finishes. Pending handshakes retain their independent resource bound.
 
 Worth knowing before you expose a host, and described nowhere else in the
 docs. The default transport is length-prefixed framing over raw TCP — no extra
@@ -369,8 +1074,18 @@ packaging rather than the platform: it goes through Pillow/mss and OpenCV, and
 those from ports and capture, image matching, OCR and action encryption work
 too — `import je_auto_control` no longer requires any of them.
 
-Wayland input falls back to the `ydotool` CLI wherever libei is not
-reachable, and that fallback needs **ydotool 1.0 or newer**. Every argument
+Wayland key/button/pointer input in `auto` mode uses CLI when the optional native
+backend is absent. Once a portal request starts, refusal, timeout, handshake
+failure, device pause or revocation stops input; it never silently switches
+providers. Repeated refused calls retain inert failure state without reopening
+consent. `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei` requires native input;
+`=cli` explicitly selects CLI. After resolving permission, an explicit
+`je_auto_control.linux_wayland.libei.reset_default_backend()` allows a fresh
+request. Interrupted native chords attempt all owned key releases on the same
+backend and preserve the original cancellation. This does not change the
+explicit wtype text path or screen-capture selection.
+
+The `ydotool` fallback needs **ydotool 1.0 or newer**. Every argument
 AutoControl builds arrived in that release; 0.1.x — which is what Debian
 bookworm and every current Ubuntu still ship under that name, and Debian
 trixie ships not at all — answers the same arguments with exit code 0 and no
@@ -397,12 +1112,123 @@ Wayland screen capture needs the tool your compositor supports, because no
 single one covers them all: `grim` on wlroots compositors (sway, Hyprland,
 river), `gnome-screenshot` on GNOME, `spectacle` on KDE. Install one and every
 capture path — screenshots, image and anchor locators, OCR, screen recording,
-remote desktop — goes through it. With none of them installed, `gdbus` is
-enough: `xdg-desktop-portal` is tried last, though it may ask for consent the
+remote desktop — goes through it. With none installed, a session bus is
+enough: the built-in D-Bus client tries `xdg-desktop-portal` last, though it may ask for consent the
 first time. Failing that, capture fails loudly with an install hint rather than
 returning the blank XWayland root. The `screen_capture` check in
 `je_auto_control.api.run_diagnostics()` (and the GUI Diagnostics tab) reports
 which tier is in use.
+
+A native Wayland pointer coordinate outside every granted EIS region, after
+raw-coordinate and layout-origin mapping, raises `LibeiUnavailable` with
+`state="failed"` and disables automatic CLI fallback. A rejected move emits
+no motion/frame or subsequent click. Valid coordinates, devices without
+regions, later valid requests on the same sender and explicit CLI selection
+retain their existing behavior.
+
+Passive **input/capture capabilities** use `BackendContext`, `CapabilityStatus`,
+`CapabilitySnapshot` and `probe_capabilities` from `je_auto_control.api` (also
+exported at the package root). Call
+`probe_capabilities(BackendContext.current()).to_dict()`, use no-argument
+`AC_probe_capabilities` / read-only `ac_probe_capabilities`, or choose
+**Diagnostics → Actions → Inspect input and capture capabilities**. Builder
+provides the same no-argument command. `python -m examples.capabilities` prints
+live prerequisites and a deterministic XWayland scope example without desktop operations.
+
+Input describes key/pointer events; the existing wtype text path is separate.
+The probe reads environment/PATH and nonblocking cached native state; it never
+loads optional native libraries, connects, polls events, captures or requests
+permission. Installed tools or a bus address mean `unverified`, not readiness.
+Cached libei readiness requires a completed handshake and active keyboard,
+absolute pointer, button and scroll families. A partial grant remains
+unverified; paused families and removed required devices report paused/revoked.
+The eight states are `available`, `unverified`, `needs_permission`,
+`needs_dependency`, `unsupported`, `paused`, `revoked` and `failed`.
+`available` is only the last local observation and may be stale; every real
+operation rechecks authority. XWayland always has `desktop_wide=False` and cannot
+cover native Wayland windows. Other scope flags remain subject to granted
+regions/permissions and do not verify every monitor.
+
+Contexts detach environment/executable facts and may carry an owner's inert
+input/capture observations. They grant no authority. Default live results omit
+environment values, command arguments, executable paths and native error text;
+AC/MCP accept no supplied observations. Explicit CLI configuration remains
+distinct from automatic fallback after observed optional native absence;
+permission/pause/revocation/failure metadata cannot imply CLI fallback.
+Capture helper and portal selection are diagnosed independently. Rendering and
+language changes reuse the snapshot without probing. Native portal restore,
+compositor restart, capture-result/context integration and native session
+controls remain in `Progress.md`.
+
+The GUI task infrastructure provides `gui.task_controller.TaskController`:
+`submit(work, owner=widget)` returns a caller-owned `TaskHandle` with
+typed `TaskOutcome` and `TaskProgress` observations. Work receives a
+Qt-free `CancellationToken` with checkpoints, bounded interruptible waits
+and progress reporting. Submission captures context; dispatch refreshes
+store-backed identity. Work must receive plain data, avoid widget references
+and authorize its own operation. Existing
+`DeferredAuthorization.scope()` still requires input privilege, while
+`context_scope()` only refreshes/binds identity for independently authorized work.
+
+Owner/handle/controller destruction requests cooperative stop and drops
+late delivery. Each task has a separate ID/token; callbacks run on the GUI
+thread. Cancellation does not forcibly interrupt an uncooperative call
+or relabel a successful committed return. Errors/progress use the captured
+secret scope; terminal errors retain no exception traceback. Failed thread
+starts roll back both registries and preserve the original failure.
+Diagnostics now adopts this controller. Remaining panel/backend migrations
+and native session operations stay in `Progress.md`.
+
+Active **Diagnostics → Actions → Run diagnostics** uses the shared task
+controller off the GUI thread. **Stop diagnostics** requests cooperative stop;
+the view distinguishes running, stopping, canceled and failed states in four
+languages. Progress counts completed checks. Duplicate runs are ignored, close
+abandons late progress/results, and a deliberate retry starts a new owned run.
+GUI cancellation is a typed outcome without retained exception tracebacks;
+headless core/SDK/CLI and the MCP handler preserve original direct/wrapped controls.
+Ordinary probe failures still become report rows and allow remaining checks.
+
+`CancellationToken`, `TaskProgress` and `cancellation_scope` are exported by both
+SDK namespaces. Bind `with cancellation_scope(token): report = run_diagnostics()`;
+the owning caller can call `token.cancel()` from another thread. The existing
+no-argument diagnostics signature remains. Scope binding grants no authority;
+`cancellation_scope(None)` only suspends cancellation for bounded owned cleanup.
+`AC_diagnose` and the new read-only `ac_diagnose` share the report. The MCP tool
+accepts no arguments, uses request cancellation/progress and requires
+`read_screen`, as does the explicit GUI action. Caller-supplied tokens or
+authority metadata are rejected. These are active checks: capture may request
+consent. `ac_probe_capabilities` remains the separate passive alternative.
+
+Scoped Wayland D-Bus connect/read/partial-write waits poll at intervals capped
+at 0.1s within the original total deadline. Cancellation attempts Request.Close
+on the originating bus with its separate 0.25s budget, then releases that
+connection; a canceled returned image is discarded. Scoped CLI captures stop
+and reap their newly owned helper/process group with bounded cleanup, preserving
+the original control even if pipe close fails; reaped numeric PIDs are never
+signaled. liboeffis acquisition observes scoped stop and releases its own context.
+Uncooperative/native calls are not forcibly preempted; the GUI remains responsive
+while cleanup completes. Restore/restart, native session controls, capture-owner
+metadata and remaining panel/backend migrations stay in `Progress.md`.
+
+`python -m examples.cancellable_diagnostics` runs a controlled cancellation demo
+without providers. `--active --cancel-after 2` explicitly runs diagnostics and
+requests stop after two seconds; native/device/API acceptance remains separate.
+
+Opening Diagnostics displays a localized not-run state and performs no checks.
+Choose **Actions → Run diagnostics** to start the existing active checks, which
+can capture the screen or require portal consent. Changing the display language
+does not start checks. The explicit `run_diagnostics`, `AC_diagnose` and MCP
+diagnostic calls retain their active behavior. Passive capability inspection is a separate action below.
+
+Abandoned screenshot portal requests attempt `Request.Close` on the originating
+bus before disconnect, using a separate 0.25-second D-Bus I/O budget. A returned
+alternate handle is followed; after an uncertain method reply, the predicted
+handle is used. Completed responses are not closed again. Ordinary cleanup
+errors do not replace the primary capture failure; original cancellation and
+hard-control objects survive wrappers and cleanup. D-Bus writes and reply waits
+share the call budget, connection setup has an explicit timeout, and interrupted
+connect/authentication/Hello releases its owned descriptor even when `__enter__`
+fails. Actual compositor/dialog cancellation remains platform acceptance work.
 
 One Wayland-only difference to plan around: **a capture may contain the mouse
 cursor.** Nothing here asks for it, but wlroots composites a *software* cursor
@@ -458,7 +1284,6 @@ Every environment variable AutoControl reads. Nothing here is required: with no 
 | Variable | Default | Effect |
 |---|---|---|
 | `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND` | `auto` | `cli` sends input through `ydotool` and never asks the desktop portal. Chosen before starting: after a refused consent AutoControl does not switch to it by itself. |
-| `JE_AUTOCONTROL_WAYLAND_EI_WORKER` | unset | `1` runs the libei session in a helper process instead of in-process. |
 | `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL` | `warn` | Absolute moves on the `ydotool` path only (relative motion the compositor accelerates): `warn` warns once and moves, `flat` declares acceleration off and moves silently, `strict` refuses the move. |
 | `JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND` | unset | Your own screenshot command line, with `{output}` where the PNG path goes. Takes precedence over `grim`, `gnome-screenshot`, `spectacle` and the portal. |
 | `JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES` | unset: none | Comma-separated `/dev/input/event*` devices `PhysicalRecorder` may read; physical recording is opt-in per device. |
@@ -468,7 +1293,6 @@ Every environment variable AutoControl reads. Nothing here is required: with no 
 | Variable | Default | Effect |
 |---|---|---|
 | `JE_AUTOCONTROL_MCP_READONLY` | unset | `1`: only tools marked read-only are offered and callable. |
-| `JE_AUTOCONTROL_MCP_TOOL_MODE` | `full` | How much of the registry `tools/list` offers: `full`, `progressive` or `static`. An unknown value is an error rather than `full`. |
 | `JE_AUTOCONTROL_MCP_TOOL_PROFILE` | unset | Comma-separated tool names and `category:<name>` entries of the `static` profile. |
 | `JE_AUTOCONTROL_MCP_ALIASES` | `1` | `0` leaves out the short aliases (`click`, `screenshot`, …) registered beside the `ac_*` tools. |
 | `JE_AUTOCONTROL_MCP_TOKEN` | unset | Bearer token of the HTTP transport. Not accepted once RBAC is on. |
@@ -505,14 +1329,12 @@ Every environment variable AutoControl reads. Nothing here is required: with no 
 |---|---|---|
 | `JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR` | `~/Downloads/AutoControl` | Directory a remote-desktop viewer stores files its host sends in. A received path is confined to it. |
 | `JE_AUTOCONTROL_USB_PASSTHROUGH` | unset | `1` enables USB passthrough opcodes on the remote-desktop channel. |
-| `AC_SIGNALING_SECRET` | unset | Shared secret of the signaling / config-sync server (`X-Signaling-Secret`). Read by the server when `--shared-secret` is not given, and by `config_sync_run` when `secret` is not. |
-| `AC_SIGNALING_CONFIG_DB` | `~/.je_auto_control/config_sync.sqlite3` | SQLite file the signaling server keeps config-sync buckets in. |
+| `AC_SIGNALING_SECRET` | unset | Shared secret of the signaling / config-sync server (`X-Signaling-Secret`). Read by the server when `--shared-secret` is not given. |
 
 ### GUI
 
 | Variable | Default | Effect |
 |---|---|---|
-| `JE_AUTOCONTROL_GUI_SETTINGS` | `~/.je_auto_control/gui_settings.ini` | File the main window keeps its theme, text size, navigation panel and geometry in. `off`, `0`, `none`, `false` or empty: nothing is read or written. |
 
 ### Logging, data and testing
 
@@ -529,7 +1351,7 @@ Every environment variable AutoControl reads. Nothing here is required: with no 
 
 | Resource | What's in it |
 |---|---|
-| [`examples/`](examples/) | 33 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators. |
+| [`examples/`](examples/) | 45 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators, action journals. |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | Full API reference, English and 中文. |
 | [architecture_explore.md](architecture_explore.md) | Every module's responsibility, layer by layer. |
 | [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md) | Capability × platform matrix. |
@@ -562,6 +1384,29 @@ python test/verify/typing_contract_verify.py --extras   # the same against the r
 python -m sphinx -b html -W docs/source docs/_build/html  # the docs, warnings as errors
 ```
 
+The dev/main headless jobs retain `native-<os>-<python>` artifacts for seven
+days: merged process output, package/runtime versions and exit status. Linux
+runs under GDB to retain all-thread native backtraces; other platforms retain
+Python faulthandler output. Test failures remain failures. From a repository
+checkout, reproduce collection with `python scripts/ci_native_diagnostics.py
+--artifact-dir test-artifacts -- python -m pytest -v --tb=short --timeout=120`
+(one command); add `--native` before `--` on Linux with GDB installed.
+Literal argv (including whitespace/quotes) and handled `SIGINT` reach the
+child unchanged. Linux first verifies the runner outside the suite's debugger;
+its preflight logs are included in the same artifact.
+
+Selected dev pushes run `.github/workflows/ei-lifecycle.yml` in an isolated
+libei/libeis container, retaining versions and both native logs for 14 days in
+`ei-lifecycle-<run>-<attempt>` artifacts. Half-open and live cleanup children
+have 10/60-second deadlines and faulthandler. Unrelated child failures fail CI;
+successful cleanup requires begin/end markers. The half-open probe also requires
+equal integer descriptor counts; live cleanup releases owned device refs first.
+Run 39507190704 on libei/libeis 1.3.901-1 passes 9/9 and 20/20 checks, including
+native out-of-region refusal without CLI fallback. Half-open `ei_unref` still
+segfaults, so runtime protection remains and helper isolation is pending.
+Device pause and sequence readback remain unverified. These controlled socket
+peers do not establish compositor consent, physical or multi-monitor acceptance.
+
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Two rules the CI enforces: `import
 je_auto_control` must never pull in PySide6, and every feature needs both a headless
@@ -578,3 +1423,169 @@ optional third-party components.
 - **Homepage**: https://github.com/Integration-Automation/AutoControlGUI
 - **PyPI**: https://pypi.org/project/je_auto_control/
 - **Documentation**: https://autocontrol.readthedocs.io/en/latest/
+
+Legacy MCP action wrappers, parallel branches and local DAG workers retain the same origin ceilings.
+
+Managed point actions accept observation-local element indices or thumbnail image points. The host checks the current frame and resolves native coordinates, including scaling and negative monitor origins. Receipts retain geometry provenance without image bytes. `AgentObservationStale` identifies rejection before dispatch; local agents reobserve only within their retry budget when the adapter confirms no held or pending input.
+
+Emergency stop returns compact snapshots with metadata.details_deferred; fetch individual task details for full artifact links.
+
+Managed mouse presses normalize button ownership and confirm the actual cursor before input. Windows pointer checks reject foreign overlays. Vision renders the exact scoped window into cleared private GDI storage, rejects geometry changes and releases resources even on rendering/read failure. There is no desktop-crop fallback. Fake-native tests cover these paths; native acceptance remains unverified.
+
+The Agent tasks view groups task scope, workflow settings, triggers, skills and recovery into separate pages. Its observation page lists read-only elements and shows a validated, strictly masked JPEG at one rendered pixel per logical widget pixel. Selecting a row or image point only edits a frame-bound action request; Actions -> Perform observed action sends it through the shared task API. Switching tasks clears the preview, and late replies cannot replace the selected task. A new frame requires reselection before an old reference can be sent. Closing the view only detaches its requests.
+
+Managed workflow waits (workflow_wait / AC_workflow_wait) poll only exact scoped control values or states, with cancellation and a deadline capped by the action budget (default five seconds, maximum sixty). They never replay a write or submit. Fixed skills require all previous receipts to match the pinned sequence before continuing, including after resume; autonomous model loops retain stuck detection. New form/transfer drafts refuse an already-matching confirmation before submit and wait for a fresh transition afterward. Batch configurations may provide new_record_selector to reset each record; confirmations prove the configured UI transition, and transaction-specific receipt values should be used when available. Archive drafts also re-read the exact reviewed manifest and current file digests at finish (one-megabyte manifest and sixty-four-megabyte total evidence limit).
+
+AgentHumanReview identifies an unsaved-content or unknown-dialog gate. It persists waiting_user and retires input ownership, including for external observe requests; explicit resume still rechecks the gate. Windows detection uses native dialog/disabled-owner evidence and known English/Chinese/Japanese unsaved labels. Workspace tasks also pause for leading/trailing asterisks in document titles; a window entry may supply unsaved_selector and unsaved_value for an application-specific indicator before layout changes. These checks do not infer every application's dirty state. Recognized standard file pickers use a context-local driver on the existing AC_handle_file_dialog executor: exact unique title, same PID, confirmed foreground and canonical rooted absolute paths. UIA control patterns must belong to the actual owned root window, even when another window shares its PID. All behavior has fake-native/loopback coverage; actual platform acceptance remains unverified.
+
+Host-reviewed targets use AgentTargetProfile and manage_agent_target (AC_agent_target; register/get/disable/enable/probe). Names and configuration are immutable; desktop/file/browser adapters are currently supported; unimplemented kinds are rejected and optional browser helper_python is host-reviewed. Tasks pin the host profile digest and cannot expand its tools, applications, roots or network origins. Availability persists across restart and is checked at dispatch; disabling requests pause/cleanup, while enabling requires explicit task resume. list_agent_targets / AC_agent_target_list / CLI agent-task targets expose passive metadata with readiness=not_probed and native_evidence=not_recorded. Full configuration requires manage_hosts; CLI agent-task target and the GUI Host targets page use the same service. Live anonymous MCP tool sessions have operator authority across direct and legacy wrapper calls; MCP host management requires an authenticated administrator. Trusted direct Python callers remain unchanged. Browser automation belongs to WebRunner (je_web_runner), with D:/Codes/WebRunner as the development source; browser profiles use the managed je_web_runner SDK contract, and dependency probes do not establish native readiness.
+
+Existing browser automation, including open_path(URL) and AC_open_path, delegates to WebRunner (Python package je_web_runner). URL plans now report backend=je_web_runner; callers inspecting the previous webbrowser descriptor should use the new value. Signatures and local-file opening stay compatible. URL execution requires the configured WebRunner project and propagates WebRunnerBridgeError when unavailable, without opening an OS browser as a fallback. The development source is D:/Codes/WebRunner. Planning and injected-opener tests remain usable without that package; browser protocol support is determined by WebRunner and its selected browser. Existing dedicated browser GUI/MCP/AC paths and recorded WR_* actions share the same bridge.
+
+## Explicit local DAG evidence handoffs
+
+Existing recovery children held by another caller can provide completion evidence to their
+original local DAG through an explicit revocable handoff. In `manage_agent_recovery`, use
+`review_handoff` with the final `task_id`, `batch_id` and `node_id`; an authorized manager then calls
+`create_handoff` with the same IDs, returned `handoff_review` as `review`, and a nonempty `note`.
+The service derives the recipient from the real original admission. In a `review_continuation`
+successor decision, explicitly include `handoff_id` alongside `node_id`, `action` and `task_id`, then
+review and approve the whole continuation. At most sixteen real recovery links are supported,
+including a privately admitted permanent read-only final verifier. Ordinary task ownership remains.
+
+`get_handoff` and `revoke_handoff` take `handoff_id`; `list_handoffs` takes `batch_id` and `node_id`.
+Issuance and consumption refresh actual owners, admitting reviewers, issuing-session root witnesses,
+current consumer ceilings, fixed scope, effect snapshots, independent completion and retirement.
+Approval, start and late dependency validation recheck consent; revocation or evidence loss blocks
+adoption. Grants expire no later than the earliest retained terminal witness's existing thirty-day
+deadline. Returned data contains bounded IDs, hashes and status, without private task arguments,
+captures or principal-store paths. No ordinary task-read/input access, ownership transfer or replay is
+granted. Cross-host and non-DAG handoff contracts remain outstanding in `Progress.md`.
+
+The Agent Tasks Handoffs page has an operation selector and JSON editor; Actions prepare review,
+create and revoke requests without dispatching them. Five editable `agent_handoff_*.json` examples
+cover review/create/get/list/revoke. Python, AC, CLI, authenticated MCP, REST and Builder use the
+same recovery operations. These checks establish contract and owned-file behavior; deferred native
+desktop, browser, device and 24-hour acceptance still require their own evidence.
+
+## Explicit read-only completion authorization renewal
+
+When original origin references are expired or unavailable, explicitly call
+`manage_agent_recovery("review_completion_authorization", {"task_id": "<source-id>"})`.
+Review the server-derived `verification_spec` and retained/replaced/current origin context, then call
+`create_authorized_completion` with the same `task_id`, returned `snapshot`, `authorization_review`
+and a nonempty `note`. Optional `owner_policy="source_owner"` requires the returned `ownership_review`
+at creation. Callers cannot supply a replacement verification spec. Existing live constraints stay;
+new roots intersect the original ceiling, prior reader ceiling and current session. Ordinary
+completion review does not replace this explicit consent for an already renewed reader.
+
+The child is permanently read-only. It independently checks current conditions against the actual
+confirmed original effects, without input, replay, restoring captures or modifying old witnesses.
+Source/effect snapshots, real owners/reviewers and original DAG admission are rechecked. Task admission
+and final completion each revalidate inside their own SQLite writer after SQL; changes roll back.
+At most sixteen actual recovery links are supported. A retired successful reader may be explicitly
+renewed again, retaining its previous narrower ceiling and all still-valid inherited restrictions.
+Changed source/effect evidence remains refused and must not be silently repaired by scope renewal.
+
+Historical `get` preserves succeeded state; loss of renewed authority makes its current
+`completion_contract` zero and `completion_authorization` unavailable. DAG adoption and late dependency
+validation then refuse that evidence. Malformed/missing renewed read-only markers fail before helper
+startup. Recording with `completion_task_id` uses the approved restricted scope and original semantic
+actions, but the draft still needs its own fresh validation trial. Renewal does not publish an expired
+candidate or renew a published skill grant. Existing skill reauthorization remains separate.
+
+Python, AC, CLI, authenticated MCP, REST and Builder share both operations. The Recovery page exposes
+two explicit Actions using its selected task, owner policy and request editor. Editable examples are
+`agent_completion_authorization_review.json` and `agent_completion_authorization_create.json`.
+Remote read-only providers, cross-host handoffs, actual application
+state restoration and deferred native/device/browser/24-hour acceptance remain in `Progress.md`.
+
+## Explicit renewed-reader completion handoffs
+
+Existing `review_handoff` / `create_handoff` can explicitly transfer completion evidence from
+a privately renewed, permanently read-only reader to its real original local DAG. Select that reader's
+task ID and the actual original batch/node. The service derives the proof; callers cannot supply a
+policy, ownership override or authorization bundle. Ordinary handoffs keep their existing rules.
+
+The preview's `evidence.completion_authorization` contains the completion task/review, a bound review
+digest, approved-root count and replaced/retained/current origin IDs. It omits private principal paths,
+action arguments and captures. Set creation's `review` to the returned top-level `handoff_review`, then
+provide a nonempty `note`. Every actual task keeps its reviewed ceiling; all live historical restrictions stay, unavailable
+references are explicitly reviewed, and the issuing session's additional constraints remain live.
+The grant uses the exact already-verified reader roots. A different intersection requires another
+real completion review and verification. The consuming session/profile still applies its own limits.
+
+At most sixteen actual recovery links may mix previously reviewed executable successors and private
+readers. A succeeded intermediate reader needs actual private historical scope and retirement proof;
+an ordinary succeeded source does not gain that exemption. No helper is launched or input replayed
+while granting or adopting evidence. Old source state, witnesses, receipts and all task owners stay.
+The original owner receives only the bounded completion projection, without ordinary access to the
+other caller's task. Revocation or lost authority blocks adoption and late dependency validation.
+
+Original accepted-request hashes, raw submission witnesses, private admission, graph, owners/reviewers,
+all real source/child snapshots and the leaf renewal remain bound. Reads and post-write checks use
+the same SQLite writer, including uncommitted changes; mutation rolls back admission/grant creation.
+An inherited `dag_batch` option is not admission: a bounded real recovery chain must resolve the actual
+original request and admitting identity without creating a replacement admission row. Earlier ordinary
+completion binding hashes remain compatible. Each historical task retains its own policy review;
+combining history cannot bypass the normal sixteen-live-origin limit or any original root ceiling.
+
+Exact active retries retain their note and ID; revoked IDs never reactivate. Restart and adoption
+preserve the earliest retained terminal witness's thirty-day deadline. Historical get/list/revoke stay
+available after an origin expires, while that history supplies no usable completion or input grant.
+Python, AC, CLI, authenticated MCP, REST and Builder share the five existing operations. Existing
+Handoffs Actions and its JSON editor/result view show the explicit renewed review without dispatching
+consent automatically. Cross-host handoff, remote readers, actual application/device
+providers and deferred native/browser/device/24-hour acceptance remain in `Progress.md`.
+
+## Explicit task-source completion evidence handoffs
+
+The five existing handoff operations also accept a real non-DAG source task:
+
+- `review_handoff`: supply `source_task` and the actual final evidence `task_id`.
+- `create_handoff`: add the returned top-level `handoff_review` as `review`, plus a nonempty `note`.
+- `list_handoffs`: supply `source_task`; `get_handoff` and `revoke_handoff` still use `handoff_id`.
+
+Task-source fields and DAG batch/node fields are mutually exclusive. The service resolves persisted
+grant IDs to their actual storage family. Original DAG ancestry must use its real batch/node route,
+even if a later read-only reader dropped its `dag_batch` option. No synthetic DAG node or admission
+is created. Ordinary standalone tasks need no invented submission witness or idempotency key;
+any actual accepted request is bound and rechecked on the same SQLite writer.
+
+Select `handoff_id` explicitly in existing skill operations. `record` uses a separate verified reader
+through `completion_task_id` and creates a draft which still needs its own new validation trial.
+`accept` with `completion_task_id` keeps the actual original candidate's validation task.
+`review_execution` and its matching `accept` may select an actual `execution_task_id`; add
+`completion_task_id` when the final granted evidence is a separate reader. The service verifies
+the exact complete original semantic action plan, real execution IDs and independent final criteria.
+A reader never becomes an execution task or a substitute validation trial.
+
+The grant yields only a private bounded evidence view. Original task owners, source state and
+receipts remain; ordinary get/list/observe/act/resume access never expands. Granting or adopting
+launches no helper and replays no input. Real source/child snapshots, original optional requests,
+actual owners/reviewers, retired input and every live historical origin remain checked. New recorded
+drafts retain both issuing and consuming session ceilings. Unavailable restrictions require actual
+private completion renewal; matching hashes or caller-authored scope flags cannot replace it.
+Read-only evidence adoption does not renew a published skill's original input authorization.
+
+At most sixteen real recovery links include source ancestry and the forward granted chain. Earliest
+retained terminal evidence expires after thirty days; anchoring at a later reader cannot extend an
+older ancestor. Same-writer post-insert and exact-retry checks honor revocation tombstones for both
+DAG and task grants. Source/request/role/origin/revocation changes roll back grant creation, draft
+recording or publication. Revoked IDs never reactivate. Historical get/list/revoke after an origin
+expires expose bounded IDs and hashes, not continued completion or input authority.
+
+The Handoffs page explicitly selects original local DAG or original task when preparing JSON.
+Three skill Actions prepare recording, publication or execution review with a handoff placeholder;
+they do not issue consent or publish automatically. Python, AC, CLI, authenticated REST/MCP and
+Builder share the same operations and actual caller identities. Editable requests are
+`agent_task_handoff_review.json`, `agent_task_handoff_create.json`, `agent_skill_recording_handoff.json`,
+`agent_skill_completion_handoff.json`, `agent_skill_execution_handoff_review.json` and
+`agent_skill_execution_handoff_accept.json` under `examples/`.
+
+Cross-host handoffs, remote readers, actual application/device providers, deferred native
+and twenty-four-hour acceptance, and unresolved HTTP409/bootstrap issues remain in `Progress.md`.
+
+Installed wheel and source distributions include the REST Dashboard and Swagger HTML, CSS and
+JavaScript resources. The same localhost REST routes and authentication rules apply to an
+installed package; serving static pages grants no task or desktop input authority.

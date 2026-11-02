@@ -26,7 +26,7 @@ from je_auto_control.gui import (  # noqa: E402
     scheduler_tab, triggers_tab, usb_devices_tab, usb_passthrough_panel, webhooks_tab,
 )
 from je_auto_control.gui.tab_registry import TAB_SPECS, TabEntry  # noqa: E402
-from je_auto_control.gui.task_controller import task_controller  # noqa: E402
+from je_auto_control.gui.tab_task_controller import task_controller  # noqa: E402
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger  # noqa: E402
 from headless._qt_settle import deleting, pump_until  # noqa: E402
 
@@ -198,15 +198,6 @@ def test_a_usb_sharing_panel_that_never_shared_leaves_the_passthrough_flag_alone
     panel = usb_passthrough_panel.UsbPassthroughPanel(acl=UsbAcl(path=tmp_path / "acl.json"))
     panel.dispose()
     assert switched == []
-
-
-def test_config_sync_cancels_the_sync_that_is_out(monkeypatch):
-    monkeypatch.setattr(config_sync_tab.session, "config_sync_status", lambda _url, _user: {})
-    tab = config_sync_tab.ConfigSyncTab()
-    cancel = threading.Event()
-    tab._cancel_slot[:] = [cancel]
-    tab.dispose()
-    assert cancel.is_set()
 
 
 def test_dispose_cancels_the_tabs_background_tasks(qapp):

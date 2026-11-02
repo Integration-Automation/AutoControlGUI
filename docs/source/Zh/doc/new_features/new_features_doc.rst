@@ -219,6 +219,11 @@ GUI 多語系
 
 點擊分頁的 ✕ 即可關閉，之後可從 *View → Tabs* 恢復。
 
+factory 建立的功能面板會在下一次 Qt event loop 刪除，釋放綁定於銷毀事件的訂閱與計時器。
+重新開啟會建立新面板，請先儲存編輯內容。View 選單隱藏與 ``hide_tab`` 會保留原面板。
+嵌入端可用 ``tab_registry.open(key)`` ／ ``close(key)`` 或 ``close_tab(key)``；
+面板拒絕 close event 時仍保持開啟。既有的擁有者表單與 Remote Desktop 在生命週期遷移前保留 widget。
+
 
 OCR 螢幕文字辨識
 ================
@@ -349,7 +354,7 @@ GUI：**OCR Reader** 分頁。可用既有的選取 overlay 圈出區域（留�
 執行期變數與資料驅動流程控制
 ============================
 
-過去 :mod:`script_vars.interpolate` 只能在執行前一次性把 ``${var}``
+過去 ``script_vars.interpolate`` 只能在執行前一次性把 ``${var}``
 取代成靜態 mapping 中的值，腳本沒辦法在執行時修改狀態。``VariableScope``
 是 executor 暴露給流程控制指令的執行期 mapping，讓它們能讀寫與
 runtime interpolator 相同的容器。
@@ -390,6 +395,14 @@ Variables 分頁顯示的、以及從 GUI 執行的腳本用的就是這個範�
 ``AC_bulkhead_run``、``AC_run_chaos``、``AC_run_dag`` 等）跑在呼叫它的清單的
 範圍裡，在 ``AC_parallel`` 分支內也一樣；分支從父層變數的一份複本開始，
 自己寫入的值留在分支內。自行建立的 executor（``Executor()``）永遠擁有自己的範圍。
+
+CLI ``run`` （含 ``--dry-run``）、頂層 ``run_from_description`` 與 ``StateMachine.run()``
+也會隔離變數。規劃器或狀態機若在既有 ``execution_scope`` 內呼叫，會共用該範圍，
+所以變數可跨同一次規劃的動作與狀態機的狀態，隨外層執行結束而捨棄。
+狀態機可變的 ``context`` 仍是獨立、由呼叫端持有的暫存區。
+
+Python 啟用執行緒 context 繼承（free-threaded 預設）或呼叫端明確複製 context 時，
+新執行緒會繼承變數範圍；獨立 worker 應在自己的 ``execution_scope`` 中執行以隔離變數。
 
 在區塊內自行啟動的執行緒\ **不會**\ 加入這次執行：它看到的是行程層級的範圍，
 執行緒池的 worker 與 timer 也一樣。這在每一種直譯器上都成立——包含
@@ -601,7 +614,7 @@ LLM 動作規劃器
    # 或者一行做完：
    ac.run_from_description("開記事本，輸入 hello", executor=executor)
 
-後端選擇對齊 :mod:`vision.backends`：
+後端選擇對齊 ``vision.backends``：
 
 - Anthropic（``anthropic`` SDK，``ANTHROPIC_API_KEY``）— 預設
 - 用 ``AUTOCONTROL_LLM_BACKEND``、``AUTOCONTROL_LLM_MODEL`` 覆寫
@@ -674,7 +687,7 @@ Headless viewer（控制別人）::
 - ``type`` ``{text}``
 - ``ping``
 
-Action-JSON 指令（使用 :mod:`utils.remote_desktop.registry` 的單例）::
+Action-JSON 指令（使用 ``utils.remote_desktop.registry`` 的單例）::
 
    AC_start_remote_host       # token, bind, port, fps, quality, region
    AC_stop_remote_host
@@ -1095,7 +1108,7 @@ GUI：*傳送檔案...* 按鈕開啟檔案選擇器 + 目的路徑提示，上�
 ================================
 
 Viewer 分頁不再把遠端畫面內嵌在面板裡 — viewer 認證成功後,會
-另外開啟一個獨立的 :class:`RemoteScreenWindow` 顯示遠端桌面,
+另外開啟一個獨立的 ``RemoteScreenWindow`` 顯示遠端桌面,
 面板本身只剩下連線卡片 + 控制元件。關閉 popup 視窗的 ✕ 按鈕
 會自動斷線,跟 AnyDesk 的 session 視窗體驗一致。
 
@@ -1386,14 +1399,30 @@ Action JSON 指令::
    [["AC_secret_status"]]
 
 腳本透過 ``${secrets.NAME}`` 佔位符引用 vault 條目。插補器會把
-``secrets.`` 命名空間導向 vault,而不是普通變數作用域,所以明文值
-永遠不會進到變數袋裡::
+``secrets.`` 命名空間直接導向 vault，而不查詢一般變數::
 
    [["AC_shell_command",
      {"command": "curl -H \"Authorization: Bearer ${secrets.github_token}\" ..."}]]
 
 ``AC_shell_command`` 只記錄它啟動的程式,從不記錄參數,所以填入的 secret 不會進到 log;
 程式無法啟動時該動作會失敗。
+
+executor 執行期間，解析後的 ``${secrets.NAME}`` 值會在送到 handler 前，於
+``AutoControlGUI`` 應用程式訊息、例外文字與堆疊資訊中替換為 ``***``。
+遮罩包含原始值與常見 Python／JSON 跳脫形式。巢狀動作及等候完成的本機
+parallel／DAG 工作執行緒共用當次執行的遮罩；各個獨立執行彼此隔離。
+CLI／REST／MCP 請求與排程、trigger、hotkey、email 擁有者會將遮罩保留到
+外層錯誤處理及 audit／history 寫入完成。獨立的 DAG 呼叫也會建立遮罩；每個 node
+worker 將擁有者的遮罩保留到 runner 執行、結果處理、最後的錯誤日誌與計時完成，
+包含自訂 local runner。回傳的 node 錯誤資料仍保留原值。獨立的 watchdog／observer 規則與
+callback executor 呼叫會將遮罩保留到 matcher／predicate、trigger、callback 及
+最後的錯誤日誌結束；巢狀呼叫沿用外層範圍，獨立規則與後續呼叫各自清除資料。
+CLI stderr 也會遮罩。報表紀錄在遮罩
+清除前保存已處理的快照；循環與不透明診斷物件會替換為標記，不呼叫任意 repr
+或 deepcopy。Audit 欄位在 JSON 編碼前處理，history 錯誤文字在 SQLite 寫入前處理。
+即使失敗也會於擁有者結束時清除資料。API 結果、拋出的例外與 CLI 結果資料保留原始值。
+此遮罩涵蓋當次執行期間解析的值；經轉換／編碼的值，以及其他應用程式的 logger，
+仍由各自的邊界處理。
 
 GUI: **Secrets** 分頁 — 建立 vault、解鎖、新增 / 移除條目、變更
 通行碼。POSIX 系統上 vault 檔以 0o600 建立;Windows 預設 ACL 已限制
@@ -1403,7 +1432,7 @@ GUI: **Secrets** 分頁 — 建立 vault、解鎖、新增 / 移除條目、變�
 Webhook(HTTP push)觸發
 =======================
 
-內建的 :mod:`http.server` dispatcher 在外部服務 POST 到註冊路徑時
+內建的 ``http.server`` dispatcher 在外部服務 POST 到註冊路徑時
 觸發腳本。可設定路徑、允許的方法(``GET``、``POST``、``PUT``、``PATCH``、
 ``DELETE``;其他方法在註冊時就會被拒絕)、可選 bearer token;請求方法、
 路徑、query、headers、原始 body、解析後 JSON 都會種到變數作用域::
@@ -1437,7 +1466,7 @@ Action JSON 指令::
 每次觸發以 ``trigger`` 來源寫入 run history,source id 為
 ``webhook:<id>``,讓 dashboard 把 webhook 活動和其他 trigger 並排
 顯示;只要有任何動作失敗,這次觸發就記為錯誤(並附錯誤截圖),排程、觸發器與熱鍵的執行也一樣。Body 上限 1 MiB,bearer token 比對用
-:func:`hmac.compare_digest`。除非你真的需要從網路其他地方連入,
+``hmac.compare_digest``。除非你真的需要從網路其他地方連入,
 否則綁定 ``127.0.0.1``。
 
 GUI: **Webhooks** 分頁 — 啟動 / 停止伺服器、註冊路徑、檢視每條
@@ -1495,3 +1524,273 @@ Watcher 在 process 記憶體中追蹤已觸發的 UID,可選擇把訊息標為
 
 GUI: **Email Triggers** 分頁 — 註冊 IMAP 觸發、啟動 / 停止 watcher、
 手動觸發一次輪詢、檢視最近錯誤與觸發次數。
+
+結構化動作日誌（實驗性）
+================================
+
+B1 的儲存與明確擷取／查閱 API 已從 ``je_auto_control`` 匯出，也可透過
+``je_auto_control.utils.action_journal`` 使用。CLI 擷取與有界快照查閱已接入；
+動作指令、Script Builder 表單、專用 MCP 擷取／查閱工具與 Run History 的唯讀檢視也已
+接入；手動執行的 history 控制也已接入。B1 整合期間，日誌與來源連結 API
+仍屬實驗性介面。應用程式可明確寫入 schema-v1 快照::
+
+   import time
+   from dataclasses import replace
+   from pathlib import Path
+   from je_auto_control import ActionEvent, ActionJournal, read_events
+
+   journal = ActionJournal(Path("actions.jsonl"))
+   started = ActionEvent(
+       run_id="review", step_id="step-1", command="AC_set_var",
+       parameters={"name": "login", "value": "${secrets.LOGIN}"},
+       started_at=time.time(),
+   )
+   journal.append(started)  # status: incomplete
+   journal.append(replace(started, status="ok", finished_at=time.time()))
+   snapshots = read_events(journal.path, run_id="review")
+
+每次 append 保留 run／step／parent ID，並在跨行程鎖內取得檔案層級的序號。
+完整行會 fsync；已有有效紀錄時，讀取會忽略中斷的最後片段，下次 append 前先復原尾端。
+既有非日誌檔與無法辨識的首筆片段會被拒絕且保持原內容；復原前先驗證檔案身分與上一筆完整紀錄。
+完整但損壞的行、未知 schema／欄位與錯誤順序會拋出 ``ActionJournalError``。
+每筆以 UTF-8 位元組計算，最多 8 MiB，讀取時逐筆處理。
+
+秘密參數名稱與秘密指令在 append 前遮罩；明確的 ``${secrets.NAME}`` ／ ``secret://NAME``
+保留為參照。不支援的物件、循環與非有限數字會有不可重播標記，不呼叫任意物件的 ``repr``。
+不透明結果與錯誤文字會遮罩，包含結果字典的鍵；``outcome_type`` 保留固定的安全型別分類。
+讀取回傳生命週期快照，包含未結束的 ``incomplete`` 起始紀錄，缺少完成紀錄時不推定成功。
+
+亦可明確擷取 executor 執行::
+
+   from pathlib import Path
+   from je_auto_control import execute_action_with_journal, read_events
+
+   summary = execute_action_with_journal(
+       [["AC_set_var", {"name": "count", "value": 1}]],
+       Path("captured.jsonl"), run_id="demo", dry_run=True,
+   )
+   snapshots = read_events(Path(summary["journal_path"]), run_id=summary["run_id"])
+
+``journal_scope(ActionJournal(path))`` 可擷取現有 executor 呼叫，不改變私有 executor 的變數所有權。
+便利 runner 使用模組 executor 與新的變數範圍，回傳含 ``run_id``、``journal_path``、
+原始 ``record`` 與 ``failed_actions`` 的 ``JournalRunResult``。
+本機 loop、parallel 與預設 DAG worker 會保留 run 與 parent step；遠端 DAG 端點需另行擷取。
+一般／嚴格失敗、取消與 ``dry_run`` 分別記錄；``ok`` 表示 dispatch 完成，業務結果需另外驗證。
+行程在動作中被結束時，保留已落盤的未完成起始紀錄。
+完成紀錄無法寫入時會保留原本的取消／錯誤，起始紀錄維持未完成。
+
+
+動作指令與 Script Builder
+-------------------------
+
+``AC_journal_capture`` 要求具名參數（JSON 物件），在目前的 executor 上執行巢狀
+``body``；拒絕位置參數形式的 body，避免過早對巢狀資料插值兩次。它保留呼叫端的變數、
+嚴格模式與 loop／取消訊號。body 會接受結構驗證與 lint，並在各步驟執行時才插值。
+新擷取會建立新的 journal 根，離開時恢復外層擷取；已有 history 擁有者時會自動連結來源::
+
+   ["AC_journal_capture", {
+       "path": "run.jsonl", "run_id": "example",
+       "body": [
+           ["AC_set_var", {"name": "message", "value": "hello"}],
+           ["AC_get_var", {"name": "message"}]
+       ]
+   }]
+
+可選的 ``device_id`` 與 ``session_id`` 標記當次擷取。
+識別碼與目的地不得包含外層執行已知的解析後秘密；擷取入口會在 history 連結、
+開檔及 body 執行前拒絕這類值。回傳摘要包含 ``run_id``、
+``journal_path``、原始 ``record`` 與 ``failed_actions``。此指令保留呼叫端的變數範圍；
+Python 的 ``execute_action_with_journal`` 便利函式則建立全新變數。
+外層 executor 的 dry-run 只會預演擷取指令，不執行 body、不開啟 journal；若要擷取每個
+預演步驟，請使用 Python／CLI 的執行層級擷取並指定 ``dry_run``。
+
+``AC_journal_read`` 接受 ``path``、可選的 ``run_id`` 與 ``limit``（預設 100，範圍
+1–10,000）。它與 CLI 共用公開的 ``inspect_journal``：驗證整份檔案，再按附加順序回傳
+有界的遮罩後生命週期快照清單。先篩選 run，再限制輸出筆數；不修改來源、不推定完成。
+這些操作入口沿用預設允許根目錄檢查；其他位置可透過 ``AUTOCONTROL_ALLOWED_PATH_ROOTS``
+加入。兩個指令在 RBAC 下都要求 ``drive_input``；私人日誌查閱不屬於螢幕觀察權限。
+
+在 Script Builder 的 Flow 類別加入 **Capture Action Journal**，可編輯來源標記與巢狀
+body；Data 類別的 **Read Action Journal** 可編輯路徑、run 篩選與輸出上限。
+``examples/28_action_journal.py`` 示範只操作變數的擷取與查閱，不送出桌面輸入。
+
+
+可觀察執行與 MCP 接線
+------------------------
+
+``execute_journal_run(actions, path, options=JournalRunOptions(...))`` 建立全新變數範圍，
+回傳既有四欄位的 ``JournalRunResult``。options 整合 ``variables``、``dry_run``、
+``run_id``、``device_id``、``session_id``、``observer`` 與 ``path_policy``。
+原本七參數的 ``execute_action_with_journal`` 會委派至此執行器，保留既有簽章。例如::
+
+   from pathlib import Path
+   from je_auto_control import JournalRunOptions, execute_journal_run
+
+   statuses = []
+   result = execute_journal_run(
+       [["AC_set_var", {"name": "message", "value": "hello"}]],
+       Path("run.jsonl"),
+       options=JournalRunOptions(run_id="observed", observer=statuses.append),
+   )
+   # statuses == ["incomplete", "ok"]
+
+Observer 在步驟起始快照持久化前與完成快照持久化後收到狀態字串，可丟出例外中止執行。
+完成 observer 的次要失敗不會取代原本正在傳遞的錯誤或控制訊號。本機 workers 會在各自的
+執行緒呼叫 observer。巢狀擷取保留外層 observer 並交集路徑政策，包含既有便利 API 開啟的
+擷取。每次附加都會檢查綁定政策當下的根目錄；完成寫入遭拒時，保留已持久化的未完成起始。
+
+``inspect_journal`` 與 ``read_events`` 支援筆數 observer，可合作式取消查閱。計數包含
+篩選前每筆已驗證紀錄；callback 例外傳遞前會關閉檔案。``inspect_journal`` 另會交集
+外層 journal 政策與可選的明確政策。
+
+MCP 提供 ``ac_journal_capture`` 與 ``ac_journal_read``。擷取接受 ``actions``、``path``，
+以及可選的 ``metadata``（``run_id``、``device_id``、``session_id``）、``variables`` 與
+``dry_run``。它回報已持久化完成的步驟數，在動作邊界觀察取消，並回傳結構化 run 來源資料。
+executor 記錄的失敗會設定 ``isError: true``，同時保留來源資料與原始 record。DAG node
+失敗等領域結果仍位於 ``record``，須另外檢視。
+
+查閱接受 ``path``、可選的 ``run_id`` 與 ``limit``，回傳 ``{"events": [...]}``。
+它在逐筆驗證時檢查取消，每 100 筆回報掃描進度，結束時回報最終筆數。limit 限制輸出，
+整份檔案仍會驗證。兩個工具在 RBAC 下都要求 ``drive_input``；唯讀模式保留查閱、移除擷取。
+
+MCP context 會將伺服器的路徑政策帶入日誌操作，包含巢狀日誌指令與本機 workers。
+預設 journal 根目錄也須允許該路徑；其他目的地除了 MCP roots，也需設定
+``AUTOCONTROL_ALLOWED_PATH_ROOTS``。一般巢狀動作的引數政策接線仍追蹤於 ``Progress.md``。
+取消在上述邊界合作進行，不會強制中斷已執行的原生 I/O。
+``examples/29_mcp_journal.py`` 以同一行程示範 JSON-RPC 流程，不送出桌面輸入或呼叫外部服務。
+
+
+Run History 日誌檢視
+------------------------
+
+開啟 **Run History**，選取歷史列，使用 **操作 > 使用所選執行的日誌**。
+已連結日誌選單會帶入檔案與執行 ID，但不會開檔；也可透過 **操作 > 選擇日誌**
+指定外部 JSONL 檔。執行 ID 空白時選取全部執行。設定快照上限（預設 100、範圍
+1–10,000）後，使用 **操作 > 讀取日誌**。整份檔案驗證通過後才顯示有界、遮罩後的快照。
+
+表格分別保留起始／完成快照，呈現順序、狀態、指令及 run／step／parent ID；
+選取後可查看完整 JSON，包含 device／session 與 artifact 來源。
+查閱不會執行日誌內容、建立 history 列或修改來源檔案。
+
+解析透過既有 worker relay 在背景執行，進度每 100 筆已驗證快照彙整回報。
+**操作 > 取消讀取日誌** 與關閉歷史檢視會在逐筆邊界提出取消要求，不會強制中斷
+正在進行的解碼。取消或失敗時不顯示部分結果。選取其他連結會取消舊請求並使其失效，
+因此排隊中的舊結果無法覆蓋新目標；已銷毀的檢視不會收到延遲回呼。
+
+RBAC context 啟用時，選檔、來源連結查詢與查閱都要求 ``drive_input``。
+背景 I/O 前會重新查詢儲存的擁有者，使用者遭刪除或降權時會拒絕讀取。
+Worker 保留提交 context 的 journal 路徑限制，也遵守預設根目錄政策。
+遭拒或損壞的來源會顯示錯誤，不會假裝成功讀到空結果。
+控制項、表頭與狀態文字支援 GUI 的四種語言。
+
+
+明確的手動執行歷史
+------------------------
+
+``manual_history_scope(store=None, source_id="manual", script_path="<manual>")``
+會建立明確要求的手動歷史列，回傳含有 ``store`` 與 ``run_id`` 的 frozen
+``HistoryBinding``；兩個名稱都從 ``je_auto_control`` 匯出。``source_id`` 與
+``script_path`` 是非空的來源標籤，不會藉此開啟或執行腳本；已知的解析秘密會在寫入前遮罩。
+呼叫者的 executor、變數與結果值保持原本行為。例如::
+
+   from je_auto_control import HistoryStore, manual_history_scope, execute_journal_run
+
+   store = HistoryStore("history.sqlite")
+   try:
+       with manual_history_scope(store=store, source_id="manual-example") as owner:
+           result = execute_journal_run(
+               [["AC_set_var", {"name": "message", "value": "hello"}]],
+               "events.jsonl",
+           )
+       links = store.journals_for_run(owner.run_id)
+   finally:
+       store.close()
+
+Scope 開始時會連結已存在的 journal；後續開啟的擷取，包含本機 parallel／DAG，
+也會保留該擁有者。巢狀手動 scope 各自建立歷史列，離開後還原上一個擁有者。
+清除 history 不刪除外部日誌。匯入 API 不需要 Qt 或 SQLite；明確進入 history scope 時
+才需要 SQLite。
+
+Scope 只計算新發生的 executor 記錄失敗，將歷史列結算為 ``error``，不替換動作結果。
+正常 break／continue 保留計數後的結果；取消與丟出的例外會記為 ``error`` 並原樣傳遞。
+領域結果旗標仍由呼叫者檢視。歷史結算失敗不會取代原本正在傳遞的訊號，該列可能保持
+未完成。手動擁有者不要求錯誤截圖。
+
+CLI 的 ``run SCRIPT --history`` 使用 Run History 顯示的預設 store。
+``--history-db PATH`` 必須搭配 ``--history``，選用受路徑限制的資料庫；CLI 會關閉自己
+建立的 custom store，但不會切換 GUI 的預設 store。原本 stdout JSON、變數、dry-run
+派送與失敗 exit code 保持不變。預覽以 ``cli.preview`` 為來源，一般執行使用 ``cli.run``；
+也可搭配既有 journal 旗標。
+
+Script Executor（檔案／編輯器／目錄）與 Script Builder 提供預設不勾選的
+**記錄至執行歷史**，以及選填日誌路徑；日誌可獨立於 history 使用。
+目錄呼叫共用一個批次歷史擁有者。控制項包住既有執行流程，不替換變數範圍與結果顯示；
+執行後可到 Run History 查看預設 store 的歷史列與日誌連結。
+
+``AC_history_capture`` 接受具名 ``body``，以及可選的 ``source_id``、``script_path``，
+保留擁有者 executor、strictness 與 body 的延後插值；JSON 結果含 ``history_id``、
+``record``、``failed_actions``。Script Builder 與既有 REST／MCP 動作執行工具都可使用。
+外層 dry-run 不會為該指令建立歷史列；RBAC 下紀錄要求 ``drive_input``。
+``examples/30_manual_history.py`` 支援不寫檔的驗證，以及明確輸出目錄下的純變數執行／預覽。
+
+
+執行歷史的日誌來源連結
+------------------------
+
+排程、trigger、hotkey、webhook 與 email 擁有者會在執行期間綁定既有 history 列。
+明確的 ``journal_scope`` 擷取會在 dispatch 前附加 canonical journal 路徑與 journal
+run ID；本機 parallel 與預設 DAG worker 另開擷取時也保留擁有者。
+同一列可連結多份 journal，重複附加相同連結不會增加資料。
+未綁定擁有者的普通擷取不會建立 history 列或開啟 history 資料庫。
+手動管理既有列的用法::
+
+   from pathlib import Path
+   from je_auto_control.utils.action_journal import ActionJournal, journal_scope
+   from je_auto_control.utils.executor.action_executor import executor
+   from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
+   from je_auto_control.utils.run_history.history_store import HistoryStore, SOURCE_MANUAL, STATUS_OK
+
+   history = HistoryStore("history.sqlite")
+   try:
+       row_id = history.start_run(SOURCE_MANUAL, "example", "actions.json")
+       with bound_history(HistoryBinding(history, row_id)):
+           with journal_scope(ActionJournal(Path("run.jsonl")), run_id="example"):
+               executor.execute_action([["AC_set_var", {"name": "count", "value": 1}]])
+       history.finish_run(row_id, STATUS_OK)
+       links = history.journals_for_run(row_id)
+   finally:
+       history.close()
+
+``HistoryStore.attach_journal`` 只保存中繼資料，不開啟、驗證、複製或擁有目標檔案。
+``journals_for_run`` 回傳不可變的 ``JournalLink``，欄位為 ``run_id``、
+``journal_path`` 與 ``journal_run_id``。清空／裁剪 history 只移除連結，保留 journal 檔。
+舊 history schema 會在開啟時遷移，保留原有列與截圖連結。
+綁定不存在的 history 列時，會在裝置動作發生前拒絕擷取。
+GUI 與手動執行的便利接線仍待整合。
+
+
+中止執行的結果
+------------------------
+
+拋出 ``KeyboardInterrupt``、``SystemExit``、``GeneratorExit``、asyncio／future 取消
+或 MCP ``OperationCancelledError`` 時，不可將該次執行寫成成功。
+History 記為 ``error``，journal 步驟記為 ``cancelled``，且不擷取錯誤截圖。
+一般失敗仍保留既有截圖與復原行為。
+
+取消會穿過非嚴格 executor 的錯誤紀錄、``AC_try`` 的 catch、``AC_retry`` 的重試、
+影像條件的不存在判定，以及 callback 的一般錯誤防護；腳本明確指定的 ``finally``
+清理仍會執行。本機 parallel／DAG worker 會把原始訊號送回擁有者，parallel 會先等候
+已啟動的分支結束。這些規則處理已拋出的中止訊號，不是強制中斷阻塞中的原生操作。
+
+硬中止訊號保留原樣傳遞。若 history 結算在硬中止傳遞期間失敗，診斷儲存不可取代
+原始訊號；該列維持未結算，不會被標為成功。MCP 取消保留既有 ``RuntimeError``
+控制訊號契約，與一般框架失敗分開，也保留原有 JSON-RPC 取消回覆。
+
+
+TCP 認證拒絕後的名額釋放
+----------------------------------------------------------------
+
+錯誤 token、錯誤握手階段或拒絕核准時，TCP handler 在送出 ``AUTH_FAIL`` 前就標記停止。
+即使拒絕日誌或 socket 清理尚未完成，host 仍能接受立即重試的新連線。線路 payload
+與待處理握手的獨立上限維持不變；失敗的 viewer 不會被放行，作用中 client 的
+``max_clients`` 也不會增加。

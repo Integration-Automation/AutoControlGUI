@@ -10,7 +10,6 @@ import threading
 import time
 from typing import Any, Callable, Dict, Mapping, Optional, Sequence
 
-from je_auto_control.utils.action_journal.recorder import branch_scope, current_step
 from je_auto_control.utils.exception.exceptions import (
     AutoControlActionException, AutoControlAssertionException,
     AutoControlException, ImageNotFoundException,
@@ -28,6 +27,12 @@ from je_auto_control.utils.executor.flow_data_commands import (
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.rbac.authorization import authorization_scope, current_authorization
+from je_auto_control.utils.action_journal.capture import bound_journal, current_journal
+from je_auto_control.utils.executor.dispatch import bound_command_guards, capture_command_guards
+from je_auto_control.utils.exception.cancellation import cancellation_scope, current_cancellation_token
+from je_auto_control.utils.logging.secret_scope import bound_secret_scope, current_secret_scope
+from je_auto_control.utils.run_history.context import bound_history, current_history
+from je_auto_control.utils.run_history.run_outcome import is_run_interruption, raise_if_run_interrupted
 from je_auto_control.wrapper.auto_control_image import locate_image_center
 from je_auto_control.wrapper.auto_control_screen import get_pixel
 from je_auto_control.utils.timeouts import deadline_after
@@ -54,7 +59,8 @@ def _image_present(image: str, threshold: float) -> bool:
     try:
         locate_image_center(image, threshold)
         return True
-    except (ImageNotFoundException, OSError, RuntimeError, ValueError, TypeError):
+    except (ImageNotFoundException, OSError, RuntimeError, ValueError, TypeError) as error:
+        raise_if_run_interrupted(error)
         return False
 
 
@@ -221,6 +227,7 @@ def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
         except (MacroDepthExceeded, ExecutionStopped):
             raise
         except _TRY_CATCHABLE as error:
+            raise_if_run_interrupted(error)
             last_error = error
             autocontrol_logger.info(
                 "AC_retry attempt %d/%d failed: %s",
@@ -260,6 +267,7 @@ def exec_try(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
         except (LoopBreak, LoopContinue, MacroDepthExceeded, ExecutionStopped):
             raise
         except _TRY_CATCHABLE as error:
+            raise_if_run_interrupted(error)
             caught_repr = repr(error)
             autocontrol_logger.info("AC_try caught: %s", caught_repr)
             error_var = args.get("error_var")
@@ -481,8 +489,15 @@ class _ParallelRun:
         # The RBAC user is bound to the thread that accepted the request; a
         # branch thread without it ran privileged commands unchecked.
         self._caller = current_authorization()
-        # A branch thread has no running step of its own to be the parent.
-        self._journal_parent = current_step()
+        self._journal = current_journal()
+        self._secret_scope = current_secret_scope()
+        self._history = current_history()
+        self._command_guards = capture_command_guards()
+        self._cancellation = current_cancellation_token()
+        from je_auto_control.utils.agent_runtime.context import current_operation
+        from je_auto_control.utils.agent_runtime.origin_policy import current_origin
+        self._task_operation = current_operation()
+        self._origin = current_origin()
         # Branch threads do not inherit the run's stop token either.
         self._stop_token = current_stop_token()
         self._stopped: Optional[ExecutionStopped] = None
@@ -490,6 +505,7 @@ class _ParallelRun:
         self._failures: list = [0] * len(branches)
         self._errors: Dict[int, str] = {}
         self._assertions: Dict[int, AutoControlAssertionException] = {}
+        self._interruptions: list[Optional[BaseException]] = [None] * len(branches)
 
     def _branch_executor(self) -> Any:
         branch_executor = self._module.Executor()
@@ -512,11 +528,16 @@ class _ParallelRun:
         # that legitimately returned None, and reported as success.
         if not branch:
             return  # an empty branch is a no-op, as everywhere else
+        from je_auto_control.utils.agent_runtime.context import operation_scope
+        from je_auto_control.utils.agent_runtime.origin_policy import origin_scope
         _MACRO_DEPTH.value = self._macro_depth
         self._module.reset_recorded_failures()
         try:
-            with authorization_scope(self._caller), branch_scope(self._journal_parent, index), \
-                    bound_stop_token(self._stop_token):
+            with (authorization_scope(self._caller), bound_journal(self._journal),
+                  bound_secret_scope(self._secret_scope), bound_history(self._history),
+                  bound_command_guards(self._command_guards), cancellation_scope(self._cancellation),
+                  operation_scope(self._task_operation), origin_scope(self._origin),
+                  bound_stop_token(self._stop_token)):
                 self.results[index] = self._branch_executor().execute_action(
                     branch, raise_on_error=self._strict, _validated=True)
             self._failures[index] = self._module.recorded_failures()
@@ -524,10 +545,19 @@ class _ParallelRun:
             self._stopped = error
         except AutoControlAssertionException as error:
             self._assertions[index] = error
-        except Exception as error:  # noqa: BLE001  # reason: see comment above
-            self._errors[index] = repr(error)
-            autocontrol_logger.error(
-                "AC_parallel branch %d failed: %r", index, error, exc_info=True)
+        except BaseException as error:  # reason: return worker control signals to the caller after joining
+            if not isinstance(error, Exception) or is_run_interruption(error):
+                self._interruptions[index] = error
+            else:
+                self._errors[index] = repr(error)
+                with bound_secret_scope(self._secret_scope):
+                    autocontrol_logger.error(
+                        "AC_parallel branch %d failed: %r", index, error, exc_info=True)
+
+    def _raise_interruption(self) -> None:
+        for interruption in self._interruptions:
+            if interruption is not None:
+                raise interruption
 
     def settle(self) -> None:
         """On the parent thread: count branch failures, then raise the first problem."""
@@ -535,6 +565,7 @@ class _ParallelRun:
             self._module._count_recorded_failure()
         if self._stopped is not None:
             raise self._stopped  # the run was stopped: not a branch failure
+        self._raise_interruption()
         if self._assertions:
             # Re-raised as itself so it propagates like a top-level assert.
             raise self._assertions[min(self._assertions)]

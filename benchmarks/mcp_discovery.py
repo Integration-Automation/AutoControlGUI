@@ -1,129 +1,81 @@
-"""What a new MCP session costs in each tool mode: full against progressive.
+"""Measure MCP initial schema bytes and metadata latency without executing automation tools."""
+from __future__ import annotations
 
-Drives an in-process ``MCPServer`` through ``handle_line``, the same entry
-point both transports use, so the figures are the dispatcher's and exclude
-pipe and socket time. No tool that touches the desktop is ever called: the
-only ``tools/call`` requests are the progressive mode's own search, schema
-and enable tools.
-
-Per mode:
-
-* ``count`` / ``json_bytes`` -- tools in a new session's ``tools/list`` and the
-  UTF-8 size of that result, every page added up;
-* ``handshake_ms`` -- ``initialize``, ``notifications/initialized`` and the
-  whole ``tools/list``, on a server that is already built;
-* ``search_ms`` / ``schema_ms`` / ``enable_ms`` -- one call of each core tool
-  (``null`` in full mode, which has none), and ``search_json_bytes``, the size
-  of one search reply.
-
-Usage::
-
-    python benchmarks/mcp_discovery.py            # the default registry
-    python benchmarks/mcp_discovery.py --rounds 50
-"""
 import argparse
 import json
+import platform
 import statistics
 import time
+from typing import Any
 
-_QUERY = "screenshot"
-
-
-def _line(method, params=None, msg_id=1):
-    message = {"jsonrpc": "2.0", "method": method, "params": params or {}}
-    if msg_id is not None:
-        message["id"] = msg_id
-    return json.dumps(message)
+from je_auto_control.utils.mcp_server.server import MCPServer
+from je_auto_control.utils.mcp_server.tools import MCPTool, build_default_tool_registry
 
 
-def _list_all(server):
-    """``(tool count, result bytes)`` of a session's whole ``tools/list``."""
-    count, size, cursor = 0, 0, None
-    while True:
-        reply = json.loads(server.handle_line(
-            _line("tools/list", {"cursor": cursor} if cursor else {})))
-        result = reply["result"]
-        count += len(result["tools"])
-        size += len(json.dumps(result, ensure_ascii=False).encode("utf-8"))
-        cursor = result.get("nextCursor")
-        if cursor is None:
-            return count, size
+def _rpc(server: MCPServer, method: str, params: dict | None = None) -> tuple[dict, float, int]:
+    request = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params or {}})
+    start = time.perf_counter()
+    raw = server.handle_line(request)
+    elapsed = (time.perf_counter() - start) * 1000
+    if raw is None:
+        raise ValueError("benchmark request produced no reply")
+    response = json.loads(raw)
+    if "error" in response or response["result"].get("isError"):
+        raise ValueError("benchmark metadata request failed: " + raw)
+    return response["result"], elapsed, len(raw.encode("utf-8"))
 
 
-def _handshake(server):
-    server.handle_line(_line("initialize", {"protocolVersion": "2025-11-25", "capabilities": {}}))
-    server.handle_line(_line("notifications/initialized", msg_id=None))
-    return _list_all(server)
+def _latency(samples: list[float]) -> dict[str, float]:
+    ordered = sorted(samples)
+    return {"median_ms": round(statistics.median(ordered), 3),
+            "p95_ms": round(ordered[max(0, int(len(ordered) * .95) - 1)], 3)}
 
 
-def _call(server, name, arguments):
-    reply = json.loads(server.handle_line(
-        _line("tools/call", {"name": name, "arguments": arguments})))
-    result = reply["result"]
-    if result["isError"]:
-        raise RuntimeError(f"{name} failed: {result['content'][0]['text']}")
-    return result["content"][0]["text"]
+def _mode(tools: list[MCPTool], mode: str, repeats: int) -> dict[str, Any]:
+    started = time.perf_counter()
+    server = MCPServer(tools=tools)
+    server.configure_tool_disclosure(mode, names=["ac_screen_size"] if mode == "static" else (), read_only=False)
+    try:
+        _rpc(server, "initialize", {"protocolVersion": "2025-06-18", "capabilities": {}})
+        initial, _, wire_bytes = _rpc(server, "tools/list")
+        handshake_ms = (time.perf_counter() - started) * 1000
+        search, enable = [], []
+        search_bytes = 0
+        for _ in range(repeats):
+            _, elapsed, search_bytes = _rpc(server, "tools/call", {
+                "name": "ac_mcp_tool_search", "arguments": {"query": "screen", "limit": 10}})
+            search.append(elapsed)
+            if mode == "progressive":
+                _, elapsed, _ = _rpc(server, "tools/call", {
+                    "name": "ac_mcp_tools_enable", "arguments": {"names": ["ac_screen_size"]}})
+                enable.append(elapsed)
+                _rpc(server, "tools/call", {
+                    "name": "ac_mcp_tools_disable", "arguments": {"names": ["ac_screen_size"]}})
+        return {"count": len(initial["tools"]), "response_json_bytes": wire_bytes,
+                "descriptor_json_bytes": len(json.dumps(initial["tools"], ensure_ascii=False,
+                                                        separators=(",", ":")).encode("utf-8")),
+                "handshake_ms": round(handshake_ms, 3), "search": _latency(search),
+                "search_response_json_bytes": search_bytes, "enable": _latency(enable) if enable else None}
+    finally:
+        server.stop()
 
 
-def _median_ms(action, rounds):
-    samples = []
-    for _ in range(rounds):
-        started = time.perf_counter()
-        action()
-        samples.append((time.perf_counter() - started) * 1000)
-    return round(statistics.median(samples), 3)
+def measure_discovery(repeats: int = 20) -> dict[str, Any]:
+    """Compare full/progressive/static modes using warm imports and real JSON-RPC metadata handlers."""
+    if isinstance(repeats, bool) or not isinstance(repeats, int) or not 1 <= repeats <= 100:
+        raise ValueError("repeats must be an integer from 1 to 100")
+    tools = build_default_tool_registry(read_only=False, aliases=True)
+    return {"python": platform.python_version(), "platform": platform.system(), "repeats": repeats,
+            "measurement": "warm in-process server construction, initialize and first tools/list; no native tools",
+            "modes": {mode: _mode(tools, mode, repeats) for mode in ("full", "progressive", "static")}}
 
 
-def _core_figures(server, target, rounds):
-    """Timings of the progressive mode's own tools against ``server``."""
-    def enable_and_disable():
-        _call(server, "ac_tools_enable", {"names": [target]})
-        _call(server, "ac_tools_disable", {"names": [target]})
-    _call(server, "ac_tools_search", {"query": _QUERY})  # builds the index once
-    return {
-        "search_ms": _median_ms(lambda: _call(server, "ac_tools_search", {"query": _QUERY}), rounds),
-        "search_json_bytes": len(_call(server, "ac_tools_search", {"query": _QUERY}).encode("utf-8")),
-        "schema_ms": _median_ms(lambda: _call(server, "ac_tools_schema", {"name": target}), rounds),
-        "enable_ms": _median_ms(enable_and_disable, rounds),
-    }
-
-
-def _measure_mode(mode, tools, rounds):
-    from je_auto_control.utils.mcp_server.server import MCPServer
-    server = MCPServer(tools=list(tools), tool_mode=mode)
-    count, size = _handshake(server)
-    figures = {
-        "count": count, "json_bytes": size,
-        "handshake_ms": _median_ms(lambda: _handshake(server), rounds),
-        "search_ms": None, "search_json_bytes": None, "schema_ms": None, "enable_ms": None,
-    }
-    if mode == "progressive":
-        figures.update(_core_figures(server, tools[0].name, rounds))
-    return figures
-
-
-def measure(tools=None, rounds=20):
-    """Return the report for ``tools`` (default: the registry a server builds)."""
-    if tools is None:
-        from je_auto_control.utils.mcp_server.tools import build_default_tool_registry
-        tools = build_default_tool_registry()
-    tools = list(tools)
-    modes = {mode: _measure_mode(mode, tools, rounds) for mode in ("full", "progressive")}
-    full, progressive = modes["full"], modes["progressive"]
-    return {
-        "registry_tools": len(tools), "rounds": rounds, "modes": modes,
-        "progressive_json_bytes_percent_of_full": round(
-            100 * progressive["json_bytes"] / max(1, full["json_bytes"]), 2),
-    }
-
-
-def main(argv=None):
-    """Print the report as JSON."""
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--rounds", type=int, default=20,
-                        help="Samples per timing; the median is reported.")
-    args = parser.parse_args(argv)
-    print(json.dumps(measure(rounds=max(1, args.rounds)), indent=2, sort_keys=True))
+def main() -> None:
+    """Print a reproducible JSON report; all operations are metadata-only."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repeats", type=int, default=20)
+    args = parser.parse_args()
+    print(json.dumps(measure_discovery(args.repeats), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

@@ -13,16 +13,13 @@ those modes are built on.
 from je_auto_control.utils.mcp_server.server import (
     MCPServer, start_mcp_stdio_server,
 )
+from je_auto_control.utils.mcp_server.discovery import (
+    ToolDiscoveryError, ToolIndex, ToolSummary, search_mcp_tools, get_mcp_tool_schema,
+)
+from je_auto_control.utils.mcp_server.disclosure import ToolView, ToolPage, plan_mcp_tool_profile
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
-)
-from je_auto_control.utils.mcp_server.disclosure import (
-    DisclosureResult, ToolDisclosure, ToolDisclosureError, ToolMode, ToolPage,
-    ToolView,
-)
-from je_auto_control.utils.mcp_server.discovery import (
-    ToolDiscoveryError, ToolIndex, ToolSummary,
 )
 from je_auto_control.utils.mcp_server.fake_backend import (
     FakeState, fake_state, install_fake_backend, reset_fake_state,
@@ -42,20 +39,19 @@ from je_auto_control.utils.mcp_server.resources import (
     default_resource_provider,
 )
 from je_auto_control.utils.mcp_server.tools import (
-    MCPContent, MCPTool, MCPToolAnnotations, MCPToolDescriptor,
+    MCPContent, MCPTool, MCPToolAnnotations, MCPToolDescriptor, MCPToolResult,
     build_default_tool_registry, make_plugin_tool, register_plugin_tools,
 )
 
 __all__ = [
-    "AuditLogger", "DisclosureResult", "FakeState", "HttpMCPServer",
-    "LiveScreenProvider",
+    "ToolView", "ToolPage", "plan_mcp_tool_profile",
+    "ToolDiscoveryError", "ToolIndex", "ToolSummary", "search_mcp_tools", "get_mcp_tool_schema",
+    "AuditLogger", "FakeState", "HttpMCPServer", "LiveScreenProvider",
     "MCPContent", "MCPLogBridge", "MCPPrompt", "MCPPromptArgument",
-    "MCPResource", "MCPServer", "MCPTool", "MCPToolAnnotations",
-    "MCPToolDescriptor",
+    "MCPResource", "MCPServer", "MCPTool", "MCPToolAnnotations", "MCPToolDescriptor",
+    "MCPToolResult",
     "OperationCancelledError", "PluginWatcher", "PromptProvider",
-    "RateLimiter", "ResourceProvider", "ToolCallContext", "ToolDisclosure",
-    "ToolDisclosureError", "ToolDiscoveryError", "ToolIndex", "ToolMode",
-    "ToolPage", "ToolSummary", "ToolView",
+    "RateLimiter", "ResourceProvider", "ToolCallContext",
     "build_default_tool_registry",
     "default_prompt_provider", "default_resource_provider",
     "fake_state", "install_fake_backend", "make_plugin_tool",

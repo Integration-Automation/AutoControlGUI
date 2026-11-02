@@ -235,6 +235,13 @@ The main window is now a ``QMainWindow`` with:
 
 Close any tab with its ✕ button; re-open it via *View → Tabs*.
 
+Factory-built feature panels are deleted on the next Qt event-loop turn, releasing
+their destruction-bound subscriptions and timers. Reopening creates a fresh panel,
+so save edits first. View-menu hiding and ``hide_tab`` preserve the existing panel.
+Embedders can use ``tab_registry.open(key)`` / ``close(key)`` or ``close_tab(key)``;
+a panel that refuses its close event stays open. Legacy owner-built forms and
+Remote Desktop retain their widgets pending lifecycle migration.
+
 
 OCR (text on screen)
 ====================
@@ -375,7 +382,7 @@ JSON list with text, bounding box, and confidence per hit.
 Runtime variables and data-driven control flow
 ==============================================
 
-Pre-execution interpolation in :mod:`script_vars.interpolate` only
+Pre-execution interpolation in ``script_vars.interpolate`` only
 substituted ``${var}`` placeholders once against a static mapping;
 scripts had no way to mutate state during execution. ``VariableScope``
 is a runtime mapping the executor exposes to flow-control commands so
@@ -421,6 +428,16 @@ not. Nested action lists (``AC_circuit_call``, ``AC_bulkhead_run``,
 that called them, also inside an ``AC_parallel`` branch; a branch starts from
 a copy of its parent's variables and its own writes stay in the branch.
 An executor you construct yourself (``Executor()``) always owns its scope.
+
+CLI ``run`` (including ``--dry-run``), top-level ``run_from_description`` and
+``StateMachine.run()`` also isolate variables. A planner or FSM called inside an
+existing ``execution_scope`` shares it, so variables survive across the plan's
+actions and the machine's states, then end with the outer run. The FSM's mutable
+``context`` remains a separate caller-owned scratch pad.
+
+New threads inherit context when Python's thread context inheritance is enabled
+(the free-threaded default), or when the caller explicitly copies the context.
+Use a fresh ``execution_scope`` in an independent worker to isolate its variables.
 
 A thread you start inside the block does **not** join the run: it sees the
 process scope, as do pool workers and timers. This holds on every build --
@@ -656,7 +673,7 @@ so the result can be piped straight into ``execute_action``::
    # Or in one call:
    ac.run_from_description("open Notepad and type hello", executor=executor)
 
-Backend selection mirrors :mod:`vision.backends`:
+Backend selection mirrors ``vision.backends``:
 
 - Anthropic (``anthropic`` SDK, ``ANTHROPIC_API_KEY``) — default
 - ``AUTOCONTROL_LLM_BACKEND`` and ``AUTOCONTROL_LLM_MODEL`` for overrides
@@ -736,7 +753,7 @@ Input message allowlist (validated on the host before dispatch):
 - ``ping``
 
 Action-JSON commands (use the singleton in
-:mod:`utils.remote_desktop.registry`)::
+``utils.remote_desktop.registry``)::
 
    AC_start_remote_host       # token, bind, port, fps, quality, region
    AC_stop_remote_host
@@ -1187,7 +1204,7 @@ Remote desktop — AnyDesk-style popout window
 
 The viewer panel no longer renders the live remote screen inline —
 when the viewer authenticates, a dedicated top-level
-:class:`RemoteScreenWindow` opens with the remote desktop, and the
+``RemoteScreenWindow`` opens with the remote desktop, and the
 panel shrinks back to the connection card + controls. Closing the
 popup ✕ disconnects the session, matching AnyDesk's session-window
 ergonomics.
@@ -1500,8 +1517,7 @@ Action-JSON commands::
 
 Action scripts reference vault entries through ``${secrets.NAME}``
 placeholders. The interpolator routes the ``secrets.`` namespace to the
-vault rather than the regular variable scope, so plaintext values never
-land in the variable bag::
+vault directly rather than looking up an ordinary variable::
 
    [["AC_shell_command",
      {"command": "curl -H \"Authorization: Bearer ${secrets.github_token}\" ..."}]]
@@ -1509,6 +1525,29 @@ land in the variable bag::
 ``AC_shell_command`` logs only the program it starts, never its arguments,
 so a filled-in secret stays out of the log; a program that cannot start
 fails the action.
+
+During executor execution, resolved ``${secrets.NAME}`` values are replaced
+with ``***`` in ``AutoControlGUI`` application messages, exception text and
+stack information before handlers receive them. Exact values and common
+Python/JSON escaped forms are masked. Nested actions and joined local
+parallel/DAG workers share the run's mask; concurrent independent runs have
+separate masks. CLI/REST/MCP requests and scheduled, trigger, hotkey and email
+owners keep their mask through outer error handling and audit/history writes.
+Standalone DAG calls own a mask too. Each node worker binds the owner mask
+through runner execution, outcome handling, final error logging and timing,
+including custom local runners. Returned node-error payloads remain unchanged.
+Independent watchdog/observer rules and callback-executor invocations keep a
+mask through their matcher/predicate, trigger, callback and final error log.
+Nested calls reuse the enclosing run's mask; independent rules and subsequent
+invocations clear their values separately.
+CLI stderr is masked. Report records snapshot known values before the mask is
+cleared; cyclic and opaque diagnostic objects are replaced without calling
+arbitrary repr or deepcopy. Audit fields are sanitized before JSON encoding,
+and history error text before SQLite writes. Owner exit clears the mask even
+on failure. API outcomes, raised exceptions and CLI result payloads retain
+their original values. This masking covers values learned during the owned
+run; transformed/encoded values and other applications' loggers require
+their own handling.
 
 GUI: **Secrets** tab — initialize the vault, unlock it, add / remove
 entries, change passphrase. The vault file is created with mode 0o600
@@ -1519,7 +1558,7 @@ read access to the owning user.
 Webhook (HTTP push) trigger
 ===========================
 
-A bundled :mod:`http.server` dispatcher fires an action script when an
+A bundled ``http.server`` dispatcher fires an action script when an
 external service POSTs to a registered path. Configure path, allowed
 methods (``GET``, ``POST``, ``PUT``, ``PATCH``, ``DELETE``; any other verb
 is refused when the webhook is added), and an optional bearer token; the request method, path, query,
@@ -1555,7 +1594,7 @@ Each fire is recorded in run history as ``trigger`` with source id
 ``webhook:<id>`` so the dashboard surfaces webhook activity alongside
 other triggers; a fire in which any action failed is recorded as an error
 (with an error snapshot), as scheduled, triggered and hotkey runs are. The body is capped at 1 MiB and bearer-token comparison
-uses :func:`hmac.compare_digest`. Bind to ``127.0.0.1`` unless the
+uses ``hmac.compare_digest``. Bind to ``127.0.0.1`` unless the
 listener genuinely needs to be reachable from elsewhere on the network.
 
 GUI: **Webhooks** tab — start/stop the server, register paths, view the
@@ -1613,3 +1652,329 @@ with ``${secrets.NAME}`` so passwords never appear in the JSON.
 
 GUI: **Email Triggers** tab — register IMAP triggers, start/stop the
 watcher, run a manual poll, inspect last error and fire counter.
+
+Structured action journals (experimental)
+================================================
+
+B1 exports storage and explicit capture/read APIs from ``je_auto_control`` and
+``je_auto_control.utils.action_journal``. CLI capture and bounded snapshot reads
+are available, along with action commands, Script Builder forms and dedicated
+MCP capture/read tools, read-only inspection in Run History and explicit
+manual-run history controls. The journal/provenance APIs remain experimental during B1.
+Applications can explicitly write schema-v1 snapshots::
+
+   import time
+   from dataclasses import replace
+   from pathlib import Path
+   from je_auto_control import ActionEvent, ActionJournal, read_events
+
+   journal = ActionJournal(Path("actions.jsonl"))
+   started = ActionEvent(
+       run_id="review", step_id="step-1", command="AC_set_var",
+       parameters={"name": "login", "value": "${secrets.LOGIN}"},
+       started_at=time.time(),
+   )
+   journal.append(started)  # status: incomplete
+   journal.append(replace(started, status="ok", finished_at=time.time()))
+   snapshots = read_events(journal.path, run_id="review")
+
+Every append preserves run/step/parent IDs and receives a file-wide sequence under
+an interprocess lock. Complete lines are fsynced; a final fragment after a valid
+record is ignored by readers and recovered before the next append. Existing
+non-journal files and ambiguous torn first records are refused without truncation;
+both the file identity and preceding complete record are validated before repair. Complete malformed lines,
+unknown schemas/fields and invalid order raise ``ActionJournalError``.
+Records are bounded to 8 MiB of UTF-8 bytes and read one at a time.
+
+Secret argument names and secret commands are masked before append. Explicit
+``${secrets.NAME}`` / ``secret://NAME`` references survive as references. Unsupported
+objects, cycles and non-finite values receive non-replayable markers; arbitrary
+``repr`` is never invoked. Opaque results and error text are redacted, including
+result dictionary keys; ``outcome_type`` preserves a fixed safe type category.
+Reading returns lifecycle snapshots, including unfinished ``incomplete`` starts,
+and does not infer a completed step from a missing final record.
+
+Explicit executor capture is also available::
+
+   from pathlib import Path
+   from je_auto_control import execute_action_with_journal, read_events
+
+   summary = execute_action_with_journal(
+       [["AC_set_var", {"name": "count", "value": 1}]],
+       Path("captured.jsonl"), run_id="demo", dry_run=True,
+   )
+   snapshots = read_events(Path(summary["journal_path"]), run_id=summary["run_id"])
+
+``journal_scope(ActionJournal(path))`` captures existing executor calls without
+changing a private executor's variable ownership. The convenience runner uses
+the module executor in fresh variables and returns ``JournalRunResult`` with
+``run_id``, ``journal_path``, the original ``record`` and ``failed_actions``.
+Local loop, parallel and default DAG workers preserve the run and parent step;
+remote DAG execution requires separate capture on the remote endpoint.
+Soft/strict failures, cancellation and ``dry_run`` stay distinct. ``ok`` reports
+dispatch completion; domain verification is a separate check. A process killed
+mid-command retains its durable incomplete start. Completion-storage failure
+preserves an original cancellation/error and leaves the start incomplete.
+
+
+Action commands and Script Builder
+----------------------------------
+
+``AC_journal_capture`` requires named parameters (a JSON object) and executes
+its nested ``body`` on the current executor. Positional bodies are rejected
+to avoid eagerly interpolating nested data twice.
+It keeps the caller's variables, strictness and loop/cancellation signals.
+The body is structurally validated and linted, and is interpolated only when
+its own steps run. A new capture starts a new journal root and restores any
+outer capture on exit; an existing history owner receives the provenance link::
+
+   ["AC_journal_capture", {
+       "path": "run.jsonl", "run_id": "example",
+       "body": [
+           ["AC_set_var", {"name": "message", "value": "hello"}],
+           ["AC_get_var", {"name": "message"}]
+       ]
+   }]
+
+Optional ``device_id`` and ``session_id`` label the capture. Identifiers and
+the destination must not contain values known to the enclosing
+run's resolved-secret mask; capture rejects them before history linking, file
+creation or body execution. The summary has ``run_id``, ``journal_path``, the original ``record`` and
+``failed_actions``. This command retains the caller's scope; the Python
+``execute_action_with_journal`` convenience function starts fresh variables.
+An outer executor dry-run previews the capture command without running its
+body or opening a journal. Use Python/CLI run-level capture with ``dry_run``
+to capture individual previewed steps.
+
+``AC_journal_read`` accepts ``path``, optional ``run_id`` and ``limit`` (default
+100, range 1–10,000). It uses public ``inspect_journal`` to validate the whole
+file and then return a bounded list of sanitized lifecycle snapshots in append
+order. Filtering precedes the output limit; reads preserve the source and never
+infer completion. The CLI uses the same reader. These operation paths use the
+default allowed-root guard; configure ``AUTOCONTROL_ALLOWED_PATH_ROOTS`` for
+additional destinations. Both commands require ``drive_input`` under RBAC;
+private journal reads are not screen observation.
+
+In Script Builder, add **Capture Action Journal** (Flow) to edit metadata and
+nested body steps, or **Read Action Journal** (Data) to edit path, run filter
+and limit. ``examples/28_action_journal.py`` demonstrates variable-only capture
+and inspection without desktop input.
+
+
+Observed runs and MCP integration
+----------------------------------
+
+``execute_journal_run(actions, path, options=JournalRunOptions(...))`` starts
+fresh variables and returns the existing four-field ``JournalRunResult``.
+Options group ``variables``, ``dry_run``, ``run_id``, ``device_id``,
+``session_id``, ``observer`` and ``path_policy``. The original seven-parameter
+``execute_action_with_journal`` API delegates to this runner and keeps its
+signature. For example::
+
+   from pathlib import Path
+   from je_auto_control import JournalRunOptions, execute_journal_run
+
+   statuses = []
+   result = execute_journal_run(
+       [["AC_set_var", {"name": "message", "value": "hello"}]],
+       Path("run.jsonl"),
+       options=JournalRunOptions(run_id="observed", observer=statuses.append),
+   )
+   # statuses == ["incomplete", "ok"]
+
+Observers receive a status string before a step's durable start and after its
+completion snapshot is persisted. They may raise to stop execution. A secondary
+completion-observer failure cannot replace a pending original error or control
+signal. Joined workers invoke observers on their own threads. Nested captures
+retain enclosing observers and intersect path policies, including captures
+opened by existing convenience APIs. The bound policy's live roots are checked
+at each append. A refused completion leaves the durable start incomplete.
+
+``inspect_journal`` and ``read_events`` accept count observers for cooperative
+read cancellation. Counts include every validated record before filtering;
+file handles close before callback exceptions propagate. ``inspect_journal``
+also intersects enclosing journal policies and an optional explicit policy.
+
+MCP exposes ``ac_journal_capture`` and ``ac_journal_read``. Capture accepts
+``actions``, ``path``, optional ``metadata`` (``run_id``, ``device_id``,
+``session_id``), ``variables`` and ``dry_run``. It reports durable completed-step
+counts, observes cancellation at action boundaries and returns structured run
+metadata. Recorded executor failures set ``isError: true`` while preserving
+that metadata and the original record. Domain outcomes such as a failed DAG
+node remain in ``record`` and require separate inspection.
+
+Read accepts ``path``, optional ``run_id`` and ``limit`` and returns
+``{"events": [...]}``. It checks cancellation between validated records,
+reports scan progress every 100 records and sends a final count. Limits bound
+output, while the whole file is validated. Both tools require ``drive_input``
+under RBAC. Read-only mode keeps read and omits capture.
+
+The MCP context carries the server's path policy into journal operations,
+including nested journal commands and local workers. Default journal roots
+must also allow the path; configure ``AUTOCONTROL_ALLOWED_PATH_ROOTS`` for an
+additional destination alongside MCP roots. General nested-action argument
+policy integration remains tracked in ``Progress.md``. Cancellation is
+cooperative at the described boundaries; running native I/O is not forcibly
+interrupted. ``examples/29_mcp_journal.py`` demonstrates the JSON-RPC workflow
+in process without desktop input or an external service.
+
+
+Run History journal browser
+-----------------------------
+
+Open **Run History**, select a history row and use **Actions > Use Journals
+from Selected Run**. The linked-journal selector fills the file and run ID;
+it does not open the file. Alternatively use **Actions > Choose Journal**
+for any explicit JSONL source. A blank run ID selects all runs. Set the
+snapshot limit (default 100, range 1–10,000), then **Actions > Read Journal**.
+The whole file is validated before bounded sanitized snapshots appear.
+
+The table retains separate start/completion snapshots and shows sequence,
+status, command, run/step/parent IDs. Select a snapshot to see its full JSON,
+including device/session and artifact provenance. Reads do not execute journal
+contents, create history rows or modify the source file.
+
+Parsing runs off the GUI thread through the existing worker relay. Progress
+counts validated snapshots, coalesced every 100 records. **Actions > Cancel
+Journal Read** and closing the history view request cancellation between
+records; an in-progress decode is not forcibly interrupted. A cancelled or
+failed read leaves no partial result visible. Choosing another link invalidates
+and cancels the older request, so its queued result cannot replace the new
+selection. Destroyed views receive no late callbacks.
+
+File selection, provenance lookup and inspection require ``drive_input`` when
+an RBAC context is active. Before background I/O, stored owners are refreshed
+so removal or demotion is honored. Workers retain the submitted context's
+journal path restrictions as well as the default root guard. A rejected or
+corrupt source is shown as an error, never as an empty successful read.
+The controls, headers and state labels support all four GUI languages.
+
+
+Explicit manual history
+-------------------------
+
+``manual_history_scope(store=None, source_id="manual", script_path="<manual>")``
+creates an explicitly requested manual row and yields a frozen ``HistoryBinding``
+with ``store`` and ``run_id``. Both names are exported from ``je_auto_control``.
+``source_id`` and ``script_path`` are non-empty metadata labels; they do not
+open or execute a script. Known resolved secrets are masked before insertion.
+The caller's executor, variables and result values are preserved. For example::
+
+   from je_auto_control import HistoryStore, manual_history_scope, execute_journal_run
+
+   store = HistoryStore("history.sqlite")
+   try:
+       with manual_history_scope(store=store, source_id="manual-example") as owner:
+           result = execute_journal_run(
+               [["AC_set_var", {"name": "message", "value": "hello"}]],
+               "events.jsonl",
+           )
+       links = store.journals_for_run(owner.run_id)
+   finally:
+       store.close()
+
+An ambient journal is linked when the manual scope starts. Captures opened
+later, including local parallel/DAG captures, retain that owner. Nested manual
+owners create separate rows and restore the previous owner when they leave.
+Clearing history does not delete journal files. Importing the API requires
+neither Qt nor SQLite; entering an opted-in history scope requires SQLite.
+
+The scope counts only new executor-recorded failures. Those settle the row as
+``error`` without replacing action records. Normal break/continue signals keep
+the counted outcome; cancellation and raised errors settle as ``error`` and
+propagate unchanged. Domain result flags still require caller inspection.
+A failed metadata finish cannot replace a pending original signal; its row
+may remain unfinished. Manual ownership does not request an error screenshot.
+
+CLI ``run SCRIPT --history`` uses the default store shown in Run History.
+``--history-db PATH`` requires ``--history`` and chooses a bounded custom path;
+the CLI closes its custom store. It does not switch the GUI's default store.
+Original stdout JSON, variables, dry-run dispatch and failure exit codes remain
+unchanged. History previews use source ID ``cli.preview``; ordinary runs use
+``cli.run``. Existing journal flags combine with history capture.
+
+Script Executor (file/editor/directory) and Script Builder offer **Record in
+Run History**, initially unchecked, and an optional journal path. The journal
+can be used independently of history. A directory invocation has one batch
+history owner. These controls wrap the existing execution paths and do not
+replace their variable scopes or result display. View the default-store rows
+and their links in Run History after execution.
+
+``AC_history_capture`` accepts named ``body``, optional ``source_id`` and
+``script_path``. It keeps the owning executor, strictness and deferred body
+interpolation. Its JSON result contains ``history_id``, ``record`` and
+``failed_actions``. It is available in Script Builder and through the ordinary
+REST/MCP action-execution tools. Outer dry-run previews do not open a history
+row for the command. Recording requires ``drive_input`` under RBAC.
+``examples/30_manual_history.py`` supports validation without files and a
+variable-only run/preview with an explicit output directory.
+
+
+History provenance links
+------------------------
+
+Scheduler, trigger, hotkey, webhook and email owners bind their existing history
+row during execution. Explicit ``journal_scope`` capture automatically attaches
+a canonical journal path and journal run ID to that row before dispatch. Local
+parallel and default DAG workers carry this owner when they open captures too.
+Multiple captures can link to one history row; duplicate links are idempotent.
+Plain capture without an owner does not create a history row or open a history
+database. For an explicitly managed manual row::
+
+   from pathlib import Path
+   from je_auto_control.utils.action_journal import ActionJournal, journal_scope
+   from je_auto_control.utils.executor.action_executor import executor
+   from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
+   from je_auto_control.utils.run_history.history_store import HistoryStore, SOURCE_MANUAL, STATUS_OK
+
+   history = HistoryStore("history.sqlite")
+   try:
+       row_id = history.start_run(SOURCE_MANUAL, "example", "actions.json")
+       with bound_history(HistoryBinding(history, row_id)):
+           with journal_scope(ActionJournal(Path("run.jsonl")), run_id="example"):
+               executor.execute_action([["AC_set_var", {"name": "count", "value": 1}]])
+       history.finish_run(row_id, STATUS_OK)
+       links = history.journals_for_run(row_id)
+   finally:
+       history.close()
+
+``HistoryStore.attach_journal`` stores metadata only: it does not open, validate,
+copy or take ownership of the target file. ``journals_for_run`` returns immutable
+``JournalLink`` values with ``run_id``, ``journal_path`` and ``journal_run_id``.
+Clearing/pruning history removes links and preserves journal files. Existing
+history schemas migrate on opening; original rows and screenshot links survive.
+An unknown bound history row refuses capture before device effects. GUI and
+manual-run convenience wiring remain pending integration.
+
+
+Interrupted run outcomes
+------------------------
+
+A raised ``KeyboardInterrupt``, ``SystemExit``, ``GeneratorExit``, asyncio/future
+cancellation or MCP ``OperationCancelledError`` must not turn an interrupted
+attempt into a successful history row. History records ``error``; captured
+journal steps record ``cancelled``. Interrupted attempts do not take an error
+screenshot. Ordinary failures retain their existing snapshot/recovery behavior.
+
+Cancellation bypasses non-strict executor failure recording, ``AC_try`` recovery,
+``AC_retry`` retries, image-condition absence handling and callback failure
+guards. Explicit script ``finally`` cleanup still runs. Local parallel and DAG
+workers return the original signal to the owner; already-started parallel
+branches are joined first. These are propagation rules once a signal is raised,
+not forcible interruption of a blocking native operation.
+
+Hard control signals propagate unchanged. If history completion fails while a
+hard signal is already pending, diagnostic storage cannot replace that signal;
+the history row remains unfinished rather than being marked successful.
+MCP cancellation keeps its existing ``RuntimeError`` control-signal contract,
+separate from ordinary framework failures, and its JSON-RPC cancellation reply.
+
+
+Admission after rejected TCP authentication
+----------------------------------------------------------------
+
+A TCP handler is marked stopped before sending ``AUTH_FAIL`` for a bad token, wrong
+handshake phase or denied approval. The host can admit an immediate replacement even
+while rejection logging or socket cleanup is pending. This preserves the existing
+wire payloads and the separate bound on pending handshakes; it does not admit failed
+viewers or increase ``max_clients`` for active clients.

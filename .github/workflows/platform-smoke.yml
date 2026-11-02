@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         # arm64 is not a rounding error on the desktop any more, and the
-        # dependency set is where it shows. macos-14 is already arm64;
+        # dependency set is where it shows. macos-15 is arm64;
         # ubuntu-22.04-arm adds Linux, and windows-11-arm is back.
         #
         # windows-11-arm installs a smaller dependency set than every other
@@ -42,7 +42,7 @@ jobs:
         #       'opencv-python>=4.8,<6' 'cryptography>=50.0.0'
         #
         # When both resolve, drop the markers from pyproject.toml.
-        os: [windows-2022, ubuntu-22.04, macos-14, ubuntu-22.04-arm, windows-11-arm]
+        os: [windows-2022, ubuntu-22.04, macos-15, ubuntu-22.04-arm, windows-11-arm]
         python-version: ["3.10", "3.14"]
         exclude:
           # CPython's official Windows arm64 builds start at 3.11, so
@@ -163,7 +163,7 @@ jobs:
             DISPLAY=:99 PYTHONPATH="$(pwd)" python3.11 test/verify/freebsd_verify.py
   macos-capabilities:
     name: What a real macOS runner permits
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - uses: actions/checkout@v5
@@ -195,6 +195,10 @@ jobs:
       # So the flag is off and this is a gate now: EXPECTED in the script
       # holds what was measured, and a capability appearing or disappearing
       # turns this red and names which one.
+      #
+      # That measurement was on macos-14, which GitHub retires on 2026-11-02;
+      # the job moved to macos-15 with EXPECTED unchanged, so this gate is
+      # also what confirms the newer image grants the same.
       #
       # Three of the probes (the click-state read-back, the by-id lookup of a
       # minimised window, and the point-based `grab_logical`) were measured on

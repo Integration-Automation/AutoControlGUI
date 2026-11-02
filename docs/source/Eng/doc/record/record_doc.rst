@@ -78,4 +78,4 @@ Recording on Wayland
 ``record()`` raises on a Wayland session: the compositor forbids a global
 input hook. ``InputStepLog`` records the steps the program executes without
 one, and the opt-in ``PhysicalRecorder`` reads your own input from kernel
-devices you name. See :doc:`/Eng/doc/wayland/wayland_capabilities_doc`.
+devices you name.

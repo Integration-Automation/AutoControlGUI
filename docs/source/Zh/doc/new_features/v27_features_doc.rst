@@ -25,6 +25,12 @@ fallback_rate, avg_duration_ms, top_brittle}``——在定位器真正失效前,
 越來越需要 VLM 後備(衰退中的選擇器)的那些。對應 ``AC_heal_stats`` /
 ``ac_heal_stats``。
 
+舊 ``healed`` 與 ``heal_rate`` 是定位候選數，不代表已驗證的 UI 恢復；
+``located`` 與 ``located_rate`` 明確命名此母體。``verified_operations`` 與
+``operation_success_rate`` 以具有明確布林驗證結果的點擊請求為母體，
+點擊失敗等矛盾證據不計為已驗證成功。``verification_unknown`` 計算缺乏此證據的
+點擊請求。新比率附分子、分母，空母體為 null；只送出點擊時，驗證仍是未知。
+
 
 機密掃描
 ========

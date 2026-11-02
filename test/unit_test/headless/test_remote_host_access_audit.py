@@ -7,6 +7,7 @@ write files and set the clipboard; and an allowlist whose every entry was a
 typo admitted everyone. No real input or capture runs.
 """
 import socket
+from threading import Event
 import time
 
 import pytest
@@ -18,6 +19,7 @@ from je_auto_control.utils.remote_desktop.host_client import _ClientHandler
 from je_auto_control.utils.remote_desktop.protocol import (
     MessageType, encode_frame, read_message,
 )
+from je_auto_control.utils.remote_desktop.transport import TcpMessageChannel
 
 TOKEN = "test-token-1"
 
@@ -62,6 +64,41 @@ def test_failed_logins_do_not_use_up_the_client_slots():
         assert kind is MessageType.AUTH_OK
         sock.close()
     finally:
+        host.stop()
+
+
+@pytest.mark.parametrize('reason', ['bad_token', 'wrong_phase', 'approval_denied'])
+def test_terminal_auth_rejection_releases_capacity_before_the_viewer_receives_it(monkeypatch, reason):
+    entered, release = Event(), Event()
+    send = TcpMessageChannel.send_typed
+
+    def hold_after_terminal_reply(channel, kind, payload):
+        send(channel, kind, payload)
+        if kind is MessageType.AUTH_FAIL:
+            entered.set()
+            assert release.wait(5)
+
+    monkeypatch.setattr(TcpMessageChannel, 'send_typed', hold_after_terminal_reply)
+    host = _host(max_clients=1, on_pending_viewer=(lambda _pending: host_access.PERMISSION_DENIED)
+                 if reason == 'approval_denied' else None)
+    first = second = None
+    try:
+        if reason == 'wrong_phase':
+            first = socket.create_connection(('127.0.0.1', host.port), timeout=5)
+            assert read_message(first)[0] is MessageType.AUTH_CHALLENGE
+            first.sendall(encode_frame(MessageType.INPUT, b'{}'))
+            kind, _payload = read_message(first)
+        else:
+            first, kind = _connect(host, token='wrong-token' if reason == 'bad_token' else TOKEN)
+        assert kind is MessageType.AUTH_FAIL and entered.wait(5)
+        host._on_pending_viewer = None
+        second, kind = _connect(host)
+        assert kind is MessageType.AUTH_OK
+    finally:
+        release.set()
+        for sock in (first, second):
+            if sock is not None:
+                sock.close()
         host.stop()
 
 

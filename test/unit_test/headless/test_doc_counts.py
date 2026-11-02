@@ -24,6 +24,11 @@ def _commands() -> int:
     return len(executor.known_commands())
 
 
+def _facade_names() -> int:
+    import je_auto_control
+    return len(je_auto_control.__all__)
+
+
 def _mcp_tools() -> int:
     from je_auto_control.utils.mcp_server.tools import build_default_tool_registry
     # Pinned, not defaulted: the registry consults
@@ -31,6 +36,15 @@ def _mcp_tools() -> int:
     # developer with either set in their shell would otherwise see this guard
     # fail on a documentation file that is perfectly correct.
     return len(build_default_tool_registry(read_only=False, aliases=True))
+
+
+def _mcp_canonical() -> int:
+    from je_auto_control.utils.mcp_server.tools import build_default_tool_registry
+    return len(build_default_tool_registry(read_only=False, aliases=False))
+
+
+def _mcp_aliases() -> int:
+    return _mcp_tools() - _mcp_canonical()
 
 
 def _utils_subpackages() -> int:
@@ -58,12 +72,22 @@ def _typing_exemptions() -> int:
 
 # (doc, regex with one capture group, what it counts, how to measure it)
 CITATIONS: List[Tuple[str, str, str, Callable[[], int]]] = [
+    ("architecture_explore.md", r"套件門面 `__all__` 公開名稱數 \| ([\d,]+) \|",
+     "facade names", _facade_names),
+    ("architecture_explore.md", r"把 ([\d,]+) 個公開名稱集中再匯出",
+     "facade names", _facade_names),
+    ("architecture_explore.md", r"按首次存取解析 ([\d,]+) 個公開名稱",
+     "facade names", _facade_names),
     ("architecture_explore.md",
      r"`AC_\*` 動作指令數（`known_commands\(\)` 實測） \| (\d+) \|",
      "AC_* commands", _commands),
     ("architecture_explore.md",
      r"MCP 工具數（`build_default_tool_registry\(\)` 實測） \| (\d+) \|",
      "MCP tools", _mcp_tools),
+    ("architecture_explore.md", r"預設註冊 (\d+) 個工具", "MCP tools", _mcp_tools),
+    ("architecture_explore.md", r"行，(\d+) 個工具）", "MCP tools", _mcp_tools),
+    ("architecture_explore.md", r"工具＝(\d+) 個 `ac_\*`", "canonical MCP tools", _mcp_canonical),
+    ("architecture_explore.md", r"\+ (\d+) 個別名", "MCP aliases", _mcp_aliases),
     ("architecture_explore.md",
      r"### 5\.4 能力層 `utils/`（(\d+) 個子套件）",
      "utils/ subpackages", _utils_subpackages),
@@ -78,6 +102,10 @@ CITATIONS: List[Tuple[str, str, str, Callable[[], int]]] = [
     ("README.md", r"all (\d+) commands", "AC_* commands", _commands),
     ("README.md", r"(\d+) tools for", "MCP tools", _mcp_tools),
     ("README.md", r"(\d+) self-contained scripts", "examples", _examples),
+    ("architecture_explore.md", r"範例腳本 \| (\d+) \|", "examples", _examples),
+    ("architecture_explore.md", r"`examples/` \| (\d+) 個腳本", "examples", _examples),
+    ("README/README_zh-CN.md", r"(\d+) 个自包含脚本", "examples", _examples),
+    ("README/README_zh-TW.md", r"(\d+) 個自足腳本", "examples", _examples),
     ("README/README_zh-CN.md", r"(\d+) 个 `AC_\*` 命令",
      "AC_* commands", _commands),
     ("README/README_zh-CN.md", r"全部 (\d+) 个命令", "AC_* commands", _commands),
@@ -107,7 +135,7 @@ def test_quoted_count_matches_the_tree(doc, pattern, label, measure):
     )
     actual = measure()
     for quoted in found:
-        assert int(quoted) == actual, (
+        assert int(quoted.replace(",", "")) == actual, (
             f"{doc} says {quoted} {label}, the tree has {actual}. "
             f"Re-measure and update every document that quotes it "
             f"(architecture_explore.md, README.md and both translations)."

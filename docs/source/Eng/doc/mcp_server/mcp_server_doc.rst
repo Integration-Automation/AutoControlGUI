@@ -8,14 +8,35 @@ custom Anthropic / OpenAI tool-use loops) can drive the host machine
 through AutoControl. Implementation is stdlib-only — JSON-RPC 2.0
 over stdio or HTTP+SSE — no extra runtime dependencies.
 
-Roughly 90 tools are exposed, plus the full set of MCP protocol
+The default registry exposes 682 tools (663 canonical names and 19 aliases),
+plus the full set of MCP protocol
 capabilities: tools, resources, prompts, sampling, roots, logging,
 progress, cancellation, list-changed notifications, and elicitation.
+
+Structured journals
+===================
+
+``ac_journal_capture`` accepts ``actions``, ``path`` and optional ``metadata``
+(``run_id``, ``device_id``, ``session_id``), ``variables`` and ``dry_run``.
+``ac_journal_read`` accepts ``path``, optional ``run_id`` and ``limit`` (default
+100, range 1–10,000). Both have output schemas and support progress and
+cooperative cancellation. Both require ``drive_input`` under RBAC; read-only
+mode exposes read while omitting capture. Journal paths follow the MCP policy
+and the default journal-root guard. See the journal guide for nested capture,
+worker inheritance and read-cancellation boundaries.
+
+Capture returns ``run_id``, ``journal_path``, ``record`` and ``failed_actions``;
+read returns ``{"events": [...]}``. A recorded executor failure sets ``isError``
+while retaining structured run data. For extension handlers, ``MCPToolResult``
+is a JSON-compatible dictionary with separate ``is_error``/``error_text``
+metadata. Only this explicit type controls tool error/audit status; data fields
+in an ordinary dictionary cannot set protocol flags. Controlled failure results
+retain their payload without an exception/error screenshot.
 
 Tool catalogue
 ==============
 
-The default registry pairs every canonical ``ac_*`` tool with a
+The default registry gives selected common ``ac_*`` tools a
 short alias (``click``, ``type``, ``screenshot``, ...) so prompts
 can stay terse. Use ``--list-tools`` (see *CLI inspection* below) to
 dump the live catalogue as JSON.
@@ -38,11 +59,11 @@ Screen / image / OCR
 Window management (Windows)
   ``ac_list_windows``, ``ac_focus_window``, ``ac_wait_for_window``,
   ``ac_close_window``, ``ac_window_move``, ``ac_window_minimize``,
-  ``ac_window_maximize``, ``ac_window_restore``. The last three answer with
-  a tool error (``isError``) when the window is gone or, for maximise and
-  restore, when Windows refuses to bring it to the foreground -- the window
-  may then have changed state without becoming the active one. They used to
-  return the window handle either way.
+  ``ac_window_maximize``, ``ac_window_restore``.
+  The three state tools return the window handle only when the backend accepts
+  the requested state/activation. A stale handle or refused foreground request
+  produces a tool result with ``isError: true``. The raw Win32 ``ShowWindow``
+  return value means previous visibility and is not treated as a success flag.
 
 Semantic locators
   ``ac_a11y_list``, ``ac_a11y_find``, ``ac_a11y_click``,
@@ -156,7 +177,7 @@ Logging notifications, progress, cancellation
   ``io.modelcontextprotocol/logLevel`` (see `Stateless requests
   (2026-07-28)`_).
 - Long-running tools that accept a ``ctx`` parameter receive a
-  :class:`ToolCallContext` and can call
+  ``ToolCallContext`` and can call
   ``ctx.progress(value, total, message)`` to push
   ``notifications/progress`` (when the client supplied a
   ``progressToken``) and ``ctx.check_cancelled()`` to abort
@@ -306,11 +327,21 @@ user of that store instead of comparing a shared token (``auth_token`` and
 ``JE_AUTOCONTROL_MCP_TOKEN`` are then not accepted, and a bearer token is
 always required). The store, its roles and how to create users are described
 under *Roles* in the operations-layer REST API chapter; both servers can
-share one file. Without a store nothing changes. The stdio transport has no
-bearer token and is never subject to RBAC.
+share one file. Without a store, live MCP tool sessions use an operator principal;
+host-management tools require an authenticated administrator. The stdio transport has no
+bearer token and uses the same operator ceiling for its live tool sessions.
 
-- A tool needs ``read_screen`` when it is marked ``readOnlyHint`` and
-  ``drive_input`` otherwise. ``ac_remote_host_start`` / ``_stop``,
+- A tool defaults to ``read_screen`` for ``readOnlyHint`` and ``drive_input``
+  otherwise, with explicit capability overrides. Sensitive reads require
+  ``drive_input`` (operator/admin): clipboard and history, local document/data/SQL
+  readers, dotenv and reference resolution, JWT/OTP generation, persistent-store
+  readers, outbound HTTP/port/S3 checks, microphone capture and external VLM
+  requests. Assertion containers require the same capability because their specs
+  may read those resources. Pure parsing (for example ``ac_parse_dotenv`` and
+  ``ac_jwt_decode``) and screen observation keep their existing classification.
+  Non-mutating hints remain true for these reads; a hint does not grant a role
+  permission to use them. ``ac_realize_item``, ``ac_idempotency_begin`` and
+  ``ac_rate_limit`` change state and are excluded from ``--read-only`` mode. ``ac_remote_host_start`` / ``_stop``,
   ``ac_usb_acl_add`` / ``_remove`` / ``_set_default``,
   ``ac_usb_passthrough_enable``, ``ac_egress_allow`` / ``_reset`` and
   ``ac_load_plugins`` need ``manage_hosts`` (``admin``); ``ac_user_add`` /
@@ -351,8 +382,8 @@ bearer token and is never subject to RBAC.
   libraries (``ac_ab_report``, ``ac_ab_best_strategy``, ``ac_repair_pending``,
   ``ac_repair_resolved``, ``ac_element_list``, ``ac_skill_list``,
   ``ac_skill_search``); stored policy and state (``ac_usb_acl_list``,
-  ``ac_lease_active``, ``ac_quarantine_list``, ``ac_pending_artifacts``,
-  ``ac_config_sync_status``); and a connected device's clipboard
+  ``ac_lease_active``, ``ac_quarantine_list``, ``ac_pending_artifacts``);
+  and a connected device's clipboard
   (``ac_android_get_clipboard``, ``ac_ios_get_clipboard``). These were
   ``read_screen`` before, so **a viewer token can no longer call them**;
   ``operator`` and ``admin`` are unaffected.
@@ -527,166 +558,27 @@ existing client keeps working unchanged next to a 2026-07-28 one.
 Tool modes: full, progressive, static
 =====================================
 
-By default ``tools/list`` answers with every registered tool. That is the
-**full** mode; it is the default and its replies are unchanged. Two other
-modes exist for a client that should not carry several hundred schemas it
-will never use:
+``full`` (the default) lists every permitted tool. ``progressive`` starts a
+session with five discovery controls (``ac_mcp_tool_search``,
+``ac_mcp_tool_schema``, ``ac_mcp_tools_enable``, ``ac_mcp_tools_disable`` and
+``ac_mcp_tools_state``) and enables the rest on request, for that session only.
+``static`` serves a fixed profile to clients that never refresh their tool
+list::
 
-.. list-table::
-   :header-rows: 1
-   :widths: 16 84
+   je_auto_control_mcp --tool-mode progressive
+   je_auto_control_mcp --tool-mode static --tool-profile ac_screen_size,ac_list_windows
 
-   * - Mode
-     - What ``tools/list`` offers
-   * - ``full``
-     - Every tool, in one reply. The default.
-   * - ``progressive``
-     - Five core tools. A session searches the registry, reads the schema of
-       what it wants and enables it; from then on the tool is in *that
-       session's* list and can be called.
-   * - ``static``
-     - A fixed profile and nothing else; nothing can be enabled. For a client
-       that reads the list once and never again.
-
-Choose the mode with ``JE_AUTOCONTROL_MCP_TOOL_MODE``, with
-``je_auto_control_mcp --tool-mode {full,progressive,static}``, or in code:
-
-.. code-block:: python
-
-   import je_auto_control as ac
-
-   ac.start_mcp_stdio_server(tool_mode="progressive")
-   ac.start_mcp_http_server(tool_mode="progressive")
-   ac.HttpMCPServer(tool_mode="static")
-
-``AC_start_mcp_server`` and ``AC_start_mcp_http_server`` take the same
-``tool_mode`` argument, and the variable reaches every way of starting a
-server. A value that is none of the three stops the server from starting
-rather than quietly offering everything. A dispatcher's mode is fixed when it
-is built, so ``tool_mode`` passed together with an ``mcp=`` that is in
-another mode raises ``ToolDisclosureError``.
-
-**The core tools** (progressive mode only):
-
-.. list-table::
-   :header-rows: 1
-   :widths: 24 76
-
-   * - Tool
-     - What it does
-   * - ``ac_tools_search``
-     - ``query``, ``limit`` (1-50, default 10), optional ``category`` and
-       ``capability``. Returns rows of ``name`` / ``summary`` / ``category`` /
-       ``capability`` / ``read_only`` / ``takes_paths`` / ``enabled`` plus
-       ``total`` and ``truncated`` -- never a schema.
-   * - ``ac_tools_schema``
-     - The full descriptor of one tool, by ``name``.
-   * - ``ac_tools_enable``
-     - ``names``: tool names, or ``category:<name>`` for a whole category.
-       Replies with ``enabled`` / ``already_enabled`` / ``unavailable`` and
-       whether ``notifications/tools/list_changed`` was sent.
-   * - ``ac_tools_disable``
-     - Removes tools the session enabled.
-   * - ``ac_tools_state``
-     - The mode, what the session has enabled, the categories and their
-       sizes, and the limits calls are held to (read-only, path roots,
-       ``env://`` allowlist, role).
-
-A category is the name of the factory that builds the tools (``mouse``,
-``screen``, ``window`` ...); a plugin's tools are in ``plugin``.
-
-**Sessions.** The enabled set belongs to one session and to nobody else:
-an ``Mcp-Session-Id`` over HTTP (or, for a client that ignores the header,
-its connection), and the one implicit session of a stdio server. It is
-released when the session is deleted, swept, evicted, when the connection
-closes or when the stdio loop ends. Enabling or disabling sends
-``notifications/tools/list_changed`` to that session only; a plain HTTP
-``POST`` with no standing ``GET`` stream has nowhere to receive it, so the
-reply says ``"list_changed_sent": false`` and the client should request
-``tools/list`` again.
-
-**Paging.** In these two modes ``tools/list`` is paged, 100 tools to a page
-(``server.disclosure.page_size``): a result with more to come carries
-``nextCursor``, to be sent back as ``cursor``. Every page carries the id of
-the list it belongs to under ``_meta``
-``io.github.integration-automation/toolSnapshot``. A cursor continues the
-list as it was when its first page was requested, even if a plugin was
-loaded or removed in between, so no page mixes two registries. A cursor that
-is malformed, belongs to another session, or names a list the server no
-longer keeps (it remembers the last eight per session) is answered
-``-32602``; request ``tools/list`` again without one. The full mode is not
-paged and ignores ``cursor``, as before.
-
-**The static profile.** ``JE_AUTOCONTROL_MCP_TOOL_PROFILE`` is a
-comma-separated list of tool names and ``category:<name>`` entries. In
-static mode it is the whole list; unset, the profile is the 19 tools behind
-the short aliases (``ac_click_mouse``, ``ac_type_text``, ``ac_screenshot``
-...). In progressive mode a configured profile is offered to every session
-beside the core, so a client that never refreshes its list still has those
-tools. MCP has no client capability that says "I follow
-``tools/list_changed``", so the server cannot detect such a client: use the
-static mode, or a profile, for one. A 2026-07-28 request is always served
-the static profile in progressive mode -- that revision has no session for
-an enabled set to live in.
-
-**What the mode does not change.** It decides what is *offered*, never what
-is *allowed*:
-
-* Every call still goes through the same gates in the same order -- role,
-  input schema, path roots and ``env://`` allowlist, rate limit,
-  confirmation -- and is audited as before.
-* Search, schema and enable answer from what the caller may call. A tool the
-  caller's role does not grant, or that read-only mode rules out, is not
-  found, not described and reported as ``unavailable`` when enabled.
-* A call to a tool the session's list does not hold is answered ``-32602``
-  and recorded in the audit log as ``denied``. A role refusal keeps its own
-  code, ``-32003``.
-* In read-only mode a mutating tool cannot be enabled, including one a
-  plugin registers after the server started.
-* A tool a plugin removes is gone from every session at once. If the same
-  name is registered again later, it has to be enabled again.
-* The core tools' names cannot be registered over or removed.
-
-**What it costs.** ``benchmarks/mcp_discovery.py`` measures both modes
-in-process through the dispatcher both transports use. On the 680-tool
-registry (2026-10-09, one Windows 11 machine, median of 30):
-
-.. list-table::
-   :header-rows: 1
-   :widths: 40 30 30
-
-   * - Figure
-     - ``full``
-     - ``progressive``
-   * - Tools in a new session's ``tools/list``
-     - 680
-     - 5
-   * - Size of that result
-     - 327,378 bytes
-     - 2,411 bytes (0.74 %)
-   * - ``initialize`` + ``initialized`` + ``tools/list``
-     - 43.7 ms
-     - 1.0 ms
-   * - One ``ac_tools_search`` (10 rows, 2,390 bytes)
-     - --
-     - 3.1 ms
-   * - One ``ac_tools_schema``
-     - --
-     - 0.3 ms
-   * - One ``ac_tools_enable`` + ``ac_tools_disable``
-     - --
-     - 0.9 ms
-
-.. code-block:: shell
-
-   python benchmarks/mcp_discovery.py --rounds 30
+``JE_AUTOCONTROL_MCP_TOOL_PROFILE`` gives the profile from the environment;
+embedded and HTTP servers use ``MCPServer.configure_tool_disclosure(...)``.
+Paging, cursors and the measured list sizes are described under "MCP session
+tool availability" in :doc:`../ai_agents/ai_agents_doc`.
 
 Read-only / safe mode
 =====================
 
 Set ``JE_AUTOCONTROL_MCP_READONLY=1`` (or pass ``--read-only`` to
 ``je_auto_control_mcp``, or ``read_only=True`` to
-:func:`build_default_tool_registry`) to drop every tool whose
+``build_default_tool_registry``) to drop every tool whose
 ``readOnlyHint`` is false. Only observers (positions, OCR queries,
 clipboard reads, history, ...) survive:
 
@@ -807,7 +699,7 @@ What the roots do **not** reach:
     is readable, as before — including the ones that hold API keys.
 
 Programmatically, the same policy is ``server.argument_policy``
-(:class:`ArgumentPolicy` holding a :class:`je_auto_control.PathPolicy` and
+(``ArgumentPolicy`` holding a ``je_auto_control.PathPolicy`` and
 the allowlist); assign another to a server you build yourself.
 
 Confirmation prompts (elicitation)
@@ -888,7 +780,7 @@ returned to the model — fast forensic trail for flaky automations.
 Rate limiting
 =============
 
-Pass a :class:`RateLimiter` to :class:`MCPServer` to guard against
+Pass a ``RateLimiter`` to ``MCPServer`` to guard against
 runaway loops:
 
 .. code-block:: python
@@ -906,7 +798,7 @@ Plugin hot-reload
 =================
 
 Drop ``*.py`` files exposing top-level ``AC_*`` callables into a
-directory and let :class:`PluginWatcher` keep the registry in sync:
+directory and let ``PluginWatcher`` keep the registry in sync:
 
 .. code-block:: python
 
@@ -1010,3 +902,7 @@ Security notes
 - Subprocess calls (``ac_launch_process`` / ``ac_shell``) accept
   argv lists or a command line (POSIX-split, or passed to
   ``CreateProcess`` as written on Windows) — never an OS shell.
+
+Accepted tasks, trigger templates and skill trials retain live origin policy references. A private witness contains only current root ceilings; missing/revoked/corrupt witnesses fail closed. Authenticated local HTTP forwards the current caller's additional restrictive ceiling without granting identity or capability. Every operation checkpoint and lease maintenance rechecks roots. MCP client roots and asynchronous roots refresh are session-local; stale replies cannot renew retired authorities. Static host policies persist until replacement, while retiring client-supplied root authority revokes its references. HTTP client roots do not overwrite the shared resource provider's configured workspace. Workers/maintenance run in fresh contexts, shutdown tracks actual in-flight deliveries before lease acquisition, and unstarted queued work remains durable.
+
+Legacy MCP wrappers and parallel/local DAG workers retain the intersection of source ceilings. Pure tool-context binding stays inert; task-aware dispatch resolves the metadata lazily.

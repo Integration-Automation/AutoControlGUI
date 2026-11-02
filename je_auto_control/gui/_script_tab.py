@@ -8,7 +8,8 @@ the run at its next checkpoint.
 import functools
 import json
 
-from typing import TYPE_CHECKING, Any, Callable
+from contextlib import nullcontext
+from typing import TYPE_CHECKING, Any, Callable, ContextManager
 
 from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QLabel, QLineEdit, QTextEdit, QVBoxLayout,
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
 from je_auto_control.gui._tab_task import TabTask, was_stopped
 from je_auto_control.gui._qt_typed import as_widget
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
+from je_auto_control.gui.manual_run_controls import ManualRunControls, _requested_manual_run
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
@@ -33,19 +35,22 @@ def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
 
 
-def _run_script_file(path: str) -> Any:
-    """Worker thread: load and execute one action file."""
-    return execute_action(read_executable_action_json(path))
+def _run_script_file(path: str, capture: Callable[[], ContextManager[object]] = nullcontext) -> Any:
+    """Worker thread: load and execute one action file, inside the capture the tab asked for."""
+    with capture():
+        return execute_action(read_executable_action_json(path))
 
 
-def _run_script_dir(path: str) -> Any:
-    """Worker thread: execute every action file under ``path``."""
-    return execute_files(get_dir_files_as_list(path))
+def _run_script_dir(path: str, capture: Callable[[], ContextManager[object]] = nullcontext) -> Any:
+    """Worker thread: execute every action file under ``path``, inside the capture the tab asked for."""
+    with capture():
+        return execute_files(get_dir_files_as_list(path))
 
 
-def _run_script_text(text: str) -> Any:
-    """Worker thread: execute the action list typed into the editor."""
-    return execute_action(json.loads(text))
+def _run_script_text(text: str, capture: Callable[[], ContextManager[object]] = nullcontext) -> Any:
+    """Worker thread: execute the action list typed into the editor, inside the capture the tab asked for."""
+    with capture():
+        return execute_action(json.loads(text))
 
 
 class ScriptTabMixin:
@@ -83,6 +88,8 @@ class ScriptTabMixin:
         self.script_editor.setPlaceholderText('[["AC_type_keyboard", {"keycode": "a"}]]')
         layout.addWidget(self.script_editor)
 
+        self.script_history_controls = ManualRunControls()
+        layout.addWidget(self.script_history_controls)
         layout.addWidget(self._tr(QLabel(), "execution_result"))
         self.script_result_text = QTextEdit()
         self.script_result_text.setReadOnly(True)
@@ -127,7 +134,9 @@ class ScriptTabMixin:
     def _execute_script(self):
         path = self.script_path_input.text()
         if path:
-            self._start_script_run(functools.partial(_run_script_file, path))
+            capture = _requested_manual_run(getattr(self, "script_history_controls", None),
+                                            source_id="gui.file", script_path=path)
+            self._start_script_run(functools.partial(_run_script_file, path, capture))
 
     def _browse_script_dir(self):
         path = QFileDialog.getExistingDirectory(as_widget(self), _t("execute_dir_label"))
@@ -137,9 +146,13 @@ class ScriptTabMixin:
     def _execute_dir(self):
         path = self.script_dir_input.text()
         if path:
-            self._start_script_run(functools.partial(_run_script_dir, path))
+            capture = _requested_manual_run(getattr(self, "script_history_controls", None),
+                                            source_id="gui.directory", script_path=path)
+            self._start_script_run(functools.partial(_run_script_dir, path, capture))
 
     def _execute_manual_script(self):
         text = self.script_editor.toPlainText().strip()
         if text:
-            self._start_script_run(functools.partial(_run_script_text, text))
+            capture = _requested_manual_run(getattr(self, "script_history_controls", None),
+                                            source_id="gui.editor", script_path="<editor>")
+            self._start_script_run(functools.partial(_run_script_text, text, capture))

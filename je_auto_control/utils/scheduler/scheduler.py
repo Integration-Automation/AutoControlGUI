@@ -12,13 +12,17 @@ from typing import Callable, Dict, List, Optional, Set
 
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
-from je_auto_control.utils.rbac.deferred import DeferredOwner, capture_owner
-from je_auto_control.utils.run_history.run_outcome import run_counting_failures
+from je_auto_control.utils.run_history.run_outcome import (
+    RunOutcome, finish_history_run, run_counting_failures,
+)
 from je_auto_control.utils.run_history.history_store import (
-    SOURCE_SCHEDULER, STATUS_ERROR, STATUS_OK, default_history_store,
+    SOURCE_SCHEDULER, STATUS_ERROR as STATUS_ERROR, STATUS_OK as STATUS_OK, default_history_store,
 )
 from je_auto_control.utils.scheduler.cron import (
     CronExpression, next_match, parse_cron,
@@ -50,8 +54,8 @@ class ScheduledJob:
     runs: int = 0
     enabled: bool = True
     next_run_ts: float = field(default=0.0)
-    #: Who registered it under RBAC; the run is authorised as that user.
-    owner: Optional[DeferredOwner] = field(default=None, kw_only=True)
+    _authorization: DeferredAuthorization = field(
+        default_factory=DeferredAuthorization, init=False, repr=False, compare=False)
 
     @property
     def is_cron(self) -> bool:
@@ -88,7 +92,7 @@ class Scheduler:
     def add_job(self, script_path: str, interval_seconds: float,
                 repeat: bool = True, max_runs: Optional[int] = None,
                 job_id: Optional[str] = None) -> ScheduledJob:
-        """Register and schedule a new interval job; return the record."""
+        """Register an interval job bound to the current caller; return its record."""
         max_runs = _check_max_runs(max_runs)
         jid = job_id or uuid.uuid4().hex[:8]
         now = time.monotonic()
@@ -97,9 +101,10 @@ class Scheduler:
             job_id=jid, script_path=script_path,
             interval_seconds=interval,
             repeat=repeat, max_runs=max_runs,
-            next_run_ts=now + interval, owner=capture_owner(),
+            next_run_ts=now + interval,
         )
         with self._lock:
+            job._authorization = DeferredAuthorization.capture()
             self._jobs[jid] = job
         autocontrol_logger.info("scheduler add_job %s %s", jid, script_path)
         return job
@@ -107,7 +112,7 @@ class Scheduler:
     def add_cron_job(self, script_path: str, cron_expression: str,
                      max_runs: Optional[int] = None,
                      job_id: Optional[str] = None) -> ScheduledJob:
-        """Register a cron-driven job (5-field expression)."""
+        """Register a cron job (5 fields) bound to the current caller."""
         max_runs = _check_max_runs(max_runs)
         expression = parse_cron(cron_expression)
         jid = job_id or uuid.uuid4().hex[:8]
@@ -117,9 +122,9 @@ class Scheduler:
             cron_expression=expression,
             repeat=True, max_runs=max_runs,
             next_run_ts=_next_cron_ts(expression, time.time()),
-            owner=capture_owner(),
         )
         with self._lock:
+            job._authorization = DeferredAuthorization.capture()
             self._jobs[jid] = job
         autocontrol_logger.info("scheduler add_cron_job %s %r -> %s",
                                 jid, cron_expression, _dt.datetime.fromtimestamp(job.next_run_ts).isoformat())
@@ -227,37 +232,25 @@ class Scheduler:
                 self._in_flight.difference_update(
                     job.job_id for job in pending)
 
+    @secret_log_scope()
     def _fire(self, job: ScheduledJob, now_mono: float, now_wall: float) -> None:
         run_id = default_history_store.start_run(
             SOURCE_SCHEDULER, job.job_id, job.script_path,
         )
-        status = STATUS_OK
-        error_text: Optional[str] = None
+        outcome = RunOutcome()
         try:
-            actions = read_executable_action_json(job.script_path)
-            run_counting_failures(lambda: self._execute(actions), owner=job.owner)
-        # 一個排程工作失敗必須記錄為 STATUS_ERROR 並繼續輪詢,絕不能拖垮
-        # 排程執行緒。原本的 tuple 漏掉 AutoControlException——它是幾乎所有
-        # action 失敗(找不到視窗/圖片、輸入錯誤)的基底,直接繼承
-        # Exception,不屬 OSError/ValueError/RuntimeError——所以任何正常失敗
-        # 的排程工作都會讓執行緒無聲死亡,其餘所有排程從此停擺。
-        # A failing scheduled job must be recorded as STATUS_ERROR and the loop
-        # must go on — it must never kill the scheduler thread. The previous
-        # tuple missed AutoControlException, the base of nearly every action
-        # failure (window/image not found, input error) and a direct Exception
-        # subclass, so any normally-failing job killed the thread silently and
-        # every other scheduled job stopped firing forever.
-        except Exception as error:  # noqa: BLE001  # reason: see comment above
-            status = STATUS_ERROR
-            error_text = repr(error)
+            with job._authorization.scope(), bound_history(HistoryBinding(default_history_store, run_id)):
+                actions = read_executable_action_json(job.script_path)
+                run_counting_failures(lambda: self._execute(actions))
+        # Settle every failed run; hard control signals keep propagating.
+        except BaseException as error:  # noqa: BLE001  # reason: see comment above
+            outcome.fail(error)
+            if outcome.hard_abort:
+                raise
             autocontrol_logger.error("scheduler job %s failed: %r",
                                      job.job_id, error)
         finally:
-            artifact = (capture_error_snapshot(run_id)
-                        if status == STATUS_ERROR else None)
-            default_history_store.finish_run(
-                run_id, status, error_text, artifact_path=artifact,
-            )
+            finish_history_run(default_history_store, run_id, outcome, capture_error_snapshot)
         with self._lock:
             live = self._jobs.get(job.job_id)
             if live is not job:

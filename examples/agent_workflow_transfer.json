@@ -1,0 +1,33 @@
+{
+  "apps": [
+    "ExampleApp"
+  ],
+  "source_app": {
+    "window_title": "Source"
+  },
+  "destination_app": {
+    "window_title": "Destination"
+  },
+  "fields": [
+    {
+      "source": {
+        "app_name": "ExampleApp",
+        "name": "Customer"
+      },
+      "destination": {
+        "app_name": "ExampleApp",
+        "name": "Name"
+      },
+      "transform": "strip"
+    }
+  ],
+  "submit_selector": {
+    "app_name": "ExampleApp",
+    "name": "Save"
+  },
+  "confirmation_selector": {
+    "app_name": "ExampleApp",
+    "name": "Status"
+  },
+  "confirmation_value": "Saved"
+}

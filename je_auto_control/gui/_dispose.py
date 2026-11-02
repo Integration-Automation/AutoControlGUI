@@ -10,7 +10,7 @@ hook, if the tab has one. ``dispose()`` lets go of all of it at once, on the
 call, so "release" means released when it returns.
 
 Background work is cancelled the way destroying the tab would cancel it a
-moment later: a task of the :mod:`~je_auto_control.gui.task_controller` through
+moment later: a task of the :mod:`~je_auto_control.gui.tab_task_controller` through
 its token (a script run stops, a result that still arrives goes to the task's
 ``discard``), a bare :func:`~je_auto_control.gui._worker_thread.start_worker`
 worker through its ``request_stop()`` when it has one, and in both cases the
@@ -27,7 +27,7 @@ from typing import Callable
 from PySide6.QtCore import QObject, QTimer
 
 from je_auto_control.gui._worker_thread import cancel_workers
-from je_auto_control.gui.task_controller import task_controller
+from je_auto_control.gui.tab_task_controller import task_controller
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 

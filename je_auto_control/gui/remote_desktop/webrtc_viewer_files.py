@@ -16,12 +16,14 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._slow_op import stop_each
+from je_auto_control.gui.remote_desktop.folder_sync_controls import start_folder_sync
+from je_auto_control.gui.remote_desktop.folder_sync_io import make_folder_engine
 from je_auto_control.gui.remote_desktop._helpers import (
     _t,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import _PanelPart, start_panel_task
-from je_auto_control.gui.task_controller import CancellationToken
+from je_auto_control.gui.tab_task_controller import CancellationToken
 
 if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
     from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
@@ -42,39 +44,11 @@ class _ViewerFilesMixin(_PanelPart):
 
     def _on_toggle_sync(self, checked: bool) -> None:
         if checked:
-            if self._viewer is None or not self._viewer.authenticated:
-                QMessageBox.information(
-                    self, "WebRTC", _t("rd_webrtc_cad_not_connected"),
-                )
-                self._sync_btn.setChecked(False)
-                return
-            path = self._sync_dir_edit.text().strip()
-            if not path:
-                QMessageBox.warning(
-                    self, "WebRTC", _t("rd_webrtc_sync_dir_required"),
-                )
-                self._sync_btn.setChecked(False)
-                return
-            from je_auto_control.utils.remote_desktop.file_sync import (
-                FolderSyncEngine,
-            )
-            from pathlib import Path as _Path
-            try:
-                viewer = self._require_viewer()
-                engine = FolderSyncEngine(
-                    watch_dir=_Path(path),
-                    sender=lambda local, name: viewer.send_file(
-                        local, remote_name=name,
-                    ),
-                )
-                self._sync_engine = engine
-                engine.start()
-            except (RuntimeError, OSError) as error:  # FileNotFoundError is an OSError
-                QMessageBox.warning(self, "WebRTC", str(error))
-                self._sync_btn.setChecked(False)
-                return
-            self._sync_btn.setText(_t("rd_webrtc_sync_stop"))
+            start_folder_sync(self, make_folder_engine)
         else:
+            history = getattr(self, "_sync_history", None)
+            if history is not None:
+                history.forget()
             running, self._sync_engine = self._sync_engine, None
             if running is None:
                 self._sync_btn.setText(_t("rd_webrtc_sync_start"))

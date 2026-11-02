@@ -25,7 +25,10 @@ Run a script
 
 ``--var name=value`` is parsed as JSON when the value parses, otherwise
 it is treated as a plain string. ``--dry-run`` records every action
-through the executor without invoking any side effects.
+through the executor without invoking action effects. Each invocation uses
+an independent variable scope, with or without ``--var``; seeds and action-written
+variables are discarded on success or error, including when called repeatedly
+from the same Python process.
 
 ``--allow-package NAME`` (repeatable) puts a package, and its submodules, on
 the package gate's allowlist for this run: ``AC_add_package_to_executor`` and
@@ -33,6 +36,48 @@ the package gate's allowlist for this run: ``AC_add_package_to_executor`` and
 been allowed. The ``JE_AUTOCONTROL_ALLOWED_PACKAGES`` environment variable
 (comma-separated names) does the same for every entry point, including the
 legacy flags below, ``start-server``, ``start-rest`` and the MCP server.
+
+Capture and inspect action journals
+-----------------------------------
+
+.. code-block:: bash
+
+   python -m je_auto_control.cli run script.json --journal run.jsonl --journal-run-id example
+   python -m je_auto_control.cli journal run.jsonl --run-id example --limit 100
+
+``run --journal PATH`` appends structured lifecycle snapshots while preserving
+the normal stdout record and action-failure exit code. It also supports
+``--dry-run`` and ``--var``. Each capture generates a run ID unless
+``--journal-run-id ID`` is supplied; that option requires ``--journal``.
+No history row or database is created implicitly.
+
+``journal PATH`` validates the entire file and prints a JSON array of sanitized
+snapshots in append order. ``--run-id`` filters a run; ``--limit`` bounds output
+to 1–10,000 snapshots (default 100), after filtering. Validation still reads the
+whole file. Start and completion snapshots remain separate; incomplete entries
+are never inferred successful. A missing file returns an empty array without
+creating it. Malformed committed records fail before any JSON output.
+Reading applies the journal's masking policy again and never changes the file.
+Both journal paths use the existing allowed-root guard; configure
+``AUTOCONTROL_ALLOWED_PATH_ROOTS`` for destinations outside the default roots.
+
+Record explicit manual history
+-------------------------------
+
+.. code-block:: bash
+
+   python -m je_auto_control.cli run script.json --history
+   python -m je_auto_control.cli run script.json --history --history-db history.sqlite --journal run.jsonl
+   python -m je_auto_control.cli run script.json --history --dry-run
+
+``--history`` creates a manual owner in the default Run History store.
+``--history-db PATH`` requires that flag, uses the allowed-root guard and closes
+the custom store on exit; it does not switch the GUI's default store.
+Existing/nested journal captures link to the owner. Normal stdout records,
+variable scopes and failure exit codes are preserved. Executor-counted failures
+and propagated errors/cancellation settle as ``error``. Previews use source
+label ``cli.preview``; real runs use ``cli.run``. Without history opt-in,
+including journal-only runs, no history database is opened.
 
 List scheduler jobs
 -------------------

@@ -1,5 +1,502 @@
 # AutoControl
 
+成果移交管理已共用 `manage_agent_transfer(operation, request)`、`AC_agent_transfer`、
+`ac_agent_transfer`、已授权的 `POST /agent/transfer` 与 Script Builder metadata。CLI 使用
+`agent-task transfer --operation review_export --request request.json`。审阅返回批准 token；
+创建须提供该 token、原请求 key 与明确 note。导出／导入管理可指定已登记主机；
+可携证据管理也可指定已登记主机，由来源核实私有权限。传输页提供四语 Actions、可编辑 JSON 与服务回复；
+审阅不自动批准，批准模板保留原主机、token 与 key 并留空备注。选项变更或关闭页面后，
+旧回复不覆盖画面，已接受的导入仍由服务持有。远端批准先保存明确同意，失联或协调端重启后以原键重发，保持同一授权。
+被动诊断仅列出本机契约，不代表即时授权或远程／原生能力已验证。只读完成证据在创建与使用时重新核实原私有同意，不恢复原输入权限。
+实现验证记录见 docs/updates/README.md；其余交付与验收见 Progress.md。
+examples/agent_transfer_export_review.json、agent_transfer_import_review.json 与
+agent_transfer_evidence_review.json 提供可编辑请求，并各有独立的 create 模板。
+
+实验性的来源主机技能操作，可通过现有 `handoff_id` 明确选择可携授权与完成／执行任务。
+来源在技能事务内重新核对实际同意、接收者与私有证据，候选／发布写入后再次核对。
+保留原始动作、候选自己的验证试跑与明确版本批准；新的技能试跑建立服务生成的全新请求 key，
+不为旧有未带 key 的试跑补造记录。此流程不将外部动作或策略移交协调端；
+技能证据保留来源主机的原动作／试跑／版本；其余跨主机验收与交付见 Progress.md。
+选择移交证据的技能操作，全程保留 runtime 所有权，操作结束后才释放。
+
+目的端导入目前仍为实验功能。明确启动的服务可通过 runtime 移交控制器与经验证的
+`/agent/transfer` 接受 `review_import`／`create_import`／`get_import`／`run_import`／
+`cancel_import`／`list_imports`。协调端可通过自己的不透明同意 token 路由这些有限操作；
+目的端使用自己的来源登记与账号，不转发协调端 principal／origin 或来源凭据。
+批准意图在派送前提交；回复丢失后的精确重试仍对应同一笔导入。
+启动时接回已批准且尚未领取的工作；未结算 claim 会转为待审阅。明确的 `run_import`
+以新队列代次重新核对原收件者、profile、实时 origin 与来源 grant，可重用已验证私有分块，
+或只读核对既有完整目录与哈希，不重新下载／发布。续行时新增的 origin 限制仍持续生效。
+已明确排入队列且未领取的只读核对可跨再次重启；采认前重验当前字节、profile 与保留的 origin。
+导入收据确认完成前，目的端会在最后一次来源回复后重新核对完整文件清单与内容摘要。
+文件遭改写、丢失或增加未列入清单的文件时，导入保留 requires_review，
+保留用户修改与原发布成果供审阅。
+目录身份、字节或权限变更不能确认发布。取消会使生产者失效；尚未完成收据确认的
+发布保留 requires_review，已确认发布的文件保留为用户成果。
+取消或过期的私有分块账号须确认生产者退出才清理；失败时保留配额，成功重试后才释放。
+收据维持原本固定期限。
+暂存目录与预先创建的文件会在复制字节前记录文件系统身份。生产者退出后，
+过期清理可于重启后重试；遇到替换或无关对象时保留配额待审阅，不递归删除。
+来源维护会清理过期或已撤销的私有导出账号，包含重启或授权者移除后；失败时保留配额。
+来源或目的端清理完成前持续保有 runtime 所有权；无待清理数据时不获取 runtime 写入锁。
+创建／续行回复会在唤醒新投递前读取已提交的收据；后续以 get_import 查询当前进度，避免回复被新 writer 阻塞。
+后续维护会修剪已清理、撤销且过期的来源元数据以回收记录配额，保留同意／撤销凭据与其他记录类别。
+冷启动维护以只读探测发现待处理来源记录；没有待处理记录时不创建移交控制器。
+runtime 最后释放所有权时会与控制器构建互斥，并重验后建立的控制器是否退出；忙碌时保留所有权供稍后重试关闭。
+私有缓存路径重定向会在打开存储前拒绝；清理失败时保留配额。
+后续维护会在私有数据确认清理后，回收到期的目的端导入／派送元数据及其已结束队列记录。
+仍在执行、身份被替换或未知状态的队列会阻止回收；原同意／撤销凭证与已发布用户文件保留。
+冷启动维护不启动监听端或生产者；待清理账户的扫描不受大量未到期历史记录遮蔽。
+可移植证据保留与共用接口已接入；其余故障交错与正式交付见 Progress.md。
+来源证据实验功能已接入 owning runtime 与具名／共用账户的本机 transfer HTTP 管理路径，
+提供 review_evidence／create_evidence／get_evidence／revoke_evidence／list_evidence。
+独立持久授权沿用真实恢复／完成验证、当前账户与原本机 DAG 审核；已登记 peer 的 evidence
+读取核对实际接收的 key／规范与 DAG 节点，只返回 ID、哈希及有限验证，不授予一般任务读取或输入。
+审阅摘要不含 node.request_digest；即时读取才按精确已审阅原请求补入。
+来源主机技能证据、远端管理路由与共用接口已接入；其余故障验收与交付见 Progress.md。
+协调端 DAG 的实验采纳已接入独立审阅的远端恢复授权，固定原来源／key／规范／graph／node 与主机。
+批准与启动先持久保存暂定状态，离开本机 writer 后即时验证来源，再核对原同意与认领，才启用。
+停止会取消暂定状态；中断后只可用同一明确批准请求续接。确认期间保留 runtime 所有权，
+不把独立 peer 读取串行化；认领／记录及最终采纳前后重新验证。
+授权失效会阻止后续调度，只对精确已接收的下游任务请求有限暂停；回复未知或丢失时保留认领并待审阅。
+已完成副作用与无关任务保留；不宣称已证明原生输入退休或完成整份故障矩阵。
+旧投递格式升级会保留原批准 origin 与固定期限；多次续行的额外 origin 仍累积生效。
+停止附加的 REST 观察端不会重派或取消服务持有的导入，也不释放 runtime 所有权；重新连接可读取同一笔成果。两主机与独立进程三主机测试已核对实际字节及账号范围。
+更多重启／取消交错、更多暂存故障交错、完整保留、可移植证据、client／GUI 接口与完整阶段检查
+仍列于 Progress.md；移交收据不授予任务输入权限，也不能证明任务完成。
+
+来源导出的远端审阅／创建／查询／撤销已接合。协调端发出自己的不透明审阅 token，
+绑定实际本机调用者、当前主机／凭据摘要、来源审阅、清单摘要与原 key。批准意图在转发前
+持久提交；回复丢失或协调端重启后，相同批准仍取回同一来源成果。更换调用者、主机、凭据、
+note／key 或来源回复摘要即拒绝。待审阅与持久路由各限128条；到期只清理本机路由 metadata，
+保留同意边界。关闭 runtime 会清除尚未批准的本机审阅缓存，已批准的持久意图仍可恢复。
+来源使用自身账号，本机 principal／origin 不转发。目的端导入、可移植完成证据与公开接口均已接入；
+其余验收与正式交付见 Progress.md。
+
+既有远端 DAG 在固定主机配置及每次保留连接调用前后，均读取实际持久化通讯录。
+其他进程替换／移除端点或凭据、配置损坏或原本本机调用者被撤权时，操作会失效。
+读取不建立 console，也不隔离通讯录；既有本机服务委派与封闭远端路由保持兼容。
+
+跨主机成果移交依明确审阅与各主机本机授权运行。来源核心可审阅已完成文件成果，建立不可变 blob，
+并核对实际发行者／接收者。来源管理与 peer 只读 HTTP 路由已可提供经审阅的清单／分块。
+Peer 使用接收端本身的 bearer／RBAC 与速率限制，在外部 principal／用户数据库查询前拒绝
+本机 principal／origin header；本机服务 client 仅在管理流程保留实际所有者委派。
+移交请求在服务器读取前限制为1MiB；受限 client 在派送请求与解码成功／错误回复前核对上限，
+不变更一般 HTTP 的既有上限。完整私有授权链／生命周期验收、目的端发布／
+证据采纳及共用公开接口已接入；其余验收与交付见 Progress.md。移交收据不授予任务输入权限。
+
+来源导出在打开选定文件前，排除实际 runtime／移交数据库与 sidecar、当前来源所有者及
+发行者的用户数据库、服务连接文件与专属证据目录。服务登记实际私有文件，不保留一般成果的
+同名文件名；manifest 只核对选中的输出。Peer 读取与相同请求重试会重新核对当前路径权限，
+不重新哈希历史用户成果，并保留操作期限。DAG 成果沿最多十六层真实恢复链核对原始
+提交任务、实际请求及本机 DAG admission，重新授权接纳者，并排除其不同位置的账号数据库。
+恢复子任务不补造提交记录；正常 standalone 不要求 DAG 提交记录。私有恢复链摘要在审阅、建立、
+相同请求重试与 peer 读取时重验；实际私有恢复所有者／审阅者绑定也纳入摘要，其数据库保持私有。
+来源操作在字节存取与 grant 写入边界配合取消；提交后回复被取消仍可依固定意图精确取回。
+成果期限依完成来源 updated+30 天计算，不因重试／重启刷新，也不改用较早祖先的期限。
+本机只读 reader 依当前私有完成授权导出，旧输入仍撤销；自动清理、目的端发布与证据采纳已接入。
+其余提交／撤权交错验收与正式交付见 Progress.md。
+
+Runtime 透过实际 batch 主机 adapter 保管 TransferPeer；具名传输固定端点／凭据，于 HTTP 前后
+重读持久化通讯录并核对当前本机调用者。来源端使用自身凭据验证，不接收本机 principal／origin
+header。来源私有排除只取得实际通讯录路径，不建立／重载 console 或隔离文件。封闭清单与规范 base64 分块须符合
+导出 ID／摘要、每块最多256KiB及原始期限；URL 路径前缀同样套用1MiB移交上限，一般 HTTP
+保留既有上限；无效预算（含过大整数）在派送前回报类型化错误。两／三主机
+导入交付仍待完成。
+
+空闲后台 worker 以只读预检识别空队列，减少轮询与任务状态、完成事务的写入锁竞争。
+发现工作后仍须在原有事务内重新核对与领取；保留 claim 代次、过期工作回收与重试上限，
+不延长任务或传输期限。
+
+租约维护会在停止事务内核对实际输入所有者与世代。延迟的监视程序不能改写已退役任务的
+恢复证据，也不能取消新租约；接受的最终停止状态与取消 token 会先于停止事务发布。
+仍有效的权限撤销与原有期限持续生效。
+
+副作用已确认的浏览器任务，可通过已有完成审核与技能流程读取原来的 WebRunner context。
+原 helper 先永久结束 SDK 输入／网络，再释放输入 journal／租约；runtime 最多保留 16 个 context，
+自分离前预留起最多保留 300 秒，不因分离耗时延长。预览／创建核对实际 effect task 的实时 SDK view；验证只借用原 context
+读取最新有界 DOM／字段值，不重新配置输入、不 ACK 原生输入、不传输，也不另开浏览器或 helper。
+退出切换、能力探测与清理也拒绝嵌套工具与原生输入。
+同 profile 的不同任务分开保管，context ID 本身不授权。私有完成授权审核可在原上限内明确续授权
+验证 scope，原输入规范不变；已失效输入 origin 与有限私有保管本身均不授予读取权限。
+拥有者删除、目标停用、来源变动、期限或读取失败会使 context 失效；只有确认进程结束才释放
+进程拥有权，清理失败持续跟踪。重启不恢复页面，网络结束后的 DOM 不能当作新服务器数据。
+Python／AC／MCP／REST／CLI／Builder 与 GUI Actions 共用原审核 request；技能录制保留原动作，
+发布须使用自己的实际新验证试跑与明确选择的完成证据。示例见
+`examples/agent_browser_retained_completion.py`。冷启动浏览器前缀重建、remote reader、正式部署，
+以及暂缓的原生／浏览器／真机／24 小时验收仍待完成。
+
+已停止且副作用已确认的任务，可用 `manage_agent_recovery("preview_completion", {"task_id": id})`
+审核独立验证任务，再将精确 task_id／snapshot 与审核说明交给 `create_completion`，最后完成新任务。
+私有原子绑定只选择永久只读 helper，不重播来源动作；须有新鲜独立完成条件与输入退出证据。
+skill 计划须全部确认；动态任务不得含未处理的有限计划或未知效果。
+可先 observe 再 finish；相同 helper 配置只重新检查就绪，不替换权限，也不缓存就绪结果。
+来源／审核者权限持续有效，覆盖清理后、明确重试与重启。API／AC／MCP／REST／CLI／Builder 及 GUI Actions 共用此流程。
+remote reader、正式部署仍列于 Progress.md；桌面能力仍须另行原生验证。
+
+只有受管任务节点的 DAG，可用 `manage_agent_dag("register", {"definition": graph,
+"max_parallel": 4})` 注册持久批次，再明确 `run_dag(graph, batch_id=batch["batch_id"])`。
+注册不操作目标；保存整张图的拓扑、节点契约、主机设置与并行数，目标端 key／规范标记绑定批次。
+可能派送前先提交 claim，目标端精确规范、完成及输入释放证据通过后才放行依赖节点。成功、中断或
+提交回复遗失后都不能再次 begin；`get/list/inspect` 让协调记录跨重启保留。API／AC／MCP／REST／
+CLI／Builder 及 DAG Actions 的批次注册／读取、选填批次 ID 共享流程。
+停止后用 `review_continuation` 获取只读整图快照及逐节点决策，再把审阅的 `snapshot`、`decisions`
+与非空 `note` 放入 `run_dag(graph, batch_id=id, recovery=request)`，批准并使用一次续接机会。
+只能采纳独立完成的原任务或真实 recovery 后继任务；派送限从未 claim 且目标端未接收的 pending
+节点。本地授权可在相等或更窄根目录内更新，未知 claim 永不重放。DAG Actions 提供停止新派送、
+审阅及明确续接；已接受任务仍依自身生命周期处理。将协调交给已明确启动的服务，可调用
+`manage_agent_dag("run_background", {"batch_id": id, "definition": graph, "max_parallel": 4})`；
+明确批准的续接另带 `approval_id`。DAG Actions 提供两个后台动作；关闭视图不停止已接受的服务工作，
+`get.background` 提供有限队列状态。重启使旧 attempt 失效并要求审阅，不重放排队或未知派送。
+原 owner 与提交者的权限持续重新验证，本地任务绑定所属 runtime。
+既有 `prune_agent_tasks()` 与每小时维护会回收过期且未使用的注册及已安全结束的成功批次，默认 30 天。
+未决批次持续保护任务／恢复证据与接收 gate；结果新增 `deleted_batches`、`deleted_dag_deliveries`。
+其他队列与用户成果不受影响，远程证据保留仍须明确移交契约。
+caller 协调的受管批次固定来源服务路径、端点、凭证指纹及世代，本地节点共用同一 client；连接文件
+身份变更就停止后续调用并要求明确审阅。服务端批次证据直接读取所属 runtime，绑定不缓存 bearer
+凭证。普通非批次 client 保留动态连接行为；受管批次须有含世代的连接数据。
+本地批次节点在持久 claim 后使用来源服务的封闭 `local_task` transport，以原 owner 接收精确规范／
+key，并在事务内记录真实 caller。输入前更新双方权限及 attempt；管理员失去跨 owner 管理权也会
+阻止执行。没有可信接收记录的旧请求不补造见证。任务 metadata 提供有限 `local_dag_admission`
+审计数据，已接受输入仍依既有清理契约处理。
+若恢复后继任务须让原所有者读取，preview／review_authorization 请求加入
+`owner_policy="source_owner"`，明确 create／create_authorized 时另带回 `ownership.review` 为
+`ownership_review`。后继任务保留来源所有者，事务内另记实际审核者，输入前持续验证双方权限。
+GUI 提供所有者选择；省略策略仍由创建者持有，沿用既有读取隔离。DAG 可用正常恢复证据采纳独立完成
+的原 owner 后继任务；已存在的 caller-owned 子任务不自动变更归属或补造此记录。
+详见[续接协议](../docs/source/Zh/doc/ai_agents/agent_dag_batches_doc.rst)。
+
+触发器可明确使用 `manage_agent_trigger("review_authorization", {"trigger_id":"..."})`，再以
+`create_authorized` 提供 `trigger_id`、`snapshot`、`authorization_review`、经审阅的 `spec` 与 `note`。
+新注册保留完整模板／设置／待处理上限，受原授权、仍有效限制与当前权限交集约束；事务内停用旧绑定，
+并启用未来通知。共享历史让已接受事件与未完成任务跨更新、移除及重启保留，继承的旧排队事件不再派送。
+计划从未来时段开始，文件检查点保留。API／AC／MCP／REST／CLI／Builder 及 GUI 触发器菜单共享流程；
+普通启用不能取代失效授权，审阅只准备注记留空的请求。
+
+已发布技能可用 `manage_agent_skill("review_authorization", {"candidate_id":"..."})`，再明确
+`create_authorized`，提供 `candidate_id`、`snapshot`、`authorization_review`、经审阅的 `spec` 与
+`note`。完整计划与参数定义固定；保留原根目录上限及仍有效限制，与当前权限取交集。流程只创建
+同一技能的新草稿及审计证据，须重新验证并明确发布下一版，旧版本不变。相同批准去重，过期版本／
+授权内容拒绝。API／AC／MCP／REST／CLI／Builder 与 GUI 技能操作菜单共享此流程；trigger 更新使用上方独立流程。
+
+来源授权失效的停止任务，可明确使用 `review_authorization`，再以 `create_authorized` 提供
+`task_id`、`snapshot`、经审阅的 `spec`、`note` 与 `authorization_review`。新任务保留所有仍有效的
+来源限制，将当前权限与原根目录上限取交集；根目录只可维持或缩小，其余权限、模式／模型、预算及
+完成条件固定。批准证据与唯一新任务在同一事务保存；来源及已撤销的见证不变。现有共享接口均提供
+这两种操作，GUI Actions 另有授权审阅／创建命令，详见[恢复指南](../docs/source/Zh/doc/ai_agents/agent_recovery_doc.rst)。
+任务恢复不解除输入隔离，也不重建应用状态；技能与 trigger 使用上方独立更新流程。
+
+停止的任务可用 `manage_agent_recovery("preview", {"task_id": "..."})` 审阅来源回执与快照，
+不接触应用程序。有限 skill 提供剩余动作及逐条结果；外部 agent／本机模型任务则提供空白目标的
+`review_template`，须由操作人明确填写剩余工作目标，不复制旧动作列表。明确 `create` 时提供
+快照、经审阅的规范与注记，创建有来源关联的新任务，重新观察并从零回执开始；重复批准返回同一
+任务。执行模式、模型／端点、范围、预算及完成条件固定，未知副作用须先人工核对；不移植旧
+capture、索引、坐标或已完成历史。可用 `AC_agent_task_recovery`、MCP／REST、
+`agent-task recovery preview|create request.json`，或「Agent 任务 → Actions → 审阅剩余工作／
+重新规划／创建经审阅的新任务」。已移交的来源不能再恢复，须由新任务继续。
+登录与窗口状态的恢复须明确声明，不能推断：继任任务（或任何任务）可列出 `resume_conditions`，只接受
+`screen`、`browser` 与 `file_*` 条件（回执是历史，不能证明现状）；第一个动作只在新观察全部通过时
+才被接受，任一不成立或无法判定就转为 `waiting_user`，不会动作；有任何动作回执后此关卡即结束。
+
+Android／iOS 内置受管 profile 仍未提供。内部远程副作用防护按实体设备标识保存动作前／后确认；
+本地 helper 结束但动作未确认时，仍保留隔离。恢复须在 writer 退出后取得可信设备证据，再以
+后续能使旧指令失效的世代证明安全。尚无内置 SDK 证据来源、设备 profile 或原生验收；
+剩余接合列于 `Progress.md`。
+内部 Android 传输只连接明确设置的现有 loopback ADB server，不调用 CLI、不管理 daemon、
+不重试或退回旧 shell；shell-v2 的退出证据有封包／输出上限，但不代表应用完成、实体设备
+身份或输入已释放。
+内部 Android session 会核对指定端点、实体序号、boot 与默认显示器焦点，并以原子方式固定
+boot。有限输入提案在命令连接内重验身份／焦点，限制文字与结果；提案不授权输入，仍须接合
+输入窗口、遮挡、锁定／真人活动与自有 worker。
+Android 检查后提案会绑定当前的原生输入窗口／队列及 keyguard 证据，核对完整触控路径、
+外部拦截与遮挡，并在命令连接内重验摘要。旧 ANR／历史记录不能证明当前状态；真人活动、
+全局监视器审阅仍须可信来源授权，内置受管设备执行仍未开放。
+内部 Android 动作协议 v2 区分完整前置拒绝、输入失败、输入后拒绝与输入返回。
+缺少／错误阶段或退出码不符都维持未知；输入返回不代表远程输入已清空或任务完成，也不授权重试。
+内部自有远程 SDK worker 会核对精确任务／所有者范围、重新授权与真人接回；可信主机 factory
+创建前先启动 parent 监视。持久化 begin 并收到 ACK 后才调用 SDK，相符设备／世代的清理证据
+通过后才发送 end；缺证据维持隔离。可信设备控制来源、WDA adapter 与受管 profile 仍待接合。
+命令编译器以一次带标签的提取核对三个原生焦点字段，接受六种顺序，缺少／重复／空值仍拒绝。
+前后身份与输入安全检查、原本动作期限均保留。自有 POSIX 假设备减少 Git Bash 读取进程且维持
+原始文件 bytes；有限阶段／耗时诊断不含命令、参数或输出。
+内部 AndroidRemoteAdapter 已通过逐命令 AndroidCommandLease 接合 checked session 与 worker；
+每个动作消耗一次新的身份／输入路由／安全观察，SDK 重新编译有限命令后才通过 ADB 发送一次。
+设备端防护须在真人接回、取消或到期后阻止旧写入；没有默认 provider，标准 ADB 或停止本地
+helper 不能提供这项保证。清理证据还须绑定新的随机命令 ID、boot 及独立输入／队列状态。
+可明确配置主机 hierarchy_reader，提供有界、限 app 的语义元素及经过审阅的非敏感文字；未配置时
+仍只有身份 metadata。XML 不授予文字权限；编辑／密码值及受保护子节点持续遮罩，不发布原始
+XML 或私有 freshness hash。公开观察版本随来源及动作更新；Android 元素引用须来自当前可操作
+的语义元素。新的画面读回可确认已审阅文字出现，缺少／部分／遮罩内容不能证明文字不存在。
+不新增 CLI／SDK 启动或捕获备用；真实来源、受保护字段值验证、Unicode／IME 与受管 profile 仍待交付。
+
+受管画面完成验证将内置桌面与 WebRunner 预览视为部分文字证据；文件目标与等待窗口阶段没有
+语义画面证据。已知安全文字可确认出现或推翻不存在条件，遮罩与明确隐藏的标签不可作证。
+组合条件缺少任一必要证据时保持未知，已知矛盾则判定失败。精确 DOM／字段值应使用明确的
+浏览器完成读回；未声明覆盖标志的自定义 target 保留既有行为。
+
+`lookup_agent_task("键", reviewed_spec)` 可选择由目标主机规范化规格，与原所有者提交时保存的
+不可变摘要比较；回复声明 `spec_match_contract=1`，并提供一致／不同／无法核对／查无记录。
+CLI 可加 `--spec reviewed.json`；AC／MCP／REST／Builder 共用可选对象。DAG 视图先查键，再在
+目标端明确支持契约时核对已审阅的节点规格；旧端保持 `unverified`，本地来源 witness 不发到远程。
+键改指向别的任务会使旧快照失效；规格一致时仍须核对完成报告的种类、数量与通过结果。
+节点比较不等于整个 DAG 拓扑／原批次批准，
+`resume_permitted=false` 仍保留明确继续审阅。
+
+`inspect_agent_dag(definition, timeout_seconds=30)` 可查看本地／已登记远程主机的现有提交，
+不提交、不暂停、不续跑。提供 `AC_agent_dag_inspect`、MCP、REST 动作、CLI
+`agent-task inspect-dag reviewed.json`、Builder 与 DAG Actions。最多 100 节点、最长 300 秒；
+远程仍须主机管理权限，不发送本地身份／数据库路径／来源 metadata，不返回远程路径或原始错误。
+`recorded_completion` 仅描述查回的任务；节点规格可选择核对，`resume_permitted=false` 仍表示尚未
+授权整个 DAG 继续。查无记录不代表拒绝；GUI 在图编辑后丢弃旧视图。
+
+提交回复丢失时，可用 `lookup_agent_task("原去重键")`、`AC_agent_task_lookup`、MCP、
+`POST /agent/lookup`、CLI `agent-task lookup 原去重键` 或任务视图 Actions 查询。仅读取原身份及
+用户数据库范围，不提交、不续跑、不取得输入控制权；`found=false` 只是当前快照，迟到请求仍
+可能被接收。GUI 不会让旧查询回复覆盖后来选择的任务／键。DAG 视图也使用此查询；规格绑定及继续审阅仍待完成；
+只读查询仍须具任务访问权限。
+
+现有 `run_dag`／`AC_run_dag`／MCP `ac_run_dag`、REST／CLI 动作文件、Script Builder 与 DAG
+Actions 菜单支持受管任务节点：以 `task` 替代 `actions`／`action_file`，包含 `spec`、必填的
+`idempotency_key` 与可选的 `wait_seconds`。省略 `host` 使用明确启动的本地服务；远程使用管理员
+已登记的主机。目标端须已配置有后台派送的授权 runtime，本功能不部署服务。规格限 skill 或明确
+配置的本地模型模式，工具、目标主机路径及完成条件由目标端验证。
+节点只提交一次，等待完成条件通过、持久完成契约及输入释放证据后才启动下游。同一批次恢复
+须保留去重键；不自动恢复暂停任务或重放副作用。停止、超时或通信／权限失败时，已知任务 ID
+才会提出有时限的暂停；未收到确证仍为未知。失败结果保留 ID／去重键并阻止依赖节点，GUI
+表格显示任务 ID。本地身份、用户数据库路径及来源 witness 不发送到远程。正式多机部署及原生／
+设备验收仍分别跟踪。
+
+DAG 类型与函数也可从 `je_auto_control.api`／`je_auto_control.api.core` 导入。
+
+受管 HTTP 暂停／取消／停止全部／关闭服务使用独立的每 IP 配额，与普通流量同为每分钟 120 次、
+突发 30 次；状态查询不会耗尽停止请求的配额。登录、实时角色、任务归属、审计与有界输入清理仍须
+通过。共享客户端也为 DAG 批次／节点暂停保留传输容量；`/agent/dag` 的控制标头仅接受封闭的暂停
+请求，其他带标记的操作在派送前拒绝。自定义认证门保留自己的契约；这不保证 OS／网络饱和时的优先权。
+
+受管任务在确认输入清理后才发布成功。清理失败或仍忙碌时保留输入租约并要求审阅；确认前
+中断仍需恢复。完成发布采用条件式状态转换，不覆盖同时到达的取消请求。现有 GUI／API 任务
+结果通过 `metadata.input_released` 显示释放状态；新成功记录保存 `completion_contract=1`，旧记录
+保持零而不自动认证。产物报告按最终状态更新，供后续 DAG 协调判断。
+
+DAG 节点在线程池中保留调用者授权、取消与指令限制，自定义 runner 同样适用。每个节点执行前
+重新读取用户权限；已删除的用户会使节点失败，后续依赖节点跳过，各操作按更新后的角色
+检查权限。默认远程节点在打开主机通讯录或动作文件前要求 `manage_hosts`，避免通过主机凭据
+扩大本地操作权限。管理员及受信任的直接 Python 调用仍可远程派送。受管节点采用上述完成
+验证与停止契约；正式多机部署及原生验收仍待完成。
+
+浏览器主机目标可通过可选的 `settings.helper_python` 指定已审核且已安装包的 Python
+环境（本机绝对解释器路径）。明确指定的 helper 使用 `-I`，从该环境加载已安装包；虚拟环境
+解释器的符号链接保留环境身份。任务选项不能指定解释器。
+主机管理员可使用 `manage_agent_target("probe", {"name":"reviewed-browser"})`、`AC_agent_target`、
+MCP／REST、`agent-task target probe request.json` 或 GUI 主机目标的诊断操作。
+诊断以独立且有时限的自有 helper，通过 `je_web_runner` 检查浏览器依赖后结束，过程不获取输入
+所有权或启动浏览器。结果可显示 `python_dependencies_ready`；浏览器启动及原生证据仍明确保持
+`not_probed`／`not_recorded`。`last_probe` 仅为内存中的带时间诊断快照，不授予任务权限，
+也不启用已禁用的目标。桌面／设备的原生诊断仍待完成。
+已准备的隔离环境安装两个功能工作树构建的 wheel；共享环境与正式工作树保持原状。正式服务
+配置及实际浏览器验收仍单独跟踪；所有浏览器自动化仍统一由 WebRunner（`je_web_runner`）提供。
+
+桌面固定技能现在与浏览器技能共用会话连续性检查。桌面 scope 或自有 helper 结束后，
+沿用旧前缀前必须审核，不能用历史记录证明暂停后的表单／窗口状态。未中断的会话可正常
+运行；文件 adapter 仍以持久化产物处理恢复。检查在替代 helper 启动前执行，现有继续运行／状态／
+记录接口会显示人工审核结果。暂存表单／登录／窗口状态恢复与可审核的剩余步骤重建仍待完成；
+原生验收保持暂停。
+
+固定浏览器技能的已验证前缀，现在必须保有原本仍存活的浏览器／helper 会话。
+暂停、清理、helper 中断或 runtime 重启后，旧动作记录无法证明表单仍保有之前的字段值；
+继续运行会在启动替代 helper 或发送下一动作前进入人工审核。请明确检查剩余步骤并创建新任务。
+尚无保留尝试记录的暂停，以及已审核为 failed／not_applied 的尝试，允许全新开始。
+外部拥有者仍可重新观察新会话，再规划授权范围内的新动作；未中断的固定技能沿用原
+会话。登录及暂存表单状态的恢复仍是未完成工作。
+
+本机 runtime 的用户及实时根目录授权转发，现在必须由明确的本机服务调用启用。
+普通具验证的 HTTP 请求仅携带指定的 Bearer token；runtime client 验证 loopback 服务目的地与
+路由后，才附上本机用户／来源存储库／witness 信息。版本化 `je_auto_control.api` 现在提供
+所有已声明的 `api.core` 名称，包含受管浏览器命令、目标恢复及技能；动作类型 stub 也涵盖
+所有出货命令。未解析的延后项目类型沿用生成器原有的 `Any` 策略，避免生成无效名称。
+并发预算读取改在数据库独占事务内采样时钟，避免锁获取顺序不同造成任务误判超时；真正的
+时钟倒退仍会停止任务。GUI／MCP／REST／CLI 共用这些修复；正式工作树及现有原生／浏览器／
+设备／24 小时验收暂停保持原状。
+
+受管浏览器文件命令 `browser_link`、`browser_download`、`browser_upload`（对应 `AC_browser_*`）
+委派给 WebRunner 传输契约版本 1。上／下载授权必须具有明确的主机及任务根目录；下载让浏览器
+Cookie 保留于自有 SDK／helper，核对完整长度及可选 SHA256，且不覆盖现有文件；复用必须符合
+指定 SHA256。上传将最多 4 MiB 的单个普通文件读成核对过的不可变快照，验证可选 SHA256 与
+SDK 元数据，不自动提交表单。网络操作仍全部位于 `je_web_runner`。
+浏览器 `download_archive` 预览接受查询页 `url`、明确 `allowed_origins`、授权范围内 `directory`，
+以及具有单纯 `name`、`url` 或链接 `selector`／可选 `frame` 的 `files`；每文件可用 `page_url` 覆盖
+查询页。流程获取新链接、下载每文件最多 16 MiB，并生成供独立核对名称／大小／哈希的归档清单。
+GUI Actions 仅起草文件目标／流程／上传示例，不启动资源；MCP／REST／CLI／Builder／模型工具
+共用命令，链接读取仍需输入控制权限。部署与实际浏览器验收仍待完成，现有验收暂停保持生效。
+
+浏览器任务可固定完成条件，例如
+`{"kind":"browser","operation":"value","selector":"#field","value":"expected"}`。
+操作为精确的 `text`、`value`、`visible`（布尔）或 `url`（不含定位）；必须明确授权
+`AC_browser_read` 与任务 origins，完成条件不会增加权限。Finish 由同一个自有 helper 检查
+当前页面位于允许的 HTTP(S) origin，再通过受控读取命令独立取得 SDK 完整值；既有 receipt、
+有界预览或模型停止信号不能代替读回。空白／不可用／范围外页面、被拒读回或错误验证回复
+保持未知；比较不符保持失败。取消、权限撤销及人工审核错误保留原类型。
+GUI Actions 可起草不启动资源的浏览器完成示例；API／MCP／REST／CLI finish 共用验证器。
+SPA URL fragment 会保留，origin 比较仅略去 fragment。实际浏览器／应用验收及已审核传输仍待完成。
+
+受管浏览器启动前，必须先确认 WebRunner 的 `ManagedBrowserSession.contract_version == 1`，
+通过后才创建 policy 或开启代理／浏览器。缺失、布尔、文本、过旧或未知标记会保留可处理的
+就绪错误。SDK 来源 `575e5d2` 提供完整 text／value 读回：最多 8,000 个 UTF-16 code unit，
+超限或无效 Unicode 即拒绝，不截短。AutoControl 对浏览器参数与流程预览数据应用相同 Unicode
+上限，在副作用前拒绝。跨源契约通过真正的自有 helper 与替身 Chromium 验证；部署与实际
+浏览器／原生验收保持单独记录。
+
+
+`draft_agent_workflow("batch_form", config)` 与 `transfer` 可设置 `backend: browser`，
+并提供明确的 `allowed_origins` 与已审核 browser target。CSV／XLSX 来源仍受 roots 限制；
+浏览器草稿仅生成 `AC_browser_*` 动作，不退回桌面输入。填表提供 `url`、CSS `fields`、
+可选 frame／新建记录控件、提交与确认 selector；每次填入都有独立的精确 value 读回。
+可用 `confirmation_column` 从每行取得预期确认文字。转填提供 `source_url`／`destination_url`，
+提取 text／value、应用白名单转换、填入并读回目标字段，再验证保存；提交前拒绝陈旧确认。
+`AC_browser_wait`／`browser_wait` 仅轮询 text／value，也支持稍后才出现的元素；`wait_seconds`
+默认 5 秒，受 action budget 限制，超时才返回的匹配结果仍拒绝，不重放填入或点击。
+Python/core、共享 catalog／模型 schema、MCP、CLI／REST 任务操作、Builder 及 GUI 流程预览
+使用同一编译器。浏览器读回可作为独立技能证据。实际应用验收与正式上／下载设置仍待完成；
+SDK 启动前须通过完整有界读回契约版本 1 的检查。
+
+受管浏览器 profile（`kind: browser`）统一委派给 WebRunner 的 `je_web_runner` SDK；
+开发来源为 `D:\Codes\WebRunner`，集成来源位于其隔离的受管 session 功能分支。
+Profile 必须提供精确的 `settings.allowed_origins`、浏览器专用工具，且不能授权桌面 app；
+每项任务另须设置非空、更窄的 `options.allowed_origins`，每次激活均重新核对两层范围。
+注册不启动资源；helper 环境须明确安装已审核的受管 SDK 与 Chromium，缺少时就绪失败，不自动安装。
+`AC_browser_navigate`、`AC_browser_click`、`AC_browser_fill`、`AC_browser_select`、`AC_browser_check`
+及 `AC_browser_read` 共用 Python/core、executor、MCP 与 Builder 定义。命令仅在受管 helper 中
+运行，通过既有 task submit/observe/act 周期驱动。读取操作为 `text`、`value` 或 `visible`；
+WebRunner 拒绝秘密表单字段。DOM 索引在当前 observation 内解析 selector／frame，再核对新鲜度。
+失败副作用保持不确定且需对账；暂停／取消会结束拥有的资源。GUI Actions 可生成浏览器目标示例
+供审核；DOM 选择仅编辑动作请求。专用 helper 跨就绪检查保留同一个全新 session，正常清理先
+取得浏览器 ACK，再结束自己的进程树；符合完成审核条件的来源则将原本已冻结的 context
+移交 runtime 有界保管。浏览器任务不获取共享桌面输入控制权。跨源受控测试使用真正 SDK、
+替身 Chromium、自有 IPC／loopback；实际浏览器／原生验收、正式传输设置及其余浏览器流程类型仍列于 `Progress.md`。
+
+MCP 异步调用会保留接受请求时的角色、session、原路径策略与工具列表；session 或路径策略
+结束后，延迟分派会被拒绝。异步无状态调用仍使用固定 profile。插件工具列表变更会送达所有
+有效 HTTP session 流；session 启停只通知拥有者，并避免重复发送。流注册与 HTTP 标头
+共用锁，避免提早发送的通知破坏 HTTP 响应。
+纯 metadata 的 `benchmarks/mcp_discovery.py --repeats 20` 测量工具数、JSON bytes、预热后的
+进程内握手、搜索与启用耗时。Windows／Python 3.14.4 的记录中，完整模式初始有 732 个授权工具、
+358,029 bytes；渐进模式为 5 个、2,029 bytes，响应大小减少 99.43%。握手为 58.263／47.439 ms，
+搜索中位数为 16.243／19.718 ms；渐进启用中位数为 42.486 ms。此本机测量不含冷启动导入及原生操作。
+有日期的 JSON 记录位于 `docs/benchmarks/`；既有参数策略的覆盖限制仍列于 `Progress.md`。
+
+MCP 可选择 session 渐进揭露：`je_auto_control_mcp --tool-mode progressive` 初始只提供五个
+探索控制工具；`ac_mcp_tools_enable`／`ac_mcp_tools_disable` 只改变该 session。
+不会更新工具列表的客户端可使用 `--tool-mode static --tool-profile ac_screen_size,ac_list_windows`；
+默认 `full` 保留不分页的授权工具列表。渐进／固定模式的 cursor 不透明、只能使用一次，并绑定
+快照与调用者；工具、角色或列表设置变更，以及 cursor 过期时，须重新运行 `tools/list`。
+启停只通知拥有者连接；session 结束会回收 cursor 并使尚在运行的 metadata callback 失效。
+HTTP／嵌入式使用 `MCPServer.configure_tool_disclosure(...)`；主机环境变量为
+`JE_AUTOCONTROL_MCP_DISCLOSURE` 与逗号分隔的 `JE_AUTOCONTROL_MCP_TOOL_PROFILE`。
+`plan_mcp_tool_profile(...)` 及 Diagnostics Actions 可预览启动参数，不会启动服务。
+无状态协议使用不分页的初始固定列表，不保留 session 启用状态。只读限制也覆盖后续新增的插件。
+未验证／共享 token 连接显示 operator 工具，与既有调用上限一致；主机管理工具仍须已验证身份。
+
+MCP 工具探索提供 `search_mcp_tools(query, limit=10)`、`get_mcp_tool_schema(name)`、
+对应 AC／MCP 命令及 Diagnostics → Actions。搜索返回有界摘要、分类与所需权限；完整 schema
+须指定单一工具查看。两种查询都重新验证角色，并遵守 registry 的只读筛选；MCP 查询使用该
+server 的实时 registry，包含插件变更。CLI 可运行
+`je_auto_control_mcp --search-tools document --limit 5` 或 `--tool-schema ac_mcp_tool_search`。
+完整模式仍为默认；各 session 的渐进揭露可按前述设置启用。
+
+Agent 工具调用经 `executor.execute_one(name, arguments)` 返回原始结果，与动作脚本共用
+授权、变量插值、取消及日志边界；拒绝私有 executor 参数。受管任务交付进度见 `Progress.md`。
+
+输入控制权会在分派及输入确认前写入持久记录。服务崩溃后，先手动释放按键与鼠标按钮，再以主机管理权限调用 `recover_agent_target(target, note)` 记录审核并恢复目标；任务未知结果仍须另外核对。工作区文档由输入 helper 之外的进程启动，指定的聚焦步骤会等待授权应用程序窗口就绪。
+
+受管技能将已验证的语义流程录制为不可变候选。`manage_agent_skill` 可预览具有类型的参数、执行独立验证任务，并在明确审核该候选的成功证据后发布编号版本。定位器修复会产生须重新验证的候选；任务固定使用原版本与摘要。AC／MCP／REST／CLI 与 Agent Tasks 的 Actions 菜单提供相同操作。
+
+原验证试跑的动作若已全部确认，可明确审核／创建并完成独立只读验证任务，再以
+`manage_agent_skill("accept", {...})` 提供原 `task_id` 与可选的 `completion_task_id`。
+发布保留精确候选／试跑摘要与 pin，核对最多十六层真实只读恢复链、实时权限及独立完成／清理证据。
+原试跑维持停止，动作不重播；Actions 菜单可准备待审核请求。发布记录在临时 reader 证据到期后
+仍保留历史 ID／摘要；尚未发布的采纳仍须有留存证据。
+
+停止的原流程也可通过 `manage_agent_skill("record", request)` 明确提供 `completion_task_id`。
+`task_id` 仍指原流程，草稿保留其已确认语义动作，另采纳只读 reader 的私有独立完成证据。
+录制不重播动作、不改来源状态；来源／证据检查与草稿写入共用事务，并重验实时权限。
+`provenance.completion_review` 在 reader 保留期后只是历史记录，不授予当前权限。
+草稿与新增验证条件仍须自己的新验证试跑，不能直接发布；Actions 菜单只准备录制请求。
+
+原验证试跑只执行部分动作时，先调用 `manage_agent_skill("review_execution", request)`，
+提供 `candidate_id`、原 `task_id` 与另一个最终 `execution_task_id`；再以相同 ID、返回的
+`execution_review`、`expected_version` 及非空 `note` 明确 `accept`。最多十六层真实可执行恢复链
+必须确认完整原语义计划；不同的剩余流程即使成功也不足。比较包含 JSON 类型、capture 值、预期结果
+与 grounding，但不恢复旧 capture 或重建历史 UI 状态。各任务保留原限制与独立批准；当前 caller、
+全部 owner 及实际创建审核者都须持续有权限。版本、发布及历史 `publication.execution_review`
+共同提交或回滚，写入后再次检查证据与权限。原试跑维持停止并保留 `publication.task_id`，不补造子任务
+为 validation trial。可选 `completion_task_id` 必须验证最终可执行任务的效果，其证据嵌套存于
+execution 审核记录；过期证据不能批准未发布候选。两个 Actions 示例只准备审核／接受请求，
+`agent_skill_execution_review.json` 与 `agent_skill_execution_accept.json` 可编辑后使用。
+
+受管任务保留来源路径策略：移除根目录后，后续动作、事件触发及技能验证会受阻。MCP 客户端根目录按会话隔离，来源授权结束后撤销；主机配置的固定策略则在明确更换前保留。服务停止会取消实际执行中的工作，包括取得输入前的模型初始化，尚未启动的投递则持续保存。
+
+实验性的[受管 Agent 任务](../docs/AGENT_TASKS.md)提供所有者范围内的提交、观察、动作、验证、
+暂停、恢复、取消、控制权代次、持久化回执、WorkQueue 派送与本机 Ollama 推理。
+Python、AC、MCP、REST、CLI 与 Agent 任务面板共用后台服务，明确执行
+`je_auto_control agent-task start` 才启动；新流程不强制依赖外部服务。
+四条可预览模板涵盖下载归档、CSV/XLSX 填表、跨应用转移与工作区准备；
+使用 `agent-task draft` 或 Actions 的「预览工作流程」检查后提交。
+持久化间隔、Cron、文件与事件绑定会保留核准范围，每次触发重新授权并去重；
+提交标识避免重试与重启时创建重复任务。
+提供所有者范围内的回执与结果不明对账，关联执行历史、journal 及逐条报告；
+服务缓存默认保留 30 天，保留用户输出与外部 journal。
+证据缓存以完整数据库路径及持久数据库身份绑定于 `.agent-evidence-cache/`。
+还原的数据库与旧版缓存保留原历史引用；下次动作或报告创建新的自有 journal 分段，
+不读取或移动历史文件。任务 metadata 的 `artifact_cache_state` 为 `owned` 或 `historical`。
+保留清理只移除当前数据库可识别的自有缓存文件；历史文件保留，留存的私有根目录禁止成果导出。
+
+Linux 上的 helper 程序可改由可选的 [owner 服务](../native/owner_service/README.md) 运行：
+root guardian 把每个 helper 放进它自己的 cgroup v2 树，helper 帐号无法离开；关闭 channel 会
+结束整棵树（含逃离的后代），guardian 重启后会清理崩溃留下的程序。root 拥有的
+`/etc/je_auto_control/owner_service.json` 绑定档只让完全列出的 helper argv 经由服务启动；
+驱动桌面或浏览器的 helper 一律以本机程序运行，因为受保护的 helper 以独立 ID、空环境运行，无法存取显示；
+没有绑定档时 helper 仍以本机程序运行，`agent-task status` 在 `helper_containment` 回报模式。
+Python 包不会构建、安装或启动服务，且在审阅后的版本开启闸门前，构建出的服务拒绝受保护启动。
+
+`agent-task readiness`（`agent_runtime_readiness`、`AC_agent_runtime_readiness`、MCP 工具及 Agent 任务面板的
+Actions 菜单）报告桌面输入与截取、真人在场来源、Android 与 iOS 控制、浏览器和本机模型各自的状态：
+`unsupported`、`missing_dependency`、`unauthorized`、`not_probed`、`not_recorded` 或 `measured`。它只读环境变量、
+`PATH` 与已安装包，不连接设备、不启动 helper、不请求权限，所以不会报告 `measured`，每一项的
+`native_evidence` 都是 `not_recorded`；已安装的工具只算 `not_probed`，不代表可用。
+
+部署或回退前须比对来源与制品哈希，不能只凭相同版本号判断私有缓存兼容性。
+不具此私有根目录保护的旧程序不得沿用新版数据库／缓存。经审核的回退须使用匹配的升级前状态
+及其原记录位置，先取得自有输入退出确证，并从所有旧版任务根目录排除留存的新版私有文件；
+保留不明 journal，不重放副作用。无法核实时维持兼容版本。
+
+Windows USB 枚举明确以 UTF-8 输出及解码，PowerShell 子进程保持隐藏。
+Python UTF-8 模式开启或关闭时，Unicode 设备名称与诊断均完整保留；枚举仍为只读。
+原生调用使用专属 helper，支持取消、超时、输入记录清理与跨数据库的桌面排他控制。
+Windows 共享桌面的持续来源跨 runtime／任务／helper 共用，监看开始后须重新累积解锁空闲 60 秒。
+仅支持已确认的活动本机 console；远程、shadow 及未知 session 一律拒绝。
+每个 helper 在输入 ACK 前后实时核实同一主机租约；来源／reader 失效会暂停输入，
+未确认的按住输入清理仍保持隔离，须明确重试。关闭一个 runtime 不会停止其他 runtime 的来源。
+目标说明只公开粗略 `presence` 状态与 `native_evidence=not_recorded`，不启动探测。
+`agent-task stop-all` 停止可见任务。
+其他共享桌面须有可信活动 adapter。原生平台验收与其余待办列在 `Progress.md`。
+
+Linux 内部 presence_peer_linux 以不可继承的 pidfd 保留原始 Unix stream 或 seqpacket 连接者，
+核验账户、进程创建时间、namespace 与存活状态，不另依 PID 打开进程。进程身份不代表桌面或输入权限。
+
+内部 LinuxListener 与 LinuxChannel transport 拥有受保护的 Unix endpoint、socket 与 peer。
+每个有界 JSON 数据包须有仍存活的原始 writer 的内核凭证与 pidfd；额外、缺失、负值或截断的控制数据
+直接拒绝，收到的描述符在交付前释放。排队与 I/O 共用同一期限；取消撤销交付，尚未完成或失败的
+清理维持未确定。未知文件系统对象保留不动。路径权限不能隔离同 UID 的敌对进程，用户空间的有界
+等待也不保证内核 syscall 的硬实时完成。
+
+X11 与 macOS 已有真人活动来源。X11 只计入真实设备的 XInput2 raw 事件（XTEST 从属设备一律排除），
+并从 logind 读 `Active`／`LockedHint`；没有 logind 或 `XDG_SESSION_ID` 时视为锁定。macOS 用只读的 session
+event tap（需要辅助功能权限）；只有进程从非 HID 来源状态发出的事件才算注入，有疑义时让任务等待而不是接手。
+Wayland 没有可信来源。Linux 的 presence broker、worker 与 server 已改经此 transport：自有 worker 绑定
+全新的私有 endpoint 并在 bootstrap 回复中报告，broker 只采用该 endpoint，连接时先核对 listener 即其所列
+进程，再做 presence challenge。macOS 尚无 presence transport；原生验收前 runtime 仍拒绝非 Windows 共享
+桌面任务；此 transport 不是完整 Linux 应用或原生输入验收。
+
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
@@ -19,9 +516,14 @@
 
 - **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 852 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 911 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
+  公开导出项在被访问时才加载来源模块。`__all__` 与 `dir()` 可列出名称，不必加载全部功能；
+  通配符导入会请求所有名称。尚未解析的名称不会出现在 `vars(je_auto_control)`。
+  X11 的普通包导入不会打开显示连接或输入设备，也不会启动键盘监听。
+  桌面操作在调用时才获取资源。读取 `keyboard_keys_table` 或调用
+  `get_keyboard_keys_table()` 会解析实际服务器键码，因此需要 X 连接。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
 - **依赖基线轻量。** REST 服务器、JSON Schema 校验、JWT、TOTP、WebSocket 帧、ACME 客户端、
   USB/IP 协议与 Prometheus 指标全部以标准库实现；较重的依赖都是可选项。
@@ -115,13 +617,15 @@ pip install je_auto_control[gui]       # 加上 PySide6 桌面应用
 
 | Extra | 启用的功能 |
 |---|---|
-| `gui` | PySide6 桌面应用（50 个标签页）：左侧可搜索的导航面板（`Ctrl+K`）按分类列出全部功能，标签页在第一次打开时才创建，**View → Theme** 切换深色／浅色 |
+| `gui` | PySide6 桌面应用（51 个标签页）：左侧可搜索的导航面板（`Ctrl+K`）按分类列出全部功能，标签页在第一次打开时才创建，**View → Theme** 切换深色／浅色。窄窗口的内容可滚动；关闭窗口时，主题、字号、导航面板显示（`Ctrl+B`）与宽度会保存到 `~/.je_auto_control/gui.ini`。主题直接使用 Qt，不需要 `qt-material`。 |
 | `webrtc` | WebRTC 远程桌面、USB 直通（`aiortc`、`av`） |
 | `signaling` | 独立的信令／rendezvous 服务器（`fastapi`、`uvicorn`） |
 | `discovery` | mDNS / Zeroconf 局域网主机发现 |
 | `pdf` / `office` | PDF 与 Excel／Word／PowerPoint 读取 |
 | `fuzzy` / `locale` | `rapidfuzz` 模糊匹配、`babel` 区域解析 |
 | `s3` / `audio` | S3 制品存储、系统音量控制 |
+
+使用标签页关闭按钮关闭 factory 创建的功能面板时，下一次 Qt event loop 会释放 widget、订阅与计时器；重新打开会创建新面板。**View → Tabs** 与嵌入用的 `hide_tab` 只隐藏并保留状态。`tab_registry.open/close` 与 `close_tab` 提供明确的生命周期接口。既有的所有者表单与 Remote Desktop 在生命周期迁移完成前，关闭后仍保留以供重用。
 
 **Windows arm64** 装得起来也跑得起来，少的是上游在那里发不出来的那些：
 `opencv-python` 与 `cryptography` 都没发 `win_arm64` wheel。所以 `find_image*`、
@@ -215,11 +719,11 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | 无障碍树 | `find_accessibility_element`、`click_accessibility_element` | `AC_a11y_find`、`AC_a11y_click` | Accessibility |
 | 视觉模型定位 | `locate_by_description`、`click_by_description` | `AC_vlm_locate`、`AC_vlm_click` | VLM |
 | 锚点定位 | — | `AC_anchor_click`、`AC_anchor_locate` | — |
-| 自愈定位器 | `self_heal_click`、`self_heal_locate` | `AC_self_heal_click` | Self-Healing |
+| 自愈定位器 | `self_heal_run`、`self_heal_locate`、`self_heal_click` | `AC_self_heal_click` | Self-Healing |
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 852 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 911 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -233,17 +737,66 @@ python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 | USB 枚举与直通 | `list_usb_devices`、`enable_usb_passthrough` | `AC_usb_*`（16 个命令） | USB Devices、USB Share |
 | 密钥保险库 | `default_secret_manager` | `AC_secret_set` + `${secrets.NAME}` | Secrets |
 | 报表（HTML／JSON／XML） | `generate_html_report` | `AC_generate_html_report` | Report |
-| 运行历史 | — | — | Run History |
+| 运行历史 | `HistoryStore`、`manual_history_scope` | `AC_history_list`、`AC_history_capture` | Run History、Script Executor、Script Builder |
+| 动作日志 | `execute_journal_run`、`inspect_journal` | `AC_journal_capture`、`AC_journal_read` | Run History、Script Builder |
 | 指标与追踪 | `default_metric_registry`、`render_metrics_text` | — | — |
 | 系统诊断 | `run_diagnostics` | `AC_diagnose` | Diagnostics |
 | 测试代码生成 | `generate_code` | — | — |
+
+自愈定位器会在回退或点击前原样传递取消。稽核日志在写入或返回记录前遮蔽本次运行已解析的秘密值；返回的定位结果保留原值，读取时不改写既有日志文件。
+
+实时 image／VLM 自愈现在共用一次延迟逻辑截图及实际裁切原点，两条路径的 `screen_region` 均为 `[左, 上, 右, 下]`。Schema-v2 记录增加 run／step 身份、内容与配置版本、frame hash、策略／截图耗时及实际 backend／model，仍兼容旧记录。未配置验证的点击仅记录已送出或失败，验证保持未知。GUI 提供区域输入与所选记录证据，Script Builder 保留结构化区域 JSON。旧 `healed`／`heal_rate` 统计定位候选，独立的操作指标需要明确验证。
+
+实验性 `self_heal_run(SelfHealRequest(...))` 默认只定位。明确选择 `operation="click"`，再通过 `VerificationRequest(verifier=...)`（Python bool callback）或 `VerificationRequest(description=...)`（已配置的 VLM）于输入送出后验证条件。VLM 验证使用新截取的逻辑图像，可能产生 API 费用。`verified` 分为真、假及未知；`found` 与 `issued` 本身不代表操作通过验证。异常与取消原样传递，不重试点击。`AC_self_heal_run` 和 MCP `ac_self_heal_run` 接受嵌套 `request`；明确验证失败使命令／CLI 失败，或返回含结构化结果的 MCP `isError`。GUI **Self-Healing** 提供选填的操作后条件，Script Builder 可编辑 JSON 请求。独立 VLM 截取也改用相同的内存逻辑原点／Retina 归一化。Framework assertion 会中止定位后备。
+
+已捕获的自愈记录新增可选的 `journal_path`，搭配 run／step ID。实验性 `inspect_heal_source(path, run_id, step_id)`、`AC_self_heal_source` 与 MCP `ac_self_heal_source` 只读取原始步骤经清理的生命周期快照。在 **Self-Healing** 选取记录后，使用 **动作 → 查看原始步骤** 打开后台读取器；切换目标时会等待旧读取停止并保留请求者上下文，关闭则取消待处理工作；Run History 读取器也可选填步骤 ID。先筛选 run／step 再应用输出上限，整份日志仍会验证，进度通知前后重查路径根目录，取消不返回部分结果。旧记录或未经动作日志捕获的操作没有来源链接；查阅不会重放命令。
+
+实验性因果同步提供 `CausalBucket`、`CausalConfigStore`、`SyncActor`、保留冲突的 entry 版本与持久化本机 `SyncOutbox`。独立且经过验证的 `GET/PUT /config/{user_id}/causal` 第三版协议，在保存重发收据的同一个 CAS 事务内验证设备注册、确认、退休／完整同步 epoch 与删除回收。回收后保留永久的最小删除凭据；旧版写入不能覆盖已升级账号。私有 `AC_config_store_get`／`AC_config_store_commit` 与对应 MCP／Builder 命令可读取及提交带显式 `_actor` 的因果 JSON；纯数据合并／peer 与私有 outbox 命令仍可使用。显式的 `CausalSyncClient` 与 `AC_config_causal_fetch`、`AC_config_causal_commit`、`AC_sync_outbox_flush`（含 MCP／Builder）已提供第三版 HTTP 投递：结果不明时重发固定请求，只有明确的过期版本才在有界预算内重新合并。`CausalReceipt` 在 outbox 原子确认原收据与最新完整快照；命令凭据使用实时的 `options.secret_env` 引用。`CausalSyncClient.control` 与私有 `AC_sync_peer_control`／`ac_sync_peer_control`／Builder Data 命令可持久化注册、确认、回收、退休与完整重同步。`SyncControlRequest(operation_id=...)` 让已完成 RPC 的重试保持幂等；完整重同步须明确提供 `discard_pending=True`，收到收据后才原子采用新世代并归档待送旧编辑。本机 `status` 不读取凭据或网络。`python -m examples.causal_peer_control` 提供暂存 loopback 工作流；明确的本机资产版本可通过 `AssetManifest`、`DirectoryAssetTransport`、`build_asset_manifest`、`sync_assets` 与私有 `AC_sync_asset_manifest`／`AC_sync_assets`（MCP／Builder）操作。全部资产先暂存并通过 SHA-256／大小验证，再一次发布完整目录；受损缓存拒绝使用，脚本保持未执行。`python -m examples.sync_assets` 只使用暂存目录。七种实验性 adapter 已将显式选定的脚本、locator、热键、触发器、通讯录、JSON 设置与已保存的原生 GUI 偏好设置保存为持久化因果 profile。`SyncBindings` 将显式指定的秘密与机器值换成具名引用；`materialize_sync_profile` 发布完整且未启用的原生格式版本。私有 `AC_sync_adapter_snapshot`、`AC_sync_adapter_apply`、`AC_sync_adapter_resolve`、`AC_sync_profile_materialize` 与对应 MCP／Builder 命令提供相同流程。`python -m examples.sync_adapters` 仅使用临时文件。私有绝对路径绑定接受高熵目录名称，仍拒绝可识别的凭证格式。原生数值定义会在存储前以分类错误拒绝超出范围的值，包括超大 JSON 整数。`WorkspaceSettingsSyncAdapter` 仅读取原生 GUI INI 的主题、字号、导航显示／宽度，并发布未启用的 `workspace.ini`；显式复制为独立工作文件后，才能交给新 GUI 使用。`python -m examples.sync_workspace` 不导入 Qt。`SyncWorkspace` 已整合明确来源、持久离线捕捉、因果 HTTP、精确冲突审阅与完整重同步来源基线。私有 `AC_sync_workspace`／`ac_sync_workspace`／Builder Data 共用 status／capture／sync／review／resolve／preferences／materialize 与明确 peer 控制，全部需要 DRIVE；网络凭据使用 `options.secret_env`。`python -m examples.sync_workspace_http` 以两组临时来源与 loopback 演示冲突解决、重启及退休编辑不重放。接收数据保持未启用。引用资产传输见下方；明确的原生工作副本加载见下方，`ConfigSyncClient` 保留时间戳合并。参阅[因果／outbox 指南](../docs/source/Zh/doc/causal_sync/causal_sync_doc.rst)与 `python -m examples.causal_sync`。
+
+延迟创建的 **工作区同步** 页面通过 **Actions** 提供本机状态／采集、网络同步与设备控制、精确因果查看／解决冲突，以及完整未启用发布。粘贴明确的私有工作区配置，凭据只填环境变量名称。同步不会自动应用收到的偏好设置。选择 `workspace`、查看当前版本后，再执行“应用已查看的 GUI 偏好设置”，才会更新当前窗口的主题、字号及导航面板。`SyncWorkspace.preferences(observed=change_ids)` 与现有 AC／MCP／Builder 的 `preferences` 操作，仅在已查看版本完全匹配且无冲突时返回四个标准值；缺少或删除的值采用安全默认值。Worker 保留调用者 context、重新验证 DRIVE 权限，支持取消并在关闭后丢弃旧结果。页面显示修订版、待发送／冲突／引用数与最近成功同步版本；打开页面不会启动连接。
+
+明确的原生加载使用 `load_sync_profile(directory, target_root, expected_digest=...)` 与 `LoadedSyncProfile`，并提供私有 `AC_sync_profile_load`／`ac_sync_profile_load`／Builder Data。以已发布的 `files` 文件夹及精确查看的 manifest 摘要创建全新可编辑工作区，先验证全部 bytes、标准原生文件及封存 heads 一致，再原子发布。加载的热键及每个触发器节点都是停用的原生对象；定位器与通讯录 handle 使用工作副本。类型化资产引用及原生热键／触发器路径按工作根目录解析，脚本文字保留原意，秘密保持 placeholder。在“工作区同步”发布后，文件夹／摘要字段会填入结果；选择工作副本存放文件夹，再执行“加载已查看的原生 profile”。其他明确 Actions 可检查所选原生类别、在 Builder 打开已加载脚本快照，或应用其偏好快照。每次操作都重新验证当前调用者与捕获所有者的权限；打开脚本后仍须明确执行 Run；Builder 将导入的命令名称与位置参数显示为字面文字。`python -m examples.sync_profile_load` 使用七种临时来源与真实 PNG，不调用网络或设备。
+
+文件夹镜像改用 SHA-256 内容比对，不再依赖修改时间递增：只改时间不重发，时间相同或较旧的内容修改仍会发送。FolderSyncEngine 重启时保留待发与离线修改，逐文件检查停止请求，并持续拥有尚未结束的发送工作。传输所有者可在发布文件后明确调用 record_received(path)，避免回发收到的内容。原生 GUI 的固定内容回执处理见下文。
+
+文件发送现在会等待每个 DataChannel callback，将缓冲数据限制在 1 MiB，并将通道失败报告给调用方。可选的 `cancelled` 判断会停止排队写入；声明的字节数可检测来源截短或增长。原生文件夹任务绑定授权、引擎、viewer 与 peer connection，所有权变化时停止。收件箱下载移至事件循环之外，通过每个通道最多 32 个请求的队列依次发送。默认手动模式接受数据不代表远端发布完成；确认模式见下文。GUI 重连交接见下文。
+
+原生文件接收器现在会在关闭、文件／控制通道关闭、连接进入终止状态、更换通道或撤销文件权限时清除未完成内容。已关闭的接收器拒绝延迟数据；具体 peer／通道与认证检查会保护替换后的传输，也会拒绝 viewer 在认证前接收文件。状态清理先于用户 callback，避免旧失败影响 callback 建立的新连接。文件／审计／状态 callback 保留原始取消及强制中断对象。清理会尝试关闭文件及删除暂存文件，文件系统失败写入日志。现有 Remote Desktop 控件自动使用此生命周期；已完成的目标与原有线上格式仍可使用。
+
+本机 `FileReceiveReceipt(path, sha256, size)` 现在会在原子发布后固定原始接收内容。`FileTransferReceiver.handle_message(on_receipt=...)` 与原生 host／viewer 的 `set_file_receipt_callback()` 提供回执，不必重读已发布文件。`FolderSyncEngine.record_receipt()` 避免回发并保留后续本机修改；现有 `record_received(path)` 则明确快照当前内容。GUI 文件夹开关绑定接收回执的引擎及 viewer，并在访问监控目录前重新验证原始授权。相对收件箱／监控路径绑定创建时的工作目录，现有路径通知使用绝对路径。这些本机回执供下文的原生确认模式使用；GUI 重连交接见下文。
+
+原生 `FileTransferSender.send`、viewer 的 `send_file` 与 host 的 `push_file` 现在接受仅限关键字的 `require_commit=True`。确认模式会先探测已认证的原生对端，再读取来源元数据／内容；通过第二版 begin／end 元数据发送，并在原子发布后核对传输 ID、不可预测的结束 nonce、SHA-256 及字节数。相对来源路径会在交换前固定。每个文件都重新确认支持与权限，等待有时限；取消、通道／事件循环替换或撤销权限都保留失败状态。GUI 文件夹发送一律要求此模式，因此仅接受但丢失的数据不会推进投递状态；不确定的发送会由同一引擎重试。手动发送仍默认使用原有线上格式。GUI 文件夹投递要求两端都支持确认传输；不支持时会在发送文件内容前失败。GUI 明确重连／恢复见下文。
+
+GUI 重连时会为每个面板保留一份内存中的文件夹基准。重新连接后再按开始同步：相同的已认证 host 指纹、绝对监控路径与本机用户，会通过新授权的 sender 接续失败／离线修改。缺少或更换 host 指纹、路径或用户时建立新基准；旧工作仍在运行时拒绝交接，待它退出后才能重试。明确关闭文件夹同步会重置基准；停止／重连 viewer 则保留，关闭应用后清除。指纹沿用既有已认证 host 元数据的信任模型，没有新增密码学身份保证。SDK 可先停止 FolderSyncEngine，待工作确实退出后导出 checkpoint()，将不可变的 FolderSyncCheckpoint 传给路径／递归设置相同且 sender 已明确授权的新引擎。基准包含初始忽略文件与收到的内容，并非远端确认清单。
+
+TCP／WebSocket 剪贴板传输沿用明确的 SDK 调用与 GUI 推送剪贴板按钮。收到的文字／图片不会自动传回或广播；用户仍可明确重复发送相同内容。Viewer／host 在读到缓冲消息后，会重新检查原始连接、认证及完整控制权限，再应用剪贴板数据。Viewer 会在编码前固定原通道，拒绝改发至替换后的连接。GUI 排队中的传输保留具体 viewer 与连接发起用户，写入本机剪贴板、明确读取及发送前都会重新检查权限与所有权。过期或撤销的工作会被忽略或报告权限错误；普通 provider／callback 错误仍受控，原始取消与强制中断对象继续传播。文字／图片 JSON 格式及既有 API 不变。Callback 注册仅以弱引用绑定一次原始 viewer，避免断线 viewer 自己保留自己及 Qt 面板直到循环垃圾回收；实际排队数据仍保留原始 peer 与权限，直到处理或丢弃。受控本机协议、loopback 与 offscreen 测试替换原生剪贴板 provider；真机与付费 API 验收仍暂缓。
+
+实验性引用资产使用 `SyncAssetBlob`、`SyncAssetReference`、`SyncAssetStore` 与 `SyncAssetHTTPClient`。明确的 `SyncBindings.assets` 别名将选定文件封存为不可变 SHA-256 引用；只改资产也会建立新的因果版本。`SyncWorkspace` 在准备新定义请求前上传已验证分块，支持中断续传，并在完整且未启用的发布前下载引用内容。现有私有 AC／MCP／Builder 工作区／profile 命令共用这些字段。`asset_cache_path` 选择 client cache；signaling 的 `--asset-store`／`AUTOCONTROL_SYNC_ASSET_STORE` 选择独立 server 数据库。带验证的第一版资产路由使用 256-KiB 分块、每文件 64 MiB 上限，每账户默认限制 256 MiB、8,192 块与 4,096 条 blob 收据。超过配额会明确失败；不可变历史不自动回收。原生输出路径相对于 generation 根目录。`python -m examples.sync_referenced_assets` 经临时 loopback HTTP 传送真实 PNG 与脚本，不执行脚本或改当前工作区。
+
+实验性持久化配置使用 `ConfigStore.commit(..., base_revision=..., operation_id=...)` 与第二版 signaling PUT envelope。SQLite 事务使 bucket 与重发收据在重启后保留；过期版本或 ID 改配其他内容会冲突。`ConfigSyncClient` 默认条件写入；旧版盲写须在 client／server 明确开启。`--config-store` 选择延迟打开的数据库。私有 `AC_config_store_get`／`AC_config_store_commit` 与对应 MCP 工具共用 Script Builder 的显式 Data 命令。只存储数据，不执行脚本或启用触发器；因果合并与离线 outbox 单独交付。参阅[持久化配置指南](../docs/source/Zh/doc/config_store/config_store_doc.rst)与 `python -m examples.config_store`。
+
+实验性日志产码候选支持 `generate_candidate_from_log(path, run_id=...)`、`AC_generate_candidate_from_log` 与 MCP `ac_generate_candidate_from_log`。它会整合开始／完成快照，保留已记录的控制来源与重试证据，并将不完整重建标为已观察路径。失败／未完成调用、未知命令及遮罩输入均列为排除项，不编造并行顺序。Python／pytest／Robot 产物通过静态、命令及不发送输入的干跑检查。`codegen --from-log run.jsonl --run-id selected` 输出 JSON 审阅包；`-o review.zip` 或 `write_candidate_archive` 可将代码、动作与来源信息一起原子导出。Recording Editor 与 Script Builder 的 **动作 → 审阅日志候选脚本** 提供代码／差异／来源／警告；Builder 导入为独立操作，拒绝覆盖审阅期间的编辑变更。生成与导入均不执行候选。参阅[候选指南](../docs/source/Zh/doc/journal_candidates/journal_candidates_doc.rst)与 `python -m examples.journal_candidates`。
+
+实验性候选模板版本提供 `create_template_candidate`、`preview_template_candidate`、`verify_template_candidate`、`accept_template_candidate`、`revert_template_candidate`，以及对应 `AC_template_candidate_*`／`ac_template_candidate_*` 操作。新的不可变 JSON 版本包保存原始字节及按目标 PNG／JPEG／BMP 格式编码的候选；预览返回有界缩略图。验证在本机数据集比较两个固定版本；接受须有已标注命中、预期 miss、全部已标注案例正确，并提供已预览版本的 SHA-256。接受时重新验证数据集，只原子替换仍匹配的原始内容；恢复精确还原原始字节，拒绝覆盖后续修改。未知样本与原生操作结果分别呈现。验证使用记录的阈值；启用图像不修改脚本阈值。**Self-Healing → 候选模板** 提供五个动作、后台任务、取消与 JSON 证据。运行 `python -m examples.template_candidates` 可执行只使用临时文件的示例。
+
+实验性固定图像比较支持 `evaluate_locators`、`evaluate_healing_manifest`、`AC_self_heal_evaluate`、MCP `ac_self_heal_evaluate` 与 **Self-Healing → 版本比较**。报告分别呈现已标注正确率、误判、未知与已验证恢复，包含 p50／p95 及来源，可由 `write_healing_report` 或 GUI 动作导出 JSON／HTML。本机数据集入口不会截图、点击或自行选择网络 backend。参阅[数据集、统计母体与限制](../benchmarks/self_healing/README.md)。
 
 除了这张表，`utils/` 下还有 311 个无头包，覆盖断言、韧性、数据质量、i18n 审计、脱敏、
 治理、可观测性等等。完整的逐模块地图在 **[architecture_explore.md](../architecture_explore.md)**。
 
 ---
 
+实验性的结构化日志已从 `je_auto_control` 导出（也可通过 `utils.action_journal` 使用）：`journal_scope` 记录现有 executor 调用，`execute_action_with_journal` 隔离一次执行。本机 loop／parallel／DAG 步骤保留 parent ID，并区分失败、取消与 dry-run。现有 history 拥有者会自动链接显式捕获，包括本机 parallel／DAG worker 开启的 journal；`HistoryStore.journals_for_run` 可查询非拥有式链接，清理 history 不会删除日志文件。CLI 支持 `run script.json --journal run.jsonl [--journal-run-id ID]` 与 `journal run.jsonl [--run-id ID] [--limit 100]`。查询会按追加顺序显示遮罩后的生命周期快照，默认最多 100 条，上限 10,000 条。`AC_journal_capture` 接受命名参数，在拥有者 executor 上执行嵌套 `body`，保留原变量作用域；`AC_journal_read` 与 CLI、公开的 `inspect_journal` 共用遮罩后的有界查询。两个命令都可在 Script Builder 编辑。捕获会在 history 链接、创建文件及执行动作前拒绝含有当次执行已知密钥值的标识符或目标路径。MCP 的 `ac_journal_capture` 与 `ac_journal_read` 提供结构化结果、进度与协作式取消。捕获的日志根目录限制与 observer 会保留到嵌套捕获及本机 workers；查询可在逐条验证时取消。Python 可通过 `JournalRunOptions` 与 `execute_journal_run` 使用相同控制。
+
+手动执行可通过 `manual_history_scope`、`AC_history_capture`、CLI 的 `run --history [--history-db PATH]`，或 Script Executor／Script Builder 的 **记录到运行历史** 选择记录。GUI 的可选日志路径也能独立使用；GUI／CLI 保留原有结果 JSON 与变量作用域，命令则返回 `history_id`、`record`、`failed_actions`。已有与嵌套捕获都会关联到新的手动历史记录。CLI 预览使用 `cli.preview` 标签，普通执行使用 `cli.run`。
+
+Run History 提供只读日志查看。使用 **操作 → 使用所选执行的日志** 选择来源关联，或用 **选择日志** 指定外部文件；设置执行 ID 与快照上限后，使用 **读取日志**。开始／完成快照保持分离，选中后会显示完整的遮罩数据。**取消读取日志** 与关闭视图会在逐条边界请求取消；文件解析在后台 worker 执行，仅选择关联不会打开文件。
+
+`${secrets.NAME}` 解析后的值会在 executor 执行期间的应用程序诊断中遮罩，包括嵌套动作及本机 parallel／DAG。CLI／REST／MCP 请求与排程、trigger、hotkey、email 执行会将遮罩保留到错误处理及 audit／history 写入完成；报表记录保存遮罩后的快照。DAG 会将拥有者的遮罩保留到 node 诊断完成，包括独立调用与自定义 local runner。watchdog、observer 与 callback executor 会将遮罩保留到最后的错误处理；独立规则彼此隔离。CLI stderr 会遮罩，API 结果、抛出的异常与 CLI 结果数据保留原始值。遮罩于拥有者的请求或执行结束时清除。中止的 history 记为 `error`，journal 步骤保持 `cancelled`，不再获取错误截图。取消会穿过非严格执行、恢复／重试、回调与本机 worker；history 结算失败也不会取代原始硬中止信号。
+
 ## 命令行界面
+
+每次 `je_auto_control run`（包括 `--dry-run` 与未带 `--var`）使用独立变量作用域。顶层 `run_from_description` 与 `StateMachine.run()` 也会隔离变量，同一次执行内的动作与状态仍可共享；嵌套调用沿用已有的执行作用域。自行创建的 `Executor()` 保留自己的变量。
 
 ```bash
 je_auto_control run script.json [--var name=value] [--dry-run] [--allow-package NAME]
@@ -268,7 +821,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 757 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 820 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用：完整的 `ac_*` 工具接口，以及常用 GUI 操作的短名称 alias。除了以 `initialize` 握手的各版协议，也支持无状态的 MCP 2026-07-28。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -277,13 +830,21 @@ je_auto_control version
 
 除非明确指定，所有服务器都绑定在 `127.0.0.1`。
 
+MCP 窗口状态工具 `ac_window_minimize`、`ac_window_maximize` 与 `ac_window_restore` 在后端接受请求时返回窗口 handle，被拒绝时回复 `isError: true`（包括 handle 失效或激活请求被拒）。Win32 原始 `ShowWindow` 的先前可见性由后端规范化处理。
+
 **包闸门。** `AC_add_package_to_executor` 与 `AC_add_package_to_callback_executor` 会导入 Python 包并把成员注册成命令，所以从上面任何一个入口送来的动作列表都可能加载 `os` 或 `subprocess`。没有被放行的包不会加载：不在允许清单上的包在导入前就被拒绝，该动作以 `AutoControlExecuteActionException` 失败。放行包（含子模块）的方式：在 Python 里调用 `executor.allow_packages("name", …)`；对所有入口——两个 CLI、socket／REST／MCP 服务器与调度器——设置环境变量 `JE_AUTOCONTROL_ALLOWED_PACKAGES`（以逗号分隔的名称，进程启动时读取）；或只对一次 CLI 执行使用 `je_auto_control run script.json --allow-package NAME`（可重复）。`executor.set_allow_arbitrary_packages(True)` 会对所有包打开闸门，也就是先前版本的默认行为（当时会发 `DeprecationWarning`）。这些都不是 `AC_*` 命令，所以动作列表不能自己打开闸门。
 
 **可选的加固设置。** 下列各项在设置之前都是关闭的，没设置的服务器行为与先前相同。`JE_AUTOCONTROL_RBAC_USERS=<用户文件>` 让 REST API 与 MCP HTTP 传输把 bearer token 对应到用户，并按角色（viewer／operator／admin）授权每一个路由、工具与特权 `AC_*` 命令；此时共用 token 会被拒绝。`JE_AUTOCONTROL_MCP_PATH_ROOTS`（以操作系统的路径分隔符分开的目录）把每一个属于文件路径的 MCP 工具参数限制在这些目录里，`JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT=1` 再加上 client 的 `roots/list`，`JE_AUTOCONTROL_MCP_ENV_REF_ALLOW` 限制 `ac_resolve_ref` 可以读哪些 `env://` 名称。`JE_AUTOCONTROL_ACTION_SIGNING_PUBLIC_KEY` 让端点只能验证 Ed25519 签名的动作文件而不能签名（`create_signing_keypair`；私钥留在签名的机器上）。远程桌面的 viewer 只把 host 推来的文件写在 `~/Downloads/AutoControl` 下面（`JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR`）；这一项默认就是开的。
 
-**其他可设置的项目。** `JE_AUTOCONTROL_MCP_TOOL_MODE=progressive`（或 `je_auto_control_mcp --tool-mode`）让 MCP session 从五个核心工具开始，再搜索、查询与启用其他工具；`static` 提供固定的工具组（`JE_AUTOCONTROL_MCP_TOOL_PROFILE`）；默认的 `full` 模式不变。RBAC 的用户以 `je_auto_control users add|remove|set-role|rotate-token|list`、`AC_user_*` 命令或 REST API 标签页管理。`JE_AUTOCONTROL_ACTION_SIGNING_PASSPHRASE` 用来解开有口令保护的签名私钥。动作日志（`start_action_journal`、`AC_journal_*`）记录执行过的动作并先遮蔽秘密，`je_auto_control codegen --from-log` 把一次执行转成候选脚本。配置同步把数据存在 SQLite 并检查版本（`--config-db`、`AC_SIGNALING_CONFIG_DB`；旧版 client 需要 `--allow-blind-config-writes`）。Android 与 iOS 设备各有自己的 session（`open_device`、`AC_android_*`、`AC_ios_*`）；移动设备的代码还没有在任何设备上跑过。Wayland 上 `probe_capabilities`／`AC_probe_capabilities` 报告输入与捕获能做什么、为什么，`JE_AUTOCONTROL_WAYLAND_EI_WORKER=1` 把 libei 移到辅助进程。GUI 会把主题、字号、面板与窗口位置记在 `~/.je_auto_control/gui_settings.ini`（`JE_AUTOCONTROL_GUI_SETTINGS`）。
+REST GUI 在用户存储文件启用时显示 RBAC 模式并禁用共用 token 字段。`rest_api_registry.status()` 提供 `rbac_enabled`，该模式的 `token` 为 `null`；请使用个别用户 token。只实现 `check()` 的自制 REST gate 仍可用于共用 token 模式；RBAC 要求已验证的用户 context，会拒绝没有身份的成功结果。
+
+RBAC viewer 不会取得列管的敏感读取工具，即使 MCP `readOnlyHint` 为 true：剪贴板／历史、本机文档／数据／SQL 与 dotenv 读取、引用解析、认证数据生成、持久存储读取、对外检查、麦克风捕获与外部 VLM 请求都需要 operator／admin。断言容器的 spec 也可能读取这些资源，因此同样需要 operator。屏幕观察与纯输入解析保持既有分类。`ac_realize_item`、`ac_idempotency_begin` 与 `ac_rate_limit` 会改变状态，已从 `--read-only` 模式排除。
+
+间隔／cron 调度、触发器、热键、watchdog 规则、webhook、e-mail 触发器与 observer 回调会保留注册者身份。每次触发重新检查来源用户文件与角色；已删除的用户、无法使用的来源文件与 viewer 不能执行后台工作。启动 daemon 不会改变已有工作的所有者。所有者信息不保存 RBAC bearer token；未带 `store_path` 的显式 Python `AuthorizationContext` 保留角色快照，未在 RBAC 下注册的工作会清除 worker 原有身份。observer／watchdog 回调使用独立变量作用域，watchdog 动作失败不会算成成功消除弹窗。嵌套回调会保留调用端的失败计数；webhook 所有者被撤销权限时响应 HTTP 403 与 `fired: false`。
 
 ### 远程桌面的线路协议
+
+TCP host 在发送 `AUTH_FAIL` 前就释放认证失败的 client 名额。Viewer 即使因错误 token、错误握手消息或拒绝批准而失败，也能立即重试，不必等待 socket 清理或日志完成；待处理握手仍有独立的资源上限。
 
 把主机开放出去之前值得先了解，而且这一段在其他文档里都没有写。默认传输是**裸
 TCP 上的长度前缀分帧**（不需要额外依赖），连接一开始就是 **HMAC-SHA256 的
@@ -344,7 +905,15 @@ OpenCV，而 `opencv-python`、`pillow`、`cryptography` 都没有发 FreeBSD wh
 从 ports 构建之后，截取、图像匹配、OCR 与动作加密也都能用——
 `import je_auto_control` 本身已经不需要它们任何一个。
 
-Wayland 的输入在 libei 走不通时会退回 `ydotool` CLI，而这条退路需要
+Wayland 的按键、按钮与指针输入在 `auto` 模式下，仅在可选原生后端缺失时改用 CLI。
+portal 请求开始后，拒绝、超时、握手失败、设备暂停或权限撤销都会停止输入，
+不会自动切换提供者；重复调用保留不含原生资源的失败状态，不重开同意对话框。
+`JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei` 强制原生输入，`=cli` 明确选择 CLI。
+解决权限问题后，可明确调用 `je_auto_control.linux_wayland.libei.reset_default_backend()`
+以允许重新请求。原生组合键中断时会在同一后端尝试释放所有已按下的按键，并保留原始取消。
+此行为不改变明确的 wtype 文本输入路径或屏幕截取选择。
+
+`ydotool` 退路需要
 **ydotool 1.0 以上**。AutoControl 送的每一个参数都是那一版才有的；0.1.x
 （Debian bookworm 与目前所有 Ubuntu 仍以这个名字提供，Debian trixie 则根本没有）
 对同一批参数返回 0 却不送出任何事件。AutoControl 会检测并直接拒绝，
@@ -366,10 +935,83 @@ libinput 的默认 profile 让光标走的距离正好是请求的两倍。ydoto
 Wayland 的屏幕截取需要合成器对应的工具，因为没有单一工具能覆盖全部：wlroots 系
 （sway、Hyprland、river）用 `grim`，GNOME 用 `gnome-screenshot`，KDE 用 `spectacle`。
 装好其中一个之后，所有截取路径——截图、图像与锚点定位、OCR、屏幕录制、远程桌面——都会
-经由它。三个都没装也还有 `gdbus`：最后会尝试 `xdg-desktop-portal`，只是第一次可能会弹
+经由它。三个都没装时，内置 D-Bus client 会通过 session bus 尝试 `xdg-desktop-portal`，第一次可能会弹
 同意对话框。再不行，截取会带着安装提示明确失败，而不是返回空白的 XWayland root；
 `je_auto_control.api.run_diagnostics()`（以及 GUI 的 Diagnostics 标签页）的 `screen_capture`
 检查会报告当前使用的是哪一层。
+
+原生 Wayland 指针坐标在原始坐标与布局原点换算后仍不属于任何授权 EIS 区域时，
+会以 `state="failed"` 的 `LibeiUnavailable` 拒绝，停止自动 CLI 备用，
+不发送移动、frame 或后续点击。有效坐标、未提供区域的设备、同一 sender 的后续有效请求，
+以及显式选择 CLI 的现有行为保持不变。
+
+**输入／截取能力**提供 `je_auto_control.api`（也由包根目录导出）的
+`BackendContext`、`CapabilityStatus`、`CapabilitySnapshot` 与 `probe_capabilities`。
+调用 `probe_capabilities(BackendContext.current()).to_dict()`、无参数的
+`AC_probe_capabilities`／只读 `ac_probe_capabilities`，或选择
+**Diagnostics → Actions → 查看输入与截取能力**；Builder 提供相同无参数命令。
+`python -m examples.capabilities` 显示本机前置条件与确定性的 XWayland 范围示例，不操作桌面。
+
+输入项描述按键／指针事件；现有 wtype 文字路径独立。探测只读环境、PATH 与不等待锁的现有原生状态，
+不加载可选原生库、不连接、不读取事件、不截取或请求授权。找到工具或 bus 地址只代表
+`unverified`，不等于可用。缓存 libei 须完成握手，且键盘、绝对指针、按钮与滚轮事件种类都在运行才报告可用；
+部分授权保持未验证，事件种类暂停或必要设备移除则报告暂停／撤销。八种状态为 `available`、`unverified`、`needs_permission`、
+`needs_dependency`、`unsupported`、`paused`、`revoked`、`failed`。
+`available` 仅是最近的本机观察，可能过时；实际操作仍重新验证权限。XWayland 一律
+`desktop_wide=False`，无法覆盖原生 Wayland 窗口；其他范围标记仍受授权区域限制，不代表已验证每个屏幕。
+
+Context 会复制环境／工具数据，可由拥有者提供无原生对象的输入／截取观察，但不授予权限。
+默认本机结果不含环境值、命令参数、可执行文件路径或原生错误文字；AC／MCP 不接受外部提供观察。
+显式选择 CLI 与观察到可选原生依赖缺失后的自动备用分开；拒绝、暂停、撤销与失败不表示改走 CLI。
+截取工具／portal 选择独立诊断，重绘与切换语言只使用现有快照。原生 portal 恢复、compositor 重启、
+截取结果与 context 的接合，以及原生 session 的重试／取消／停止控制仍列于 `Progress.md`。
+
+GUI 工作基础提供 `gui.task_controller.TaskController`：
+`submit(work, owner=widget)` 返回调用者持有的 `TaskHandle`，通过
+`TaskOutcome`／`TaskProgress` 传递终态与进度。工作取得不依赖 Qt 的
+`CancellationToken`，提供 checkpoint、有界且可被取消唤醒的等待与进度报告。
+提交时捕获 context，执行前重新读取 store 用户；工作须持有数据、不引用 widget，并验证自身操作所需的 capability。
+现有 `DeferredAuthorization.scope()` 保持输入权限要求，`context_scope()` 仅更新并绑定身份。
+
+拥有者、handle 或 controller 销毁时会请求协作式停止并丢弃延迟结果；每项工作有独立 ID／token，
+回调在 GUI 线程执行。不强制中断不配合的调用，也不把已成功提交的结果改标为取消。
+错误与进度使用捕获的秘密遮罩 scope，终态不保留异常 traceback；线程启动失败会恢复两层登记并保留原失败。
+Diagnostics 已接入此共用控制器；其余面板／backend 迁移与原生 session 操作仍列于 `Progress.md`。
+
+主动 **Diagnostics → Actions → 运行诊断** 以共用控制器在 GUI 线程外运行。
+**停止诊断** 请求协作式停止；四种语言的状态区分运行中、清理中、已取消和失败，并显示已完成检查数。
+重复运行不另开工作，关闭后丢弃延迟进度／结果，显式重试会建立新的拥有者工作。
+GUI 以不保留异常 traceback 的 typed outcome 呈现取消；核心／SDK／CLI 与 MCP handler
+保持原始直接／包装取消对象。普通检查错误仍计入报告并继续其余项目。
+
+两个 SDK namespace 导出 `CancellationToken`、`TaskProgress`、`cancellation_scope`。
+使用 `with cancellation_scope(token): report = run_diagnostics()`，拥有者可由另一线程调用
+`token.cancel()`；现有无参数诊断签名不变。Scope 不授予权限，`cancellation_scope(None)`
+只在有时限的自有资源清理期间暂停取消。`AC_diagnose` 与新增的只读 `ac_diagnose` 共用报告；
+MCP 不接受参数，使用请求取消／进度，与显式 GUI 操作同样需要 `read_screen`，拒绝外部 token／授权数据。
+这些是主动检查，截取可能请求同意；`ac_probe_capabilities` 保持独立的被动选项。
+
+Scoped Wayland D-Bus 的连接／读取／部分写入，以最多 0.1 秒的间隔轮询，保持原本总时限。
+取消时在原 bus 以独立 0.25 秒预算尝试 Request.Close，再释放连接；取消的已返回图片会删除。
+Scoped CLI 截取会停止并回收自己建立的 helper／process group，清理有时限，pipe close 失败也不覆盖原取消，
+已回收的数字 PID 不再作为信号目标。liboeffis 获取 session 时会观察停止并释放自身 context。
+不强制中断不配合或原生调用，清理期间 GUI 仍可操作；restore／重启、原生 session 控制、
+截取拥有者 metadata 与其余面板／backend 迁移保留于 `Progress.md`。
+
+`python -m examples.cancellable_diagnostics` 默认只做受控取消示例，不调用 provider。
+`--active --cancel-after 2` 才显式运行诊断并在两秒后请求停止；真机／设备／API 验收另外列管。
+
+打开 Diagnostics 只显示已翻译的「尚未运行」状态，不执行检查。
+选择 **Actions → 运行诊断** 才会启动现有主动检查，可能截取屏幕或需要 portal 同意；
+切换语言不启动检查。显式的 `run_diagnostics`、`AC_diagnose` 与 MCP 诊断调用保持主动行为；
+无副作用的能力查看使用下方独立操作。
+
+未完成的 screenshot portal 请求会在断开原始 bus 前尝试 `Request.Close`，
+使用独立的 0.25 秒 D-Bus I/O 预算。服务器返回替代 handle 时会跟随该 handle；
+方法回复不确定时则使用预测 handle，已完成的 Response 不重复关闭。
+普通清理错误不覆盖主要截取失败；原始取消与强制中断对象会穿过包装及清理继续传播。
+D-Bus 写入与回复共用调用预算，连接建立有明确时限，connect／认证／Hello 中断时，
+即使 `__enter__` 失败也会释放自己拥有的描述符。实际合成器／对话框取消仍待平台验收。
 
 有一件只在 Wayland 出现、需要事先规划的事：**截取回来的图里可能有鼠标光标。**
 这里没有任何一条截取请求光标，但只要 backend 没有光标平面（包含任何以
@@ -420,7 +1062,6 @@ AutoControl 读取的每一个环境变量。这里没有任何一项是必填�
 | 变量 | 默认 | 作用 |
 |---|---|---|
 | `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND` | `auto` | 设为 `cli` 时通过 `ydotool` 发送输入，完全不向桌面 portal 提出请求。这是启动前就做好的选择：用户拒绝授权后，AutoControl 不会自行切换过去。 |
-| `JE_AUTOCONTROL_WAYLAND_EI_WORKER` | 未设置 | 设为 `1` 时把 libei 会话放到辅助进程里运行，而不是放在本进程。 |
 | `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL` | `warn` | 只影响 `ydotool` 路径的绝对移动（那其实是会被合成器加速的相对位移）：`warn` 警告一次后照样移动，`flat` 表示加速已关闭、不再警告，`strict` 直接拒绝移动。 |
 | `JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND` | 未设置 | 自定义的截图命令行，以 `{output}` 表示 PNG 的输出路径。优先于 `grim`、`gnome-screenshot`、`spectacle` 与 portal。 |
 | `JE_AUTOCONTROL_WAYLAND_RECORD_DEVICES` | 未设置：一个都不读 | `PhysicalRecorder` 可以读取的 `/dev/input/event*` 设备（以逗号分隔）；物理输入录制必须逐一指定设备才会启用。 |
@@ -430,7 +1071,6 @@ AutoControl 读取的每一个环境变量。这里没有任何一项是必填�
 | 变量 | 默认 | 作用 |
 |---|---|---|
 | `JE_AUTOCONTROL_MCP_READONLY` | 未设置 | 设为 `1` 时只提供、也只能调用标记为只读的工具。 |
-| `JE_AUTOCONTROL_MCP_TOOL_MODE` | `full` | `tools/list` 要提供注册表的多少内容：`full`、`progressive` 或 `static`。未知的值会报错，不会被当成 `full`。 |
 | `JE_AUTOCONTROL_MCP_TOOL_PROFILE` | 未设置 | `static` 模式的工具清单：以逗号分隔的工具名称与 `category:<名称>`。 |
 | `JE_AUTOCONTROL_MCP_ALIASES` | `1` | 设为 `0` 时不注册 `ac_*` 工具之外的简短别名（`click`、`screenshot` …）。 |
 | `JE_AUTOCONTROL_MCP_TOKEN` | 未设置 | HTTP 传输的 Bearer 令牌。启用 RBAC 之后不再接受。 |
@@ -467,14 +1107,12 @@ AutoControl 读取的每一个环境变量。这里没有任何一项是必填�
 |---|---|---|
 | `JE_AUTOCONTROL_REMOTE_DOWNLOAD_DIR` | `~/Downloads/AutoControl` | 远程桌面查看端存放主机传来文件的目录。收到的路径一律限制在这个目录内。 |
 | `JE_AUTOCONTROL_USB_PASSTHROUGH` | 未设置 | 设为 `1` 时在远程桌面通道上启用 USB 直通指令。 |
-| `AC_SIGNALING_SECRET` | 未设置 | 信令／配置同步服务器的共享密钥（`X-Signaling-Secret`）。服务器在没有 `--shared-secret` 时读取它，`config_sync_run` 在没有 `secret` 时也读取它。 |
-| `AC_SIGNALING_CONFIG_DB` | `~/.je_auto_control/config_sync.sqlite3` | 信令服务器存放配置同步数据的 SQLite 文件。 |
+| `AC_SIGNALING_SECRET` | 未设置 | 信令／配置同步服务器的共享密钥（`X-Signaling-Secret`）。服务器在没有 `--shared-secret` 时读取它。 |
 
 ### GUI
 
 | 变量 | 默认 | 作用 |
 |---|---|---|
-| `JE_AUTOCONTROL_GUI_SETTINGS` | `~/.je_auto_control/gui_settings.ini` | 主窗口保存主题、文字大小、导航面板与窗口位置的文件。设为 `off`、`0`、`none`、`false` 或空字符串时，不读也不写。 |
 
 ### 日志、数据与测试
 
@@ -491,7 +1129,7 @@ AutoControl 读取的每一个环境变量。这里没有任何一项是必填�
 
 | 资源 | 内容 |
 |---|---|
-| [`examples/`](../examples/) | 33 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位。 |
+| [`examples/`](../examples/) | 45 个自包含脚本：截图点击、OCR、调度器、远程桌面、agent loop、可观测性、录制、变量、热键、触发器、报表、MCP、REST、密钥、插件、computer use、Wayland、跨主机 DAG、chat-ops、pytest/BDD、锚点定位、动作日志。 |
 | [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 参考，含英文与中文。 |
 | [architecture_explore.md](../architecture_explore.md) | 逐层记录每个模块的职责。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台对照矩阵。 |
@@ -524,6 +1162,23 @@ python test/verify/typing_contract_verify.py --extras   # 同一项检查，改�
 python -m sphinx -b html -W docs/source docs/_build/html  # 文档，警告视为错误
 ```
 
+dev／main 的无头任务会保留七天的 `native-<os>-<python>` artifact，内含合并进程输出、
+包／运行环境版本与退出码。Linux 经 GDB 保留各线程原生堆栈；其他平台保留 Python
+faulthandler 输出，测试失败仍会使任务失败。可在 repo 执行单一命令
+`python scripts/ci_native_diagnostics.py --artifact-dir test-artifacts -- python -m pytest -v --tb=short --timeout=120`；
+Linux 安装 GDB 后，可在 `--` 前加入 `--native`。
+含空格／引号的 argv 仍是原始参数，已处理的 `SIGINT` 会传给子进程。
+Linux 先在完整套件的 debugger 外验证诊断工具；前置检查记录也收在同一 artifact。
+
+选定的 dev 推送由 `.github/workflows/ei-lifecycle.yml` 在隔离 libei／libeis
+容器执行，将版本及两份原生记录保留于 `ei-lifecycle-<run>-<attempt>` artifact 十四天。
+半开与 live 释放子进程分别有十／六十秒时限与 faulthandler；其他子进程失败使 CI 失败，
+释放成功必须有 begin／end 标记。半开探测另须有相同整数 fd 数量，live 清理先释放拥有的
+device refs。run 39507190704 在 libei／libeis 1.3.901-1 通过 9/9 与 20/20 检查，
+包含坐标越界拒绝且不转用 CLI。半开 `ei_unref` 仍会 SIGSEGV，因此保留 runtime 保护，
+helper 隔离仍待完成。设备暂停与序号回读仍未验证；受控 socket peer 不代表合成器授权、
+真机或多屏幕验收。
+
 欢迎贡献——请见 [CONTRIBUTING.md](../CONTRIBUTING.md) 与
 [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)。CI 会强制两条规则：`import je_auto_control`
 绝不能加载 PySide6；每个功能都必须同时具备无头 API 与 GUI 界面。
@@ -538,3 +1193,139 @@ python -m sphinx -b html -W docs/source docs/_build/html  # 文档，警告视�
 - **主页**：https://github.com/Integration-Automation/AutoControlGUI
 - **PyPI**：https://pypi.org/project/je_auto_control/
 - **文档**：https://autocontrol.readthedocs.io/en/latest/
+
+旧式 MCP 动作包装、并行分支及本机 DAG worker 也会保留相同的来源限制。
+
+受管指针动作可指定该次观察的元素索引或缩略图坐标，由主机检查当前画面并换算原生坐标，包括缩放与负屏幕原点。收据保存几何依据，不保存图像字节。`AgentObservationStale` 表示分派前已拒绝动作；本机 agent 只在 adapter 确认没有按住或待处理输入时，在重试预算内重新观察。
+
+紧急停止先返回带有 metadata.details_deferred 的精简状态，完整产物链接可由单个任务查询。
+
+托管鼠标按下前会规范按钮所有权并确认实际光标位置。Windows 指针检查会拒绝其他窗口遮挡。影像仅将指定窗口绘制到清空的私有 GDI 内存，几何变化会拒绝该画面；绘制或读取失败也会释放资源。不改用桌面捕获。这些路径已用模拟原生 API 测试，实际原生验收仍未验证。
+
+Agent 任务界面将任务范围、工作流程设置、触发器、技能及恢复分页。观察页显示只读元素和已验证、严格遮罩的 JPEG，每个逻辑画面像素对应一个呈现像素。选择元素或影像坐标只会编辑该次观察的动作请求；由 Actions 的「执行观察动作」通过共用任务 API 发送。切换任务会清除预览，迟到回复不能替换当前任务；新画面必须重新选择，旧索引不能直接复用。关闭界面仅解除请求订阅。
+
+托管工作流程可用 workflow_wait／AC_workflow_wait 等待指定控件的精确值或状态，只重复读取；可取消且受动作预算限制，默认五秒、上限六十秒，不重发写入或提交。固定技能每一步都验证已有收据与固定顺序，恢复也不能跳过读回失败的步骤；模型自主循环仍保留停滞检测。新表单／跨应用模板会在提交前拒绝原本已匹配的确认值，提交后等待新的状态转换。批次可设置 new_record_selector 逐条重置；确认仅证明配置的界面转换，有交易标识值时应使用它。归档模板完成时会重读指定清单及文件摘要，清单上限一 MB，总验证数据上限六十四 MiB。
+
+AgentHumanReview 表示未保存内容或未知对话框需人工审核；包括外部观察请求都会记录 waiting_user 并释放输入控制权，明确恢复后仍会重新检查。Windows 依据原生对话框／禁用所有者及英中日已知未保存文字判断。Workspace 也会拒绝标题首尾带星号的文档，并可在窗口设置中加入 unsaved_selector 与 unsaved_value，在改变排列前检查应用特有指示；不声称能推断所有程序的未保存状态。标准文件对话框沿用 AC_handle_file_dialog 执行器，托管 driver 只接受唯一精确标题、相同 PID、已确认前景，以及授权根目录内的绝对路径。UIA 控件须属于实际指定的根窗口，同 PID 的其他窗口也会拒绝。模拟原生与本机 HTTP 测试已有覆盖，实际平台验收仍未验证。
+
+主机目标通过 AgentTargetProfile 与 manage_agent_target（AC_agent_target，register/get/disable/enable/probe）设置。名称及设置固定不可替换，目前提供 desktop／files／browser adapter，未实现类型会被拒绝；浏览器可使用主机审阅的 helper_python。任务固定主机设置摘要，不能扩大工具、应用、根目录或网络来源。启停状态会跨重启保存并在分派时检查；禁用会请求暂停及清理，重新启用仍须明确恢复任务。list_agent_targets／AC_agent_target_list／CLI agent-task targets 仅提供被动信息，readiness=not_probed、native_evidence=not_recorded；完整设置需要 manage_hosts。CLI agent-task target 及 GUI「主机目标」页使用同一服务。匿名有效 MCP 工具 session 的直接及旧式包装调用都以 operator 权限执行；MCP 主机管理需要已验证的管理员，可信任的直接 Python 调用维持原行为。浏览器自动化统一由 WebRunner（je_web_runner）提供，本机开发来源为 D:/Codes/WebRunner；browser profile 使用受管 je_web_runner SDK 契约，依赖诊断不代表原生可用。
+
+既有浏览器自动化（包括 open_path(URL) 与 AC_open_path）统一交由 WebRunner，Python 包名为 je_web_runner。URL 计划的 backend 现为 je_web_runner，原本比较 webbrowser 描述值的调用端需改用新值；函数接口与本机文件打开维持兼容。实际 URL 执行需要配置的 WebRunner 项目，缺少时传出 WebRunnerBridgeError，不改用 OS 浏览器。本机开发来源为 D:/Codes/WebRunner；纯计划及注入 opener 测试不需要该包。协议支持由 WebRunner 与所选浏览器决定。既有浏览器 GUI／MCP／AC 及录制的 WR_* 动作都使用同一桥接。
+
+## Local DAG 完成证据的明确移交
+
+其他 caller 持有的既有恢复子任务，可通过明确且可撤销的移交，向原 local DAG 提供完成证据。
+以 `manage_agent_recovery` 的 `review_handoff` 提供最终 `task_id`、`batch_id`、`node_id`，
+有权管理者再用相同 ID、将返回的 `handoff_review` 填入 `review`，并附非空 `note` 执行
+`create_handoff`。接收者由服务依真实原始 admission 决定。在 `review_continuation` 的 successor
+决策中，除 `node_id`、`action`、`task_id` 外明列 `handoff_id`，再审核并批准整份 continuation。
+最多支持十六层真实恢复链，包含经私有 admission 的永久只读最终验证者；一般任务归属保持原样。
+
+`get_handoff`／`revoke_handoff` 使用 `handoff_id`；`list_handoffs` 使用 `batch_id`、`node_id`。
+创建与采纳时重查实际 owner、创建审核者、签发 session 的来源根限制、当前接收端限制、固定 scope、
+效果快照、独立完成及资源退役。批准、开始及后续依赖验证都重查同意；撤销或证据丢失会阻止采纳。
+期限不超过最早终止见证既有的三十天保留期限。公开响应只含有限 ID、摘要与状态，不含私有参数、
+capture 或 principal 数据库路径；不授予一般任务读取／输入权、不转移归属或重放。
+跨主机及非 DAG 的移交契约仍列于 `Progress.md`。
+
+Agent Tasks 的成果移交页提供操作菜单与 JSON 编辑器；Actions 只准备审核、创建、撤销请求，
+不自动派发。五个可编辑的 `agent_handoff_*.json` 示例涵盖 review/create/get/list/revoke。
+Python、AC、CLI、具名 MCP、REST、Builder 共用这些 recovery 操作。本次证据涵盖契约及自有文件
+流程；暂缓的原生桌面、浏览器、设备及二十四小时验收仍须各自提供证据。
+
+## 明确续授权只读完成验证
+
+原来源的 origin 引用过期或不可用时，明确调用
+`manage_agent_recovery("review_completion_authorization", {"task_id": "<source-id>"})`。
+审核服务产生的 `verification_spec`、保留／替换／当前 origin 限制，再以相同 `task_id`、返回的
+`snapshot`、`authorization_review` 及非空 `note` 调用 `create_authorized_completion`。
+可选 `owner_policy="source_owner"` 在创建时另须返回的 `ownership_review`；不能自行提供新验证
+规范。仍有效的旧限制保留，新根目录与原上限、前一读取者上限及当前 session 取交集。
+已重新授权的读取者不能改用一般完成审核来移除这些限制。
+
+子任务永久只读，依真实已确认的原效果独立检查当前条件，不输入、不重放、不恢复 capture，
+也不修改旧见证。来源／效果快照、实际 owner／reviewer 及原 DAG admission 都会重查。
+创建任务与最终完成各自在自己的 SQLite writer 内写入后重验，变化时共同回滚。
+最多支持十六层真实恢复链；已退役且成功的读取者可再次明确续授权，但保留前次较窄上限及所有仍有效
+的继承限制。来源／效果证据已改变时仍拒绝，不能借 scope 续授权默默修复旧证据。
+
+历史 `get` 保留 succeeded 状态；新授权失效时，当前 `completion_contract` 为零、
+`completion_authorization` 为 unavailable，DAG 采纳与后续依赖验证会拒绝这份证据。
+新的只读标记损坏／丢失时，在 helper 启动前拒绝。以 `completion_task_id` 录制时沿用原语义动作及
+已审核的限缩 scope，但草稿仍须自己的新验证试跑。此流程不发布过期候选，也不续授权已发布技能；
+既有技能重新授权流程保持分开。
+
+Python、AC、CLI、具名 MCP、REST、Builder 共用两个操作；Recovery 页的两个明确 Actions
+沿用所选任务、owner policy 与请求编辑器。可编辑示例为 `agent_completion_authorization_review.json`
+与 `agent_completion_authorization_create.json`。remote 只读来源、跨主机移交、
+实际应用状态重建，以及暂缓的原生／设备／浏览器／二十四小时验收仍列于 `Progress.md`。
+
+## 明确移交已续授权读取者的完成证据
+
+现有 `review_handoff`／`create_handoff` 现在可明确将已重新授权、永久只读读取者的完成
+证据交给实际原 local DAG。指定该读取者的 task ID 与原 batch／node，由服务推导证明；不能自行提供
+policy、所有者覆盖或授权 bundle。一般成果移交沿用现有规则。
+
+预览的 `evidence.completion_authorization` 显示完成任务／审核、固定的审核摘要、根目录数量及
+替换／保留／当前 origin ID，不含私人 principal 路径、动作参数或 capture。创建时以最上层返回的 `handoff_review`
+作为请求的 `review`，并提供非空 `note`。每个真实任务都保留已审核的上限与所有仍有效的历史限制；不可用的
+引用须明确审核替换，发出移交时额外的 session 限制也持续有效。移交沿用读取者已实际验证的相同
+根目录；交集改变时须重新审核及执行只读完成验证，接收者的 session／profile 限制也会持续应用。
+
+最多十六层真实恢复链可混合先前已审核的可执行子任务及私人读取者。成功的中间读取者必须具备实际
+私人历史 scope 与退役证明，一般已成功来源没有这个例外。发出或采纳移交时不启动 helper、不重放
+输入；旧来源状态、见证、收据及所有任务所有者维持原样。原所有者只取得有限完成投影，不能因此
+一般读取其他 caller 的任务。撤销或授权失效会阻止采纳及后续依赖验证。
+
+原 accepted-request hash、原始提交见证、私人 admission、graph、owner／reviewer、整条来源／子任务
+快照与最后读取者的续授权都固定在证明内。读取与写入后重验使用同一个 SQLite writer，包含尚未提交
+的变更；发现变动即回滚任务／移交创建。继承的 `dag_batch` 选项不等于 admission，必须沿有界真实
+恢复链找到原请求及实际授权身份，不补造 admission。旧的一般完成 binding hash 保持兼容；各历史
+任务各自审核限制，不能通过合并历史绕过正常十六个有效 origin 上限或原根目录边界。
+
+相同有效重试沿用原 note 与 ID，已撤销 ID 不会重新启用；重启与采纳保留最早终止见证的三十日期限。
+origin 失效后仍可查 get／list 历史与 revoke，但历史不代表可用完成证据或输入授权。Python、AC、
+CLI、具名 MCP、REST、Builder 共用五个现有操作，Handoffs Actions 与 JSON 编辑器／结果区可显示
+明确续授权审核，不自动派发同意。跨主机移交、remote 读取者、实际应用／设备
+来源及暂缓的原生／浏览器／真机／二十四小时验收仍列于 `Progress.md`。
+
+## 明确移交任务来源的完成证据
+
+现有五个移交操作也接受真实非 DAG 来源任务：
+
+- `review_handoff` 提供 `source_task` 与实际最后证据的 `task_id`。
+- `create_handoff` 再以最上层返回的 `handoff_review` 作为 `review`，并填写非空 `note`。
+- `list_handoffs` 提供 `source_task`；`get_handoff`／`revoke_handoff` 仍使用 `handoff_id`。
+
+任务来源与 DAG batch／node 字段互斥，服务依实际保存的 grant 判断存储类别。真实 DAG 祖先仍须走
+原 batch／node 路径，不能借由已移除 `dag_batch` 的只读读取者绕过，也不补造 DAG 节点或 admission。
+一般任务不必虚构提交见证或 idempotency key；实际存在的原请求须固定并在同一 SQLite writer 重验。
+
+现有技能操作明确选择 `handoff_id`。`record` 以 `completion_task_id` 采纳独立读取者，建立的 draft
+仍须自己的新验证 trial；`accept` 使用完成读取者时，仍保留原 candidate 的真正验证任务。
+`review_execution` 与对应 `accept` 可选实际 `execution_task_id`；最后证据是独立读取者时，再提供
+`completion_task_id`。服务核对原本完整语义动作计划、真实执行 ID 及独立完成条件，不能把读取者
+当执行任务或替代验证 trial。
+
+grant 只提供私人有限证据视图，原所有者、来源状态与收据维持原样，一般 get／list／observe／act／
+resume 权限不扩大。发出或采纳时不启动 helper、不重放输入。真实快照、可选原请求、实际 owner／
+reviewer、退役输入与有效历史 origin 均持续核对；新录制的 draft 保留发出与接收 session 上限。
+失效限制须经真实私人完成续授权，不能靠相同 hash 或自填 scope flag 替代；只读采纳也不会续授权
+已发布技能原本的输入权限。
+
+来源祖先与后续移交链合计最多十六条真实恢复连接。期限沿用最早终止证据的三十日，改锚定较新的
+读取者不会延长旧祖先。DAG 与任务 grant 的 INSERT 后及相同重试都重验撤销墓碑；来源／请求／角色／
+origin／撤销变动会回滚 grant、draft 或发布。已撤销 ID 不重启，origin 失效后的 get／list／revoke
+历史只显示有限 ID／hash，不代表持续有效的完成证据或输入授权。
+
+Handoffs 页可明确选原本机 DAG 或原任务来准备 JSON；三个技能 Actions 准备带 grant 占位符的录制、
+发布与执行审核，不自动同意或发布。Python、AC、CLI、具名 REST／MCP 与 Builder 共用相同操作及
+真实 caller。`examples/` 提供 `agent_task_handoff_review.json`、`agent_task_handoff_create.json`、
+`agent_skill_recording_handoff.json`、`agent_skill_completion_handoff.json`、
+`agent_skill_execution_handoff_review.json` 与 `agent_skill_execution_handoff_accept.json`。
+
+跨主机移交、remote 读取者、实际应用／设备来源、暂缓的原生与二十四小时验收，以及未解的
+HTTP409／bootstrap 问题仍列于 `Progress.md`。
+
+wheel 与源码分发包包含 REST Dashboard 和 Swagger 的 HTML、CSS、JavaScript 资源。
+安装后的套件沿用相同的本机 REST 路由与授权规则；提供静态页面不授予任务或桌面输入权限。

@@ -1,471 +1,283 @@
-"""What this session can do right now, and what stands in the way if it cannot.
-
-``platform_wrapper`` picks a backend at import and says nothing more. That is
-enough on Windows; on Wayland it leaves every interesting question open. Is
-input going through the portal or through ``/dev/uinput``? Did the user refuse
-the consent dialog, or is there no portal to ask? Is this the Wayland backend
-at all, or the X11 one talking to XWayland and reaching only half the windows?
-
-:func:`probe_capabilities` answers those as data. Four capabilities, each
-diagnosed on its own because they fail independently — a host with working
-capture and no input is ordinary, and one verdict for both hides which:
-
-``input``          synthesising keyboard and pointer events
-``capture``        reading pixels off the screen
-``recording``      reading what the *user* types and clicks
-``stop_shortcut``  a global key that stops a running script
-
-**Probing has no side effect.** It reads the environment, looks names up on
-``PATH``, asks the loader whether a library exists, and reads the
-authorisation ledger. It never opens a portal request, never shows a consent
-dialog, never connects a libei sender and never sends an event — so it is safe
-to call from a diagnostics screen, a health check, or an MCP client that has
-no business moving the pointer.
-
-On Windows and macOS the same rule holds, with different questions: the
-process's integrity level and session, whether the workstation is locked,
-whether one pixel can be copied off the screen; Accessibility, Screen
-Recording and Input Monitoring through the calls that *check* a permission,
-never the ones that ask for it (:mod:`capability_probes`). What could not be
-read is ``unknown``, not ``available``.
-
-Everything it consults comes in through :class:`BackendContext`, which is what
-makes a GNOME session describable from a Windows test run.
-"""
+"""Passive key/pointer-input and screen-capture capabilities, without native probing or permission requests."""
 from __future__ import annotations
 
-import ctypes.util
+from dataclasses import dataclass, field, replace
 import os
+import shlex
 import shutil
 import sys
-from dataclasses import asdict, dataclass, field
-from enum import Enum
-from typing import Any, Callable, Dict, Mapping, Optional, Tuple
+from types import MappingProxyType
+from typing import Callable, Mapping, Optional, cast
 
-from je_auto_control.linux_wayland._detect import (
-    WAYLAND_GNOME_SCREENSHOT, WAYLAND_GRIM, WAYLAND_SPECTACLE,
-    WAYLAND_YDOTOOL, is_wayland_session, select_display_server,
-)
-from je_auto_control.linux_wayland.authorisation import (
-    CAPTURE, CAPTURE_RECOVERY, INPUT, INPUT_RECOVERY, AuthorisationLedger,
-    AuthorisationRecord, AuthorisationState, compositor_identity, ledger,
-)
-from je_auto_control.linux_wayland.input_events import (
-    RECORD_DEVICES_ENV, configured_record_devices,
-)
-from je_auto_control.wrapper.capability_probes import (
-    MacFacts, WindowsFacts, cheap_backend_version, read_mac_facts,
-    read_windows_facts,
-)
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
-RECORDING = "recording"
-STOP_SHORTCUT = "stop_shortcut"
-
-_INPUT_BACKEND_ENV = "JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND"
-_CAPTURE_COMMAND_ENV = "JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND"
-
-
-class CapabilityStatus(str, Enum):
-    """Where one capability stands. Compares equal to its string value."""
-
-    AVAILABLE = "available"
-    #: Usable, but the desktop has not been asked yet — it will be on first use.
-    NOT_REQUESTED = "not_requested"
-    #: A consent request is on screen right now.
-    REQUESTING = "requesting"
-    #: Someone has to say yes: a refused or unanswered consent, a device node
-    #: this user may not read.
-    NEEDS_PERMISSION = "needs_permission"
-    #: Something has to be installed or configured.
-    NEEDS_SETUP = "needs_setup"
-    #: This process closed its session; the next use asks again.
-    SESSION_CLOSED = "session_closed"
-    #: The compositor took a granted session away.
-    REVOKED = "revoked"
-    #: The grant came from a compositor that is no longer the one running.
-    COMPOSITOR_RESTARTED = "compositor_restarted"
-    UNSUPPORTED = "unsupported"
-    #: Not something this probe can determine without side effects.
-    UNKNOWN = "unknown"
+_STATES = frozenset({'available', 'needs_permission', 'needs_dependency', 'unsupported',
+                     'unverified', 'paused', 'revoked', 'failed'})
+_ENV_KEYS = ('DISPLAY', 'WAYLAND_DISPLAY', 'XDG_SESSION_TYPE', 'DBUS_SESSION_BUS_ADDRESS',
+             'JE_AUTOCONTROL_LINUX_DISPLAY_SERVER', 'JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND',
+             'JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND')
+_CAPTURE_TOOLS = ('grim', 'gnome-screenshot', 'spectacle')
+_TOOLS = ('ydotool', 'wtype', *_CAPTURE_TOOLS)
+_CAPTURE_OVERRIDE = 'JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND'
 
 
 @dataclass(frozen=True)
-class Capability:
-    """One capability's diagnosis."""
+class CapabilityStatus:
+    """One informational capability; availability is a last local observation, never an authority grant.
+
+    ``input`` describes key/pointer events, not the independent wtype text path.
+    ``desktop_wide`` describes scope, independently of readiness. Reasons and
+    recovery instructions contain no native objects or traceback ownership.
+    """
 
     name: str
-    state: CapabilityStatus
-    #: The backend that serves it, or would once the obstacle is cleared.
+    state: str
     backend: str
-    #: False when only part of the desktop is reachable — XWayland.
-    desktop_wide: bool = True
-    detail: str = ""
-    #: What the operator can do about it, in English; empty when nothing is
-    #: wrong. ``recovery_key`` is the same advice as a GUI catalogue key.
-    recovery: str = ""
-    recovery_key: str = ""
-    #: The raw authorisation state behind ``state``, where there is one.
-    authorisation: str = ""
-    #: Whether consent survives a restart: ``unsupported`` on the libei path,
-    #: because liboeffis is never asked for a restore token by this binding.
-    restore_token: str = "not_applicable"
+    reason: str
+    recovery: str
+    desktop_wide: bool
 
-    @property
-    def usable(self) -> bool:
-        """Whether an action using this capability can be attempted now."""
-        return self.state in (CapabilityStatus.AVAILABLE,
-                              CapabilityStatus.NOT_REQUESTED,
-                              CapabilityStatus.SESSION_CLOSED)
+    def __post_init__(self) -> None:
+        if (not isinstance(self.name, str) or not isinstance(self.state, str)
+                or self.name not in ('input', 'capture') or self.state not in _STATES):
+            raise AutoControlException('invalid capability name or state')
+        if not all(isinstance(value, str) and value for value in (self.backend, self.reason, self.recovery)):
+            raise AutoControlException('capability descriptions must be non-empty strings')
+        if not isinstance(self.desktop_wide, bool):
+            raise AutoControlException('capability scope must be boolean')
 
-    def to_dict(self) -> Dict[str, Any]:
-        """JSON-ready form; the state becomes its plain string."""
-        data = asdict(self)
-        data["state"] = self.state.value
-        data["usable"] = self.usable
-        return data
+    def to_dict(self) -> dict[str, object]:
+        """Return JSON-compatible metadata without devices, permission tokens or environment values."""
+        return {'name': self.name, 'state': self.state, 'backend': self.backend, 'reason': self.reason,
+                'recovery': self.recovery, 'desktop_wide': self.desktop_wide}
 
 
 @dataclass(frozen=True)
 class CapabilitySnapshot:
-    """Every capability of one session, at one moment."""
+    """Independent capability results for one supplied backend context; no active verification is performed."""
 
     platform: str
-    #: ``wayland``, ``x11``, or the platform name where the question is moot.
     display_server: str
-    #: True when the X11 backend is serving a Wayland session.
-    xwayland: bool
-    capabilities: Tuple[Capability, ...]
-    #: What the serving backend could say about its version without running
-    #: anything (``Windows 10.0.26200``, ``python-xlib 0.33``); ``""`` when it
-    #: cannot be known that cheaply -- the Wayland tools, or a described
-    #: desktop that is not this machine.
-    backend_version: str = ""
+    input: CapabilityStatus
+    capture: CapabilityStatus
 
-    def get(self, name: str) -> Capability:
-        """The capability called ``name``."""
-        for capability in self.capabilities:
-            if capability.name == name:
-                return capability
-        raise KeyError(name)
+    def __post_init__(self) -> None:
+        _validate_observations(self.input, self.capture)
+        if not isinstance(self.input, CapabilityStatus) or not isinstance(self.capture, CapabilityStatus):
+            raise AutoControlException('snapshot requires input and capture statuses')
+        if not all(isinstance(value, str) and value for value in (self.platform, self.display_server)):
+            raise AutoControlException('snapshot platform/display must be non-empty strings')
 
-    @property
-    def input(self) -> Capability:
-        """Keyboard and pointer synthesis."""
-        return self.get(INPUT)
-
-    @property
-    def capture(self) -> Capability:
-        """Screen capture."""
-        return self.get(CAPTURE)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """JSON-ready form, shared by the executor, MCP and the GUI."""
-        return {
-            "platform": self.platform,
-            "display_server": self.display_server,
-            "xwayland": self.xwayland,
-            "backend_version": self.backend_version,
-            "capabilities": [item.to_dict() for item in self.capabilities],
-        }
-
-
-def _library_present(name: str) -> bool:
-    """Whether the loader can find ``lib<name>``; loads nothing."""
-    try:
-        return ctypes.util.find_library(name) is not None
-    except (OSError, ValueError):
-        return False
-
-
-def _session_bus_present() -> bool:
-    """Whether a D-Bus session bus address is known; connects to nothing."""
-    from je_auto_control.linux_wayland import _dbus_client
-    return _dbus_client.is_available()
-
-
-def _readable(path: str) -> bool:
-    return os.access(path, os.R_OK)
-
-
-def _loaded_backend() -> Optional[str]:
-    """Which Linux backend ``platform_wrapper`` actually imported, if it has.
-
-    Read out of ``sys.modules`` rather than imported: importing the wrapper
-    is what *selects* a backend, and a probe must not be the thing that does.
-    """
-    wrapper = sys.modules.get("je_auto_control.wrapper.platform_wrapper")
-    screen = getattr(wrapper, "screen", None)
-    module = getattr(screen, "__name__", "")
-    if "linux_wayland" in module:
-        return "wayland"
-    return "x11" if module else None
+    def to_dict(self) -> dict[str, object]:
+        """Serialize the passive result; this payload cannot be used as a permission grant."""
+        return {'platform': self.platform, 'display_server': self.display_server, 'passive': True,
+                'input': self.input.to_dict(), 'capture': self.capture.to_dict()}
 
 
 @dataclass(frozen=True)
 class BackendContext:
-    """Everything a probe is allowed to look at.
+    """Detached diagnostic facts, owned by the caller rather than a new mutable global session.
 
-    The defaults read the live process. A test — or a support engineer
-    reproducing someone else's desktop — replaces any of them.
+    Construct explicit contexts for adapters/tests or use ``current()`` for
+    bounded PATH lookups and cached local native state. Observations are inert
+    metadata and never change an operator's real backend or authorization.
     """
 
-    platform: str = sys.platform
-    environ: Mapping[str, str] = field(default_factory=lambda: os.environ)
-    which: Callable[[str], Optional[str]] = shutil.which
-    library_present: Callable[[str], bool] = _library_present
-    session_bus_present: Callable[[], bool] = _session_bus_present
-    readable: Callable[[str], bool] = _readable
-    compositor: Callable[[Mapping[str, str]], Optional[str]] = (
-        compositor_identity)
-    authorisations: AuthorisationLedger = ledger
-    #: ``wayland`` / ``x11`` once the wrapper has chosen, else None.
-    loaded_backend: Optional[str] = None
-    #: Read-only facts about a Windows / macOS session. The defaults query the
-    #: live process and answer "unknown" on any other platform.
-    windows_facts: Callable[[], WindowsFacts] = read_windows_facts
-    mac_facts: Callable[[], MacFacts] = read_mac_facts
-    #: ``backend name -> version text`` (``""`` when not cheaply known).
-    backend_version: Callable[[str], str] = cheap_backend_version
+    platform: str
+    environ: Mapping[str, str] = field(repr=False)
+    executables: frozenset[str] = field(default_factory=frozenset, repr=False)
+    input_state: Optional[CapabilityStatus] = None
+    capture_state: Optional[CapabilityStatus] = None
+    native_optional_absent: bool = False
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.platform, str) or not self.platform:
+            raise AutoControlException('capability platform must be a non-empty string')
+        _validate_observations(self.input_state, self.capture_state)
+        if not isinstance(self.native_optional_absent, bool):
+            raise AutoControlException('optional native absence must be boolean')
+        object.__setattr__(self, 'environ', _freeze_environment(self.environ))
+        object.__setattr__(self, 'executables', _freeze_executables(self.executables))
 
     @classmethod
-    def current(cls) -> "BackendContext":
-        """The context of the running process."""
-        return cls(loaded_backend=_loaded_backend())
+    def current(cls) -> BackendContext:
+        """Read environment/PATH and an already-loaded sender's nonblocking state; never load or connect it."""
+        env = {key: value for key in _ENV_KEYS if (value := os.environ.get(key)) is not None}
+        names = set(_TOOLS)
+        command = _command_parts(env.get(_CAPTURE_OVERRIDE, ''))
+        if command:
+            names.add(command[0])
+        found = frozenset(name for name in names if shutil.which(name))
+        observed, optional = _current_input_state()
+        return cls(sys.platform, env, found, input_state=observed, native_optional_absent=optional)
 
 
-def probe_capabilities(context: Optional[BackendContext] = None
-                       ) -> CapabilitySnapshot:
-    """Diagnose input, capture, recording and the stop shortcut.
+def _freeze_environment(env: Mapping[str, str]) -> Mapping[str, str]:
+    if not isinstance(env, Mapping) or not all(
+            isinstance(key, str) and isinstance(value, str) for key, value in env.items()):
+        raise AutoControlException('capability environment must map strings to strings')
+    return MappingProxyType(dict(env))
 
-    :param context: what to inspect; the live process when omitted.
-    :return: one :class:`Capability` per capability. Never raises for a
-        capability that is merely unavailable — that is a state, not an error.
+
+def _freeze_executables(tools: frozenset[str]) -> frozenset[str]:
+    if not isinstance(tools, (set, frozenset)) or not all(isinstance(name, str) and name for name in tools):
+        raise AutoControlException('capability executables must be a set of names')
+    return frozenset(tools)
+
+
+def _validate_observations(input_state: Optional[CapabilityStatus],
+                           capture_state: Optional[CapabilityStatus]) -> None:
+    for name, status in (('input', input_state), ('capture', capture_state)):
+        if status is not None and (not isinstance(status, CapabilityStatus) or status.name != name):
+            raise AutoControlException('capability observation belongs to a different operation')
+
+
+def _current_input_state() -> tuple[Optional[CapabilityStatus], bool]:
+    native = sys.modules.get('je_auto_control.linux_wayland.libei')
+    peek = getattr(native, '_observed_input_state', None)
+    if not callable(peek):
+        return None, False
+    state, fallback = cast(Callable[[], tuple[Optional[str], bool]], peek)()
+    if state is None:
+        return None, False
+    optional = state == 'unavailable' and fallback
+    state = 'needs_dependency' if state == 'unavailable' else state
+    if state not in _STATES:
+        state = 'unverified'
+    recovery = _INPUT_RECOVERY.get(state, 'Explicitly invoke the intended input operation to verify readiness.')
+    return CapabilityStatus('input', state, 'libei',
+                            'Last locally observed native sender state; no events or permissions were polled.',
+                            recovery, True), optional
+
+
+_INPUT_RECOVERY = {
+    'needs_permission': 'Review the portal refusal, then explicitly reset/retry the native session to request consent.',
+    'needs_dependency': 'Install compatible libei/liboeffis, or explicitly select the configured CLI alternative.',
+    'paused': 'Wait for the compositor to resume its devices; no CLI fallback is implied.',
+    'revoked': 'Explicitly establish a new authorized native session before sending input.',
+    'failed': 'Inspect the native session failure and explicitly reconnect; no CLI fallback is implied.',
+}
+
+
+def _command_parts(template: str) -> list[str]:
+    try:
+        return shlex.split(template)
+    except ValueError:
+        return []
+
+
+def probe_capabilities(context: BackendContext) -> CapabilitySnapshot:
+    """Describe input/capture independently without operating devices, loading libraries or requesting permission.
+
+    ``unverified`` distinguishes prerequisites from an established capability.
+    Existing local native observations are not refreshed and may become stale;
+    every real operation must still enforce its current authority and state.
     """
-    ctx = context if context is not None else BackendContext.current()
-    if not ctx.platform.startswith("linux"):
-        return _other_platform(ctx)
-    wanted = select_display_server(ctx.environ)
-    serving = ctx.loaded_backend or wanted
-    if serving == "wayland":
-        return CapabilitySnapshot(ctx.platform, "wayland", False, (
-            _wayland_input(ctx), _wayland_capture(ctx),
-            _wayland_recording(ctx), _wayland_stop_shortcut(ctx)),
-            backend_version=ctx.backend_version("wayland"))
-    return _x11(ctx, is_wayland_session(ctx.environ))
+    if not isinstance(context, BackendContext):
+        raise AutoControlException('probe_capabilities requires a BackendContext')
+    if context.platform in ('win32', 'darwin'):
+        backend = 'win32' if context.platform == 'win32' else 'quartz'
+        return _native_desktop(context, backend)
+    if not context.platform.startswith(('linux', 'freebsd', 'openbsd', 'netbsd')):
+        return _unsupported(context)
+    wayland = _is_wayland(context.environ)
+    override = context.environ.get('JE_AUTOCONTROL_LINUX_DISPLAY_SERVER', '').strip().lower()
+    selected = override if override in ('x11', 'wayland') else ('wayland' if wayland else 'x11')
+    if not context.platform.startswith('linux') or selected == 'x11':
+        return _x11(context, wayland)
+    return CapabilitySnapshot(context.platform, 'wayland', _wayland_input(context), _wayland_capture(context))
 
 
-# --- Windows, macOS and anything else --------------------------------------
-
-def _other_platform(ctx: BackendContext) -> CapabilitySnapshot:
-    from je_auto_control.wrapper import capability_states
-    if ctx.platform == "win32":
-        backend = "win32"
-        found = capability_states.windows_capabilities(ctx.windows_facts())
-    elif ctx.platform == "darwin":
-        backend = "quartz"
-        found = capability_states.mac_capabilities(ctx.mac_facts())
-    else:
-        backend = "x11"
-        found = capability_states.unprobed_capabilities(backend)
-    return CapabilitySnapshot(
-        ctx.platform, ctx.platform, False,
-        tuple(Capability(**fields) for fields in found),
-        backend_version=ctx.backend_version(backend))
+def _is_wayland(env: Mapping[str, str]) -> bool:
+    return env.get('XDG_SESSION_TYPE', '').strip().lower() == 'wayland' or bool(env.get('WAYLAND_DISPLAY', '').strip())
 
 
-# --- X11, including X11 serving a Wayland session --------------------------
-
-_XWAYLAND_SCOPE = (
-    "the X11 backend is running against XWayland: it reaches X11 "
-    "applications only, and native Wayland windows neither receive its "
-    "input nor appear in its captures")
-_XWAYLAND_RECOVERY = (
-    "Install the Wayland tools (ydotool 1.0+ or libei, and grim, "
-    "gnome-screenshot or spectacle) so the Wayland backend loads, or keep "
-    "JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11 only for X11 applications.")
+def _native_desktop(context: BackendContext, backend: str) -> CapabilitySnapshot:
+    statuses = [_observation(context, name, backend) or CapabilityStatus(
+        name, 'unverified', backend, 'Backend selected; OS permission and desktop access have not been tested.',
+        'Explicitly run the intended operation; review OS permissions if it is denied.', True)
+        for name in ('input', 'capture')]
+    return CapabilitySnapshot(context.platform, backend, *statuses)
 
 
-def _x11(ctx: BackendContext, xwayland: bool) -> CapabilitySnapshot:
-    has_display = bool((ctx.environ.get("DISPLAY") or "").strip())
-    state = (CapabilityStatus.AVAILABLE if has_display
-             else CapabilityStatus.NEEDS_SETUP)
-    detail = _XWAYLAND_SCOPE if xwayland else ""
-    if xwayland:
-        recovery, key = _XWAYLAND_RECOVERY, "cap_fix_xwayland"
-    elif has_display:
-        recovery, key = "", ""
-    else:
-        recovery, key = "Set DISPLAY to a running X server.", "cap_fix_display"
-    return CapabilitySnapshot(ctx.platform, "x11", xwayland, tuple(
-        Capability(name, state, "xwayland" if xwayland else "x11",
-                   desktop_wide=not xwayland, detail=detail,
-                   recovery=recovery, recovery_key=key)
-        for name in (INPUT, CAPTURE, RECORDING, STOP_SHORTCUT)),
-        backend_version=ctx.backend_version("x11"))
+def _unsupported(context: BackendContext) -> CapabilitySnapshot:
+    statuses = [CapabilityStatus(name, 'unsupported', 'none', 'No supported desktop backend for this platform.',
+                                 'Use a supported Windows, macOS, Linux or BSD desktop.', False)
+                for name in ('input', 'capture')]
+    return CapabilitySnapshot(context.platform, 'none', *statuses)
 
 
-# --- Wayland: input ---------------------------------------------------------
-
-#: liboeffis is never asked for a restore token by this binding, so consent
-#: is per process. A name, not a literal at the call site: it is a state,
-#: and a literal there reads to a secret scanner as a hardcoded credential.
-_RESTORE_UNSUPPORTED = "unsupported"
-
-_YDOTOOL_RECOVERY = (
-    "Install ydotool 1.0 or newer and run ydotoold with access to "
-    "/dev/uinput, or install libei and liboeffis to use the desktop portal.")
-
-#: authorisation state -> (capability state, catalogue key of the advice)
-_INPUT_STATES = {
-    AuthorisationState.NOT_REQUESTED: (CapabilityStatus.NOT_REQUESTED, ""),
-    AuthorisationState.REQUESTING: (CapabilityStatus.REQUESTING,
-                                    "cap_fix_answer_dialog"),
-    AuthorisationState.GRANTED: (CapabilityStatus.AVAILABLE, ""),
-    AuthorisationState.DECLINED: (CapabilityStatus.NEEDS_PERMISSION,
-                                  "cap_fix_input_consent"),
-    AuthorisationState.TIMED_OUT: (CapabilityStatus.NEEDS_PERMISSION,
-                                   "cap_fix_input_consent"),
-    AuthorisationState.CLOSED: (CapabilityStatus.SESSION_CLOSED, ""),
-    AuthorisationState.REVOKED: (CapabilityStatus.REVOKED,
-                                 "cap_fix_input_consent"),
-}
+def _x11(context: BackendContext, wayland: bool) -> CapabilitySnapshot:
+    present = bool(context.environ.get('DISPLAY', '').strip())
+    state = 'unverified' if present else 'needs_dependency'
+    reason = 'XWayland covers X11 clients only; native Wayland windows are outside its scope.' if wayland else (
+        'DISPLAY is configured; no X11 connection was attempted.' if present else 'DISPLAY is not configured.')
+    statuses = [_observation(context, name, 'x11') or CapabilityStatus(
+        name, state, 'x11', reason, 'Provide a reachable X11 display and explicitly verify the intended operation.',
+        not wayland) for name in ('input', 'capture')]
+    scoped = [replace(status, desktop_wide=status.desktop_wide and not wayland) for status in statuses]
+    return CapabilitySnapshot(context.platform, 'x11', *scoped)
 
 
-def _wayland_input(ctx: BackendContext) -> Capability:
-    forced = (ctx.environ.get(_INPUT_BACKEND_ENV) or "auto").strip().lower()
-    if forced == "cli" or not ctx.library_present("ei"):
-        return _ydotool_input(ctx, "")
-    record = ctx.authorisations.get(INPUT)
-    if record.state is AuthorisationState.FAILED:
-        # Not a refusal, so the CLI really is what serves input now.
-        return _ydotool_input(ctx, f"libei could not start: {record.detail}")
-    if _compositor_changed(ctx, record):
-        return Capability(
-            INPUT, CapabilityStatus.COMPOSITOR_RESTARTED, "libei",
-            detail="the session was granted by a compositor that has since "
-                   "been restarted", recovery=INPUT_RECOVERY,
-            recovery_key="cap_fix_input_consent",
-            authorisation=record.state.value, restore_token=_RESTORE_UNSUPPORTED)
-    state, key = _INPUT_STATES[record.state]
-    if key == "cap_fix_input_consent":
-        recovery = INPUT_RECOVERY
-    else:
-        recovery = "Answer the consent dialog on the desktop." if key else ""
-    return Capability(
-        INPUT, state, "libei", detail=record.detail, recovery=recovery,
-        recovery_key=key, authorisation=record.state.value,
-        restore_token=_RESTORE_UNSUPPORTED)
+def _observation(context: BackendContext, name: str, backend: str) -> Optional[CapabilityStatus]:
+    observed = context.input_state if name == 'input' else context.capture_state
+    return observed if observed is not None and observed.backend == backend else None
 
 
-def _ydotool_input(ctx: BackendContext, detail: str) -> Capability:
-    """Input through the ``ydotool`` CLI: no consent, but a daemon to run."""
-    if ctx.which(WAYLAND_YDOTOOL):
-        return Capability(INPUT, CapabilityStatus.AVAILABLE, "ydotool",
-                          detail=detail)
-    return Capability(INPUT, CapabilityStatus.NEEDS_SETUP, "ydotool",
-                      detail=detail or "ydotool is not on PATH",
-                      recovery=_YDOTOOL_RECOVERY,
-                      recovery_key="cap_fix_ydotool")
+def _wayland_input(context: BackendContext) -> CapabilityStatus:
+    choice = context.environ.get('JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND', '').strip().lower()
+    if choice == 'cli':
+        return _cli_input(context)
+    observed = _observation(context, 'input', 'libei')
+    fallback = _optional_cli(context, choice, observed)
+    if observed is not None and not fallback:
+        return observed
+    if fallback:
+        return _cli_input(context)
+    return CapabilityStatus('input', 'unverified', 'libei' if choice == 'libei' else 'auto',
+                            'Native loadability, authorization and protocol readiness were not probed.',
+                            'Explicitly invoke key/pointer input to verify the native session.', True)
 
 
-def _compositor_changed(ctx: BackendContext,
-                        record: AuthorisationRecord) -> bool:
-    """Whether a granted session has outlived the compositor that granted it."""
-    if record.state is not AuthorisationState.GRANTED or not record.compositor:
-        return False
-    now = ctx.compositor(ctx.environ)
-    return now is not None and now != record.compositor
+def _optional_cli(context: BackendContext, choice: str, observed: Optional[CapabilityStatus]) -> bool:
+    return (choice != 'libei' and context.native_optional_absent
+            and (observed is None or observed.state == 'needs_dependency'))
 
 
-# --- Wayland: capture -------------------------------------------------------
-
-_CAPTURE_TOOLS = (WAYLAND_GRIM, WAYLAND_GNOME_SCREENSHOT, WAYLAND_SPECTACLE)
-
-_CAPTURE_STATES = {
-    AuthorisationState.NOT_REQUESTED: CapabilityStatus.NOT_REQUESTED,
-    AuthorisationState.REQUESTING: CapabilityStatus.REQUESTING,
-    AuthorisationState.GRANTED: CapabilityStatus.AVAILABLE,
-    AuthorisationState.DECLINED: CapabilityStatus.NEEDS_PERMISSION,
-    AuthorisationState.TIMED_OUT: CapabilityStatus.NEEDS_PERMISSION,
-    AuthorisationState.FAILED: CapabilityStatus.NEEDS_SETUP,
-    AuthorisationState.CLOSED: CapabilityStatus.NOT_REQUESTED,
-    AuthorisationState.REVOKED: CapabilityStatus.NEEDS_PERMISSION,
-}
+def _cli_input(context: BackendContext) -> CapabilityStatus:
+    installed = 'ydotool' in context.executables
+    return CapabilityStatus('input', 'unverified' if installed else 'needs_dependency', 'ydotool',
+                            'CLI client found; daemon/access not tested.' if installed else 'ydotool is not found.',
+                            'Configure ydotoold and verify key/pointer input; wtype text is separate.', True)
 
 
-def _wayland_capture(ctx: BackendContext) -> Capability:
-    if (ctx.environ.get(_CAPTURE_COMMAND_ENV) or "").strip():
-        return Capability(CAPTURE, CapabilityStatus.AVAILABLE,
-                          f"${_CAPTURE_COMMAND_ENV}")
+def _wayland_capture(context: BackendContext) -> CapabilityStatus:
+    template = context.environ.get(_CAPTURE_OVERRIDE, '').strip()
+    if template:
+        return _custom_capture(context, template)
     for tool in _CAPTURE_TOOLS:
-        if ctx.which(tool):
-            return Capability(CAPTURE, CapabilityStatus.AVAILABLE, tool)
-    if not ctx.session_bus_present():
-        return Capability(
-            CAPTURE, CapabilityStatus.NEEDS_SETUP, "none",
-            detail="no capture tool on PATH and no session bus for the portal",
-            recovery=CAPTURE_RECOVERY, recovery_key="cap_fix_capture")
-    record = ctx.authorisations.get(CAPTURE)
-    state = _CAPTURE_STATES[record.state]
-    blocked = state in (CapabilityStatus.NEEDS_PERMISSION,
-                        CapabilityStatus.NEEDS_SETUP)
-    return Capability(
-        CAPTURE, state, "xdg-desktop-portal", detail=record.detail,
-        recovery=CAPTURE_RECOVERY if blocked else "",
-        recovery_key="cap_fix_capture" if blocked else "",
-        authorisation=record.state.value)
+        if tool in context.executables:
+            return _observation(context, 'capture', tool) or CapabilityStatus(
+                'capture', 'unverified', tool, 'Executable found; compositor compatibility/permission not tested.',
+                'Use the helper matching the compositor and explicitly verify capture.', True)
+    if context.environ.get('DBUS_SESSION_BUS_ADDRESS', '').strip():
+        return _observation(context, 'capture', 'portal') or CapabilityStatus(
+            'capture', 'unverified', 'portal', 'Session bus configured; portal service and consent were not checked.',
+            'Explicitly request a screenshot and respond to the portal dialog if shown.', True)
+    return CapabilityStatus('capture', 'needs_dependency', 'none', 'No capture helper or session bus is configured.',
+                            'Install a compositor-compatible helper or configure the desktop session bus.', True)
 
 
-# --- Wayland: recording and the stop shortcut -------------------------------
-
-_RECORDING_SCOPE = (
-    "Wayland has no global input hook. Actions this program executes are "
-    "journalled without one; reading the user's own keyboard and mouse "
-    "needs the evdev reader, which is opt-in")
-_RECORDING_SETUP = (
-    f"Name the devices to read in {RECORD_DEVICES_ENV} (comma-separated "
-    "/dev/input/event* paths); list candidates with list_input_devices().")
-_RECORDING_PERMISSION = (
-    "Give this user read access to the named devices: add it to the "
-    "`input` group (then log in again) or install a udev rule. Do not run "
-    "the whole program as root for this.")
+def _custom_capture(context: BackendContext, template: str) -> CapabilityStatus:
+    parts = _command_parts(template)
+    if not parts or not any('{output}' in part for part in parts):
+        return CapabilityStatus('capture', 'failed', 'custom-command', 'The explicit capture command is malformed.',
+                                'Supply a correctly quoted argv template containing the {output} placeholder.', True)
+    installed = parts[0] in context.executables
+    return _observation(context, 'capture', 'custom-command') or CapabilityStatus(
+        'capture', 'unverified' if installed else 'needs_dependency', 'custom-command',
+        'Command found; it was not executed.' if installed else 'The explicit capture executable was not found.',
+        'Check the explicit executable and deliberately verify its output; no alternate provider is selected.', True)
 
 
-def _wayland_recording(ctx: BackendContext) -> Capability:
-    devices = configured_record_devices(ctx.environ)
-    if not devices:
-        return Capability(RECORDING, CapabilityStatus.NEEDS_SETUP, "evdev",
-                          detail=_RECORDING_SCOPE, recovery=_RECORDING_SETUP,
-                          recovery_key="cap_fix_record_setup")
-    denied = [path for path in devices if not ctx.readable(path)]
-    if denied:
-        return Capability(
-            RECORDING, CapabilityStatus.NEEDS_PERMISSION, "evdev",
-            detail="not readable: " + ", ".join(denied),
-            recovery=_RECORDING_PERMISSION,
-            recovery_key="cap_fix_record_permission")
-    return Capability(RECORDING, CapabilityStatus.AVAILABLE, "evdev",
-                      detail=", ".join(devices))
-
-
-def _wayland_stop_shortcut(ctx: BackendContext) -> Capability:
-    if not ctx.session_bus_present():
-        return Capability(
-            STOP_SHORTCUT, CapabilityStatus.NEEDS_SETUP, "none",
-            detail="no session bus, so the GlobalShortcuts portal cannot be "
-                   "reached",
-            recovery="Stop a running script from the GUI's stop control or "
-                     "by ending the process.",
-            recovery_key="cap_fix_stop_manual")
-    return Capability(
-        STOP_SHORTCUT, CapabilityStatus.NOT_REQUESTED,
-        "xdg-desktop-portal GlobalShortcuts",
-        detail="whether this desktop's portal implements GlobalShortcuts is "
-               "only known once a stop-shortcut session is opened; the GUI's "
-               "stop control works regardless")
-
-
-__all__ = [
-    "BackendContext", "Capability", "CapabilitySnapshot", "CapabilityStatus",
-    "MacFacts", "RECORDING", "STOP_SHORTCUT", "WindowsFacts", "probe_capabilities",
-]
+__all__ = ['BackendContext', 'CapabilityStatus', 'CapabilitySnapshot', 'probe_capabilities']

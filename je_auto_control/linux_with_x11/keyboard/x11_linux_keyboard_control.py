@@ -14,14 +14,14 @@ from je_auto_control.utils.platform_id import is_x11_unix
 if not is_x11_unix():
     raise AutoControlException(linux_import_error_message)
 
-from je_auto_control.linux_with_x11.core.utils.x11_linux_display import display
+from je_auto_control.linux_with_x11.core.utils.x11_linux_display import get_display
 from Xlib.ext.xtest import fake_input
 from Xlib import X, protocol
 
 _KEYCODE_INT_ERROR = "Keycode must be an integer 鍵盤代碼必須是整數"
 
 
-def _check_keycode(keycode: int) -> None:
+def validate_keycode(keycode: int) -> None:
     """Refuse a keycode X cannot send.
 
     ``keysym_to_keycode`` gives 0 for a keysym the keymap does not bind; the
@@ -42,9 +42,10 @@ def press_key(keycode: int) -> None:
 
     :param keycode: (int) The keycode to press 要按下的鍵盤代碼
     """
-    _check_keycode(keycode)
+    validate_keycode(keycode)
 
     time.sleep(0.01)  # Small delay to ensure event stability 確保事件穩定的小延遲
+    display = get_display()
     fake_input(display, X.KeyPress, keycode)
     display.sync()
 
@@ -56,9 +57,10 @@ def release_key(keycode: int) -> None:
 
     :param keycode: (int) The keycode to release 要釋放的鍵盤代碼
     """
-    _check_keycode(keycode)
+    validate_keycode(keycode)
 
     time.sleep(0.01)
+    display = get_display()
     fake_input(display, X.KeyRelease, keycode)
     display.sync()
 
@@ -73,10 +75,10 @@ def send_key_event_to_window(window_id: int, keycode: int) -> None:
     """
     if not isinstance(window_id, int):
         raise ValueError("Window ID must be an integer 視窗 ID 必須是整數")
-    if not isinstance(keycode, int):
-        raise ValueError(_KEYCODE_INT_ERROR)
+    validate_keycode(keycode)
 
     # 建立目標視窗物件 Create target window object
+    display = get_display()
     window = display.create_resource_object("window", window_id)
 
     # A separate event object for each: python-xlib encodes the bytes when

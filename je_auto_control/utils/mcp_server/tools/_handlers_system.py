@@ -1,7 +1,7 @@
 """MCP adapters for windows, processes and the rest of the desktop session.
 
 Same contract as :mod:`._handlers` -- normalise arguments and return values so
-they survive the JSON-RPC boundary, with every project import lazy -- split out
+they survive the JSON-RPC boundary, with platform imports kept lazy -- split out
 by theme because ``_handlers.py`` is over the 750-line limit.
 
 Covers window management, processes and the shell, opening files, idle and
@@ -12,6 +12,7 @@ import base64
 import os
 from typing import Any, Dict, List, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.mcp_server.tools._base import MCPContent
 
 
@@ -156,13 +157,12 @@ def _show_command(title_substring: str, case_sensitive: bool,
     as it is for ``ac_focus_window``. ``None`` (a backend that cannot tell)
     is not a failure.
     """
-    from je_auto_control.utils.exception.exceptions import AutoControlActionException
     from je_auto_control.windows.window import windows_window_manage as wm
     hwnd = _resolve_window_hwnd(title_substring, bool(case_sensitive))
     if wm.show_window(hwnd, int(cmd_show)) is False:
         verb = _SHOW_VERBS.get(int(cmd_show), f"show (command {int(cmd_show)})")
         raise AutoControlActionException(
-            f"could not {verb} {title_substring!r} (hwnd {hwnd}): the window is "
+            f"could not {verb} {title_substring!r} (hwnd {hwnd}): could not apply the state; the window is "
             "gone, or Windows refused to bring it to the foreground -- it may "
             "have changed state without becoming the active window")
     return hwnd
@@ -236,7 +236,6 @@ def kill_process(pid: int, timeout: float = 5.0) -> str:
         raise RuntimeError(
             "ac_kill_process requires psutil — pip install psutil"
         ) from error
-    from je_auto_control.utils.exception.exceptions import AutoControlActionException
     try:
         return _terminate(psutil, int(pid), float(timeout))
     # AccessDenied / ZombieProcess derive from psutil.Error, an Exception
@@ -560,12 +559,6 @@ def normalize_ext(target):
 def file_association(target):
     from je_auto_control.utils.executor.action_executor import _file_association
     return _file_association(target)
-
-
-def probe_capabilities() -> Dict[str, Any]:
-    """Capability and authorisation states; the same data ``AC_`` returns."""
-    from je_auto_control.wrapper.capabilities import probe_capabilities as _probe
-    return _probe().to_dict()
 
 
 def get_clipboard() -> str:

@@ -1,610 +1,431 @@
-"""Config-sync adapters: what leaves this machine, and what arriving data may do.
-
-Syncing settings between machines must not carry secrets or machine paths,
-must not arm a hotkey or trigger on the machine that receives it, and must
-not leave a script without the content its hash promises. The folder mirror
-and the clipboard channel must not send back what they just received.
-"""
-import hashlib
+"""Concrete domain adapters retain causal profiles and local references without activating synchronized work."""
 import json
-from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
-from je_auto_control.utils.config_sync import (
-    ConfigSyncClient, ConfigSyncConflict, ConfigSyncError, SyncOutbox,
-)
-from je_auto_control.utils.config_sync.adapters import (
-    AddressBookSyncAdapter, HotkeySyncAdapter, LocatorSyncAdapter, ScriptSyncAdapter,
-    SyncAdapter, TriggerSyncAdapter, is_local_ref,
-)
-from je_auto_control.utils.config_sync.assets import (
-    AssetManifest, AssetSyncError, DirectoryAssetTransport, publish_assets, sync_assets,
-)
-from je_auto_control.utils.config_sync.session import (
-    config_sync_status, default_device_id, resolve_conflict, run_full_resync, run_sync,
-    sync_status,
-)
-from je_auto_control.utils.hotkey.hotkey_daemon import HotkeyDaemon
-from je_auto_control.utils.remote_desktop.clipboard_sync import ClipboardEchoGuard
-from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
-from je_auto_control.utils.triggers.trigger_engine import (
-    AllOfTrigger, CronTrigger, ImageAppearsTrigger, TriggerEngine,
-)
-
-_URL = "https://sync.invalid"
-
-
-class _Server:
-    """The revision-checked bucket endpoint, in memory."""
-
-    def __init__(self):
-        self.body = None
-        self.revision = 0
-        self.offline = False
-
-    def request(self, method, body=None):
-        if self.offline:
-            raise ConfigSyncError("config sync: connection refused")
-        if method == "GET":
-            return self.body
-        if body["base_revision"] != self.revision:
-            raise ConfigSyncConflict("behind", self.revision)
-        self.revision += 1
-        self.body = {**body["bucket"], "revision": self.revision}
-        return {"ok": True, "revision": self.revision}
-
-
-@pytest.fixture
-def server():
-    endpoint = _Server()
-    with patch.object(ConfigSyncClient, "_request",
-                      new=lambda _client, method, body=None: endpoint.request(method, body)):
-        yield endpoint
-
-
-class _Machine:
-    """One device: its own outbox, its own stores, the shared server."""
-
-    def __init__(self, tmp_path, name):
-        self.name = name
-        self.home = tmp_path / name
-        self.scripts = self.home / "scripts"
-        self.scripts.mkdir(parents=True)
-        self.outbox = SyncOutbox(self.home / "outbox.sqlite3", account="alice", endpoint=_URL,
-                                 base_delay_s=0.0)
-        self.client = ConfigSyncClient(_URL, user_id="alice")
-        self.adapters = []
-
-    def sync(self, **options):
-        return run_sync(self.client, self.outbox, self.adapters, device_id=self.name, **options)
-
-
-class _DictAdapter(SyncAdapter):
-    """A section backed by a plain dict, for the rules every adapter shares."""
-
-    section = "custom"
-    path_fields = ("script_path",)
-
-    def __init__(self, origin, store, scripts_dir=None):
-        super().__init__(origin, scripts_dir=scripts_dir)
-        self.store = store
-
-    def read_local(self):
-        return {key: dict(value) for key, value in self.store.items()}
-
-    def write_local(self, key, value, existing):
-        self.store[key] = dict(value)
-
-    def delete_local(self, key):
-        self.store.pop(key, None)
-
-
-def _pair(tmp_path):
-    return _Machine(tmp_path, "laptop"), _Machine(tmp_path, "desktop")
-
-
-# --- scripts and assets ----------------------------------------------------
-
-def test_script_asset_hash_round_trip(tmp_path, server):
-    laptop, desktop = _pair(tmp_path)
-    shared = tmp_path / "shared-assets"
-    small = json.dumps([["AC_click_mouse", {"mouse_keycode": "mouse_left"}]]).encode("utf-8")
-    large = json.dumps([["AC_write", {"write_string": "x" * 100_000}]]).encode("utf-8")
-    (laptop.scripts / "sub").mkdir()
-    (laptop.scripts / "small.json").write_bytes(small)
-    (laptop.scripts / "sub" / "large.json").write_bytes(large)
-    laptop.adapters = [ScriptSyncAdapter("laptop", laptop.scripts)]
-    desktop.adapters = [ScriptSyncAdapter("desktop", desktop.scripts)]
-    transport = DirectoryAssetTransport(shared)
-
-    assert laptop.sync(asset_transport=transport).state == "synced"
-    report = desktop.sync(asset_transport=transport)
-
-    assert report.state == "synced"
-    for name, source in (("small.json", small), ("sub/large.json", large)):
-        source_hash = hashlib.sha256(source).hexdigest()
-        received_hash = hashlib.sha256((desktop.scripts / name).read_bytes()).hexdigest()
-        assert received_hash == source_hash
-    # The large script went through the transport, not through the bucket.
-    assert "content" not in server.body["sections"]["scripts"]["sub/large.json"]["value"]
-    assert report.assets["received"]["transferred"] == ["sub/large.json"]
-    # Nothing changed, so nothing is sent again -- and nothing was deleted.
-    before = server.revision
-    assert desktop.sync(asset_transport=transport).state == "synced"
-    assert laptop.sync(asset_transport=transport).state == "synced"
-    assert server.revision == before
-    assert (laptop.scripts / "sub" / "large.json").read_bytes() == large
-
-
-def test_a_large_script_without_its_content_is_not_mistaken_for_a_deletion(tmp_path, server):
-    laptop, desktop = _pair(tmp_path)
-    large = json.dumps([["AC_write", {"write_string": "x" * 100_000}]]).encode("utf-8")
-    (laptop.scripts / "large.json").write_bytes(large)
-    laptop.adapters = [ScriptSyncAdapter("laptop", laptop.scripts)]
-    desktop.adapters = [ScriptSyncAdapter("desktop", desktop.scripts)]
-    laptop.sync()
-
-    report = desktop.sync()      # no transport: the content cannot arrive
-    assert "large.json" in report.applied["scripts"]["skipped"]
-    assert not (desktop.scripts / "large.json").exists()
-    desktop.sync()
-    laptop.sync()
-    assert (laptop.scripts / "large.json").read_bytes() == large, "the laptop's copy survived"
-    assert server.body["sections"]["scripts"]["large.json"]["deleted"] is False
-
-
-def test_a_tampered_asset_is_refused_and_the_old_file_survives(tmp_path):
-    root = tmp_path / "scripts"
-    root.mkdir()
-    (root / "template.png").write_bytes(b"old image")
-    wanted = b"new image"
-    manifest = AssetManifest.from_entries(root, {"template.png": {
-        "sha256": hashlib.sha256(wanted).hexdigest(), "size": len(wanted)}})
-
-    class _Tampering:
-        def fetch(self, sha256):
-            return b"evil bits"
-
-    result = sync_assets(manifest, _Tampering())
-    assert "template.png" in result.failed
-    assert result.transferred == []
-    assert (root / "template.png").read_bytes() == b"old image"
-    assert [path.name for path in root.iterdir()] == ["template.png"], "no temp file left"
-
-
-def test_assets_publish_fetch_and_stay_inside_the_folder(tmp_path):
-    source, target, shared = tmp_path / "a", tmp_path / "b", tmp_path / "shared"
-    (source / "img").mkdir(parents=True)
-    target.mkdir()
-    (source / "img" / "ok.png").write_bytes(b"\x89PNG data")
-    manifest = AssetManifest.from_directory(source, ("*.png",))
-    transport = DirectoryAssetTransport(shared)
-    assert publish_assets(manifest, transport).transferred == ["img/ok.png"]
-    assert publish_assets(manifest, transport).unchanged == ["img/ok.png"]
-
-    incoming = AssetManifest(root=target, assets=manifest.assets)
-    assert sync_assets(incoming, transport).transferred == ["img/ok.png"]
-    assert sync_assets(incoming, transport).unchanged == ["img/ok.png"]
-    assert (target / "img" / "ok.png").read_bytes() == b"\x89PNG data"
-
-    digest = manifest.assets[0].sha256
-    for escaping in ("../outside.png", "/abs.png", "C:/abs.png", "a\\..\\b.png"):
-        bad = AssetManifest.from_entries(target, {escaping: {"sha256": digest, "size": 9}})
-        assert escaping in sync_assets(bad, transport).failed
-    assert not (tmp_path / "outside.png").exists()
-    with pytest.raises(AssetSyncError):
-        AssetManifest.from_entries(target, {"x.png": {"sha256": "not-a-hash", "size": 1}})
-
-
-def test_a_script_with_a_literal_secret_is_withheld(tmp_path, server):
-    laptop, _desktop = _pair(tmp_path)
-    (laptop.scripts / "login.json").write_text(json.dumps(
-        [["AC_write", {"password": "hunter2-very-secret-value"}]]), encoding="utf-8")
-    (laptop.scripts / "ok.json").write_text(json.dumps(
-        [["AC_write", {"password": "${secrets.login}"}]]), encoding="utf-8")
-    laptop.adapters = [ScriptSyncAdapter("laptop", laptop.scripts)]
-    report = laptop.sync()
-    assert "scripts/login.json" in report.withheld
-    assert set(server.body["sections"]["scripts"]) == {"ok.json"}
-    assert "hunter2" not in json.dumps(server.body)
-
-
-# --- secrets and machine paths ---------------------------------------------
-
-def test_secret_is_local(tmp_path, server):
-    laptop, desktop = _pair(tmp_path)
-    laptop_store = {"vpn": {"host": "10.0.0.1", "password": "laptop-pass-123",
-                            "api_token": "${secrets.vpn_token}"}}
-    desktop_store = {"vpn": {"host": "old", "password": "desktop-pass-456"}}
-    laptop.adapters = [_DictAdapter("laptop", laptop_store)]
-    desktop.adapters = [_DictAdapter("desktop", desktop_store)]
-
-    laptop.sync()
-    sent = server.body["sections"]["custom"]["vpn"]["value"]
-    sync_payload_contains_secret = "laptop-pass-123" in json.dumps(server.body)
-    assert sync_payload_contains_secret is False
-    assert is_local_ref(sent["password"])
-    assert sent["api_token"] == "${secrets.vpn_token}", "a reference is not a secret"
-
-    # The desktop pushes its own older version of the same key: a conflict,
-    # not a silent overwrite of either side.
-    report = desktop.sync()
-    assert report.state == "conflict"
-    assert report.conflicts == ["custom/vpn"]
-    resolved = resolve_conflict(desktop.outbox, desktop.adapters, device_id="desktop",
-                                section="custom", key="vpn", choice=_sibling(server, "laptop"))
-    assert resolved["value"]["host"] == "10.0.0.1"
-    assert desktop.sync().state == "synced"
-    assert desktop_store["vpn"]["host"] == "10.0.0.1"
-    assert desktop_store["vpn"]["password"] == "desktop-pass-456", "its own secret stayed"
-    assert laptop.sync().state == "synced"
-    assert laptop_store["vpn"]["password"] == "laptop-pass-123"
-
-
-def _sibling(server, origin):
-    siblings = server.body["sections"]["custom"]["vpn"]["siblings"]
-    return [sibling["origin"] for sibling in siblings].index(origin)
-
-
-def test_machine_paths_travel_as_references(tmp_path, server):
-    laptop, desktop = _pair(tmp_path)
-    outside = tmp_path / "elsewhere" / "private.json"
-    laptop_store = {"in": {"script_path": str(laptop.scripts / "run.json")},
-                    "out": {"script_path": str(outside)}}
-    desktop_store = {}
-    laptop.adapters = [_DictAdapter("laptop", laptop_store, laptop.scripts)]
-    desktop.adapters = [_DictAdapter("desktop", desktop_store, desktop.scripts)]
-    laptop.sync()
-    assert str(tmp_path) not in json.dumps(server.body), "no absolute path left the machine"
-
-    report = desktop.sync()
-    assert Path(desktop_store["in"]["script_path"]) == desktop.scripts / "run.json"
-    assert "out" in report.applied["custom"]["skipped"]
-    assert "out" not in desktop_store
-    # Not having it here is not a deletion for the laptop.
-    desktop.sync()
-    laptop.sync()
-    assert "out" in laptop_store
-
-
-def test_a_reference_cannot_escape_the_scripts_folder(tmp_path):
-    adapter = _DictAdapter("laptop", {}, tmp_path / "scripts")
-    escaping = {"$local": "path", "root": "scripts", "relative": "../../etc/passwd"}
-    with pytest.raises(ConfigSyncError):
-        adapter.from_portable({"script_path": escaping}, None)
-    for drive_or_backslash in ("C:/Windows/x.json", "a\\..\\..\\x.json"):
-        with pytest.raises(ConfigSyncError):
-            adapter.from_portable({"script_path": {
-                "$local": "path", "root": "scripts", "relative": drive_or_backslash}}, None)
-    good = hashlib.sha256(b"[]").hexdigest()
-    for key in ("../evil.json", "/abs.json", "C:/abs.json", "a\\..\\..\\evil.json"):
-        scripts = ScriptSyncAdapter("laptop", tmp_path / "s")
-        with pytest.raises(ConfigSyncError):
-            scripts.write_local(key, {"content": "[]", "sha256": good}, None)
-    assert not (tmp_path / "evil.json").exists()
-    scripts = ScriptSyncAdapter("laptop", tmp_path)
-    with pytest.raises(ConfigSyncError):
-        scripts.write_local("ok.json", {"content": "[]", "sha256": "0" * 64}, None)
-
-
-# --- hotkeys and triggers are never armed by a sync ------------------------
-
-def test_sync_never_enables_trigger(tmp_path, server):
-    laptop, desktop = _pair(tmp_path)
-    ran = []
-    source = TriggerEngine(executor=ran.append)
-    target = TriggerEngine(executor=ran.append)
-    source.add(ImageAppearsTrigger(trigger_id="img", script_path=str(laptop.scripts / "a.json"),
-                                   image_path=str(laptop.scripts / "t.png"), enabled=True))
-    source.add(CronTrigger(trigger_id="cron", script_path=str(laptop.scripts / "a.json"),
-                           cron="0 9 * * *", enabled=True))
-    source.add(AllOfTrigger(trigger_id="both", script_path=str(laptop.scripts / "a.json")))
-    laptop.adapters = [TriggerSyncAdapter("laptop", source, scripts_dir=laptop.scripts)]
-    desktop.adapters = [TriggerSyncAdapter("desktop", target, scripts_dir=desktop.scripts)]
-
-    # Composites are synced too (test_sync_composite_triggers.py) -- and arrive disabled.
-    assert laptop.sync().withheld == {}
-    report = desktop.sync()
-
-    received = {trigger.trigger_id: trigger for trigger in target.list_triggers()}
-    assert set(received) == {"img", "cron", "both"}
-    enabled_triggers = [trigger.trigger_id for trigger in received.values() if trigger.enabled]
-    assert enabled_triggers == []
-    assert sorted(report.applied["triggers"]["left_disabled"]) == ["both", "cron", "img"]
-    assert Path(received["img"].image_path) == desktop.scripts / "t.png"
-    assert received["cron"].cron == "0 9 * * *"
-    assert not target.is_running
-    assert not source.is_running
-    assert ran == []
-    assert "enabled" not in json.dumps(server.body["sections"]["triggers"])
-
-    # The laptop edits its (enabled) trigger; the desktop's stays off.
-    next(t for t in source.list_triggers() if t.trigger_id == "cron").cron = "30 9 * * *"
-    laptop.sync()
-    desktop.sync()
-    cron = next(t for t in target.list_triggers() if t.trigger_id == "cron")
-    assert cron.cron == "30 9 * * *"
-    assert cron.enabled is False
-    # Once this machine's user enables it, a later sync leaves that alone too.
-    target.set_enabled("cron", True)
-    next(t for t in source.list_triggers() if t.trigger_id == "cron").cron = "45 9 * * *"
-    laptop.sync()
-    desktop.sync()
-    cron = next(t for t in target.list_triggers() if t.trigger_id == "cron")
-    assert cron.cron == "45 9 * * *"
-    assert cron.enabled is True
-    assert next(t for t in source.list_triggers() if t.trigger_id == "img").enabled is True
-
-
-def test_sync_never_enables_a_hotkey(tmp_path, server):
-    laptop, desktop = _pair(tmp_path)
-    source, target = HotkeyDaemon(), HotkeyDaemon()
-    source.bind("ctrl+alt+k", str(laptop.scripts / "a.json"), binding_id="hk1")
-    laptop.adapters = [HotkeySyncAdapter("laptop", source, scripts_dir=laptop.scripts)]
-    desktop.adapters = [HotkeySyncAdapter("desktop", target, scripts_dir=desktop.scripts)]
-    laptop.sync()
-    report = desktop.sync()
-
-    [binding] = target.list_bindings()
-    assert binding.combo == "ctrl+alt+k"
-    assert binding.enabled is False
-    assert Path(binding.script_path) == desktop.scripts / "a.json"
-    assert report.applied["hotkeys"]["left_disabled"] == ["hk1"]
-    assert not target.is_running
-    assert source.list_bindings()[0].enabled is True, "the sender's own state is untouched"
-
-    source.unbind("hk1")
-    laptop.sync()
-    desktop.sync()
-    assert target.list_bindings() == []
-
-
-def test_a_binding_this_platform_refuses_is_skipped_not_deleted_for_everyone(tmp_path, server):
-    laptop, desktop = _pair(tmp_path)
-
-    class _Picky(HotkeyDaemon):
-        def bind(self, combo, script_path, binding_id=None, *, enabled=True):
-            raise ValueError(f"cannot register {combo} here")
-
-    source, target = HotkeyDaemon(), _Picky()
-    source.bind("ctrl+alt+k", str(laptop.scripts / "a.json"), binding_id="hk1")
-    laptop.adapters = [HotkeySyncAdapter("laptop", source, scripts_dir=laptop.scripts)]
-    desktop.adapters = [HotkeySyncAdapter("desktop", target, scripts_dir=desktop.scripts)]
-    laptop.sync()
-    assert "hk1" in desktop.sync().applied["hotkeys"]["skipped"]
-    desktop.sync()
-    laptop.sync()
-    assert [binding.binding_id for binding in source.list_bindings()] == ["hk1"]
-
-
-# --- locators and the address book -----------------------------------------
-
-def test_locators_and_address_book_round_trip(tmp_path, server):
-    from je_auto_control.utils.element_repository import ElementRepository
-    from je_auto_control.utils.remote_desktop.address_book import AddressBook
-    laptop, desktop = _pair(tmp_path)
-    repos = [ElementRepository(str(machine.home / "locators.json"))
-             for machine in (laptop, desktop)]
-    books = [AddressBook(machine.home / "address_book.json") for machine in (laptop, desktop)]
-    repos[0].save("ok_button", name="OK", role="button")
-    books[0].upsert(host_id="host1", server_url="https://rd.invalid", label="Office")
-    books[0].set_tags(host_id="host1", server_url="https://rd.invalid", tags=["work"])
-    books[0].toggle_favorite(host_id="host1", server_url="https://rd.invalid")
-    laptop.adapters = [LocatorSyncAdapter("laptop", repos[0]),
-                       AddressBookSyncAdapter("laptop", books[0])]
-    desktop.adapters = [LocatorSyncAdapter("desktop", repos[1]),
-                        AddressBookSyncAdapter("desktop", books[1])]
-    laptop.sync()
-    desktop.sync()
-
-    assert repos[1].get("ok_button") == {"name": "OK", "role": "button"}
-    [entry] = books[1].list_entries()
-    assert (entry["label"], entry["tags"], entry["favorite"]) == ("Office", ["work"], True)
-    assert "last_used" not in json.dumps(server.body["sections"]["address_book"])
-
-    repos[1].remove("ok_button")
-    books[1].remove(host_id="host1", server_url="https://rd.invalid")
-    desktop.sync()
-    laptop.sync()
-    assert repos[0].all() == {}
-    assert books[0].list_entries() == []
-
-
-# --- status, offline, resync -----------------------------------------------
-
-def test_offline_changes_wait_in_the_outbox_and_the_status_says_so(tmp_path, server):
-    laptop, _desktop = _pair(tmp_path)
-    store = {"a": {"v": 1}}
-    laptop.adapters = [_DictAdapter("laptop", store)]
-    server.offline = True
-    report = laptop.sync(max_attempts=2)
-    assert (report.state, report.pending) == ("offline", 1)
-    assert report.error
-    assert laptop.sync(max_attempts=1).pending == 1, "the same edit is not queued twice"
-    status = sync_status(laptop.outbox)
-    assert (status["state"], status["pending"], status["revision"]) == ("offline", 1, 0)
-
-    server.offline = False
-    report = laptop.sync()
-    assert (report.state, report.pending, report.revision) == ("synced", 0, 1)
-    status = config_sync_status(_URL, "alice", str(laptop.home / "outbox.sqlite3"))
-    assert status["state"] == "synced"
-    assert status["last_success"] > 0
-
-
-def test_a_cancelled_sync_stops_and_keeps_its_changes(tmp_path, server):
-    import threading
-    laptop, _desktop = _pair(tmp_path)
-    laptop.adapters = [_DictAdapter("laptop", {"a": {"v": 1}})]
-    cancel = threading.Event()
-    cancel.set()
-    report = laptop.sync(cancel=cancel)
-    assert report.state == "cancelled"
-    assert report.pending == 1
-    assert server.revision == 0
-
-
-def test_a_retired_device_is_told_to_resync_and_adopts_the_server_state(tmp_path, server):
-    laptop, desktop = _pair(tmp_path)
-    # No hold, so the tombstone is really gone when the retired desktop returns:
-    # the refusal is then all that keeps the entry from coming back.
-    laptop.client = ConfigSyncClient(_URL, user_id="alice", tombstone_hold_s=0)
-    laptop_store, desktop_store = {"a": {"v": 1}}, {}
-    laptop.adapters = [_DictAdapter("laptop", laptop_store)]
-    desktop.adapters = [_DictAdapter("desktop", desktop_store)]
-    laptop.sync()
-    desktop.sync()
-    laptop.client.retire_peer("desktop")
-    del laptop_store["a"]
-    laptop.sync()
-    laptop.sync()                      # the tombstone is collected: nobody waits for desktop
-    assert server.body["sections"]["custom"] == {}
-
-    desktop_store["a"] = {"v": "edited while away"}
-    report = desktop.sync()
-    assert report.state == "resync_required"
-    assert server.body["sections"]["custom"] == {}, "the stale edit did not get in"
-
-    report = run_full_resync(desktop.client, desktop.outbox, desktop.adapters,
-                             device_id="desktop")
-    assert report.state == "synced"
-    assert "custom/a" in report.withheld
-    assert desktop_store == {}, "the deleted entry did not come back"
-    assert desktop.sync().state == "synced"
-
-
-def test_the_device_id_is_created_once_and_kept(tmp_path, monkeypatch):
-    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
-    first = default_device_id()
-    assert first
-    assert default_device_id() == first
-    assert (tmp_path / ".je_auto_control" / "config_sync_device_id").read_text(
-        encoding="utf-8").strip() == first
-
-
-# --- the mirror channels do not echo ---------------------------------------
-
-def test_clipboard_does_not_echo():
-    host, viewer = ClipboardEchoGuard(), ClipboardEchoGuard()
-    wire = []
-
-    def copy_on(sender, receiver, text):
-        """A local copy on one side, forwarded and applied on the other."""
-        if sender.should_send("text", text):
-            wire.append(text)
-            receiver.note_remote("text", text)
-            return True
-        return False
-
-    assert copy_on(viewer, host, "hello") is True
-    # The host's watcher now sees "hello" on its clipboard: it must not go back.
-    assert copy_on(host, viewer, "hello") is False
-    # Nor does the viewer keep resending what the clipboard still holds.
-    assert copy_on(viewer, host, "hello") is False
-    assert wire == ["hello"]
-    # A real change on the host does travel, once.
-    assert copy_on(host, viewer, "reply") is True
-    assert copy_on(viewer, host, "reply") is False
-    assert wire == ["hello", "reply"]
-    assert host.should_send("image", b"hello") is True, "another kind is other content"
-    host.reset()
-    assert host.should_send("text", "reply") is True, "after a reconnect nothing is assumed"
-
-
-def test_a_folder_mirror_does_not_push_back_what_it_received(tmp_path):
-    watch = tmp_path / "watch"
-    watch.mkdir()
-    sent = []
-    # wait_until_stable=False: this is about echo, not about files still being written.
-    engine = FolderSyncEngine(watch_dir=watch, sender=lambda _path, name: sent.append(name),
-                              wait_until_stable=False)
-    assert engine.poll_once() == []            # baseline
-
-    # Noted before the bytes land, so a poll in between cannot echo it.
-    incoming = b"from the peer"
-    engine.note_received("report.txt", sha256=hashlib.sha256(incoming).hexdigest())
-    (watch / "report.txt").write_bytes(incoming)
-    (watch / "mine.txt").write_text("made here", encoding="utf-8")
-    assert engine.poll_once() == ["mine.txt"]
-    assert engine.poll_once() == []
-    assert sent == ["mine.txt"]
-
-    # Edited here afterwards: now it is a local change and goes out.
-    (watch / "report.txt").write_bytes(b"edited locally")
-    assert engine.poll_once() == ["report.txt"]
-
-
-def test_a_received_file_noted_after_it_landed_is_not_echoed(tmp_path):
-    watch = tmp_path / "watch"
-    watch.mkdir()
-    sent = []
-    engine = FolderSyncEngine(watch_dir=watch, sender=lambda _path, name: sent.append(name))
-    engine.poll_once()
-    (watch / "a.bin").write_bytes(b"payload")
-    engine.note_received("a.bin")
-    assert engine.poll_once() == []
-    assert sent == []
-
-
-# --- the delivery surfaces: executor, MCP, Script Builder, facade ----------
-
-_COMMANDS = ("AC_config_sync_run", "AC_config_sync_status", "AC_config_sync_resolve",
-             "AC_config_sync_full_resync")
-
-
-def test_the_commands_run_from_an_action_list(tmp_path, server):
-    from je_auto_control.utils.executor.action_executor import executor
-    scripts = tmp_path / "scripts"
-    scripts.mkdir()
-    (scripts / "a.json").write_text("[]", encoding="utf-8")
-    target = {"server_url": _URL, "user_id": "alice"}
-    options = {"device_id": "laptop", "sections": "scripts", "scripts_dir": str(scripts),
-               "outbox_path": str(tmp_path / "outbox.sqlite3")}
-    record = executor.execute_action([
-        ["AC_config_sync_run", {**target, **options}],
-        ["AC_config_sync_status", {**target, "outbox_path": options["outbox_path"]}],
-    ])
-    run, status = list(record.values())
-    assert run["state"] == "synced"
-    assert run["revision"] == 1
-    assert status["state"] == "synced"
-    assert status["pending"] == 0
-    assert set(server.body["sections"]["scripts"]) == {"a.json"}
-    json.dumps(record)
-
-
-def test_an_unknown_option_or_section_is_refused(tmp_path, server):
-    from je_auto_control.utils.config_sync import config_sync_run
-    options = {"device_id": "laptop", "outbox_path": str(tmp_path / "outbox.sqlite3")}
-    with pytest.raises(ConfigSyncError, match="unknown config sync option"):
-        config_sync_run(_URL, "alice", enable_everything=True, **options)
-    with pytest.raises(ConfigSyncError, match="cannot sync section"):
-        config_sync_run(_URL, "alice", sections=["scripts"], **options)
-    assert server.revision == 0
-
-
-def test_every_surface_knows_the_commands():
-    import je_auto_control as ac
-    from je_auto_control.gui.script_builder.command_schema import _build_specs
-    from je_auto_control.utils.executor.action_executor import executor
-    from je_auto_control.utils.mcp_server.tools import build_default_tool_registry
-    assert set(_COMMANDS) <= set(executor.known_commands())
-    assert set(_COMMANDS) <= {spec.command for spec in _build_specs()}
-    tools = {tool.name: tool
-             for tool in build_default_tool_registry(read_only=False, aliases=False)}
-    for command in _COMMANDS:
-        assert "ac_" + command[3:] in tools
-    assert tools["ac_config_sync_status"].annotations.read_only
-    for acting in ("ac_config_sync_run", "ac_config_sync_resolve", "ac_config_sync_full_resync"):
-        assert tools[acting].annotations.destructive
-        assert not tools[acting].annotations.read_only
-    read_only = {tool.name
-                 for tool in build_default_tool_registry(read_only=True, aliases=False)}
-    assert "ac_config_sync_run" not in read_only
-    assert "ac_config_sync_status" in read_only
-    for name in ("ConfigSyncClient", "SyncEntry", "SyncOutbox", "merge_entries", "sync_assets",
-                 "config_sync_run", "SyncAdapter", "ConfigStore"):
-        assert name in ac.__all__
-        assert hasattr(ac, name)
+import je_auto_control as ac
+from je_auto_control.utils.remote_desktop.address_book import AddressBook
+
+
+def state(tmp_path, origin, name='state.sqlite3'):
+    identity = ac.SyncLocalIdentity('https://controlled.invalid', 'alice', origin, 0, 0)
+    return ac.SyncAdapterState(tmp_path / name, identity)
+
+
+def script_adapter(tmp_path, origin, *, bindings=None):
+    directory = tmp_path / origin
+    directory.mkdir(exist_ok=True)
+    return ac.ScriptSyncAdapter(directory, state(tmp_path, origin, origin + '.sqlite3'),
+                                paths=('login.json',), bindings=bindings)
+
+
+def write_script(adapter, value):
+    (adapter.source_root / 'login.json').write_text(json.dumps([['AC_log', {'message': value}]]), encoding='utf-8')
+
+
+def test_real_script_snapshot_is_stable_across_restart_and_materializes_inert_json(tmp_path, monkeypatch):
+    sender = script_adapter(tmp_path, 'desktop')
+    write_script(sender, 'hello')
+    original = sender.snapshot()
+    assert len(original) == 1
+    assert all(key == value.change_id for key, value in original.items())
+    assert script_adapter(tmp_path, 'desktop').snapshot() == original
+    receiver = script_adapter(tmp_path, 'laptop')
+    monkeypatch.setattr(ac.executor, 'execute_action', lambda *_a, **_k: pytest.fail('sync executed a script'))
+    report = receiver.apply(original)
+    assert report.stored == ('login.json',) and not report.conflicts
+    result = ac.materialize_sync_profile((receiver,), tmp_path / 'profile-cache')
+    assert json.loads((result.directory / 'scripts' / 'login.json').read_text()) == [['AC_log', {'message': 'hello'}]]
+    assert not (receiver.source_root / 'login.json').exists()
+    assert receiver.snapshot() == original
+
+
+def test_secret_is_local_and_machine_paths_remain_named_references(tmp_path):
+    fields = {'login.json': {'/actions/0/1/password': ac.SyncReference('secret', 'LOGIN'),
+                             '/actions/0/1/file_path': ac.SyncReference('local', 'downloads')}}
+    sender = script_adapter(tmp_path, 'desktop', bindings=ac.SyncBindings(fields=fields))
+    actions = [['AC_example', {'password': 'local-password-only', 'file_path': 'C:/private-sender/result.txt'}]]
+    (sender.source_root / 'login.json').write_text(json.dumps(actions), encoding='utf-8')
+    entries = sender.snapshot()
+    wire = json.dumps([entry.to_dict() for entry in entries.values()])
+    assert 'local-password-only' not in wire and 'private-sender' not in wire
+    assert b'local-password-only' not in (tmp_path / 'desktop.sqlite3').read_bytes()
+    receiver = script_adapter(tmp_path, 'laptop',
+                               bindings=ac.SyncBindings(local_values={'downloads': '/receiver/result.txt'}))
+    assert not receiver.apply(entries).unresolved
+    result = ac.materialize_sync_profile((receiver,), tmp_path / 'cache')
+    received = json.loads((result.directory / 'scripts' / 'login.json').read_text())[0][1]
+    assert received == {'password': '${secrets.LOGIN}', 'file_path': '/receiver/result.txt'}
+
+
+def test_unbound_secret_or_machine_path_fails_before_creating_state(tmp_path):
+    sender = script_adapter(tmp_path, 'desktop')
+    for arguments in ({'password': 'do-not-export'}, {'file_path': '/private/path'}):
+        (sender.source_root / 'login.json').write_text(json.dumps([['AC_example', arguments]]), encoding='utf-8')
+        with pytest.raises(ac.ConfigSyncError):
+            sender.snapshot()
+        assert not (tmp_path / 'desktop.sqlite3').exists()
+
+
+def test_sync_never_enables_trigger_or_hotkey_and_keeps_runtime_state_local(tmp_path):
+    script = str(tmp_path / 'run.json')
+    bindings = ac.SyncBindings(local_values={'script': script})
+    engine = ac.TriggerEngine(executor=lambda _actions: pytest.fail('trigger ran'))
+    engine.add(ac.FilePathTrigger(trigger_id='watch', script_path=script, watch_path=str(tmp_path / 'watched'),
+                                  enabled=True, fired=8))
+    trigger_bindings = ac.SyncBindings(local_values={'script': script, 'watch': str(tmp_path / 'watched')})
+    sender = ac.TriggerSyncAdapter(engine, state(tmp_path, 'desktop', 'triggers.sqlite3'), bindings=trigger_bindings)
+    entries = sender.snapshot()
+    assert 'fired' not in json.dumps([entry.to_dict() for entry in entries.values()])
+    target = ac.TriggerEngine(executor=lambda _actions: pytest.fail('remote trigger ran'))
+    receiver = ac.TriggerSyncAdapter(target, state(tmp_path, 'laptop', 'target-triggers.sqlite3'),
+                                     bindings=trigger_bindings)
+    receiver.apply(entries)
+    assert target.list_triggers() == [] and not target.is_running
+    assert all(value['enabled'] is False for value in receiver.definitions().values())
+    daemon = ac.HotkeyDaemon(executor=lambda _actions: pytest.fail('hotkey ran'))
+    daemon.bind('ctrl+alt+1', script, binding_id='login')
+    hotkeys = ac.HotkeySyncAdapter(daemon, state(tmp_path, 'desktop', 'hotkeys.sqlite3'), bindings=bindings)
+    empty = ac.HotkeyDaemon(executor=lambda _actions: pytest.fail('remote hotkey ran'))
+    received = ac.HotkeySyncAdapter(empty, state(tmp_path, 'laptop', 'target-hotkeys.sqlite3'), bindings=bindings)
+    received.apply(hotkeys.snapshot())
+    assert empty.list_bindings() == [] and not empty.is_running
+    assert received.definitions()['login']['enabled'] is False
+
+
+def test_locator_and_address_book_profiles_use_real_native_storage_formats(tmp_path):
+    repository = ac.ElementRepository(str(tmp_path / 'local-locators.json'))
+    repository.save('login.submit', name='Submit', role='button')
+    locators = ac.LocatorSyncAdapter(repository, state(tmp_path, 'desktop', 'locator-state.sqlite3'))
+    other = ac.LocatorSyncAdapter(ac.ElementRepository(str(tmp_path / 'empty-locators.json')),
+                                  state(tmp_path, 'laptop', 'other-locators.sqlite3'))
+    other.apply(locators.snapshot())
+    book = AddressBook(tmp_path / 'local-book.json')
+    book.upsert(host_id='host-one', server_url='https://signal.invalid', label='Office')
+    book.set_tags(host_id='host-one', server_url='https://signal.invalid', tags=['work'])
+    addresses = ac.AddressBookSyncAdapter(book, state(tmp_path, 'desktop', 'address-state.sqlite3'))
+    remote = ac.AddressBookSyncAdapter(AddressBook(tmp_path / 'empty-book.json'),
+                                      state(tmp_path, 'laptop', 'other-addresses.sqlite3'))
+    remote.apply(addresses.snapshot())
+    result = ac.materialize_sync_profile((other, remote), tmp_path / 'cache')
+    restored_locators = ac.ElementRepository(str(result.directory / 'locators.json'))
+    assert restored_locators.get('login.submit') == repository.get('login.submit')
+    restored = AddressBook(result.directory / 'address_book.json').list_entries()
+    assert restored[0]['label'] == 'Office' and restored[0]['tags'] == ['work']
+    assert 'last_used' not in json.dumps([entry.to_dict() for entry in addresses.snapshot().values()])
+
+
+def test_parallel_source_edits_require_explicit_resolution_and_survive_restart(tmp_path):
+    desktop, laptop = script_adapter(tmp_path, 'desktop'), script_adapter(tmp_path, 'laptop')
+    write_script(desktop, 'base')
+    laptop.apply(desktop.snapshot())
+    write_script(laptop, 'base')
+    assert len(laptop.snapshot()) == 1
+    write_script(desktop, 'left')
+    write_script(laptop, 'right')
+    report = laptop.apply(desktop.snapshot())
+    assert report.conflicts == ('login.json',)
+    heads = laptop.snapshot()
+    assert len(heads) == 2
+    with pytest.raises(ac.ConfigSyncError):
+        ac.materialize_sync_profile((laptop,), tmp_path / 'must-not-publish')
+    selected = next(entry for entry in heads.values() if entry.value['actions'][0][1]['message'] == 'left')
+    laptop.resolve('login.json', selected.value, observed=tuple(heads))
+    reopened = script_adapter(tmp_path, 'laptop')
+    assert len(reopened.snapshot()) == 1
+    assert next(iter(reopened.snapshot().values())).value == selected.value
+
+
+def test_missing_reference_persists_portable_entry_but_refuses_partial_materialization(tmp_path):
+    source = script_adapter(tmp_path, 'desktop', bindings=ac.SyncBindings(
+        fields={'login.json': {'/actions/0/1/file_path': ac.SyncReference('local', 'download')}}))
+    (source.source_root / 'login.json').write_text(json.dumps([['AC_example', {'file_path': '/private/file'}]]))
+    receiver = script_adapter(tmp_path, 'laptop')
+    report = receiver.apply(source.snapshot())
+    assert report.unresolved
+    assert len(receiver.snapshot()) == 1
+    with pytest.raises(ac.ConfigSyncError):
+        ac.materialize_sync_profile((receiver,), tmp_path / 'cache')
+    assert not (tmp_path / 'cache').exists()
+
+
+def test_invalid_remote_secret_is_rejected_before_any_local_state_write(tmp_path):
+    receiver = script_adapter(tmp_path, 'laptop')
+    entry = ac.SyncEntry('scripts', 'login.json', {'actions': [['AC_example', {'password': 'remote-plain'}]]},
+                         {'desktop': 1}, 'bad', 'desktop')
+    with pytest.raises(ac.ConfigSyncError):
+        receiver.apply({entry.change_id: entry})
+    assert not (tmp_path / 'laptop.sqlite3').exists()
+
+
+def test_receiver_edit_of_an_unactivated_old_source_does_not_silently_overwrite_remote(tmp_path):
+    desktop, laptop = script_adapter(tmp_path, 'desktop'), script_adapter(tmp_path, 'laptop')
+    write_script(desktop, 'base')
+    laptop.apply(desktop.snapshot())
+    write_script(laptop, 'base')
+    laptop.snapshot()
+    write_script(desktop, 'new remote value')
+    assert not laptop.apply(desktop.snapshot()).conflicts
+    assert next(iter(laptop.snapshot().values())).value['actions'][0][1]['message'] == 'new remote value'
+    write_script(laptop, 'edit of the old active source')
+    assert len(laptop.snapshot()) == 2
+
+
+def test_source_deletion_is_versioned_but_does_not_delete_a_receivers_active_script(tmp_path):
+    desktop, laptop = script_adapter(tmp_path, 'desktop'), script_adapter(tmp_path, 'laptop')
+    write_script(desktop, 'base')
+    original = desktop.snapshot()
+    laptop.apply(original)
+    write_script(laptop, 'base')
+    laptop.snapshot()
+    (desktop.source_root / 'login.json').unlink()
+    deleted = desktop.snapshot()
+    assert next(iter(deleted.values())).is_deleted
+    laptop.apply(deleted)
+    laptop.apply(original)
+    assert next(iter(laptop.snapshot().values())).is_deleted
+    assert (laptop.source_root / 'login.json').is_file()
+    assert laptop.definitions() == {}
+
+
+def test_settings_entry_names_are_sensitive_and_only_references_enter_sync_state(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(json.dumps({'password': 'local-only', 'theme': 'dark'}))
+    unbound = ac.SettingsSyncAdapter(path, state(tmp_path, 'desktop'))
+    with pytest.raises(ac.ConfigSyncError):
+        unbound.snapshot()
+    assert not (tmp_path / 'state.sqlite3').exists()
+    bindings = ac.SyncBindings(fields={'password': {'/value': ac.SyncReference('secret', 'PASSWORD')}})
+    adapter = ac.SettingsSyncAdapter(path, state(tmp_path, 'desktop'), bindings=bindings)
+    wire = json.dumps([entry.to_dict() for entry in adapter.snapshot().values()])
+    assert 'local-only' not in wire
+    result = ac.materialize_sync_profile((adapter,), tmp_path / 'cache')
+    assert json.loads((result.directory / 'settings.json').read_text())['password'] == '${secrets.PASSWORD}'
+
+
+def test_same_operation_with_changed_data_is_refused_and_existing_heads_survive(tmp_path):
+    sender, receiver = script_adapter(tmp_path, 'desktop'), script_adapter(tmp_path, 'laptop')
+    write_script(sender, 'first')
+    original = sender.snapshot()
+    receiver.apply(original)
+    old = next(iter(original.values()))
+    changed = ac.SyncEntry(old.section, old.entry_id, {'actions': [['AC_log', {'message': 'changed'}]]},
+                           old.version, old.operation_id, old.origin)
+    with pytest.raises(ac.ConfigSyncError):
+        receiver.apply({changed.change_id: changed})
+    assert receiver.snapshot() == original
+
+
+def test_receipt_or_head_storage_failure_rolls_back_the_complete_batch(tmp_path):
+    import sqlite3
+    receiver = script_adapter(tmp_path, 'laptop')
+    assert receiver.snapshot() == {}
+    with sqlite3.connect(tmp_path / 'laptop.sqlite3') as connection:
+        connection.execute("CREATE TRIGGER stop_second BEFORE INSERT ON adapter_heads "
+                           "WHEN NEW.entry_id='second.json' BEGIN SELECT RAISE(ABORT,'controlled failure'); END")
+    entries = [ac.SyncEntry('scripts', name, {'actions': []}, {'desktop': 1}, name, 'desktop')
+               for name in ('first.json', 'second.json')]
+    with pytest.raises(ac.ConfigStoreError):
+        receiver.apply({entry.change_id: entry for entry in entries})
+    assert receiver.snapshot() == {}
+
+
+def test_materialization_refuses_an_escaping_custom_profile_before_creating_files(tmp_path):
+    class EscapingProfile:
+        kind = 'scripts'
+        def checkpoint(self):
+            pass
+        def profile_files(self):
+            return {'../outside.txt': b'not allowed'}
+    with pytest.raises(ac.ConfigSyncError):
+        ac.materialize_sync_profile((EscapingProfile(),), tmp_path / 'cache')
+    assert not (tmp_path / 'outside.txt').exists() and not (tmp_path / 'cache').exists()
+
+
+def test_delete_edit_conflict_can_be_explicitly_resolved_as_a_tombstone(tmp_path):
+    desktop, laptop = script_adapter(tmp_path, 'desktop'), script_adapter(tmp_path, 'laptop')
+    write_script(desktop, 'base')
+    laptop.apply(desktop.snapshot())
+    write_script(laptop, 'base')
+    laptop.snapshot()
+    (desktop.source_root / 'login.json').unlink()
+    write_script(laptop, 'parallel edit')
+    assert laptop.apply(desktop.snapshot()).conflicts == ('login.json',)
+    heads = laptop.snapshot()
+    laptop.resolve('login.json', {}, observed=tuple(heads), is_deleted=True)
+    assert next(iter(laptop.snapshot().values())).is_deleted
+    assert laptop.definitions() == {}
+
+
+def test_wrapped_source_cancellation_preserves_its_signal_and_makes_no_state(tmp_path):
+    from concurrent.futures import CancelledError
+    class InterruptedSource:
+        def list_bindings(self):
+            raise ac.ConfigSyncError('wrapped source cancellation') from CancelledError()
+    adapter = ac.HotkeySyncAdapter(InterruptedSource(), state(tmp_path, 'desktop'))
+    with pytest.raises(CancelledError):
+        adapter.snapshot()
+    assert not (tmp_path / 'state.sqlite3').exists()
+
+
+def test_corrupted_native_repository_fails_with_typed_error_before_state(tmp_path):
+    path = tmp_path / 'locators.json'
+    repository = ac.ElementRepository(str(path))
+    repository.save('submit', name='Submit')
+    adapter = ac.LocatorSyncAdapter(repository, state(tmp_path, 'desktop'))
+    path.write_text('[]', encoding='utf-8')
+    with pytest.raises(ac.ConfigSyncError, match='source'):
+        adapter.snapshot()
+    assert not (tmp_path / 'state.sqlite3').exists()
+    assert path.read_text(encoding='utf-8') == '[]'
+
+
+@pytest.mark.parametrize('extreme', [10 ** 400, -10 ** 400])
+def test_extreme_integer_condition_is_refused_with_typed_error_before_state(tmp_path, extreme):
+    profile = {'schema_version': 1, 'kind': 'triggers', 'state_path': str(tmp_path / 'state.sqlite3'),
+               'identity': {'endpoint': 'https://controlled.invalid', 'user_id': 'alice', 'origin': 'desktop'},
+               'source': {'records': {'watch': {'kind': 'file', 'script_path': 'run.json', 'repeat': True,
+                                              'cooldown_seconds': extreme,
+                                              'condition': {'watch_path': 'watched'}}}}}
+    adapter = ac.adapter_from_profile(profile)
+    with pytest.raises(ac.ConfigSyncError, match='number'):
+        adapter.snapshot()
+    assert not (tmp_path / 'state.sqlite3').exists()
+
+
+def test_private_posix_path_binding_is_not_a_high_entropy_credential():
+    from je_auto_control.utils.logging.secret_scope import remember_secret, secret_log_scope
+    from je_auto_control.utils.secrets_scan.secrets_scan import scan_secrets
+    path = '/tmp/pytest-of-runner/pytest-0/test_sync_never_enables_trigger0/watched'
+    assert scan_secrets({'value': path})[0]['kind'] == 'high-entropy-string'
+    assert ac.SyncBindings(local_values={'watch': path}).local_values['watch'] == path
+    for value in ('AbCdEfGhIjKlMnOpQrStUvWxYz0123456789', path + '/AKIA' + 'A1' * 8):
+        with pytest.raises(ac.ConfigSyncError):
+            ac.SyncBindings(local_values={'watch': value})
+    with secret_log_scope():
+        remember_secret(path)
+        with pytest.raises(ac.ConfigSyncError, match='resolved credentials'):
+            ac.SyncBindings(local_values={'watch': path})
+
+
+def test_non_ascii_corrupt_head_wire_raises_a_framework_storage_error(tmp_path):
+    import sqlite3
+    adapter = script_adapter(tmp_path, 'desktop')
+    write_script(adapter, 'base')
+    adapter.snapshot()
+    with sqlite3.connect(tmp_path / 'desktop.sqlite3') as connection:
+        connection.execute("UPDATE adapter_heads SET wire='壞掉的資料'")
+    with pytest.raises(ac.ConfigStoreError):
+        adapter.snapshot()
+
+
+def test_device_connections_are_local_references_and_numeric_bindings_keep_their_type(tmp_path):
+    sender = script_adapter(tmp_path, 'desktop')
+    actions = [['AC_example', {'device_id': 'sender-device', 'screen_index': 1}]]
+    (sender.source_root / 'login.json').write_text(json.dumps(actions))
+    with pytest.raises(ac.ConfigSyncError):
+        sender.snapshot()
+    fields = {'login.json': {'/actions/0/1/device_id': ac.SyncReference('local', 'phone'),
+                             '/actions/0/1/screen_index': ac.SyncReference('local', 'display')}}
+    sender = script_adapter(tmp_path, 'desktop', bindings=ac.SyncBindings(fields=fields))
+    entries = sender.snapshot()
+    assert 'sender-device' not in json.dumps([item.to_dict() for item in entries.values()])
+    receiver = script_adapter(tmp_path, 'laptop',
+                               bindings=ac.SyncBindings(local_values={'phone': 'receiver-device', 'display': 2}))
+    receiver.apply(entries)
+    result = ac.materialize_sync_profile((receiver,), tmp_path / 'cache')
+    arguments = json.loads((result.directory / 'scripts' / 'login.json').read_text())[0][1]
+    assert arguments == {'device_id': 'receiver-device', 'screen_index': 2}
+
+
+def test_positional_secret_commands_cannot_export_a_plaintext_value(tmp_path):
+    sender = script_adapter(tmp_path, 'desktop')
+    path = sender.source_root / 'login.json'
+    for value in ('local-only-password', 0, False):
+        path.write_text(json.dumps([['AC_write_secret', [value]]]))
+        with pytest.raises(ac.ConfigSyncError):
+            sender.snapshot()
+    path.write_text(json.dumps([['AC_write_secret', {'secret': '${secrets.LOGIN}'}]]))
+    wire = json.dumps([entry.to_dict() for entry in sender.snapshot().values()])
+    assert 'local-only-password' not in wire
+
+
+def test_cancel_after_first_merge_rolls_back_heads_receipts_and_source_baselines(tmp_path, monkeypatch):
+    from concurrent.futures import CancelledError
+    from threading import Event
+    import je_auto_control.utils.config_sync.adapter_state as state_module
+    stop = Event()
+    def checkpoint():
+        if stop.is_set():
+            raise CancelledError()
+    directory = tmp_path / 'receiver'
+    directory.mkdir()
+    identity = ac.SyncLocalIdentity('https://controlled.invalid', 'alice', 'receiver', 0, 0)
+    ledger = ac.SyncAdapterState(tmp_path / 'cancel.sqlite3', identity, checkpoint=checkpoint)
+    adapter = ac.ScriptSyncAdapter(directory, ledger, paths=())
+    adapter.snapshot()
+    original = state_module.merge_head
+    def after_merge(*args, **kwargs):
+        result = original(*args, **kwargs)
+        stop.set()
+        return result
+    monkeypatch.setattr(state_module, 'merge_head', after_merge)
+    incoming = [ac.SyncEntry('scripts', name, {'actions': []}, {'sender': 1}, name, 'sender')
+                for name in ('one.json', 'two.json')]
+    with pytest.raises(CancelledError):
+        adapter.apply({entry.change_id: entry for entry in incoming})
+    stop.clear()
+    assert adapter.snapshot() == {}
+
+
+def test_local_reference_type_errors_are_reported_without_losing_portable_versions(tmp_path):
+    engine = ac.TriggerEngine(executor=lambda _actions: None)
+    script = str(tmp_path / 'script.json')
+    engine.add(ac.WindowAppearsTrigger(trigger_id='window', script_path=script, title_substring='Demo', repeat=True))
+    fields = {'window': {'/repeat': ac.SyncReference('local', 'repeatSetting')}}
+    sender = ac.TriggerSyncAdapter(engine, state(tmp_path, 'desktop', 'sender.sqlite3'),
+                                    bindings=ac.SyncBindings(fields=fields, local_values={'script': script}))
+    incoming = sender.snapshot()
+    empty = ac.TriggerEngine(executor=lambda _actions: None)
+    local_state = state(tmp_path, 'laptop', 'receiver.sqlite3')
+    receiver = ac.TriggerSyncAdapter(empty, local_state,
+        bindings=ac.SyncBindings(local_values={'script': script, 'repeatSetting': 'wrong-type'}))
+    assert receiver.apply(incoming).unresolved == ('window:local-value-type',)
+    assert receiver.snapshot() == incoming
+    corrected = ac.TriggerSyncAdapter(empty, local_state,
+        bindings=ac.SyncBindings(local_values={'script': script, 'repeatSetting': False}))
+    assert corrected.definitions()['window']['repeat'] is False
+    assert empty.list_triggers() == []
+
+
+def test_foreign_database_is_refused_without_adding_profile_tables(tmp_path):
+    import sqlite3
+    path = tmp_path / 'foreign.sqlite3'
+    with sqlite3.connect(path) as connection:
+        connection.execute('CREATE TABLE important (value TEXT)')
+        connection.execute("INSERT INTO important VALUES ('keep')")
+    ledger = state(tmp_path, 'desktop', 'foreign.sqlite3')
+    with pytest.raises(ac.ConfigStoreError):
+        ledger.heads('scripts')
+    with sqlite3.connect(path) as connection:
+        assert connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall() == [('important',)]
+        assert connection.execute('SELECT value FROM important').fetchone()[0] == 'keep'
+
+
+@pytest.mark.parametrize('interrupted', [False, True])
+def test_profile_staging_io_failure_is_typed_and_wrapped_cancellation_stays_control_flow(tmp_path, monkeypatch,
+                                                                                       interrupted):
+    from concurrent.futures import CancelledError
+    from pathlib import Path
+    adapter = script_adapter(tmp_path, 'desktop')
+    write_script(adapter, 'base')
+    adapter.snapshot()
+    def failed_write(_path, _body):
+        if interrupted:
+            raise OSError('interrupted write') from CancelledError()
+        raise OSError('controlled unavailable storage')
+    monkeypatch.setattr(Path, 'write_bytes', failed_write)
+    expected = CancelledError if interrupted else ac.ConfigSyncError
+    with pytest.raises(expected):
+        ac.materialize_sync_profile((adapter,), tmp_path / 'cache')
+    assert not (tmp_path / 'cache').exists()

@@ -17,6 +17,14 @@ Install AutoControl from PyPI:
 
    pip install je_auto_control
 
+On X11, plain ``import je_auto_control`` opens no display or input device and starts
+no keyboard listener. Desktop operations acquire resources when called. Explicit
+``keyboard_keys_table`` access or ``get_keyboard_keys_table()`` resolves actual server
+keycodes and requires an X connection. Wildcard imports that request the table also
+resolve it. A key-state check or recording request starts observation; events before
+that request are not captured. Stopping recording before it starts acquires nothing.
+Import success alone does not establish Linux agent desktop authority.
+
 With GUI Support
 ================
 

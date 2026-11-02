@@ -1,243 +1,180 @@
-"""Config-sync buckets survive a restart and refuse a write built on stale data.
-
-The signaling server kept buckets in a dict and let every ``PUT`` replace the
-previous one: a restart lost them all, and two machines pushing together
-dropped one side's changes without either hearing about it.
-"""
-import threading
+"""Persistent per-account revision commits across restart, races and uncertain retries."""
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from je_auto_control.utils.config_sync.client import ConfigBucket, ConfigSyncError
-from je_auto_control.utils.config_sync.store import (
-    ConfigStore, ConfigStoreError, RevisionConflictError, StoreCapacityError,
-)
-
-_SECRET = {"X-Signaling-Secret": "s3cret"}
+from je_auto_control.utils.config_sync import ConfigBucket
 
 
-def _bucket(user="alice", combo="ctrl+a"):
-    bucket = ConfigBucket(user_id=user)
-    bucket.upsert("hotkeys", "hk1", {"combo": combo, "last_modified": 100.0}, versioned=False)
-    return bucket
+def bucket(user='alice', value='first'):
+    return ConfigBucket(user, {'hotkeys': {'one': {'combo': value, 'last_modified': 1.0}}})
 
 
-def _envelope(bucket, base, operation="op-1"):
-    return {"version": 2, "base_revision": base, "operation_id": operation,
-            "bucket": bucket.to_dict()}
+def test_reopen_preserves_bucket(tmp_path):
+    from je_auto_control.utils.config_sync.store import ConfigStore
+    path=tmp_path/'config.sqlite3'
+    committed_revision=ConfigStore(path).commit('alice',bucket(),base_revision=0,operation_id='first')
+    reopened=ConfigStore(path)
+    assert reopened.get('alice').revision==committed_revision
+    assert reopened.get('alice').sections==bucket().sections
 
 
-@pytest.fixture
-def db(tmp_path):
-    return tmp_path / "sync" / "buckets.sqlite3"
-
-
-def _client(db, **options):
-    pytest.importorskip("fastapi")
-    testclient = pytest.importorskip("fastapi.testclient")
+def test_stale_revision_conflicts(tmp_path):
+    pytest.importorskip('fastapi')
+    from fastapi.testclient import TestClient
     from je_auto_control.utils.remote_desktop.signaling_server import create_app
-    return testclient.TestClient(create_app(
-        shared_secret="s3cret", serve_web_viewer=False, config_store_path=db, **options))
+    client=TestClient(create_app(config_store_path=tmp_path/'config.sqlite3',serve_web_viewer=False))
+    envelope={'version':2,'base_revision':0,'operation_id':'original','bucket':bucket().to_dict()}
+    original=client.put('/config/alice',json=envelope)
+    assert original.status_code==200
+    stale_response=client.put('/config/alice',json={**envelope,'operation_id':'stale'})
+    assert stale_response.status_code==409
+    assert client.get('/config/alice').json()['revision']==original.json()['revision']
 
 
-# --- the store -------------------------------------------------------------
-
-def test_reopen_preserves_bucket(db):
-    user = "alice"
-    committed_revision = ConfigStore(db).commit(
-        user, _bucket(), base_revision=0, operation_id="op-1")
-    reopened = ConfigStore(db)
-    assert reopened.get(user).revision == committed_revision
-    assert reopened.get(user).sections["hotkeys"]["hk1"]["combo"] == "ctrl+a"
-
-
-def test_a_stale_base_revision_is_refused_and_nothing_is_written(db):
-    store = ConfigStore(db)
-    store.commit("alice", _bucket(combo="first"), base_revision=0, operation_id="a")
-    second = _bucket(combo="second")
-    with pytest.raises(RevisionConflictError) as raised:
-        store.commit("alice", second, base_revision=0, operation_id="b")
-    assert raised.value.current_revision == 1
-    assert store.get("alice").sections["hotkeys"]["hk1"]["combo"] == "first"
+def test_operation_retry_is_idempotent(tmp_path):
+    from je_auto_control.utils.config_sync.store import ConfigStore
+    store=ConfigStore(tmp_path/'config.sqlite3')
+    original=store.commit('alice',bucket(),base_revision=0,operation_id='original')
+    store.commit('alice',bucket(value='second'),base_revision=original,operation_id='later')
+    repeated=store.commit('alice',bucket(),base_revision=0,operation_id='original')
+    assert repeated==original
+    assert store.get('alice').revision==original+1
+    assert store.get('alice').sections==bucket(value='second').sections
 
 
-def test_operation_retry_is_idempotent(db):
-    store = ConfigStore(db)
-    original = store.commit("alice", _bucket(), base_revision=0, operation_id="op-1")
-    # The retry still names base 0, which is stale by now -- it is the
-    # operation id that tells the store this is the same write.
-    store_after_restart = ConfigStore(db)
-    repeated = store_after_restart.commit(
-        "alice", _bucket(), base_revision=0, operation_id="op-1")
-    assert repeated == original
-    assert store_after_restart.revision("alice") == original
-
-
-def test_operation_ids_are_per_user(db):
-    store = ConfigStore(db)
-    store.commit("alice", _bucket("alice"), base_revision=0, operation_id="op-1")
-    assert store.commit("bob", _bucket("bob"), base_revision=0, operation_id="op-1") == 1
-    assert store.get("bob").user_id == "bob"
-
-
-def test_concurrent_commits_from_one_base_admit_exactly_one(db):
-    store = ConfigStore(db)
-    store.commit("alice", _bucket(), base_revision=0, operation_id="seed")
-    outcomes = []
-    start = threading.Barrier(8)
-
-    def push(index):
-        start.wait(timeout=10)
+def test_two_connections_cannot_commit_the_same_base(tmp_path):
+    from je_auto_control.utils.config_sync.store import ConfigRevisionConflict,ConfigStore
+    path=tmp_path/'config.sqlite3'
+    def commit(index):
         try:
-            outcomes.append(ConfigStore(db).commit(
-                "alice", _bucket(combo=f"writer-{index}"),
-                base_revision=1, operation_id=f"writer-{index}"))
-        except RevisionConflictError:
-            outcomes.append(None)
-
-    threads = [threading.Thread(target=push, args=(index,)) for index in range(8)]
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join(timeout=30)
-    assert sorted(outcome for outcome in outcomes if outcome is not None) == [2]
-    assert outcomes.count(None) == 7
+            return ConfigStore(path).commit('alice',bucket(value=str(index)),base_revision=0,operation_id=f'op-{index}')
+        except ConfigRevisionConflict:
+            return 'conflict'
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        replies=list(pool.map(commit,range(2)))
+    assert sorted(map(str,replies))==['1','conflict']
 
 
-def test_a_bucket_cannot_be_committed_under_another_user(db):
-    store = ConfigStore(db)
-    bobs = _bucket("bob")
-    with pytest.raises(ConfigStoreError):
-        store.commit("alice", bobs, base_revision=0, operation_id="x")
+def test_retry_id_is_bound_to_account_and_content(tmp_path):
+    from je_auto_control.utils.config_sync.store import ConfigRevisionConflict,ConfigStore
+    store=ConfigStore(tmp_path/'config.sqlite3')
+    assert store.commit('alice',bucket(),base_revision=0,operation_id='same')==1
+    with pytest.raises(ConfigRevisionConflict):
+        store.commit('alice',bucket(value='changed'),base_revision=0,operation_id='same')
+    assert store.commit('bob',bucket('bob'),base_revision=0,operation_id='same')==1
+    assert store.get('nobody') is None
 
 
-def test_the_user_limit_is_enforced_inside_the_commit(db):
-    store = ConfigStore(db, max_users=1)
-    store.commit("alice", _bucket("alice"), base_revision=0, operation_id="a")
-    bobs = _bucket("bob")
-    with pytest.raises(StoreCapacityError):
-        store.commit("bob", bobs, base_revision=0, operation_id="b")
-    assert store.commit("alice", _bucket("alice"), base_revision=1, operation_id="c") == 2
+def test_default_store_path_is_resolved_only_on_use(tmp_path,monkeypatch):
+    from je_auto_control.utils.config_sync.store import ConfigStore
+    first=tmp_path/'first.sqlite3'
+    second=tmp_path/'second.sqlite3'
+    monkeypatch.setenv('AUTOCONTROL_CONFIG_STORE',str(first))
+    store=ConfigStore()
+    assert not first.exists()
+    monkeypatch.setenv('AUTOCONTROL_CONFIG_STORE',str(second))
+    store.commit('alice',bucket(),base_revision=0,operation_id='first')
+    assert second.is_file() and not first.exists()
 
 
-@pytest.mark.parametrize("base, operation", [(-1, "op"), (True, "op"), ("0", "op"), (0, ""),
-                                             (0, "x" * 200), (0, None)])
-def test_malformed_commit_arguments_are_refused(db, base, operation):
-    store = ConfigStore(db)
-    bucket = _bucket()
-    with pytest.raises(ConfigStoreError):
-        store.commit("alice", bucket, base_revision=base, operation_id=operation)
+def test_server_reopen_and_retry_do_not_overwrite_a_later_commit(tmp_path):
+    pytest.importorskip('fastapi')
+    from fastapi.testclient import TestClient
+    from je_auto_control.utils.remote_desktop.signaling_server import create_app
+    path=tmp_path/'config.sqlite3'
+    request={'version':2,'base_revision':0,'operation_id':'first','bucket':bucket().to_dict()}
+    first=TestClient(create_app(config_store_path=path,serve_web_viewer=False))
+    assert first.put('/config/alice',json=request).json()['revision']==1
+    second=TestClient(create_app(config_store_path=path,serve_web_viewer=False))
+    assert second.get('/config/alice').json()['revision']==1
+    assert second.put('/config/alice',json={**request,'operation_id':'second','base_revision':1,
+                                          'bucket':bucket(value='second').to_dict()}).json()['revision']==2
+    assert second.put('/config/alice',json=request).json()['revision']==1
+    assert second.get('/config/alice').json()['sections']==bucket(value='second').sections
 
 
-def test_building_a_store_touches_nothing_until_first_use(db):
-    store = ConfigStore(db)
-    assert not db.parent.exists()
-    assert store.get("alice") is None
-    assert db.exists()
+def test_private_routes_are_lazy_and_legacy_requires_explicit_opt_in(tmp_path):
+    pytest.importorskip('fastapi')
+    from fastapi.testclient import TestClient
+    from je_auto_control.utils.remote_desktop.signaling_server import create_app
+    path=tmp_path/'config.sqlite3'
+    app=create_app(config_store_path=path,shared_secret='synthetic-test',serve_web_viewer=False)
+    assert not path.exists()
+    client=TestClient(app)
+    assert client.get('/config/alice').status_code==401
+    assert not path.exists()
+    headers={'X-Signaling-Secret':'synthetic-test'}
+    assert client.put('/config/alice',json=bucket().to_dict(),headers=headers).status_code==428
+    assert not path.exists()
+    compatible=TestClient(create_app(config_store_path=path,allow_legacy_config_writes=True,
+                                    shared_secret='synthetic-test',serve_web_viewer=False))
+    assert compatible.put('/config/alice',json=bucket().to_dict(),headers=headers).json()['revision']==1
+    reply=compatible.get('/config/alice',headers=headers)
+    assert reply.headers['X-Autocontrol-Config-CAS']=='legacy-enabled'
+    assert reply.json()['revision']==1
 
 
-def test_the_default_path_is_resolved_at_call_time(tmp_path, monkeypatch):
-    from pathlib import Path
-    store = ConfigStore()
-    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
-    assert store.path == tmp_path / ".je_auto_control" / "config_sync.sqlite3"
-
-
-def test_a_database_failure_is_a_framework_error(tmp_path):
-    not_a_database = tmp_path / "junk.sqlite3"
-    not_a_database.write_bytes(b"this is not sqlite" * 64)
-    store = ConfigStore(not_a_database)
-    with pytest.raises(ConfigSyncError):
-        store.get("alice")
-
-
-# --- the server ------------------------------------------------------------
-
-def test_stale_revision_conflicts(db):
-    client = _client(db)
-    first = client.put("/config/alice", json=_envelope(_bucket(combo="first"), 0, "a"),
-                       headers=_SECRET)
-    assert first.status_code == 200
-    assert first.json()["revision"] == 1
-    stale_response = client.put("/config/alice", json=_envelope(_bucket(combo="second"), 0, "b"),
-                                headers=_SECRET)
-    assert stale_response.status_code == 409
-    assert stale_response.json()["revision"] == 1
-    stored = client.get("/config/alice", headers=_SECRET).json()
-    assert stored["sections"]["hotkeys"]["hk1"]["combo"] == "first"
-
-
-def test_get_returns_the_committed_revision_not_the_one_the_client_sent(db):
-    client = _client(db)
-    bucket = _bucket()
-    bucket.revision = 41
-    client.put("/config/alice", json=_envelope(bucket, 0), headers=_SECRET)
-    body = client.get("/config/alice", headers=_SECRET).json()
-    assert body["revision"] == 1
-    assert body["version"] == 2
-
-
-def test_a_server_restart_keeps_the_bucket(db):
-    _client(db).put("/config/alice", json=_envelope(_bucket(), 0), headers=_SECRET)
-    body = _client(db).get("/config/alice", headers=_SECRET).json()
-    assert body["revision"] == 1
-    assert body["sections"]["hotkeys"]["hk1"]["combo"] == "ctrl+a"
-
-
-def test_a_retried_put_gets_the_original_revision(db):
-    client = _client(db)
-    envelope = _envelope(_bucket(), 0, "retry-me")
-    original = client.put("/config/alice", json=envelope, headers=_SECRET).json()
-    repeated = client.put("/config/alice", json=envelope, headers=_SECRET)
-    assert repeated.status_code == 200
-    assert repeated.json()["revision"] == original["revision"] == 1
-
-
-def test_a_blind_write_is_refused_unless_the_compatibility_setting_is_on(db):
-    refused = _client(db).put("/config/alice", json=_bucket().to_dict(), headers=_SECRET)
-    assert refused.status_code == 428
-    assert _client(db).get("/config/alice", headers=_SECRET).status_code == 404
-
-    compat = _client(db, allow_blind_config_writes=True)
-    assert compat.put("/config/alice", json=_bucket(combo="one").to_dict(),
-                      headers=_SECRET).status_code == 200
-    reply = compat.put("/config/alice", json=_bucket(combo="two").to_dict(), headers=_SECRET)
-    assert reply.status_code == 200
-    assert reply.json()["revision"] == 2
-    assert compat.get("/config/alice", headers=_SECRET).json()["revision"] == 2
-
-
-def test_accounts_stay_isolated(db):
-    client = _client(db)
-    client.put("/config/alice", json=_envelope(_bucket("alice"), 0), headers=_SECRET)
-    assert client.get("/config/bob", headers=_SECRET).status_code == 404
-    crossed = client.put("/config/bob", json=_envelope(_bucket("alice"), 0), headers=_SECRET)
-    assert crossed.status_code == 400
-
-
-@pytest.mark.parametrize("envelope", [
-    {"version": 2, "base_revision": "0", "operation_id": "a", "bucket": {"user_id": "alice"}},
-    {"version": 2, "base_revision": 0, "operation_id": "", "bucket": {"user_id": "alice"}},
-    {"version": 2, "base_revision": 0, "operation_id": "a", "bucket": []},
-    {"version": 2, "base_revision": 0, "operation_id": "a",
-     "bucket": {"user_id": "alice", "sections": {"hotkeys": []}}},
-    {"version": 3, "base_revision": 0, "operation_id": "a", "bucket": {"user_id": "alice"}},
+@pytest.mark.parametrize('invalid',[
+    {'version':2.0},{'base_revision':True},{'base_revision':-1},{'operation_id':''},
+    {'bucket':{'user_id':'bob'}},{'bucket':{'user_id':'alice','sections':[]}},
+    {'bucket':{'user_id':'alice','revision':True}},
 ])
-def test_a_malformed_envelope_is_a_400(db, envelope):
-    assert _client(db).put("/config/alice", json=envelope, headers=_SECRET).status_code == 400
+def test_version_two_rejects_invalid_input_before_database_io(tmp_path,invalid):
+    pytest.importorskip('fastapi')
+    from fastapi.testclient import TestClient
+    from je_auto_control.utils.remote_desktop.signaling_server import create_app
+    path=tmp_path/'config.sqlite3'
+    client=TestClient(create_app(config_store_path=path,serve_web_viewer=False))
+    body={'version':2,'base_revision':0,'operation_id':'first','bucket':bucket().to_dict()}
+    assert client.put('/config/alice',json={**body,**invalid}).status_code==400
+    assert not path.exists()
 
 
-def test_the_secret_and_the_body_cap_still_apply(db):
-    client = _client(db)
-    assert client.put("/config/alice", json=_envelope(_bucket(), 0)).status_code == 401
-    body = b'{"x":"' + b"A" * (2 * 1024 * 1024) + b'"}'
-    oversized = client.put("/config/alice", content=body,
-                           headers={**_SECRET, "Content-Type": "application/json"})
-    assert oversized.status_code == 413
-    assert not db.exists()
+def test_capacity_and_independent_reads_survive_reopen(tmp_path):
+    from je_auto_control.utils.config_sync.store import ConfigStore,ConfigStoreFull
+    path=tmp_path/'config.sqlite3'
+    store=ConfigStore(path,max_users=1)
+    original=bucket()
+    store.commit('alice',original,base_revision=0,operation_id='first')
+    original.sections.clear()
+    read=store.get('alice')
+    assert read.sections
+    read.sections.clear()
+    assert store.get('alice').sections
+    with pytest.raises(ConfigStoreFull):
+        ConfigStore(path,max_users=1).commit('bob',bucket('bob'),base_revision=0,operation_id='first')
+    assert store.get('bob') is None
 
 
-def test_creating_the_app_does_not_create_the_database(db):
-    client = _client(db)
-    assert client.get("/health").status_code == 200
-    assert not db.parent.exists()
+@pytest.mark.parametrize('reply',[None,[],{'version':2.0,'revision':1},{'version':2,'revision':True}])
+def test_client_rejects_unconfirmed_conditional_commits(reply):
+    from unittest.mock import patch
+    from je_auto_control.utils.config_sync import ConfigSyncClient,ConfigSyncError
+    client=ConfigSyncClient('https://synthetic.invalid',user_id='alice')
+    with patch.object(client,'_request',return_value=reply):
+        with pytest.raises(ConfigSyncError):
+            client.push(bucket(),operation_id='first')
+
+
+def test_conditional_client_never_writes_an_unsupported_legacy_server(monkeypatch):
+    from urllib.parse import urlsplit
+    pytest.importorskip('fastapi')
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from je_auto_control.utils.config_sync import ConfigSyncClient,ConfigSyncError
+    writes=[]
+    old=FastAPI()
+    @old.put('/config/{user_id}')
+    def blind_put(user_id:str,body:dict):
+        writes.append((user_id,body))
+        return {'ok':True}
+    transport=TestClient(old)
+    def perform(call):
+        response=transport.request(call['method'],urlsplit(call['url']).path,
+                                   content=call['body'],headers=call['headers'])
+        return {'status':response.status_code,'text':response.text,'headers':dict(response.headers)}
+    monkeypatch.setattr('je_auto_control.utils.http_client.http_client.perform_call',perform)
+    with pytest.raises(ConfigSyncError):
+        ConfigSyncClient('https://synthetic.invalid',user_id='alice').push(bucket(),operation_id='first')
+    assert writes==[]

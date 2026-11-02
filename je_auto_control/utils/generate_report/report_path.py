@@ -41,13 +41,7 @@ def report_path(name: str) -> str:
 
 
 def write_report(name: str, text: str) -> str:
-    """Write the report called ``name`` atomically; return where it went.
-
-    The file is also noted on the action journal's running step, when a
-    journal is started, so the step that produced a report names it.
-    """
+    """Write the report called ``name`` atomically; return where it went."""
     path = report_path(name)
     atomic_write_text(path, text)
-    from je_auto_control.utils.action_journal.recorder import note_artifact
-    note_artifact("report", path=os.path.abspath(path))
     return path

@@ -23,18 +23,23 @@ from je_auto_control.utils.rbac import (
     AuthorizationContext, Capability, Role, authorization_scope, capability_for_tool,
 )
 
-_MODES = ["full", "progressive", "static"]
+# Progressive and static session views are covered by the disclosure tests.
+
+def _read_only(server):
+    """Switch a built server to read-only, as ``--read-only`` / ``JE_AUTOCONTROL_MCP_READONLY`` do."""
+    server.configure_tool_disclosure("full", read_only=True)
+    return server
+
+_MODES = ["full"]
 _PEEK = "plugin_ac_peek"
 _POKE = "plugin_ac_poke"
 
 
 @pytest.fixture(autouse=True)
 def _no_ambient_configuration(monkeypatch):
-    for name in ("JE_AUTOCONTROL_MCP_READONLY", "JE_AUTOCONTROL_MCP_TOOL_MODE",
-                 "JE_AUTOCONTROL_MCP_AUDIT"):
+    for name in ("JE_AUTOCONTROL_MCP_READONLY", "JE_AUTOCONTROL_MCP_AUDIT"):
         monkeypatch.delenv(name, raising=False)
-    # The static mode offers a fixed profile; name the two plugin tools in it.
-    monkeypatch.setenv("JE_AUTOCONTROL_MCP_TOOL_PROFILE", f"{_PEEK},{_POKE}")
+    monkeypatch.delenv("JE_AUTOCONTROL_MCP_TOOL_PROFILE", raising=False)
 
 
 @pytest.fixture
@@ -161,7 +166,7 @@ def test_a_bound_method_carries_its_functions_declaration():
 @pytest.mark.parametrize("mode", _MODES)
 def test_a_declared_tool_runs_on_a_read_only_server(mode):
     plugin = _Plugin()
-    server = MCPServer(tools=[], read_only=True, tool_mode=mode)
+    server = _read_only(MCPServer(tools=[]))
     assert register_plugin_tools(server, plugin.commands) == [_PEEK, _POKE]
     _enable(server, mode, _PEEK)
     listed = _listed(server)
@@ -175,7 +180,7 @@ def test_a_declared_tool_runs_on_a_read_only_server(mode):
 @pytest.mark.parametrize("mode", _MODES)
 def test_an_undeclared_plugin_tool_still_does_not_run_read_only(mode):
     plugin = _Plugin(declaration=False)
-    server = MCPServer(tools=[], read_only=True, tool_mode=mode)
+    server = _read_only(MCPServer(tools=[]))
     register_plugin_tools(server, plugin.commands)
     assert not {_PEEK, _POKE} & _listed(server)
     assert "error" in _call(server, _PEEK)
@@ -186,7 +191,7 @@ def test_an_undeclared_plugin_tool_still_does_not_run_read_only(mode):
 @pytest.mark.parametrize("mode", _MODES)
 def test_a_malformed_declaration_does_not_run_read_only(mode):
     plugin = _Plugin(declaration="true")
-    server = MCPServer(tools=[], read_only=True, tool_mode=mode)
+    server = _read_only(MCPServer(tools=[]))
     register_plugin_tools(server, plugin.commands)
     assert _PEEK not in _listed(server)
     assert _call(server, _PEEK)["error"]["code"] == -32602
@@ -204,7 +209,7 @@ def test_a_server_that_is_not_read_only_offers_both():
 @pytest.mark.parametrize("mode", _MODES)
 def test_a_viewer_may_call_the_declared_tool_and_only_that_one(mode):
     plugin = _Plugin()
-    server = MCPServer(tools=[], tool_mode=mode)
+    server = MCPServer(tools=[])
     register_plugin_tools(server, plugin.commands)
     with authorization_scope(AuthorizationContext("viewer-user", Role.VIEWER)):
         _enable(server, mode, _PEEK)
@@ -255,7 +260,7 @@ def test_the_watcher_honours_and_logs_the_declaration(tmp_path, log_records):
         "def AC_poke():\n"
         "    raise AssertionError('a mutating plugin tool ran on a read-only server')\n",
         encoding="utf-8")
-    server = MCPServer(tools=[], read_only=True)
+    server = _read_only(MCPServer(tools=[]))
     PluginWatcher(server, str(plugins)).poll_once()
     assert _listed(server) == {_PEEK}
     assert _call(server, _PEEK)["result"]["isError"] is False

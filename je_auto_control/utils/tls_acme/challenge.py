@@ -8,6 +8,8 @@ import threading
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from je_auto_control.utils.http_headers import LocalThreadingHTTPServer
+
 
 class _ChallengeHandler(http.server.BaseHTTPRequestHandler):
     """Serve ``/.well-known/acme-challenge/<token>`` responses from memory."""
@@ -80,7 +82,7 @@ class HttpChallengeServer:
         """Bind + spawn the handler thread. Returns the bound port."""
         if self.is_running:
             return self._port
-        server = http.server.ThreadingHTTPServer(
+        server = LocalThreadingHTTPServer(
             (self._host, self._port), _ChallengeHandler,
         )
         # Stash tokens on the server so each request handler can read them.

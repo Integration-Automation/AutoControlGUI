@@ -6,7 +6,7 @@
 群組)宣告式地註冊新的 ``AC_*`` 執行器指令——把單體變成生態系(pytest /
 Playwright 的成長方式)。AutoControl 於執行期探索它們;探索到的指令立即可
 用於 JSON action 檔、socket server、排程器與 MCP。純標準庫
-(``importlib.metadata``);走完整五層。
+( ``importlib.metadata`` );走完整五層。
 
 .. contents::
    :local:

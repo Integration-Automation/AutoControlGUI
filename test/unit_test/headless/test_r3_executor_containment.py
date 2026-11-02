@@ -60,10 +60,13 @@ def test_empty_loop_body_is_noop():
 
 def test_shell_to_var_timeout_is_contained(monkeypatch):
     """A shell timeout is converted to a contained framework error."""
-    def _timeout(*_args, **kwargs):
-        raise subprocess.TimeoutExpired(cmd="x", timeout=kwargs.get("timeout", 1))  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: raising the TimeoutExpired exception class, not spawning a subprocess
+    from je_auto_control.utils.shell_process import shell_exec
 
-    monkeypatch.setattr(subprocess, "run", _timeout)
+    def _timeout(*_args, **kwargs):
+        raise subprocess.TimeoutExpired(  # nosemgrep  # reason: raises an exception; no process is spawned
+            cmd="x", timeout=kwargs.get("timeout", 1))
+
+    monkeypatch.setattr(shell_exec, "run_captured", _timeout)
     engine = Executor()
     record = engine.execute_action(
         [["AC_shell_to_var", {"command": "sleep 9", "timeout": 1}]],

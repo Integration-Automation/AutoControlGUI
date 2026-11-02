@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui.remote_desktop._webrtc_types import SessionRecorderT, WebRTCDesktopViewerT
+from je_auto_control.gui.remote_desktop.folder_sync_io import bind_folder_receipts
 from je_auto_control.gui.remote_desktop._helpers import (
     _t,
 )
@@ -23,11 +24,12 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
 )
 from je_auto_control.gui._slow_op import stop_each
 from je_auto_control.gui._weak_call import WeakCall, weak_slot
-from je_auto_control.gui.task_controller import CancellationToken, task_controller
+from je_auto_control.gui.tab_task_controller import CancellationToken, task_controller
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.utils.remote_desktop import (
-    WebRTCDesktopViewer,
-)
+if TYPE_CHECKING:  # the facade types optional members as possibly None
+    from je_auto_control.utils.remote_desktop.webrtc_viewer import WebRTCDesktopViewer
+else:
+    from je_auto_control.utils.remote_desktop import WebRTCDesktopViewer
 from je_auto_control.gui.remote_desktop.webrtc_panel_common import (
     _PanelPart,
     _read_webrtc_config,
@@ -205,7 +207,8 @@ class _ViewerConnectionMixin(_PanelPart):
             on_state_change=self._signals.state.emit,
             on_auth_result=self._signals.auth.emit,
         )
-        viewer.set_file_received_callback(self._on_received_file)
+        bind_folder_receipts(viewer, lambda: self._viewer, lambda: self._sync_engine,
+                             self._on_received_file)
         viewer.set_inbox_listing_callback(self._signals.inbox_listing.emit)
         viewer.set_inbox_op_result_callback(self._signals.inbox_op.emit)
         return viewer

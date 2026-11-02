@@ -1,5 +1,586 @@
 # Changelog
 
+## [1.1.0] - 2026-11-02
+
+1.1.0 merges the development line into the release line. The development line re-implemented several
+beta subsystems, and 1.1.0 ships those implementations. As the beta rule in
+[docs/API_LIFECYCLE.md](docs/API_LIFECYCLE.md) allows, the replaced names change in this minor release
+with this note and no deprecation window. The stable surface, `je_auto_control.api`, keeps every 1.0
+name; `import je_auto_control` gains 143 names and loses the 65 listed below.
+
+### Removed from `import je_auto_control`
+
+- **Action journal** (15):
+  `ACTION_JOURNAL_SCHEMA_VERSION`, `CandidateDiff`, `JournalFormatError`, `JournalImportError`,
+  `action_journal_status`, `carry_step`, `diff_candidate`, `diff_candidate_against_file`,
+  `list_journal_runs`, `note_artifact`, `note_secret_value`, `only_run_id`, `start_action_journal`,
+  `stop_action_journal`, `write_candidate`
+- **Config sync** (14):
+  `BlobStore`, `CONFIG_SYNC_WIRE_VERSION`, `ConfigSyncConflict`, `HttpAssetTransport`,
+  `OperationMismatchError`, `RevisionConflictError`, `collect_unreferenced_blobs`,
+  `config_sync_collect_blobs`, `config_sync_full_resync`, `config_sync_resolve`, `config_sync_run`,
+  `config_sync_status`, `referenced_blob_digests`, `run_sync`
+- **Healing evaluation and template revisions** (23):
+  `COMPARISON_COLUMNS`, `HEALING_DATASET_SCHEMA_VERSION`, `HEAL_EVENT_SCHEMA_VERSION`,
+  `HealVerificationError`, `LocateRequest`, `ModelUsage`, `TemplateRevision`, `TemplateRevisionStore`,
+  `UsageMeter`, `VERIFY_TYPES`, `accept_template_revision`, `build_verifier`, `check_thresholds`,
+  `comparison_rows`, `evaluate_healing_dataset`, `format_comparison`, `heal_context`,
+  `list_template_revisions`, `preview_template_revision`, `propose_template_revision`,
+  `revert_template_revision`, `template_match_strategy`, `vlm_strategy`
+- **Capability states and Wayland authorisation** (8):
+  `AuthorisationLedger`, `AuthorisationState`, `Capability`, `MacFacts`, `WaylandAuthorisationError`,
+  `WindowsFacts`, `close_input_session`, `reset_input_authorisation`
+- **MCP tool modes** (2):
+  `ToolDisclosureError`, `ToolMode`
+- **Roles** (3):
+  `DeferredOwner`, `capture_owner`, `owner_scope`
+
+### Removed commands and MCP tools
+
+- `AC_*` (16): `AC_config_sync_collect_blobs`, `AC_config_sync_full_resync`, `AC_config_sync_resolve`, `AC_config_sync_run`, `AC_config_sync_status`, `AC_generate_code_from_journal`, `AC_journal_runs`, `AC_journal_start`, `AC_journal_status`, `AC_journal_stop`, `AC_reset_input_authorisation`, `AC_self_heal_revision_accept`, `AC_self_heal_revision_list`, `AC_self_heal_revision_preview`, `AC_self_heal_revision_propose`, `AC_self_heal_revision_revert`.
+- MCP (15): the `ac_` forms of the same commands, with `ac_generate_code_from_log` in place of
+  the journal code generator, and no tool for the Wayland reset.
+
+The development line's own commands replace them: `AC_journal_capture` / `AC_journal_read`, the
+`AC_config_causal_*` / `AC_sync_*` family, and the `AC_self_heal_*` candidate commands.
+
+### Removed environment variables
+
+- `JE_AUTOCONTROL_MCP_TOOL_MODE`: choose the mode with `je_auto_control_mcp --tool-mode` or
+  `MCPServer.configure_tool_disclosure(...)`. `JE_AUTOCONTROL_MCP_TOOL_PROFILE` is still read.
+- `JE_AUTOCONTROL_WAYLAND_EI_WORKER`: the out-of-process libei helper is gone.
+- `JE_AUTOCONTROL_GUI_SETTINGS`: the main window no longer keeps a settings file.
+- `AC_SIGNALING_CONFIG_DB`: the signaling server's config-sync store is the causal sync store.
+
+### Behaviour that follows the development line
+
+- **The RBAC caller is a context variable again.** 1.0.x bound it to the thread that entered the
+  scope. The development line's agent runtime hands the caller to its workers with
+  `contextvars.copy_context()`, which needs a context variable. On a free-threaded build, or under
+  `-X thread_inherit_context=1`, a thread started inside a request now inherits that caller.
+- **Stricter capabilities for some reads.** The file, clipboard and database readers
+  (`ac_read_action_file`, `ac_get_clipboard`, `ac_sql_query`, ...) and the VLM locators need
+  `drive_input`, not `read_data` or `read_screen`. A viewer still cannot call any of them.
+  `ac_jwt_decode` only parses the token the caller gives it, so it is open to viewers again.
+- **MCP refusals.** A tool outside the session's view is refused with "tool is not available in this
+  session", without naming the reason and without an audit row.
+- **The Script Builder's state machine.** Actions in a state machine run on the executor of the list
+  that started the machine, so a machine inside an `AC_parallel` branch sees that branch's variables.
+
+### Kept from the 1.0.x line
+
+Everything else that 1.0.x added is still there: mobile device sessions, stoppable runs
+(`AC_run_stoppable`, `AC_stop_execution`, `AC_list_executions`), user administration (`AC_user_*`),
+the result hook, the split remote-desktop panel, the background script runs of the Script and Script
+Builder tabs, physical recording on Wayland (`PhysicalRecorder`, `InputStepLog`, `StopShortcutSession`)
+and the PySide6 6.12.0 pin.
+
+## Unreleased: Linux owner service sources
+
+The optional Linux owner service now lives in `native/owner_service/`. It contains the C sources for
+the root guardian, the service and the owner core, a manifest template, `build.sh`, and the
+unprivileged and root acceptance runners. It is not part of the Python wheel, and nothing in the
+package builds, installs or starts it. Its builds refuse protected launches until a reviewed release
+opens the gate. Each client account may use at most the manifest's `client_lease_quota` of an epoch's
+lease positions.
+
+The manifest format changed after review: `service_policy` adds `lease_max_age_ns` and `socket_gid`, the
+guardian's `listener_gid` must be a dedicated socket group, payload accounts need their own primary
+group, and a service accepts exactly one client account. Manifests written against the first template
+no longer build a valid service.
+
+Each helper is now bounded by the manifest's `record_pids_max` and `record_memory_max`, written to its
+container cgroup; the `pids` and `memory` controllers must be enabled down to the subtree's parent, or
+the guardian refuses to start.
+A service also closes a new connection once its account already holds the manifest's
+`connections_per_account` (1 to 8 of the 16), so neither the client nor a payload can lock the other out.
+The binding file is now refused when it is a symlink or sits under a directory another account can
+write, and a client refuses an owner-service endpoint whose listener is not root (`SO_PEERCRED`).
+A manifest whose policy lists a child policy that is missing, not nested, or runs as another payload
+account is now invalid.
+The guardian now installs a seccomp filter on the service, inherited by every payload: `setresuid` and
+`setresgid` accept only the service's and the manifest's payload IDs, `setgroups` only an empty list, and no
+user namespace can be created (`clone3` answers ENOSYS). Payloads therefore hold no supplementary group; the
+listener carries an ACL naming every client account in the guardian's manifest, so `/run` must support POSIX
+ACLs. The filter is built for x86-64 and arm64 only.
+
+A spent epoch no longer waits for every open connection: one without an open lease holds it for at most
+5 seconds. `SeqpacketTransport` now connects on its first frame instead of at construction, and a
+connection refused, dropped or unreachable before a lease exists raises `AgentControlBusy` (through the new
+`ServiceConnectionLost`). The guardian reaps its service, logs how it ended and waits a second before the
+next epoch when a service ends within a second.
+
+Manifest format changes for the remaining review findings: `payload_uid`/`payload_gid` are now the base of
+a range of 32 IDs (each helper runs as base plus its lease position, with no account needed), a policy's
+range must avoid every other account's IDs and equal or miss every other range, `service_policy` adds
+`nested_lease_quota`, and `guardian_client` adds `id_count` so a nested-capable payload range can be listed.
+The guardian also refuses a cgroup subtree with a delegated or writable cgroup on the way, and limits each
+account to 32 handed-over connections per second.
+`guardian_manifest` adds `service` (the service policy from the same file): the guardian caps the epoch's
+`records` cgroup at the per-helper limits times the record capacity, and payloads start with umask 077.
+When it reclaims an epoch, the guardian removes every file under `/tmp`, `/var/tmp`, `/dev/shm` and
+`/dev/mqueue` and every SysV IPC object owned by a payload ID, before those IDs are handed out again.
+A spent epoch that still holds open leases now retires beside the next one instead of refusing new
+helpers until they close: the service sends `GRANT_RETIRING`, the guardian starts the next epoch and
+reclaims the retiring one when its service ends. Payload ranges grow to 64 IDs, half per epoch by counter
+parity, so the two never share an ID; at most one epoch retires at a time. The guardian keeps one listener
+across epochs, and after a crash reclaims every epoch branch under the subtree, journaled or not.
+`owned_channel` gains `display=`: a helper that drives the user's display (`native_target`) always runs as
+a local process, even on a host with a binding, and `helper_containment` reports `display_helpers`.
+Browser dependency probes run locally as well. `guardian_grant` gains `payload_half`: the guardian, not the
+epoch counter, picks each epoch's half of the payload ranges. Payload ranges must start at 1000 or above, and
+the guardian refuses a manifest whose payload IDs the host's user or group databases know. An unreachable
+owner-service endpoint now raises `AgentTaskError`; only a connection closed after it was accepted raises
+`AgentControlBusy`.
+Payload ranges now hold four 32-ID slices (128 IDs): `guardian_grant.payload_half` becomes `payload_slice`,
+up to three spent epochs retire beside the current one, and each slice is purged in a child process
+before it is handed out again.
+`guardian_purge_payloads` takes the guardian manifest; `guardian_manifest` adds `purge_roots`,
+`subtree_pids_max` and `subtree_memory_max`. A leftover the purge cannot remove is closed off (root, mode 0)
+instead of tainting its slice, startup purges each slice once after the previous run's epochs are dead,
+and a stop abandons running purges instead of waiting for them. The example payload range moves to 50000.
+Leftovers the purge cannot remove in place are now moved into a root-only quarantine on the same filesystem and
+taken apart there, instead of being closed off where they stand; `epoch-N` gets its own depth, descendant, process
+and memory limits before delegation; a helper's own connection is routed to the epoch running its slice; and a
+failed epoch start is retried with backoff instead of stopping the guardian.
+The quarantine is now made under a random name and recognised by inode, a purge that stops short is run again
+before its slice is reused, and retries back off from the main loop, which keeps answering a stop request.
+A purge now stops short only on churn a live user causes, never on the size of what others keep; every
+quarantine pass reads from the start; quarantines are locked while their purge runs; and the service filter,
+which payloads inherit, refuses set-user- and set-group-ID bits on files.
+Directories are now known by inode number and file handle and a directory met again is skipped rather than
+stopping the purge; the filter also refuses io_uring.
+The purge's directory identity is now the exact inode number plus a per-purge keyed SipHash of the file handle,
+walks never enter or judge another mount, and io_uring_enter and io_uring_register are refused as well.
+The key now also holds the device, so directories on another device of the same mount (btrfs subvolumes) are
+walked, and an unknown mount ID makes the purge run again instead of skipping the entry. Every purge, the
+startup ones included, runs in a child with a private mount namespace and detaches the mounts below each root
+first, so a payload directory covered by another user's mount is removed too.
+Mounts are now detached during the walk, by the descriptor of each mount's root, never by a mountinfo path; all
+roots and IPC tables are opened first; the namespace is a slave of the host's; another ID's subvolume is not
+entered; and the filter refuses btrfs subvolume and snapshot creation and subvolume flags.
+A mount's ID is now read without asking its filesystem, so another user's FUSE mount (sshfs, an AppImage) is
+detached instead of making every purge run again, and stacked mounts are detached until none is left.
+The mount ID now comes from the fdinfo of an O_PATH descriptor, with no inode operation, so a FUSE root inode
+marked bad no longer blocks purges either; a purge child that makes no progress for a minute is killed and
+run again.
+Each purge entry is now opened once without crossing any mount (RESOLVE_NO_XDEV), so no other filesystem is
+ever asked anything; the stall allowance doubles after each stall of a slice in a row; and a startup purge
+stuck where no signal reaches it no longer holds the guardian.
+A mount placed on an entry during the walk is detached before the entry is judged again, and POSIX message
+queues are purged through a detached mqueue mount, so they are reached on hosts without /dev/mqueue.
+Helpers now start with a core-dump limit of 0 (hard limit included), so a crashed helper's memory image no
+longer waits, readable by its UID, for the next helper with that ID; a kernel without message queues no longer
+keeps purges from completing, and the README lists the mount-API and journald host requirements.
+`/var/crash` is now a default purge root (apport writes crash reports, core image included, owned by the
+crashing UID), the guardian warns at startup about a pipe core_pattern to an unknown handler, and the README
+requires every directory payload IDs can write to be a purge root.
+The core_pattern warning now judges the handler by the base name of its path and also covers sockets and an
+unreadable pattern; a purge root that exists but is not trusted is logged, and one that exists but cannot be
+opened makes the purge run again. A manifest purge root must now sit under real directories only root can
+write, sticky or not, or the guardian refuses the manifest; what an existing manifest root resolves to is
+checked the same way at load, what every root resolves to at each purge, and a dangling-link root counts as
+absent.
+A manifest purge root that resolves into a link loop or to a directory the purge would not trust is now
+refused at load, and a purge child the guardian waits for in place (at startup, or while serving when no
+pidfd can be had) is watched by its pid when there is no pidfd (its slice is tainted when even a kill cannot
+end it) and on a longer, still doubling allowance when the shared heartbeat could not be mapped.
+A purge child the guardian could not wait for now taints its slice, the guardian resets SIGCHLD to its
+default at startup, and a pidfd that cannot be polled falls back to the pid watch.
+Each epoch's service and helpers now run in a mount and an IPC namespace of their own, with fresh tmpfs mounts
+over every purge root, so what a helper leaves goes with its epoch; the guardian accepts a payload ID's
+connection only from the mount namespace of the epoch that runs its slice. A new root script,
+`tests/installed_host_acceptance.py`, installs the service per its README on a disposable host, checks it and
+removes it; the README now requires every helper-writable directory to be a purge root and says how under WSL.
+Each epoch's private roots now keep the host directory's mode and owner and its mount's `noexec`, `nosymfollow`
+and read-only flags. A manifest is refused when its listener or service executable lies under a private root, or
+when anything a policy names (its executable, working directory, and the paths its fixed arguments and
+environment values name, relative ones from that directory) is at or below one, as written or resolved: every
+helper of an epoch can write a root, so only TMPDIR, TMP and TEMP may name a root itself. Each epoch start checks
+the listener and the service executable again.
+
+## Unreleased: helper containment in runtime status
+
+`agent_runtime_status()` (and `AC_agent_runtime_status`, `agent-task status`) adds a
+`helper_containment` object. It reports the helper ownership mode, the intended
+containment and a status of `not_probed`, `not_supported`, `not_configured`,
+`binding_refused`, `unreachable` or `reachable_unverified`, and always has
+`native_evidence: not_recorded`. Existing keys are unchanged. On Linux a root-owned
+`/etc/je_auto_control/owner_service.json` binding routes listed helpers through the owner
+service. Without a binding, helpers keep running as before.
+
+## Unreleased: public exports resolved on demand
+
+Resolve root and remote-desktop exports on first access while preserving public names, order,
+source objects and concrete type signatures. Optional remote features retain grouped
+ImportError-to-None outcomes. Plain import avoids loading unrelated feature dependencies.
+Use `__all__` or `dir()` for discovery; unresolved exports are absent from `vars()`.
+Wildcard imports request every export. Reloading a facade does not refresh cached exports
+or private optional-feature outcomes; import failures and side effects occur on first access.
+
+## Unreleased: lazy X11 resources
+
+Defer X11 displays, keycode resolution, RECORD listener startup and uinput device selection until
+use. Plain package import no longer activates those desktop resources. Explicit key-table access
+retains real mutable dictionary behavior, and legacy key constants remain available on demand.
+Internal X11 callers use get_display instead of importing a global display instance.
+Recording starts observation on request and rejects queue admission once listener cleanup begins.
+Linux agent physical-presence and helper-retirement integration remain tracked in Progress.md.
+
+## Unreleased — destination import receipt integrity
+
+Recheck the published generation file list and content digests after the final source response
+and under the same delivery claim before accepting an import receipt. Files changed, removed
+or added before acceptance leave `requires_review`, preserving user changes and the original
+publication. Existing cancellation, fixed expiry and explicit restart rules remain in force.
+
+## Unreleased — installed REST dashboard resources
+
+Include Dashboard and Swagger HTML, CSS and JavaScript in both wheel and source distributions.
+Installed REST routes now have the same static resources as a source checkout; task authorization
+and desktop control rules remain unchanged.
+
+## Unreleased — database-owned task evidence
+
+Bind generated evidence to the complete database path and a persistent private identity, preventing
+an expired SQLite backup from pruning another runtime's current journal/report. Restored and legacy
+references remain historical provenance; new publication creates an owned history/journal segment
+without reading, moving or rewriting old files. Same-path restart retains the segment.
+Task metadata adds `artifact_cache_state`; existing task commands and schema version stay unchanged.
+Retention removes only recognized current cache files and local expired metadata; historical physical
+files remain. Current, legacy and retained historical roots remain private to artifact exports.
+Native/device/browser acceptance and literal Windows file-symlink verification remain in Progress.md.
+
+Older runtimes do not recognize the new private cache roots: a rollback must use reviewed pre-upgrade
+state and keep retained newer private files outside every legacy task root after owned input retirement.
+Compare exact source/artifact hashes and preserve uncertain journals; the same version is insufficient.
+Windows USB enumeration now emits/decodes UTF-8 explicitly and hides its PowerShell process, preserving
+Unicode names/errors and preventing background reader exceptions in Python UTF-8 mode.
+
+## Unreleased — managed cross-host outcomes
+
+Add manage_agent_transfer / AC_agent_transfer, MCP/REST/CLI/Builder parity and the Transfers view.
+Destination imports publish independently verified immutable bytes under destination-local authorization;
+portable evidence is live source proof, separate from artifact receipts and input permission.
+Preserve original local handoff/skill ownership, accepted trials/versions, current-role and retired-input rules.
+Remote adoption stays provisional until post-write source confirmation; revocation pauses only actually
+admitted owned descendants and retains uncertain retirement. GUI closure detaches observers only.
+Registered endpoint/token replacements invalidate consent. Review/create/retry retain exact keys/notes,
+source/destination expiry, generation fencing and exclusively owned cleanup. Existing task APIs stay intact.
+The browser helper requires the reviewed je_web_runner managed contracts; an old installed SDK refuses
+explicitly, without selecting another browser engine. Isolated helper proof is not production deployment.
+Full tests and compatibility evidence: docs/updates/2026-10-d.md; unresolved legacy evidence-cache ownership,
+historical timing causes and all deferred native/device/browser acceptance remain in Progress.md.
+
+### Earlier implementation checkpoints
+
+Registered source management now routes review/create/get/list/revoke through a coordinator-owned
+opaque review. Consent binds the actual local caller, current host fingerprint, peer review, manifest
+digest and original key. Approved intent commits before forwarding; lost replies and coordinator
+restart retry the same source grant. Changed actor/host/token/note/key or a different reply manifest
+is refused. Pending reviews and retained route records each cap at128; expiry removes only local
+route metadata while preserving consent fences. Runtime closure discards unapproved cached reviews;
+durable approvals remain recoverable. The source uses its own account, and local principal/
+origin headers stay local. Destination import, portable completion evidence and public surfaces remain pending.
+
+Existing remote DAG host bindings and retained connections now recheck persisted endpoint/credential
+configuration and captured local authority around every request. External replacement/removal,
+damaged books and revoked owners fail closed without initializing or quarantining configuration.
+Keep local service delegation and legacy closed-route request conventions unchanged.
+
+Reject known private runtime/transfer stores, actor stores, service credential files and evidence
+roots as source artifacts before byte access. Recheck selected path permissions on peer reads/retries
+within the original deadline; preserve legitimate same-named outputs and historical artifact bytes.
+Resolve DAG artifacts through actual recovery ancestry, original requests and local admission;
+recheck admitting actors and protect their stores. Do not require a fabricated child submission row.
+Bind a private lineage digest across review/create/retry/peer reads, including validated actual
+private recovery reviewers and their stores. Honor source cancellation before bytes and around SQL;
+recover a committed intent after cancelled feedback without a second grant/account. Keep artifact
+expiry at its completed source updated+30days independently of older ancestor deadlines. Local renewed
+readers retain current private authority and revoked old input. Runtime-owned registered peer reads
+now validate persisted endpoint/credential before and after HTTP, current caller authority and closed
+manifest/chunk replies. Actual credential books stay private without loading/quarantining them.
+Transfer wire caps include proxy path prefixes; invalid empty query/fragment and header-control
+credentials are refused. Oversized numeric budgets produce typed failures before float conversion.
+Remote management consent routing, cross-host import/publication/evidence
+and cleanup scheduling remain pending.
+
+Add authenticated source transfer management and peer-read HTTP routes with separate authority.
+Reject peer delegation headers before foreign identity lookup while preserving receiving-gate limits.
+Bound transfer ingress and per-call HTTP replies to1MiB; retain ordinary HTTP limits and local owner
+delegation for management. Registered-host routing, destination publication and evidence remain pending.
+
+Add runtime-owned local file-export review, exact consent and immutable private blob snapshots.
+Current local issuer/recipient checks, streamed file/text/manifest verification, descriptor rechecks,
+fixed deadlines and guarded runtime retirement precede future authenticated cross-host transport.
+Network routes, complete lineage/lifecycle acceptance and public transfer surfaces remain pending.
+
+Add internal transfer reservations with exact consent/key binding, irreversible revocation,
+fixed expiry and atomic aggregate quotas; retain capacity until confirmed private-account cleanup.
+Cross-host source authorization, transport, lifecycle and public surfaces remain pending.
+
+Add internal immutable transfer selection and manifest validation with canonical digest binding.
+These data proposals grant no access; cross-host consent, transport and evidence adoption remain pending.
+
+Retain confirmed browser effects in their actual original WebRunner context for private read-only
+completion and skill validation. Freeze input/network before releasing the input journal and
+lease; keep bounded context lifetime, exact private reader scope and confirmed process cleanup.
+Unsupported SDKs still clean up normally, and lost contexts cannot start replacement browsers.
+Keep non-browser input cleanup independent of action-evidence reads. Idle queue polls avoid
+reserving an empty writer. Expiry/revocation stops recheck the actual input owner and generation
+under the stop writer, publishing accepted final state before settling workers observe it.
+Concurrent retirement remains pending for its actual task owner; stale watchers cannot rewrite
+retired recovery snapshots or cancel a newer lease. No public request schema or deadline changes.
+
+Add explicit source_task variants of the five completion handoff operations without synthetic DAG
+admission or broader task access. Recording, original-trial publication and exact execution-chain
+review adopt selected grants through host-only bounded evidence views. Retain current historical,
+issuing and consuming ceilings; private renewal never renews published input. Additive task grant
+storage stays compatible with schema1 and real DAG ancestry remains bound. Same-writer post-insert
+and retry checks now reject revoked grants in both families, and complete real ancestry preserves
+the earliest thirty-day terminal deadline. Thin Actions, four-language source choices and editable
+request examples keep consent explicit. Private recovery provenance is checked before verification
+scope comparison, preserving existing typed refusal reasons for forged recording/publication evidence.
+
+Compose explicit local DAG handoffs with privately renewed permanent read-only completion.
+Bind real full recovery lineage, exact approved reader roots, every historical policy review and actual
+original request/admission/roles. Preserve current issuing/consuming ceilings and earliest retention;
+keep legacy grants and ordinary task access unchanged. Same-writer accepted-request/submission reads
+and post-write validation roll back stale consent. Resolve inherited DAG tags through actual bounded
+recovery ancestry without creating admission rows; preserve earlier ordinary binding hashes. Existing
+five shared operations, Handoffs Actions and result editor expose the bounded explicit review summary.
+
+Add explicit review_completion_authorization/create_authorized_completion recovery operations
+for expired original origin constraints. Preserve exact source/effect snapshots, actual principals,
+original DAG admission, valid inherited restrictions and prior narrowed reader ceilings. Tasks stay
+permanently read-only; admission and completion publication revalidate under their own SQLite writer.
+Revoked evidence cannot satisfy DAG adoption. Skill drafts use approved scope and still need a fresh
+trial. Reject malformed/missing renewed markers before helper startup; share the strict private binding
+decoder without adding reverse service dependencies. Existing ordinary recovery remains compatible;
+add two Recovery Actions, four locales, two editable requests and aligned documentation.
+
+Add explicit review/create/get/list/revoke recovery handoffs for existing caller-owned local DAG
+completion evidence. Optional successor handoff_id binds the real original batch/node/source and at
+most sixteen actual recovery links, including permanent read-only verification. Transactional grant,
+approval/start and late dependency checks preserve live authority, issuing-session roots, original
+scope, effect snapshots and evidence retention. Revocation blocks adoption without ordinary read/input
+rights or ownership transfer. Add five request examples, a thin Handoffs editor and Actions in four
+locales; preserve existing recovery decisions and keep cross-host/non-DAG contracts outstanding.
+
+Add explicit review_execution and token-bound skill acceptance for complete original effects across
+at most sixteen real executable recovery links. Preserve the original candidate/trial identity and
+stopped source; validate exact semantic data/types, live actual principals and final independent
+completion/retirement without replay or restoring old captures. Optional read-only evidence verifies
+the final executable effect. Version/publication/historical execution audit commit atomically with
+post-write authority/proof checks. Retain ordinary publication/recording compatibility, add two passive
+GUI request examples and four locale labels, and expose the operation through existing shared surfaces.
+
+Allow explicit completion_task_id on managed skill record for stopped original workflows. Preserve
+their confirmed semantic actions and source identity in a new draft, with private read-only evidence
+and historical completion_review provenance. Verify current proof/authority before and after insertion
+under one write transaction; failures roll back. Keep ordinary recording/repair/reauthorization and
+recorded_spec compatible. A fresh exact validation trial is still required, including added criteria;
+do not replay or rewrite the source or publish from the action-free reader. Add an inert GUI Actions
+request example and four locale labels. Partial executable-recovery trial adoption remains outstanding.
+
+Allow explicit completion_task_id on managed skill acceptance after all original validation effects
+are confirmed. Preserve the exact original candidate/spec hash/pin and publication.task_id; validate
+private read-only proof, real ancestry, exact scope, independent success/retirement and live authority.
+Atomically publish the version with optional historical completion_review proof; failures roll back.
+Recheck candidate integrity inside the write transaction and return typed review refusal on authority
+loss. Add a non-executing GUI Actions request example and four labels; existing operation surfaces and
+ordinary publication remain compatible. Partial recovery trial adoption remains outstanding.
+
+Reserve independently bounded per-IP REST admission for existing runtime pause/cancel/stop_all/shutdown
+and closed DAG batch/node pauses. Ordinary polling keeps its existing limits and cannot consume the
+stop reserve. Shared clients use existing control transport slots and mark only closed DAG pauses;
+marked execution bodies refuse before dispatch. Live authentication, roles, ownership, audit and input
+retirement remain enforced; custom authentication gates preserve their existing contract.
+
+Add recovery preview_completion/create_completion for explicitly reviewed, separately owned read-only
+verification tasks after confirmed effects. Atomically bind source/effect snapshots, principals and actual
+successor lineage in a private additive table. Refuse action dispatch, ordinary executable recovery,
+unknown effects and unsupported helpers; refresh original criteria and retire input before success.
+Recheck authority after cleanup, retain original effect-owner checks through retries, and expose bounded
+completion_review metadata plus GUI Actions/locales. Browser/remote readers and expired-scope renewal remain open.
+Identical read-only helper configuration may repeat to rerun readiness for observe-then-finish; different
+specifications, owners or profiles still refuse before replacing any configured authority.
+
+Add a fresh read-only completion-reader host seam for standard desktop/file proxies, with a separate
+permanently restricted helper, live scope checks, host-side tool refusal and no input ACK/cleanup injection.
+Preserve unknown resource witnesses and reject ordinary/custom-helper fallback or fresh browser startup.
+Target diagnostics add readonly_completion contract status without probing readiness. Reviewed completion
+recovery/publication and browser/remote readers remain separate unfinished work; no task state is changed.
+
+Reduce Android focus-guard subprocess overhead with one labeled extraction and exact comparison across
+all field orders. Keep missing/duplicate/empty-value rejection, pre/post checks, byte limits and deadlines.
+Owned POSIX fixtures use byte-exact Bash builtin reads with a portable external fallback and bounded
+phase/timing diagnostics, withholding timeout commands/output. No device-control authority is added.
+
+Add explicit source_owner recovery ownership to preview/review_authorization and create/create_authorized.
+Bind ownership_review to the source snapshot and current owner/reviewer identities; atomically store the
+original-owner child, lineage and separate ownership/authorization audits. Refresh both principals and
+cross-owner management authority before input and during maintenance. Preserve default caller ownership,
+request isolation and no-backfill retries. The GUI owner selection requires a matching fresh preview.
+
+Extend existing task pruning and hourly maintenance with owner-scoped DAG retention. Expire unused
+registrations and independently settled successful batches after the selected retention period;
+preserve active/review/approved batches, referenced tasks/recovery descendants, uncertain actions,
+held input and unretired/fresh deliveries. Cascade only settled local batch metadata and terminal
+agent_dag deliveries. Results add deleted_batches and deleted_dag_deliveries; existing fields remain.
+
+Route claimed local DAG nodes through the source runtime's closed local_task protocol. Preserve
+original task ownership while atomically recording the actual admitting caller, node, attempt and
+submission witness. Revalidate both principals, cross-owner authority and live claims before input
+and during maintenance. Refuse altered specs/keys, unrelated IDs and backfilling old requests. Expose
+bounded local_dag_admission audit metadata and allow exact owned retirement after a scheduling fence.
+Caller and background execution share admission. Cross-owner recovery-child evidence remains separate.
+
+Pin caller-coordinated registered DAGs to one local service owner-file path, endpoint, credential
+fingerprint and generation. Reuse that client for local node transport and reject replacement before
+future calls. Bind server-side inspection/completion evidence to its owning runtime and original-owner
+request-key namespace, independently refreshing the actual caller. Ordinary clients retain adaptive
+discovery; bound runs require generation-bearing metadata. Never cache bearer credentials or rebind an
+active attempt automatically.
+
+Add service-owned run_background for initial and explicitly approved managed DAG attempts. Persist
+deliveries through WorkQueue, bind local destinations to the owning runtime and refresh both original
+owner and actual submitting actor. Closing a client/view leaves accepted work alive. Add thin GUI
+Actions and bounded background state to batch reads. Queue failure, shutdown, stop_all and restart
+fence scheduling attempts; old queued/claimed work never replays automatically. Accepted destination
+tasks retain their own retirement contract. Batch retention/cleanup remains separate.
+Make task stop requests atomic against concurrently committed completion and conditionally settle
+retirement, preserving terminal evidence when a worker finishes during service shutdown.
+
+Add explicit whole-DAG continuation review, actor-bound one-shot approval and fresh evidence checks.
+Adopt independently completed original tasks or real TaskRecovery successors; dispatch only never-claimed
+pending nodes within preserved/narrowed authority. Keep unknown claims blocked and fence stale attempts.
+Add optional recovery to run_dag/AC_run_dag/ac_run_dag and thin DAG Actions review controls. Historical
+submission witnesses establish request identity without renewing input authority or backfilling legacy
+tasks. Background batch coordination/retention and native acceptance remain separate.
+
+Add durable managed-only DAG batch registration and bound initial execution. Persist the exact graph,
+owner and pre-delivery claims, bind destination keys/spec tags to the batch, pin registered host
+configuration and independently verify completion before releasing dependants. Reject repeated begin
+after interruption or lost replies. Add shared batch API/commands and optional run_dag batch_id;
+legacy unbound graphs remain compatible. Batch retention remains separate.
+
+Add explicit trigger authorization review/replacement while retaining accepted event identities and
+pending limits across generations. Retire the source atomically, activate future notifications, retain
+file checkpoints and refuse schedule backlog replay or inherited queued-task dispatch. Ordinary enable
+revalidates original authority. Expose shared operations and GUI review with selection-bound requests.
+
+Add explicit origin reauthorization of the current published skill into a new immutable draft.
+Preserve plan, parameter schema and authority ceilings, require fresh validation and next-version
+publication, and audit/deduplicate approval atomically. Existing versions and running pins remain
+unchanged. Expose both operations through the shared skill protocol and GUI operation selector.
+
+Add explicit reviewed successor reauthorization for retired origin policies. Preserve the original
+root ceiling and every live restriction, intersect current authority, and allow only equal/narrower
+roots while retaining other scope/settings and completion conditions. Audit approval atomically with
+the unique successor; expose API/AC/MCP/REST/CLI/Builder and separate GUI Actions. Existing ordinary
+recovery, source witnesses and input quarantine retain their contracts.
+
+Extend reviewed task recovery to external agents and local models. Return an explicit blank-goal
+review template without guessing remaining steps or reusing history. Require a new reviewed goal,
+retain execution mode/model/endpoint and source scope, and start with fresh observations and results.
+Preview never contacts a model; explicit goal review, creation and independent completion remain required.
+
+Add reviewed successors for stopped finite workflows through manage_agent_recovery and shared
+API/AC/MCP/REST/CLI/Builder/GUI Actions. Bind explicit approval to the source task/receipt/review snapshot,
+preserve original scope and evidence, reject unknown effects and stale captures/coordinates, and create
+one deduplicated successor with atomic provenance. Retain source evidence while its child exists.
+New completion belongs only to the child; its delegated source cannot resume. No old workflow prefix
+or application state is inherited.
+
+Fix managed screen completion for built-in desktop, WebRunner and file targets: bounded/masked previews
+declare partial coverage; file and window-bootstrap metadata cannot prove screen absence. Partial text
+checks ignore protected/hidden/untyped labels and combine known contradictions with unknown evidence.
+Custom targets without capability flags retain legacy behavior; exact browser readback is unchanged.
+
+Add optional host-reviewed Android semantic hierarchy capture with scoped element references and fresh
+application readback. Bound defused XML parsing; exclude foreign packages and mask protected/editable
+values. Keep raw XML/private witnesses out of observations and use random revisions across changes and
+actions. Require native and semantic rechecks before input. Screen verification treats unavailable or
+redacted absence and malformed source flags/elements as unknown; known reviewed matches remain usable.
+No default capture, CLI/SDK startup, managed profile or native acceptance claim is added.
+
+Connect checked Android sessions to the owned remote worker through explicit host device-control leases.
+Require a fresh metadata observation per action, exact finite recompilation and request/boot-bound
+independent settlement; reject altered proposals before transport and never replay a prepared call.
+No default provider is supplied: real device-side suppression of old writes on takeover/cancel/expiry,
+semantic observations, independent app completion, managed profiles and public surfaces remain pending.
+
+Add an internal owned remote SDK worker with exact scope/owner binding, refreshed authority, parent
+retirement monitoring and physical takeover. Invoke finite SDK calls once after durable begin ACK;
+require trusted matching device/epoch input/queue settlement before end ACK. Unknown effects retain
+quarantine without replay or desktop cleanup. Concrete Android/WDA adapters and public profiles remain pending.
+
+Replace the internal Android action marker with closed v2 phases and exact shell-exit matching.
+Distinguish pre-input refusal from failure or refusal after possible input; malformed/partial/legacy
+evidence stays unknown. Returned input cannot certify remote input retirement or task completion.
+No managed-device execution or public Android command behavior is changed.
+
+Add internal Android native input/security evidence and checked proposals. Parse current dispatcher
+windows, native server-channel/queue state and both keyguard views; reject busy, inconsistent or unknown
+critical formats. Check entire pointer paths against half-open region unions and front-to-back overlays,
+including spies and transparent interceptors. Bind stable routing/security digests to pre-input checks on
+the same command connection, excluding dynamic history and old ANR data. Proposals retain no input
+authority; human-presence/monitor authorization, worker integration and managed device profiles remain pending.
+
+Add internal Android identity sessions and finite host-only command proposals. Validate an exact endpoint,
+physical serial, kernel boot UUID and one focused app/user on display zero; pin boot atomically and refuse
+adoption after restart. Commands check identity/focus before and after input on the same connection,
+preserve empty duplicate-field evidence, bound literal text/keys/coordinates/duration and emit fixed results.
+No proposal grants input authority or adds a managed device profile. Input-window/presence gates and worker
+integration remain pending; the legacy Android API and command catalog are unchanged.
+
+Add an internal bounded ADB smart-socket transport for future managed Android adapters. Require an
+explicit loopback server and transport ID, shell-v2 exit framing and closed streams; never invoke an ADB
+CLI, manage a daemon, retry an ambiguous command or fall back to a legacy shell. Preserve cancellation
+and authority revocation; suppress server/transport diagnostic content. Share existing device-list parsing
+with the legacy CLI without changing its behavior. Managed device profiles and public commands remain pending.
+
+Add an internal remote-effect lifecycle prerequisite for future Android/iOS adapters. Physical-device
+ownership, a closed remote protocol and fsynced begin/end acknowledgements fence unknown effects after
+local helper retirement. Recovery requires host-trusted post-retirement evidence and a later device epoch
+that invalidates old commands. Generic local-input recovery refuses remote witnesses. No device profiles,
+SDK adapters, public commands or native readiness are added by this prerequisite.
+
+Extend keyed task lookup with an optional reviewed spec and additive spec_match_contract=1. Compare destination-normalized specs with the immutable accepted request digest without submission or activation. CLI lookup adds --spec; AC/MCP/REST/Builder share it. DAG inspection negotiates matching, validates stable task identity and preserves legacy unverified behavior. Local origin witnesses stay local. Node matching does not grant graph/batch approval or continuation; existing one-argument calls remain supported.
+
+Add inspect_agent_dag / AC_agent_dag_inspect across shared API/MCP/REST actions/CLI/Builder and DAG Actions. Inspect at most 100 keyed local/registered-host requests with bounded read-only lookup, live authorization, sanitized snapshots and no control operations. Recorded task completion never grants current-graph matching or resume approval. GUI results discard stale graph views. Preserve legacy local/remote action node objects that omit the optional task field; the remote transport adds only the closed lookup operation.
+
+Add owner/store-scoped lookup_agent_task and AC_agent_task_lookup across API/MCP/REST/CLI/Builder/GUI to inspect lost submission acknowledgements. Queries neither submit/resume nor acquire input; missing records remain snapshots rather than rejection proof. Refresh caller authority, retain task-access requirements for read-only MCP calls, and discard GUI lookup replies after selection changes. Existing submission key semantics are preserved; invalid Unicode keys now fail with AgentTaskError.
+
+Experimental DAG nodes now accept a mutually exclusive task payload with a fixed spec, required idempotency_key and bounded optional wait_seconds. Existing Python/AC/MCP/REST/CLI/Builder/GUI DAG surfaces submit once to local or registered remote runtimes and advance only after matching completion criteria, durable completion contract 1 and input retirement. Stop/error requests bounded pause; uncertainty preserves task identity/key and skips dependants. No automatic resume/replay or listener deployment. GUI worker authority survives offload and results display task IDs; local GET honors caller timeout. Legacy action DAG payloads retain their behavior.
+
+Fix task success being committed before owned input cleanup. Verification remains nonterminal until retirement is confirmed; failed/busy cleanup requires review and retains control. Conditional transitions preserve concurrent cancellation and crash recovery. Existing status/results add metadata.input_released and durable completion_contract (new confirmed success=1, legacy=0); final artifact/history publication reflects the committed outcome. Public operation signatures stay compatible.
+
+Fix DAG pool workers dropping caller authorization and custom-runner cancellation/command guards. Capture a separate context per node and refresh store-backed identities before dispatch. Default remote nodes now require manage_hosts before reading registered host credentials or action files; operator calls that previously borrowed those credentials are refused. Administrator and trusted direct Python dispatch remain supported. Public DAG signatures are unchanged.
+
+Experimental browser profiles accept an optional host-reviewed absolute helper_python path and run that environment with -I. Add the host-only probe target operation across existing API/AC/MCP/REST/CLI/GUI routes. Dependency inspection uses a separately bounded owned helper, records a timestamped metadata snapshot and never establishes browser/native readiness, acquires input or enables a target. Preserve virtualenv executable symlinks; task options cannot override the interpreter.
+
+Extend retired-context prefix protection to managed desktop skills, including host-profiled and built-in desktop helpers. The shared validator is now target_continuity.py. Browser protection, external reobservation and persistent file recovery retain their behavior; interrupted desktop fixed flows now require review before continuing old actions.
+
+Experimental browser recovery now refuses a finite skill prefix when its original context has retired. The shared activation gate runs before helper replacement/input ownership, enters human review and retains history; users review remaining steps into a new task. Uninterrupted sessions, fresh starts and external reobservation remain supported. This closes a reproduced empty-form submission after pause/restart; it does not implement browser state restoration.
+
+Fix generic HTTP transport forwarding local principals/root witnesses: only explicit validated local runtime client calls delegate metadata. Complete versioned API exports and shipped command stubs, including recovery/skills/browser operations; unknown postponed stub types follow the existing Any fallback. Sample persistent budget clocks after acquiring the database transaction to prevent concurrent readers from falsely expiring a task. Public task and GUI operation signatures remain compatible.
+
+Experimental: add rooted browser link/download/upload commands via je_web_runner transfer contract version 1. Add browser download_archive previews with independent manifest verification and inert GUI file examples. Browser URL scope checks run before dispatch; cancellation and authority errors retain control semantics. Existing core browser grants remain compatible without transfer support.
+
+Experimental: add pinned browser text/value/visibility/URL completion criteria, requiring browser-read and origin grants. Finish uses fresh owned-helper SDK state rather than receipts or previews; unsupported results are unknown. Cancellation, authorization revocation and human review propagate through verification. Existing non-browser criteria and three-argument verifier callers remain compatible. Browser workflow URLs now preserve SPA fragments.
+
+Experimental: add explicit browser backends for batch_form and transfer workflow previews, plus AC_browser_wait with read-only bounded polling and late-result refusal. Desktop workflows keep their default behavior; unsupported browser workflows are rejected. Browser readback is recognized as independent skill evidence. Startup requires exact WebRunner managed browser contract version 1.
+
+Experimental: add browser host profiles and six managed browser commands through the reviewed WebRunner SDK. Existing browser bridge APIs remain delegated to je_web_runner. DOM indexes use observation-local grounding; repeated readiness preserves one session. SDK absence fails before browser startup; no dependency or browser is installed automatically.
+
+Preserve MCP async caller authority, session roots and accepted tool availability; retired views/policies refuse late calls. HTTP plugin notifications reach live sessions exactly once per stream, and header publication is atomic with stream registration. Existing argument, rate-limit, confirmation and invocation gates remain in use. Add a metadata-only schema/latency benchmark and dated results without native input or browser execution.
+
+Add opt-in MCP progressive/static availability and snapshot pagination. Default full mode keeps an unpaginated authorized list. Anonymous/shared-token listings now match their existing operator invocation ceiling, so host administration names are hidden. Read-only host ceilings also filter newly registered plugins. Existing stdio import paths and the default AC_run_agent tool collection remain available.
+
+Add experimental MCP summary search and single-tool schema inspection across Python/core/AC/MCP/CLI/Builder and Diagnostics Actions. Existing full-registry listing and AC_run_agent tool selection stay unchanged.
+
 This file records user-visible compatibility changes. Detailed development
 notes are recorded in `docs/updates/` (index: `docs/updates/README.md`).
 
@@ -14,6 +595,471 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 `CHANGELOG.md` shows which ones those are (`git show vX.Y.Z:CHANGELOG.md`).
 
 ## Unreleased
+
+- URL opening through open_path / AC_open_path now delegates to je_web_runner, including legacy
+  callers. URL plan backend changes from webbrowser to je_web_runner; update descriptor comparisons.
+  Missing WebRunner raises WebRunnerBridgeError, with no OS-browser fallback. Local-file opening
+  and the public function signatures remain compatible.
+
+- Add immutable host target profiles, durable enable controls and passive target metadata across all
+  task surfaces. Named tasks pin resource policy; enabling never automatically resumes paused work.
+- Live anonymous MCP tool sessions now execute as operator across direct and nested wrappers. MCP
+  host-management calls require authenticated admin authority; trusted direct Python callers keep
+  their prior behavior.
+
+- Add AgentHumanReview for managed dialog/unsaved-content gates; external observation also records
+  waiting_user and retires input. Windows UIA lookup requires the exact owned root window.
+  Managed file-dialog selection is exact, unique and PID-scoped; paths are canonicalized before typing.
+
+- New workflow drafts require a fresh post-submit confirmation and independently recheck archive files.
+  Configure new_record_selector when an application retains a previous confirmation between batch rows.
+  Add workflow_wait / AC_workflow_wait for bounded read-only settling; existing frozen plans stay pinned.
+
+- Add grouped agent task configuration, read-only observation previews and an Actions-menu grounded
+  action editor. Task changes invalidate previews; closing a view preserves service-owned tasks.
+
+- Managed Windows vision renders only its scoped window; unsupported rendering pauses without a
+  desktop-crop fallback. Managed pointer input rejects foreign overlays and confirms positioning.
+
+- Add experimental managed tasks across Python/AC/MCP/REST/CLI/GUI, with detached task contracts,
+  owner-scoped service transport, fenced target control, durable receipts, independent completion
+  checks, WorkQueue delivery and configured local Ollama decisions. Native acceptance remains open.
+  Add WorkQueue.defer with required claim fencing without consuming application retries.
+
+- Route agent tool calls through validated, authorized, cancellable executor dispatch and journal capture.
+  Add `Executor.execute_one` with raw results. Private top-level tool arguments are rejected;
+  configured viewer identities cannot drive input through `run_tool_call`.
+
+- Fail live EI cleanup verification on unrelated child errors or missing native
+  completion evidence; retain bounded fault traces and release owned device refs
+  before the context. Record native half-open SIGSEGV and socket-peer refusal
+  evidence while retaining runtime protection pending helper isolation.
+
+- Collect isolated native EI lifecycle evidence on selected dev pushes. Bound
+  the half-open teardown child, retain fault traces and descriptor counts,
+  reject unrelated probe failures, and verify native refusal separately from
+  explicit CLI selection. Package runtime behavior is unchanged.
+
+- Run Diagnostics through the shared owner-bound controller with localized
+  progress/stop/retry states and no late updates after close. Add scoped
+  cancellation primitives to both SDK namespaces and the previously absent
+  active ac_diagnose MCP entry point. Supported Wayland socket/helper/native
+  waits observe scoped cancellation and retain bounded owned cleanup;
+  unscoped calls and existing diagnostic signatures remain compatible.
+
+- Add owner-bound shared GUI task infrastructure with cooperative cancellation,
+  typed progress/outcomes, captured context and refreshed identity. Late owner
+  results are dropped, failures do not retain traceback objects, and a failed
+  thread start rolls back worker ownership. Panel migration remains pending.
+
+- Stop active diagnostics on direct or explicitly wrapped cancellation and
+  hard controls, retaining the original signal before later checks or error
+  reporting. Ordinary failed checks keep their existing report behavior.
+
+- Refuse native Wayland pointer coordinates outside all EIS regions with
+  failed state and no automatic CLI fallback. A rejected move cannot emit
+  a subsequent click; valid mapping and explicit CLI selection are preserved.
+
+- Add passive input/capture capability snapshots to both SDK namespaces,
+  AC_probe_capabilities, read-only MCP, Builder and Diagnostics Actions.
+  Prerequisites remain unverified; local native state is not refreshed or
+  treated as a permission grant. XWayland scope is explicit, provider
+  refusals cannot imply CLI fallback, and default results omit environment
+  values, executable paths, command arguments and native error strings.
+
+- Diagnostics opens in a localized not-run state. Only its explicit Actions
+  command starts the existing active checks; opening or retranslating the tab
+  cannot implicitly capture the screen or request portal consent. Existing
+  headless/AC/MCP diagnostic signatures and active behavior remain compatible.
+
+- Abandoned screenshot portal calls attempt bounded `Request.Close` on their
+  originating connection before disconnect. Wrapped and direct controls survive
+  cleanup; completed responses are not closed twice. D-Bus call budgets now
+  cover writes and the remaining reply wait, and canceled connect/authentication/
+  Hello releases partial connections. Existing APIs and ordinary failure families
+  remain compatible; live compositor/dialog acceptance is tracked in Progress.md.
+
+- Remove the GUI clipboard callback's strong reference to its own viewer.
+  Disconnect no longer leaves that viewer and its native Qt panel waiting for
+  cyclic GC. Registration binds the original peer weakly once; queued delivery
+  still retains its original peer/authority for ownership checks. Public API,
+  wire data and explicit clipboard behavior remain compatible.
+
+- Wayland native key/button/pointer input stops on portal refusal/timeout,
+  incomplete handshake, device pause or revocation instead of implicitly replaying
+  through CLI. Forced `libei` also refuses optional absence. Auto mode retains
+  fallback for optional absence and unclassified legacy adapters. Refused calls
+  do not reopen consent; after resolving permission, explicitly reset with
+  `je_auto_control.linux_wayland.libei.reset_default_backend()` before retrying,
+  or deliberately select `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli`.
+  Interrupted native chords attempt every owned release and preserve cancellation.
+  The explicit wtype text path and screen-capture selection retain their behavior.
+
+- Bind TCP/WebSocket clipboard reads, decoded data and sends to their original connection.
+  Reject stopped, unauthenticated or non-full-control host writes; queued GUI clipboard
+  delivery and explicit push refresh the connecting user's authority before native I/O.
+  Preserve original controls and contain ordinary provider errors. Received data does not
+  automatically echo; deliberate repeated sends and legacy text/image envelopes remain valid.
+
+- Retain GUI folder baselines across viewer stop/reconnect for explicit Start sync resume
+  under the same authenticated host fingerprint, watch path and local principal. Refresh
+  authorization and use a new sender; refuse handoff while an old worker remains alive.
+  FolderSyncEngine checkpoint metadata is immutable and exports only after retirement.
+  Explicitly disabling sync resets the baseline; application exit clears this memory state.
+  Different/unknown peers, roots and users establish fresh baselines.
+  Make weak file-channel registry cleanup reentrant during cyclic garbage collection;
+  stale callbacks still cannot remove replacement bindings.
+
+- Require authenticated publication receipts for native GUI folder sends; queued acceptance
+  alone no longer advances folder delivery state. Optional SDK require_commit probes support
+  before source reads and verifies transfer ID, nonce, SHA-256 and size after atomic replacement.
+  Bound protocol state to channel/loop/permission generation, preserve cancellation and refuse
+  stale receipts or unsupported peers. Legacy manual sends retain their original envelopes.
+  Relative source paths bind before the capability exchange. GUI explicit reconnect/resume retains state as described above; a failed/uncertain send retries on the same retained engine.
+
+- Publish immutable local file receipts with streamed SHA-256/size metadata after atomic
+  replacement, exposing optional receipt callbacks through the receiver and native endpoints.
+  Native GUI folder watches consume captured receipts without rehashing or echoing received
+  bytes; delayed receipts retain later local edits and reject stale engine/viewer/peer/role owners.
+  Bind relative receive inboxes and folder watches to their creation cwd; legacy path notices
+  now use absolute paths for relative inbox configurations. File wire and legacy path callbacks
+  remain available; GUI explicit reconnect/resume is described above.
+
+- Retire unfinished native file receives on close, disconnect, replacement and permission loss.
+  Serialize cleanup with writes, refuse unauthenticated viewer receives and isolate stale
+  peer/channel callbacks. Clean terminal state before notifying callbacks so reconnecting
+  inside a callback is safe. Preserve wrapped file/audit/state cancellation and hard signals.
+
+- Wait for bounded DataChannel file writes and expose callback errors, source-size changes
+  and cooperative cancellation to callers. Prevent overlapping producers and stale loop writes.
+  Bind GUI folder jobs to their original authorization and concrete peer connection.
+  Serialize up to 32 inbox download requests per channel outside the bridge event loop;
+  cancel owned jobs on host shutdown and suppress stale failure replies.
+
+- Compare folder mirror content using SHA-256, preserving same/older timestamp edits
+  without resending timestamp-only changes. Retain pending/offline changes across restarts,
+  stop between files and retain blocked worker ownership instead of overlapping runs.
+  Explicit receive receipts suppress returned bytes and survive concurrent send/scan completion.
+  GUI explicit reconnect/resume is described above.
+
+- Add experimental load_sync_profile/LoadedSyncProfile and private AC_sync_profile_load,
+  MCP and Builder routing for exact reviewed generations. Each load creates an independent
+  editable native working copy with disabled hotkeys/trigger nodes and rebound typed assets.
+  Sync Actions inspect native definitions, import script snapshots into Builder and apply
+  loaded GUI preference snapshots explicitly; caller/owner authority is rechecked for each.
+  Builder displays imported command names and positional values as literal text.
+
+- Release rejected TCP authentication slots before AUTH_FAIL, so immediate retries do not
+  spuriously hit max_clients while earlier handler cleanup or logging is still pending.
+  Bad-token, wrong-phase and denied-approval replies keep their existing wire payloads.
+
+- Add the lazy Workspace Sync tab with Actions-menu status/capture/sync, peer controls,
+  exact causal review/resolution, inert publication and explicit live GUI preference application.
+  SyncWorkspace.preferences(observed=...) and the existing AC/MCP/Builder preferences operation
+  require the exact conflict-free reviewed workspace heads. Received preferences stay inert
+  until explicit application; workers preserve captured authority, cancellation and close safety.
+
+- Add experimental content-addressed referenced assets through SyncAssetBlob/SyncAssetReference,
+  durable account-isolated SyncAssetStore and resumable SyncAssetHTTPClient. Private bindings.assets
+  and asset_cache_path connect real source files to causal versions and existing AC/MCP/Builder
+  flows. Signaling adds authenticated bounded asset routes and --asset-store. New definitions
+  upload frozen bytes before prepare; uncertain prepared retries still send exact PUT first.
+  Native metadata/assets publish together, with no execution or activation. Byte/object/user
+  quotas bound storage, while corrupt/missing content blocks output. Fix asset reads following
+  later cwd changes, credential-like destination paths and resolution before local download.
+- Add experimental SyncWorkspace coordination with durable offline capture, strict seven-domain
+  causal HTTP validation, exact reviewed resolution and inert materialization, plus private
+  AC_sync_workspace/MCP/Builder Data routing. Full resync atomically prepares source fingerprints
+  with its durable intent, adopts each new adapter generation once and preserves edits made
+  during uncertain recovery without replaying retired source data. Outbox schemas 1/2 migrate
+  to 3; adapter schema 1 migrates to 2 without changing edit/control wire schemas. Source/storage
+  role collisions are refused before I/O; credentials refresh per RPC and INI errors exclude
+  private source lines. Asset transport and Sync UI remain tracked in Progress.md.
+- Add an experimental workspace adapter for saved native GUI INI preferences. Theme,
+  font size and navigation visibility/width retain causal conflicts and publish as inert
+  workspace.ini data through existing AC/MCP/Builder commands. Headless capture stays
+  Qt-free; explicit GUI use creates a separate working copy. Materialization accepts
+  seven distinct domains, and unrelated/private settings never enter portable profiles.
+
+- Accept high-entropy private absolute path bindings on POSIX while continuing
+  to reject recognized credential patterns and known resolved secrets.
+
+- Reject extreme JSON integers in native sync definition numeric fields with
+  ConfigSyncError before storage, preserving framework error containment.
+
+- Add experimental causal adapters for selected scripts, locators, hotkeys, triggers,
+  address-book entries and JSON settings, with durable concurrent profiles and exact
+  reviewed conflict resolution. Named vault/local references keep selected secrets and
+  machine values local. Four private AC/MCP/Builder commands capture, apply, resolve and
+  publish complete inert native-format generations; active sources are never replaced,
+  and received hotkeys/triggers remain disabled. Workspace/assets/full-resync integration
+  and Sync UI remain separate C3 work.
+
+- Experimental portable asset manifests and explicit local verified-generation sync
+  now have API/AC/MCP/Builder entry points. All selected files pass size/SHA-256 checks
+  before one directory publication. Cancellation/failure clears staging and preserves
+  previous generations; duplicate/concurrent transfers reverify caches, and corruption
+  or unmanifested content fails without overwrite. No active workspace is replaced and
+  no script/trigger is executed or enabled. Settings adapters/causal integration remain open.
+
+- Experimental durable peer controls join/ack/collect/retire/full-resync through
+  CausalSyncClient, AC/MCP and Builder. Stable explicit operation IDs replay original
+  receipts without repeating completed effects. Confirmed full resync atomically adopts
+  identity/cache and archives pending old edits only with explicit consent. Owned outbox
+  schema 1 migrates atomically to 2; existing edit wire and plain sync APIs are unchanged.
+  Local status needs no credential or HTTP. Core client tests no longer require FastAPI.
+
+- Experimental CausalSyncClient and CausalReceipt connect durable outboxes to v3 HTTP.
+  Uncertain requests retry unchanged; only definite stale-base errors permit bounded
+  rebase. Delivery and complete snapshots confirm atomically under the current lease;
+  older/equal-forked or credential-bearing snapshots cannot replace evidence. Private
+  fetch/commit/flush AC/MCP/Builder commands use live environment credential references.
+  Plain ConfigSyncClient behavior stays compatible; the durable peer-control workflow
+  above supplies explicit full-resync orchestration.
+  Shared interruption handling avoids an executor dependency; existing MCP/history
+  class/function imports and cancellation containment behavior remain compatible.
+
+- Experimental CausalBucket/CausalConfigStore and a dedicated authenticated version-three
+  /config/{user_id}/causal endpoint preserve concurrent alternatives, validate explicit
+  actor/peer/epoch transitions and collect acknowledged deletion payloads while retaining
+  permanent causal fences. Upgraded accounts reject plain readers/writers. Historical
+  identical requests remain idempotent. Existing private AC/MCP/Builder store commands
+  accept causal JSON with _actor; automatic client/outbox orchestration remains pending.
+
+- Experimental causal entry/peer models and a local SQLite sync outbox preserve
+  concurrent alternatives, explicit resolution, acknowledgement eligibility and
+  retirement epochs. Durable endpoint/account-scoped operation identity and frozen
+  requests survive restart; bounded backoff/cancellation and leases prevent stale
+  senders from publishing results. Private queue and pure-data AC/MCP/Builder
+  commands expose these primitives without HTTP delivery or configuration apply.
+  HTTP client/server causal integration and full resync remain pending C2 work.
+
+- Experimental config buckets and operation receipts persist in SQLite. Commits
+  atomically compare base revisions; identical retries return their original
+  revision, while stale bases or changed operation identities conflict. Signaling
+  PUT uses version-two envelopes by default. Client conditional writes return the
+  committed revision and propagate 409 conflicts. A dedicated /config/{user_id}/commit
+  route prevents an older blind-write server from storing unsupported envelopes.
+  Blind legacy writes now require
+  explicit client/server compatibility settings (otherwise HTTP 428); revisions
+  remain server-owned. CLI adds --config-store/--allow-legacy-config-writes.
+  Private AC/MCP/Script Builder store operations share bounded validation. Existing
+  timestamp merge and tombstone policies remain separate from this CAS change.
+
+- Experimental journal candidates reconcile lifecycle snapshots and parent/retry
+  provenance, preserve recorded control sources and label observed-only fallbacks.
+  Python/pytest/Robot code, actions, warnings and manifests share API/AC/MCP/CLI
+  and owned GUI review. Static/signature/dry-run checks dispatch no input; explicit
+  Builder import retains provenance and rejects intervening edits. Atomic ZIP
+  exports keep source/actions/manifest together and reject changed review data.
+  `codegen --from-log ... --run-id ...` returns JSON; `-o review.zip` exports it.
+  Legacy action-file codegen defaults remain unchanged.
+- Journal source sanitization now inspects encoded parallel branches before
+  persistence, preserves nested/positional secret references and masks known
+  resolved input strings and dynamic keys. Duplicate encoded keys become explicit
+  non-replayable markers. Safe recorded argument text stays unchanged.
+
+- Experimental template-candidate bundles support preview, fixed-frame verification,
+  explicit acceptance and byte-exact rollback through API/AC/MCP/CLI/Builder/GUI.
+  Creation retains original/candidate images without changing the active template;
+  previews are bounded thumbnails. Acceptance requires positive and expected-miss
+  labels, all labelled cases correct and the reviewed bundle SHA-256. A target lock,
+  current content checks and atomic replacement protect later edits; rollback refuses
+  conflicts. PNG/JPEG/BMP target encoding is retained. Unknowns/native operation
+  verification remain separate. The shared sample loader accepts samples-only
+  manifests for candidates while ordinary version evaluation still requires versions.
+  Example: `python -m examples.template_candidates`.
+
+- Captured healing records retain an optional journal path for original-step
+  inspection through experimental API/AC/MCP/CLI and the Self-Healing GUI.
+  Legacy and unbound rows retain unknown provenance. Journal inspection adds
+  optional step filtering before output limits, validates the whole file and
+  rechecks roots around progress. The shared background GUI reader supports
+  step selection, cancellation and stale-result disposal. Reads never replay
+  recorded actions; existing row formats and signatures remain compatible.
+
+- Experimental immutable `SelfHealRequest` / `VerificationRequest` and
+  `self_heal_run` default to locate and enable explicit post-click verification.
+  Callback checks require bool; configured VLM checks use fresh logical pixels
+  and may incur API cost. True, false and unknown stay distinct. AC/CLI treats
+  false verification as failure; MCP preserves structured evidence with isError.
+  GUI and Script Builder expose the opt-in controls. Exceptions/cancellation
+  preserve their identity without retrying input. Existing signatures/outcomes
+  remain compatible. Standalone VLM capture now normalizes logical geometry and
+  Retina pixels in memory; `verify_description` rejects non-bool backend replies.
+  Framework assertions propagate through locator recovery instead of becoming misses.
+
+- Runtime self-healing shares one lazy logical capture across image/VLM, applies
+  bbox regions to both and honors actual clipped/nonzero origins. Failed capture
+  is not retried for fallback. Additive schema-v2 audit fields retain source,
+  version, frame and strategy/model provenance; old rows still load. Click audit
+  settles after dispatch and preserves failures/cancellation without calling an
+  issued click verified. Legacy outcome/signatures and candidate-count aliases
+  remain compatible. GUI region/evidence controls and structured Script Builder
+  inputs expose the behavior through existing operations.
+
+- Experimental fixed-frame locator comparisons share schema-v1 reports across
+  API, AC commands, MCP, CLI action files and the Self-Healing GUI. Ratios show
+  eligible populations and unknowns; recovery requires both correct localization
+  and explicit operation verification. Reports include latency, optional USD
+  costs and provenance, with JSON/HTML export. Local manifests are bounded and
+  never select a network backend. GUI comparisons run off-thread and support
+  cancellation and safe disposal of stale results.
+
+- Self-healing preserves cancellation instead of treating it as an image/VLM
+  miss and continuing to fallback or click. Audit writes and reads mask secret
+  values already resolved in the current run, preserving original outcomes and
+  leaving legacy log files untouched on read.
+
+- Explicit manual history is available through `manual_history_scope`,
+  `AC_history_capture`, CLI `run --history [--history-db PATH]`, and opt-in
+  controls in Script Executor / Script Builder. GUI and CLI results keep their
+  existing shape and variable scope. Ambient and nested journals link to the
+  manual row; failures and cancellation settle as error while preserving the
+  original signal. Normal loop control retains the counted outcome. CLI
+  previews carry a distinct source label. Known secret values are masked from
+  labels before insertion. A broken exception formatter falls back to its type
+  instead of replacing the original run failure.
+
+- Run History includes read-only journal browsing from an existing provenance
+  link or an explicit file. Run filtering and bounded sanitized lifecycle
+  snapshots share the headless inspector. Reads run off the GUI thread, report
+  progress and support cooperative cancellation; closing the view requests
+  cancellation and stale results cannot overwrite a changed selection.
+  Deferred readers refresh stored owners before I/O and retain enclosing path
+  restrictions. Operations live in Actions and labels support all four languages.
+
+- MCP `ac_journal_capture` and `ac_journal_read` support structured journal
+  results, progress and cooperative cancellation. Recorded action failures set
+  `isError` while retaining the run metadata. `MCPToolResult` lets handlers mark
+  controlled failures without adding protocol flags to their JSON data.
+  `JournalRunOptions`/`execute_journal_run` add typed observers and path policies;
+  nested captures and joined workers retain these controls, and each append
+  rechecks the bound roots. Readers can cancel between validated records and
+  close the file before propagating the original signal. Existing capture
+  convenience signatures and ordinary tool-result dictionaries stay compatible.
+
+- `AC_journal_capture` captures a nested body while retaining its owning
+  executor, variables, strictness and control signals; structural validation
+  and linting include the body. `AC_journal_read` and public `inspect_journal`
+  share bounded, sanitized inspection with the CLI. Both commands have Script
+  Builder forms and require `drive_input` under RBAC, including private reads.
+  Capture rejects identifiers and destinations containing secrets already known
+  to the owning run before history linking, file creation or action effects.
+
+- Structured journal types and capture/read helpers, plus history `JournalLink`,
+  are exported from `je_auto_control`. CLI `run --journal PATH` captures actions
+  with an optional `--journal-run-id`; `journal PATH` supports run filtering and
+  bounded, sanitized snapshot output. Existing run stdout and exit codes remain
+  unchanged; these operations create no history database or row implicitly.
+
+- DAG node error diagnostics retain the owning run's resolved-secret mask after
+  the runner exits. Standalone DAG calls and custom local runners receive the
+  same protection; returned node-error data and run outcomes stay unchanged.
+
+- Interrupted background attempts now settle history as `error` and skip error
+  screenshots. Hard exits retain their original control flow even if history
+  completion fails. Cancellation bypasses non-strict action failure recording,
+  retry/recovery, callback and image-condition guards; local parallel/DAG workers
+  preserve the original signal. Explicit script `finally` cleanup still runs.
+  Ordinary failure behavior and the MCP cancellation exception family are unchanged.
+
+- Explicit action journals now link to an enclosing existing run-history row,
+  including local parallel/DAG captures. Links are idempotent and non-owning;
+  clearing/pruning history keeps external journal files. Plain captures create
+  no implicit history row. Legacy history databases migrate without losing rows.
+- Failed run-history initialization closes its connection before propagating
+  the failure, and no partially initialized connection remains cached.
+
+- Watchdog and observer rules, and callback-executor invocations, retain their
+  resolved-secret mask through detection, callbacks and final error logging.
+  Independent rules/calls isolate masks; existing return and failure semantics
+  remain unchanged.
+
+- CLI/REST/MCP and background run owners retain resolved-secret masking through
+  outer error handling and audit/history writes. CLI stderr and delayed report
+  snapshots are sanitized; report snapshots omit opaque/cyclic values when the
+  run resolved secrets. API outcomes, raised exceptions and CLI result payloads
+  keep their existing contents.
+
+- Executor runs mask resolved vault-reference values in application log messages,
+  exception text and tracebacks before handlers receive them. Nested actions and
+  joined local parallel/DAG workers share a run-local mask, cleared on exit.
+  Returned results and raised exceptions retain their original values.
+
+
+- Journal tail recovery validates the destination's format and last committed
+  event before truncation. Existing non-journal files, corrupt committed tails
+  and ambiguous first fragments remain intact and report a format refusal.
+
+- Explicit Python journal scopes now capture executor starts/outcomes, including
+  local loop/parallel/DAG parent relationships. Failed, cancelled and dry-run
+  steps remain distinct; process interruption leaves a durable incomplete start.
+  The convenience runner isolates variables and returns typed run metadata.
+  Facade, command, CLI/MCP/GUI and run-history integration remain pending.
+
+- Add the schema-v1 structured action-journal storage foundation: pre-append
+  secret redaction, fixed outcome-type metadata, interprocess append ordering,
+  durable JSONL writes and bounded torn-tail recovery. Executor capture and its
+  facade/command/GUI integration remain pending.
+
+- RBAC viewer access now excludes named sensitive-read tools even when their
+  `readOnlyHint` remains true. Clipboard/history, local data/document/SQL readers,
+  dotenv/reference resolution, credential generators, persistent-store readers,
+  outbound checks, microphone capture, VLM requests and assertion containers
+  require operator/admin; tool listing and invocation use the same capability.
+  Unconfigured RBAC retains existing access. State-changing `ac_realize_item`,
+  `ac_idempotency_begin` and `ac_rate_limit` are excluded from read-only mode.
+
+- REST registry status adds `rbac_enabled` and suppresses the inactive shared
+  token in RBAC mode (`token: null`). The GUI explains user-token authentication
+  and disables its shared-token field. The Python server's `token` property stays
+  unchanged. Check-only custom gates work in shared-token mode; an identityless
+  success cannot bypass a server's configured RBAC policy.
+
+- The GUI tab close button now releases factory-built feature panels and their
+  destruction-bound resources; reopening creates a fresh panel. View-menu hiding
+  and `hide_tab` retain state. Explicit `TabRegistry.open/close` and `close_tab`
+  APIs preserve metadata, respect rejected closes, and retain legacy owner-built
+  forms and Remote Desktop until their lifecycle migration.
+
+- CLI `run` and `--dry-run` now discard per-run variables, including `--var`
+  seeds, on success or error. Top-level LLM planner and state-machine runs use
+  fresh variables; nested calls reuse the enclosing scope. State-machine
+  `on_enter` now dispatches standard single actions correctly as well as batches.
+
+- MCP `ac_window_minimize`, `ac_window_maximize` and `ac_window_restore`
+  return a tool error when the backend refuses the state/activation request,
+  instead of reporting the handle as success. Successful calls still return
+  the same integer handle; raw Win32 previous-visibility values are normalized
+  by the existing backend.
+
+### Background authorization
+
+- Scheduled interval/cron jobs, triggers, hotkeys, watchdog rules, webhooks,
+  e-mail triggers and observer callbacks retain the identity that registered
+  them. Store-backed users are checked again on dispatch: removal, damaged
+  stores and loss of input privileges prevent execution; role changes apply
+  to privileged commands. Ownership metadata stores no RBAC bearer token.
+- Work registered outside RBAC explicitly clears any worker identity. Explicit
+  Python `AuthorizationContext` values without `store_path` remain role
+  snapshots. Re-enabling or starting a daemon does not change its jobs' owners.
+- Observer and watchdog callbacks get fresh variable scopes. A watchdog action
+  containing failed executor commands no longer counts as a dismissed popup.
+  Nested callback runs preserve the caller's prior failure count. A webhook
+  whose owner was revoked returns HTTP 403 with `fired: false`.
+
+### GUI workspace
+
+- Tab contents scroll when the window is smaller than their minimum layout;
+  the embedded workspace's page lookup and show/hide APIs keep returning the
+  original widgets. Close buttons are painted as vectors in the active palette.
+- Theme, text size, navigation visibility and width persist on window close in
+  `~/.je_auto_control/gui.ini`. Remove this file to reset workspace preferences.
+  `Ctrl+B` now toggles the fixed navigation panel.
+- The `gui` extra and requirements files no longer install `qt-material` or
+  its otherwise unused transitive dependencies. Applications importing
+  `qt_material` themselves must declare their own dependency.
 
 ### Security
 
@@ -2895,3 +3941,11 @@ No compatibility changes.
   `UnicodeEncodeError`) on non-encodable text; non-ASCII USB/IP busid no longer
   kills the client thread; SQLite connections are closed; USB ACL removal is
   case-insensitive.
+
+- Managed input now requires explicit host review after an unfinished crash witness; approved workspace applications survive task input cleanup.
+
+- Add immutable managed skill recording, typed parameters, candidate validation and explicitly reviewed version publication. Legacy SkillLibrary is unchanged.
+
+- Managed tasks retain live origin ceilings. MCP client roots are session-local and no longer replace the shared HTTP resource workspace. Worker shutdown cancels model initialization before lease acquisition.
+
+- Add observation-local point references, durable grounding receipts and typed pre-dispatch stale-observation retries. Explicit legacy coordinates keep their meaning.

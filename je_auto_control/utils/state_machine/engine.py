@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import time
+from contextlib import nullcontext
 from typing import Any, Callable, Dict, Mapping, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.run_control import pause
-from je_auto_control.utils.rbac.deferred import adopted_scope, capture_owner
-from je_auto_control.utils.script_vars.execution import run_level_scope
+from je_auto_control.utils.script_vars.execution import current_scope, execution_scope
 
 
 # AutoControlException so `except AutoControlException` boundaries catch a
@@ -52,7 +52,6 @@ class StateMachine:
             spec.get("states", {}),
         )
         self._execute = execute_action or _default_execute_action
-        self._owner = capture_owner()
         self._guard_eval = guard_eval or _default_guard_eval
         self._context: Dict[str, Any] = {}
         self._max_steps = int(spec.get("max_steps", _DEFAULT_MAX_STEPS))
@@ -70,14 +69,14 @@ class StateMachine:
 
         Returns ``{"final_state": name, "steps": N, "elapsed_s": S}``.
         Raises :class:`StateMachineError` on budget exhaustion or when
-        a state has no fireable transition.
+        a state has no fireable transition. Default-executor actions share a
+        fresh variable scope for this run, or reuse an enclosing run's scope.
         """
-        # Built in a request, run on a thread with no caller of its own: the
-        # actions still run as the user who built the machine.
-        with adopted_scope(self._owner), run_level_scope():
-            return self._drive()
+        with execution_scope() if current_scope() is None else nullcontext():
+            return self._run()
 
-    def _drive(self) -> Dict[str, Any]:
+    def _run(self) -> Dict[str, Any]:
+        """Drive states inside the run's variable scope."""
         current = self._spec["initial"]
         if current not in self._states:
             raise StateMachineError(f"initial state {current!r} undefined")
@@ -166,17 +165,14 @@ def _validate_spec(spec: Mapping[str, Any]) -> None:
 
 
 def _default_execute_action(action: Any) -> Any:
-    """Lazy bridge to the executor running the calling list, else the module's.
+    """Lazy bridge accepting a single action or a nested action batch.
 
-    An ``on_enter`` entry is one action -- ``["AC_name", {...}]`` -- or a
-    list of them. Every list used to be taken for a list of actions, so the
-    single action the documentation shows was rejected ("must be [name] or
-    [name, params]") and, the failure only being recorded, never ran.
+    It runs on the executor running the calling list (a parallel branch has
+    its own), else the module's, so the actions see that list's variables.
     """
     from je_auto_control.utils.executor.action_executor import _running_executor
-    is_action_list = (isinstance(action, list) and bool(action)
-                      and not isinstance(action[0], str))
-    return _running_executor().execute_action(action if is_action_list else [action])
+    batch = isinstance(action, list) and (not action or isinstance(action[0], list))
+    return _running_executor().execute_action(action if batch else [action])
 
 
 def _after_ok(transition: Mapping[str, Any], _context: Mapping[str, Any],

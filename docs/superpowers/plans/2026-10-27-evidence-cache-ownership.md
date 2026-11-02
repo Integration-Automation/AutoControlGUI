@@ -1,0 +1,85 @@
+# Database-owned task evidence Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans inline. Preserve the existing question opt-out and whole-original-goal final review; no per-stage agents.
+
+**Goal:** Stop cross-database evidence mutation/deletion while preserving old provenance and usable current journals.
+
+**Architecture:** A neutral cache helper derives a namespace from the database's full path and persistent identity. TaskEvidence creates a new history segment for a nonowned stored reference, preserving old references and bytes. Source privacy consumes actual cache roots; existing task/GUI JSON surfaces expose cache state.
+
+**Tech Stack:** Python3.10+, SQLite, pathlib, existing HistoryStore/ActionJournal/FileTarget.
+
+**Spec:** docs/superpowers/specs/2026-10-27-evidence-cache-ownership-design.md
+
+## Global Constraints
+
+Background only; no real browser/device/input, shared-environment installs, version change, paid dependency or fee feature.
+Task2 permits only a new owned temporary application installation after the required recorded comparison.
+runtime.py remains750; file/function/parameters/CC/nesting/line limits750/75/7/10/4/120, including self.
+No added import cycles/duplicates/suppressions, WAL/durability/deadline relaxation or replay.
+Original40items and deferred acceptance remain open; final review only at the whole-original-goal end.
+
+## Review Focus
+
+Actual SQLite backup retains task IDs and history paths; only the expired backup may be pruned.
+An old/foreign journal is provenance, never permission to overwrite or delete another namespace.
+Same-path restart is idempotent; old-layout rebind preserves original run/journal/report bytes.
+Failed/concurrent rebind and redirected caches preserve original metadata and user output.
+New private roots must not make old/historical journal/image/report paths exportable.
+
+### Task 1: Owned namespace, historical segments and private boundaries
+
+**Files:** new utils/agent_runtime/evidence_cache.py; store.py/evidence.py/transfer_privacy.py; test_agent_evidence_cache_ownership.py and private-source regression tests.
+**Interfaces:** EvidenceCache(store:Any).root:Path, .directory(task_id:str)->Path, .file(task_id:str,name:str)->Path, .is_private(path:Path)->bool. TaskEvidence.ensure retains its signature; a nonowned reference creates one new run/segment.
+
+- [x] Add actual completed FileTarget/SQLite backup/prune and restart tests; observe correct RED.
+- [x] Add private persistent database identity and namespace/path guards, keeping construction inert.
+- [x] Verify independent roots and prune preserve source journal/report/user output and stable restart.
+
+- [x] RED legacy/foreign publication, no-write status, idempotence, concurrent/rolled-back segment and path attacks.
+- [x] Atomically rebind only the current link; retain old runs/journals/reports, never move or read old files.
+- [x] RED/GREEN source export denies current/old/retained private paths while ordinary filenames stay usable.
+
+Task1 behavior evidence: stage106 broad998JUnit includes all51 acceptance cases (49pass2Win1314skip).
+Task1 formally completed at3cc488e: actual task-done acceptance49passed2Win1314skipped23.51s.
+
+Acceptance command (append a fresh owned C `--basetemp`):
+
+```text
+python -m pytest -q -ra
+ test/unit_test/headless/test_agent_evidence_cache_ownership.py
+ test/unit_test/headless/test_agent_evidence_cache_legacy.py
+ test/unit_test/headless/test_agent_evidence_cache_transactions.py
+ test/unit_test/headless/test_agent_evidence_cache_privacy.py
+ test/unit_test/headless/test_agent_evidence_cache_paths.py
+ test/unit_test/headless/test_agent_task_evidence.py
+ test/unit_test/headless/test_agent_transfer_private_sources.py
+```
+
+Expected:49passed2skipped; only literal file symlinks unavailable with Win1314 may skip on this host.
+The listed paths are one argv, displayed across lines for readability.
+
+### Task 2: Coherent verification and delivery
+
+**Files:** three READMEs/Sphinx2/architecture/map/lifecycle/capability/Progress/monthly/changelog as applicable.
+Full-run integration fix: `je_auto_control/utils/usb/usb_devices.py` and
+`test/unit_test/headless/test_usb_windows_encoding.py`; source byte changes require a fresh full run.
+The retained first full run has7unhandled reader-thread warnings and is not accepted as clean.
+
+
+- [x] Run task/evidence/history/retention/recovery/transfer/ownership regressions and prescribed static gates.
+- [x] Check exact original58 import edges; preserve existing raw lint debt without new issues/cycles/duplicates.
+- [x] Freeze inputs and run full configured coverage; inspect every skip/error/warning/atexit and hashes.
+- [x] Strict docs, exact fresh wheel/sdist/installed metadata/bytes and real installed-worker proof.
+- [x] Compare/write differences before any isolated installation; mirror only main Agent bytes, monthly ID lock,
+  explicit owned-path commit/push and remote SHA/clean proof. Do not mark the original goal complete.
+
+Final Task2 evidence: stage108/completed-full-suite-audit01.json binds actual native89939 terminal0,
+16129passed80skipped3105.86s and coverage87.85%, all3310input hashes/inventory unchanged.
+All skips and raw logs are retained; no warnings/tracebacks/atexit findings. The25cache cases
+include2Win1314skips;4USBcases and20priorcriticalregressions passed. Stage107 proves static,
+strict docs, exact1377source/wheel/sdist/installed bytes and actual installed-worker origins.
+Final changes are four unshipped record files only. Reuse the immutable code/test/artifact proof;
+the real task-done2 command must run stage108/verify_recorded_delivery.py after the coherent
+record commit. It checks actual full audit, raw runtime bytes, record-only Git delta, archive
+exclusions, clean feature and main non-Agent bytes. No rerun solely for record/task labels.
+Original40items and all native/device/browser/24hour deferrals remain open; no merge/deploy.

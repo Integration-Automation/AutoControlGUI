@@ -1,11 +1,11 @@
-Open Files / URLs with the Default App
-======================================
+Open Files / WebRunner URLs
+===========================
 
 The framework could launch a literal executable (``start_exe`` / ``shell_process``),
 but not the single most common "hand off to another app" RPA step: open
 ``report.pdf`` with whatever app is registered for it, ``print`` a document, or
-open a URL in the default browser. ``shell_open`` adds that, routed per-OS to
-``os.startfile`` / ``open`` / ``xdg-open`` / ``webbrowser``.
+open a URL through WebRunner. Files use ``os.startfile`` / ``open`` / ``xdg-open``;
+URLs use the existing ``je_web_runner`` bridge.
 
 * :func:`plan_open` — pure planner: classify the target (URL vs file path),
   validate it (URL scheme allow-list; ``realpath`` for files) and return the
@@ -13,7 +13,7 @@ open a URL in the default browser. ``shell_open`` adds that, routed per-OS to
 * :func:`open_path` — run the plan through an injectable ``opener`` sink (the real
   OS call by default).
 
-Pure stdlib; the dispatch logic is unit-testable without launching anything via
+Planning is pure stdlib. URL execution requires WebRunner; the dispatch is testable via
 the injectable ``opener``. Imports no ``PySide6``.
 
 Headless API
@@ -25,10 +25,10 @@ Headless API
 
     open_path("report.pdf")                 # default PDF viewer
     open_path("invoice.pdf", verb="print")  # print it
-    open_path("https://example.com")        # default browser
+    open_path("https://example.com")        # je_web_runner
 
     plan_open("https://example.com")
-    # {"kind": "url", "scheme": "https", "target": "...", "backend": "webbrowser",
+    # {"kind": "url", "scheme": "https", "target": "...", "backend": "je_web_runner",
     #  "verb": "open"}
     plan_open("report.pdf")
     # {"kind": "file", "target": "<realpath>", "backend": "startfile", ...}

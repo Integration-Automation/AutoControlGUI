@@ -11,7 +11,14 @@ import json
 import threading
 from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional
 
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.remote_desktop.webrtc_file_callbacks import (
+    FileReceiveCallbacks, ReceiptCallback,
+)
+from je_auto_control.utils.remote_desktop.webrtc_file_receive import (
+    abort_file_receiver, bind_file_receiver, close_file_receiver,
+)
 from je_auto_control.utils.remote_desktop.webrtc_transport import (
     RTCPeerConnection, RTCSessionDescription, WebRTCConfig,
     get_bridge, wait_for_ice_gathering,
@@ -75,7 +82,7 @@ class WebRTCDesktopViewer:
         self._files_receiver: Optional[FileTransferReceiver] = None
         self._usb_channel: Any = None
         self._usb_client: Optional[UsbChannelClient] = None
-        self._on_file_received: Optional[FileReceivedCallback] = None
+        self._file_callbacks = FileReceiveCallbacks()
         self._on_inbox_listing: Optional[InboxListingCallback] = None
         self._on_inbox_op_result: Optional[InboxOpResultCallback] = None
         self._viewer_screen_track: Optional[ScreenVideoTrack] = None
@@ -158,20 +165,26 @@ class WebRTCDesktopViewer:
         return self._mic_sender is not None and self._mic_sender.is_running()
 
     def send_file(self, local_path, remote_name: Optional[str] = None,
-                  on_progress: Optional[Callable[[int, int], None]] = None) -> None:
-        """Stream a local file to the host's inbox via the files DataChannel."""
+                  on_progress: Optional[Callable[[int, int], None]] = None, *,
+                  cancelled: Optional[Callable[[], bool]] = None, require_commit: bool = False) -> None:
+        """Stream to the host inbox, optionally requiring its matching atomic-publication receipt."""
         if self._files_channel is None:
             raise RuntimeError("files channel not open yet")
         from je_auto_control.utils.remote_desktop.webrtc_files import (
             FileTransferSender,
         )
         FileTransferSender(self._files_channel).send(
-            local_path, remote_name=remote_name, on_progress=on_progress,
+            local_path, remote_name=remote_name, on_progress=on_progress, cancelled=cancelled,
+            require_commit=require_commit,
         )
 
     def set_file_received_callback(self, callback) -> None:
         """Register ``cb(path)`` for files the host pushes to the viewer."""
-        self._on_file_received = callback
+        self._file_callbacks.on_file = callback
+
+    def set_file_receipt_callback(self, callback: Optional[ReceiptCallback]) -> None:
+        """Register an inert local publication-receipt listener; None clears it."""
+        self._file_callbacks.on_receipt = callback
 
     def set_inbox_listing_callback(self, callback) -> None:
         """Register ``cb(files: list[dict])`` for list_inbox responses."""
@@ -284,20 +297,17 @@ class WebRTCDesktopViewer:
         autocontrol_logger.info("webrtc viewer: sent renegotiate answer")
 
     def _wire_files_channel(self, channel) -> None:
-        from je_auto_control.utils.remote_desktop.webrtc_files import (
-            FileTransferReceiver,
-        )
-        receiver = self._files_receiver
-        if receiver is None:
-            receiver = FileTransferReceiver()
-            self._files_receiver = receiver
+        from je_auto_control.utils.remote_desktop.webrtc_files import FileTransferReceiver
+        close_file_receiver(self._files_receiver, self._files_channel)
+        receiver = self._files_receiver = FileTransferReceiver()
+        self._files_channel, connection = channel, self._pc
 
-        @channel.on("message")
-        def _on_message(message) -> None:
-            receiver.handle_message(
-                message,
-                on_done=self._on_viewer_file_done,
-            )
+        def active() -> bool:
+            return (self._files_channel is channel and self._pc is connection and self._files_receiver is receiver
+                    and self._authenticated and not self._closed.is_set())
+
+        bind_file_receiver(channel, receiver, active, self._on_viewer_file_done,
+                           received=self._file_callbacks.received)
 
     def _wire_usb_channel(self, channel) -> None:
         """Attach a USB passthrough client to the ``usb`` DataChannel.
@@ -313,11 +323,7 @@ class WebRTCDesktopViewer:
         return self._usb_client
 
     def _on_viewer_file_done(self, path) -> None:
-        if self._on_file_received is not None:
-            try:
-                self._on_file_received(path)
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("viewer file done cb: %r", error)
+        self._file_callbacks.published(path)
 
     def stop(self) -> None:
         if self._pc is None:
@@ -328,6 +334,12 @@ class WebRTCDesktopViewer:
             future.result(timeout=3.0)
         except (asyncio.TimeoutError, OSError, RuntimeError) as error:
             autocontrol_logger.warning("webrtc viewer stop: %r", error)
+
+    @property
+    def connection_identity(self) -> object:
+        """Return an opaque peer-connection identity for delayed work; compare only by object identity."""
+        identity: object = self._pc
+        return identity
 
     @property
     def authenticated(self) -> bool:
@@ -439,6 +451,8 @@ class WebRTCDesktopViewer:
             autocontrol_logger.debug("%s stop: %r", label, error)
 
     async def _async_stop(self) -> None:
+        self._closed.set()
+        close_file_receiver(self._files_receiver, self._files_channel)
         self._stop_quietly(self._host_voice_receiver, "host voice")
         self._host_voice_receiver = None
         self._stop_quietly(self._opus_audio_track, "opus mic track")
@@ -455,7 +469,7 @@ class WebRTCDesktopViewer:
             self._pc = None
         self._control_channel = None
         self._mic_channel = None
-        self._files_channel = None
+        self._files_channel = self._files_receiver = None
         self._authenticated = False
 
     # --- wiring -------------------------------------------------------------
@@ -465,15 +479,20 @@ class WebRTCDesktopViewer:
 
         @pc.on("connectionstatechange")
         async def _on_state() -> None:
-            state = pc.connectionState
+            current = self._pc
+            if current is None or current is not pc:
+                return
+            state = current.connectionState
             autocontrol_logger.info("webrtc viewer: connection %s", state)
+            if state in ("failed", "closed", "disconnected"):
+                self._authenticated = False
+                close_file_receiver(self._files_receiver, self._files_channel)
             if cb is not None:
                 try:
                     cb(state)
                 except (RuntimeError, OSError) as error:
+                    raise_caused_run_interruption(error)
                     autocontrol_logger.warning("state cb: %r", error)
-            if state in ("failed", "closed", "disconnected"):
-                self._authenticated = False
 
         @pc.on("track")
         def _on_track(track) -> None:
@@ -519,7 +538,9 @@ class WebRTCDesktopViewer:
 
         @channel.on("close")
         def _on_close() -> None:
-            self._authenticated = False
+            if self._control_channel is channel:
+                self._authenticated = False
+                abort_file_receiver(self._files_receiver, self._files_channel)
 
         # Channel may already be open by the time aiortc fires the
         # "datachannel" event; in that case "open" never fires again.

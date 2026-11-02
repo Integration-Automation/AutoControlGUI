@@ -151,9 +151,9 @@ def _new_vault(passphrase: str) -> Tuple[Any, dict]:
 
 
 def _note_for_journal(value: str) -> None:
-    """Let a started action journal mask ``value`` by exact match (memory only)."""
-    from je_auto_control.utils.action_journal import recorder
-    recorder.note_secret_value(value)
+    """Let the current run mask ``value`` by exact match (memory only)."""
+    from je_auto_control.utils.logging.secret_scope import remember_secret
+    remember_secret(value)
 
 
 class SecretManager:

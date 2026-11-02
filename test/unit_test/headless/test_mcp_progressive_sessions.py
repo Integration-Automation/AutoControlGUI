@@ -1,319 +1,186 @@
-"""Session-local tool disclosure and paged ``tools/list`` (plan G2).
-
-Fake tools only. The HTTP half runs a real ``HttpMCPServer`` on a loopback
-port, because "two sessions do not see each other's tools" is a statement
-about session ids and connections, not about a dict.
-"""
-import http.client
+"""Session disclosure cannot grant authority, cross peers, or mix registry snapshots."""
 import json
 
 import pytest
 
-from je_auto_control.utils.mcp_server.disclosure import (
-    CORE_TOOL_NAMES, SNAPSHOT_META, DisclosureResult, ToolDisclosureError,
-    ToolMode, ToolPage, ToolView, resolve_mode,
-)
-from je_auto_control.utils.mcp_server.http_sessions import SESSION_HEADER
-from je_auto_control.utils.mcp_server.http_transport import DEFAULT_PATH, HttpMCPServer
-from je_auto_control.utils.mcp_server.server import MCPServer
-from je_auto_control.utils.mcp_server.tools import (
-    MCPTool, MCPToolAnnotations, build_default_tool_registry,
-)
-
-_LIST_CHANGED = "notifications/tools/list_changed"
+from je_auto_control.utils.mcp_server.discovery import ToolIndex, ToolDiscoveryError
+from je_auto_control.utils.mcp_server.tools import MCPTool, MCPToolAnnotations
 
 
-def _tool(name, *, read_only=False, category="fake"):
-    return MCPTool(
-        name=name, description=f"Fake tool {name}.",
-        input_schema={"type": "object", "properties": {}},
-        handler=lambda: name,
-        annotations=MCPToolAnnotations(read_only=read_only), category=category,
-    )
+def fixtures():
+    return [MCPTool("fixture_" + str(index), "Fixture", {}, lambda: "ok",
+                    MCPToolAnnotations(read_only=True)) for index in range(5)]
 
 
-def _tools(count=6):
-    return [_tool(f"fx_{number:03d}") for number in range(count)]
+def request(server, method, params=None):
+    return json.loads(server.handle_line(json.dumps({"jsonrpc": "2.0", "id": 1,
+                                                    "method": method, "params": params or {}})))
 
 
-def _rpc(server, method, params=None, msg_id=1):
-    return json.loads(server.handle_line(json.dumps({
-        "jsonrpc": "2.0", "id": msg_id, "method": method, "params": params or {}})))
+def test_enable_is_session_local_and_emits_one_change():
+    from je_auto_control.utils.mcp_server.disclosure import ToolView
+    events = []
+    first = ToolView(lambda: ToolIndex(fixtures()), changed=lambda: events.append("changed"))
+    second = ToolView(lambda: ToolIndex(fixtures()))
+    assert first.state()["enabled"] == []
+    first.enable(["fixture_0"])
+    first.enable(["fixture_0"])
+    assert first.state()["enabled"] == ["fixture_0"]
+    assert second.state()["enabled"] == [] and events == ["changed"]
+    assert first.state()["snapshot_id"] != second.state()["snapshot_id"]
 
 
-def _names(reply):
-    return [tool["name"] for tool in reply["result"]["tools"]]
+def test_cursor_rejects_plugin_changes_and_other_views():
+    from je_auto_control.utils.mcp_server.disclosure import ToolView
+    tools = fixtures()
+    view = ToolView(lambda: ToolIndex(tools), mode="static", initial=[tool.name for tool in tools], page_size=2)
+    first = view.list_page()
+    cursor = first["nextCursor"]
+    other = ToolView(lambda: ToolIndex(tools), mode="static", initial=[tool.name for tool in tools], page_size=2)
+    with pytest.raises(ToolDiscoveryError, match="cursor"):
+        other.list_page(cursor)
+    second = view.list_page(cursor)
+    assert len({item["name"] for item in first["tools"] + second["tools"]}) == 4
+    assert first["snapshot_id"] == second["snapshot_id"]
+    tools.pop()
+    with pytest.raises(ToolDiscoveryError, match="cursor"):
+        view.list_page(second["nextCursor"])
 
 
-def _call(server, name, arguments=None):
-    reply = _rpc(server, "tools/call", {"name": name, "arguments": arguments or {}})
-    result = reply["result"]
-    assert result["isError"] is False, result
-    return json.loads(result["content"][0]["text"])
+def test_server_disclosure_cannot_cross_connections_or_bypass_enable():
+    from je_auto_control.utils.mcp_server.server import MCPServer
+    from je_auto_control.utils.mcp_server.tools._discovery import discovery_tools
+    server = MCPServer(tools=discovery_tools() + fixtures())
+    server.configure_tool_disclosure("progressive", page_size=10)
+    events = []
+    with server.connection_scope(connection_id="first", notifier=lambda *event: events.append(event)):
+        assert "error" in request(server, "tools/call", {"name": "fixture_0"})
+        reply = request(server, "tools/call", {"name": "ac_mcp_tools_enable",
+                                               "arguments": {"names": ["fixture_0"]}})
+        assert reply["result"]["isError"] is False
+        assert "fixture_0" in {tool["name"] for tool in request(server, "tools/list")["result"]["tools"]}
+    with server.connection_scope(connection_id="second"):
+        assert "fixture_0" not in {tool["name"] for tool in request(server, "tools/list")["result"]["tools"]}
+    assert [event[0] for event in events] == ["notifications/tools/list_changed"]
+    server.forget_connection("first")
+    with server.connection_scope(connection_id="first"):
+        assert "error" in request(server, "tools/call", {"name": "fixture_0"})
 
 
-def _all_pages(server):
-    names, cursor, pages = [], None, 0
-    while True:
-        reply = _rpc(server, "tools/list", {"cursor": cursor} if cursor else {})
-        names.extend(_names(reply))
-        pages += 1
-        cursor = reply["result"].get("nextCursor")
-        if cursor is None:
-            return names, pages
+def test_full_mode_preserves_the_existing_list_shape():
+    from je_auto_control.utils.mcp_server.server import MCPServer
+    tools = fixtures()
+    server = MCPServer(tools=tools)
+    assert request(server, "tools/list")["result"] == {"tools": [tool.to_descriptor() for tool in tools]}
 
 
-# --- mode selection ---------------------------------------------------------------
+def test_readonly_role_and_revocation_apply_to_enable_and_cursors():
+    from je_auto_control.utils.mcp_server.disclosure import ToolView
+    from je_auto_control.utils.rbac.authorization import AuthorizationContext, authorization_scope
+    tools = fixtures() + [MCPTool("write", "Mutate", {}, lambda: None)]
+    view = ToolView(lambda: ToolIndex(tools), page_size=2)
+    with authorization_scope(AuthorizationContext("reader", "viewer")):
+        with pytest.raises(ToolDiscoveryError, match="not available"):
+            view.enable(["fixture_0", "write"])
+        assert view.state()["enabled"] == []
+    with authorization_scope(AuthorizationContext("driver", "operator")):
+        view.enable([tool.name for tool in tools])
+        page = view.list_page()
+    with authorization_scope(AuthorizationContext("driver", "viewer")):
+        with pytest.raises(ToolDiscoveryError, match="cursor"):
+            view.list_page(page["nextCursor"])
+        assert "write" not in view.state()["enabled"]
 
 
-def test_full_mode_is_compatible(monkeypatch):
-    monkeypatch.delenv("JE_AUTOCONTROL_MCP_TOOL_MODE", raising=False)
-    registry = build_default_tool_registry(read_only=False)
-    server = MCPServer(tools=registry)
-    assert server.disclosure.mode is ToolMode.FULL
-    reply = _rpc(server, "tools/list")
-    full_names = _names(reply)
-    registry_names = [tool.name for tool in registry]
-    assert full_names == registry_names
-    # Byte for byte what the server answered before the mode existed: one
-    # page, no cursor, no _meta, and a cursor argument is ignored as it was.
-    expected = {"tools": [tool.to_descriptor() for tool in registry]}
-    assert reply["result"] == expected
-    assert json.dumps(reply["result"]) == json.dumps(expected)
-    assert _rpc(server, "tools/list", {"cursor": "anything"})["result"] == expected
-    assert not any(name in server._tools for name in CORE_TOOL_NAMES)
+def test_closed_view_cannot_be_revived_by_an_inflight_callback():
+    from je_auto_control.utils.mcp_server.disclosure import ToolView
+    view = ToolView(lambda: ToolIndex(fixtures()))
+    view.close()
+    with pytest.raises(ToolDiscoveryError, match="closed"):
+        view.enable(["fixture_0"])
+    with pytest.raises(ToolDiscoveryError, match="closed"):
+        view.list_page()
 
 
-def test_mode_comes_from_the_environment_and_rejects_typos(monkeypatch):
-    monkeypatch.setenv("JE_AUTOCONTROL_MCP_TOOL_MODE", "progressive")
-    assert MCPServer(tools=_tools()).disclosure.mode is ToolMode.PROGRESSIVE
-    assert MCPServer(tools=_tools(), tool_mode="full").disclosure.mode is ToolMode.FULL
-    monkeypatch.setenv("JE_AUTOCONTROL_MCP_TOOL_MODE", "progresive")
-    with pytest.raises(ToolDisclosureError):
-        resolve_mode(None)
-    monkeypatch.setenv("JE_AUTOCONTROL_MCP_TOOL_MODE", "")
-    assert resolve_mode(None) is ToolMode.FULL
+def test_readonly_ceiling_applies_to_plugins_registered_after_start():
+    from je_auto_control.utils.mcp_server.server import MCPServer
+    from je_auto_control.utils.mcp_server.tools._discovery import discovery_tools
+    server = MCPServer(tools=discovery_tools())
+    server.configure_tool_disclosure("progressive", read_only=True)
+    calls = []
+    server.register_tool(MCPTool("plugin_write", "Mutate", {}, lambda: calls.append(True)))
+    result = request(server, "tools/call", {"name": "ac_mcp_tools_enable", "arguments": {"names": ["plugin_write"]}})
+    assert result["result"]["isError"] is True
+    assert "error" in request(server, "tools/call", {"name": "plugin_write"})
+    server.configure_tool_disclosure("full")
+    assert "plugin_write" not in {item["name"] for item in request(server, "tools/list")["result"]["tools"]}
+    assert "error" in request(server, "tools/call", {"name": "plugin_write"})
+    assert calls == []
 
 
-def test_progressive_session_starts_with_the_core_only():
-    server = MCPServer(tools=_tools(), tool_mode="progressive")
-    reply = _rpc(server, "tools/list")
-    assert _names(reply) == list(CORE_TOOL_NAMES)
-    assert "nextCursor" not in reply["result"]
-    assert isinstance(reply["result"]["_meta"][SNAPSHOT_META], str)
+def test_stateless_requests_use_a_fixed_profile_and_create_no_session_views():
+    from je_auto_control.utils.mcp_server.server import MCPServer
+    from je_auto_control.utils.mcp_server.tools._discovery import discovery_tools
+    server = MCPServer(tools=discovery_tools() + fixtures())
+    server.configure_tool_disclosure("progressive", names=["fixture_0"], page_size=1)
+    meta = {"io.modelcontextprotocol/protocolVersion": "2026-07-28",
+            "io.modelcontextprotocol/clientCapabilities": {}}
+    page = request(server, "tools/list", {"_meta": meta})["result"]
+    assert "fixture_0" in {item["name"] for item in page["tools"]}
+    assert "fixture_1" not in {item["name"] for item in page["tools"]}
+    assert "nextCursor" not in page and server._disclosure_views == {}
+    result = request(server, "tools/call", {"_meta": meta, "name": "ac_mcp_tools_enable",
+                                          "arguments": {"names": ["fixture_1"]}})
+    assert result["result"]["isError"] is True
 
 
-# --- enabling ---------------------------------------------------------------------
+def test_two_real_http_sessions_keep_separate_views_across_connections():
+    import http.client
+    from je_auto_control.utils.mcp_server.server import MCPServer
+    from je_auto_control.utils.mcp_server.http_transport import HttpMCPServer
+    from je_auto_control.utils.mcp_server.tools._discovery import discovery_tools
+    bridge = MCPServer(tools=discovery_tools() + fixtures())
+    bridge.configure_tool_disclosure("progressive", page_size=10)
+    server = HttpMCPServer(bridge, port=0)
+    server.start()
 
-
-def test_enable_adds_to_the_list_and_reports_what_happened():
-    server = MCPServer(tools=_tools(), tool_mode="progressive")
-    outcome = _call(server, "ac_tools_enable", {"names": ["fx_001", "fx_404", "fx_001"]})
-    assert outcome["enabled"] == ["fx_001"]
-    assert outcome["unavailable"] == ["fx_404"]
-    assert _names(_rpc(server, "tools/list")) == list(CORE_TOOL_NAMES) + ["fx_001"]
-    again = _call(server, "ac_tools_enable", {"names": ["fx_001"]})
-    assert again["enabled"] == []
-    assert again["already_enabled"] == ["fx_001"]
-    assert _call(server, "ac_tools_disable", {"names": ["fx_001"]})["disabled"] == ["fx_001"]
-    assert _names(_rpc(server, "tools/list")) == list(CORE_TOOL_NAMES)
-
-
-def test_enable_accepts_a_category():
-    tools = _tools(3) + [_tool("fx_other", category="other")]
-    server = MCPServer(tools=tools, tool_mode="progressive")
-    outcome = _call(server, "ac_tools_enable", {"names": ["category:fake"]})
-    assert outcome["enabled"] == ["fx_000", "fx_001", "fx_002"]
-    assert _call(server, "ac_tools_enable", {"names": ["category:nope"]})["unavailable"] == [
-        "category:nope"]
-
-
-def test_enable_emits_list_changed():
-    server = MCPServer(tools=_tools(), tool_mode="progressive")
-    sent = []
-    server.set_notifier(lambda method, params: sent.append(method))
-    outcome = _call(server, "ac_tools_enable", {"names": ["fx_001", "fx_002"]})
-    list_changed_count = sent.count(_LIST_CHANGED)
-    assert list_changed_count == 1
-    assert outcome["list_changed_sent"] is True
-    # Enabling what is already enabled changes nothing, so it says nothing.
-    _call(server, "ac_tools_enable", {"names": ["fx_001"]})
-    assert sent.count(_LIST_CHANGED) == 1
-    _call(server, "ac_tools_disable", {"names": ["fx_001"]})
-    assert sent.count(_LIST_CHANGED) == 2
-
-
-def test_enable_without_a_channel_says_the_client_must_list_again():
-    server = MCPServer(tools=_tools(), tool_mode="progressive")
-    outcome = _call(server, "ac_tools_enable", {"names": ["fx_001"]})
-    assert outcome["list_changed_sent"] is False
-
-
-def test_view_api_returns_typed_results():
-    server = MCPServer(tools=_tools(), tool_mode="progressive")
-    view = server.disclosure.view_for("session-a")
-    assert isinstance(view, ToolView)
-    result = view.enable(["fx_002"])
-    assert isinstance(result, DisclosureResult)
-    assert result.enabled == ("fx_002",)
-    page = view.list_page(None)
-    assert isinstance(page, ToolPage)
-    assert page.next_cursor is None
-    assert page.snapshot_id
-    assert [tool.name for tool in page.tools] == list(CORE_TOOL_NAMES) + ["fx_002"]
-    with pytest.raises(ToolDisclosureError):
-        view.enable("fx_003")  # a bare string is not a list of names
-    with pytest.raises(ToolDisclosureError):
-        view.enable([f"fx_{number}" for number in range(10_000)])
-
-
-def test_enable_is_session_local():
-    server = MCPServer(tools=_tools(), tool_mode="progressive")
-    tool = "fx_003"
-    with server.connection_scope(connection_id="session-a"):
-        _call(server, "ac_tools_enable", {"names": [tool]})
-        assert tool in _names(_rpc(server, "tools/list"))
-    other_session = server.disclosure.view_for("session-b")
-    assert tool not in other_session.visible_names
-    with server.connection_scope(connection_id="session-b"):
-        assert tool not in _names(_rpc(server, "tools/list"))
-        refused = _rpc(server, "tools/call", {"name": tool, "arguments": {}})
-        assert refused["error"]["code"] == -32602
-    # stdio's one implicit session is a third, separate view.
-    assert tool not in _names(_rpc(server, "tools/list"))
-
-
-def test_a_session_is_reclaimed_when_it_ends():
-    server = MCPServer(tools=_tools(), tool_mode="progressive")
-    with server.connection_scope(connection_id="session-a"):
-        _call(server, "ac_tools_enable", {"names": ["fx_001"]})
-    assert server.disclosure.session_count == 1
-    server.forget_connection("session-a")
-    assert server.disclosure.session_count == 0
-    with server.connection_scope(connection_id="session-a"):
-        assert "fx_001" not in _names(_rpc(server, "tools/list"))
-
-
-# --- pagination -------------------------------------------------------------------
-
-
-def _paged_server(count=7, page_size=3):
-    server = MCPServer(tools=_tools(count), tool_mode="progressive")
-    server.disclosure.page_size = page_size
-    _call(server, "ac_tools_enable", {"names": ["category:fake"]})
-    return server
-
-
-def test_list_pages_cover_the_view_exactly_once():
-    server = _paged_server()
-    names, pages = _all_pages(server)
-    assert names == list(CORE_TOOL_NAMES) + [f"fx_{number:03d}" for number in range(7)]
-    assert pages == 4
-
-
-def test_cursor_snapshot_survives_plugin_change():
-    server = _paged_server()
-    first = _rpc(server, "tools/list")
-    snapshot = first["result"]["_meta"][SNAPSHOT_META]
-    cursor = first["result"]["nextCursor"]
-    # A plugin arrives and another leaves between two pages.
-    server.register_tool(_tool("plugin_fx_new"))
-    server.unregister_tool("fx_005")
-    _call(server, "ac_tools_enable", {"names": ["plugin_fx_new"]})
-    names = _names(first)
-    while cursor is not None:
-        page = _rpc(server, "tools/list", {"cursor": cursor})
-        assert page["result"]["_meta"][SNAPSHOT_META] == snapshot
-        names.extend(_names(page))
-        cursor = page["result"].get("nextCursor")
-    # The original snapshot, whole: no page mixes the two registries.
-    assert names == list(CORE_TOOL_NAMES) + [f"fx_{number:03d}" for number in range(7)]
-    fresh, _pages = _all_pages(server)
-    assert "plugin_fx_new" in fresh
-    assert "fx_005" not in fresh
-    assert _rpc(server, "tools/list")["result"]["_meta"][SNAPSHOT_META] != snapshot
-
-
-def test_stale_and_malformed_cursors_fail_explicitly():
-    server = _paged_server()
-    cursor = _rpc(server, "tools/list")["result"]["nextCursor"]
-    for bad in ("", "not-a-cursor", cursor[:-2] + "zz", cursor + "AAAA", 7, ["x"]):
-        reply = _rpc(server, "tools/list", {"cursor": bad})
-        assert reply["error"]["code"] == -32602, bad
-    # Enough newer snapshots push the first one out; its cursor then fails
-    # instead of silently paging a different list.
-    for number in range(server.disclosure.view_for(None).max_snapshots + 1):
-        server.register_tool(_tool(f"fx_churn_{number}"))
-        _rpc(server, "tools/list")
-    assert _rpc(server, "tools/list", {"cursor": cursor})["error"]["code"] == -32602
-
-
-def test_a_cursor_belongs_to_its_session():
-    server = _paged_server()
-    cursor = _rpc(server, "tools/list")["result"]["nextCursor"]
-    with server.connection_scope(connection_id="session-b"):
-        assert _rpc(server, "tools/list", {"cursor": cursor})["error"]["code"] == -32602
-
-
-# --- over HTTP --------------------------------------------------------------------
-
-
-def _post(port, payload, session_id=None):
-    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
-    headers = {"Content-Type": "application/json"}
-    if session_id is not None:
-        headers[SESSION_HEADER] = session_id
-    try:
-        connection.request("POST", DEFAULT_PATH, body=json.dumps(payload), headers=headers)
-        response = connection.getresponse()
-        body = response.read().decode("utf-8")
-        return response.status, response.getheader(SESSION_HEADER), body
-    finally:
-        connection.close()
-
-
-def _open_session(port):
-    status, session_id, _body = _post(port, {
-        "jsonrpc": "2.0", "id": 1, "method": "initialize",
-        "params": {"protocolVersion": "2025-11-25", "capabilities": {}}})
-    assert status == 200
-    assert session_id
-    return session_id
-
-
-def _http_names(port, session_id):
-    _status, _sid, body = _post(port, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
-                                session_id)
-    return [tool["name"] for tool in json.loads(body)["result"]["tools"]]
-
-
-def test_two_http_sessions_do_not_share_enabled_tools():
-    mcp = MCPServer(tools=_tools(), tool_mode="progressive")
-    transport = HttpMCPServer(mcp=mcp, port=0)
-    transport.start()
-    try:
-        port = transport.address[1]
-        first, second = _open_session(port), _open_session(port)
-        _post(port, {"jsonrpc": "2.0", "id": 3, "method": "tools/call",
-                     "params": {"name": "ac_tools_enable", "arguments": {"names": ["fx_002"]}}},
-              first)
-        assert "fx_002" in _http_names(port, first)
-        assert "fx_002" not in _http_names(port, second)
-        status, _sid, body = _post(port, {
-            "jsonrpc": "2.0", "id": 4, "method": "tools/call",
-            "params": {"name": "fx_002", "arguments": {}}}, second)
-        assert status == 200
-        assert json.loads(body)["error"]["code"] == -32602
-        assert mcp.disclosure.session_count == 2
-        # Ending the session releases its view.
-        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    def rpc(method, params=None, session=None):
+        connection = http.client.HTTPConnection(*server.address, timeout=5)
         try:
-            connection.request("DELETE", DEFAULT_PATH, headers={SESSION_HEADER: first})
-            assert connection.getresponse().status == 200
+            headers = {"Content-Type": "application/json"}
+            if session:
+                headers["Mcp-Session-Id"] = session
+            connection.request("POST", "/mcp", json.dumps({"jsonrpc": "2.0", "id": 1,
+                               "method": method, "params": params or {}}), headers)
+            response = connection.getresponse()
+            return response.getheader("Mcp-Session-Id"), json.loads(response.read())
         finally:
             connection.close()
-        assert mcp.disclosure.session_count == 1
-        transport.stop()
-        assert mcp.disclosure.session_count == 0
+
+    try:
+        first, _ = rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}})
+        second, _ = rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}})
+        assert first and second and first != second
+        _, enabled = rpc("tools/call", {"name": "ac_mcp_tools_enable",
+                                        "arguments": {"names": ["fixture_0"]}}, first)
+        assert enabled["result"]["isError"] is False
+        _, first_page = rpc("tools/list", session=first)
+        _, second_page = rpc("tools/list", session=second)
+        assert "fixture_0" in {item["name"] for item in first_page["result"]["tools"]}
+        assert "fixture_0" not in {item["name"] for item in second_page["result"]["tools"]}
+        assert first in bridge._disclosure_views and second in bridge._disclosure_views
     finally:
-        transport.stop()
+        server.stop()
+    assert bridge._disclosure_views == {}
+
+
+def test_stdio_eof_retires_the_view_and_its_existing_callback():
+    import io
+    from je_auto_control.utils.mcp_server.server import MCPServer
+    server = MCPServer(tools=fixtures())
+    server.configure_tool_disclosure("progressive")
+    callback = server._build_call_context(1, {}).tool_catalog
+    server.serve_stdio(io.StringIO(""), io.StringIO())
+    assert server._disclosure_views == {}
+    with pytest.raises(ToolDiscoveryError, match="closed"):
+        callback().state()

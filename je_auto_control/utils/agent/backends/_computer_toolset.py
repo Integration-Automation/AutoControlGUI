@@ -147,7 +147,8 @@ def zoom_image(png: bytes, region: Tuple[int, int, int, int],
     with Image.open(io.BytesIO(png)) as image:
         x0, y0, x1, y1 = _clip_region(region, image.size)
         crop = image.crop((x0, y0, x1, y1))
-        size = fitted_size(*crop.size, tier)
+        crop_width, crop_height = crop.size
+        size = fitted_size(crop_width, crop_height, tier)
         if size != crop.size:
             crop = crop.resize(size, Image.Resampling.LANCZOS)
         return _png_bytes(crop)

@@ -4,11 +4,12 @@ Serves tools, resources and prompts to MCP clients of both protocol eras:
 the handshake-based revisions (``initialize``, up to 2025-11-25) and the
 stateless 2026-07-28, chosen per request (see :mod:`._stateless`). Each
 stdio line is one JSON-RPC message — no Content-Length framing — matching
-the MCP stdio spec. Which tools a session is offered -- all of them by
-default -- is :mod:`.disclosure`'s.
+the MCP stdio spec.
 """
+import contextlib
 import itertools
 import json
+import secrets
 import sys
 import threading
 import time
@@ -17,16 +18,16 @@ from typing import Any, Callable, Dict, List, Optional, TextIO
 from je_auto_control.utils.cli_output import utf8_stream
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
 from je_auto_control.utils.mcp_server._authz import (
     authorize_resource, authorize_tool_call, visible_resources,
 )
-from je_auto_control.utils.mcp_server._connection_state import ConnectionStateMixin
-from je_auto_control.utils.mcp_server._core_tools import build_core_tools
 from je_auto_control.utils.mcp_server.audit import AuditLogger
+from je_auto_control.utils.mcp_server._disclosure_server import DisclosureServerMixin
+from je_auto_control.utils.mcp_server.stdio import start_mcp_stdio_server  # noqa: F401  # reason: legacy re-export
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
 )
-from je_auto_control.utils.mcp_server.disclosure import ToolDisclosure, ToolMode
 from je_auto_control.utils.mcp_server.log_bridge import (
     MCPLogBridge, mcp_level_to_logging,
 )
@@ -40,10 +41,12 @@ from je_auto_control.utils.mcp_server.resources import (
 from je_auto_control.utils.mcp_server.tools import (
     MCPTool, build_default_tool_registry,
 )
+from je_auto_control.utils.mcp_server.tools._base import _tool_result_error
 from je_auto_control.utils.mcp_server.tools._validation import (
     undeclared_arguments, validate_arguments,
 )
 from je_auto_control.utils.mcp_server._argument_policy import ArgumentPolicy
+from je_auto_control.utils.mcp_server._origin_policies import OriginPoliciesMixin
 from je_auto_control.utils.mcp_server._client_requests import (
     ClientRequestMixin,
 )
@@ -53,7 +56,7 @@ from je_auto_control.utils.mcp_server._input_required import (
 from je_auto_control.utils.mcp_server._stateless import StatelessDispatchMixin
 from je_auto_control.utils.mcp_server._subscriptions import NO_RESPONSE, SubscriptionMixin
 from je_auto_control.utils.mcp_server._protocol import (
-    PROTOCOL_VERSION,
+    PROTOCOL_VERSION,  # noqa: F401  # reason: re-exported; callers import it from server
     _capture_error_screenshot, negotiate_protocol_version,
     _coerce_params, _DISPATCH_ERRORS, _error_response, _invalid_envelope, _InvalidToolArguments,
     _is_hashable,
@@ -65,19 +68,10 @@ from je_auto_control.utils.mcp_server._protocol import (
 #: and shuts down anyway.
 WORKER_DRAIN_TIMEOUT = 10.0
 
-# PROTOCOL_VERSION is re-exported: callers import it from this module.
-__all__ = ["MCPServer", "PROTOCOL_VERSION", "WORKER_DRAIN_TIMEOUT", "start_mcp_stdio_server"]
 
-
-class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
-                ClientRequestMixin):
-    """JSON-RPC 2.0 MCP server with a configurable tool registry.
-
-    ``tool_mode`` is ``full`` (every tool in ``tools/list``, the default),
-    ``progressive`` or ``static``; ``None`` reads ``JE_AUTOCONTROL_MCP_TOOL_MODE``.
-    ``read_only`` builds the default registry without mutating tools and, in
-    every mode, keeps any registered later from being listed or called.
-    """
+class MCPServer(StatelessDispatchMixin, SubscriptionMixin, ClientRequestMixin,
+                OriginPoliciesMixin, DisclosureServerMixin):
+    """JSON-RPC 2.0 MCP server with a configurable tool registry."""
 
     def __init__(self, tools: Optional[List[MCPTool]] = None,
                  resource_provider: Optional[ResourceProvider] = None,
@@ -86,15 +80,9 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
                  audit_logger: Optional[AuditLogger] = None,
                  rate_limiter: Optional[RateLimiter] = None,
                  log_bridge: Optional[MCPLogBridge] = None,
-                 tool_mode: str | ToolMode | None = None,
-                 read_only: Optional[bool] = None,
                  ) -> None:
-        registry = tools if tools is not None else build_default_tool_registry(read_only=read_only)
+        registry = tools if tools is not None else build_default_tool_registry()
         self._tools: Dict[str, MCPTool] = {tool.name: tool for tool in registry}
-        #: The tool mode and each session's view of the registry.
-        self.disclosure = ToolDisclosure(self, tool_mode, read_only=read_only)
-        if self.disclosure.mode is ToolMode.PROGRESSIVE:
-            self._tools.update((tool.name, tool) for tool in build_core_tools(self.disclosure))
         self._resources = (resource_provider if resource_provider is not None
                             else default_resource_provider())
         self._prompts = (prompt_provider if prompt_provider is not None
@@ -107,9 +95,11 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
         self._log_bridge = log_bridge
         #: Path roots and env:// allowlist for tool arguments; off unless the
         #: environment configures them. Assign another to change it.
+        self._init_origin_policies()
         self.argument_policy = ArgumentPolicy.from_env()
         self._stop = threading.Event()
         self._initialized = False
+        self._agent_session = secrets.token_hex(16)
         self._peer_era: Optional[str] = None  # the stdio peer's; see _note_peer_era
         self._request_states = RequestStateSigner()
         # tools/call runs on a worker thread under the stdio transport, so a
@@ -118,7 +108,12 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
         # the writer out from under them.
         self._workers: List[threading.Thread] = []
         self._workers_lock = threading.Lock()
-        # Connection-scoped state; see :mod:`._connection_state`.
+        # Connection-scoped state. The stdio transport has exactly one peer, so
+        # a server-wide default is right for it; an HTTP transport has many, and
+        # each request runs on its own thread. Keeping the notifier/writer in
+        # thread-local storage is what stops one client's progress
+        # notifications from being emitted down another client's socket.
+        # See :meth:`connection_scope`.
         self._default_notifier: Optional[
             Callable[[str, Dict[str, Any]], None]] = None
         self._default_writer: Optional[Callable[[str], None]] = None
@@ -143,7 +138,111 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
         self._subscriptions_lock = threading.Lock()
         self._listeners: Dict[Any, Any] = {}  # open subscriptions/listen, by (connection, id)
         self._listeners_lock = threading.Lock()
-        self._list_changed_listeners: List[Callable[[Any], None]] = []
+        self._tool_change_sinks: Dict[Any, Callable[[Any], set[Any]]] = {}
+        self._init_tool_disclosure()
+
+    # --- connection-scoped state ------------------------------------------
+    #
+    # Each property prefers a value set for the current thread (one HTTP
+    # request = one thread) and falls back to the server-wide default that
+    # stdio and set_notifier() use. A plain POST therefore sees *no* notifier
+    # rather than inheriting whichever SSE connection happens to be open —
+    # correct, since a plain POST has no stream to deliver notifications on.
+
+    @property
+    def _notifier(self) -> Optional[Callable[[str, Dict[str, Any]], None]]:
+        return getattr(self._local, "notifier", None) or self._default_notifier
+
+    @_notifier.setter
+    def _notifier(self, value) -> None:
+        self._default_notifier = value
+
+    @property
+    def _writer(self) -> Optional[Callable[[str], None]]:
+        return getattr(self._local, "writer", None) or self._default_writer
+
+    @_writer.setter
+    def _writer(self, value) -> None:
+        self._default_writer = value
+
+    @property
+    def _concurrent_tools(self) -> bool:
+        scoped = getattr(self._local, "concurrent_tools", None)
+        if scoped is None:
+            return self._default_concurrent_tools
+        return scoped
+
+    @_concurrent_tools.setter
+    def _concurrent_tools(self, value) -> None:
+        self._default_concurrent_tools = bool(value)
+
+    @property
+    def _connection_id(self) -> Any:
+        """Identity of the peer served on this thread (None for stdio)."""
+        return getattr(self._local, "connection_id", None)
+
+    @property
+    def _client_capabilities(self) -> Dict[str, Any]:
+        """Capabilities advertised by the peer served on this thread."""
+        if self._stateless_request is not None:
+            return self._stateless_request.capabilities
+        conn = self._connection_id
+        if conn is None:
+            return self._default_client_capabilities
+        with self._caps_lock:
+            return self._client_caps_by_conn.get(conn, {})
+
+    @_client_capabilities.setter
+    def _client_capabilities(self, value: Dict[str, Any]) -> None:
+        conn = self._connection_id
+        if conn is None:
+            self._default_client_capabilities = value
+            return
+        with self._caps_lock:
+            self._client_caps_by_conn[conn] = value
+
+    @contextlib.contextmanager
+    def connection_scope(self, *, notifier=None, writer=None,
+                         concurrent_tools=None, connection_id=None):
+        """Bind notifier/writer/concurrency/identity to the calling thread only.
+
+        Transports that serve more than one peer must wrap each request in
+        this. Previously they swapped the attributes on the shared server, so
+        any concurrent request bound to the wrong peer's socket. ``connection_id``
+        scopes active-call slots and client capabilities per peer.
+        """
+        prior = (getattr(self._local, "notifier", None),
+                 getattr(self._local, "writer", None),
+                 getattr(self._local, "concurrent_tools", None),
+                 getattr(self._local, "connection_id", None))
+        self._local.notifier = notifier
+        self._local.writer = writer
+        self._local.concurrent_tools = concurrent_tools
+        self._local.connection_id = connection_id
+        try:
+            yield self
+        finally:
+            (self._local.notifier, self._local.writer,
+             self._local.concurrent_tools, self._local.connection_id) = prior
+
+    def forget_connection(self, connection_id: Any) -> None:
+        """Drop per-connection state when a transport connection closes.
+
+        HTTP connections are transient; without this their capabilities and
+        any stray active-call contexts would accumulate for the server's life.
+        """
+        if connection_id is None:
+            return
+        self._forget_origin_policy(connection_id)
+        self._forget_tool_view(connection_id)
+        with self._caps_lock:
+            self._client_caps_by_conn.pop(connection_id, None)
+        self._end_listeners(lambda conn: conn == connection_id, graceful=False)
+        with self._calls_lock:
+            stale = [key for key in self._active_calls
+                     if isinstance(key, tuple) and key[0] == connection_id]
+            for key in stale:
+                self._active_calls.pop(key, None)
 
     def register_tool(self, tool: MCPTool) -> None:
         """Add or replace a tool in the live registry.
@@ -151,26 +250,24 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
         Emits ``notifications/tools/list_changed`` to the connected
         client so it knows to refresh its cached tool list.
         """
-        self.disclosure.check_name(tool.name)
         with self._tools_lock:
             self._tools[tool.name] = tool
-        self.disclosure.registry_changed()
         self._notify_tools_list_changed()
 
     def unregister_tool(self, name: str) -> bool:
         """Remove a tool by name. Returns True if it existed."""
-        self.disclosure.check_name(name)
         with self._tools_lock:
             if name not in self._tools:
                 return False
             del self._tools[name]
-        self.disclosure.registry_changed(removed=name)
         self._notify_tools_list_changed()
         return True
 
     def stop(self) -> None:
         """Request the stdio loop to exit at its next iteration."""
         self._stop.set()
+        self._close_client_origin_policies()
+        self._close_tool_views()
 
     def serve_stdio(self, stdin: Optional[TextIO] = None,
                     stdout: Optional[TextIO] = None) -> None:
@@ -208,8 +305,9 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
             # EOF is still running, and its reply has nowhere to go once the
             # writer is swapped back.
             self._join_workers()
+            self._close_client_origin_policies()
+            self._forget_tool_view(None)
             self.end_subscriptions(stdio=True)
-            self.disclosure.forget(None)  # the stdio peer's one implicit session
             self._detach_log_bridge_if_configured()
             self._notifier = prior_notifier
             self._writer = prior_writer
@@ -336,9 +434,13 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
                 )
                 return
             writer(payload)
-        thread = threading.Thread(
-            target=worker, daemon=True, name=f"MCPCall-{msg_id}",
-        )
+        try:
+            target = self._tool_worker_for_request(worker, params)
+        except AutoControlException as error:
+            if writer is not None:
+                writer(_error_response(msg_id, -32602, str(error)))
+            return
+        thread = threading.Thread(target=target, daemon=True, name=f"MCPCall-{msg_id}")
         with self._workers_lock:
             self._workers = [live for live in self._workers if live.is_alive()]
             self._workers.append(thread)
@@ -426,8 +528,8 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
         if nullary is not None:
             return nullary()
         handler = {
+            "tools/list": self._handle_tools_list,
             "initialize": self._handle_initialize,
-            "tools/list": self.disclosure.handle_list,
             "resources/read": self._handle_resources_read,
             "resources/subscribe": self._handle_resources_subscribe,
             "resources/unsubscribe": self._handle_resources_unsubscribe,
@@ -517,7 +619,7 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
         return payload
 
     def _prepare_tool_call(
-        self, params: Dict[str, Any],
+        self, params: Dict[str, Any], tool_view: Any = None,
     ) -> tuple[str, Any, Dict[str, Any]]:
         """Validate a tools/call request; return ``(name, tool, arguments)``.
 
@@ -537,13 +639,13 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
         if tool is None:
             raise _MCPError(-32602, f"Unknown tool: {name}")
         authorize_tool_call(tool, arguments, self._audit)  # RBAC; a no-op without a user
-        self.disclosure.require_available(tool, arguments)  # a no-op in full mode
+        self._require_disclosed_tool(name, tool_view, tool)
         violation = (validate_arguments(tool.input_schema, arguments)
                      or undeclared_arguments(tool.input_schema, arguments))
         if violation is not None:
             raise _InvalidToolArguments(f"Invalid arguments for {name}: {violation}")
         try:
-            arguments = self.argument_policy.apply(name, tool.input_schema, arguments)
+            arguments = self._active_argument_policy.apply(name, tool.input_schema, arguments)
         except AutoControlException as error:
             raise _InvalidToolArguments(f"Invalid arguments for {name}: {error}") from error
         if self._rate_limiter is not None and not self._rate_limiter.try_acquire():
@@ -551,15 +653,17 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
         self._maybe_confirm_destructive(name, tool, arguments)
         return name, tool, arguments
 
+    @secret_log_scope()
     def _handle_tools_call(self, msg_id: Any,
                            params: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            name, tool, arguments = self._prepare_tool_call(params)
+            view = self._accepted_tool_view()
+            name, tool, arguments = self._prepare_tool_call(params, view)
         except _InvalidToolArguments as error:
             return {"content": [{"type": "text", "text": str(error)}], "isError": True}
         except AnsweredByGate as answered:
             return answered.result
-        ctx = self._build_call_context(msg_id, params)
+        ctx = self._build_call_context(msg_id, params, view)
         call_key = (self._connection_id, msg_id)
         with self._calls_lock:
             self._active_calls[call_key] = ctx
@@ -596,13 +700,15 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
         finally:
             with self._calls_lock:
                 self._active_calls.pop(call_key, None)
+        failure = _tool_result_error(result)
         self._audit.record(
-            tool=name, arguments=arguments, status="ok",
+            tool=name, arguments=arguments, status="error" if failure is not None else "ok",
             duration_seconds=time.monotonic() - started_at,
+            error_text=failure,
         )
         response: Dict[str, Any] = {
             "content": _to_content_blocks(result),
-            "isError": False,
+            "isError": failure is not None,
         }
         # 2025-06-18 spec: tools with an outputSchema return their dict result
         # as structuredContent for typed, token-cheap client consumption.
@@ -611,13 +717,16 @@ class MCPServer(ConnectionStateMixin, StatelessDispatchMixin, SubscriptionMixin,
         return response
 
     def _build_call_context(self, msg_id: Any,
-                            params: Dict[str, Any]) -> ToolCallContext:
+                            params: Dict[str, Any], tool_view: Any = None) -> ToolCallContext:
         meta = params.get("_meta") if isinstance(params.get("_meta"),
                                                   dict) else {}
         progress_token = meta.get("progressToken") if isinstance(meta, dict) else None
         return ToolCallContext(
             request_id=msg_id, progress_token=progress_token,
             notifier=self._notifier,
+            path_policy=self._active_argument_policy.path_policy,
+            session_id=f"{self._agent_session}:{self._connection_id}",
+            tool_catalog=self._call_tool_catalog(tool_view),
         )
 
 
@@ -633,18 +742,3 @@ def _parse_request(line: str) -> "tuple[Optional[Dict[str, Any]], Optional[str]]
         return None, _error_response(None, -32600, "Invalid Request")
     refusal = _invalid_envelope(message)
     return (None, refusal) if refusal is not None else (message, None)
-
-
-def start_mcp_stdio_server(read_only: Optional[bool] = None,
-                           tool_mode: str | ToolMode | None = None) -> MCPServer:
-    """Start a stdio MCP server in the foreground; blocks until EOF.
-
-    ``read_only=True`` offers only tools marked read-only; ``None`` leaves
-    the choice to ``JE_AUTOCONTROL_MCP_READONLY``. ``je_auto_control_mcp
-    --read-only`` used to reach only its ``--list-*`` output, so the server
-    it started offered every tool, clicks and typing included. ``tool_mode``
-    is :class:`MCPServer`'s; ``None`` reads ``JE_AUTOCONTROL_MCP_TOOL_MODE``.
-    """
-    server = MCPServer(read_only=read_only, tool_mode=tool_mode)
-    server.serve_stdio()
-    return server

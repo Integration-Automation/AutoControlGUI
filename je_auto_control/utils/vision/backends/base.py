@@ -28,6 +28,10 @@ class VLMBackend:
     #: that is not sharing the backend with another thread.
     last_usage: Optional[Mapping[str, Any]] = None
 
+    def resolve_model(self, model: Optional[str] = None) -> Optional[str]:
+        """Return the effective model when known; custom backends may leave it unknown."""
+        return model
+
     def locate(self, image_bytes: bytes, description: str,
                model: Optional[str] = None,
                image_mime: str = "image/png",

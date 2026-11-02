@@ -17,14 +17,18 @@ from typing import TYPE_CHECKING, Callable, ClassVar, Dict, List, Optional, Tupl
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.timeouts import clamp_poll_interval
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
-from je_auto_control.utils.rbac.deferred import DeferredOwner, capture_owner
-from je_auto_control.utils.run_history.run_outcome import run_counting_failures
+from je_auto_control.utils.run_history.run_outcome import (
+    RunOutcome, finish_history_run, run_counting_failures,
+)
 from je_auto_control.utils.run_history.history_store import (
-    SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
+    SOURCE_TRIGGER, STATUS_ERROR as STATUS_ERROR, STATUS_OK as STATUS_OK, default_history_store,
 )
 
 if TYPE_CHECKING:  # imported lazily at runtime, where each trigger needs it
@@ -41,8 +45,6 @@ class _TriggerBase:
     fired: int = 0
     cooldown_seconds: float = 0.5
     _last_fire: float = field(default=0.0)
-    #: Who registered it under RBAC; the run is authorised as that user.
-    owner: Optional[DeferredOwner] = field(default=None, kw_only=True)
     #: True when checking the trigger uses up the event it reports (an edge:
     #: a cron minute, a file change, a sequence step), so a composite has to
     #: check it last. Not a dataclass field.
@@ -243,6 +245,7 @@ class TriggerEngine:
         self._execute = executor or execute_action
         self._tick = clamp_poll_interval(tick_seconds)
         self._triggers: Dict[str, _TriggerBase] = {}
+        self._authorizations: Dict[str, DeferredAuthorization] = {}
         self._lock = threading.Lock()
         # start() / stop() race without it: two starts made two polling
         # threads (every trigger fired twice) and a stop() between creating
@@ -253,17 +256,17 @@ class TriggerEngine:
         self._stop = threading.Event()
 
     def add(self, trigger: _TriggerBase) -> _TriggerBase:
-        """Register ``trigger``; assigns an id when missing."""
+        """Register ``trigger`` for the current caller; assign an id when missing."""
         if not trigger.trigger_id:
             trigger.trigger_id = uuid.uuid4().hex[:8]
-        if trigger.owner is None:
-            trigger.owner = capture_owner()
         with self._lock:
+            self._authorizations[trigger.trigger_id] = DeferredAuthorization.capture()
             self._triggers[trigger.trigger_id] = trigger
         return trigger
 
     def remove(self, trigger_id: str) -> bool:
         with self._lock:
+            self._authorizations.pop(trigger_id, None)
             return self._triggers.pop(trigger_id, None) is not None
 
     def list_triggers(self) -> List[_TriggerBase]:
@@ -362,36 +365,29 @@ class TriggerEngine:
             )
             return False
 
+    @secret_log_scope()
     def _fire(self, trigger: _TriggerBase, now: float) -> None:
+        with self._lock:
+            if self._triggers.get(trigger.trigger_id) is not trigger:
+                return
+            authorization = self._authorizations[trigger.trigger_id]
         run_id = default_history_store.start_run(
             SOURCE_TRIGGER, trigger.trigger_id, trigger.script_path,
         )
-        status = STATUS_OK
-        error_text: Optional[str] = None
+        outcome = RunOutcome()
         try:
-            actions = read_executable_action_json(trigger.script_path)
-            run_counting_failures(lambda: self._execute(actions), owner=trigger.owner)
-        # 這裡刻意攔截所有例外：一個 trigger 失敗必須記錄成 STATUS_ERROR
-        # 並繼續，而不是拖垮輪詢執行緒。原本的 tuple 漏掉
-        # AutoControlJsonActionException，所以光是改名 script 檔就會讓
-        # 整個引擎永久停擺。
-        # Deliberately broad: a failing trigger must be recorded as
-        # STATUS_ERROR and the loop must go on — which the finally below
-        # already assumes. The previous tuple (OSError, ValueError,
-        # RuntimeError) missed AutoControlJsonActionException, so merely
-        # renaming a trigger's script file killed the polling thread and
-        # silently stopped every other trigger with it.
-        except Exception as error:  # noqa: BLE001  # reason: see comment above
-            status = STATUS_ERROR
-            error_text = repr(error)
+            with authorization.scope(), bound_history(HistoryBinding(default_history_store, run_id)):
+                actions = read_executable_action_json(trigger.script_path)
+                run_counting_failures(lambda: self._execute(actions))
+        # Isolate ordinary trigger failures, while preserving hard control flow.
+        except BaseException as error:  # noqa: BLE001  # reason: see comment above
+            outcome.fail(error)
+            if outcome.hard_abort:
+                raise
             autocontrol_logger.error("trigger %s failed: %r",
                                      trigger.trigger_id, error)
         finally:
-            artifact = (capture_error_snapshot(run_id)
-                        if status == STATUS_ERROR else None)
-            default_history_store.finish_run(
-                run_id, status, error_text, artifact_path=artifact,
-            )
+            finish_history_run(default_history_store, run_id, outcome, capture_error_snapshot)
         with self._lock:
             live = self._triggers.get(trigger.trigger_id)
             # Not just "some trigger with this id": one removed and replaced
@@ -402,6 +398,7 @@ class TriggerEngine:
             live._last_fire = now
             if not live.repeat:
                 self._triggers.pop(trigger.trigger_id, None)
+                self._authorizations.pop(trigger.trigger_id, None)
 
 
 default_trigger_engine = TriggerEngine()

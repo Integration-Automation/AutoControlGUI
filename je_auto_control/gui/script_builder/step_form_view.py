@@ -1,7 +1,8 @@
 """Schema-driven form for editing a Step's parameters."""
+import json
 from typing import Any, Callable, Dict, Optional
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
     QLineEdit, QPushButton, QWidget,
@@ -24,6 +25,12 @@ def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
 
 
+def _plain_label(text: str) -> QLabel:
+    label = QLabel(text)
+    label.setTextFormat(Qt.TextFormat.PlainText)
+    return label
+
+
 class StepFormView(QWidget):
     """Right-pane editor for a single Step."""
 
@@ -42,7 +49,7 @@ class StepFormView(QWidget):
         # form, overwriting params from fields that have not been set yet.
         self._populating = False
         self._layout = QFormLayout(self)
-        self._title = QLabel(_t("sb_no_step_selected"))
+        self._title = _plain_label(_t("sb_no_step_selected"))
         self._layout.addRow(self._title)
 
     def retranslate(self) -> None:
@@ -66,7 +73,7 @@ class StepFormView(QWidget):
         self._title.setText(f"{spec.label}  ({spec.command})")
         if step.args is not None:
             # Positional arguments have no field names to edit by.
-            self._layout.addRow(QLabel(_t("sb_positional_args")), QLabel(repr(step.args)))
+            self._layout.addRow(QLabel(_t("sb_positional_args")), _plain_label(repr(step.args)))
             return
         for field_spec in spec.fields:
             editor = self._build_editor(field_spec)
@@ -235,6 +242,8 @@ def _set_enum_value(editor: QWidget, value: Any) -> None:
 
 _SETTERS = {
     FieldType.STRING: _set_text_value,
+    FieldType.JSON: lambda editor, value: _set_text_value(
+        editor, json.dumps(value, ensure_ascii=False) if value is not None else None),
     FieldType.INT: _set_text_value,
     FieldType.FLOAT: _set_text_value,
     FieldType.BOOL: lambda e, v: e.setChecked(bool(v)),
@@ -259,6 +268,11 @@ def _read_int(editor: QWidget) -> Any:
     return int(text) if text else None
 
 
+def _read_json(editor: QWidget) -> Any:
+    text = _read_string(editor)
+    return json.loads(text) if text is not None else None
+
+
 def _read_float(editor: QWidget) -> Any:
     text = editor.text().strip()
     return float(text) if text else None
@@ -279,6 +293,7 @@ def _read_rgb(editor: QWidget) -> Any:
 
 _READERS = {
     FieldType.STRING: _read_string,
+    FieldType.JSON: _read_json,
     FieldType.INT: _read_int,
     FieldType.FLOAT: _read_float,
     FieldType.BOOL: lambda e: bool(e.isChecked()),
@@ -296,7 +311,7 @@ def _read_editor_value(editor: QWidget, spec: FieldSpec) -> Any:
 def _read_field_value(editor: QWidget, spec: FieldSpec) -> tuple[bool, Any]:
     """Read one field, returning ``(ok, value)``.
 
-    ``ok`` is ``False`` when the current text cannot be parsed (int/float/rgb
+    ``ok`` is ``False`` when the current text cannot be parsed (int/float/rgb/JSON
     fields), so the caller can skip that field instead of aborting the commit.
     """
     try:
@@ -307,6 +322,7 @@ def _read_field_value(editor: QWidget, spec: FieldSpec) -> tuple[bool, Any]:
 
 _EDITOR_BUILDERS = {
     FieldType.STRING: StepFormView._build_string,
+    FieldType.JSON: StepFormView._build_string,
     FieldType.INT: StepFormView._build_int,
     FieldType.FLOAT: StepFormView._build_float,
     FieldType.BOOL: StepFormView._build_bool,

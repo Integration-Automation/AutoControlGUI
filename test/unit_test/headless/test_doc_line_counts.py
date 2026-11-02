@@ -23,7 +23,7 @@ from __future__ import annotations
 import pathlib
 import re
 import sys
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 PACKAGE = ROOT / "je_auto_control"
@@ -59,6 +59,8 @@ _COUNT_OF = re.compile(r"(\d[\d,]*)(\s*(?:檔|行))")
 _BLOCKQUOTE = re.compile(r"^> (\d[\d,]*) 個套件、約 (\d[\d,]*) 行。")
 _METRIC_TOTAL_LINES = re.compile(r"^(\| 程式碼總行數 \| )([\d,]+)( \|)")
 _METRIC_TOTAL_FILES = re.compile(r"^(\| Python 模組總數（含周邊子專案） \| )([\d,]+)( \|)")
+_GUI_TABLE_HEADER = "| 分頁 | 模組 | 行數 | 職責 |"
+_GUI_INLINE_COUNT = re.compile(r"(`([^`]+\.py)`（)([\d,]+)( 行)")
 
 # §8 rows that are not a plain path measurement.
 _TOP_LEVEL_ROW = "je_auto_control/"           # 頂層 3 檔 — not recursive
@@ -270,6 +272,47 @@ def _rewrite_table_rows(doc_lines: List[str]) -> Dict[str, object]:
     return derived
 
 
+def _gui_table_rows(doc_lines: List[str]) -> Iterator[int]:
+    """Locate GUI rows whose source paths live in their second cell."""
+    active = False
+    for index, line in enumerate(doc_lines):
+        cells = line.split("|")
+        if line.rstrip() == _GUI_TABLE_HEADER:
+            active = True
+        elif not line.startswith("|"):
+            active = False
+        elif active and len(cells) >= 5 and _TICKED.search(cells[2]):
+            yield index
+
+
+def _gui_inline_counts(caption: str, context: str) -> str:
+    """Measure filename/count pairs in a GUI row's description as well."""
+    def replace(match: re.Match[str]) -> str:
+        target = _resolve(match.group(2), context)
+        if target is None:
+            raise ValueError(f"unknown GUI map source: {match.group(2)}")
+        return f"{match.group(1)}{_measure(target)[1]:,}{match.group(4)}"
+    return _GUI_INLINE_COUNT.sub(replace, caption)
+
+
+def _rewrite_gui_tables(doc_lines: List[str]) -> None:
+    """Measure individual, composite and directory-backed GUI tab rows."""
+    for index in _gui_table_rows(doc_lines):
+        cells = doc_lines[index].split("|")
+        targets = []
+        for name in _TICKED.findall(cells[2]):
+            target = _resolve(name, "gui")
+            if target is None:
+                raise ValueError(f"unknown GUI map source: {name}")
+            targets.append(target)
+        files = {path for target in targets
+                 for path in (_py_files(target) if target.is_dir() else [target])}
+        cells[3] = f" {sum(_lines(path) for path in files):,} "
+        first = targets[0] if targets[0].is_dir() else targets[0].parent
+        cells[4] = _gui_inline_counts(cells[4], first.relative_to(PACKAGE).as_posix())
+        doc_lines[index] = "|".join(cells)
+
+
 def _rewrite_slashed_row(line: str, context: Optional[str]) -> str:
     """Rewrite a row that quotes one figure per file: ``82 / 78``.
 
@@ -334,6 +377,7 @@ def rewrite(text: str) -> str:
     """Return ``text`` with every measurable figure replaced by a measurement."""
     doc_lines = text.split("\n")
     _rewrite_appendix_totals(doc_lines, _rewrite_table_rows(doc_lines))
+    _rewrite_gui_tables(doc_lines)
     _rewrite_headings(doc_lines)
     _rewrite_scope_metrics(doc_lines)
     return "\n".join(doc_lines)
@@ -389,6 +433,10 @@ def unresolved_rows() -> List[str]:
         for each in names:
             if _resolve(each, context) is None:
                 missing.append(f"line {index + 1}: {each}")
+    for index in _gui_table_rows(doc_lines):
+        for name in _TICKED.findall(doc_lines[index].split("|")[2]):
+            if _resolve(name, "gui") is None:
+                missing.append(f"line {index + 1}: {name}")
     return missing
 
 

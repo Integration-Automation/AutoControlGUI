@@ -1,316 +1,365 @@
-"""Durable queue of local changes that have not reached the sync server yet.
-
-A change made while the server is unreachable used to exist only in the
-caller's memory: closing the program lost it, and the caller had no way to
-know which pushes had landed. :class:`SyncOutbox` keeps every pending
-:class:`~je_auto_control.utils.config_sync.versions.SyncOperation` in SQLite
-under its operation id, so it survives a restart and is sent again -- with
-the same id, which makes the resend harmless when the first attempt did
-arrive -- until the server has taken it.
-
-Failed attempts back off exponentially up to a ceiling, a drain makes a
-bounded number of attempts, and every wait can be cancelled. One database
-can serve several accounts and servers: each ``(account, endpoint)`` pair has
-its own queue and its own remembered state.
-
-Pure standard library; imports no ``PySide6``.
-"""
+"""Durable account/endpoint-scoped edits with leased, bounded and cancellable retry delivery."""
 from __future__ import annotations
 
 import json
-import threading
+import math
 import time
-from dataclasses import dataclass
+from dataclasses import replace
+from hashlib import sha256
 from pathlib import Path
-from typing import Any, Callable, ContextManager, List, Optional, Sequence
+from typing import TYPE_CHECKING, Callable, Iterable, Optional, cast
+from uuid import uuid4
 
-from je_auto_control.utils.config_sync.client import (
-    ConfigBucket, ConfigSyncError, FullResyncRequired,
+from je_auto_control.utils.config_sync.contract import (
+    ConfigRevisionConflict, ConfigStoreError, ConfigSyncError, _encoded, _identifier, _revision,
 )
-from je_auto_control.utils.config_sync.versions import SyncOperation
-from je_auto_control.utils.sqlite_support import autocommit_connection, sqlite_errors_as
-
-DEFAULT_BASE_DELAY_S = 2.0
-DEFAULT_MAX_DELAY_S = 300.0
-DEFAULT_DRAIN_ATTEMPTS = 5
-_BASELINE = "baseline"
-_GO = "go"
-_EMPTY = "empty"
-_CANCELLED = ""
-_BACKING_OFF = "waiting to retry after an earlier failure"
-
-_SCHEMA = (
-    "CREATE TABLE IF NOT EXISTS operations ("
-    " seq INTEGER PRIMARY KEY AUTOINCREMENT, account TEXT NOT NULL, endpoint TEXT NOT NULL,"
-    " operation_id TEXT NOT NULL, body TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,"
-    " next_attempt REAL NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '',"
-    " UNIQUE (account, endpoint, operation_id))",
-    "CREATE TABLE IF NOT EXISTS state ("
-    " account TEXT NOT NULL, endpoint TEXT NOT NULL, name TEXT NOT NULL, value TEXT NOT NULL,"
-    " PRIMARY KEY (account, endpoint, name))",
+from je_auto_control.utils.config_sync.database import SyncDatabase
+from je_auto_control.utils.config_sync.control_models import ControlKind, SyncControlOperation, _intent
+from je_auto_control.utils.config_sync.control_store import ControlStore
+from je_auto_control.utils.config_sync.causal_receipt import CausalReceipt, _server_snapshot
+from je_auto_control.utils.config_sync.causal_state import CausalBucket
+from je_auto_control.utils.config_sync.outbox_models import (
+    SyncDrainResult, SyncLocalIdentity, SyncOperation, SyncRetryPolicy, normalize_sync_endpoint,
 )
+from je_auto_control.utils.config_sync.outbox_batch import enqueue_batch, logical_operation as _logical
+from je_auto_control.utils.config_sync.outbox_schema import initialize_outbox
+from je_auto_control.utils.config_sync.outbox_lease import due as _due
+from je_auto_control.utils.config_sync.peers import FullResyncRequired
+from je_auto_control.utils.logging.secret_scope import scrub_secret_text
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption as _raise_interruption
+
+if TYPE_CHECKING:
+    from sqlite3 import Connection
+
+_Scope = tuple[str, str]
+_Key = tuple[str, str, str]
+_Clock = Callable[[], float]
+_Sender = Callable[[SyncOperation], int | CausalReceipt]
+_Cancelled = Optional[Callable[[], bool]]
+_SELECT = "SELECT wire, digest, prepared FROM sync_operations WHERE endpoint = ? AND user_id = ? AND operation_id = ?"
 
 
-class OutboxError(ConfigSyncError):
-    """The outbox database could not be opened, read or written."""
+def _scope(endpoint: str, user_id: str) -> _Scope:
+    _identifier(user_id, "user_id")
+    return normalize_sync_endpoint(endpoint), user_id
 
 
-def default_outbox_path() -> Path:
-    """``~/.je_auto_control/config_sync_outbox.sqlite3``, resolved at call time."""
-    return Path.home() / ".je_auto_control" / "config_sync_outbox.sqlite3"
-
-
-@dataclass(frozen=True)
-class DrainReport:
-    """How a :meth:`SyncOutbox.drain` ended.
-
-    ``sent`` operations were accepted, ``pending`` are still queued,
-    ``attempts`` sends were made. ``offline`` is true when the queue did not
-    reach the server (``error`` says why); ``cancelled`` when the cancel
-    event ended it. ``backing_off`` narrows ``offline``: the drain made no
-    attempt at all because an earlier failure's retry delay has not run out,
-    so nothing is known about the server *now* and ``error`` is the failure
-    that started the wait. ``retry_in_s`` is how long until the queue may be
-    sent again (``0`` when it may go now).
-    """
-    sent: int = 0
-    pending: int = 0
-    attempts: int = 0
-    offline: bool = False
-    cancelled: bool = False
-    error: str = ""
-    backing_off: bool = False
-    retry_in_s: float = 0.0
+def _operation(row: tuple[object, ...]) -> SyncOperation:
+    wire, digest, prepared = cast(tuple[str, str, Optional[str]], row)
+    if len(wire) > 2 * 1024 * 1024 or sha256(wire.encode("ascii")).hexdigest() != digest:
+        raise ConfigStoreError("sync outbox operation integrity failed")
+    try:
+        value = SyncOperation.from_dict(json.loads(wire))
+        return replace(value, prepared=json.loads(prepared)) if prepared is not None else value
+    except (ValueError, TypeError, RecursionError):
+        raise ConfigStoreError("invalid durable sync operation") from None
 
 
 class SyncOutbox:
-    """The pending operations of one account on one sync endpoint."""
+    """Keep logical edits and exact prepared requests across restart without persisting client credentials.
 
-    def __init__(self, db_path: str | Path | None = None, *, account: str, endpoint: str,
-                 base_delay_s: float = DEFAULT_BASE_DELAY_S,
-                 max_delay_s: float = DEFAULT_MAX_DELAY_S) -> None:
-        if not account or not endpoint:
-            raise OutboxError("an outbox needs an account and an endpoint")
-        self._configured_path = db_path
-        self._scope = (str(account), str(endpoint).rstrip("/"))
-        self._base_delay = max(0.0, float(base_delay_s))
-        self._max_delay = max(self._base_delay, float(max_delay_s))
-        self._resolved_path: Optional[str] = None
+    Drains own short leases rather than holding SQLite locks around callbacks.
+    Failed attempts remain pending/offline; a later drain may retry the same ID.
+    At-least-once sinks must honor operation identity; the causal HTTP sender uses
+    the durable prepared request and server receipts for that purpose.
+    """
 
-    @property
-    def path(self) -> Path:
-        """Where the database lives (resolving the default if none was given)."""
-        configured = self._configured_path
-        return Path(configured) if configured is not None else default_outbox_path()
+    def __init__(self, path: Optional[str | Path] = None, *, clock: _Clock = time.time) -> None:
+        self._database = SyncDatabase(path, "AUTOCONTROL_SYNC_OUTBOX", "config-outbox.sqlite3", initialize_outbox)
+        self._clock = clock
 
-    def exists(self) -> bool:
-        """Whether the database file is there; asking does not create it."""
-        return self.path.is_file()
-
-    def _connection(self) -> ContextManager[Any]:
-        if self._resolved_path is None:
-            path = self.path
-            try:
-                path.parent.mkdir(parents=True, exist_ok=True)
-            except OSError as error:
-                raise OutboxError(f"cannot create {path.parent}: {error}") from error
-            with autocommit_connection(str(path)) as connection:
-                for statement in _SCHEMA:
-                    connection.execute(statement)
-            self._resolved_path = str(path)
-        return autocommit_connection(self._resolved_path)
-
-    @sqlite_errors_as(OutboxError)
-    def enqueue(self, operation: SyncOperation) -> None:
-        """Queue ``operation``; queueing the same operation id again is a no-op."""
-        if not operation.operation_id:
-            raise OutboxError("an operation needs an operation id to be queued")
-        with self._connection() as connection:
-            connection.execute(
-                "INSERT OR IGNORE INTO operations (account, endpoint, operation_id, body) "
-                "VALUES (?, ?, ?, ?)",
-                (*self._scope, operation.operation_id, json.dumps(operation.to_dict())))
-
-    @sqlite_errors_as(OutboxError)
-    def pending(self) -> List[SyncOperation]:
-        """Every queued operation, oldest first."""
-        with self._connection() as connection:
-            rows = connection.execute(
-                "SELECT body FROM operations WHERE account = ? AND endpoint = ? ORDER BY seq",
-                self._scope).fetchall()
-        return [SyncOperation.from_dict(json.loads(row["body"])) for row in rows]
-
-    @sqlite_errors_as(OutboxError)
-    def acknowledge(self, operation_ids: Sequence[str]) -> None:
-        """Remove operations the server has accepted."""
-        with self._connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
-            connection.executemany(
-                "DELETE FROM operations WHERE account = ? AND endpoint = ? AND operation_id = ?",
-                [(*self._scope, operation_id) for operation_id in operation_ids])
-            connection.execute("COMMIT")
-
-    def retry_delay(self, attempts: int) -> float:
-        """Seconds to wait after ``attempts`` failures: doubling, never above the ceiling."""
-        if attempts <= 0:
-            return 0.0
-        return min(self._max_delay, self._base_delay * (2 ** min(attempts - 1, 32)))
-
-    @sqlite_errors_as(OutboxError)
-    def record_failure(self, operation_ids: Sequence[str], *, now: float, error: str = "") -> None:
-        """Count a failed send and schedule the next attempt for those operations."""
-        with self._connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
-            for operation_id in operation_ids:
-                row = connection.execute(
-                    "SELECT attempts FROM operations WHERE account = ? AND endpoint = ? "
-                    "AND operation_id = ?", (*self._scope, operation_id)).fetchone()
-                if row is None:
-                    continue
-                attempts = int(row["attempts"]) + 1
-                connection.execute(
-                    "UPDATE operations SET attempts = ?, next_attempt = ?, last_error = ? "
-                    "WHERE account = ? AND endpoint = ? AND operation_id = ?",
-                    (attempts, now + self.retry_delay(attempts), error[:500],
-                     *self._scope, operation_id))
-            connection.execute("COMMIT")
-
-    @sqlite_errors_as(OutboxError)
-    def seconds_until_due(self, now: float) -> Optional[float]:
-        """How long until the queue may be sent again; ``None`` when it is empty.
-
-        The whole queue goes out together and in order, so it waits for the
-        operation that has to wait longest.
-        """
-        with self._connection() as connection:
-            row = connection.execute(
-                "SELECT COUNT(*) AS n, MAX(next_attempt) AS due FROM operations "
-                "WHERE account = ? AND endpoint = ?", self._scope).fetchone()
-        if not row["n"]:
-            return None
-        return max(0.0, float(row["due"]) - now)
-
-    @sqlite_errors_as(OutboxError)
-    def last_error(self) -> str:
-        """Why the most recent failed send failed; ``""`` when none is recorded."""
-        with self._connection() as connection:
-            row = connection.execute(
-                "SELECT last_error FROM operations WHERE account = ? AND endpoint = ? "
-                "AND last_error != '' ORDER BY next_attempt DESC, seq DESC LIMIT 1",
-                self._scope).fetchone()
-        return "" if row is None else str(row["last_error"])
-
-    @sqlite_errors_as(OutboxError)
-    def clear(self) -> List[SyncOperation]:
-        """Empty the queue and return what was in it (for a full resync)."""
-        discarded = self.pending()
-        with self._connection() as connection:
-            connection.execute(
-                "DELETE FROM operations WHERE account = ? AND endpoint = ?", self._scope)
-        return discarded
-
-    @sqlite_errors_as(OutboxError)
-    def get_state(self, name: str) -> Optional[Any]:
-        """A remembered JSON value for this account and endpoint, or ``None``."""
-        with self._connection() as connection:
-            row = connection.execute(
-                "SELECT value FROM state WHERE account = ? AND endpoint = ? AND name = ?",
-                (*self._scope, name)).fetchone()
-        return None if row is None else json.loads(row["value"])
-
-    @sqlite_errors_as(OutboxError)
-    def set_state(self, name: str, value: Any) -> None:
-        """Remember a JSON value for this account and endpoint."""
-        with self._connection() as connection:
-            connection.execute(
-                "INSERT INTO state (account, endpoint, name, value) VALUES (?, ?, ?, ?) "
-                "ON CONFLICT(account, endpoint, name) DO UPDATE SET value = excluded.value",
-                (*self._scope, name, json.dumps(value)))
-
-    def load_baseline(self) -> Optional[ConfigBucket]:
-        """The bucket this device last merged, or ``None`` before its first sync."""
-        body = self.get_state(_BASELINE)
-        return None if body is None else ConfigBucket.from_dict(body)
-
-    def save_baseline(self, bucket: ConfigBucket) -> None:
-        """Remember ``bucket`` as the state local changes are measured against."""
-        self.set_state(_BASELINE, bucket.to_dict())
-
-    def drain(self, send: Callable[[List[SyncOperation]], Any], *,
-              cancel: Optional[threading.Event] = None,
-              max_attempts: int = DEFAULT_DRAIN_ATTEMPTS, wait: bool = True,
-              clock: Callable[[], float] = time.time, force: bool = False) -> DrainReport:
-        """Send the queue through ``send`` until it is empty or attempts run out.
-
-        ``send(operations)`` must raise :class:`ConfigSyncError` when the
-        operations did not (or may not have) arrived; they stay queued under
-        the same ids and are tried again after the back-off delay. With
-        ``wait`` false a queue that is still backing off is left alone and
-        the report says ``backing_off``. ``force`` sends once without
-        regard to that delay -- for a person who has just said "now"; if
-        that attempt fails too, the (longer) delay it earns is respected.
-        Setting ``cancel`` ends the drain at the next check, including in the
-        middle of a wait. :class:`FullResyncRequired` is not retried.
-        """
-        stop = cancel if cancel is not None else threading.Event()
-        sent = attempts = 0
-        error = ""
-        while attempts < max(1, int(max_attempts)):
-            turn = self._await_turn(stop, wait, clock(), force and not attempts)
-            if turn == _EMPTY:
-                return DrainReport(sent=sent, attempts=attempts)
-            if turn != _GO:
-                break
-            batch = self.pending()
-            attempts += 1
-            error = self._send(send, batch, clock)
-            if not error:
-                sent += len(batch)
-        return self._stopped(sent, attempts, error, stop.is_set(), clock())
-
-    def _stopped(self, sent: int, attempts: int, error: str, cancelled: bool,
-                 now: float) -> DrainReport:
-        """The report of a drain that ended with operations still queued."""
-        waiting = self.seconds_until_due(now) or 0.0
-        # No attempt and no cancel: the only thing that stopped it is the delay.
-        backing_off = not attempts and not cancelled and waiting > 0
-        if backing_off:
-            error = self.last_error() or _BACKING_OFF
-        return DrainReport(
-            sent=sent, pending=len(self.pending()), attempts=attempts,
-            offline=bool(error), cancelled=cancelled, error=error,
-            backing_off=backing_off, retry_in_s=waiting)
-
-    def _await_turn(self, stop: threading.Event, wait: bool, now: float,
-                    force: bool = False) -> str:
-        """Wait out the back-off: ``_GO``, ``_EMPTY``, or why the drain must stop."""
-        delay = self.seconds_until_due(now)
-        if delay is None:
-            return _EMPTY
-        if force:
-            delay = 0.0
-        if delay > 0 and not wait:
-            return _BACKING_OFF
-        if stop.is_set() or (delay > 0 and stop.wait(delay)):
-            return _CANCELLED
-        return _GO
-
-    def _send(self, send: Callable[[List[SyncOperation]], Any], batch: List[SyncOperation],
-              clock: Callable[[], float]) -> str:
-        """Send one batch; ``""`` when it was accepted, else the failure text."""
-        ids = [operation.operation_id for operation in batch]
+    def _now(self) -> float:
         try:
-            send(batch)
-        except FullResyncRequired:
-            raise
-        except ConfigSyncError as failure:
-            self.record_failure(ids, now=clock(), error=str(failure))
-            return str(failure) or "send failed"
-        self.acknowledge(ids)
-        return ""
+            value = float(self._clock())
+        except (TypeError, ValueError, OverflowError):
+            raise ConfigSyncError("outbox clock must return a finite number") from None
+        if not math.isfinite(value):
+            raise ConfigSyncError("outbox clock must return a finite number")
+        return value
+
+    def identity(self, endpoint: str, user_id: str, *, origin: Optional[str] = None,
+                    epoch: Optional[int] = None) -> SyncLocalIdentity:
+        """Load/create a stable local origin for precisely one canonical endpoint/account."""
+        scope = _scope(endpoint, user_id)
+        if origin is not None:
+            _identifier(origin, "origin")
+        if epoch is not None:
+            _revision(epoch)
+        with self._database.connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            connection.execute("INSERT OR IGNORE INTO sync_namespaces (endpoint,user_id,origin,epoch) VALUES (?,?,?,?)",
+                               (*scope, origin or uuid4().hex, epoch or 0))
+            row = connection.execute("SELECT origin,epoch,confirmed_revision FROM sync_namespaces "
+                                     "WHERE endpoint = ? AND user_id = ?", scope).fetchone()
+            if origin is not None and row[0] != origin:
+                raise ConfigSyncError("outbox namespace already belongs to another origin")
+            if epoch is not None and row[1] != epoch:
+                raise FullResyncRequired("operation belongs to an obsolete local peer epoch")
+            connection.execute("COMMIT")
+        return SyncLocalIdentity(*scope, row[0], row[1], row[2])
+
+    def enqueue(self, operation: SyncOperation) -> None:
+        """Persist once by namespace/ID; duplicate equal input is idempotent, changed input is refused."""
+        self.enqueue_many((operation,))
+
+    def enqueue_many(self, operations: Iterable[SyncOperation]) -> int:
+        """Atomically persist bounded same-generation edits, returning the number newly queued."""
+        return enqueue_batch(self._database, operations)
+
+    def pending(self, *, endpoint: str, user_id: str, limit: int = 1000) -> tuple[SyncOperation, ...]:
+        """Read a bounded prefix in enqueue order; status reports the full count even when this view is truncated."""
+        _revision(limit)
+        if not 1 <= limit <= 1000:
+            raise ConfigSyncError("pending view limit must be 1–1000")
+        scope = _scope(endpoint, user_id)
+        values: list[SyncOperation] = []
+        size = 0
+        with self._database.connection() as connection:
+            rows = connection.execute("SELECT wire,digest,prepared FROM sync_operations WHERE endpoint = ? "
+                                      "AND user_id = ? AND status NOT IN ('delivered','retired') "
+                                      "ORDER BY sequence LIMIT ?", (*scope, limit))
+            for row in rows:
+                size += len(row[0]) + len(row[2] or "")
+                if size > 16 * 1024 * 1024:
+                    if not values:
+                        raise ConfigStoreError("oversized persisted outbox operation")
+                    break
+                values.append(_operation(row))
+        return tuple(values)
+
+    def status(self, *, endpoint: str, user_id: str) -> dict[str, object]:
+        """Read aggregate queue state and bounded sanitized error previews without loading payload history."""
+        scope = _scope(endpoint, user_id)
+        with self._database.connection() as connection:
+            connection.execute("BEGIN")
+            rows = connection.execute("SELECT status,count(*) FROM sync_operations WHERE endpoint=? AND user_id=? "
+                                      "GROUP BY status", scope).fetchall()
+            totals = {name: int(count) for name, count in rows}
+            local = connection.execute("SELECT origin,epoch,confirmed_revision FROM sync_namespaces "
+                                       "WHERE endpoint=? AND user_id=?", scope).fetchone()
+            due = connection.execute("SELECT min(next_attempt),sum(attempts) FROM sync_operations "
+                                     "WHERE endpoint=? AND user_id=? AND status IN ('pending','offline','sending')",
+                                     scope).fetchone()
+            errors = connection.execute("SELECT error FROM sync_operations WHERE endpoint=? AND user_id=? "
+                                        "AND error != '' ORDER BY sequence DESC LIMIT 10", scope).fetchall()
+            connection.execute("COMMIT")
+        pending = sum(count for name, count in totals.items() if name not in {"delivered", "retired"})
+        result: dict[str, object] = {"endpoint": scope[0], "user_id": scope[1], "pending": pending,
+                                     "origin": local[0] if local else None, "epoch": local[1] if local else 0,
+                                     "confirmed_revision": local[2] if local else 0,
+                                     "next_attempt": due[0], "attempts": due[1] or 0,
+                                     "errors": [scrub_secret_text(row[0]) for row in errors]}
+        for name in ("offline", "conflict", "blocked", "sending", "delivered", "retired"):
+            result[name] = totals.get(name, 0)
+        result["queued"] = totals.get("pending", 0)
+        return result
+
+    def prepare(self, operation: SyncOperation, *, base_revision: int, bucket: dict[str, object]) -> SyncOperation:
+        """Durably freeze a request before sending; replacing an uncertain request is forbidden."""
+        prepared = {"base_revision": base_revision, "bucket": bucket}
+        candidate = replace(operation, prepared=prepared)
+        encoded = _encoded(prepared)
+        key = operation.endpoint, operation.user_id, operation.operation_id
+        with self._database.connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(_SELECT, key).fetchone()
+            if row is None or _logical(_operation(row))[1] != _logical(operation)[1]:
+                raise ConfigSyncError("cannot prepare an unknown or changed operation")
+            if row[2] is not None and row[2] != encoded:
+                raise ConfigSyncError("prepared request cannot change before an explicit rejection")
+            connection.execute("UPDATE sync_operations SET prepared = ? WHERE endpoint = ? "
+                               "AND user_id = ? AND operation_id = ?", (encoded, *key))
+            connection.execute("COMMIT")
+        return candidate
+
+    def reject_prepared(self, operation: SyncOperation, *, rejected_base: int) -> None:
+        """Clear a frozen request only after a definite stale-base rejection, retaining its logical edit."""
+        _revision(rejected_base)
+        key = operation.endpoint, operation.user_id, operation.operation_id
+        with self._database.connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(_SELECT, key).fetchone()
+            if row is None or _logical(_operation(row))[1] != _logical(operation)[1]:
+                raise ConfigSyncError("unknown or changed queued operation")
+            prepared = _operation(row).prepared
+            if prepared is None or prepared["base_revision"] != rejected_base:
+                raise ConfigSyncError("rejected base does not identify the frozen request")
+            connection.execute("UPDATE sync_operations SET prepared = NULL WHERE endpoint = ? "
+                               "AND user_id = ? AND operation_id = ?", key)
+            connection.execute("COMMIT")
+
+    def snapshot(self, *, endpoint: str, user_id: str) -> Optional[CausalBucket]:
+        """Read the latest complete server snapshot durably confirmed by a current delivery lease owner."""
+        scope = _scope(endpoint, user_id)
+        with self._database.connection() as connection:
+            row = connection.execute("SELECT snapshot FROM sync_namespaces WHERE endpoint=? AND user_id=?",
+                                     scope).fetchone()
+        if row is None or row[0] is None:
+            return None
+        result = _server_snapshot(CausalBucket.from_dict(json.loads(row[0])))
+        if result.user_id != user_id:
+            raise ConfigStoreError("outbox snapshot belongs to another account")
+        return result
+
+    def observe(self, snapshot: CausalBucket, *, endpoint: str, minimum_revision: int = 0) -> CausalBucket:
+        """Cache a complete validated GET without acknowledging edits; reject rollback behind the pre-GET frontier."""
+        _revision(minimum_revision)
+        snapshot = _server_snapshot(snapshot)
+        if snapshot.revision < minimum_revision:
+            raise FullResyncRequired('server snapshot moved behind the pre-fetch frontier')
+        self.identity(endpoint, snapshot.user_id)
+        scope = _scope(endpoint, snapshot.user_id)
+        with self._database.connection() as connection:
+            connection.execute('BEGIN IMMEDIATE')
+            self._save_snapshot(connection, scope, snapshot)
+            connection.execute('COMMIT')
+        current = self.snapshot(endpoint=endpoint, user_id=snapshot.user_id)
+        if current is None:
+            raise ConfigStoreError('observed workspace snapshot disappeared')
+        return current
+
+    def request_control(self, endpoint: str, user_id: str, kind: ControlKind, *, peer_id: Optional[str] = None,
+                          discard_pending: bool = False, operation_id: Optional[str] = None) -> SyncControlOperation:
+        """Persist or resume one explicit peer-control intent; pending retirement always requires consent."""
+        _intent(kind, peer_id, discard_pending)
+        if operation_id is not None:
+            _identifier(operation_id, "control operation_id")
+        identity = self.identity(endpoint, user_id)
+        return self._controls().enqueue(identity, kind, peer_id=peer_id, discard_pending=discard_pending,
+                                         operation_id=operation_id)
+
+    def control_receipt(self, endpoint: str, user_id: str, operation_id: str) -> Optional[int]:
+        """Read one locally confirmed historical control receipt without resending or changing queued work."""
+        _identifier(operation_id, "control operation_id")
+        return self._controls().receipt(_scope(endpoint, user_id), operation_id)
+
+    def control_status(self, *, endpoint: str, user_id: str) -> dict[str, object]:
+        """Inspect bounded private metadata-control state without HTTP or applying configuration."""
+        return self._controls().status(_scope(endpoint, user_id))
+
+    def _controls(self) -> ControlStore:
+        return ControlStore(self._database, self._now, self._save_snapshot)
+
+    def flush(self, sender: _Sender, *, endpoint: str, user_id: str,
+                 policy: Optional[SyncRetryPolicy] = None, cancelled: _Cancelled = None) -> SyncDrainResult:
+        """Attempt bounded due work; backoff is persisted without sleeping and cancellation never discards edits."""
+        policy = policy or SyncRetryPolicy()
+        operations = self.pending(endpoint=endpoint, user_id=user_id, limit=policy.max_batch)
+        delivered, failed, stopped = 0, 0, False
+        for operation in operations:
+            owner = uuid4().hex
+            result = self._attempt(operation, sender, policy, owner, cancelled)
+            delivered += result[0]
+            failed += result[1]
+            if result[2]:
+                stopped = True
+                break
+        count = cast(int, self.status(endpoint=endpoint, user_id=user_id)["pending"])
+        return SyncDrainResult(delivered, count, failed, stopped)
+
+    def _attempt(self, operation: SyncOperation, sender: _Sender, policy: SyncRetryPolicy,
+                    owner: str, cancelled: _Cancelled) -> tuple[int, int, bool]:
+        failed = 0
+        key = operation.endpoint, operation.user_id, operation.operation_id
+        for _ in range(policy.max_attempts):
+            if cancelled is not None and cancelled():
+                return 0, failed, True
+            claimed = self._claim(key, owner, policy)
+            if claimed is None:
+                break
+            try:
+                if cancelled is not None and cancelled():
+                    return 0, failed, True
+                receipt = sender(claimed)
+                revision = receipt.revision if isinstance(receipt, CausalReceipt) else receipt
+                _revision(revision)
+                if revision == 0:
+                    raise ConfigSyncError("delivery receipt must be a positive revision")
+                return int(self._delivered(key, owner, receipt)), failed, False
+            except (OSError, ConfigSyncError, ConfigStoreError, ConfigRevisionConflict, FullResyncRequired) as error:
+                _raise_interruption(error)
+                self._failed(key, owner, error, policy)
+                failed += 1
+            finally:
+                self._release(key, owner)
+        return 0, failed, False
+
+    def _claim(self, key: _Key, owner: str, policy: SyncRetryPolicy) -> Optional[SyncOperation]:
+        now = self._now()
+        with self._database.connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            control = connection.execute("SELECT 1 FROM sync_controls WHERE endpoint=? AND user_id=? "
+                                         "AND status!='delivered'", key[:2]).fetchone()
+            if control is not None:
+                connection.execute("COMMIT")
+                return None
+            row = connection.execute("SELECT status,next_attempt,last_attempt,lease_owner,lease_until "
+                                     "FROM sync_operations WHERE endpoint = ? AND user_id = ? AND operation_id = ?",
+                                     key).fetchone()
+            if row is None or not _due(row, now):
+                connection.execute("COMMIT")
+                return None
+            connection.execute("UPDATE sync_operations SET status='sending', attempts=attempts+1, "
+                               "last_attempt=?,lease_owner=?,lease_until=? WHERE endpoint=? AND user_id=? "
+                               "AND operation_id=?", (now, owner, now + policy.lease_seconds, *key))
+            value = _operation(connection.execute(_SELECT, key).fetchone())
+            connection.execute("COMMIT")
+            return value
+
+    def _delivered(self, key: _Key, owner: str, receipt: int | CausalReceipt) -> bool:
+        revision = receipt.revision if isinstance(receipt, CausalReceipt) else receipt
+        snapshot = _receipt_snapshot(receipt, key[1])
+        with self._database.connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            changed = connection.execute("UPDATE sync_operations SET status='delivered',delivered_revision=?, "
+                                         "error='',lease_owner='',lease_until=0 WHERE endpoint=? AND user_id=? "
+                                         "AND operation_id=? AND lease_owner=?", (revision, *key, owner)).rowcount
+            if changed:
+                self._save_snapshot(connection, key[:2], snapshot)
+                connection.execute("UPDATE sync_namespaces SET confirmed_revision=max(confirmed_revision,?) "
+                                   "WHERE endpoint=? AND user_id=?", (revision, *key[:2]))
+            connection.execute("COMMIT")
+            return bool(changed)
+
+    @staticmethod
+    def _save_snapshot(connection: Connection, scope: _Scope, snapshot: Optional[CausalBucket]) -> None:
+        if snapshot is None:
+            return
+        row = connection.execute("SELECT snapshot FROM sync_namespaces WHERE endpoint=? AND user_id=?",
+                                 scope).fetchone()
+        previous = CausalBucket.from_dict(json.loads(row[0])) if row and row[0] else None
+        if previous is not None and snapshot.revision == previous.revision:
+            if _encoded(snapshot.to_dict()) != _encoded(previous.to_dict()):
+                raise ConfigSyncError("server snapshot fork at an already confirmed revision")
+        if previous is None or snapshot.revision >= previous.revision:
+            connection.execute("UPDATE sync_namespaces SET snapshot=? WHERE endpoint=? AND user_id=?",
+                               (_encoded(snapshot.to_dict()), *scope))
+
+    def _failed(self, key: _Key, owner: str, error: Exception, policy: SyncRetryPolicy) -> None:
+        status = ("blocked" if isinstance(error, FullResyncRequired) else
+                  "conflict" if isinstance(error, ConfigRevisionConflict) else "offline")
+        with self._database.connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT attempts FROM sync_operations WHERE endpoint=? AND user_id=? "
+                                     "AND operation_id=? AND lease_owner=?", (*key, owner)).fetchone()
+            if row is not None:
+                delay = min(policy.max_delay, policy.backoff * 2 ** min(row[0] - 1, 16))
+                connection.execute("UPDATE sync_operations SET status=?,next_attempt=?,error=?,lease_owner='', "
+                                   "lease_until=0 WHERE endpoint=? AND user_id=? AND operation_id=? AND lease_owner=?",
+                                   (status, self._now() + delay, scrub_secret_text(str(error))[:2048], *key, owner))
+            connection.execute("COMMIT")
+
+    def _release(self, key: _Key, owner: str) -> None:
+        with self._database.connection() as connection:
+            connection.execute("UPDATE sync_operations SET status=CASE WHEN status='sending' THEN 'pending' "
+                               "ELSE status END,lease_owner='',lease_until=0 WHERE endpoint=? AND user_id=? "
+                               "AND operation_id=? AND lease_owner=?", (*key, owner))
 
 
-__all__ = [
-    "DEFAULT_BASE_DELAY_S", "DEFAULT_DRAIN_ATTEMPTS", "DEFAULT_MAX_DELAY_S",
-    "DrainReport", "OutboxError", "SyncOutbox", "default_outbox_path",
-]
+def _receipt_snapshot(receipt: int | CausalReceipt, user_id: str) -> Optional[CausalBucket]:
+    if not isinstance(receipt, CausalReceipt):
+        return None
+    snapshot = _server_snapshot(receipt.snapshot)
+    if snapshot.user_id != user_id:
+        raise ConfigSyncError("delivery receipt snapshot belongs to another account")
+    return snapshot

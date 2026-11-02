@@ -15,7 +15,6 @@ Comprehensive guides for all AutoControl features.
    doc/screen/screen_doc
    doc/image/image_doc
    doc/record/record_doc
-   doc/wayland/wayland_capabilities_doc
    doc/keyword_and_executor/keyword_and_executor_doc
    doc/generate_report/generate_report_doc
    doc/callback_function/callback_function_doc
@@ -25,11 +24,10 @@ Comprehensive guides for all AutoControl features.
    doc/ai_agents/ai_agents_doc
    doc/critical_exit/critical_exit_doc
    doc/cli/cli_doc
-   doc/config_sync/config_sync_doc
-   doc/examples/examples_doc
    doc/create_project/create_project_doc
    doc/new_features/new_features_doc
    doc/new_features/v2_features_doc
+   doc/new_features/healing_evaluation_doc
    doc/new_features/v3_features_doc
    doc/new_features/v4_features_doc
    doc/new_features/v5_features_doc
@@ -254,6 +252,9 @@ Comprehensive guides for all AutoControl features.
    doc/mobile/mobile_doc
    doc/ocr_backends/ocr_backends_doc
    doc/observability/observability_doc
+   doc/journal_candidates/journal_candidates_doc
+   doc/config_store/config_store_doc
+   doc/causal_sync/causal_sync_doc
    doc/operations_layer/operations_layer_doc
    doc/operations_layer/usb_passthrough_design
    doc/operations_layer/usb_passthrough_security_review

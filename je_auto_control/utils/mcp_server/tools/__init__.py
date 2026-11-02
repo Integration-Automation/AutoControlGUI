@@ -10,7 +10,7 @@ from dataclasses import replace
 from typing import Callable, Dict, List, Optional
 
 from je_auto_control.utils.mcp_server.tools._base import (
-    MCPContent, MCPTool, MCPToolAnnotations, MCPToolDescriptor, read_only_env_flag,
+    MCPContent, MCPTool, MCPToolAnnotations, MCPToolDescriptor, MCPToolResult, read_only_env_flag,
 )
 from je_auto_control.utils.mcp_server.tools._factories import ALL_FACTORIES
 from je_auto_control.utils.mcp_server.tools.plugin_tools import (
@@ -107,6 +107,6 @@ def build_default_tool_registry(read_only: Optional[bool] = None,
 
 __all__ = [
     "COMMON_TOOL_NAMES", "MCPContent", "MCPTool", "MCPToolAnnotations",
-    "MCPToolDescriptor", "build_default_tool_registry", "make_plugin_tool",
+    "MCPToolDescriptor", "MCPToolResult", "build_default_tool_registry", "make_plugin_tool",
     "register_plugin_tools",
 ]

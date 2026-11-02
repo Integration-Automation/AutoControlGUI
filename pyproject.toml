@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "je_auto_control"
-version = "1.0.6"
+version = "1.1.0"
 authors = [
     { name = "JE-Chen", email = "jechenmailman@gmail.com" },
 ]
@@ -44,7 +44,11 @@ dependencies = [
     # je_open_cv leaves opencv-python unpinned; bound the major so a new
     # OpenCV release cannot silently change cv2 return shapes under us.
     "opencv-python>=4.8,<6; sys_platform != 'win32' or platform_machine != 'ARM64'",
-    "pillow==12.3.0",
+    # Pillow 13.0.0 fixes the 12.x advisories (critical: GHSA-v9pv-5gc8-w2m6,
+    # GHSA-5x8w-8jj5-q52h) but needs Python >=3.11; 3.10 keeps 12.3.0, the
+    # newest release it can install.
+    "pillow==12.3.0; python_version < '3.11'",
+    "pillow==13.0.0; python_version >= '3.11'",
     "pyobjc-core==12.2.2;platform_system=='Darwin'",
     "pyobjc==12.2.2;platform_system=='Darwin'",
     # The BSDs run the same X11 stack, and platform_system is the kernel
@@ -102,20 +106,33 @@ find = { namespaces = false }
     "web_viewer/mic-worklet.js",
 ]
 
+"je_auto_control.utils.rest_api" = [
+    "dashboard/*.html",
+    "dashboard/*.css",
+    "dashboard/*.js",
+]
+
 [project.optional-dependencies]
 gui = ["PySide6==6.12.0"]
 webrtc = ["aiortc>=1.14.0", "av>=14.0.0"]
 signaling = ["fastapi>=0.115", "starlette>=1.0.1", "uvicorn>=0.32"]
 discovery = ["zeroconf>=0.149.16"]
 # Security floor: utils/pdf opens PDFs the caller hands it, and every pypdf
-# before 6.16.1 has a malformed-file infinite loop or memory blow-up
-# (inline images, xref entries, /ToUnicode, CID widths, outlines, XForms).
-pdf = ["pypdf>=6.16.1"]
+# before 6.21.4 has a malformed-file infinite loop, long runtime or memory
+# blow-up (xref tables and streams, page trees, outlines, form fields,
+# content streams, encrypted files, /ToUnicode, CID widths, XForms).
+pdf = ["pypdf>=6.21.4"]
 office = ["openpyxl>=3.1", "python-docx>=1.1", "python-pptx>=0.6"]
 fuzzy = ["rapidfuzz>=3.0"]
 s3 = ["boto3>=1.34"]
 locale = ["babel>=2.12"]
 audio = ["pycaw>=20240210"]
+
+# Lock-only security floor for a transitive dependency (uv.lock; the wheel
+# metadata is unchanged). dnspython 2.9.0 fixes the advisory in 2.8.0 but
+# needs Python >=3.11, so 3.10 keeps 2.8.0.
+[tool.uv]
+constraint-dependencies = ["dnspython>=2.9.0; python_version >= '3.11'"]
 
 # CLAUDE.md's 120-character line limit. Without this table CI's `ruff check`
 # ran the default rule set, which has no E501, so the documented limit was
@@ -345,7 +362,6 @@ module = [
     "je_auto_control.android.input",
     "je_auto_control.android.screen",
     "je_auto_control.android.session",
-    "je_auto_control.gui._journal_import",
     "je_auto_control.gui._tab_close_icon",
     "je_auto_control.gui.config_sync_tab",
     "je_auto_control.gui.mobile_tab",
@@ -368,21 +384,13 @@ module = [
     "je_auto_control.gui.tab_registry",
     "je_auto_control.gui.task_controller",
     "je_auto_control.gui.theme",
-    "je_auto_control.gui.window_settings",
-    "je_auto_control.gui.workspace_tabs",
     "je_auto_control.ios.apps",
     "je_auto_control.ios.session",
-    "je_auto_control.linux_wayland.authorisation",
-    "je_auto_control.linux_wayland.ei_client",
-    "je_auto_control.linux_wayland.ei_transport",
-    "je_auto_control.linux_wayland.ei_worker",
     "je_auto_control.linux_wayland.global_shortcuts",
     "je_auto_control.linux_wayland.input_events",
     "je_auto_control.utils.action_journal",
     "je_auto_control.utils.action_journal.*",
     "je_auto_control.utils.action_journal.events",
-    "je_auto_control.utils.action_journal.recorder",
-    "je_auto_control.utils.action_journal.sanitize",
     "je_auto_control.utils.action_journal.store",
     "je_auto_control.utils.action_signing._private_file",
     "je_auto_control.utils.action_signing.asymmetric",
@@ -395,20 +403,13 @@ module = [
     "je_auto_control.utils.codegen.robot_check",
     "je_auto_control.utils.config_sync.adapters",
     "je_auto_control.utils.config_sync.assets",
-    "je_auto_control.utils.config_sync.blobs",
-    "je_auto_control.utils.config_sync.bucket",
     "je_auto_control.utils.config_sync.client",
-    "je_auto_control.utils.config_sync.device",
-    "je_auto_control.utils.config_sync.merge",
     "je_auto_control.utils.config_sync.outbox",
-    "je_auto_control.utils.config_sync.session",
     "je_auto_control.utils.config_sync.store",
     "je_auto_control.utils.config_sync.versions",
     "je_auto_control.utils.generate_report.report_path",
     "je_auto_control.utils.mcp_server._argument_policy",
     "je_auto_control.utils.mcp_server._authz",
-    "je_auto_control.utils.mcp_server._connection_state",
-    "je_auto_control.utils.mcp_server._core_tools",
     "je_auto_control.utils.mcp_server._http_origin",
     "je_auto_control.utils.mcp_server._http_responses",
     "je_auto_control.utils.mcp_server.disclosure",
@@ -423,18 +424,13 @@ module = [
     "je_auto_control.utils.rbac.deferred",
     "je_auto_control.utils.rbac.policy",
     "je_auto_control.utils.script_vars.execution",
-    "je_auto_control.utils.self_healing.eval_strategies",
-    "je_auto_control.utils.self_healing.eval_vlm",
     "je_auto_control.utils.self_healing.evaluation",
-    "je_auto_control.utils.self_healing.template_revision",
     "je_auto_control.utils.self_healing.verification",
     "je_auto_control.utils.usb.passthrough._client_requests",
     "je_auto_control.utils.usb.passthrough.client_errors",
     "je_auto_control.utils.usb.passthrough.client_handle",
     "je_auto_control.windows.core.utils.win32_layout_vk",
     "je_auto_control.wrapper.capabilities",
-    "je_auto_control.wrapper.capability_probes",
-    "je_auto_control.wrapper.capability_states",
     "je_auto_control.wrapper.device_context",
     "je_auto_control.wrapper.device_frame",
     "je_auto_control.wrapper.mobile_commands",
@@ -449,7 +445,6 @@ module = [
     "je_auto_control.gui._weak_call",
     "je_auto_control.gui._qt_typed",
     "je_auto_control.utils.accessibility.backends.windows_automation",
-    "je_auto_control.utils.codegen.candidate_diff",
     "je_auto_control.utils.remote_desktop.input_send_queue",
     "je_auto_control_pytest",
 ]

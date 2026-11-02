@@ -9,8 +9,9 @@ with ``Unknown variable``.
 :func:`execution_scope` opens a fresh scope for one run and makes it the
 module executor's scope for as long as the ``with`` block lasts. The binding
 is a :class:`contextvars.ContextVar`, so it is per thread (and per asyncio
-task): two server threads running at once each see their own scope, and a
-thread started inside the block does not inherit it. Code that hands work to
+task): two server threads running at once each see their own scope. New threads
+inherit it only when Python's thread context inheritance is enabled (the
+free-threaded default) or a caller explicitly copies the context. Code handing work to
 another thread on behalf of the run -- the DAG runner's pool -- captures the
 scope first and re-binds it there with :func:`bound_scope`.
 

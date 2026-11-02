@@ -7,18 +7,15 @@ list in prose or a code fence, we extract the first JSON array we find.
 """
 import json
 import re
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional
+from contextlib import nullcontext
+from typing import Any, Dict, Iterable, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.executor.action_schema import validate_actions
 from je_auto_control.utils.llm.backends import (
     LLMBackend, LLMNotAvailableError, get_backend,
 )
-from je_auto_control.utils.rbac.deferred import adopted_scope, capture_owner
-from je_auto_control.utils.script_vars.execution import run_level_scope
-
-if TYPE_CHECKING:
-    from je_auto_control.utils.rbac.deferred import DeferredOwner
+from je_auto_control.utils.script_vars.execution import current_scope, execution_scope
 
 _SYSTEM_PROMPT = (
     "You translate plain-language automation instructions into a strict "
@@ -77,24 +74,12 @@ def run_from_description(description: str,
                          examples: Optional[List[Dict[str, Any]]] = None,
                          backend: Optional[LLMBackend] = None,
                          model: Optional[str] = None,
-                         max_tokens: int = 2048,
-                         owner: "Optional[DeferredOwner]" = None) -> Dict[str, Any]:
-    """Plan a description and execute it on ``executor`` in one call.
+                         max_tokens: int = 2048) -> Dict[str, Any]:
+    """Plan and execute in a fresh run, reusing an enclosing execution scope.
 
-    ``owner`` is for a caller that hands the run to another thread: the
-    RBAC user (``capture_owner()``, taken on the request's thread) the plan's
-    actions run as there. Inside a request the request's own caller stands
-    and ``owner`` is not needed.
-
-    The plan is a run of its own: called from Python it gets a fresh variable
-    scope, so what a model-written ``AC_set_var`` sets is gone when the call
-    returns and the plan cannot read what an earlier call left behind. Called
-    from inside a run (``AC_llm_run`` in an action list, or a block wrapped
-    in ``execution_scope``) it is a step of that run and shares its variables
-    -- wrap the call in ``execution_scope({...})`` to hand the plan values.
-    An executor you constructed yourself always uses its own scope.
+    The module executor shares variables across this plan's actions, then drops
+    them on return or failure. Caller-owned executors retain their own scope.
     """
-    run_as = owner if owner is not None else capture_owner()
     actions = plan_actions(
         description,
         known_commands=executor.known_commands(),
@@ -105,7 +90,7 @@ def run_from_description(description: str,
     )
     # A top-level run: ``_validated=True`` would mark it as a nested body,
     # and a stray AC_break from the model would escape as a raw LoopBreak.
-    with adopted_scope(run_as), run_level_scope():
+    with execution_scope() if current_scope() is None else nullcontext():
         record = executor.execute_action(actions)
     return {"actions": actions, "record": record}
 

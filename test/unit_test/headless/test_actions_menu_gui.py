@@ -82,6 +82,11 @@ report["variables_menu_matches"] = (
 )
 report["variables_has_actions"] = bool(menu_actions)
 
+widget.show_tab("diagnostics")
+diagnostic_entry = next(e for e in widget._tab_entries if e.key == "diagnostics")
+widget.tabs.setCurrentWidget(diagnostic_entry.widget)
+report["diagnostic_menu_keys"] = [key for key, _handler in widget.current_tab_menu_actions()]
+
 sys.stdout.write(json.dumps(report))
 sys.stdout.flush()
 # Skip Qt/native-thread teardown entirely: some tabs start helper threads
@@ -128,10 +133,17 @@ def test_hook_tab_actions_reach_the_menu(report):
     )
 
 
+def test_diagnostic_run_stop_and_passive_inspection_reach_the_window_actions_menu(report):
+    assert report['diagnostic_menu_keys'] == ['diag_probe', 'diag_run', 'diag_stop',
+                                              'mcp_discovery_search', 'mcp_discovery_schema', 'mcp_disclosure_plan']
+
+
 # The other documented counts are guarded by test_doc_counts.py. The tab count
 # lives here instead because counting tabs means constructing the widget, which
 # means Qt — and this module already runs it in a subprocess for that reason.
 TAB_CITATIONS = (
+    ("architecture_explore.md", r"GUI 分頁數（`main_widget` 註冊） \| (\d+)"),
+    ("architecture_explore.md", r"#### (\d+) 個分頁"),
     ("README.md", r"\((\d+) tabs\)"),
     ("README/README_zh-CN.md", r"（(\d+) 个标签页）"),
     ("README/README_zh-TW.md", r"（(\d+) 個分頁）"),

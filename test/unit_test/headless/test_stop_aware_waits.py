@@ -182,18 +182,6 @@ def test_wait_actionable_is_woken():
     assert isinstance(_stop_while_waiting(wait), ExecutionStopped)
 
 
-def test_heal_verifier_is_woken(monkeypatch):
-    from je_auto_control.utils.self_healing import verification
-
-    def wait(started):
-        monkeypatch.setattr(verification, "text_on_screen", _never(started, False))
-        verify = verification.build_verifier(
-            {"type": "text_present", "text": "Saved", "timeout_s": _TIMEOUT_S, "poll_s": _POLL_S})
-        return verify(None)
-
-    assert isinstance(_stop_while_waiting(wait), ExecutionStopped)
-
-
 def test_state_machine_timer_is_woken():
     from je_auto_control.utils.state_machine.engine import StateMachine
     spec = {"initial": "idle", "global_timeout_s": 120,

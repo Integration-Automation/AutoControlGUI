@@ -21,8 +21,8 @@ command is checked against the capability it needs (:mod:`.policy`), and
 the audit entries carry the ``user_id``.
 
 Work registered by an authenticated user and run later -- a scheduler job, a
-trigger, a hotkey, a webhook, a watchdog rule -- runs as that user, with the
-role they hold when it fires (:mod:`.deferred`). Users are managed through
+trigger, a hotkey, a webhook, a watchdog rule -- keeps that user's authority
+(:class:`.deferred.DeferredAuthorization`). Users are managed through
 :mod:`.admin`: ``AC_user_*``, the ``ac_user_*`` MCP tools,
 ``je_auto_control users`` and the REST API tab, all gated by ``manage_users``.
 
@@ -39,9 +39,6 @@ from je_auto_control.utils.rbac.authorization import (
     USERS_ENV, AuthorizationContext, AuthorizationError, authorization_scope,
     current_authorization, resolve_token, user_store_from_env,
 )
-from je_auto_control.utils.rbac.deferred import (
-    DeferredOwner, adopted_scope, capture_owner, owner_scope, resolve_owner,
-)
 from je_auto_control.utils.rbac.policy import (
     authorize_command, capability_for_command, capability_for_route,
     capability_for_tool, denied_command_in,
@@ -52,12 +49,12 @@ from je_auto_control.utils.rbac.users import (
 )
 
 __all__ = [
-    "AuthorizationContext", "AuthorizationError", "Capability", "DeferredOwner",
+    "AuthorizationContext", "AuthorizationError", "Capability",
     "IssuedToken", "Role", "USERS_ENV", "UserAuthError", "UserRecord", "UserStore",
-    "add_user", "adopted_scope", "authorization_scope", "authorize_command", "can",
+    "add_user", "authorization_scope", "authorize_command", "can",
     "capability_for_command", "capability_for_route", "capability_for_tool",
-    "capture_owner", "current_authorization", "default_user_store",
-    "denied_command_in", "list_users", "management_store", "owner_scope",
-    "remove_user", "resolve_owner", "resolve_token", "role_capabilities",
+    "current_authorization", "default_user_store",
+    "denied_command_in", "list_users", "management_store",
+    "remove_user", "resolve_token", "role_capabilities",
     "rotate_user_token", "set_user_role", "user_store_from_env",
 ]

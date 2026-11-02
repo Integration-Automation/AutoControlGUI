@@ -1,0 +1,6 @@
+{
+  "task_id": "<stopped-source-task-id>",
+  "snapshot": "<source-snapshot>",
+  "authorization_review": "<authorization-review-token>",
+  "note": "<describe the reviewed current limits and independent completion criteria>"
+}

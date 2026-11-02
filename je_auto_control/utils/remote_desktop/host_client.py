@@ -10,9 +10,10 @@ module does not import it.
 import collections
 import json
 import threading
-from typing import TYPE_CHECKING, Deque, Optional
+from typing import TYPE_CHECKING, Deque, NoReturn, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.auth import make_nonce
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
@@ -22,7 +23,7 @@ from je_auto_control.utils.remote_desktop.file_transfer import (
     FileTransferError, decode_begin,
 )
 from je_auto_control.utils.remote_desktop.host_access import (
-    PERMISSION_DENIED, PERMISSION_FULL, PERMISSION_VIEW_ONLY,
+    PERMISSION_DENIED, PERMISSION_FULL,
     PendingViewer, _AUTH_TIMEOUT_S, _interpret_approval,
 )
 from je_auto_control.utils.remote_desktop.input_dispatch import (
@@ -196,11 +197,7 @@ class _ClientHandler:
         self._channel.send_typed(MessageType.AUTH_CHALLENGE, nonce)
         msg_type, payload = self._channel.read_typed()
         if msg_type is not MessageType.AUTH_RESPONSE:
-            self._channel.send_typed(MessageType.AUTH_FAIL,
-                                     b"expected AUTH_RESPONSE")
-            raise AuthenticationError(
-                f"expected AUTH_RESPONSE, got {msg_type.name}"
-            )
+            self._reject_auth(b"expected AUTH_RESPONSE", f"expected AUTH_RESPONSE, got {msg_type.name}")
         # Phase 6.6: a viewer reconnecting with a valid resume token
         # signs with that token directly — host short-circuits the
         # approval popup and reuses the saved permission.
@@ -209,17 +206,13 @@ class _ClientHandler:
             self.permission = resumed
         else:
             if not self._host._verify_token(nonce, payload):
-                self._channel.send_typed(MessageType.AUTH_FAIL, b"bad token")
-                raise AuthenticationError("bad token")
+                self._reject_auth(b"bad token", "bad token")
             # Host operator gates the session *before* AUTH_OK so the
             # viewer surfaces the rejection as an AuthenticationError
             # instead of connecting and then mysteriously disconnecting.
             permission = self._resolve_permission()
             if permission == PERMISSION_DENIED:
-                self._channel.send_typed(
-                    MessageType.AUTH_FAIL, b"rejected by host",
-                )
-                raise AuthenticationError("rejected by host")
+                self._reject_auth(b"rejected by host", "rejected by host")
             self.permission = permission
         # Issue a fresh resume token so the viewer can reconnect
         # within the store's TTL without the approval popup.
@@ -233,6 +226,12 @@ class _ClientHandler:
         ).encode("utf-8")
         self._channel.send_typed(MessageType.AUTH_OK, ok_payload)
         self._channel.settimeout(None)
+
+    def _reject_auth(self, payload: bytes, message: str) -> NoReturn:
+        """Release admission capacity before the terminal reply lets the viewer immediately reconnect."""
+        self._shutdown.set()
+        self._channel.send_typed(MessageType.AUTH_FAIL, payload)
+        raise AuthenticationError(message)
 
     def _send_loop(self) -> None:
         # Seed the viewer with the latest cursor + frame on this per-client
@@ -298,6 +297,9 @@ class _ClientHandler:
                     )
                 self.stop()
                 return
+            if self._shutdown.is_set() or not self.authenticated:
+                self.stop()
+                return
             try:
                 self._route_incoming(msg_type, payload)
             except BaseException:
@@ -314,15 +316,15 @@ class _ClientHandler:
         if msg_type is MessageType.INPUT:
             # Phase 5.3: drop input from view-only viewers so they can
             # watch but cannot drive the mouse / keyboard.
-            if self.permission != PERMISSION_VIEW_ONLY:
+            if self.permission == PERMISSION_FULL:
                 self._handle_input_payload(payload)
             return
-        if msg_type in _CONTROL_MSG_TYPES and self.permission == PERMISSION_VIEW_ONLY:
+        if msg_type in _CONTROL_MSG_TYPES and self.permission != PERMISSION_FULL:
             # Setting the host clipboard or writing files on it is control,
             # not viewing: a file dropped in the Startup folder is full
             # control at the next logon.
             autocontrol_logger.info(
-                "remote_desktop view-only viewer %s sent %s; dropped",
+                "remote_desktop unprivileged viewer %s sent %s; dropped",
                 self._address, msg_type.name,
             )
             return
@@ -415,10 +417,13 @@ class _ClientHandler:
         try:
             kind, data = decode_clipboard(payload)
         except ClipboardSyncError as error:
+            raise_caused_run_interruption(error)
             autocontrol_logger.info(
                 "remote_desktop bad CLIPBOARD from %s: %r",
                 self._address, error,
             )
+            return
+        if self._shutdown.is_set() or not self.authenticated or self.permission != PERMISSION_FULL:
             return
         # Noted before it is applied: a watcher that sees the clipboard
         # change the moment it is set must already find the note.
@@ -426,6 +431,7 @@ class _ClientHandler:
         try:
             self._host._apply_clipboard(kind, data)
         except (OSError, RuntimeError, TypeError, ValueError) as error:
+            raise_caused_run_interruption(error)
             autocontrol_logger.warning(
                 "remote_desktop clipboard apply failed for %s: %r",
                 self._address, error,

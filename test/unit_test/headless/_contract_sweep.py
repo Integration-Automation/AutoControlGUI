@@ -234,6 +234,14 @@ def _module_picks_a_backend(module_path: str) -> bool:
     return False
 
 
+def _typed_dict_value(cls: Any, seen: FrozenSet[type]) -> Dict[str, Any]:
+    """Populate required keys rather than treating a TypedDict as an empty dict."""
+    if cls in seen:
+        raise ValueError(f"self-referential TypedDict field on {cls!r}")
+    return {name: _value_for(annotation, seen | {cls})
+            for name, annotation in typing.get_type_hints(cls).items() if name in cls.__required_keys__}
+
+
 def _value_for(annotation: Any, seen: FrozenSet[type] = frozenset()) -> Any:
     """Build the emptiest value a return annotation allows.
 
@@ -252,6 +260,8 @@ def _value_for(annotation: Any, seen: FrozenSet[type] = frozenset()) -> Any:
         return _value_for_generic(origin, typing.get_args(annotation), seen)
     if annotation in _ZEROS:
         return _ZEROS[annotation]()
+    if typing.is_typeddict(annotation):
+        return _typed_dict_value(annotation, seen)
     if isinstance(annotation, type) and dataclasses.is_dataclass(annotation):
         return _dataclass_value(annotation, seen)
     if isinstance(annotation, type):

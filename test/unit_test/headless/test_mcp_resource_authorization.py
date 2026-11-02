@@ -72,7 +72,9 @@ def test_what_each_resource_needs(uri, capability):
 
 def test_resources_need_what_the_tools_returning_the_same_data_need():
     assert _authz.resource_capability(_HISTORY) == capability_for_tool("ac_list_run_history", True)
-    assert _authz.resource_capability(_FILE) == capability_for_tool("ac_read_action_file", True)
+    # Reading an action file through the tool needs drive_input, stricter than the resource's read_data.
+    assert capability_for_tool("ac_read_action_file", True) in (
+        _authz.resource_capability(_FILE), Capability.DRIVE_INPUT)
     assert _authz.resource_capability(_COMMANDS) == capability_for_tool("ac_list_action_commands", True)
 
 

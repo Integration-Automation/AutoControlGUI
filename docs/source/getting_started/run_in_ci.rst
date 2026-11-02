@@ -58,6 +58,28 @@ push touching ``docker/``, ``je_auto_control/`` or
 container under ``xvfb-run``, then smoke-tests the REST entrypoint
 with ``curl /health``.
 
+The dev/main headless jobs also retain ``native-<os>-<python>`` artifacts for
+seven days, even when tests fail. ``process.log`` combines stdout/stderr;
+``runtime.json`` records package/runtime versions and the child exit status.
+Linux runs under GDB and retains all-thread native backtraces. Other systems
+retain Python faulthandler output. Neither ordinary failure nor native abort
+is converted into a passing job. Native root-cause acceptance remains separate
+from collecting the evidence.
+
+From the repository, run::
+
+   python scripts/ci_native_diagnostics.py --artifact-dir test-artifacts -- python -m pytest -v --tb=short --timeout=120
+
+Linux first verifies the diagnostics runner outside the suite's debugger;
+those logs are retained under ``preflight/`` in the same artifact. Original
+argv, including whitespace, Unicode, quotes and shell characters, stays
+literal. ``SIGINT`` reaches the child's handler instead of stopping GDB;
+fatal native signals still stop for a backtrace.
+
+On Linux, install GDB and add ``--native`` before ``--`` to collect native
+backtraces. The wrapper never opens a display or obtains device permissions;
+the selected test command still requires its normal Xvfb/backend setup.
+
 Reuse from any branch by adding this job to your own workflow:
 
 .. code-block:: yaml
@@ -162,3 +184,29 @@ Limitations
 * The REST and Remote-Desktop hosts default to binding on ``0.0.0.0``
   inside the container — front them with a network policy or
   reverse-proxy when exposing them beyond ``localhost``.
+
+Isolated native EI lifecycle evidence
+========================================
+
+Selected dev pushes run ``.github/workflows/ei-lifecycle.yml`` in an isolated
+libei/libeis container, retaining versions and both native logs for 14 days in
+``ei-lifecycle-<run>-<attempt>`` artifacts. Half-open and live cleanup children
+have 10/60-second deadlines and faulthandler. Unrelated child failures fail CI;
+successful cleanup requires begin/end markers. The half-open probe also requires
+equal integer descriptor counts; live cleanup releases owned device refs first.
+Run 39507190704 on libei/libeis 1.3.901-1 passes 9/9 and 20/20 checks, including
+native out-of-region refusal without CLI fallback. Half-open ``ei_unref`` still
+segfaults, so runtime protection remains and helper isolation is pending.
+Device pause and sequence readback remain unverified. These controlled socket
+peers do not establish compositor consent, physical or multi-monitor acceptance.
+
+On a disposable Linux Docker host, run the same image explicitly::
+
+    docker build -f docker/Dockerfile.eis -t autocontrol-ei-lifecycle:local .
+    docker run --rm --entrypoint python autocontrol-ei-lifecycle:local /opt/verify/libei_verify.py
+    docker run --rm --entrypoint python autocontrol-ei-lifecycle:local /opt/verify/eis_verify.py
+
+The dev job attempts both probes even when the first fails, preserves pipeline
+exit status, and always attempts log upload and removal of its named containers.
+The known isolated teardown fault is a measurement, not permission to call that
+unsafe teardown in the GUI process or proof that pending D2 isolation is complete.

@@ -236,6 +236,9 @@ class RestApiTab(TranslatableMixin, QWidget):
             self._status_label.setText(_t(self._pending_key))
             return
         status = rest_api_registry.status()
+        # With RBAC each user has their own token, so the shared-token field is disabled.
+        rbac = bool(status.get("rbac") or status.get("rbac_enabled"))
+        self._token_input.setEnabled(not rbac)
         self._shared_token = None
         if not status["running"]:
             self._url_value.setText("-")
@@ -243,13 +246,14 @@ class RestApiTab(TranslatableMixin, QWidget):
             self._status_label.setText(_t("rest_stopped"))
             return
         self._url_value.setText(status["url"])
-        if status.get("rbac"):
+        if rbac:
+            users_path = status.get("users_path")
             self._token_value.setText(
-                _t("rest_token_rbac").format(path=status.get("users_path")))
+                _t("rest_token_rbac").format(path=users_path) if users_path else "-")
             self._status_label.setText(_t("rest_running_rbac"))
             return
         self._shared_token = status["token"]
-        self._token_value.setText(status["token"])
+        self._token_value.setText(status["token"] or "-")
         self._status_label.setText(_t("rest_running"))
 
 

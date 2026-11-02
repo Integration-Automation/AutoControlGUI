@@ -9,8 +9,9 @@ answers cannot disagree. :func:`visible_resources` and
 :func:`authorize_resource` do the same for ``resources/list``,
 ``resources/read`` and ``resources/subscribe``.
 
-Without a user store nothing here identifies anyone: the transport keeps
-its optional shared token and the dispatcher offers every tool, as before.
+Without a user store the transport keeps its optional shared token. Live
+MCP peers have the operator ceiling at invocation and discovery; a shared
+token does not identify an administrator. Authenticated roles remain opt-in.
 """
 import hmac
 from typing import Any, Dict, List, Optional, Tuple

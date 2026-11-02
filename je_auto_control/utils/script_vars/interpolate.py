@@ -16,6 +16,8 @@ import re
 from pathlib import Path
 from typing import Any, List, Mapping, MutableMapping, Optional, Tuple
 
+from je_auto_control.utils.logging.secret_scope import remember_secret
+
 # Bounded character class with a single quantifier — avoids the nested
 # alternation that ReDoS scanners (semgrep regex_dos) flag on
 # ``([A-Za-z_]\w*(?:\.\w+)*)``. Validation of the segment shape is
@@ -107,6 +109,8 @@ def _lookup(name: str, variables: Mapping[str, Any]) -> Any:
 
 def _lookup_secret(secret_name: str) -> str:
     """Resolve ``${secrets.NAME}`` through the global vault."""
+    from je_auto_control.utils.script_vars.ref_guard import _check_vault_access
+    _check_vault_access(secret_name)
     from je_auto_control.utils.secrets import (
         SecretStoreLocked, default_secret_manager,
     )
@@ -120,14 +124,8 @@ def _lookup_secret(secret_name: str) -> str:
         ) from error
     if value is None:
         raise ValueError(f"Unknown secret: ${{secrets.{secret_name}}}")
-    _note_resolved_secret(value)
+    remember_secret(value)
     return value
-
-
-def _note_resolved_secret(value: Any) -> None:
-    """Let a started action journal mask ``value`` by exact match."""
-    from je_auto_control.utils.action_journal import recorder
-    recorder.note_secret_value(value)
 
 
 def load_vars_from_json(path: str,

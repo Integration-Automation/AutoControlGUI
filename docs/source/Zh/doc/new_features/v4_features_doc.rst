@@ -181,7 +181,7 @@ GUI
 ===
 
 * **錄製編輯器 Undo** — 每次編輯(刪步驟、trim、rescale、調整延遲、
-  filter)都會快照進 undo stack;**Ctrl+Z** 與 Undo 按鈕可還原前一狀態。
+  filter)都會快照進 undo stack; **Ctrl+Z** 與 Undo 按鈕可還原前一狀態。
 * **觸發器分頁** — *Combine selected* 把選取的觸發器包成 AllOf / AnyOf /
   Sequence 複合觸發器;新增 **Cron** 觸發器型別。
 * **斷言分頁** — 新增 **VLM**\ (「畫面符合描述」)斷言型別。

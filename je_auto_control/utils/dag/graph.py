@@ -15,7 +15,7 @@ class DagDefinitionError(AutoControlException, ValueError):
 class DagNode:
     """One unit of work in the DAG.
 
-    Exactly one of ``actions`` / ``action_file`` must be set. ``host``
+    Exactly one of ``actions`` / ``action_file`` / ``task`` must be set. ``host``
     selects the executor:
 
     * ``"local"`` — run via :func:`execute_action` in this process;
@@ -28,6 +28,7 @@ class DagNode:
     actions: Optional[List[Any]] = None
     action_file: Optional[str] = None
     depends_on: Tuple[str, ...] = ()
+    task: Optional[Mapping[str, Any]] = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.id, str) or not self.id.strip():
@@ -36,14 +37,22 @@ class DagNode:
             raise DagDefinitionError(
                 f"node {self.id!r} requires a host string",
             )
-        if self.actions is None and not self.action_file:
+        payloads = sum((self.actions is not None, bool(self.action_file), self.task is not None))
+        if payloads == 0:
             raise DagDefinitionError(
-                f"node {self.id!r} needs actions or action_file",
+                f"node {self.id!r} needs actions, action_file or task",
             )
-        if self.actions is not None and self.action_file:
+        if payloads > 1:
             raise DagDefinitionError(
-                f"node {self.id!r} cannot set both actions and action_file",
+                f"node {self.id!r} must select only one of actions, action_file or task",
             )
+        if self.task is not None:
+            from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+            from je_auto_control.utils.dag.task_contract import task_contract
+            try:
+                object.__setattr__(self, "task", task_contract(self.task))
+            except AgentTaskError as error:
+                raise DagDefinitionError(str(error)) from None
 
 
 @dataclass(frozen=True)
@@ -111,7 +120,7 @@ def parse_definition(data: Mapping[str, Any]) -> DagDefinition:
     """Build a :class:`DagDefinition` from a JSON-shaped mapping.
 
     The expected structure mirrors the JSON serialisation: ``{"nodes":
-    [{"id": ..., "host": ..., "actions": [...] | "action_file": ...,
+    [{"id": ..., "host": ..., "actions": [...] | "action_file": ... | "task": {...},
     "depends_on": [...]}, ...]}``.
     """
     if not isinstance(data, Mapping):
@@ -129,6 +138,7 @@ def parse_definition(data: Mapping[str, Any]) -> DagDefinition:
             actions=_coerce_actions(raw.get("actions")),
             action_file=raw.get("action_file") or None,
             depends_on=_coerce_deps(raw.get("depends_on")),
+            task=raw.get("task"),
         ))
     return DagDefinition(nodes=tuple(nodes))
 

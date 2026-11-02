@@ -36,18 +36,23 @@ from urllib.parse import parse_qs, urlparse
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.http_headers import (
-    INVALID_CONTENT_LENGTH, ChunkedBodyError, is_chunked, log_safe,
+    INVALID_CONTENT_LENGTH, ChunkedBodyError, LocalThreadingHTTPServer, is_chunked, log_safe,
     parse_content_length, read_chunked_body,
 )
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
+from je_auto_control.utils.logging.secret_scope import secret_log_scope
+from je_auto_control.utils.rbac.authorization import AuthorizationError
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
-from je_auto_control.utils.rbac.deferred import DeferredOwner, capture_owner
-from je_auto_control.utils.run_history.run_outcome import run_counting_failures
+from je_auto_control.utils.run_history.run_outcome import (
+    RunOutcome, finish_history_run, run_counting_failures,
+)
 from je_auto_control.utils.run_history.history_store import (
-    SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
+    SOURCE_TRIGGER, STATUS_ERROR as STATUS_ERROR, STATUS_OK as STATUS_OK, default_history_store,
 )
 
 
@@ -83,8 +88,8 @@ class WebhookTrigger:
     enabled: bool = True
     fired: int = 0
     last_status: int = 0
-    #: Who registered it under RBAC; the run is authorised as that user.
-    owner: Optional[DeferredOwner] = field(default=None, kw_only=True)
+    _authorization: DeferredAuthorization = field(
+        default_factory=DeferredAuthorization.capture, init=False, repr=False, compare=False)
 
 
 #: Verbs the request handler answers; anything else gets a 501 before routing.
@@ -232,6 +237,10 @@ class _WebhookHandler(BaseHTTPRequestHandler):
         }
         try:
             run_id = registry.fire(trigger, payload)
+        except AuthorizationError:
+            self._send_json(HTTPStatus.FORBIDDEN,
+                            {"fired": False, "error": "webhook owner is not authorised"})
+            return
         except AutoControlException as error:
             # The run-history store failed before the script ran; the client
             # still gets an answer instead of a dropped connection.
@@ -296,7 +305,7 @@ class WebhookTriggerServer:
             methods: Optional[List[str]] = None,
             token: Optional[str] = None,
             ) -> WebhookTrigger:
-        """Register a new webhook → script binding."""
+        """Bind a webhook to a script and the current caller's authority."""
         normalized_path = _normalize_path(path)
         if not script_path:
             raise ValueError("script_path is required")
@@ -306,7 +315,6 @@ class WebhookTriggerServer:
             script_path=str(script_path),
             methods=_normalize_methods(methods),
             token=token if token is not None else None,
-            owner=capture_owner(),
         )
         with self._lock:
             for existing in self._triggers.values():
@@ -357,6 +365,7 @@ class WebhookTriggerServer:
         return hmac.compare_digest(token.strip().encode("utf-8"),
                                    trigger.token.encode("utf-8"))
 
+    @secret_log_scope()
     def fire(self, trigger: WebhookTrigger,
              payload: Dict[str, Any]) -> Optional[int]:
         """Run the trigger's script with ``payload`` seeded into variables.
@@ -376,32 +385,30 @@ class WebhookTriggerServer:
                 SOURCE_TRIGGER, f"webhook:{trigger.webhook_id}",
                 trigger.script_path,
             )
-            status = STATUS_OK
-            error_text: Optional[str] = None
-            # Missing the framework base let a bad/renamed script escape fire()
-            # and propagate out of the HTTP handler: the run was recorded as a
-            # bogus STATUS_OK and the client's connection was dropped with no
-            # response. Catch the whole family so the fire is recorded as an
-            # error and _dispatch still answers the request.
+            outcome = RunOutcome()
+            # Settle failures before answering; hard exits propagate after finalization.
             try:
-                actions = read_executable_action_json(trigger.script_path)
-                run_counting_failures(lambda: self._executor(actions, payload), owner=trigger.owner)
-            except Exception as error:  # noqa: BLE001  # reason: any script failure must be recorded and answered
-                status = STATUS_ERROR
-                error_text = repr(error)
+                with trigger._authorization.scope(), bound_history(HistoryBinding(default_history_store, run_id)):
+                    actions = read_executable_action_json(trigger.script_path)
+                    run_counting_failures(lambda: self._executor(actions, payload))
+            except BaseException as error:  # noqa: BLE001  # reason: any script failure must be recorded and answered
+                outcome.fail(error)
+                if outcome.hard_abort:
+                    raise
                 autocontrol_logger.error("webhook %s failed: %r",
                                          trigger.webhook_id, error)
+                if isinstance(error, AuthorizationError):
+                    with self._lock:
+                        if self._triggers.get(trigger.webhook_id) is trigger:
+                            trigger.last_status = int(HTTPStatus.FORBIDDEN)
+                    raise
             finally:
-                artifact = (capture_error_snapshot(run_id)
-                            if status == STATUS_ERROR else None)
-                default_history_store.finish_run(
-                    run_id, status, error_text, artifact_path=artifact,
-                )
+                finish_history_run(default_history_store, run_id, outcome, capture_error_snapshot)
             with self._lock:
                 live = self._triggers.get(trigger.webhook_id)
                 if live is not None:
                     live.fired += 1
-                    live.last_status = 200 if status == STATUS_OK else 500
+                    live.last_status = 200 if outcome.status == STATUS_OK else 500
             return run_id
         finally:
             self._fire_lock.release()
@@ -411,7 +418,7 @@ class WebhookTriggerServer:
         with self._lock:
             if self._server is not None and self._bound is not None:
                 return self._bound
-            server = ThreadingHTTPServer((host, int(port)), _WebhookHandler)
+            server = LocalThreadingHTTPServer((host, int(port)), _WebhookHandler)
             server.webhook_owner = self  # type: ignore[attr-defined]
             self._server = server
             actual_host, actual_port = server.server_address[:2]

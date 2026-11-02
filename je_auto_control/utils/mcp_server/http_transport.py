@@ -22,8 +22,6 @@ confirmation gate. A client that ignores the header still works exactly as
 before, scoped to its TCP connection, but cannot be prompted: there is no
 channel to carry the question. See :mod:`.http_sessions`. With RBAC a session
 belongs to the user who created it: anyone else presenting its id gets 403.
-A tool registered or removed outside a request -- the plugin watcher's thread
--- is announced on every session's standing stream.
 
 **2026-07-28.** A request that declares the stateless revision, in its
 ``MCP-Protocol-Version`` header or its ``_meta``, is checked against that
@@ -36,10 +34,12 @@ import json
 import os
 import ssl
 import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 from typing import Any, Callable, Dict, Optional, Tuple
 
-from je_auto_control.utils.http_headers import bearer_challenge, log_safe
+from je_auto_control.utils.http_headers import (
+    LocalThreadingHTTPServer, bearer_challenge, log_safe,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server._authz import check_bearer
 from je_auto_control.utils.mcp_server._http_origin import (
@@ -63,10 +63,8 @@ from je_auto_control.utils.mcp_server.http_sessions import (
     HttpSession, SESSION_HEADER, SessionOwnerMismatch, SessionRegistry,
     session_id_from_headers,
 )
-from je_auto_control.utils.mcp_server.disclosure import (
-    ToolDisclosureError, ToolMode, resolve_mode,
-)
 from je_auto_control.utils.mcp_server.server import MCPServer
+from je_auto_control.utils.mcp_server._tool_notifications import HTTPToolNotifications
 from je_auto_control.utils.rbac.authorization import (
     AuthorizationContext, authorization_scope, user_store_from_env,
 )
@@ -403,13 +401,15 @@ class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
         # Claim the slot before writing headers, and write them under the
         # same lock, so an elicitation racing the handshake cannot land in
         # front of the status line.
-        if not session.attach_stream(emit):
-            self._send_json(
-                {"error": "session already has an open stream"}, status=409,
-            )
-            return
+        claimed = False
         try:
             with send_lock:
+                if not session.attach_stream(emit):
+                    self._send_json(
+                        {"error": "session already has an open stream"}, status=409,
+                    )
+                    return
+                claimed = True
                 self.send_response(200)
                 self.send_header("Content-Type",
                                   f"{SSE_MEDIA_TYPE}; charset=utf-8")
@@ -426,7 +426,8 @@ class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
                 "MCP session stream %s ended: %r", session.id, error,
             )
         finally:
-            session.detach_stream(emit)
+            if claimed:
+                session.detach_stream(emit)
 
     def _heartbeat_until_closed(self, registry: SessionRegistry,
                                 session: HttpSession,
@@ -469,7 +470,7 @@ class _MCPHttpHandler(HttpResponseMixin, BaseHTTPRequestHandler):
         self._send_json({"status": "session terminated"})
 
 
-class _MCPHttpServer(ThreadingHTTPServer):
+class _MCPHttpServer(LocalThreadingHTTPServer):
     """ThreadingHTTPServer extension that owns an :class:`MCPServer`."""
 
     def __init__(self, server_address: Tuple[str, int],
@@ -486,11 +487,19 @@ class _MCPHttpServer(ThreadingHTTPServer):
         self.sessions = SessionRegistry(
             on_drop=lambda session: mcp.forget_connection(session.id),
         )
+        self._tool_notifications = HTTPToolNotifications(mcp, self.sessions)
         # No sse_lock: SSE requests used to swap server-wide notifier/writer
         # state and needed serialising. They now bind that state to their own
         # thread via MCPServer.connection_scope, so concurrent SSE streams no
         # longer race — and, unlike the lock, plain POSTs can no longer read
         # another connection's notifier either.
+
+    def server_close(self) -> None:
+        """Detach the notification sink, including when binding failed during construction."""
+        notifications = getattr(self, "_tool_notifications", None)
+        if notifications is not None:
+            notifications.close()
+        super().server_close()
 
     def get_request(self) -> Tuple[Any, Any]:
         """Accept a connection, time-boxing any TLS handshake.
@@ -521,21 +530,9 @@ class HttpMCPServer:
                  auth_token: Optional[str] = None,
                  ssl_context: Optional[ssl.SSLContext] = None,
                  user_store: Optional[UserStore] = None,
-                 tool_mode: str | ToolMode | None = None,
                  ) -> None:
-        """``user_store`` switches RBAC on; ``None`` reads ``JE_AUTOCONTROL_RBAC_USERS``.
-
-        ``tool_mode`` is :class:`MCPServer`'s (``full`` / ``progressive`` /
-        ``static``; ``None`` reads ``JE_AUTOCONTROL_MCP_TOOL_MODE``) and builds
-        the dispatcher when ``mcp`` is not given. Passed together with an
-        ``mcp`` already in another mode it raises :class:`ToolDisclosureError`
-        -- a dispatcher's mode is fixed when it is built.
-        """
-        self._mcp = mcp if mcp is not None else MCPServer(tool_mode=tool_mode)
-        if tool_mode is not None and resolve_mode(tool_mode) is not self._mcp.disclosure.mode:
-            raise ToolDisclosureError(
-                f"tool_mode {resolve_mode(tool_mode).value!r} does not match the given "
-                f"MCPServer's {self._mcp.disclosure.mode.value!r}; build it with that mode")
+        """``user_store`` switches RBAC on; ``None`` reads ``JE_AUTOCONTROL_RBAC_USERS``."""
+        self._mcp = mcp if mcp is not None else MCPServer()
         self._users = user_store if user_store is not None else user_store_from_env()
         self._address: Tuple[str, int] = (host, port)
         self._auth_token = auth_token if auth_token is not None else (
@@ -587,7 +584,6 @@ class HttpMCPServer:
             name="AutoControlMCPHttp",
         )
         self._thread.start()
-        self._mcp.add_list_changed_listener(self._broadcast_list_changed)
         scheme = "https" if self._ssl_context is not None else "http"
         autocontrol_logger.info("MCP %s listening on %s:%d (rbac=%s)", scheme,
                                  *self._address, "on" if self._users is not None else "off")
@@ -598,7 +594,6 @@ class HttpMCPServer:
         # Close the sessions and subscriptions first: a standing GET stream or
         # a subscriptions/listen parks a worker on its heartbeat, and ending
         # them releases it without waiting one out.
-        self._mcp.remove_list_changed_listener(self._broadcast_list_changed)
         self._mcp.end_subscriptions(stdio=False)
         self._server.sessions.terminate_all()
         self._server.shutdown()
@@ -609,45 +604,16 @@ class HttpMCPServer:
         self._thread = None
 
 
-    def _broadcast_list_changed(self, served: Any) -> None:
-        """Tell every session with a standing stream that the tool list changed.
-
-        ``served`` is the session the registering request came from, if any;
-        the dispatcher has told that one already. A registration from no
-        request at all -- the plugin watcher's thread -- used to reach nobody.
-        """
-        server = self._server
-        if server is None:
-            return
-        message = _notification_message("notifications/tools/list_changed", {})
-        for session in server.sessions.live():
-            writer = session.stream_writer
-            if writer is None or session.id == served:
-                continue
-            try:
-                writer(message)
-            except (OSError, ValueError) as error:
-                # The stream's own heartbeat notices a dead client and detaches.
-                autocontrol_logger.info(
-                    "MCP tools/list_changed not delivered to a session: %r", error)
-
-
 def start_mcp_http_server(host: str = "127.0.0.1", port: int = 9940,
                           mcp: Optional[MCPServer] = None,
                           auth_token: Optional[str] = None,
                           ssl_context: Optional[ssl.SSLContext] = None,
                           user_store: Optional[UserStore] = None,
-                          tool_mode: str | ToolMode | None = None,
                           ) -> HttpMCPServer:
-    """Start and return an :class:`HttpMCPServer`; convenience wrapper.
-
-    ``tool_mode`` is :class:`HttpMCPServer`'s: ``full``, ``progressive`` or
-    ``static``; ``None`` reads ``JE_AUTOCONTROL_MCP_TOOL_MODE``.
-    """
+    """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
     server = HttpMCPServer(
         mcp=mcp, host=host, port=port,
         auth_token=auth_token, ssl_context=ssl_context, user_store=user_store,
-        tool_mode=tool_mode,
     )
     server.start()
     return server

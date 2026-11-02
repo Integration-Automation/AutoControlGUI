@@ -2,18 +2,16 @@
 import json
 from typing import Optional
 
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtGui import QCloseEvent, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
     QMessageBox, QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._journal_import import confirm_candidate_diff, pick_journal_candidate
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
-from je_auto_control.utils.codegen.candidate_diff import diff_candidate
 from je_auto_control.utils.codegen.codegen import generate_code_file
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
@@ -107,9 +105,9 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         return [
             ("re_browse", self._browse),
             ("re_load", self._load),
-            ("re_import_journal", self._import_journal),
             ("re_save_as", self._save_as),
             ("re_export_code", self._export_code),
+            ("journal_candidate_open", self._open_journal_candidate),
             ("re_apply_trim", self._apply_trim),
             ("re_remove_selected", self._remove_selected),
             ("re_undo", self._undo),
@@ -121,6 +119,23 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
 
     def _keep_mouse(self) -> None:
         self._filter_prefix("AC_mouse")
+
+    def _open_journal_candidate(self) -> None:
+        """Preview source/diff/provenance without replacing this recording or replaying input."""
+        # pylint: disable-next=import-outside-toplevel  # reason: load candidate UI only when its action is invoked
+        from je_auto_control.gui.journal_candidate_dialog import show_journal_candidate
+        try:
+            show_journal_candidate(self, self._actions)
+        except (AutoControlException, ValueError, TypeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
+
+    # pylint: disable-next=invalid-name  # reason: Qt override
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802  # reason: Qt override
+        """Cancel pending review tasks when the recording editor closes."""
+        # pylint: disable-next=import-outside-toplevel  # reason: avoid loading review UI during tab registration
+        from je_auto_control.gui.journal_candidate_dialog import close_candidate_dialogs
+        close_candidate_dialogs(self)
+        super().closeEvent(event)
 
     def _keep_keyboard(self) -> None:
         self._filter_prefix((
@@ -146,22 +161,6 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
             return
         self._undo_stack.clear()  # a freshly loaded recording starts clean
         self._refresh()
-
-    def _import_journal(self) -> None:
-        """Open the candidate built from an action journal run for editing."""
-        candidate = pick_journal_candidate(self)
-        if candidate is None:
-            return
-        # A recording is open: show what the candidate changes before it
-        # replaces it. (Undo brings the old one back either way.)
-        if self._actions and not confirm_candidate_diff(
-                self, diff_candidate(candidate, actions=self._actions)):
-            return
-        self._path_input.clear()
-        self._mutate(list(candidate.actions))
-        self._status.setText(
-            f"{len(self._actions)} actions from journal run {candidate.manifest['run_id']}"
-            f" ({len(candidate.warnings)} warning(s))")
 
     def _save_as(self) -> None:
         if not self._actions:

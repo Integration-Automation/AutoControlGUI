@@ -143,6 +143,17 @@ missing or does not verify; the file is not run.
 Roles (opt-in RBAC)
 -------------------
 
+The REST GUI labels RBAC mode and disables its shared-token input. Registry
+status includes ``rbac_enabled`` and reports ``token: null`` while a user store is
+configured; use a token belonging to an individual user. Stopping the server
+restores the shared-token controls. The Python server's ``token`` property still
+holds its configured shared token, which RBAC does not accept.
+
+Custom REST gates implementing only ``check(client_ip=..., header_value=...)``
+retain their verdict and rate-limit behavior in shared-token mode. When the
+server has a user store, a successful gate result must include an authenticated
+``AuthorizationContext``; an identityless success returns HTTP 401.
+
 By default every caller holds the one shared token and may use every
 endpoint. Point the server at a user store and each caller gets a token of
 their own and a role instead:
@@ -299,38 +310,22 @@ the executor refuses the same commands when they come from an action file.
 
 The roles are not a sandbox: an operator drives the real keyboard and can
 launch programs, so whatever the desktop user could do by hand is within
-reach. They protect the host's own privileged state.
+reach. They protect the host's own privileged state. Interval/cron jobs,
+triggers, hotkeys, watchdog rules, webhooks, e-mail triggers and observer
+callbacks keep their registrant's identity. Starting or re-enabling the daemon
+does not transfer ownership to that caller. Each dispatch refreshes a
+store-backed user: removal, a missing/damaged store or a downgrade to viewer
+prevents execution, and privileged commands use the current role.
 
-**Deferred work keeps its owner.** A scheduler job, a trigger, a hotkey
-binding, a webhook, an e-mail trigger or a watchdog rule registered by an
-authenticated caller is stored with that user (``job.owner`` and the like, a
-``DeferredOwner``) and later runs as them. The role is looked up in the user
-store when the work fires, not remembered: a user demoted since loses the
-privilege for work already registered, a user who no longer has
-``drive_input`` or was removed gets none of it run (the run is recorded as
-failed), and a promoted user gains the new role. Work registered without RBAC
--- from the GUI, a script, a server with no user store -- has no owner and
-runs as before.
-
-A screen-observer watch (``AC_observe_add``, the ``ac_observe_add`` MCP tool,
-``ScreenObserver.add``) is deferred work of the same kind: its callback fires
-as the user who added it (``rule.owner``), whoever's ``AC_observe_poll`` or
-whichever thread detects the transition, and a removed or demoted owner's
-callback is refused. A state machine (``StateMachine``, ``AC_run_state_machine``)
-and a planner run (``run_from_description``, ``AC_llm_run``) normally execute
-inside the request that asked for them and are that request's; a
-``StateMachine`` also remembers the user who built it, and
-``run_from_description`` takes ``owner=capture_owner()``, so one handed to
-another thread still runs as that user instead of as nobody.
-
-Status calls (``AC_rest_api_status``, the REST API tab) report
-``"rbac": true``, ``"users_path"`` and ``"token": null`` while a user store is
-in use: the shared token is not shown where it is refused.
-
-A custom gate object that only implements ``check(client_ip=, header_value=)``
-is accepted: its verdict is used and the request is served with no user
-identity, as under the shared token. Implement ``authenticate(...)``
-returning an ``AuthResult`` to supply one.
+``resolve_token`` records only the source ``store_path`` in its
+``AuthorizationContext``, never the bearer token. Explicit Python contexts
+without a store path retain their captured role. Work registered without RBAC
+clears ambient worker authority and keeps trusted local behavior.
+Observer and watchdog callbacks also get fresh variable scopes; a failed
+watchdog executor action is not counted as a dismissed popup. Observer events
+continue to describe detected transitions, with callback failures logged.
+Nested callbacks preserve the caller's prior failure count. Webhooks whose
+owners are revoked return HTTP 403 with ``fired: false``.
 
 Every audit row of an RBAC request names the user: the ``viewer_id`` column
 holds the user id and the detail reads

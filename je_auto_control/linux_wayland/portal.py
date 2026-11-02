@@ -27,8 +27,9 @@ uses this: the portal may show a consent dialog the first time (so the wait is
 bounded by :data:`DEFAULT_TIMEOUT`, not instant), and it always captures the
 whole screen, so a region is cropped afterwards.
 
-Every failure here is an ordinary capture failure — the caller reports the
-install hint for the CLI helpers, which is the actionable advice.
+Abandoned requests attempt a bounded Request.Close on the original connection
+before it is dropped. Ordinary capture failures retain their framework error;
+original request cancellation and hard-control objects propagate through D-Bus wrappers.
 """
 from __future__ import annotations
 
@@ -39,10 +40,10 @@ import urllib.parse
 from typing import Any, Dict, List, Tuple
 
 from je_auto_control.linux_wayland import _dbus_client
-from je_auto_control.linux_wayland.authorisation import (
-    CAPTURE, AuthorisationState, ledger,
-)
 from je_auto_control.utils.exception.exceptions import AutoControlScreenException
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
+from je_auto_control.utils.exception.cancellation import cancellation_checkpoint, cancellation_scope
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 PORTAL_BUS = "org.freedesktop.portal.Desktop"
@@ -55,20 +56,12 @@ PORTAL_METHOD = f"{SCREENSHOT_INTERFACE}.Screenshot"
 # so this is a human-scale wait, not a machine-scale one.
 DEFAULT_TIMEOUT = 30.0
 _CALL_TIMEOUT = 10.0
+_CLOSE_TIMEOUT = 0.25
 
 # 0 success, 1 cancelled by the user, 2 ended some other way.
 _RESPONSE_MEANING = {
     1: "the user dismissed the desktop portal's screenshot dialog",
     2: "the desktop portal ended the screenshot request",
-}
-
-#: What each Response code means for the capture authorisation. Recorded so a
-#: dismissed dialog reads as "needs permission" in the diagnostics rather than
-#: as one more capture failure. There is no tier after the portal to fall back
-#: to, so nothing is ever captured another way behind a refusal.
-_RESPONSE_STATE = {
-    0: AuthorisationState.GRANTED,
-    1: AuthorisationState.DECLINED,
 }
 
 
@@ -82,12 +75,14 @@ def capture_png(timeout: float = DEFAULT_TIMEOUT) -> bytes:
 
     :param timeout: seconds to wait for the portal's Response signal,
         including any time the user spends on a consent dialog.
+        Abandoning a pending request adds at most a separate bounded Close call.
     :return: the captured image file's bytes.
     """
     try:
         with _dbus_client.SessionBus() as bus:
             uri = _request_and_await(bus, timeout)
     except _dbus_client.DBusError as error:
+        raise_caused_run_interruption(error)
         raise AutoControlScreenException(
             f"the desktop portal could not be reached: {error}",
         ) from error
@@ -99,26 +94,43 @@ def _request_and_await(bus: "_dbus_client.SessionBus", timeout: float) -> str:
     token = _handle_token()
     predicted = _request_path(bus.sender_token, token)
     bus.add_match(_match_rule(predicted))
-    handle = _screenshot(bus, token)
-    paths = [predicted]
-    # A portal that ignores handle_token answers on a path of its own choosing.
-    # The specification tells clients to follow the returned handle, and the
-    # subscription for it can only be added once the call has returned it —
-    # which is exactly why the predicted one is subscribed to first.
-    if handle and handle != predicted:
-        bus.add_match(_match_rule(handle))
-        paths.append(handle)
+    handle = predicted
     try:
-        body = bus.wait_for_signal(paths, REQUEST_INTERFACE, "Response",
-                                   timeout)
-    except _dbus_client.DBusError as error:
-        ledger.transition(CAPTURE, AuthorisationState.TIMED_OUT,
-                          f"no answer within {timeout:g}s")
-        raise AutoControlScreenException(
-            f"desktop portal did not answer within {timeout:g}s "
-            f"(a consent dialog may be waiting)",
-        ) from error
+        handle = _screenshot(bus, token) or predicted
+        paths = [predicted]
+        # Subscribe to the returned path too when the portal ignores handle_token.
+        if handle != predicted:
+            bus.add_match(_match_rule(handle))
+            paths.append(handle)
+        body = _await_response(bus, paths, timeout)
+    except BaseException as error:  # reason: abandon pending consent before preserving the original control
+        _close_request(bus, handle, error)
+        raise
     return _uri_from_response(body)
+
+
+def _await_response(bus: "_dbus_client.SessionBus", paths: List[str], timeout: float) -> List[Any]:
+    """Keep the established timeout diagnostic while extracting original wrapped controls."""
+    try:
+        return bus.wait_for_signal(paths, REQUEST_INTERFACE, 'Response', timeout)
+    except _dbus_client.DBusError as error:
+        raise_caused_run_interruption(error)
+        raise AutoControlScreenException(
+            f'desktop portal did not answer within {timeout:g}s (canceling the pending request)',
+        ) from error
+
+
+def _close_request(bus: "_dbus_client.SessionBus", handle: str, failure: BaseException) -> None:
+    """Abandon only this request on its originating bus; cleanup cannot replace its primary interruption."""
+    try:
+        with cancellation_scope(None):
+            bus.call(PORTAL_BUS, handle, REQUEST_INTERFACE, 'Close', '', [], timeout=_CLOSE_TIMEOUT)
+    # pylint: disable-next=broad-exception-caught  # reason: retain the primary control after all cleanup outcomes
+    except BaseException as error:  # reason: choose controls only after the bounded cleanup attempt
+        raise_caused_run_interruption(failure)
+        raise_caused_run_interruption(error)
+        autocontrol_logger.debug('desktop portal request cleanup failed: %r', error)
+    raise_caused_run_interruption(failure)
 
 
 def _screenshot(bus: "_dbus_client.SessionBus", token: str) -> str:
@@ -168,9 +180,6 @@ def _match_rule(path: str) -> str:
 def _uri_from_response(body: List[Any]) -> str:
     """Read the screenshot URI out of one ``Response`` signal body."""
     code, results = _response_parts(body)
-    ledger.transition(
-        CAPTURE, _RESPONSE_STATE.get(code, AuthorisationState.FAILED),
-        _RESPONSE_MEANING.get(code, ""))
     if code != 0:
         raise AutoControlScreenException(
             _RESPONSE_MEANING.get(code, f"desktop portal returned {code}"),
@@ -205,6 +214,7 @@ def _path_from_uri(uri: str) -> str:
 def _read_and_discard(path: str) -> bytes:
     """Read the portal's file, then remove it — it is ours to clean up."""
     try:
+        cancellation_checkpoint()
         with open(path, "rb") as captured:
             data = captured.read()
     except OSError as error:

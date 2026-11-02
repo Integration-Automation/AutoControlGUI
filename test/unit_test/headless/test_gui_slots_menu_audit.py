@@ -54,21 +54,11 @@ def test_a_zero_interval_is_refused(monkeypatch):
     stub = types.SimpleNamespace(interval_input=_Text("0"),
                                  timer=types.SimpleNamespace(start=lambda: started.append(1)))
     tab.AutoClickTabMixin._start_auto_click(stub)
-    assert warned
-    assert not started
-
-
-def test_a_data_source_error_is_shown_by_the_slot(monkeypatch):
-    from je_auto_control.gui import data_source_tab as module
-    monkeypatch.setattr(module, "load_rows", _raiser(AutoControlActionException("bad query")))
-    stub = types.SimpleNamespace(_limit=types.SimpleNamespace(value=lambda: 0),
-                                 _build_source=lambda: {}, _status=_Text())
-    module.DataSourceTab._on_load(stub)
-    assert stub._status.value, "the slot did not report the error"
+    assert warned and not started
 
 
 def test_an_assertion_backend_error_is_shown_once_the_run_is_delivered(monkeypatch):
-    # The assertion runs off the GUI thread now, so this needs the real tab.
+    # The assertion runs off the GUI thread, so this needs the real tab.
     from je_auto_control.gui import assertions_tab as module
     _app()
     monkeypatch.setattr(module.ac, "assert_pixel", _raiser(AutoControlException("GetPixel failed")))
@@ -81,15 +71,32 @@ def test_an_assertion_backend_error_is_shown_once_the_run_is_delivered(monkeypat
     assert "GetPixel failed" in tab._result.text()
 
 
-def test_a_self_heal_click_error_is_shown_once_the_run_is_delivered(monkeypatch):
-    from je_auto_control.gui import self_healing_tab as module
-    _app()
-    monkeypatch.setattr(module, "self_heal_click", _raiser(AutoControlMouseException("click failed")))
-    tab = module.SelfHealingTab()
-    tab._template_input.setText("t.png")
-    tab._run(do_click=True)
-    assert settle(tab._runs, "task")
-    assert "click failed" in tab._status.text()
+@pytest.mark.parametrize("module_name, cls_name, setup", [
+    ("data_source_tab", "DataSourceTab",
+     lambda m, mp: (mp.setattr(m, "load_rows", _raiser(AutoControlActionException("bad query"))),
+                    {"_limit": types.SimpleNamespace(value=lambda: 0), "_build_source": lambda: {},
+                     "_status": _Text()})[1]),
+    ("self_healing_tab", "SelfHealingTab",
+     lambda m, mp: (mp.setattr(m, "self_heal_click", _raiser(AutoControlMouseException("click failed"))),
+                    {"_collect_inputs": lambda: ("t.png", "", 0.8, None), "_status": _Text(),
+                     "refresh_log": lambda: None,
+                     "_verification_input": _Text(),
+                     "_click_check": types.SimpleNamespace(isChecked=lambda: True)})[1]),
+])
+def test_framework_errors_are_shown_by_the_slot(module_name, cls_name, setup, monkeypatch):
+    from je_auto_control.gui import data_source_tab, self_healing_tab
+    module = {"data_source_tab": data_source_tab, "self_healing_tab": self_healing_tab}[module_name]
+    stub = types.SimpleNamespace(**setup(module, monkeypatch))
+    cls = getattr(module, cls_name)
+    slot = cls._run if cls_name == "SelfHealingTab" else cls._on_load
+    if cls_name == "SelfHealingTab":
+        slot(stub, do_click=True)
+    else:
+        slot(stub)
+    status = stub._status
+    assert status.value, "the slot did not report the error"
+    if cls_name == "SelfHealingTab":
+        assert "click failed" in status.value
 
 
 def test_the_planner_run_slot_shows_an_assertion_failure(monkeypatch):
@@ -149,8 +156,7 @@ def test_a_recording_that_does_not_start_is_reported(monkeypatch):
     monkeypatch.setattr(tab, "record", lambda: False)
     stub = types.SimpleNamespace(_record_status_key="record_idle", _apply_record_status_label=lambda: None)
     tab.RecordTabMixin._start_record(stub)
-    assert warned
-    assert stub._record_status_key == "record_idle"
+    assert warned and stub._record_status_key == "record_idle"
 
 
 def test_a_template_is_cropped_into_a_non_ascii_folder(monkeypatch, tmp_path):

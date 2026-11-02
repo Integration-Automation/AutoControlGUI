@@ -33,7 +33,7 @@ headless 測試(PIL 影像 / spec 以注入方式提供,完全不需真實螢幕
 
 執行器指令:
 
-* ``AC_take_golden`` — 擷取並存基準圖(可選 ``region``)。
+* ``AC_take_golden`` — 擷取並存基準圖(可選 ``region`` )。
 * ``AC_assert_visual`` — 把畫面與黃金影像比對,不符即拋例外(可存
   ``diff_path``)。**首跑**\ (基準不存在)時會擷取基準並通過,除非
   ``create_if_missing`` 設為 false。

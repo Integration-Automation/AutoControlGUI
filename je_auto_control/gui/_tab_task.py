@@ -2,7 +2,7 @@
 
 The tabs' commands used to run on the GUI thread: executing an action list,
 asking a VLM, pushing a file. :class:`TabTask` is the small piece every such
-tab shares on top of :mod:`je_auto_control.gui.task_controller`:
+tab shares on top of :mod:`je_auto_control.gui.tab_task_controller`:
 
 * **One run at a time.** :meth:`TabTask.start` refuses while a task is
   running, so a second click (or a script that clicks this window's own Run
@@ -28,7 +28,7 @@ from typing import Any, Callable, Optional
 
 from PySide6.QtCore import QObject, Signal
 
-from je_auto_control.gui.task_controller import CancellationToken, TaskHandle, task_controller
+from je_auto_control.gui.tab_task_controller import CancellationToken, TaskHandle, task_controller
 from je_auto_control.utils.executor.run_control import (
     ExecutionStopped, StopToken, stop_execution, stoppable_run,
 )

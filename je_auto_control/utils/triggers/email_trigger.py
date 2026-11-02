@@ -27,13 +27,17 @@ from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
+from je_auto_control.utils.logging.secret_scope import scrub_secret_text, secret_log_scope
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
 )
-from je_auto_control.utils.rbac.deferred import DeferredOwner, capture_owner
-from je_auto_control.utils.run_history.run_outcome import run_counting_failures
+from je_auto_control.utils.run_history.run_outcome import (
+    RunOutcome, finish_history_run, run_counting_failures,
+)
 from je_auto_control.utils.run_history.history_store import (
-    SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
+    SOURCE_TRIGGER, STATUS_ERROR as STATUS_ERROR, STATUS_OK as STATUS_OK, default_history_store,
 )
 
 
@@ -63,8 +67,8 @@ class EmailTrigger:
     _seen_uids: set = field(default_factory=set, repr=False)
     _inflight: set = field(default_factory=set, repr=False)
     _uidvalidity: Optional[str] = field(default=None, repr=False)
-    #: Who registered it under RBAC; the run is authorised as that user.
-    owner: Optional[DeferredOwner] = field(default=None, kw_only=True)
+    _authorization: DeferredAuthorization = field(
+        default_factory=DeferredAuthorization.capture, init=False, repr=False, compare=False)
 
 
 def _decode_header_value(value: Optional[str]) -> str:
@@ -266,7 +270,7 @@ class EmailTriggerWatcher:
             search_criteria: str = "UNSEEN",
             mark_seen: bool = True,
             poll_seconds: float = _DEFAULT_POLL_SECONDS) -> EmailTrigger:
-        """Register a new IMAP trigger."""
+        """Register an IMAP trigger bound to the current caller's authority."""
         if not host or not username or not script_path:
             raise ValueError(
                 "host, username, and script_path are required",
@@ -286,7 +290,6 @@ class EmailTriggerWatcher:
             search_criteria=str(search_criteria or "UNSEEN"),
             mark_seen=bool(mark_seen),
             poll_seconds=max(_MIN_POLL_SECONDS, float(poll_seconds)),
-            owner=capture_owner(),
         )
         with self._lock:
             self._triggers[trigger.trigger_id] = trigger
@@ -351,7 +354,7 @@ class EmailTriggerWatcher:
                 try:
                     self._poll_one(trigger)
                 except Exception as error:  # noqa: BLE001  # reason: see above
-                    trigger.last_error = repr(error)
+                    trigger.last_error = scrub_secret_text(repr(error))
                     autocontrol_logger.error(
                         "email trigger %s poll failed: %r",
                         trigger.trigger_id, error, exc_info=True,
@@ -368,7 +371,8 @@ class EmailTriggerWatcher:
 
     def _poll_one(self, trigger: EmailTrigger) -> int:
         try:
-            client = _connect(trigger)
+            with trigger._authorization.scope():
+                client = _connect(trigger)
         except (OSError, imaplib.IMAP4.error) as error:
             self._record_connect_error(trigger, error)
             return 0
@@ -443,10 +447,11 @@ class EmailTriggerWatcher:
 
     def _record_connect_error(self, trigger: EmailTrigger,
                               error: Exception) -> None:
-        trigger.last_error = repr(error)
+        trigger.last_error = scrub_secret_text(repr(error))
         autocontrol_logger.error("imap %s connect failed: %r",
                                  trigger.trigger_id, error)
 
+    @secret_log_scope()
     def _fire_for_uid(self, client: imaplib.IMAP4,
                       trigger: EmailTrigger, uid: str) -> int:
         msg = _fetch_message(client, uid)
@@ -455,7 +460,7 @@ class EmailTriggerWatcher:
         try:
             payload = _build_payload(uid, msg)
         except Exception as error:  # noqa: BLE001  # reason: a message the email package cannot read is skipped, not retried forever
-            trigger.last_error = repr(error)
+            trigger.last_error = scrub_secret_text(repr(error))
             autocontrol_logger.error("imap %s unreadable message %s: %r",
                                      trigger.trigger_id, uid, error)
             trigger._seen_uids.add(uid)
@@ -470,7 +475,7 @@ class EmailTriggerWatcher:
         try:
             self._execute_with_history(trigger, payload)
         except Exception as error:  # noqa: BLE001  # reason: recorded; the uid must still be marked seen
-            trigger.last_error = repr(error)
+            trigger.last_error = scrub_secret_text(repr(error))
             autocontrol_logger.error("imap %s fire failed: %r",
                                      trigger.trigger_id, error)
         else:
@@ -480,6 +485,7 @@ class EmailTriggerWatcher:
             _mark_seen(client, uid)
         return 1
 
+    @secret_log_scope()
     def _execute_with_history(self, trigger: EmailTrigger,
                               payload: Dict[str, Any]) -> None:
         with self._fire_lock:
@@ -487,23 +493,18 @@ class EmailTriggerWatcher:
                 SOURCE_TRIGGER, f"email:{trigger.trigger_id}",
                 trigger.script_path,
             )
-            status = STATUS_OK
-            error_text: Optional[str] = None
+            outcome = RunOutcome()
             try:
-                actions = read_executable_action_json(trigger.script_path)
-                run_counting_failures(lambda: self._executor(actions, payload), owner=trigger.owner)
+                with trigger._authorization.scope(), bound_history(HistoryBinding(default_history_store, run_id)):
+                    actions = read_executable_action_json(trigger.script_path)
+                    run_counting_failures(lambda: self._executor(actions, payload))
             # Any failure is recorded as STATUS_ERROR -- not a bogus
             # STATUS_OK from the finally below -- before re-raising.
-            except Exception as error:  # noqa: BLE001  # reason: re-raised
-                status = STATUS_ERROR
-                error_text = repr(error)
+            except BaseException as error:  # noqa: BLE001  # reason: re-raised
+                outcome.fail(error)
                 raise
             finally:
-                artifact = (capture_error_snapshot(run_id)
-                            if status == STATUS_ERROR else None)
-                default_history_store.finish_run(
-                    run_id, status, error_text, artifact_path=artifact,
-                )
+                finish_history_run(default_history_store, run_id, outcome, capture_error_snapshot)
                 trigger.fired += 1
 
     @staticmethod

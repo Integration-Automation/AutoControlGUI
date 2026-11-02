@@ -1,0 +1,5 @@
+{
+  "task_id": "<original-workflow-task-id>",
+  "completion_task_id": "<verified-read-only-completion-task-id>",
+  "name": "<reviewed-skill-name>"
+}

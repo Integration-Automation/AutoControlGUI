@@ -6,14 +6,15 @@ Installed as the ``je_auto_control`` console script; also runnable via
 Usage::
 
     je_auto_control run script.json [--var x=10 --var y=20] [--dry-run]
-                        [--allow-package NAME ...]
+                        [--allow-package NAME ...] [--journal run.jsonl]
+                        [--journal-run-id ID] [--history [--history-db history.sqlite]]
+    je_auto_control journal run.jsonl [--run-id ID] [--limit 100]
     je_auto_control validate script.json          # alias: lint
     je_auto_control list-commands [--filter mouse] [--json]
     je_auto_control fmt script.json [--check]
     je_auto_control record out.json [--duration 5]
     je_auto_control codegen script.json [--target pytest] [-o test_flow.py]
-    je_auto_control codegen --from-log journal.jsonl [--run-id ID]
-                        [--manifest candidate.json] [-o test_flow.py]
+    je_auto_control codegen --from-log journal.jsonl --run-id ID   # JSON candidate review bundle
     je_auto_control failure-bundle failure.zip [--error "message"]
     je_auto_control version
     je_auto_control list-jobs
@@ -31,7 +32,10 @@ import signal
 import sys
 import threading
 import time
-from typing import Callable, Dict, List, Optional, Sequence
+from contextlib import AbstractContextManager, ExitStack, closing, contextmanager, nullcontext
+from typing import Callable, Dict, Iterator, List, Optional, Sequence
+
+from je_auto_control.utils.logging.secret_scope import scrub_secret_text, secret_log_scope
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -64,29 +68,22 @@ def _allow_packages(names: Optional[Sequence[str]]) -> None:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
+    """Execute or preview one script in its own variable scope."""
     from je_auto_control.utils.executor.action_executor import (
-        execute_action, execute_action_with_vars, recorded_failures,
-        reset_recorded_failures,
+        executor, recorded_failures, reset_recorded_failures,
     )
     from je_auto_control.utils.json.json_file import read_executable_action_json
+    from je_auto_control.utils.script_vars.execution import execution_scope
     actions = read_executable_action_json(args.script)
     variables = _parse_vars(args.var)
     _allow_packages(args.allow_package)
     reset_recorded_failures()
-    if args.dry_run:
-        from je_auto_control.utils.executor.action_executor import executor
-        from je_auto_control.utils.script_vars.execution import execution_scope
+    capture = _run_capture(args)
+    with _run_history(args), capture, execution_scope(variables):
         # Seeded, not interpolated over the whole tree: that failed on a loop
         # body's ${item} ("Unknown variable") and would print ${secrets.X}
-        # resolved into the dry-run keys. Seeded into the run's own scope, as
-        # a real run's --var is: writing them into the module executor left
-        # them behind for whatever the same process ran next.
-        with execution_scope(variables):
-            result = executor.execute_action(actions, dry_run=True)
-    elif variables:
-        result = execute_action_with_vars(actions, variables)
-    else:
-        result = execute_action(actions)
+        # resolved into the dry-run keys.
+        result = executor.execute_action(actions, dry_run=args.dry_run)
     json.dump(result, sys.stdout, indent=2, default=str, ensure_ascii=False)
     sys.stdout.write("\n")
     # Failed actions are recorded and the run goes on; exiting 0 anyway left
@@ -95,6 +92,47 @@ def cmd_run(args: argparse.Namespace) -> int:
     if failures:
         sys.stderr.write(f"error: {failures} action(s) failed\n")
         return 1
+    return 0
+
+
+@contextmanager
+def _run_history(args: argparse.Namespace) -> Iterator[object]:
+    """Open an opted-in manual owner and close only a CLI-owned custom store."""
+    from je_auto_control.utils.run_history import HistoryStore, manual_history_scope
+    from je_auto_control.utils.path_guard.path_guard import validate_path
+    path = getattr(args, "history_db", None)
+    if not getattr(args, "history", False):
+        if path is not None:
+            raise ValueError("--history-db requires --history")
+        yield None
+        return
+    with ExitStack() as stack:
+        store = stack.enter_context(closing(HistoryStore(validate_path(path)))) if path is not None else None
+        source = "cli.preview" if getattr(args, "dry_run", False) else "cli.run"
+        owner = stack.enter_context(manual_history_scope(store=store, source_id=source, script_path=args.script))
+        yield owner
+
+
+def _run_capture(args: argparse.Namespace) -> AbstractContextManager[object]:
+    """Open only an explicitly requested journal, before any action effects."""
+    from pathlib import Path
+    from je_auto_control.utils.action_journal import ActionJournal, journal_scope
+    from je_auto_control.utils.path_guard.path_guard import validate_path
+    path = getattr(args, "journal", None)
+    run_id = getattr(args, "journal_run_id", None)
+    if path is None:
+        if run_id is not None:
+            raise ValueError("--journal-run-id requires --journal")
+        return nullcontext()
+    return journal_scope(ActionJournal(validate_path(Path(path))), run_id=run_id)
+
+
+def cmd_journal(args: argparse.Namespace) -> int:
+    """Read sanitized snapshots in append order without changing the journal."""
+    from je_auto_control.utils.action_journal import inspect_journal
+    payload = inspect_journal(args.path, run_id=args.run_id, limit=args.limit)
+    json.dump(payload, sys.stdout, indent=2, ensure_ascii=False, allow_nan=False)
+    sys.stdout.write("\n")
     return 0
 
 
@@ -167,53 +205,28 @@ def _set_on_enter(stop_event: threading.Event) -> None:
 
 
 def cmd_codegen(args: argparse.Namespace) -> int:
-    """Generate pytest/python/robot source from an action file or a journal."""
+    """Generate pytest/python/robot source from an action file."""
+    if getattr(args, "from_log", None) is not None:
+        from je_auto_control.utils.codegen.journal_cli import candidate_codegen
+        return candidate_codegen(args)
+    if getattr(args, "run_id", None) is not None or args.script is None:
+        raise ValueError("provide an action script, or --from-log with --run-id")
     from je_auto_control.utils.codegen.codegen import (
         generate_code, generate_code_file,
     )
     from je_auto_control.utils.json.json_file import read_action_json
-    if bool(args.script) == bool(args.from_log):
-        raise ValueError("codegen needs an action file or --from-log JOURNAL (not both)")
-    if args.from_log:
-        return _codegen_from_log(args)
-    style = args.style or "calls"
     if args.output:
         generate_code_file(args.script, args.output, target=args.target,
-                           name=args.name, style=style,
+                           name=args.name, style=args.style or "calls",
                            failure_bundle=args.failure_bundle)
         sys.stderr.write(f"Wrote {args.target} code to {args.output}\n")
     else:
         code = generate_code(read_action_json(args.script), target=args.target,
-                             name=args.name, style=style,
+                             name=args.name, style=args.style or "calls",
                              failure_bundle=args.failure_bundle)
         sys.stdout.write(code)
     return 0
 
-
-def _codegen_from_log(args: argparse.Namespace) -> int:
-    """Write a candidate script built from one run of an action journal."""
-    from je_auto_control.utils.codegen.journal_import import (
-        generate_candidate_from_log, only_run_id, write_candidate,
-    )
-    if args.failure_bundle:
-        raise ValueError("--failure-bundle does not apply to --from-log")
-    if args.manifest and not args.output:
-        raise ValueError("--manifest needs -o/--output")
-    run_id = args.run_id or only_run_id(args.from_log)
-    candidate = generate_candidate_from_log(
-        args.from_log, run_id=run_id, target=args.target,
-        style=args.style or "actions")
-    for warning in candidate.warnings:
-        sys.stderr.write(f"warning: {warning}\n")
-    if candidate.observed_path_only:
-        sys.stderr.write("warning: observed path only -- the candidate replays what "
-                         "this run did, not the script's control flow\n")
-    if args.output:
-        write_candidate(candidate, args.output, args.manifest)
-        sys.stderr.write(f"Wrote {args.target} candidate to {args.output}\n")
-    else:
-        sys.stdout.write(candidate.code)
-    return 0
 
 
 def cmd_version(_: argparse.Namespace) -> int:
@@ -293,9 +306,18 @@ def _run_until_signal(shutdown: Callable[[], None]) -> None:
         shutdown()
 
 
+def cmd_agent_task(args: argparse.Namespace) -> int:
+    """Operate the explicitly started managed agent service."""
+    from je_auto_control.utils.agent_runtime.cli import run
+    print(json.dumps(run(args), ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="je_auto_control")
     sub = parser.add_subparsers(dest="command", required=True)
+    from je_auto_control.utils.agent_runtime.cli import register_parser
+    register_parser(sub, cmd_agent_task)
 
     p_run = sub.add_parser("run", help="Execute an action JSON file")
     p_run.add_argument("script")
@@ -303,11 +325,22 @@ def build_parser() -> argparse.ArgumentParser:
                        help="name=value override; may be repeated")
     p_run.add_argument("--dry-run", action="store_true",
                        help="record actions without calling them")
+    p_run.add_argument("--journal", metavar="PATH", help="append structured action snapshots to this journal")
+    p_run.add_argument("--journal-run-id", metavar="ID", help="explicit capture run ID; requires --journal")
+    p_run.add_argument("--history", action="store_true", help="record this manual run in history")
+    p_run.add_argument("--history-db", metavar="PATH", help="custom history database; requires --history")
     p_run.add_argument("--allow-package", action="append", metavar="NAME",
                        help="package AC_add_package_to_executor may load (submodules "
                             "included); may be repeated. JE_AUTOCONTROL_ALLOWED_PACKAGES "
                             "lists them for every entry point")
     p_run.set_defaults(func=cmd_run)
+
+    p_journal = sub.add_parser("journal", help="Read sanitized action journal snapshots")
+    p_journal.add_argument("path")
+    p_journal.add_argument("--run-id", help="Only snapshots for this journal run")
+    p_journal.add_argument("--limit", type=_journal_limit, default=100,
+                           help="maximum output snapshots, 1-10000 (default: 100)")
+    p_journal.set_defaults(func=cmd_journal)
 
     for name in ("validate", "lint"):
         p_validate = sub.add_parser(name, help="Validate an action JSON file")
@@ -332,22 +365,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_record.set_defaults(func=cmd_record)
 
     p_codegen = sub.add_parser(
-        "codegen", help="Generate test code from an action file or a journal")
+        "codegen", help="Generate test code from an action file")
     p_codegen.add_argument("script", nargs="?")
-    p_codegen.add_argument(
-        "--from-log", metavar="JOURNAL",
-        help="Build a candidate from an action journal (.jsonl) instead of a script")
-    p_codegen.add_argument(
-        "--run-id", help="Journal run to use (optional when the journal holds one run)")
-    p_codegen.add_argument(
-        "--manifest", metavar="PATH",
-        help="With --from-log and -o: also write the provenance manifest (JSON)")
+    p_codegen.add_argument("--from-log", help="Read a structured journal; returns a JSON candidate review bundle")
+    p_codegen.add_argument("--run-id", help="Explicit journal run for --from-log")
     p_codegen.add_argument("--target", choices=("pytest", "python", "robot"),
                            default="pytest")
-    p_codegen.add_argument("--style", choices=("calls", "actions"), default=None,
-                           help="Default: calls for a script, actions for --from-log")
+    p_codegen.add_argument("--style", choices=("calls", "actions"),
+                           default=None)
     p_codegen.add_argument("--name", default="recorded_flow")
-    p_codegen.add_argument("-o", "--output", help="Write to file instead of stdout")
+    p_codegen.add_argument("-o", "--output", help="Write code, or a review .zip with --from-log")
     p_codegen.add_argument(
         "--failure-bundle", action="store_true",
         help="Wrap generated pytest in automatic failure diagnostics")
@@ -387,6 +414,17 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _journal_limit(text: str) -> int:
+    """Bound journal output without silently accepting zero or negative slices."""
+    try:
+        limit = int(text)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("journal limit must be an integer from 1 to 10000") from error
+    if not 1 <= limit <= 10000:
+        raise argparse.ArgumentTypeError("journal limit must be an integer from 1 to 10000")
+    return limit
+
+
 def _port(text: str) -> int:
     """A TCP port for argparse: 0 (any free port) to 65535."""
     try:
@@ -400,6 +438,7 @@ def _port(text: str) -> int:
     return port
 
 
+@secret_log_scope()
 def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -408,7 +447,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         return args.func(args)
     except (AutoControlException, OSError, RuntimeError, ValueError) as error:
-        sys.stderr.write(f"error: {error}\n")
+        sys.stderr.write(f"error: {scrub_secret_text(str(error))}\n")
         return 1
 
 

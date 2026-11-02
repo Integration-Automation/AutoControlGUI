@@ -19,6 +19,10 @@ AutoControlGUIWidget``; TestPioneer imports ``execute_action``,
 ``execute_files`` and ``RecordingThread``; Jeffrey_RPA drives this working
 tree through ``JeffreyRPA/_gui_control.py`` and reaches three internal modules
 directly. Only the names are pinned -- what they do is covered elsewhere.
+
+The additive managed-runtime peer batch protocol is exercised by
+``test_agent_dag_batch_surfaces.py`` and ``test_agent_dag_batch_loopback.py``;
+existing sibling callers without batch_id retain the historical DAG path.
 """
 import ast
 import json

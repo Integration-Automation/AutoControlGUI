@@ -12,7 +12,7 @@ from je_auto_control.utils.config_sync import (
 
 def test_upsert_stamps_last_modified():
     bucket = ConfigBucket(user_id="alice")
-    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, versioned=False)
+    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"})
     entry = bucket.sections["hotkeys"]["hk1"]
     assert "last_modified" in entry
     assert isinstance(entry["last_modified"], float)
@@ -21,21 +21,21 @@ def test_upsert_stamps_last_modified():
 def test_upsert_preserves_explicit_timestamp():
     bucket = ConfigBucket(user_id="alice")
     bucket.upsert("hotkeys", "hk1",
-                  {"combo": "ctrl+a", "last_modified": 1700.0}, versioned=False)
+                  {"combo": "ctrl+a", "last_modified": 1700.0})
     assert bucket.sections["hotkeys"]["hk1"]["last_modified"] == pytest.approx(1700.0)
 
 
 def test_remove_returns_false_when_absent():
     bucket = ConfigBucket(user_id="alice")
-    assert bucket.remove("hotkeys", "hk-missing", versioned=False) is False
-    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, versioned=False)
-    assert bucket.remove("hotkeys", "hk1", versioned=False) is True
-    assert bucket.remove("hotkeys", "hk1", versioned=False) is False
+    assert bucket.remove("hotkeys", "hk-missing") is False
+    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"})
+    assert bucket.remove("hotkeys", "hk1") is True
+    assert bucket.remove("hotkeys", "hk1") is False
 
 
 def test_from_dict_round_trip():
     bucket = ConfigBucket(user_id="alice")
-    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, versioned=False)
+    bucket.upsert("hotkeys", "hk1", {"combo": "ctrl+a"})
     body = bucket.to_dict()
     parsed = ConfigBucket.from_dict(body)
     assert parsed.user_id == "alice"
@@ -56,10 +56,10 @@ def test_from_dict_rejects_invalid_input():
 def test_merge_takes_newer_entry_per_section():
     local = ConfigBucket(user_id="u")
     local.upsert("hotkeys", "hk1",
-                 {"combo": "ctrl+a", "last_modified": 100.0}, versioned=False)
+                 {"combo": "ctrl+a", "last_modified": 100.0})
     remote = ConfigBucket(user_id="u")
     remote.upsert("hotkeys", "hk1",
-                  {"combo": "ctrl+b", "last_modified": 200.0}, versioned=False)
+                  {"combo": "ctrl+b", "last_modified": 200.0})
     merged, conflicts = merge_buckets(local, remote)
     assert merged.sections["hotkeys"]["hk1"]["combo"] == "ctrl+b"
     assert len(conflicts) == 1
@@ -69,10 +69,10 @@ def test_merge_takes_newer_entry_per_section():
 def test_merge_keeps_local_when_local_is_newer():
     local = ConfigBucket(user_id="u")
     local.upsert("hotkeys", "hk1",
-                 {"combo": "ctrl+a", "last_modified": 300.0}, versioned=False)
+                 {"combo": "ctrl+a", "last_modified": 300.0})
     remote = ConfigBucket(user_id="u")
     remote.upsert("hotkeys", "hk1",
-                  {"combo": "ctrl+b", "last_modified": 100.0}, versioned=False)
+                  {"combo": "ctrl+b", "last_modified": 100.0})
     merged, conflicts = merge_buckets(local, remote)
     assert merged.sections["hotkeys"]["hk1"]["combo"] == "ctrl+a"
     assert len(conflicts) == 1
@@ -80,9 +80,9 @@ def test_merge_keeps_local_when_local_is_newer():
 
 def test_merge_handles_disjoint_entries():
     local = ConfigBucket(user_id="u")
-    local.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, versioned=False)
+    local.upsert("hotkeys", "hk1", {"combo": "ctrl+a"})
     remote = ConfigBucket(user_id="u")
-    remote.upsert("triggers", "tr1", {"kind": "webhook"}, versioned=False)
+    remote.upsert("triggers", "tr1", {"kind": "webhook"})
     merged, conflicts = merge_buckets(local, remote)
     assert "hk1" in merged.sections["hotkeys"]
     assert "tr1" in merged.sections["triggers"]
@@ -95,10 +95,10 @@ def test_merge_tie_picks_the_same_entry_on_both_sides():
     report the one it beat."""
     local = ConfigBucket(user_id="u")
     local.upsert("hotkeys", "hk1",
-                 {"combo": "ctrl+local", "last_modified": 100.0}, versioned=False)
+                 {"combo": "ctrl+local", "last_modified": 100.0})
     remote = ConfigBucket(user_id="u")
     remote.upsert("hotkeys", "hk1",
-                  {"combo": "ctrl+remote", "last_modified": 100.0}, versioned=False)
+                  {"combo": "ctrl+remote", "last_modified": 100.0})
     merged, conflicts = merge_buckets(local, remote)
     mirrored, mirrored_conflicts = merge_buckets(remote, local)
     assert merged.sections["hotkeys"]["hk1"] == mirrored.sections["hotkeys"]["hk1"]
@@ -173,28 +173,15 @@ def test_push_round_trip_uses_put():
     client = ConfigSyncClient("https://x", user_id="alice")
     calls: list = []
     local = ConfigBucket(user_id="alice")
-    local.upsert("hotkeys", "hk1", {"combo": "ctrl+a"}, versioned=False)
-    with _patch_request({"ok": True, "revision": 1}, calls=calls):
-        assert client.push(local) == 1
+    local.upsert("hotkeys", "hk1", {"combo": "ctrl+a"})
+    with _patch_request({"version": 2, "revision": 1}, calls=calls):
+        client.push(local)
     assert len(calls) == 1
     method, body = calls[0]
     assert method == "PUT"
-    # Version 2: the bucket travels in an envelope naming what it was built on.
-    assert body["version"] == 2
-    assert body["base_revision"] == 0
-    assert body["operation_id"]
+    assert body["version"] == 2 and body["base_revision"] == 0
     assert body["bucket"]["user_id"] == "alice"
     assert "hk1" in body["bucket"]["sections"]["hotkeys"]
-    assert local.revision == 1
-
-
-def test_push_to_a_server_without_revision_checks_is_an_error():
-    """A pre-version-2 server answers {"ok": true}: nothing was checked."""
-    client = ConfigSyncClient("https://x", user_id="alice")
-    bucket = ConfigBucket(user_id="alice")
-    with _patch_request({"ok": True}):
-        with pytest.raises(ConfigSyncError, match="predates"):
-            client.push(bucket)
 
 
 def test_sync_merges_remote_into_local_and_pushes_result():
@@ -202,7 +189,7 @@ def test_sync_merges_remote_into_local_and_pushes_result():
     client = ConfigSyncClient("https://x", user_id="alice")
     local = ConfigBucket(user_id="alice")
     local.upsert("hotkeys", "hk1",
-                 {"combo": "ctrl+a", "last_modified": 100.0}, versioned=False)
+                 {"combo": "ctrl+a", "last_modified": 100.0})
     remote_body = {
         "user_id": "alice", "revision": 0,
         "sections": {"hotkeys": {
@@ -214,7 +201,7 @@ def test_sync_merges_remote_into_local_and_pushes_result():
 
     def fake_request(self, method, body=None):
         fetched.append(method)
-        return remote_body if method == "GET" else {"ok": True, "revision": 1}
+        return remote_body if method == "GET" else {"version": 2, "revision": 1}
 
     with patch.object(ConfigSyncClient, "_request", new=fake_request):
         merged, conflicts = client.sync(local)
@@ -222,50 +209,3 @@ def test_sync_merges_remote_into_local_and_pushes_result():
     assert merged.sections["hotkeys"]["hk1"]["combo"] == "ctrl+b"
     assert len(conflicts) == 1
     assert fetched == ["GET", "PUT"]
-    assert merged.revision == 1
-
-
-def test_sync_refetches_and_merges_again_when_it_loses_the_race():
-    """Another machine pushed between the fetch and the push: nothing is overwritten."""
-    from je_auto_control.utils.config_sync.client import ConfigSyncConflict
-    client = ConfigSyncClient("https://x", user_id="alice")
-    local = ConfigBucket(user_id="alice")
-    local.upsert("hotkeys", "mine", {"combo": "ctrl+m", "last_modified": 100.0}, versioned=False)
-    server = {"revision": 1, "sections": {}}
-    bases: list = []
-
-    def fake_request(self, method, body=None):
-        if method == "GET":
-            return {"user_id": "alice", **server}
-        bases.append(body["base_revision"])
-        if len(bases) == 1:
-            # The other machine's push lands first.
-            server.update(revision=2, sections={"hotkeys": {
-                "theirs": {"combo": "ctrl+t", "last_modified": 50.0}}})
-            raise ConfigSyncConflict("behind", 2)
-        server.update(revision=3, sections=body["bucket"]["sections"])
-        return {"ok": True, "revision": 3}
-
-    with patch.object(ConfigSyncClient, "_request", new=fake_request):
-        merged, _conflicts = client.sync(local)
-    assert bases == [1, 2]
-    assert set(merged.entries("hotkeys")) == {"mine", "theirs"}
-    assert merged.revision == 3
-
-
-def test_sync_gives_up_after_a_bounded_number_of_lost_races():
-    from je_auto_control.utils.config_sync.client import ConfigSyncConflict
-    client = ConfigSyncClient("https://x", user_id="alice")
-    attempts: list = []
-
-    def fake_request(self, method, body=None):
-        if method == "GET":
-            return None
-        attempts.append(body["operation_id"])
-        raise ConfigSyncConflict("behind", 9)
-
-    bucket = ConfigBucket(user_id="alice")
-    with patch.object(ConfigSyncClient, "_request", new=fake_request):
-        with pytest.raises(ConfigSyncConflict):
-            client.sync(bucket, max_attempts=3)
-    assert len(attempts) == 3

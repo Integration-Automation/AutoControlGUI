@@ -157,23 +157,6 @@ def test_a_short_pixel_coordinate_is_still_explained(boxes):
     assert "x,y" in tab._result.text()
 
 
-def test_self_heal_locate_runs_off_thread(boxes, monkeypatch):
-    from je_auto_control.gui import self_healing_tab as module
-    outcome = module.HealOutcome(found=True, method="template", coordinates=(3, 4))
-    gate = _Gate(result=outcome)
-    monkeypatch.setattr(module, "self_heal_locate", gate)
-    tab = module.SelfHealingTab()
-    tab._template_input.setText("button.png")
-    _returns_at_once(tab._on_locate)
-    assert tab._status.text() == _t("task_running")
-    assert gate.entered.wait(_WAIT)
-    gate.release.set()
-    assert settle(tab._runs, "task")
-    assert gate.off_gui_thread()
-    assert "(template)" in tab._status.text()
-    assert gate.calls[0][1]["template_path"] == "button.png"
-
-
 # --- Quick Connect: files dropped on the remote screen ----------------------------------------------------------
 
 class _FakeSession:

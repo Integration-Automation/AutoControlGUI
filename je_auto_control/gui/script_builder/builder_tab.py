@@ -13,11 +13,12 @@ and when it is disposed. A run that was stopped or failed still offers what
 it had issued by then.
 """
 import functools
+from contextlib import nullcontext
 import json
-from typing import List, Optional, Sequence
+from typing import Callable, ContextManager, List, Optional, Sequence
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QCloseEvent
 from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QMenu, QMessageBox, QPushButton, QSplitter,
     QTextEdit, QToolButton, QVBoxLayout, QWidget,
@@ -25,7 +26,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui._dispose import release_resources
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui._journal_import import candidate_summary, pick_journal_candidate
+from je_auto_control.gui.manual_run_controls import ManualRunControls, _requested_manual_run
 from je_auto_control.gui._tab_task import TabTask, was_stopped
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
@@ -40,7 +41,11 @@ from je_auto_control.gui.script_builder.step_model import (
     OneTimeCollector, OneTimeValue, Step, actions_to_steps, displayable_record,
     load_action_file, save_action_file, steps_to_actions,
 )
+from je_auto_control.utils.codegen.candidate_models import CandidateGenerationError, CandidateScript
+from je_auto_control.utils.codegen.candidate_validation import validate_candidate_actions
+from je_auto_control.utils.rbac.policy import authorize_command
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.config_sync.adapter_schema import validate_record
 from je_auto_control.utils.executor.action_executor import execute_action
 
 
@@ -48,9 +53,14 @@ def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
 
 
-def _run_actions(actions: list, collector: OneTimeCollector) -> object:
-    """Worker thread: execute the built action list, reporting each result to ``collector``."""
-    return execute_action(actions, result_callback=collector.note)
+def _run_actions(actions: list, collector: OneTimeCollector,
+                 capture: Callable[[], ContextManager[object]] = nullcontext) -> object:
+    """Worker thread: execute the built action list, reporting each result to ``collector``.
+
+    ``capture`` is the history/journal capture the tab's controls asked for, read on the GUI thread.
+    """
+    with capture():
+        return execute_action(actions, result_callback=collector.note)
 
 
 class ScriptBuilderTab(TranslatableMixin, QWidget):
@@ -68,6 +78,8 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         # The other top-level keys of a loaded {"auto_control": [...]} file,
         # written back on Save; None for a bare list.
         self._file_extras: Optional[dict] = None
+        self._source_path = "<script-builder>"
+        self._capture = ManualRunControls()
         # The secrets of the last run, until they are revealed or the next run starts.
         self._one_time: List[OneTimeValue] = []
         # What the running (or last) run reported; emptied when its values are claimed.
@@ -92,6 +104,7 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
+        self._capture.retranslate()
         if self._add_btn is not None:
             self._add_btn.setText(_t("sb_add_step"))
         if hasattr(self._form, "retranslate"):
@@ -100,6 +113,7 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
     def _build_layout(self) -> None:
         root = QVBoxLayout(self)
         root.addLayout(self._build_toolbar())
+        root.addWidget(self._capture)
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self._tree)
         splitter.addWidget(self._form)
@@ -121,7 +135,6 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         bar.addStretch()
         for key, handler in (
             ("sb_load_json", self._on_load),
-            ("sb_import_journal", self._on_import_journal),
             ("sb_save_json", self._on_save),
             ("sb_run", self._on_run),
             ("task_stop", self._on_stop),
@@ -171,6 +184,41 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
         self._tree.remove_selected()
         self._form.load_step(None)
 
+    def menu_actions(self) -> list[tuple[str, Callable[[], None]]]:
+        """Open journal review through Actions; importing never calls Run."""
+        return [("journal_candidate_open", self._open_journal_candidate)]
+
+    def _open_journal_candidate(self) -> None:
+        # pylint: disable-next=import-outside-toplevel  # reason: defer the optional review dialog until requested
+        from je_auto_control.gui.journal_candidate_dialog import show_journal_candidate
+        try:
+            show_journal_candidate(self, steps_to_actions(self._tree.root_steps()),
+                                      on_import=self._import_journal_candidate,
+                                      current_actions=lambda: steps_to_actions(self._tree.root_steps()))
+        except (AutoControlException, ValueError, TypeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
+
+    def _import_journal_candidate(self, candidate: CandidateScript) -> None:
+        """Replace editor data explicitly with independent reviewed actions and source metadata."""
+        authorize_command("AC_generate_candidate_from_log")
+        if not candidate.actions:
+            raise CandidateGenerationError("candidate has no replayable actions to import")
+        validate_candidate_actions(candidate.actions)
+        data = candidate.to_dict()
+        self._tree.load_steps(actions_to_steps(data["actions"]))
+        self._form.load_step(None)
+        self._file_extras = {"journal_candidate": data["manifest"], "candidate_warnings": data["warnings"]}
+        self._source_path = "<journal-candidate>"
+        self._result.setPlainText(_t("journal_candidate_imported"))
+
+    # pylint: disable-next=invalid-name  # reason: Qt override
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802  # reason: Qt override
+        """Cancel owned review tasks as the editor closes."""
+        # pylint: disable-next=import-outside-toplevel  # reason: avoid loading review UI during tab registration
+        from je_auto_control.gui.journal_candidate_dialog import close_candidate_dialogs
+        close_candidate_dialogs(self)
+        super().closeEvent(event)
+
     def _on_save(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
             self, _t("sb_dialog_save"), "", "JSON (*.json)",
@@ -179,9 +227,20 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             return
         try:
             save_action_file(path, self._tree.root_steps(), self._file_extras)
+            self._source_path = path
             self._result.setPlainText(f"Saved: {path}")
         except (AutoControlException, OSError, ValueError, TypeError) as error:
             QMessageBox.warning(self, "Error", str(error))
+
+    def import_sync_script(self, actions: list[object], source_path: str) -> None:
+        """Explicitly replace editor data with one validated loaded native snapshot, without dispatching it."""
+        authorize_command('AC_sync_profile_load')
+        validate_record('scripts', 'loaded.json', {'actions': actions})
+        self._tree.load_steps(actions_to_steps(actions))
+        self._form.load_step(None)
+        self._file_extras = None
+        self._source_path = source_path
+        self._result.setPlainText(_t('config_sync_script_opened'))
 
     def _on_load(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -191,28 +250,12 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             return
         try:
             steps, self._file_extras = load_action_file(path)
+            self._source_path = path
             self._tree.load_steps(steps)
             self._form.load_step(None)
             self._result.setPlainText(f"Loaded: {path}")
         except (AutoControlException, OSError, ValueError, TypeError) as error:
             QMessageBox.warning(self, "Error", str(error))
-
-    def _on_import_journal(self) -> None:
-        """Load the candidate built from an action journal run as steps to review."""
-        candidate = pick_journal_candidate(self)
-        if candidate is None:
-            return
-        try:
-            steps = actions_to_steps(candidate.actions)
-        except (AutoControlException, ValueError, TypeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
-            return
-        self._file_extras = None
-        self._tree.load_steps(steps)
-        self._form.load_step(None)
-        self._result.setPlainText("\n".join((
-            f"Imported journal run {candidate.manifest['run_id']}: {len(steps)} step(s)",
-            candidate_summary(candidate))))
 
     def _on_run(self) -> None:
         try:
@@ -225,7 +268,9 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             QMessageBox.information(self, "Info", "No steps to run")
             return
         collector = OneTimeCollector()
-        if not self._runs.start_script(functools.partial(_run_actions, actions, collector)):
+        capture = _requested_manual_run(getattr(self, "_capture", None), source_id="gui.builder",
+                                        script_path=getattr(self, "_source_path", "<script-builder>"))
+        if not self._runs.start_script(functools.partial(_run_actions, actions, collector, capture)):
             self._result.setPlainText(_t("task_busy"))
             return
         self._forget_one_time()

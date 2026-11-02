@@ -15,7 +15,7 @@ if not is_x11_unix():
 
 from Xlib import X, protocol
 from Xlib.ext.xtest import fake_input
-from je_auto_control.linux_with_x11.core.utils.x11_linux_display import display
+from je_auto_control.linux_with_x11.core.utils.x11_linux_display import get_display
 
 # === 滑鼠按鍵與滾動方向定義 Mouse button & scroll direction constants ===
 x11_linux_mouse_left = 1
@@ -43,6 +43,7 @@ def position() -> Tuple[int, int]:
     Get current mouse position
     取得目前滑鼠座標位置
     """
+    display = get_display()
     coord = display.screen().root.query_pointer()._data
     return coord["root_x"], coord["root_y"]
 
@@ -56,6 +57,7 @@ def set_position(x: int, y: int) -> None:
     :param y: target y position 目標 Y 座標
     """
     time.sleep(0.01)
+    display = get_display()
     fake_input(display, X.MotionNotify, x=x, y=y)
     display.sync()
 
@@ -68,6 +70,7 @@ def press_mouse(mouse_keycode: int) -> None:
     :param mouse_keycode: mouse button code 滑鼠按鍵代碼
     """
     time.sleep(0.01)
+    display = get_display()
     fake_input(display, X.ButtonPress, mouse_keycode)
     display.sync()
 
@@ -80,6 +83,7 @@ def release_mouse(mouse_keycode: int) -> None:
     :param mouse_keycode: mouse button code 滑鼠按鍵代碼
     """
     time.sleep(0.01)
+    display = get_display()
     fake_input(display, X.ButtonRelease, mouse_keycode)
     display.sync()
 
@@ -138,9 +142,10 @@ def send_mouse_event_to_window(window_id: int, mouse_keycode: int,
     :param x: optional x position 選擇性 X 座標
     :param y: optional y position 選擇性 Y 座標
     """
-    window = display.create_resource_object("window", window_id)
     # The defaults: None packed into the event raised struct.error.
     x, y = (int(x) if x is not None else 0), (int(y) if y is not None else 0)
+    display = get_display()
+    window = display.create_resource_object("window", window_id)
     # One event object per type: python-xlib encodes the bytes when the event
     # is built, so setting ``type`` afterwards sent two ButtonPress events.
     for factory, mask in ((protocol.event.ButtonPress, X.ButtonPressMask),

@@ -34,6 +34,7 @@ import numbers
 import sys
 import time
 import warnings
+from je_auto_control.wrapper._input_observer import input_event, has_input_observer
 from typing import Any, Dict, Optional, Tuple
 
 from je_auto_control.utils.exception.exception_tags import (
@@ -56,6 +57,22 @@ from je_auto_control.wrapper.platform_wrapper import mouse, mouse_keys_table, sp
 #: "left"; the tables only knew "mouse_left", so AC_act_with_mode's default
 #: button failed without clicking.
 _BUTTON_ALIASES = {"left": "mouse_left", "right": "mouse_right", "middle": "mouse_middle"}
+
+
+def _mouse_input(kind: str, keycode: MouseKeycode, x: int, y: int) -> None:
+    """Expose reviewed portable button identities only inside an owned input observer."""
+    if not has_input_observer():
+        return
+    if isinstance(keycode, bool):
+        raise AutoControlMouseException("managed mouse input requires a reviewed button")
+    for name, native in mouse_keys_table.items():
+        if keycode == native:
+            values: dict[str, Any] = {"keycode": name, "x": x, "y": y}
+            if kind == "mouse_press":
+                values["move_before_press"] = True
+            input_event(kind, **values)
+            return
+    raise AutoControlMouseException("managed mouse input requires a reviewed button")
 
 
 def get_mouse_table() -> dict:
@@ -178,6 +195,7 @@ def set_mouse_position(x: int, y: int) -> tuple[int, int]:
         # (SetCursorPos / Xlib fake_input) and raise ctypes.ArgumentError /
         # struct.error, which escapes the executor and aborts the whole run.
         x, y = _coordinate(x, "x"), _coordinate(y, "y")
+        input_event("pointer", x=x, y=y)
         mouse.set_position(x=x, y=y)
         record_action_to_list("set_mouse_position", param)
         return x, y
@@ -205,6 +223,7 @@ def press_mouse(mouse_keycode: int | str, x: Optional[int] = None,
     param = {"keycode": mouse_keycode, "x": x, "y": y}
     try:
         keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
+        _mouse_input("mouse_press", keycode, x, y)
         # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
         # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
         # Branch spelling explained in the module docstring.
@@ -238,6 +257,7 @@ def release_mouse(mouse_keycode: int | str, x: Optional[int] = None,
     param = {"keycode": mouse_keycode, "x": x, "y": y}
     try:
         keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
+        _mouse_input("mouse_release", keycode, x, y)
         # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
         # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
         # Branch spelling explained in the module docstring.
@@ -249,6 +269,7 @@ def release_mouse(mouse_keycode: int | str, x: Optional[int] = None,
             raise AutoControlMouseException(
                 f"release_mouse: no backend for {sys.platform!r}")
         record_action_to_list("release_mouse", param)
+        _mouse_input("mouse_released", keycode, x, y)
         return keycode, x, y
     except AutoControlMouseException as error:
         autocontrol_logger.error(f"release_mouse failed: {repr(error)}")
@@ -339,6 +360,7 @@ def click_mouse(mouse_keycode: int | str, x: int | None = None,
         for index in range(count):
             if index and pause:
                 time.sleep(pause)
+            _mouse_input("mouse_press", keycode, x, y)
             # macOS orders its mouse backend as (x, y, button) — same convention as
             # press_mouse/release_mouse above. Without this branch the arguments
             # bind as x=<keycode>, y=<x>, button=<y>; the osx button table holds
@@ -348,6 +370,7 @@ def click_mouse(mouse_keycode: int | str, x: int | None = None,
                 _darwin_click(x, y, keycode, index, pause)
             else:
                 mouse.click_mouse(keycode, x, y)
+            _mouse_input("mouse_released", keycode, x, y)
         record_action_to_list("click_mouse", param)
         return keycode, x, y
     except AutoControlMouseException as error:
@@ -477,6 +500,8 @@ def mouse_scroll(scroll_value: int, x: Optional[int] = None,
         # it, e.g. Wayland.
         if x is not None or y is not None:
             _scroll_to(x, y)
+
+        input_event("scroll")
 
         # 全檔唯一一處把 OS 名稱寫出來的分支，理由見模組 docstring：
         # Windows／macOS 的 `scroll` 收一個參數，X11／Wayland 收兩個，除非有

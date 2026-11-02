@@ -150,11 +150,7 @@ def run_tool_call(name: str, arguments: Mapping[str, Any]) -> Any:
     JSON-serialisable dict that the agent loop can feed back to the
     model as the tool's result.
     """
-    callables = _ac_callables()
-    if name not in callables:
-        raise ValueError(f"unknown AC command: {name!r}")
-    fn = callables[name]
-    return fn(**dict(arguments or {}))
+    return _executor().execute_one(name, arguments)
 
 
 __all__ = [

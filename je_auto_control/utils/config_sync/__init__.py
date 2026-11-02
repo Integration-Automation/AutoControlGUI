@@ -1,111 +1,81 @@
-"""Cross-machine config sync through a small bucket server.
+"""Persistent cross-machine config buckets and conditional HTTP commits.
 
-Operators running AutoControl on several machines (work desktop, home
-desktop, demo laptop) would otherwise copy hotkey bindings, trigger
-definitions, and address-book entries by hand. Each user has one namespaced
-bucket on a sync server, and every machine merges its changes into it.
+ConfigStore persists buckets and operation receipts in lazy SQLite storage.
+ConfigSyncClient uses version-two base revisions and operation IDs by default;
+legacy blind writes require explicit client/server compatibility settings.
+The signaling server serves GET/PUT /config/{user_id} with its existing optional
+X-Signaling-Secret gate. Bucket account names are namespaces, not separate logins.
 
-The server side is the signaling server
-(:mod:`je_auto_control.utils.remote_desktop.signaling_server`), which serves
-``GET`` / ``PUT /config/{user_id}`` with an optional ``X-Signaling-Secret``
-header and keeps the buckets in SQLite (:mod:`.store`). A ``PUT`` is a
-version-2 envelope naming the revision it was built on and an operation id;
-the server refuses it with ``409`` when that revision is no longer current,
-and answers a repeated operation id with the revision of the first attempt.
-
-This package is the **headless client** side:
-
-* :mod:`.bucket` -- :class:`ConfigBucket` and the error types.
-* :mod:`.merge` -- :func:`merge_buckets` and the per-operation merge.
-* :mod:`.client` -- :class:`ConfigSyncClient`
-  (``fetch`` / ``push`` / ``sync`` / ``push_operations`` / ``full_resync``);
-  it still exports every name of the two modules above.
-* :mod:`.versions` -- :class:`SyncEntry` with a version vector, and
-  :func:`merge_entries`: the change made knowing the other wins; two changes
-  to one key made apart are *both kept* as a conflict. No clock is consulted.
-* :mod:`.outbox` -- :class:`SyncOutbox`, the durable queue of changes not
-  yet on the server (resent by operation id, bounded back-off, cancellable).
-* :mod:`.adapters` -- :class:`SyncAdapter` and the script, locator, hotkey,
-  trigger and address-book adapters. Secrets and machine paths leave only as
-  references, and applying synced data never enables a hotkey or trigger.
-* :mod:`.assets` -- :func:`sync_assets`: files fetched by SHA-256, verified,
-  then replaced atomically, through a shared folder
-  (:class:`DirectoryAssetTransport`) or the sync server
-  (:class:`HttpAssetTransport`).
-* :mod:`.blobs` -- :class:`BlobStore`, what the server keeps behind
-  ``/blobs``: per account, content-addressed, size-capped, with a quota.
-  :func:`collect_unreferenced_blobs` (and :func:`config_sync_collect_blobs`,
-  which works out what is still referenced) removes the ones no entry names.
-* :mod:`.device` -- :func:`default_device_id`, this machine's stable id.
-* :mod:`.session` -- :func:`run_sync`, the whole cycle behind the GUI tab,
-  the ``AC_config_sync_*`` commands and the MCP tools.
-
-Each section maps an entry id to an entry. Section names are free-form;
-``hotkeys``, ``triggers``, ``address_book`` and ``custom`` are the
-conventional ones, and the syncer treats every section the same way.
-
-A removed entry is kept as a tombstone so the deletion reaches every
-machine; read live entries with ``ConfigBucket.entries(section)`` or
-``values(section)``. A versioned tombstone is dropped only once every
-participating device has acknowledged it -- a device retired for staying
-away must do an explicit full resync. ``ConfigBucket.upsert`` / ``remove``
-version what they write as made by this machine unless told otherwise; flat
-entries from before version vectors (or written with ``versioned=False``)
-keep the older rule: the later ``last_modified`` wins and the loser is
-reported in a ``ConflictRecord``.
+SyncEntry/merge_entries preserve concurrent alternatives using version vectors;
+SyncPeers models explicit acknowledgements and retirement/full-resync epochs.
+SyncOutbox persists isolated edits and prepared requests with bounded retry leases.
+CausalConfigStore and the dedicated version-three /causal route validate peer
+acknowledgements, full-resync epochs and payload collection with permanent fences.
+CausalSyncClient explicitly fetches/commits v3 snapshots and drains durable outboxes
+with exact retries, bounded CAS rebasing and atomically confirmed snapshot receipts.
+Durable explicit controls coordinate registration and atomic full-resync adoption.
+The merge_buckets helper retains legacy last_modified and time-bounded tombstones.
+Portable asset manifests stage complete verified local generations without
+replacing an active workspace; configuration adapters remain separate.
+Synchronization stores data without executing scripts or enabling triggers.
 """
-from je_auto_control.utils.config_sync.adapters import (
-    AddressBookSyncAdapter, ApplyReport, HotkeySyncAdapter, LocatorSyncAdapter,
-    ScriptSyncAdapter, SyncAdapter, TriggerSyncAdapter,
-)
-from je_auto_control.utils.config_sync.assets import (
-    DEFAULT_BLOB_GRACE_S, AssetManifest, AssetRef, AssetSyncError, AssetSyncResult,
-    AssetTransport, DirectoryAssetTransport, HttpAssetTransport, collect_unreferenced_blobs,
-    publish_assets, sync_assets,
-)
-from je_auto_control.utils.config_sync.blobs import BlobStore, BlobStoreError
 from je_auto_control.utils.config_sync.client import (
-    DEFAULT_SYNC_ATTEMPTS, TOMBSTONE_RETENTION_S, WIRE_VERSION, ConflictRecord, ConfigBucket,
-    ConfigSyncClient, ConfigSyncConflict, ConfigSyncError, FullResyncRequired,
-    OperationMismatchError, SyncResult,
-    batch_operation_id, is_tombstone, merge_buckets, new_operation_id,
-)
-from je_auto_control.utils.config_sync.outbox import (
-    DrainReport, OutboxError, SyncOutbox, default_outbox_path,
-)
-from je_auto_control.utils.config_sync.session import (
-    SYNCABLE_SECTIONS, SyncRunReport, config_sync_collect_blobs, config_sync_full_resync,
-    config_sync_resolve, config_sync_run, config_sync_status, default_adapters,
-    default_device_id, referenced_blob_digests, resolve_conflict,
-    resolve_sections, run_full_resync, run_sync, sync_status,
+    TOMBSTONE_RETENTION_S, ConflictRecord, ConfigBucket, ConfigSyncClient,
+    ConfigSyncError, is_tombstone, merge_buckets,
 )
 from je_auto_control.utils.config_sync.store import (
-    ConfigStore, ConfigStoreError, RevisionConflictError, StoreCapacityError,
-    default_store_path,
+    ConfigRevisionConflict, ConfigStore, ConfigStoreError, ConfigStoreFull,
 )
-from je_auto_control.utils.config_sync.versions import (
-    MergeDecision, PeerState, SyncConflict, SyncEntry, SyncOperation, collect_tombstones,
-    collectable_revision, compare_vectors, merge_collections, merge_entries,
+from je_auto_control.utils.config_sync.causal_models import CausalConflict, DeletionFence, SyncActor
+from je_auto_control.utils.config_sync.causal_state import CausalBucket
+from je_auto_control.utils.config_sync.causal_store import CausalConfigStore
+from je_auto_control.utils.config_sync.causal_client import CausalSyncClient
+from je_auto_control.utils.config_sync.causal_receipt import CausalReceipt
+from je_auto_control.utils.config_sync.control_models import SyncControlOperation, SyncControlRequest, SyncControlResult
+from je_auto_control.utils.config_sync.asset_models import AssetFile, AssetManifest, AssetSyncResult
+from je_auto_control.utils.config_sync.adapter_references import SyncBindings, SyncReference
+from je_auto_control.utils.config_sync.adapter_schema import ApplyReport
+from je_auto_control.utils.config_sync.adapter_state import SyncAdapterState
+from je_auto_control.utils.config_sync.adapters import (
+    AddressBookSyncAdapter, HotkeySyncAdapter, LocatorSyncAdapter, ScriptSyncAdapter, SettingsSyncAdapter,
+    SyncAdapter, TriggerSyncAdapter, WorkspaceSettingsSyncAdapter,
+)
+from je_auto_control.utils.config_sync.adapter_profiles import materialize_sync_profile
+from je_auto_control.utils.config_sync.adapter_factory import adapter_from_profile
+from je_auto_control.utils.config_sync.workspace_sync import SyncWorkspace
+from je_auto_control.utils.config_sync.profile_load import load_sync_profile
+from je_auto_control.utils.config_sync.profile_models import LoadedSyncProfile
+from je_auto_control.utils.config_sync.blob_models import SyncAssetBlob, SyncAssetReference
+from je_auto_control.utils.config_sync.blob_store import SyncAssetStore
+from je_auto_control.utils.config_sync.blob_http import SyncAssetHTTPClient
+from je_auto_control.utils.config_sync.workspace_models import SyncWorkspaceError, WorkspaceSyncResult
+from je_auto_control.utils.config_sync.assets import (
+    AssetTransport, DirectoryAssetTransport, build_asset_manifest, sync_assets,
+)
+from je_auto_control.utils.config_sync.versions import MergeDecision, SyncConflict, SyncEntry, merge_entries
+from je_auto_control.utils.config_sync.peers import FullResyncRequired, SyncPeer, SyncPeers
+from je_auto_control.utils.config_sync.outbox import (
+    SyncDrainResult, SyncLocalIdentity, SyncOperation, SyncOutbox, SyncRetryPolicy,
 )
 
 __all__ = [
-    "AddressBookSyncAdapter", "ApplyReport", "AssetManifest", "AssetRef", "AssetSyncError",
-    "AssetSyncResult", "AssetTransport", "BlobStore", "BlobStoreError",
-    "DirectoryAssetTransport", "HotkeySyncAdapter", "HttpAssetTransport",
-    "LocatorSyncAdapter", "ScriptSyncAdapter", "SyncAdapter", "SyncRunReport",
-    "TriggerSyncAdapter", "config_sync_full_resync", "config_sync_resolve", "config_sync_run",
-    "config_sync_status", "default_adapters", "default_device_id", "publish_assets",
-    "resolve_conflict", "run_full_resync", "run_sync", "sync_assets", "sync_status",
-    "SYNCABLE_SECTIONS", "resolve_sections",
-    "DEFAULT_BLOB_GRACE_S", "collect_unreferenced_blobs", "config_sync_collect_blobs",
-    "referenced_blob_digests",
-    "ConfigBucket", "ConfigStore", "ConfigStoreError", "ConflictRecord", "ConfigSyncClient",
-    "ConfigSyncConflict", "ConfigSyncError", "DEFAULT_SYNC_ATTEMPTS", "DrainReport",
-    "FullResyncRequired", "MergeDecision", "OperationMismatchError", "OutboxError", "PeerState",
-    "RevisionConflictError",
-    "StoreCapacityError", "SyncConflict", "SyncEntry", "SyncOperation", "SyncOutbox",
-    "SyncResult", "TOMBSTONE_RETENTION_S", "WIRE_VERSION", "batch_operation_id",
-    "collect_tombstones", "collectable_revision", "compare_vectors", "default_outbox_path",
-    "default_store_path", "is_tombstone", "merge_buckets", "merge_collections",
-    "merge_entries", "new_operation_id",
+    "SyncWorkspace", "SyncWorkspaceError", "WorkspaceSyncResult",
+    "load_sync_profile", "LoadedSyncProfile",
+    "SyncAssetBlob", "SyncAssetReference", "SyncAssetStore",
+    "SyncAssetHTTPClient",
+    "SyncBindings", "SyncReference", "ApplyReport", "SyncAdapterState", "SyncAdapter", "ScriptSyncAdapter",
+    "LocatorSyncAdapter", "HotkeySyncAdapter", "TriggerSyncAdapter", "AddressBookSyncAdapter", "SettingsSyncAdapter",
+    "WorkspaceSettingsSyncAdapter",
+    "materialize_sync_profile",
+    "adapter_from_profile",
+    "AssetFile", "AssetManifest", "AssetSyncResult", "AssetTransport", "DirectoryAssetTransport",
+    "build_asset_manifest", "sync_assets",
+    "SyncControlOperation", "SyncControlRequest", "SyncControlResult",
+    "CausalSyncClient", "CausalReceipt",
+    "CausalBucket", "CausalConfigStore", "CausalConflict", "DeletionFence", "SyncActor",
+    "MergeDecision", "SyncConflict", "SyncEntry", "merge_entries", "FullResyncRequired", "SyncPeer", "SyncPeers",
+    "SyncDrainResult", "SyncLocalIdentity", "SyncOperation", "SyncOutbox", "SyncRetryPolicy",
+    "ConfigRevisionConflict", "ConfigStore", "ConfigStoreError", "ConfigStoreFull",
+    "ConfigBucket", "ConflictRecord", "ConfigSyncClient",
+    "ConfigSyncError", "TOMBSTONE_RETENTION_S", "is_tombstone", "merge_buckets",
 ]

@@ -1,0 +1,302 @@
+"""Native desktop proxy with private IPC, host input ledger and cross-database ownership."""
+from __future__ import annotations
+
+import ctypes
+import hashlib
+import os
+import socket
+import sys
+import time
+from pathlib import Path
+from typing import Any, Callable, Sequence, Mapping
+
+from je_auto_control.utils.agent_runtime.context import current_operation, current_takeover
+from je_auto_control.utils.agent_runtime.errors import AgentTaskError
+from je_auto_control.utils.agent_runtime.input_ledger import InputLedger
+from je_auto_control.utils.agent_runtime.input_journal import InputJournal
+from je_auto_control.utils.agent_runtime.native_recovery import no_held_input
+from je_auto_control.utils.agent_runtime.models import AgentTaskSpec
+from je_auto_control.utils.agent_runtime.target_config import AgentTargetProfile
+from je_auto_control.utils.agent_runtime.owned_channel_factory import HelperChannel, owned_channel
+from je_auto_control.utils.agent_runtime.runtime_lock import RuntimeLock
+from je_auto_control.utils.agent_runtime.target_continuity import require_context_continuity
+from je_auto_control.utils.agent_runtime.presence_host import TargetPresence
+from je_auto_control.utils.agent_runtime.native_control import NativeControl
+
+
+def _desktop_lock_path() -> Path:
+    if sys.platform == "win32":
+        session = ctypes.c_uint32()
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.ProcessIdToSessionId.argtypes = (ctypes.c_uint32, ctypes.POINTER(ctypes.c_uint32))
+        kernel.ProcessIdToSessionId.restype = ctypes.c_int
+        if not kernel.ProcessIdToSessionId(os.getpid(), ctypes.byref(session)):
+            raise AgentTaskError("cannot identify the interactive input session")
+        identity = f"{socket.gethostname()}:{session.value}:{os.getlogin()}"
+    else:
+        # Conservative on POSIX: independently named displays for the same user
+        # cannot accidentally acquire the same compositor's input concurrently.
+        identity = f"{socket.gethostname()}:{os.getuid()}"
+    digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+    return Path.home() / ".je_auto_control" / "input_ownership" / (digest + ".lock")
+
+
+class NativeDesktopTarget:
+    """Only trusted host code may select an argv/resource path; neither is task/model input."""
+
+    _worker_module = "je_auto_control.utils.agent_runtime.native_worker"
+
+    def __init__(self, *, argv: Sequence[str] | None = None, resource_path: Path | None = None,
+                 recovery_probe: Callable[[], None] = no_held_input, profile: dict | None = None) -> None:
+        self._profile = AgentTargetProfile.from_dict(profile) if profile is not None else None
+        self._argv = tuple(argv) if argv is not None else (
+            sys.executable, "-u", "-m", self._worker_module)
+        self._resource_path = resource_path
+        self._resource: RuntimeLock | None = None
+        self._journal: InputJournal | None = None
+        self._recovery_probe = recovery_probe
+        self._pending: str | None = None
+        self._channel: HelperChannel | None = None
+        self._ledger = InputLedger()
+        self._takeover: Any = None
+        self._channel_control: NativeControl | None = None
+        self._presence = TargetPresence()
+
+    def _ensure(self) -> HelperChannel:
+        if self._resource is None:
+            path = self._resource_path or _desktop_lock_path()
+            resource = RuntimeLock(path)
+            journal = InputJournal(path)
+            try:
+                journal.acquire()
+            except BaseException:  # reason: failed recovery gate cannot retain the newly acquired OS lock
+                resource.close()
+                raise
+            self._resource, self._journal = resource, journal
+        if self._channel is None or self._channel.retired:
+            if not self._ledger.empty:
+                raise AgentTaskError("native input cleanup is required before another operation")
+            context = current_operation()
+            control = NativeControl(self._takeover)
+            self._channel = self._launch(context.checkpoint if context is not None else lambda: None,
+                                         lambda kind: control.notify(kind, self._channel))
+            control.bind(self._channel)
+            self._channel_control = control
+        return self._channel
+
+    def check_resume(self, spec: AgentTaskSpec, receipts: list[dict]) -> None:
+        """Fence UI prefixes before launching a replacement helper; file recovery uses persistent evidence."""
+        kind = self._profile.kind if self._profile is not None else (
+            "desktop" if spec.target == "local-desktop" else "")
+        if kind in {"browser", "desktop"}:
+            connected = self._channel is not None and not self._channel.retired
+            require_context_continuity(spec, receipts, connected, kind=kind)
+
+    @property
+    def supports_readonly_completion(self) -> bool:
+        """Declare a helper contract only; this is not a readiness or native-evidence probe."""
+        return self._argv[-2:] == ("-m", "je_auto_control.utils.agent_runtime.native_worker")
+
+    @property
+    def is_managed_browser(self) -> bool:
+        """Identify the built-in host-owned browser worker without probing its current context."""
+        return self.supports_readonly_completion and self._profile is not None and self._profile.kind == "browser"
+
+    @property
+    def has_browser_context(self) -> bool:
+        """Report ownership of an unretired browser channel without implying SDK retirement proof."""
+        return self.is_managed_browser and self._channel is not None and not self._channel.retired
+
+    @property
+    def presence_status(self) -> dict:
+        """Return passive source/binding metadata without any monitor, helper or native probe."""
+        result = self._presence.status()
+        if self._channel_control is not None:
+            result['takeover'] = self._channel_control.status()
+        return result
+
+    def completion_reader(self, spec: AgentTaskSpec) -> Any:
+        """Open fresh observation-only ownership; never continue an old input attempt."""
+        # pylint: disable-next=import-outside-toplevel  # reason: the read-only collaborator derives from this proxy
+        from je_auto_control.utils.agent_runtime.readonly_target import open_completion_reader
+        return open_completion_reader(self, spec)
+
+    def probe(self) -> dict[str, Any]:
+        """Inspect browser Python dependencies in a separate owned process; never reuse an input channel."""
+        if self._profile is None or self._profile.kind != "browser":
+            return {"status": "not_supported", "native_evidence": "not_recorded"}
+        # pylint: disable-next=import-outside-toplevel  # reason: dependency inspection stays browser-only
+        from je_auto_control.utils.agent_runtime.browser_commands import BROWSER_TRANSFER_TOOLS
+        # pylint: disable-next=import-outside-toplevel  # reason: no probe dependencies load on desktop-only paths
+        from je_auto_control.utils.agent_runtime.helper_environment import probe_browser_helper
+        transfers = bool(set(self._profile.allowed_tools) & BROWSER_TRANSFER_TOOLS)
+        return probe_browser_helper(self._argv, transfer=transfers)
+
+    def _launch(self, check: Callable[[], None], control: Callable[[str], None] | None = None) -> HelperChannel:
+        # It drives the user's desktop or browser session, which a protected helper cannot reach.
+        self._channel = owned_channel(self._argv, on_control=control, display=True)
+        reply = self._channel.request("bootstrap", {}, timeout=15, check=check)
+        if not isinstance(reply, dict) or type(reply.get("protocol")) is not int or reply["protocol"] != 1:
+            self._channel.close()
+            raise AgentTaskError("native helper bootstrap protocol is incompatible")
+        return self._channel
+
+    @property
+    def can_reobserve(self) -> bool:
+        """Allow pre-dispatch replanning only with no held input and a settled live channel."""
+        return (self._channel is not None and not self._channel.retired
+                and self._ledger.empty and self._pending is None)
+
+    def _request(self, operation: str, payload: dict, *, deadline: float | None = None) -> Any:
+        context = current_operation()
+        if context is None:
+            raise AgentTaskError("native targets require an explicitly managed operation scope")
+        context.checkpoint()
+        channel = self._ensure()
+        self._pending = operation
+        self._persist()
+        timeout = context.spec.budget.action_seconds
+        if deadline is not None:
+            timeout = min(timeout, deadline - time.monotonic())
+            if timeout <= 0:
+                raise AgentTaskError('native configuration action deadline exhausted')
+        result = channel.request(operation, payload, timeout=timeout,
+                                 check=context.checkpoint, on_event=self._input)
+        self._pending = None
+        self._persist()
+        return result
+
+    def _persist(self) -> None:
+        if self._journal is not None:
+            self._journal.update(self._ledger.snapshot(), self._pending)
+
+    def _input(self, event: dict, *, cleanup: bool = False) -> None:
+        self._ledger.consume(event, cleanup=cleanup)
+        self._persist()
+
+    def recover(self, note: str, *, actor: str) -> dict:
+        """Review a stale witness while exclusively owning the resource; never replay old input."""
+        path = self._resource_path or _desktop_lock_path()
+        lock = RuntimeLock(path)
+        try:
+            return InputJournal(path).recover(note, self._recovery_probe, actor)
+        finally:
+            lock.close()
+
+    def ready(self, spec: AgentTaskSpec) -> tuple[bool, str]:
+        """Configure the owned helper only after the runtime has acquired its target lease."""
+        context = current_operation()
+        if context is None or context.spec != spec:
+            raise AgentTaskError("native target scope does not match its owner")
+        context.checkpoint()
+        if self._profile is not None:
+            from je_auto_control.utils.agent_runtime.target_config import check_host_platform
+            check_host_platform(self._profile)
+            self._profile.check(spec)
+        owner = context.owner
+        self._takeover = current_takeover()
+        identity = {"user_id": owner.user_id, "role": owner.role,
+                    "store_path": owner.store_path} if owner is not None else {}
+        payload = {"spec": spec.to_dict(), "owner": identity}
+        if self._profile is not None:
+            payload["profile"] = self._profile.to_dict()
+        deadline = None
+        if (self.supports_readonly_completion and spec.target != 'local-files'
+                and (self._profile is None or self._profile.kind == 'desktop')):
+            self._presence.check_platform()
+            channel = self._ensure()
+            deadline = time.monotonic() + spec.budget.action_seconds
+            payload['presence'] = self._presence.bind(context, channel, spec.budget.action_seconds)
+        result = self._request("configure", payload, deadline=deadline)
+        return bool(result["ready"]), str(result.get("reason", ""))
+
+    def observe(self) -> dict[str, Any]:
+        """Capture in the helper, enforcing the host's live operation deadline."""
+        return self._request("observe", {})
+
+    def perform(self, name: str, arguments: dict[str, Any]) -> Any:
+        """Execute an authorized command in the helper, retaining input ownership in the host."""
+        if name == "AC_workflow_open":
+            from je_auto_control.utils.agent_runtime.workflow_desktop import workflow_open
+            self._ensure()
+            self._pending = "launch_document"
+            self._persist()
+            result = workflow_open(**arguments)
+            self._pending = None
+            self._persist()
+            return result
+        return self._request("perform", {"tool": name, "arguments": arguments})
+
+    def verify_browser(self, clause: Mapping[str, Any]) -> Any:
+        """Delegate a pinned read-only completion check to the same owned browser helper."""
+        return self._request("verify_browser", {"clause": clause})
+
+    def _readonly_source_channel(self) -> HelperChannel | None:
+        if self._profile is None or self._profile.kind != "browser":
+            raise AgentTaskError("only an owned browser can retain its read-only context")
+        if self._pending is not None or not self._ledger.empty:
+            raise AgentTaskError("browser input must settle before retirement")
+        channel = self._channel
+        if channel is None or channel.retired:
+            return None
+        if self._journal is None or self._resource is None:
+            raise AgentTaskError("browser retirement requires its original input ownership")
+        return channel
+
+    def detach_readonly(self) -> tuple[HelperChannel, dict] | None:
+        """Transfer only the actual frozen browser channel after confirmed empty input ownership."""
+        channel = self._readonly_source_channel()
+        if channel is None:
+            return None
+        # pylint: disable-next=import-outside-toplevel  # reason: only browser detachment loads the SDK proof seam
+        from je_auto_control.utils.agent_runtime.browser_retirement import (
+            retirement_proof, refuse_browser_input, supports_browser_retirement,
+        )
+        bootstrap = channel.request("bootstrap", {}, timeout=3, check=lambda: None, on_event=refuse_browser_input)
+        if not supports_browser_retirement(bootstrap):
+            return None
+        self._pending = "retire_browser"
+        self._persist()
+        reply = channel.request("retire_browser", {}, timeout=3, check=lambda: None,
+                                on_event=refuse_browser_input)
+        if isinstance(reply, dict) and set(reply) == {"supported"} and reply["supported"] is False:
+            self._pending = None
+            self._persist()
+            return None
+        proof = retirement_proof(reply)
+        if self._journal is None or self._resource is None:
+            raise AgentTaskError("browser retirement lost its original input ownership")
+        self._journal.release()
+        self._resource.close()
+        self._journal = self._resource = self._channel = None
+        self._pending = None
+        return channel, proof
+
+    def cleanup(self) -> None:
+        """Reap native calls and release only host-recorded keys/buttons before input transfer."""
+        channel = self._channel
+        self._cleanup_browser(channel)
+        if not self._ledger.empty:
+            if channel is None or channel.retired:
+                channel = self._launch(lambda: None)
+            channel.request("cleanup", self._ledger.snapshot(), timeout=3, check=lambda: None,
+                            on_event=lambda event: self._input(event, cleanup=True))
+        if channel is not None:
+            channel.close()
+        self._channel = None
+        if not self._ledger.empty:
+            raise AgentTaskError("native input cleanup has not been confirmed")
+        self._presence.release()
+        if self._journal is not None:
+            self._journal.release()
+            self._journal = None
+        self._pending = None
+        if self._resource is not None:
+            self._resource.close()
+            self._resource = None
+
+    def _cleanup_browser(self, channel: HelperChannel | None) -> None:
+        if (self._profile is not None and self._profile.kind == "browser"
+                and channel is not None and not channel.retired):
+            channel.request("cleanup", self._ledger.snapshot(), timeout=3, check=lambda: None,
+                            on_event=lambda event: self._input(event, cleanup=True))

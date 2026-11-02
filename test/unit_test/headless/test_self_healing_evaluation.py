@@ -1,357 +1,254 @@
-"""Self-healing measurement: labelled evaluation, heal-log schema, verified actions.
-
-Everything here runs on arrays built in the test and on fakes for the two
-locator strategies; nothing captures the screen or moves the pointer.
-"""
+"""Fixed-frame comparisons separate localization, verification and unknown labels."""
+import io
 import json
+from pathlib import Path
 
-import numpy as np
 import pytest
+from PIL import Image
 
-from je_auto_control.utils.self_healing import (
-    HealEvent, HealEventLog, self_heal_click, self_heal_locate,
-)
-from je_auto_control.utils.self_healing import locator as locator_mod
-from je_auto_control.utils.self_healing.evaluation import (
-    EvaluationSample, HealingEvaluationError, Ratio, check_thresholds,
-    evaluate_locators, format_comparison,
-)
-from je_auto_control.utils.self_healing.heal_log import HEAL_EVENT_SCHEMA_VERSION
-from je_auto_control.utils.self_healing.locator import heal_context
+from je_auto_control.utils.self_healing.evaluation import evaluate_locators
+from je_auto_control.utils.self_healing.evaluation_models import EvaluationSample, LocatorCandidate
+from je_auto_control.utils.self_healing.evaluation_models import HealingEvaluationError
+from je_auto_control.utils.self_healing.evaluation_io import evaluate_healing_manifest, write_healing_report
+from je_auto_control.utils.self_healing.frame_locators import TemplateFrameLocator, VLMFrameLocator
+from je_auto_control.utils.vision.backends.base import VLMBackend
 
-
-def _frame(seed: int = 0) -> np.ndarray:
-    return np.random.default_rng(seed).integers(0, 255, (40, 60), dtype=np.uint8)
+DATASET = Path(__file__).resolve().parents[3] / "benchmarks/self_healing"
 
 
-def _always(point):
-    return lambda request: point
+def png(size=(40, 30)):
+    stream = io.BytesIO()
+    Image.new("RGB", size, "white").save(stream, format="PNG")
+    return stream.getvalue()
 
 
-def _never(request):
-    return None
+class FixedLocator:
+    def __init__(self, candidate):
+        self.candidate = candidate
+        self.seen = []
 
-
-# --- evaluate_locators ---------------------------------------------------
+    def locate(self, sample):
+        self.seen.append(sample)
+        return self.candidate
 
 
 def test_unlabelled_is_unknown():
-    samples = [
-        EvaluationSample("labelled", _frame(1), expected_box=(0, 0, 10, 10)),
-        EvaluationSample("unlabelled", _frame(2)),
-    ]
-    report = evaluate_locators(samples, {"v1": _always((5, 5))}).report("v1")
-    assert report.unknown == 1
-    # The unlabelled hit is counted as located, and as nothing else.
-    assert report.located == 2
-    assert report.correct == 1
-    assert report.accuracy == Ratio(1, 1)
-    assert report.hit_rate == Ratio(2, 2)
+    report = evaluate_locators([EvaluationSample("unknown", png())], {
+        "v1": FixedLocator(LocatorCandidate((4, 5), "image")),
+    })
+    version = report.versions["v1"]
+    assert version.unknown == 1
+    assert version.accuracy.numerator == version.accuracy.denominator == 0
+    assert version.accuracy.value is None
+    assert report.attempts[0].correct is None
 
 
 def test_false_positive_is_not_recovery():
-    samples = [
-        EvaluationSample("a", _frame(1), expected_box=(0, 0, 10, 10)),
-        EvaluationSample("b", _frame(2), expected_box=(20, 20, 30, 30)),
-    ]
-    # v2 "finds" both, but the second hit is nowhere near the target.
-    comparison = evaluate_locators(
-        samples, {"v1": _never, "v2": _always((5, 5))})
-    report = comparison.report("v2")
-    assert report.correct == 1
-    assert report.false_positive == 1
-    assert report.located == 2
-    assert report.recovery_rate == Ratio(1, 2)
-    assert comparison.report("v1").miss == 2
-    assert [row.sample_id for row in comparison.failures("v2")] == ["b"]
-
-
-def test_hit_on_an_expected_miss_is_a_false_positive():
-    samples = [EvaluationSample("gone", _frame(), expect_miss=True)]
-    comparison = evaluate_locators(
-        samples, {"strict": _never, "loose": _always((1, 1))})
-    assert comparison.report("strict").true_negative == 1
-    assert comparison.report("strict").accuracy == Ratio(1, 1)
-    assert comparison.report("loose").false_positive == 1
-    assert comparison.report("loose").accuracy == Ratio(0, 1)
-    # A sample that expects a miss can never be "recovered".
-    assert comparison.report("loose").recovery_rate == Ratio(0, 0)
-    assert comparison.report("loose").recovery_rate.value is None
+    samples = [EvaluationSample("labelled", png(), expected_box=(0, 0, 10, 10))]
+    bad = LocatorCandidate((20, 20), "vlm", fallback_used=True, verified=True)
+    good = LocatorCandidate((4, 5), "vlm", fallback_used=True)
+    report = evaluate_locators(samples, {"bad": FixedLocator(bad), "unverified": FixedLocator(good)})
+    assert report.versions["bad"].false_positive.numerator == 1
+    assert report.versions["bad"].recovery.numerator == 0
+    assert report.versions["bad"].recovery.denominator == 1
+    assert report.versions["unverified"].accuracy.numerator == 1
+    assert report.versions["unverified"].recovery.denominator == 0
+    assert report.versions["unverified"].verification_unknown == 1
 
 
 def test_same_frame_versions_are_comparable():
-    seen = {}
-
-    def record(name):
-        def strategy(request):
-            seen[name] = request
-            return None
-        return strategy
-
-    frame = _frame(7)
-    sample = EvaluationSample("s", frame, expected_box=(0, 0, 5, 5),
-                              origin=(-1920, -200), scale=1.5)
-    comparison = evaluate_locators([sample], {"a": record("a"), "b": record("b")})
-    assert seen["a"].frame is frame
-    assert seen["b"].frame is frame
-    assert seen["a"] is seen["b"]
-    assert seen["a"].origin == (-1920, -200)
-    assert seen["a"].scale == 1.5
-    hashes = {row.frame_hash for row in comparison.results}
-    assert len(hashes) == 1
-    assert None not in hashes
+    sample = EvaluationSample("shared", png(), expected_miss=True)
+    left = FixedLocator(LocatorCandidate(None, "miss"))
+    right = FixedLocator(LocatorCandidate((4, 5), "image"))
+    report = evaluate_locators([sample], {"old": left, "new": right})
+    assert left.seen[0] is right.seen[0] is sample
+    assert report.attempts[0].frame_hash == report.attempts[1].frame_hash
+    assert report.versions["old"].accuracy.numerator == 1
+    assert report.versions["new"].false_positive.numerator == 1
 
 
 def test_region_passed_to_both_strategies():
-    regions = {}
-
-    def record(name):
-        def strategy(request):
-            regions[name] = request.region
-            return None
-        return strategy
-
-    sample = EvaluationSample("s", _frame(), expected_box=(12, 12, 20, 20),
-                              region=(10, 10, 50, 30))
-    evaluate_locators([sample], {"image": record("image"), "vlm": record("vlm")})
-    image_region, vlm_region = regions["image"], regions["vlm"]
-    assert image_region == vlm_region
-    assert image_region == (10, 10, 50, 30)
+    sample = EvaluationSample("crop", png(), origin=(-100, -50), scale=2,
+                              region=(-98, -48, -90, -40))
+    image, vlm = FixedLocator(LocatorCandidate(None, "miss")), FixedLocator(LocatorCandidate(None, "miss"))
+    evaluate_locators([sample], {"image": image, "vlm": vlm})
+    assert image.seen[0].region == vlm.seen[0].region == (-98, -48, -90, -40)
 
 
-def test_a_strategy_that_edits_the_frame_is_refused():
-    def vandal(request):
-        request.frame[0, 0] ^= 0xFF
-        return None
-
-    sample = EvaluationSample("s", _frame(), expected_box=(0, 0, 5, 5))
-    with pytest.raises(HealingEvaluationError, match="modified the frame"):
-        evaluate_locators([sample], {"vandal": vandal, "later": _never})
-
-
-def test_negative_origin_box_is_judged_in_screen_coordinates():
-    sample = EvaluationSample("left-monitor", _frame(),
-                              expected_box=(-1900, -180, -1880, -160),
-                              origin=(-1920, -200))
-    comparison = evaluate_locators(
-        [sample], {"right": _always((-1890, -170)), "frame-local": _always((30, 30))})
-    assert comparison.report("right").correct == 1
-    assert comparison.report("frame-local").false_positive == 1
+def test_real_template_dataset_and_versioned_acceptance():
+    report = evaluate_healing_manifest(DATASET / "dataset.json")
+    thresholds = json.loads((DATASET / "acceptance.json").read_text(encoding="utf-8"))
+    for name, expected in thresholds.items():
+        actual = report.versions[name]
+        assert actual.accuracy.numerator == expected["correct"]
+        assert actual.accuracy.denominator == expected["labelled"]
+        assert actual.unknown == expected["unknown"]
+        assert actual.false_positive.numerator == expected["false_positive"]
+        assert actual.recovery.value is None
+    attempt = next(row for row in report.attempts if row.version == "new" and row.sample_id.startswith("negative"))
+    assert attempt.candidate.coordinates == (-66, -29)
+    assert attempt.correct is True and attempt.step_id == "scaled-submit"
 
 
-def test_strategy_error_is_its_own_bucket():
-    def broken(request):
-        raise RuntimeError("backend down")
+def test_image_miss_and_vlm_use_same_crop_and_transform_without_capture(monkeypatch):
+    frame = (DATASET / "fixtures/frame_new.png").read_bytes()
+    sample = EvaluationSample("crop", frame, expected_box=(-70, -32, -61.5, -25.5),
+                              origin=(-80, -40), scale=2, region=(-72, -34, -60, -24))
+    seen = []
 
-    samples = [EvaluationSample("s", _frame(), expect_miss=True)]
-    report = evaluate_locators(samples, {"broken": broken}).report("broken")
-    # Raising on a sample that expects a miss is not a correct rejection.
-    assert report.error == 1
-    assert report.true_negative == 0
-    assert report.accuracy == Ratio(0, 1)
+    class Backend(VLMBackend):
+        available, name = True, "controlled"
 
+        def locate(self, image_bytes, description, model=None, image_mime="image/png"):
+            seen.append(image_bytes)
+            return 12, 10
 
-def test_latency_percentiles_and_counts_are_reported():
-    ticks = iter(range(0, 1000))
-    samples = [EvaluationSample(f"s{i}", _frame(i), expected_box=(0, 0, 9, 9))
-               for i in range(4)]
-    comparison = evaluate_locators(
-        samples, {"v1": _always((1, 1))}, clock=lambda: next(ticks) / 1000.0)
-    report = comparison.report("v1")
-    assert report.p50_ms == pytest.approx(1.0)
-    assert report.p95_ms == pytest.approx(1.0)
-    payload = json.loads(json.dumps(comparison.to_dict()))
-    version = payload["versions"]["v1"]
-    assert version["accuracy"] == {"numerator": 4, "denominator": 4, "value": 1.0}
-    assert version["false_positive_rate"]["denominator"] == 4
-    assert payload["baseline"] == "v1"
-    assert "4/4" in format_comparison(comparison)
+        def verify(self, *_args, **_kwargs):
+            pytest.fail("no implicit post-operation verification")
 
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("evaluation must not capture or click")
 
-def test_empty_ratio_has_no_value_rather_than_a_perfect_one():
-    report = evaluate_locators(
-        [EvaluationSample("u", _frame())], {"v1": _never}).report("v1")
-    assert report.accuracy.to_dict() == {
-        "numerator": 0, "denominator": 0, "value": None}
+    monkeypatch.setattr("je_auto_control.utils.monitor_layout.logical_frame.grab_logical", forbidden)
+    monkeypatch.setattr("je_auto_control.wrapper.auto_control_mouse.click_mouse", forbidden)
+    vlm = VLMFrameLocator(Backend(), "submit", model="fake")
+    image = TemplateFrameLocator((DATASET / "fixtures/old.png").read_bytes(), .99, vlm)
+    result = image.locate(sample)
+    assert result.coordinates == (-66, -29) and result.method == "vlm"
+    assert result.verified is None and result.fallback_used
+    assert [name for name, _ in result.timings_ms] == ["image", "fallback.vlm"]
+    with Image.open(io.BytesIO(frame)) as original, Image.open(io.BytesIO(seen[0])) as actual:
+        assert actual.size == (24, 20)
+        assert actual.tobytes() == original.crop((16, 12, 40, 32)).tobytes()
 
 
-def test_invalid_inputs_are_rejected():
-    sample = EvaluationSample("s", _frame(), expected_box=(0, 0, 5, 5))
+def test_measured_percentiles_costs_and_verified_recovery(monkeypatch):
+    ticks = iter([0, 1, 2, 4])
+    monkeypatch.setattr("je_auto_control.utils.self_healing.evaluation.perf_counter", lambda: next(ticks))
+    locator = FixedLocator(LocatorCandidate((4, 5), "vlm", fallback_used=True, verified=True, cost=.01))
+    samples = [EvaluationSample(str(index), png(), expected_box=(0, 0, 10, 10)) for index in range(2)]
+    version = evaluate_locators(samples, {"v1": locator}).versions["v1"]
+    assert version.p50_ms == 1500 and version.p95_ms == 1950
+    assert version.cost_total == .02 and version.cost_known == 2
+    assert version.recovery.to_dict() == {"numerator": 2, "denominator": 2, "value": 1}
+
+
+@pytest.mark.parametrize("fields", [
+    {"scale": 0}, {"scale": float("nan")}, {"scale": True}, {"origin": (True, 0)},
+    {"region": (-1, 0, 20, 20)}, {"expected_box": (0, 0, 0, 10)},
+    {"expected_box": (0, 0, 10, 10), "expected_miss": True}, {"expected_miss": "false"},
+    {"frame": bytearray(png())}, {"run_id": 1},
+])
+def test_invalid_samples_fail_at_boundary(fields):
+    values = {"sample_id": "invalid", "frame": png(), **fields}
+    with pytest.raises(HealingEvaluationError):
+        EvaluationSample(**values)
+
+
+def test_strategy_and_observer_errors_propagate_without_partial_report():
+    seen = []
+    signal = RuntimeError("strategy aborted")
+
+    class Failure:
+        def locate(self, sample):
+            seen.append(sample.sample_id)
+            raise signal
+
+    samples = [EvaluationSample("first", png()), EvaluationSample("second", png())]
+    with pytest.raises(RuntimeError) as caught:
+        evaluate_locators(samples, {"v1": Failure()})
+    assert caught.value is signal and seen == ["first"]
+    with pytest.raises(RuntimeError) as caught:
+        evaluate_locators(samples, {"v1": Failure()}, observer=lambda _: (_ for _ in ()).throw(signal))
+    assert caught.value is signal and seen == ["first"]
+
+
+def test_exports_escape_html_and_contain_provenance_without_images(tmp_path):
+    sample = EvaluationSample("<script>probe</script>", png(), expected_miss=True, run_id="run", step_id="step")
+    report = evaluate_locators([sample], {"<candidate>": FixedLocator(LocatorCandidate(None, "miss"))})
+    json_path = write_healing_report(report, tmp_path / "report.json")
+    html_path = write_healing_report(report, tmp_path / "report.html")
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert payload["attempts"][0]["run_id"] == "run" and "frame" not in payload["attempts"][0]
+    html = html_path.read_text(encoding="utf-8")
+    assert "<script>" not in html and "&lt;script&gt;" in html
+    assert payload["versions"]["<candidate>"]["accuracy"]["value"] == 1
+
+
+def test_manifest_nested_assets_cannot_escape_directory(tmp_path):
+    path = tmp_path / "dataset/manifest.json"
+    path.parent.mkdir()
+    (tmp_path / "outside.png").write_bytes(png())
+    path.write_text(json.dumps({"schema_version": 1, "samples": [{"id": "x", "frame": "../outside.png"}],
+                                "versions": {"v1": {"template": "../outside.png"}}}), encoding="utf-8")
+    from je_auto_control.utils.path_guard.path_guard import PathNotAllowedError
+    with pytest.raises(PathNotAllowedError):
+        evaluate_healing_manifest(path)
+
+
+@pytest.mark.parametrize("fields", [
+    {"coordinates": (True, 0)}, {"coordinates": (float("inf"), 0)}, {"method": "bad"},
+    {"method": "miss"}, {"cost": -1}, {"cost": float("nan")}, {"verified": "true"},
+    {"backend": 1}, {"timings_ms": (("x", -1),)}, {"timings_ms": (("x", 1), ("x", 2))},
+    {"timings_ms": (("x", 1, 2),)}, {"method": "vlm", "fallback_used": False},
+])
+def test_invalid_candidates_fail_at_boundary(fields):
+    with pytest.raises(HealingEvaluationError):
+        LocatorCandidate(**{"coordinates": (1, 2), "method": "image", **fields})
+
+
+def test_unknown_empty_and_duplicate_populations_remain_explicit():
+    locator = FixedLocator(LocatorCandidate(None, "miss"))
+    empty = evaluate_locators([], {"v1": locator}).versions["v1"]
+    assert empty.p50_ms is empty.p95_ms is empty.accuracy.value is empty.cost_total is None
+    sample = EvaluationSample("duplicate", png())
+    with pytest.raises(HealingEvaluationError):
+        evaluate_locators([sample, sample], {"v1": locator})
     with pytest.raises(HealingEvaluationError):
         evaluate_locators([sample], {})
-    with pytest.raises(HealingEvaluationError, match="duplicate"):
-        evaluate_locators([sample, sample], {"v1": _never})
-    frame = _frame()
-    with pytest.raises(HealingEvaluationError, match="expect_miss"):
-        EvaluationSample("x", frame, expected_box=(0, 0, 5, 5), expect_miss=True)
-    with pytest.raises(HealingEvaluationError, match="scale"):
-        EvaluationSample("x", frame, scale=0)
+    with pytest.raises(HealingEvaluationError):
+        evaluate_locators([sample], {"v1": object()})
 
 
-def test_thresholds_report_each_violation():
-    samples = [EvaluationSample("a", _frame(), expected_box=(0, 0, 10, 10)),
-               EvaluationSample("b", _frame(1), expect_miss=True)]
-    comparison = evaluate_locators(samples, {"v1": _always((5, 5))})
-    assert check_thresholds(comparison, {"v1": {"min_correct": 1}}) == []
-    violations = check_thresholds(
-        comparison, {"v1": {"max_false_positive": 0, "min_accuracy": 0.9},
-                     "missing": {"min_correct": 1}})
-    assert len(violations) == 3
+def test_masked_snapshot_remains_safe_after_secret_scope_closes(tmp_path):
+    from je_auto_control.utils.logging.secret_scope import remember_secret, secret_log_scope
+
+    with secret_log_scope():
+        remember_secret("sensitive-label")
+        sample = EvaluationSample("sensitive-label", png(), run_id="sensitive-label", step_id="sensitive-label")
+        locator = FixedLocator(LocatorCandidate((4, 5), "vlm", fallback_used=True, backend="sensitive-label"))
+        report = evaluate_locators([sample], {"sensitive-label": locator})
+    for suffix in ("json", "html"):
+        path = write_healing_report(report, tmp_path / f"report.{suffix}")
+        assert "sensitive-label" not in path.read_text(encoding="utf-8")
+    with pytest.raises(TypeError):
+        report.versions["new"] = report.versions["***"]
 
 
-# --- the live locator: one region for both strategies ----------------------
+def test_constant_template_and_outside_vlm_point_are_refused():
+    sample = EvaluationSample("probe", png())
+    with pytest.raises(HealingEvaluationError, match="constant"):
+        TemplateFrameLocator(png()).locate(sample)
+
+    class Backend(VLMBackend):
+        available = True
+
+        def locate(self, *_args, **_kwargs):
+            return 10000, 0
+
+    with pytest.raises(HealingEvaluationError, match="outside"):
+        VLMFrameLocator(Backend(), "probe").locate(sample)
 
 
-@pytest.fixture
-def temp_log(tmp_path):
-    return HealEventLog(path=tmp_path / "events.jsonl")
-
-
-def test_live_locate_gives_the_region_to_image_and_vlm(monkeypatch, temp_log):
-    seen = {}
-
-    def fake_find_image(image, detect_threshold=1.0, draw_image=False,
-                        all_screens=True, screen_region=None):
-        seen["image"] = screen_region
-        return [False, []]
-
-    def fake_vlm(description, screen_region, model):
-        seen["vlm"] = screen_region
-        return None, "no match"
-
-    from je_auto_control.utils.cv2_utils import template_detection
-    monkeypatch.setattr(template_detection, "find_image", fake_find_image)
-    monkeypatch.setattr(locator_mod, "_try_vlm", fake_vlm)
-    outcome = self_heal_locate(template_path="t.png", description="the button",
-                               screen_region=[-100, 20, 300, 220], log=temp_log)
-    assert outcome.found is False
-    # Two corners for the VLM, (x, y, width, height) for the matcher: one box.
-    assert seen["vlm"] == [-100, 20, 300, 220]
-    assert seen["image"] == (-100, 20, 400, 200)
-    assert temp_log.list_events()[0].screen_region == [-100, 20, 300, 220]
-
-
-def test_live_locate_rejects_a_region_without_area(temp_log):
-    with pytest.raises(ValueError):
-        self_heal_locate(template_path="t.png", screen_region=[10, 10, 10, 50],
-                         log=temp_log)
-
-
-# --- located vs verified -------------------------------------------------
-
-
-def _patch_hit(monkeypatch, clicks):
-    monkeypatch.setattr(locator_mod, "_try_image", lambda path, threshold: ((7, 9), None))
-    monkeypatch.setattr(locator_mod, "_click_at",
-                        lambda coords, keycode: clicks.append(coords))
-
-
-def test_click_without_a_check_is_located_but_not_verified(monkeypatch, temp_log):
-    clicks = []
-    _patch_hit(monkeypatch, clicks)
-    outcome = self_heal_click(template_path="t.png", log=temp_log)
-    assert outcome.found is True
-    assert outcome.action == "click"
-    assert outcome.action_verified is None
-    event = temp_log.list_events()[0]
-    assert event.action == "click"
-    assert event.action_verified is None
-    assert clicks == [(7, 9)]
-
-
-@pytest.mark.parametrize("verdict", [True, False])
-def test_click_records_what_the_check_said(monkeypatch, temp_log, verdict):
-    _patch_hit(monkeypatch, [])
-    outcome = self_heal_click(template_path="t.png", log=temp_log,
-                              verify=lambda result: verdict)
-    assert outcome.found is True
-    assert outcome.action_verified is verdict
-    events = temp_log.list_events()
-    assert len(events) == 1
-    assert events[0].action_verified is verdict
-
-
-def test_a_failed_click_is_still_logged_and_never_verified(monkeypatch, temp_log):
-    monkeypatch.setattr(locator_mod, "_try_image", lambda path, threshold: ((1, 2), None))
-
-    def boom(coords, keycode):
-        raise OSError("pointer unavailable")
-
-    monkeypatch.setattr(locator_mod, "_click_at", boom)
-    with pytest.raises(OSError):
-        self_heal_click(template_path="t.png", log=temp_log, verify=lambda result: True)
-    event = temp_log.list_events()[0]
-    assert event.action == "click"
-    assert event.action_verified is None
-
-
-def test_bare_locate_has_no_action(monkeypatch, temp_log):
-    _patch_hit(monkeypatch, [])
-    outcome = self_heal_locate(template_path="t.png", log=temp_log)
-    assert outcome.action is None
-    assert outcome.action_verified is None
-
-
-# --- heal log schema -----------------------------------------------------
-
-
-def test_old_format_lines_still_load(tmp_path):
-    path = tmp_path / "events.jsonl"
-    old = {"timestamp": "2026-05-01T00:00:00+00:00", "method": "image",
-           "coordinates": [1, 2], "duration_ms": 3.5, "template_path": "a.png",
-           "description": None, "image_error": None, "vlm_error": None}
-    newer = dict(old, schema_version=99, locator_version="v9",
-                 a_field_from_the_future={"x": 1})
-    path.write_text(json.dumps(old) + "\n" + json.dumps(newer) + "\n[1, 2]\n",
-                    encoding="utf-8")
-    events = HealEventLog(path=path).list_events()
-    assert len(events) == 2
-    assert events[0].schema_version is None
-    assert events[0].locator_version is None
-    assert events[0].coordinates == [1, 2]
-    assert events[1].locator_version == "v9"
-
-
-def test_context_is_stamped_on_events(monkeypatch, temp_log):
-    _patch_hit(monkeypatch, [])
-    with heal_context(run_id="run-1", locator_id="submit", locator_version="v2"):
-        self_heal_locate(template_path="t.png", model="m-1", log=temp_log)
-    self_heal_locate(template_path="t.png", log=temp_log)
-    inside, outside = temp_log.list_events()
-    assert (inside.run_id, inside.locator_id, inside.locator_version) == (
-        "run-1", "submit", "v2")
-    assert inside.model == "m-1"
-    assert inside.schema_version == HEAL_EVENT_SCHEMA_VERSION
-    assert inside.image_ms is not None
-    assert outside.run_id is None
-    assert outside.locator_version is None
-
-
-def test_unknown_context_key_is_rejected():
-    with pytest.raises(ValueError):
-        with heal_context(colour="blue"):
-            pass
-
-
-def test_event_round_trips_through_the_log(temp_log):
-    event = HealEvent(timestamp="t", method="vlm", coordinates=[-5, 6],
-                      duration_ms=1.0, locator_version="v2",
-                      screen_region=[-10, 0, 10, 20], action="click",
-                      action_verified=False)
-    temp_log.append(event)
-    assert temp_log.list_events() == [event]
-
-
-def test_heal_stats_report_verification_apart_from_hits():
-    from je_auto_control.utils.heal_analytics import heal_stats
-    events = [
-        HealEvent("t", "image", [1, 1], 1.0),
-        HealEvent("t", "vlm", [1, 1], 1.0, action="click", action_verified=True),
-        HealEvent("t", "vlm", [1, 1], 1.0, action="click", action_verified=False),
-        HealEvent("t", "vlm", [1, 1], 1.0, action="click"),
-        {"method": "image", "coordinates": [1, 1], "duration_ms": 1.0},
-    ]
-    stats = heal_stats(events)
-    assert stats["healed"] == 5
-    assert stats["action_verification"] == {
-        "actions": 3, "verified": 1, "failed": 1, "unchecked": 1}
+@pytest.mark.parametrize("payload", [
+    '{"schema_version":1,"schema_version":1,"samples":[],"versions":{}}',
+    '{"schema_version":true,"samples":[],"versions":{}}',
+    '{"schema_version":1,"samples":[],"versions":{}}',
+    '{"schema_version":1,"samples":[{}],"versions":{}}',
+    '{"schema_version":1,"samples":[],"versions":{},"unknown":1}',
+])
+def test_invalid_manifest_never_runs_a_strategy(tmp_path, payload):
+    path = tmp_path / "invalid.json"
+    path.write_text(payload, encoding="utf-8")
+    with pytest.raises(HealingEvaluationError):
+        evaluate_healing_manifest(path)

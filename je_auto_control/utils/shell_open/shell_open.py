@@ -1,10 +1,10 @@
-"""Open a file with its default app, or a URL in the default browser.
+"""Open files with their registered applications and delegate URLs to WebRunner.
 
 The framework can launch a literal executable (``start_exe`` / ``shell_process``),
 but not the single most common "hand off to another app" RPA step: open ``report.pdf``
 with whatever app is registered for it, ``print`` a document, or open a URL in the
-default browser. ``shell_open`` adds that, routed per-OS to ``os.startfile`` /
-``open`` / ``xdg-open`` / ``webbrowser``.
+WebRunner. Files use ``os.startfile`` / ``open`` / ``xdg-open``; every URL uses
+the existing ``je_web_runner`` bridge, including legacy ``AC_open_path`` calls.
 
 :func:`plan_open` is a pure planner — it classifies the target (URL vs file path),
 validates it (URL scheme allowlist; ``realpath`` for files) and returns the
@@ -60,7 +60,7 @@ def plan_open(target: str, *, verb: str = "open") -> Dict[str, Any]:
         if scheme not in _URL_SCHEMES:
             raise ValueError(f"unsupported URL scheme: {scheme!r}")
         return {"kind": "url", "scheme": scheme, "target": text,
-                "backend": "webbrowser", "verb": verb}
+                "backend": "je_web_runner", "verb": verb}
     path = os.path.realpath(os.path.expanduser(text))
     return {"kind": "file", "target": path, "backend": _file_backend(),
             "verb": verb}
@@ -68,9 +68,9 @@ def plan_open(target: str, *, verb: str = "open") -> Dict[str, Any]:
 
 def _default_opener(plan: Dict[str, Any]) -> bool:
     backend, target = plan["backend"], plan["target"]
-    if backend == "webbrowser":
-        import webbrowser
-        return bool(webbrowser.open(target))
+    if backend == "je_web_runner":
+        from je_auto_control.utils.webrunner_bridge import web_open
+        return web_open(target) is not False
     if backend == "startfile":
         if not sys.platform.startswith("win"):
             raise RuntimeError("startfile is only supported on Windows")
@@ -85,7 +85,7 @@ def _default_opener(plan: Dict[str, Any]) -> bool:
 
 def open_path(target: str, *, verb: str = "open",
               opener: Optional[Opener] = None) -> bool:
-    """Open ``target`` (file → default app / verb; URL → default browser).
+    """Open ``target`` (file → registered app / verb; URL → WebRunner).
 
     Pass an ``opener`` ``plan -> bool`` to intercept the dispatch (e.g. in tests);
     the default runs the real OS call. Returns True on success.

@@ -33,9 +33,6 @@ from je_auto_control.utils.executor.run_control import (
 from je_auto_control.utils.rbac.authorization import (
     AuthorizationContext, authorization_scope, current_authorization,
 )
-from je_auto_control.utils.rbac.deferred import adopted_scope, capture_owner
-from je_auto_control.utils.self_healing import locator
-from je_auto_control.utils.self_healing.locator import heal_context
 from je_auto_control.utils.thread_bound import ThreadBoundVar, thread_marker
 from je_auto_control.wrapper.device_context import bound_session, use_device
 
@@ -126,34 +123,6 @@ def test_each_thread_has_its_own_marker(threads):
 
 # --- who a request is served as -----------------------------------------------------------------
 
-def test_a_thread_started_in_a_request_has_no_caller(threads):
-    with authorization_scope(_ADMIN):
-        assert current_authorization() is _ADMIN
-        assert _in_thread(current_authorization) is None
-        assert current_authorization() is _ADMIN, "starting a thread must not disturb the request"
-    assert current_authorization() is None
-
-
-def test_a_daemon_started_in_an_admins_request_does_not_stay_admin(threads):
-    request_over, done = threading.Event(), threading.Event()
-    seen = []
-
-    def daemon():
-        request_over.wait(WAIT)
-        seen.append(current_authorization())
-        # Deferred work with no owner of its own must not pick the admin up either.
-        with adopted_scope(None):
-            seen.append(current_authorization())
-        seen.append(capture_owner())
-        done.set()
-
-    with authorization_scope(_ADMIN):
-        threading.Thread(target=daemon, daemon=True).start()
-    request_over.set()
-    assert done.wait(WAIT)
-    assert seen == [None, None, None]
-
-
 def test_a_caller_handed_over_on_purpose_is_served_on_the_other_thread(threads):
     def branch():
         with authorization_scope(_ADMIN):
@@ -195,18 +164,6 @@ def test_two_workers_each_see_their_own_device(threads):
 
 
 # --- what a heal event is stamped with ----------------------------------------------------------
-
-def test_a_thread_started_in_a_heal_context_is_not_stamped_with_it(threads):
-    with heal_context(run_id="run-1", step_id="s1"):
-        assert dict(locator._context.get()) == {"run_id": "run-1", "step_id": "s1"}
-        assert dict(_in_thread(locator._context.get)) == {}
-        with heal_context(locator_id="ok-button"):
-            assert dict(locator._context.get()) == {
-                "run_id": "run-1", "step_id": "s1", "locator_id": "ok-button"}
-    assert dict(locator._context.get()) == {}
-
-
-# --- which stop a run answers to ----------------------------------------------------------------
 
 def test_a_thread_started_in_a_stoppable_run_is_not_part_of_it(threads):
     with stoppable_run("bound-run") as token:

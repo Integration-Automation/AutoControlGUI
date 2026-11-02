@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import weakref
-from typing import Any, Callable, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QImage
@@ -13,12 +13,13 @@ from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._slow_op import StopQueue
 from je_auto_control.gui._weak_call import weak_slot
 from je_auto_control.gui.remote_desktop._helpers import _t
-from je_auto_control.gui.task_controller import task_controller
+from je_auto_control.gui.tab_task_controller import task_controller
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.utils.remote_desktop import (
-    WebRTCConfig,
-)
+if TYPE_CHECKING:  # the facade types optional members as possibly None
+    from je_auto_control.utils.remote_desktop.webrtc_transport import WebRTCConfig
+else:
+    from je_auto_control.utils.remote_desktop import WebRTCConfig
 
 
 _DEFAULT_FPS = 24

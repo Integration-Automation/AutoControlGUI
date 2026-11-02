@@ -11,6 +11,7 @@ from __future__ import annotations
 import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+from contextvars import copy_context
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set
 
@@ -18,7 +19,11 @@ from je_auto_control.utils.dag.graph import (
     DagDefinition, DagDefinitionError, DagNode, parse_definition,
 )
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.run_history.run_outcome import is_run_interruption
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.logging.secret_scope import (
+    SecretLogScope, bound_secret_scope, current_secret_scope, secret_log_scope,
+)
 
 
 STATUS_PENDING = "pending"
@@ -75,12 +80,15 @@ class DagRunResult:
 NodeRunner = Callable[[DagNode, DagDefinition], Any]
 
 
+@secret_log_scope()
 def run_dag(definition: Any,
             *,
             max_parallel: int = 4,
             local_runner: Optional[NodeRunner] = None,
             remote_runner: Optional[NodeRunner] = None,
             stop_event: Optional[threading.Event] = None,
+            batch_id: Optional[str] = None,
+            recovery: Optional[Mapping[str, Any]] = None,
             ) -> DagRunResult:
     """Execute ``definition`` in topological order with bounded parallelism.
 
@@ -90,8 +98,20 @@ def run_dag(definition: Any,
     pure-Python fake — both default to the production paths. Once
     ``stop_event`` is set, no further node starts: the running ones finish
     and every pending node is ``skipped`` with the error ``"stopped"``.
+    Running managed task nodes request bounded pause and retain task identity
+    for review. They require destination completion and input-retirement evidence.
+    Optional batch_id binds a registered all-managed graph and durable dispatch claims;
+    the same batch cannot be started again without a separate recovery decision.
     """
     dag = _coerce_definition(definition)
+    if batch_id is not None:
+        if local_runner is not None or remote_runner is not None:
+            raise DagDefinitionError("registered batches use only managed destination dispatch")
+        # pylint: disable-next=import-outside-toplevel  # reason: batch client imports the runtime service back through runner
+        from je_auto_control.utils.dag.batch_execution import run_batch
+        return run_batch(dag, batch_id, max_parallel, stop_event, run_dag, recovery)
+    if recovery is not None:
+        raise DagDefinitionError("DAG continuation requires a registered batch identity")
     local = local_runner or _current_run_local_runner()
     remote = remote_runner or _default_remote_runner
     if stop_event is not None:
@@ -103,10 +123,9 @@ def run_dag(definition: Any,
                for nid in nodes_by_id}
     _execute_with_pool(dag, results, local, remote, max(1, int(max_parallel)),
                        stop_event)
-    elapsed = round(time.monotonic() - started_at, 3)
-    succeeded = all(r.status == STATUS_SUCCEEDED for r in results.values())
     return DagRunResult(
-        succeeded=succeeded, elapsed_s=elapsed, nodes=results,
+        succeeded=all(r.status == STATUS_SUCCEEDED for r in results.values()),
+        elapsed_s=round(time.monotonic() - started_at, 3), nodes=results,
     )
 
 
@@ -123,7 +142,9 @@ def _stoppable(runner: NodeRunner, stop_event: threading.Event) -> NodeRunner:
     def run(node: DagNode, definition: DagDefinition) -> Any:
         if stop_event.is_set():
             raise _NodeStopped(node.id)
-        return runner(node, definition)
+        from je_auto_control.utils.dag.managed_tasks import managed_stop_scope
+        with managed_stop_scope(stop_event):
+            return runner(node, definition)
     return run
 
 
@@ -167,8 +188,7 @@ def _spawn_ready_nodes(pending: Set[str], inflight: Dict[Future, str],
                        nodes_by_id: Dict[str, DagNode],
                        local: NodeRunner, remote: NodeRunner,
                        pool: ThreadPoolExecutor) -> None:
-    from je_auto_control.utils.action_journal.recorder import carry_step
-    order = {node_id: index for index, node_id in enumerate(nodes_by_id)}
+    from je_auto_control.utils.agent_runtime.origin_policy import current_origin
     for nid in sorted(pending):
         node = nodes_by_id[nid]
         deps_done = {results[d].status for d in node.depends_on}
@@ -181,9 +201,8 @@ def _spawn_ready_nodes(pending: Set[str], inflight: Dict[Future, str],
         results[nid].status = STATUS_RUNNING
         results[nid].started_at = time.monotonic()
         runner = local if node.host == LOCAL_HOST else remote
-        # The journal's parent of a node's steps is the step that ran the DAG.
-        future = pool.submit(carry_step(_run_one, order[nid]), node, results[nid],
-                             runner, nodes_by_id)
+        future = pool.submit(copy_context().run, _run_one, node, results[nid], runner, nodes_by_id,
+                             current_secret_scope(), current_origin())
         inflight[future] = nid
         pending.discard(nid)
 
@@ -225,6 +244,8 @@ def _record_future(nid: str, finished: Future,
         finished.result()
     except (AutoControlException, RuntimeError, OSError, ValueError,
             LookupError, TypeError, AttributeError, ArithmeticError) as error:
+        if is_run_interruption(error):
+            raise
         # Defensive: _run_one swallows tool errors into NodeResult.
         # This branch only catches pool / runner-side faults. It includes
         # AutoControlException so a framework failure that slips past
@@ -233,28 +254,48 @@ def _record_future(nid: str, finished: Future,
         results[nid].error = repr(error)
 
 
-def _run_one(node: DagNode, result: NodeResult,
-             runner: NodeRunner, _nodes: Dict[str, DagNode]) -> None:
-    try:
-        outcome = runner(node, _build_proxy_definition(node, _nodes))
-    except _NodeStopped:
-        result.status = STATUS_SKIPPED
-        result.error = "stopped"
-    # A runner is user code and may raise any Exception subclass; one that
-    # escaped left the node "running" and run_dag returned no result.
-    except Exception as error:  # noqa: BLE001  # reason: any node failure becomes a failed NodeResult and a skip cascade, never a crash of the whole run
-        # AutoControlException covers validate_actions / locate / assert
-        # failures raised by the executor: a node failure becomes a failed
-        # NodeResult (and a downstream skip cascade), not a raw crash that
-        # leaves the node stuck "running" and returns no DagRunResult.
-        result.status = STATUS_FAILED
-        result.error = f"{type(error).__name__}: {error}"
-        autocontrol_logger.warning(
-            f"DAG node {node.id!r} failed: {result.error}",
-        )
-    else:
-        result.status = STATUS_SUCCEEDED
-        result.result = outcome
+def _run_one(node: DagNode, result: NodeResult, runner: NodeRunner, _nodes: Dict[str, DagNode],
+             secret_scope: Optional[SecretLogScope] = None, origin: Optional[str] = None) -> None:
+    """Keep node execution, outcome handling and final diagnostics in one mask."""
+    binding = current_secret_scope() if secret_scope is None else secret_scope
+    from je_auto_control.utils.agent_runtime.origin_policy import origin_scope
+    from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
+    from je_auto_control.utils.rbac.deferred import DeferredAuthorization
+    with bound_secret_scope(binding), origin_scope(origin):
+        try:
+            cancellation_checkpoint()
+            with DeferredAuthorization.capture().context_scope():
+                outcome = runner(node, _build_proxy_definition(node, _nodes))
+        except _NodeStopped:
+            result.status = STATUS_SKIPPED
+            result.error = "stopped"
+        # A runner is user code and may raise any Exception subclass; one that
+        # escaped left the node "running" and run_dag returned no result.
+        except BaseException as error:  # reason: settle node state; cancellation/control signals re-raise
+            # AutoControlException covers validate_actions / locate / assert
+            # failures raised by the executor: a node failure becomes a failed
+            # NodeResult (and a downstream skip cascade), not a raw crash that
+            # leaves the node stuck "running" and returns no DagRunResult.
+            result.status = STATUS_FAILED
+            if not isinstance(error, Exception) or is_run_interruption(error):
+                result.error = f"{type(error).__name__}: run interrupted"
+                raise
+            result.error = f"{type(error).__name__}: {error}"
+            from je_auto_control.utils.dag.managed_tasks import ManagedTaskDispatchError
+            if isinstance(error, ManagedTaskDispatchError):
+                result.result = error.outcome
+            autocontrol_logger.warning(
+                f"DAG node {node.id!r} failed: {result.error}",
+            )
+        else:
+            result.status = STATUS_SUCCEEDED
+            result.result = outcome
+        finally:
+            _finish_node_timing(result)
+
+
+def _finish_node_timing(result: NodeResult) -> None:
+    """Settle timing even when a node propagates a cancellation or hard exit."""
     finished_at = time.monotonic()
     result.finished_at = finished_at
     if result.started_at is not None:
@@ -306,11 +347,23 @@ def _current_run_local_runner() -> NodeRunner:
     """
     from je_auto_control.utils.executor.action_executor import _running_executor
     from je_auto_control.utils.script_vars.execution import bound_scope
+    from je_auto_control.utils.action_journal.capture import bound_journal, current_journal
+    from je_auto_control.utils.run_history.context import bound_history, current_history
     runner = _running_executor()
     scope = runner.variables
+    journal = current_journal()
+    from je_auto_control.utils.executor.dispatch import bound_command_guards, capture_command_guards
+    from je_auto_control.utils.exception.cancellation import cancellation_scope, current_cancellation_token
+    command_guards = capture_command_guards()
+    cancellation = current_cancellation_token()
+    from je_auto_control.utils.agent_runtime.context import current_operation, operation_scope
+    operation = current_operation()
+    secret_scope = current_secret_scope()
+    history = current_history()
 
     def run(node: DagNode, definition: DagDefinition) -> Any:
-        with bound_scope(scope):
+        with (bound_scope(scope), bound_journal(journal), bound_secret_scope(secret_scope), bound_history(history),
+              bound_command_guards(command_guards), cancellation_scope(cancellation), operation_scope(operation)):
             return _default_local_runner(node, definition, runner)
     return run
 
@@ -318,6 +371,10 @@ def _current_run_local_runner() -> NodeRunner:
 def _default_local_runner(node: DagNode, _definition: DagDefinition,
                           runner: Any = None) -> Any:
     """Run a local node's actions on ``runner`` (default: the module executor)."""
+    task = getattr(node, "task", None)
+    if task is not None:
+        from je_auto_control.utils.dag.managed_tasks import run_managed_task
+        return run_managed_task(node.host, task)
     from je_auto_control.utils.json.json_file import read_executable_action_json
     if runner is None:
         from je_auto_control.utils.executor.action_executor import executor
@@ -332,6 +389,14 @@ def _default_local_runner(node: DagNode, _definition: DagDefinition,
 
 def _default_remote_runner(node: DagNode,
                            _definition: DagDefinition) -> Any:
+    from je_auto_control.utils.rbac.policy import authorize_command
+    # The address book contains host credentials, independently of this
+    # caller's local action permissions. Check before opening it or files.
+    authorize_command("AC_admin_broadcast_execute")
+    task = getattr(node, "task", None)
+    if task is not None:
+        from je_auto_control.utils.dag.managed_tasks import run_managed_task
+        return run_managed_task(node.host, task)
     from je_auto_control.utils.admin.admin_client import default_admin_console
     console = default_admin_console()
     actions = _resolve_remote_actions(node)

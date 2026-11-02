@@ -27,33 +27,9 @@ Actions 選單
 
 視窗左側依同樣五個分類列出每一個已註冊的分頁,不論是否已開啟;已開啟的以粗體
 顯示。點一下就開啟該功能(已開啟則切到最前面)。搜尋框會隨輸入過濾清單——比對
-標題、鍵名(``usb_devices``)或分類——按 **Return** 開啟第一個符合的項目。
-``Ctrl+K``\ (**View → Search Features...**)從任何地方把游標移到搜尋框,
-``Ctrl+B``\ (**View → Navigation Panel**)隱藏或顯示面板。
-
-分頁在第一次顯示時才建立。視窗啟動時分頁列上有三個分頁——錄製、Script Builder
-與遠端桌面——錄製在最前面;另外兩個在第一次點到時才建立,其他分頁則在開啟時建立。
-在那之前,Script Builder 與遠端桌面(它會載入 WebRTC 相關套件)都不會被匯入。
-
-小視窗,以及視窗會記住的事
---------------------------
-
-分頁內容保有自己的最小尺寸:視窗小到放不下時,分頁會出現捲軸,而不是把表單擠扁。
-遠端桌面本來就自己捲動內容,維持原樣。對於內嵌 ``AutoControlGUIWidget`` 的程式,
-``widget.tabs`` 仍然以分頁內容為單位——``tabs.indexOf(page)``、
-``tabs.widget(index)``、``tabs.currentWidget()`` 與 ``tabs.setCurrentWidget(page)``
-收與回的都是分頁自己的 widget,不是包在外面的捲動區。
-
-主題、字級、導覽面板是否顯示與寬度、視窗位置與大小,會存在
-``~/.je_auto_control/gui_settings.ini``,下次啟動時還原。把
-``JE_AUTOCONTROL_GUI_SETTINGS`` 設成另一個檔案可以換位置,設成 ``off`` 則什麼都
-不記(測試套件就是這樣跑的)。
-
-關閉分頁會保留它的 widget,再開啟時維持離開時的樣子。
-``AutoControlGUIWidget.close_tab(key, release=True)`` 則是放掉它:先呼叫 widget
-選擇性實作的 ``dispose()``——分頁在這裡停掉計時器與執行緒、移除它註冊的監聽——
-再刪除 widget,下一次 ``open_tab(key)`` 會建立新的。主元件自己建立的表單(自動點擊、
-截圖、影像偵測、錄製、腳本、報告)只會關閉,不會被放掉。
+標題、鍵名( ``usb_devices`` )或分類——按 **Return** 開啟第一個符合的項目。
+``Ctrl+K`` ( **View → Search Features...** ) 從任何地方把游標移到搜尋框,
+``Ctrl+B`` ( **View → Navigation Panel** ) 隱藏或顯示面板。
 
 凡是在 widget 之外還握有東西的分頁都實作了 ``dispose()``:排程、觸發器、熱鍵、
 E-mail 觸發器、Webhooks、REST API、Presence、Live HUD、Inspector、Profiler、
@@ -93,17 +69,18 @@ View 選單
   設計 token;視窗不再使用 ``qt-material``。
 * **View → Text Size** 提供自動(依螢幕高度)與預設字級,即時套用在目前的主題上。
 
-切換主題或字級時,視窗的樣式表只設定一次,而且只重新套用畫面上看得到的部分。Qt 會
-把視窗的樣式表重新套用到底下每一個 widget,不論是否可見,所以沒有被選取的分頁內容
-會先移出視窗的樹(``WorkspaceTabWidget.restyle(apply)``),之後每一輪事件迴圈放回
-一頁,若分頁被選取則立刻放回。50 個分頁全開時,切換主題原本會卡住視窗 1.5–1.8 秒;
-現在約 0.3 秒,其餘分成每輪最多 85 毫秒完成(在開發機上以
-``benchmarks/gui_workloads.py`` 量測)。已關閉分頁的內容(隱藏地留在分頁元件底下)
-也會和其他頁面一起移出、放回。
+工作區尺寸與設定
+----------------
 
-頁面移出樹的期間,它的 ``window()`` 不是主視窗。分頁裡需要「自己所屬的視窗」的程式
-——要把它叫到前面,或擺放對話框——請改用 ``je_auto_control.gui.workspace_tabs`` 的
-``real_window(widget)``,不要用 ``widget.window()``。
+內容的最小版面超過視窗時，分頁可水平與垂直捲動。分頁註冊表與嵌入使用的
+``tabs.widget/indexOf/currentWidget`` API 仍使用原始頁面，包含隱藏後重新開啟。
+關閉鈕直接以目前的 palette 繪製向量，不載入圖檔。
+
+關閉視窗時，主題、字級、導覽面板的顯示與寬度透過 QSettings 保存到
+``~/.je_auto_control/gui.ini``。刪除此檔可重設設定。嵌入程式與測試可傳入
+``AutoControlGUIUI(settings=QSettings(...))`` 指定獨立設定檔。家目錄在建立視窗時
+解析，測試套件會將它導向暫存家目錄。``gui`` extra 只需要 PySide6；
+直接使用 ``qt_material`` 的應用程式應自行宣告該相依。
 
 契約測試
 --------

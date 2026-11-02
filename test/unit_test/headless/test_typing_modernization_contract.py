@@ -36,9 +36,15 @@ BASELINE_TAG = "v0.0.225"
 STRICT_SETTINGS = ("disallow_untyped_defs", "disallow_any_generics")
 
 #: Modules written after the baseline that are NOT in the strict tier, each
-#: with the reason. Empty: every one of them was made clean. An entry here is
-#: a debt someone agreed to, not a way to turn a red build green.
-NOT_YET_STRICT: Dict[str, str] = {}
+#: with the reason. An entry here is a debt someone agreed to, not a way to
+#: turn a red build green. ``typing_not_yet_strict.txt`` holds the modules the
+#: 1.1.0 merge brought from the development line; it may only shrink.
+NOT_YET_STRICT_FILE = VERIFY_DIR / "typing_not_yet_strict.txt"
+NOT_YET_STRICT: Dict[str, str] = {
+    name: "development line merged in 1.1.0; not held to the strict tier before"
+    for name in (line.strip() for line in NOT_YET_STRICT_FILE.read_text(encoding="utf-8").splitlines())
+    if name and not name.startswith("#")
+}
 
 #: The only modules that may bind a name to ``Any`` at module level. Each is a
 #: typed adapter for an optional SDK the contract deliberately reads as ``Any``

@@ -23,8 +23,13 @@ from je_auto_control.gui.remote_desktop._helpers import (
 from je_auto_control.gui.remote_desktop.remote_screen_window import (
     RemoteScreenWindow,
 )
-from je_auto_control.gui.task_controller import TaskHandle
+from je_auto_control.gui.tab_task_controller import TaskHandle
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
+from je_auto_control.utils.rbac.deferred import DeferredAuthorization
+from je_auto_control.utils.remote_desktop.clipboard_delivery import (
+    ClipboardDelivery, ClipboardReceiver, apply_clipboard,
+)
 from je_auto_control.utils.remote_desktop import (
     FileReceiver, RemoteDesktopViewer, WebSocketDesktopViewer, default_download_dir,
 )
@@ -45,7 +50,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
     _frame_signal = Signal(bytes)
     _error_signal = Signal(str)
     _audio_signal = Signal(bytes)
-    _clipboard_signal = Signal(str, object)
+    _clipboard_signal = Signal(object)
     _file_progress_signal = Signal(str, int, int)
     _file_complete_signal = Signal(str, bool, str, str)
     # Another owner took the viewer slot; emitted from that owner's thread.
@@ -93,6 +98,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._disconnect_btn: Optional[QPushButton] = None
         self._action_row: Optional[QWidget] = None
         self._connected = False
+        self._clipboard_authority: Optional[DeferredAuthorization] = None
+        # The clipboard authority of the connect in progress, adopted once it answers.
+        self._connect_authority: Optional[DeferredAuthorization] = None
         # The newest frame that arrived before the screen window existed. The
         # host sends a screen that does not change exactly once, and that frame
         # can be delivered ahead of the connect's own result: dropped, the
@@ -254,6 +262,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
                       else RemoteDesktopViewer)
         self._cancel_pending_connect()
         registry.evict(SLOT_VIEWER, by=self._owner)
+        authority = DeferredAuthorization.capture()
+        clipboard_receiver = ClipboardReceiver(authority, self._clipboard_signal.emit)
+        viewer: RemoteDesktopViewer
         self._early_frame = None            # a frame of the session being replaced
         try:
             viewer = viewer_cls(
@@ -261,8 +272,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
                 on_frame=self._frame_signal.emit,
                 on_error=lambda exc: self._error_signal.emit(str(exc)),
                 on_audio=self._audio_signal.emit,
-                on_clipboard=lambda kind, data:
-                    self._clipboard_signal.emit(kind, data),
+                on_clipboard=clipboard_receiver,
                 expected_host_id=expected_id,
                 ssl_context=ssl_context,
             )
@@ -275,6 +285,8 @@ class _ViewerPanel(TranslatableMixin, QWidget):
                     ),
                 base_dir=default_download_dir(),
             ))
+            clipboard_receiver.bind(viewer)
+            self._connect_authority = authority
         except (OSError, RuntimeError, ValueError, AutoControlException) as error:
             QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
             return
@@ -304,6 +316,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
     def _on_connected(self, viewer) -> None:
         """GUI thread: the viewer this panel asked for is connected."""
         registry.adopt(SLOT_VIEWER, viewer, self._owner, displaced_notifier(self))
+        self._clipboard_authority, self._connect_authority = self._connect_authority, None
         self._connected = True
         self._start_audio_player_if_requested()
         # AnyDesk-style: open the live screen in its own window so the
@@ -366,6 +379,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._status.setText(_t("rd_viewer_displaced"))
 
     def _disconnect(self) -> None:
+        self._clipboard_authority = None
         self._cancel_pending_connect()
         registry.release(SLOT_VIEWER, self._owner)
         self._stop_audio_player()
@@ -452,19 +466,19 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         except (OSError, RuntimeError):
             pass
 
-    def _on_clipboard_main(self, kind: str, data) -> None:
-        from je_auto_control.utils.clipboard.clipboard import (
-            set_clipboard, set_clipboard_image,
-        )
+    def _on_clipboard_main(self, delivery: ClipboardDelivery) -> None:
         try:
-            if kind == "text":
-                set_clipboard(data)
-            elif kind == "image":
-                set_clipboard_image(data)
-        except (OSError, RuntimeError) as error:
+            if not delivery.dispatch(self._clipboard_peer_active, apply_clipboard):
+                return
+        except (OSError, RuntimeError, AutoControlException) as error:
+            raise_caused_run_interruption(error)
             self._status.setText(f"{_t('rd_viewer_error')}: {error}")
             return
         self._status.setText(_t("rd_viewer_clipboard_received"))
+
+    def _clipboard_peer_active(self, peer: object) -> bool:
+        """Queued clipboard metadata never adopts another panel's or a replacement viewer's connection."""
+        return self._own_viewer() is peer and bool(getattr(peer, 'connected', False))
 
     def _on_file_progress_main(self, transfer_id: str,
                                bytes_done: int, total: int) -> None:
@@ -515,17 +529,26 @@ class _ViewerPanel(TranslatableMixin, QWidget):
 
     def _push_clipboard_to_host(self) -> None:
         viewer = self._own_viewer()
-        if viewer is None or not viewer.connected:
+        authority = self._clipboard_authority
+        if viewer is None or authority is None or not viewer.connected:
             QMessageBox.warning(self, _t("rd_viewer_push_clipboard"),
                                 _t("rd_viewer_status_idle"))
             return
-        text = QGuiApplication.clipboard().text()
-        if not text:
-            self._status.setText(_t("rd_clipboard_empty"))
-            return
         try:
-            viewer.send_clipboard_text(text)
-        except OSError as error:
+            with authority.scope():
+                if not self._clipboard_peer_active(viewer):
+                    return
+                text = QGuiApplication.clipboard().text()
+            if not text:
+                self._status.setText(_t("rd_clipboard_empty"))
+                return
+            delivery = ClipboardDelivery(viewer, 'text', text, authority)
+            sent = delivery.dispatch(self._clipboard_peer_active,
+                                     lambda _kind, value: viewer.send_clipboard_text(value))
+            if not sent:
+                return
+        except (OSError, RuntimeError, AutoControlException) as error:
+            raise_caused_run_interruption(error)
             QMessageBox.warning(self, _t("rd_viewer_push_clipboard"),
                                 str(error))
             return

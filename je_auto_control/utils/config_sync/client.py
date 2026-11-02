@@ -1,49 +1,216 @@
-"""HTTP client for the config-sync bucket.
-
-The bucket model and the error types live in :mod:`.bucket` and the merges in
-:mod:`.merge`; every name that used to be defined here is still importable
-from here.
-"""
+"""HTTP client + deterministic merge for the config-sync bucket."""
 from __future__ import annotations
 
 import json
+import math
 import time
 import urllib.parse
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from uuid import uuid4
+from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, List, Mapping, NoReturn, Optional, Tuple
 
-from je_auto_control.utils.config_sync.bucket import (
-    TOMBSTONE_RETENTION_S, WIRE_VERSION, ConfigBucket, ConfigSyncConflict, ConfigSyncError,
-    FullResyncRequired, OperationMismatchError, is_tombstone, new_operation_id,
-)
-from je_auto_control.utils.config_sync.merge import (
-    ConflictRecord, apply_operation, awaits_ack, batch_operation_id, merge_buckets, settle,
-)
-from je_auto_control.utils.config_sync.versions import TOMBSTONE_HOLD_S
 from je_auto_control.utils.exception.exceptions import AutoControlException
-
-if TYPE_CHECKING:
-    from je_auto_control.utils.config_sync.versions import SyncConflict, SyncOperation
+from je_auto_control.utils.config_sync.contract import (
+    ConfigRevisionConflict, ConfigSyncError, _encoded, _identifier, _revision, _version_two,
+)
 
 _DEFAULT_TIMEOUT_S = 5.0
-#: How often :meth:`ConfigSyncClient.sync` fetches, merges and pushes again
-#: after losing a race to another machine before it gives up.
-DEFAULT_SYNC_ATTEMPTS = 4
+
+#: How long a deletion is remembered. A tombstone purged before every machine
+#: has synced lets a machine that still holds the entry bring it back, so this
+#: bounds how long a machine may stay offline without that happening.
+TOMBSTONE_RETENTION_S = 30 * 24 * 3600.0
+
+
+def is_tombstone(entry: Mapping[str, Any]) -> bool:
+    """Whether ``entry`` records a deletion rather than a value."""
+    return entry.get("deleted") is True
 
 
 @dataclass
-class SyncResult:
-    """What :meth:`ConfigSyncClient.push_operations` left on the server.
+class ConflictRecord:
+    """One entry that lost a last-modified race during the merge."""
+    section: str
+    entry_id: str
+    dropped: Dict[str, Any]
+    kept: Dict[str, Any]
 
-    ``bucket`` is the server's state including this device's operations,
-    ``revision`` its committed revision, ``conflicts`` the keys where an
-    operation met a concurrent change (both kept), and ``pushed`` whether a
-    write was needed at all.
+
+@dataclass
+class ConfigBucket:
+    """JSON-shaped bucket persisted on the sync server.
+
+    Each section maps an opaque ``entry_id`` to a dict that must carry
+    a ``last_modified`` epoch timestamp. Unknown sections are passed
+    through untouched so callers can extend the schema without
+    touching the syncer.
+
+    A removed entry stays in ``sections`` as a tombstone
+    (``{"deleted": True, "last_modified": ...}``) so the deletion wins the
+    merge against an older copy on another machine instead of being undone
+    by it; read entries through :meth:`entries`, which leaves tombstones out.
     """
-    bucket: ConfigBucket
-    revision: int
-    conflicts: List["SyncConflict"] = field(default_factory=list)
-    pushed: bool = False
+    user_id: str
+    sections: Dict[str, Dict[str, Dict[str, Any]]] = field(
+        default_factory=dict,
+    )
+    revision: int = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, body: Mapping[str, Any]) -> "ConfigBucket":
+        if not isinstance(body, Mapping):
+            raise ConfigSyncError("bucket body must be a mapping")
+        if not isinstance(body.get("user_id"), str):
+            raise ConfigSyncError("bucket missing user_id")
+        sections = body.get("sections") or {}
+        if not isinstance(sections, Mapping):
+            raise ConfigSyncError("bucket sections must be a mapping")
+        # The server's reply is data, not trusted structure: a list where a
+        # section belongs or a non-numeric stamp raised AttributeError or
+        # ValueError here or later in merge_buckets.
+        return cls(
+            user_id=body["user_id"],
+            sections={str(name): _section(name, sec) for name, sec in sections.items()},
+            revision=int(_finite(body.get("revision", 0), "revision")),
+        )
+
+    def upsert(self, section: str, entry_id: str,
+               entry: Mapping[str, Any]) -> None:
+        """Add or replace an entry, stamping it with the current time.
+
+        A ``last_modified`` already in ``entry`` is kept, so drop it when
+        editing an entry read back from a bucket -- otherwise the edit keeps
+        its old stamp and loses the merge to any newer remote copy.
+        """
+        body = dict(entry)
+        body["last_modified"] = float(body.get("last_modified", time.time()))
+        self.sections.setdefault(section, {})[entry_id] = body
+
+    def remove(self, section: str, entry_id: str) -> bool:
+        """Replace a live entry with a tombstone; False when there was none.
+
+        Dropping the entry outright let the next sync bring it straight back
+        from the server, where it still existed. The tombstone is stamped no
+        earlier than the entry it deletes, so a clock running behind cannot
+        make the deletion lose to the value it removed.
+        """
+        entry = self.sections.get(section, {}).get(entry_id)
+        if entry is None or is_tombstone(entry):
+            return False
+        stamp = max(time.time(), float(entry.get("last_modified", 0)))
+        self.sections[section][entry_id] = {"deleted": True, "last_modified": stamp}
+        return True
+
+    def entries(self, section: str) -> Dict[str, Dict[str, Any]]:
+        """The live entries of ``section``: everything except tombstones."""
+        return {entry_id: entry for entry_id, entry in self.sections.get(section, {}).items()
+                if not is_tombstone(entry)}
+
+
+def _finite(value: Any, what: str) -> float:
+    """``value`` as a finite float, or :class:`ConfigSyncError`."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as error:
+        raise ConfigSyncError(f"{what} must be a number, got {value!r}") from error
+    if not math.isfinite(number):
+        raise ConfigSyncError(f"{what} must be finite, got {value!r}")
+    return number
+
+
+def _section(name: Any, section: Any) -> Dict[str, Dict[str, Any]]:
+    if not isinstance(section, Mapping):
+        raise ConfigSyncError(f"section {name!r} must be a mapping")
+    entries: Dict[str, Dict[str, Any]] = {}
+    for entry_id, entry in section.items():
+        if not isinstance(entry, Mapping):
+            raise ConfigSyncError(f"entry {name!r}/{entry_id!r} must be a mapping")
+        entries[str(entry_id)] = dict(entry)
+        _finite(entry.get("last_modified", 0), f"{name}/{entry_id} last_modified")
+        if not isinstance(entry.get("deleted", False), bool):
+            raise ConfigSyncError(f"entry {name!r}/{entry_id!r} deleted must be a boolean")
+    return entries
+
+
+def merge_buckets(local: ConfigBucket,
+                  remote: ConfigBucket,
+                  *, now: Optional[float] = None,
+                  tombstone_retention_s: float = TOMBSTONE_RETENTION_S,
+                  ) -> Tuple[ConfigBucket, List[ConflictRecord]]:
+    """Last-write-wins merge across every section. Returns merged + conflicts.
+
+    Tombstones take part like any other entry, so a deletion newer than a
+    remote copy removes it and an edit newer than a deletion restores it.
+    Tombstones older than ``tombstone_retention_s`` (measured from ``now``,
+    default the current time) are left out of the result.
+    """
+    if local.user_id != remote.user_id:
+        raise ConfigSyncError(
+            f"user_id mismatch: local={local.user_id!r} remote={remote.user_id!r}",
+        )
+    merged = ConfigBucket(user_id=local.user_id)
+    conflicts: List[ConflictRecord] = []
+    sections = set(local.sections) | set(remote.sections)
+    for name in sections:
+        merged_section: Dict[str, Dict[str, Any]] = {}
+        local_sec = local.sections.get(name, {})
+        remote_sec = remote.sections.get(name, {})
+        ids = set(local_sec) | set(remote_sec)
+        for entry_id in ids:
+            local_entry = local_sec.get(entry_id)
+            remote_entry = remote_sec.get(entry_id)
+            if local_entry is None:
+                if remote_entry is not None:
+                    merged_section[entry_id] = remote_entry
+                continue
+            if remote_entry is None:
+                merged_section[entry_id] = local_entry
+                continue
+            kept, dropped = _winner(local_entry, remote_entry)
+            merged_section[entry_id] = kept
+            if dropped is not None:
+                conflicts.append(ConflictRecord(
+                    section=name, entry_id=entry_id, dropped=dropped, kept=kept,
+                ))
+        merged.sections[name] = _without_expired(
+            merged_section, (time.time() if now is None else now) - tombstone_retention_s)
+    merged.revision = max(local.revision, remote.revision) + 1
+    return merged, conflicts
+
+
+def _winner(local_entry: Dict[str, Any], remote_entry: Dict[str, Any],
+            ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+    """The entry that wins and the one it beat (``None`` when they are equal).
+
+    The later ``last_modified`` wins. At a tie a deletion wins -- ``delete``
+    stamps its tombstone no earlier than the entry it removes -- and then the
+    larger canonical JSON, so both sides pick the same entry: "local wins"
+    had two clients each push their own copy on every sync, never agreeing
+    and never reporting the conflict.
+    """
+    local_ts = float(local_entry.get("last_modified", 0))
+    remote_ts = float(remote_entry.get("last_modified", 0))
+    if local_ts != remote_ts:
+        if remote_ts > local_ts:
+            return remote_entry, local_entry
+        return local_entry, remote_entry
+    if local_entry == remote_entry:
+        return local_entry, None
+    loser, winner = sorted((local_entry, remote_entry), key=_tie_rank)
+    return winner, loser
+
+
+def _tie_rank(entry: Dict[str, Any]) -> Tuple[bool, str]:
+    return is_tombstone(entry), json.dumps(entry, sort_keys=True, default=str)
+
+
+def _without_expired(section: Dict[str, Dict[str, Any]],
+                     cutoff: float) -> Dict[str, Dict[str, Any]]:
+    return {entry_id: entry for entry_id, entry in section.items()
+            if not (is_tombstone(entry) and float(entry.get("last_modified", 0)) < cutoff)}
 
 
 class ConfigSyncClient:
@@ -51,18 +218,12 @@ class ConfigSyncClient:
 
     Methods are intentionally small and synchronous — the GUI wraps
     them in QThread workers when wiring up periodic sync.
-
-    ``tombstone_hold_s`` is how long a deletion every listed device has
-    acknowledged is still kept in the bucket this client commits (default
-    :data:`~je_auto_control.utils.config_sync.versions.TOMBSTONE_HOLD_S`,
-    thirty days), so a machine that has not synced yet still meets it.
     """
 
     def __init__(self, server_url: str, *,
                  user_id: str, secret: Optional[str] = None,
                  timeout_s: float = _DEFAULT_TIMEOUT_S,
-                 device_id: Optional[str] = None,
-                 tombstone_hold_s: float = TOMBSTONE_HOLD_S) -> None:
+                 legacy_writes: bool = False) -> None:
         if not server_url:
             raise ConfigSyncError("server_url is required")
         if not user_id:
@@ -71,40 +232,17 @@ class ConfigSyncClient:
         self._user_id = user_id
         self._secret = secret
         self._timeout = float(timeout_s)
-        self._device_id = device_id or None
-        self._tombstone_hold_s = max(0.0, float(tombstone_hold_s))
-
-    @property
-    def device_id(self) -> str:
-        """The device :meth:`sync` announces: the one given, else this machine's.
-
-        The default is read (and on a machine's very first use created) when
-        it is first needed, not when the client is built.
-        """
-        if self._device_id is None:
-            from je_auto_control.utils.config_sync import device
-            self._device_id = device.default_device_id()
-        return self._device_id
-
-    @property
-    def user_id(self) -> str:
-        """The account this client syncs."""
-        return self._user_id
-
-    @property
-    def server_url(self) -> str:
-        """The server this client talks to, without a trailing slash."""
-        return self._server_url
-
-    @property
-    def timeout_s(self) -> float:
-        """Seconds this client waits for one request."""
-        return self._timeout
+        self._legacy_writes = legacy_writes
 
     def _endpoint(self, suffix: str = "") -> str:
         encoded = urllib.parse.quote(self._user_id, safe="")
         path = f"/config/{encoded}{suffix}"
         return f"{self._server_url}{path}"
+
+    def _request_endpoint(self, method: str) -> str:
+        """Use a distinct conditional-write route that an old blind-write server cannot accept."""
+        suffix = "/commit" if method == "PUT" and not self._legacy_writes else ""
+        return self._endpoint(suffix)
 
     def _request(self, method: str, *,
                  body: Optional[Mapping[str, Any]] = None,
@@ -115,7 +253,7 @@ class ConfigSyncClient:
             headers["X-Signaling-Secret"] = self._secret
         data = json.dumps(body).encode("utf-8") if body is not None else None
         try:
-            call = build_call(self._endpoint(), method=method, headers=headers,
+            call = build_call(self._request_endpoint(method), method=method, headers=headers,
                               data=data, timeout=self._timeout)
             # Through http_client for the egress policy and the body cap, and
             # without following redirects: urlopen carried X-Signaling-Secret
@@ -128,11 +266,7 @@ class ConfigSyncClient:
         if status == 404:
             return None
         if status == 409:
-            raise _refusal(method, response.get("text"), body)
-        if status == 428:
-            raise ConfigSyncError(
-                f"config sync {method} returned HTTP 428: the server only accepts "
-                "revision-checked (version 2) writes")
+            self._conflict(response["text"])
         if not 200 <= status < 300:
             raise ConfigSyncError(f"config sync {method} returned HTTP {status}")
         if not response.get("text"):
@@ -142,6 +276,9 @@ class ConfigSyncClient:
         except (json.JSONDecodeError, RecursionError) as error:
             raise ConfigSyncError("config sync: invalid JSON reply") from error
 
+    def _conflict(self, text: str) -> NoReturn:
+        _raise_conflict(text)
+
     def fetch(self) -> Optional[ConfigBucket]:
         """GET the bucket from the server, or ``None`` when none exists."""
         body = self._request("GET")
@@ -150,190 +287,65 @@ class ConfigSyncClient:
         return ConfigBucket.from_dict(body)
 
     def push(self, bucket: ConfigBucket, *, base_revision: Optional[int] = None,
-             operation_id: Optional[str] = None) -> int:
-        """PUT the bucket if the server is still at ``base_revision``.
+             operation_id: Optional[str] = None) -> Optional[int]:
+        """Commit conditionally and return the server revision; explicit legacy mode returns None.
 
-        ``base_revision`` defaults to ``bucket.revision`` -- for a bucket
-        that came from :meth:`fetch` that is the revision it was read at;
-        ``0`` means "there is no bucket yet". Returns the committed revision
-        and stores it in ``bucket.revision``. Raises
-        :class:`ConfigSyncConflict` when another machine pushed in between;
-        nothing is overwritten. Pass the same ``operation_id`` when repeating
-        a push whose reply never arrived: the server answers with the
-        revision the first attempt produced instead of a conflict. Reusing
-        an id for a different bucket or base revision raises
-        :class:`OperationMismatchError`.
+        Reuse operation_id and the identical request when retrying an uncertain
+        network result. Without an explicit ID each call creates a new operation.
+        A 409 propagates for caller-directed refetch rather than a blind overwrite.
         """
         if bucket.user_id != self._user_id:
             raise ConfigSyncError(
                 f"bucket user_id={bucket.user_id!r} mismatches client user_id"
                 f"={self._user_id!r}",
             )
-        base = bucket.revision if base_revision is None else int(base_revision)
-        reply = self._request("PUT", body={
-            "version": WIRE_VERSION, "base_revision": base,
-            "operation_id": operation_id or new_operation_id(),
-            "bucket": bucket.to_dict(),
-        })
-        revision = (reply or {}).get("revision")
-        if isinstance(revision, bool) or not isinstance(revision, int):
-            # A server from before the version-2 format stores any JSON
-            # object and answers {"ok": true}: it did not check anything.
-            raise ConfigSyncError(
-                "config sync PUT: the server did not report a committed revision; "
-                "it predates revision-checked writes and must be upgraded")
-        bucket.revision = revision
-        return revision
+        if self._legacy_writes:
+            if base_revision is not None or operation_id is not None:
+                raise ConfigSyncError("conditional commit arguments cannot be used with legacy writes")
+            self._request("PUT", body=bucket.to_dict())
+            return None
+        base = bucket.revision if base_revision is None else base_revision
+        identity = uuid4().hex if operation_id is None else operation_id
+        _identifier(identity, "operation_id")
+        _revision(base)
+        _revision(bucket.revision)
+        _encoded(bucket.to_dict())
+        ConfigBucket.from_dict(bucket.to_dict())
+        reply = self._request("PUT", body={"version": 2, "base_revision": base,
+                                          "operation_id": identity, "bucket": bucket.to_dict()})
+        return _confirm_commit(reply, base)
 
-    def sync(self, local: ConfigBucket, *, max_attempts: int = DEFAULT_SYNC_ATTEMPTS,
-             now: Optional[float] = None) -> Tuple[ConfigBucket, List[ConflictRecord]]:
-        """Bidirectional sync: fetch, merge, push on top of what was fetched.
-
-        When another machine pushes between the fetch and the push the
-        server refuses the write, and this fetches and merges again -- up to
-        ``max_attempts`` times, then :class:`ConfigSyncConflict`. The
-        returned bucket's ``revision`` is the one the server committed.
-
-        The push records :attr:`device_id` under the bucket's ``peers`` as
-        having merged that revision, exactly as :meth:`push_operations`
-        does: deletions wait for this device before they are forgotten, and
-        the ones every device has seen are dropped. Raises
-        :class:`FullResyncRequired` when the group has retired this device.
-        """
-        device = self.device_id
-        stamp = time.time() if now is None else float(now)
-        for _attempt in range(max(1, int(max_attempts))):
-            remote = self.fetch() or ConfigBucket(user_id=self._user_id)
-            self._require_active(remote, device)
-            merged, conflicts = merge_buckets(local, remote)
-            settle(merged, device, remote.revision + 1, stamp, None, self._tombstone_hold_s)
-            try:
-                self.push(merged, base_revision=remote.revision)
-            except ConfigSyncConflict:
-                continue
-            return merged, conflicts
-        raise ConfigSyncConflict(
-            f"config sync: still behind the server after {max_attempts} attempts")
-
-    def push_operations(self, operations: Sequence["SyncOperation"], *, device_id: str,
-                        max_attempts: int = DEFAULT_SYNC_ATTEMPTS, now: Optional[float] = None,
-                        max_offline_s: Optional[float] = None) -> SyncResult:
-        """Apply this device's pending changes on top of the server's state.
-
-        Fetches the bucket, merges each operation into it by causality
-        (a concurrent change to the same key is kept beside it as a
-        conflict), records that ``device_id`` has merged the result, and
-        commits against the fetched revision -- fetching again when another
-        device got there first, up to ``max_attempts`` times. Applying the
-        same operations twice changes nothing, so a batch can be resent
-        after an uncertain failure. With no operations this pushes only
-        when the bucket lists this device and holds a deletion it has not
-        acknowledged; otherwise nothing is committed and ``pushed`` is
-        false. In particular a device the bucket does not list yet is not
-        recorded for merely reading it: it joins ``peers`` with the first
-        change it commits.
-
-        Raises :class:`FullResyncRequired` when the group has retired this
-        device. ``max_offline_s`` retires peers not seen for that long.
-        """
-        if not device_id:
-            raise ConfigSyncError("device_id is required")
-        stamp = time.time() if now is None else float(now)
-        for _attempt in range(max(1, int(max_attempts))):
-            remote = self.fetch() or ConfigBucket(user_id=self._user_id)
-            self._require_active(remote, device_id)
-            merged = ConfigBucket.from_dict(remote.to_dict())
-            conflicts: List["SyncConflict"] = []
-            changed = [apply_operation(merged, operation, conflicts) for operation in operations]
-            # reason (suppression below): every operation must be applied; any() over a generator stops early
-            if not any(changed) and not awaits_ack(remote, device_id):  # NOSONAR python:S7492
-                return SyncResult(bucket=remote, revision=remote.revision, conflicts=conflicts)
-            settle(merged, device_id, remote.revision + 1, stamp, max_offline_s,
-                   self._tombstone_hold_s)
-            try:
-                revision = self.push(merged, base_revision=remote.revision,
-                                     operation_id=batch_operation_id(remote.revision, operations))
-            except ConfigSyncConflict:
-                continue
-            return SyncResult(bucket=merged, revision=revision, conflicts=conflicts, pushed=True)
-        raise ConfigSyncConflict(
-            f"config sync: still behind the server after {max_attempts} attempts")
-
-    def _require_active(self, remote: ConfigBucket, device_id: str) -> None:
-        peer = remote.peer_states().get(device_id)
-        if peer is not None and peer.retired:
-            raise FullResyncRequired(
-                f"device {device_id!r} was retired from the bucket of {self._user_id!r}; "
-                "call full_resync() and replace the local state")
-
-    def retire_peer(self, device_id: str, *, max_attempts: int = DEFAULT_SYNC_ATTEMPTS) -> int:
-        """Stop waiting for ``device_id``; returns the committed revision.
-
-        Tombstones no longer wait for a retired device, and it is refused
-        with :class:`FullResyncRequired` until it does a full resync.
-        """
-        from je_auto_control.utils.config_sync.versions import PeerState
-        for _attempt in range(max(1, int(max_attempts))):
-            remote = self.fetch() or ConfigBucket(user_id=self._user_id)
-            known = remote.peer_states().get(device_id) or PeerState(device_id)
-            remote.peers[device_id] = PeerState(
-                device_id, known.acked_revision, known.last_seen, retired=True).to_dict()
-            try:
-                return self.push(remote)
-            except ConfigSyncConflict:
-                continue
-        raise ConfigSyncConflict(
-            f"config sync: still behind the server after {max_attempts} attempts")
-
-    def full_resync(self, *, device_id: str, max_attempts: int = DEFAULT_SYNC_ATTEMPTS,
-                    now: Optional[float] = None) -> ConfigBucket:
-        """Re-admit ``device_id`` and return the server's state to adopt.
-
-        The caller must replace its local state with the returned bucket and
-        discard its pending operations -- they were made against state the
-        group has moved past -- rather than merge the two.
-        """
-        from je_auto_control.utils.config_sync.versions import PeerState
-        stamp = time.time() if now is None else float(now)
-        for _attempt in range(max(1, int(max_attempts))):
-            remote = self.fetch() or ConfigBucket(user_id=self._user_id)
-            remote.peers[device_id] = PeerState(
-                device_id, acked_revision=remote.revision + 1, last_seen=stamp).to_dict()
-            try:
-                self.push(remote)
-            except ConfigSyncConflict:
-                continue
-            return remote
-        raise ConfigSyncConflict(
-            f"config sync: still behind the server after {max_attempts} attempts")
+    def sync(self, local: ConfigBucket
+             ) -> Tuple[ConfigBucket, List[ConflictRecord]]:
+        """One-shot bidirectional sync: fetch, merge, push the result."""
+        remote = self.fetch() or ConfigBucket(user_id=self._user_id)
+        merged, conflicts = merge_buckets(local, remote)
+        committed = self.push(merged) if self._legacy_writes else self.push(merged, base_revision=remote.revision)
+        if committed is not None:
+            merged.revision = committed
+        return merged, conflicts
 
 
-#: ``code`` of the 409 that refuses an operation id reused for other content.
-_OPERATION_MISMATCH = "operation_mismatch"
-
-
-def _refusal(method: str, text: Any, sent: Optional[Mapping[str, Any]]) -> ConfigSyncError:
-    """The error a 409 reply stands for: a stale revision, or a reused operation id."""
+def _raise_conflict(text: str) -> NoReturn:
     try:
-        reply = json.loads(text or "")
-    except (json.JSONDecodeError, RecursionError, TypeError):
-        reply = None
-    reply = reply if isinstance(reply, dict) else {}
-    found = reply.get("revision")
-    revision = found if isinstance(found, int) and not isinstance(found, bool) else None
-    if reply.get("code") == _OPERATION_MISMATCH:
-        operation_id = str((sent or {}).get("operation_id") or "")
-        return OperationMismatchError(
-            f"config sync {method}: operation id {operation_id!r} was already used for a "
-            "different write; nothing was written", operation_id=operation_id, revision=revision)
-    return ConfigSyncConflict(
-        f"config sync {method}: the server is at another revision", revision)
+        revision = json.loads(text)["detail"]["revision"]
+        if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
+            raise ValueError("invalid conflict revision")
+    except (KeyError, TypeError, ValueError, RecursionError):
+        raise ConfigSyncError("config sync: invalid conflict reply") from None
+    raise ConfigRevisionConflict(revision)
+
+
+def _confirm_commit(reply: Optional[Mapping[str, object]], base: int) -> int:
+    if not isinstance(reply, Mapping) or not _version_two(reply.get("version")):
+        raise ConfigSyncError("server did not confirm a version-two conditional commit")
+    revision = reply.get("revision")
+    if isinstance(revision, bool) or not isinstance(revision, int) or revision != base + 1:
+        raise ConfigSyncError("server returned an invalid committed revision")
+    return revision
 
 
 __all__ = [
-    "ConfigBucket", "ConflictRecord", "ConfigSyncClient", "ConfigSyncConflict",
-    "ConfigSyncError", "DEFAULT_SYNC_ATTEMPTS", "FullResyncRequired",
-    "OperationMismatchError", "SyncResult",
-    "TOMBSTONE_RETENTION_S", "WIRE_VERSION", "batch_operation_id",
-    "is_tombstone", "merge_buckets", "new_operation_id",
+    "ConfigBucket", "ConflictRecord", "ConfigSyncClient",
+    "ConfigSyncError", "TOMBSTONE_RETENTION_S", "is_tombstone", "merge_buckets",
 ]

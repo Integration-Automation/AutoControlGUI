@@ -17,6 +17,7 @@ their parameters so the other surfaces cover them.
 from __future__ import annotations
 
 import inspect
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Iterator, List, Mapping, Optional, Tuple
@@ -179,13 +180,55 @@ def _find_by_description(session: DeviceSession, description: str,
     return _located(session, session.capture().locate_description(description, model=model), tap)
 
 
+def _heal_on_frame(frame: Any, template_path: Optional[str], description: Optional[str],
+                   detect_threshold: float, model: Optional[str]) -> Any:
+    """Template first, the VLM on a miss, both searched in the device's own frame.
+
+    The desktop self-heal locator searches the host's screen, so a device
+    session cannot hand it a frame; this is the same order against the frame.
+    """
+    from je_auto_control.utils.exception.exceptions import (
+        AutoControlException, ImageNotFoundException,
+    )
+    from je_auto_control.utils.self_healing.locator import (
+        METHOD_IMAGE, METHOD_MISS, METHOD_VLM, HealOutcome,
+    )
+    if not template_path and not description:
+        raise ValueError("self_heal needs template_path, description or both")
+    started = time.monotonic()
+    image_error: Optional[str] = "no template_path supplied"
+    if template_path:
+        try:
+            x, y = frame.locate_image(template_path, float(detect_threshold))
+        except ImageNotFoundException as error:
+            image_error = str(error)
+        else:
+            return HealOutcome(found=True, coordinates=(int(x), int(y)), method=METHOD_IMAGE,
+                               description=description, template_path=template_path,
+                               duration_ms=(time.monotonic() - started) * 1000.0)
+    vlm_error: Optional[str] = "no description supplied"
+    if description:
+        try:
+            coords = frame.locate_description(description, model=model)
+        except (AutoControlException, OSError, RuntimeError, ValueError) as error:
+            vlm_error = repr(error)
+        else:
+            if coords is not None:
+                return HealOutcome(found=True, coordinates=(int(coords[0]), int(coords[1])),
+                                   method=METHOD_VLM, description=description,
+                                   template_path=template_path, image_error=image_error,
+                                   duration_ms=(time.monotonic() - started) * 1000.0)
+            vlm_error = "vlm returned no match"
+    return HealOutcome(found=False, coordinates=None, method=METHOD_MISS, description=description,
+                       template_path=template_path, image_error=image_error, vlm_error=vlm_error,
+                       duration_ms=(time.monotonic() - started) * 1000.0)
+
+
 def _self_heal(session: DeviceSession, template_path: Optional[str] = None,
                description: Optional[str] = None, detect_threshold: float = 0.9,
                model: Optional[str] = None, tap: bool = False) -> Dict[str, Any]:
-    from je_auto_control.utils.self_healing.locator import self_heal_locate
-    outcome = self_heal_locate(
-        template_path=template_path, description=description,
-        detect_threshold=detect_threshold, model=model, frame=session.capture())
+    outcome = _heal_on_frame(session.capture(), template_path, description,
+                             detect_threshold, model)
     if tap and outcome.found and outcome.coordinates is not None:
         session.perform(Tap(*outcome.coordinates))
     return outcome.to_dict()

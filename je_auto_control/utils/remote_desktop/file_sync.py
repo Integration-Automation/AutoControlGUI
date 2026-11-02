@@ -1,385 +1,379 @@
-"""Polling-based folder mirror over the existing files DataChannel.
-
-Each :class:`FolderSyncEngine` watches a local directory; on each tick it
-diffs the current filesystem state against its snapshot and pushes any
-new / modified files to the peer using a sender callable (typically
-``WebRTCDesktopViewer.send_file`` or ``WebRTCDesktopHost.push_file``).
-Deletions and renames aren't propagated — sync is "additive only" so
-local edits never silently destroy remote work. The receiving side just
-treats the pushed files like any other file transfer (saved into the
-inbox dir).
-
-Polling interval default 3s — enough for most edit/save workflows
-without burning CPU; bump it lower for tighter sync.
-
-**A file still being written is not pushed.** A changed file goes out only
-once its size and modification time are the same on two polls in a row, so
-a large copy or a slow save is sent whole, one poll later, instead of as a
-truncated first half. Names that mark a file as in progress (``*.part``,
-``*.partial``, ``*.tmp``, ``*.crdownload`` -- which covers the
-``.<name>.<id>.part`` files the receivers here write) are never mirrored: a
-program that writes under such a name and renames when it is done is picked
-up complete.
-
-**A file that arrived from the peer is not pushed back.** When both sides
-mirror the same folder, a received file is new on disk and would be sent
-straight back, and back again from the other side. The receivers in this
-package (:class:`~je_auto_control.utils.remote_desktop.webrtc_files.FileTransferReceiver`
-and :class:`~je_auto_control.utils.remote_desktop.file_transfer.FileReceiver`)
-call :func:`note_incoming` just before they rename a finished file into
-place; every live engine whose folder holds it records the content's hash
-through :meth:`FolderSyncEngine.note_received` and leaves the file alone
-until it changes locally.
-
-**A change is anything that differs from what was last recorded.** The engine
-remembers each file's modification time and size and pushes a file whose
-either one differs -- including a file put back with an *older* time. A time
-alone cannot tell two writes in one clock tick apart, so a file recorded
-within :data:`RACY_WINDOW_S` of its own last write is also remembered by
-content hash and compared by content until that window has passed; an older
-file is never read to decide whether it changed.
-"""
+"""Polling additive folder mirror using content digests, explicit receive receipts and owned stopped workers."""
 from __future__ import annotations
 
-import hashlib
+from _thread import LockType
+from asyncio import CancelledError as AsyncCancelledError
+from concurrent.futures import CancelledError
+from contextlib import closing
+from dataclasses import dataclass, field
+from hashlib import sha256
+import os
+from os import fstat, stat_result
 import threading
-import time
-import weakref
 from pathlib import Path
-from typing import Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple
+from typing import BinaryIO, Callable, Generator, Optional, Protocol
 
+from je_auto_control.utils.exception.control_signals import OperationCancelledError, raise_caused_run_interruption
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-
+from je_auto_control.utils.remote_desktop.file_receipts import FileReceiveReceipt
 
 _DEFAULT_POLL_S = 3.0
-#: How many "this came from the peer" notes one engine keeps.
-_MAX_RECEIVED_NOTES = 4096
-#: Name endings that mark a file as still being written; never mirrored.
-IN_PROGRESS_SUFFIXES = (".part", ".partial", ".tmp", ".crdownload")
-
-#: A file recorded this soon after its last write is compared by content too:
-#: within one tick of the file system's clock (2 s on FAT, far less elsewhere)
-#: a second write leaves the modification time as it was.
-RACY_WINDOW_S = 2.0
-_RACY_WINDOW_NS = int(RACY_WINDOW_S * 1_000_000_000)
-
-_ENGINES: "weakref.WeakSet[FolderSyncEngine]" = weakref.WeakSet()
-_ENGINES_LOCK = threading.Lock()
 
 
-def _wall_ns() -> int:
-    """The wall clock in nanoseconds, the unit file times are compared in."""
-    return time.time_ns()
+class FolderSyncStateError(AutoControlException, RuntimeError):
+    """A folder baseline cannot be handed to another worker safely."""
 
 
-class _FileState(NamedTuple):
-    """What one scan saw of a file: its mtime, and (mtime ns, size) to compare."""
-    mtime: float
-    signature: Tuple[int, int]
+@dataclass(frozen=True)
+class FolderSyncCheckpoint:
+    """Immutable in-memory baseline for a retired worker; contains no file bytes or sender authority."""
+    watch_dir: Path
+    include_subdirs: bool
+    entries: tuple[tuple[str, str], ...]
+    baselined: bool
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.watch_dir, Path) or not self.watch_dir.is_absolute():
+            raise FolderSyncStateError('checkpoint requires an absolute watch path')
+        if not isinstance(self.include_subdirs, bool) or not isinstance(self.baselined, bool):
+            raise FolderSyncStateError('checkpoint flags must be booleans')
+        _validate_checkpoint_entries(self.entries, self.include_subdirs)
 
 
-class _Known(NamedTuple):
-    """What the engine last recorded of a file it considers in sync.
-
-    ``digest`` is set only while the file's time cannot tell a later write
-    apart from the recorded one (see :data:`RACY_WINDOW_S`).
-    """
-    signature: Tuple[int, int]
-    digest: Optional[str] = None
-
-
-def _is_racy(signature: Tuple[int, int], now_ns: int) -> bool:
-    """Whether a write made now could still carry this file's recorded time."""
-    return signature[0] + _RACY_WINDOW_NS >= now_ns
+def _validate_checkpoint_entries(entries: tuple[tuple[str, str], ...], include_subdirs: bool) -> None:
+    if not isinstance(entries, tuple) or not all(_checkpoint_entry(item) for item in entries):
+        raise FolderSyncStateError('checkpoint entries must contain relative names and SHA-256 digests')
+    if len(dict(entries)) != len(entries):
+        raise FolderSyncStateError('checkpoint contains duplicate paths')
+    if not include_subdirs and any('/' in name for name, _digest in entries):
+        raise FolderSyncStateError('checkpoint excludes subdirectories')
 
 
-def _file_digest(path: Path) -> Optional[str]:
-    """The SHA-256 of a file read in chunks; ``None`` when it cannot be read."""
-    digest = hashlib.sha256()
-    try:
-        with open(path, "rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-    except OSError:
-        return None
-    return digest.hexdigest()
+def _checkpoint_entry(item: object) -> bool:
+    if not isinstance(item, tuple) or len(item) != 2:
+        return False
+    name, digest = item
+    return (_checkpoint_name(name) and isinstance(digest, str) and len(digest) == 64
+            and all(char in '0123456789abcdef' for char in digest))
 
 
+def _checkpoint_name(name: object) -> bool:
+    if not isinstance(name, str) or not name or '\x00' in name:
+        return False
+    selected = Path(name)
+    if selected.anchor or selected.as_posix() != name:
+        return False
+    return all(part not in ('', '.', '..') for part in name.split('/'))
+
+
+@dataclass
+class _ContentState:
+    snapshot: dict[str, str] = field(default_factory=dict)
+    baselined: bool = False
+    received: set[str] = field(default_factory=set)
+    versions: dict[str, int] = field(default_factory=dict)
+    sequence: int = 0
+    lock: LockType = field(default_factory=threading.Lock)
+
+
+# pylint: disable-next=too-few-public-methods  # reason: polling needs only a cooperative stop check
+class _StopFlag(Protocol):
+    def is_set(self) -> bool:
+        """Whether the current polling operation must stop before another side effect."""
+
+
+@dataclass
+class _PollStop:
+    event: threading.Event
+    cancelled: Optional[Callable[[], bool]]
+
+    def is_set(self) -> bool:
+        """Combine owner cancellation with the owned run event."""
+        if self.event.is_set():
+            return True
+        if self.cancelled is not None and self.cancelled():
+            self.event.set()
+        return self.event.is_set()
+
+
+# pylint: disable-next=too-many-instance-attributes  # reason: watch options, worker ownership and locked content baseline
 class FolderSyncEngine:
-    """Mirror a local directory onto the peer side via a file-send callable.
+    """Mirror new or changed bytes through a synchronous sender; retry failures on the next tick.
 
-    ``sender(local_path, remote_name)`` should perform the actual transfer
-    (raise on failure). The engine retries on the next tick.
-
-    ``wait_until_stable`` (default on) holds a changed file back until two
-    polls in a row see the same size and modification time; turn it off to
-    push on first sight, as the engine did before. ``ignore_suffixes`` are
-    the name endings never mirrored (default :data:`IN_PROGRESS_SUFFIXES`).
+    Existing files establish a baseline on the first run; restarts retain pending/offline
+    edits. Deletions never propagate. Receiving transports
+    call record_received after publishing a file to prevent sending those bytes back.
+    A stopped but blocked sender remains owned; start cannot overlap it with a new run.
+    Retired workers can export an immutable checkpoint for an explicitly authorised
+    replacement sender watching the same path and recursion mode.
     """
 
-    def __init__(self, *, watch_dir: Path,
-                 sender: Callable[[str, str], None],
-                 poll_interval_s: float = _DEFAULT_POLL_S,
-                 include_subdirs: bool = False,
-                 wait_until_stable: bool = True,
-                 ignore_suffixes: Sequence[str] = IN_PROGRESS_SUFFIXES) -> None:
-        self._watch = Path(watch_dir)
+    def __init__(self, *, watch_dir: Path, sender: Callable[[str, str], None],
+                 poll_interval_s: float = _DEFAULT_POLL_S, include_subdirs: bool = False,
+                 cancelled: Optional[Callable[[], bool]] = None,
+                 checkpoint: Optional[FolderSyncCheckpoint] = None) -> None:
+        self._watch = Path(watch_dir).absolute()
         self._sender = sender
         self._interval = max(0.5, float(poll_interval_s))
         self._include_subdirs = bool(include_subdirs)
-        self._wait_until_stable = bool(wait_until_stable)
-        self._ignore_suffixes = tuple(suffix.lower() for suffix in ignore_suffixes)
-        self._snapshot: Dict[str, _Known] = {}  # rel_path -> what was last in sync
-        # rel_path -> what the last poll saw of a changed file not pushed yet
-        self._settling: Dict[str, Tuple[int, int]] = {}
-        self._received: Dict[str, str] = {}  # rel_path -> sha256 of what the peer sent
-        self._received_lock = threading.Lock()
+        self._cancelled = cancelled
+        self._content = _ContentState()
+        if checkpoint is not None:
+            if (not isinstance(checkpoint, FolderSyncCheckpoint) or checkpoint.watch_dir != self._watch
+                    or checkpoint.include_subdirs != self._include_subdirs):
+                raise FolderSyncStateError('checkpoint watch path or recursion mode does not match')
+            self._content.snapshot = dict(checkpoint.entries)
+            self._content.baselined = checkpoint.baselined
         self._stop = threading.Event()
         self._ready = threading.Event()
         self._thread: Optional[threading.Thread] = None
-        self._lifecycle_lock = threading.Lock()
-        with _ENGINES_LOCK:
-            _ENGINES.add(self)
+        self._lifecycle_lock = threading.RLock()
 
     def start(self) -> None:
+        """Start one polling worker, or retain the existing worker until it actually ends."""
         with self._lifecycle_lock:
-            if self._thread is not None:
+            if self._thread is not None and self._thread.is_alive():
                 return
-            if not self._watch.exists() or not self._watch.is_dir():
-                raise FileNotFoundError(
-                    f"watch dir not a directory: {self._watch}"
-                )
-            # A fresh event per run, never clear() on the old one: a thread that
-            # outlived stop()'s join would see it cleared and keep running.
+            if not self._watch.is_dir():
+                raise FileNotFoundError(f'watch dir not a directory: {self._watch}')
             self._stop = threading.Event()
-            self._ready.clear()
-            self._thread = threading.Thread(
-                target=self._loop, args=(self._stop,), name="folder-sync", daemon=True,
-            )
+            self._ready = threading.Event()
+            self._thread = threading.Thread(target=self._loop, args=(self._stop,), name='folder-sync', daemon=True)
             self._thread.start()
-        autocontrol_logger.info(
-            "folder sync: watching %s every %.1fs", self._watch, self._interval,
-        )
+        autocontrol_logger.info('folder sync: watching %s every %.1fs', self._watch, self._interval)
 
-    def stop(self) -> None:
+    def request_stop(self) -> None:
+        """Signal cancellation without joining, including from an owner predicate on the bridge thread."""
         with self._lifecycle_lock:
             self._stop.set()
+            self._ready.clear()
+
+    def stop(self) -> None:
+        """Signal cancellation and wait at most two seconds, retaining ownership of a blocked sender."""
+        with self._lifecycle_lock:
+            self.request_stop()
             thread = self._thread
-            self._thread = None
-        if thread is not None:
+        if thread is not None and thread is not threading.current_thread():
             thread.join(timeout=2.0)
 
+    @property
+    def stop_requested(self) -> bool:
+        """Expose the current run's cancellation request to an owning synchronous sender."""
+        return self._stop.is_set()
+
     def is_running(self) -> bool:
-        return self._thread is not None and self._thread.is_alive()
+        """Report a live worker, including a stopped worker finishing an in-flight sender call."""
+        with self._lifecycle_lock:
+            return self._thread is not None and self._thread.is_alive()
 
     def wait_until_ready(self, timeout: float = 5.0) -> bool:
-        """Block until the baseline snapshot exists; ``True`` if it does.
-
-        ``start()`` returns as soon as the worker is spawned, so a file
-        created immediately after it can still land in the baseline and
-        never be pushed. Callers that add files right after starting
-        should wait here first.
-        """
+        """Wait for a complete initial content baseline; stopped or failed scans are never ready."""
         return self._ready.wait(timeout)
 
-    def relative_name(self, path: str | Path) -> Optional[str]:
-        """``path`` as this engine names it, or ``None`` if it does not mirror it.
+    def checkpoint(self) -> FolderSyncCheckpoint:
+        """Copy metadata without filesystem access only after stop and actual worker retirement.
 
-        A file directly in the watched folder is covered; one in a subfolder
-        only when the engine was built with ``include_subdirs``.
+        The caller must bind a replacement to its authorised peer. An initial baseline
+        includes pre-existing files and is not evidence that those bytes were delivered.
         """
-        try:
-            relative = Path(path).resolve().relative_to(self._watch.resolve())
-        except (OSError, ValueError):
-            return None
-        if not relative.parts or (len(relative.parts) > 1 and not self._include_subdirs):
-            return None
-        return relative.as_posix()
+        with self._lifecycle_lock:
+            if not self._stop.is_set() or self.is_running():
+                raise FolderSyncStateError('previous folder worker has not retired; retry after it exits')
+            with self._content.lock:
+                return FolderSyncCheckpoint(self._watch, self._include_subdirs,
+                                            tuple(self._content.snapshot.items()), self._content.baselined)
 
-    def note_received(self, remote_name: str, *, sha256: Optional[str] = None) -> None:
-        """Record that ``remote_name`` in the watched folder came from the peer.
+    def record_received(self, path: str | Path) -> bool:
+        """Accept an already-published regular file inside this watch root as received, without echoing it.
 
-        The engine will not push it back while its content is still what the
-        peer sent. Pass the content's ``sha256`` to note a file *before* it
-        is written -- otherwise a poll landing between the write and this
-        call would already have echoed it; without it the file on disk is
-        hashed now. A later local edit changes the hash and is pushed as usual.
-
-        The receivers in this package call this through :func:`note_incoming`;
-        call it directly only for a file that arrived some other way.
+        Return False for outside, excluded, missing, redirected or changing files. Receipt
+        hashing never starts a worker, and later local content edits still propagate.
         """
-        rel = Path(remote_name).as_posix()
-        digest = sha256.lower() if sha256 else self._digest(self._watch / rel)
-        if digest is None:
-            return
-        with self._received_lock:
-            # A note may be made before its file lands, so notes cannot be
-            # pruned by what is on disk; the oldest go once there are many.
-            self._received.pop(rel, None)
-            self._received[rel] = digest
-            while len(self._received) > _MAX_RECEIVED_NOTES:
-                self._received.pop(next(iter(self._received)))
+        return self._record_received(path, None)
 
-    @staticmethod
-    def _digest(path: Path) -> Optional[str]:
-        return _file_digest(path)
-
-    def _echo_digest(self, rel: str) -> Optional[str]:
-        """The hash ``rel`` holds if that is still exactly what the peer sent."""
-        with self._received_lock:
-            noted = self._received.get(rel)
-        if noted is None:
-            return None
-        if self._digest(self._watch / rel) == noted:
-            return noted
-        # Edited here since it arrived: it is a local change again.
-        with self._received_lock:
-            self._received.pop(rel, None)
-        return None
-
-    def _known(self, rel: str, state: _FileState, now_ns: int,
-               digest: Optional[str] = None) -> _Known:
-        """The record of ``rel`` as it is now, with its hash while its time is racy."""
-        if not _is_racy(state.signature, now_ns):
-            return _Known(state.signature)
-        return _Known(state.signature, digest or self._digest(self._watch / rel))
-
-    def _has_changed(self, rel: str, state: _FileState, now_ns: int) -> bool:
-        """Whether ``rel`` differs from what was last recorded as in sync."""
-        known = self._snapshot.get(rel)
-        if known is None or known.signature != state.signature:
-            return True
-        if known.digest is None:
+    def record_receipt(self, receipt: FileReceiveReceipt) -> bool:
+        """Record originally received bytes without hashing or consuming a later local edit to the published path."""
+        if not isinstance(receipt, FileReceiveReceipt):
             return False
-        digest = self._digest(self._watch / rel)
-        if digest is None:
-            return False        # unreadable right now; looked at again next poll
-        if digest != known.digest:
-            return True
-        if not _is_racy(state.signature, now_ns):
-            # From here on a write gets a later time: stop reading the file.
-            self._snapshot[rel] = _Known(state.signature)
-        return False
+        return self._record_received(receipt.path, receipt.sha256)
 
-    def _has_settled(self, rel: str, state: _FileState) -> bool:
-        """Whether ``rel`` looks the same as it did on the previous poll."""
-        if not self._wait_until_stable or self._settling.get(rel) == state.signature:
-            return True
-        self._settling[rel] = state.signature
-        return False
-
-    def poll_once(self) -> List[str]:
-        """Run one diff pass now and return the relative paths pushed.
-
-        The first pass only records what is already there. The background
-        thread calls this every interval; tests and callers that drive the
-        engine themselves can call it directly.
-        """
-        current = self._scan()
-        now_ns = _wall_ns()
-        if not self._ready.is_set():
-            self._snapshot = {rel: self._known(rel, state, now_ns)
-                              for rel, state in current.items()}
-            self._ready.set()
-            return []
-        pushed: List[str] = []
-        changed = [(rel, state) for rel, state in current.items()
-                   if self._has_changed(rel, state, now_ns)]
-        for rel, state in changed:
-            echoed = self._echo_digest(rel)
-            if echoed is not None:
-                self._snapshot[rel] = self._known(rel, state, now_ns, echoed)
-            elif self._has_settled(rel, state) and self._push(rel, state, now_ns):
-                pushed.append(rel)
-        self._forget(current, {rel for rel, _state in changed})
-        return pushed
-
-    def _forget(self, current: Dict[str, _FileState], waiting: set) -> None:
-        """Drop what is tracked for files that are gone or no longer waiting."""
-        # Track deletions in snapshot (don't propagate, just stop
-        # tracking). Do NOT blindly merge ``current`` here — that would
-        # mark failed sends as already-synced and break the next-tick
-        # retry promise made in this engine's docstring. Successful
-        # sends already updated ``_snapshot[rel]``.
-        self._snapshot = {
-            rel: known for rel, known in self._snapshot.items()
-            if rel in current
-        }
-        self._settling = {rel: seen for rel, seen in self._settling.items() if rel in waiting}
-
-    def _push(self, rel: str, state: _FileState, now_ns: int) -> bool:
-        # Hashed before the send: a write that slips in during it is then a
-        # difference from this record, and goes out on the next poll.
-        known = self._known(rel, state, now_ns)
-        try:
-            self._sender(str(self._watch / rel), rel)
-        except (RuntimeError, OSError, ValueError) as error:
-            # _settling keeps the file's state, so the retry is the next tick.
-            autocontrol_logger.warning("folder sync push %s: %r", rel, error)
+    def _record_received(self, path: str | Path, digest: Optional[str]) -> bool:
+        if self._cancelled is not None and self._cancelled():
             return False
-        self._snapshot[rel] = known
-        self._settling.pop(rel, None)
-        autocontrol_logger.info("folder sync: pushed %s", rel)
+        try:
+            target = self._receipt_target(path)
+            if target is None:
+                return False
+            selected, relative = target
+            if digest is None:
+                digest = self._digest(selected, None)
+        except (OSError, ValueError) as error:
+            raise_caused_run_interruption(error)
+            return False
+        if digest is None:
+            return False
+        with self._lifecycle_lock:
+            if self._cancelled is not None and self._cancelled():
+                return False
+            with self._content.lock:
+                self._content.snapshot[relative] = digest
+                self._content.received.add(relative)
+                self._content.sequence += 1
+                self._content.versions[relative] = self._content.sequence
         return True
 
-    def _scan(self) -> Dict[str, _FileState]:
-        out: Dict[str, _FileState] = {}
-        try:
-            iterator = (self._watch.rglob("*") if self._include_subdirs
-                        else self._watch.iterdir())
-            for entry in iterator:
-                if not entry.is_file() or entry.name.lower().endswith(self._ignore_suffixes):
-                    continue
-                rel = str(entry.relative_to(self._watch).as_posix())
-                try:
-                    stat = entry.stat()
-                except OSError:
-                    continue
-                out[rel] = _FileState(stat.st_mtime, (stat.st_mtime_ns, stat.st_size))
-        except OSError as error:
-            autocontrol_logger.warning("folder sync scan: %r", error)
+    def _receipt_target(self, path: str | Path) -> Optional[tuple[Path, str]]:
+        selected = Path(path)
+        root = self._watch.resolve(strict=True)
+        if selected.is_symlink():
+            return None
+        selected = selected.resolve(strict=True)
+        relative = selected.relative_to(root)
+        if not self._include_subdirs and len(relative.parts) != 1:
+            return None
+        if not selected.is_file():
+            return None
+        return selected, relative.as_posix()
+
+    @staticmethod
+    def _digest(path: Path, stop: Optional[_StopFlag]) -> Optional[str]:
+        if path.is_symlink() or not path.is_file():
+            raise OSError('folder sync requires a regular file')
+        before = path.stat()
+        with path.open('rb') as stream:
+            if _identity(before) != _identity(fstat(stream.fileno())):
+                raise OSError('folder sync file changed before hashing')
+            digest = _read_digest(stream, stop)
+        if path.is_symlink() or _identity(before) != _identity(path.stat()):
+            raise OSError('folder sync file changed during hashing')
+        return digest
+
+    def _paths(self, stop: _StopFlag) -> Generator[Path, None, None]:
+        root = self._watch.resolve(strict=True)
+        directories = [self._watch]
+        visited: set[Path] = set()
+        while directories:
+            directory = directories.pop()
+            resolved = directory.resolve(strict=True)
+            if resolved in visited or not resolved.is_relative_to(root):
+                continue
+            visited.add(resolved)
+            with os.scandir(directory) as entries:
+                for entry in entries:
+                    if stop.is_set():
+                        return
+                    selected = self._select_entry(entry, directories)
+                    if selected is not None:
+                        yield selected
+
+    def _select_entry(self, entry: os.DirEntry[str], directories: list[Path]) -> Optional[Path]:
+        if entry.is_symlink():
+            return None
+        if entry.is_dir(follow_symlinks=False):
+            if self._include_subdirs:
+                directories.append(Path(entry.path))
+        elif entry.is_file(follow_symlinks=False):
+            return Path(entry.path)
+        return None
+
+    def _scan(self, stop: _StopFlag) -> Optional[dict[str, str]]:
+        out: dict[str, str] = {}
+        with closing(self._paths(stop)) as paths:
+            for entry in paths:
+                digest = self._digest(entry, stop)
+                if digest is None:
+                    return None
+                out[entry.relative_to(self._watch).as_posix()] = digest
         return out
 
-    def _loop(self, stop: threading.Event) -> None:
-        # Build initial snapshot WITHOUT sending; treat pre-existing files
-        # as "already synced" so engaging sync mid-edit doesn't re-upload
-        # the entire directory.
-        self.poll_once()
-        while not stop.is_set():
-            stop.wait(self._interval)
+    def _poll(self, current: dict[str, str], stop: _StopFlag) -> None:
+        for relative, digest in current.items():
             if stop.is_set():
                 return
-            self.poll_once()
+            with self._content.lock:
+                previous = self._content.snapshot.get(relative)
+                version = self._content.versions.get(relative, 0)
+                received = relative in self._content.received
+            if received or previous == digest:
+                continue
+            try:
+                self._sender(str(self._watch / relative), relative)
+            except (RuntimeError, OSError, ValueError) as error:
+                raise_caused_run_interruption(error)
+                autocontrol_logger.warning('folder sync push %s: %r', relative, error)
+            else:
+                with self._content.lock:
+                    if self._content.versions.get(relative, 0) == version:
+                        self._content.snapshot[relative] = digest
+                autocontrol_logger.info('folder sync: pushed %s', relative)
+        self._prune(current)
+
+    def _prune(self, current: dict[str, str]) -> None:
+        with self._content.lock:
+            self._content.snapshot = {name: digest for name, digest in self._content.snapshot.items()
+                                      if name in current or name in self._content.received}
+            self._content.versions = {name: version for name, version in self._content.versions.items()
+                                      if name in self._content.snapshot}
+
+    def _accept_scan(self, current: dict[str, str], stop: _StopFlag) -> bool:
+        with self._lifecycle_lock:
+            if stop.is_set():
+                return False
+            with self._content.lock:
+                initial = not self._content.baselined
+                if initial:
+                    self._content.snapshot = dict(current, **self._content.snapshot)
+                    self._content.baselined = True
+            self._ready.set()
+        if not initial:
+            self._poll(current, stop)
+        return True
+
+    def _loop(self, stop: threading.Event) -> None:
+        guard = _PollStop(stop, self._cancelled)
+        try:
+            while not guard.is_set():
+                try:
+                    with self._content.lock:
+                        self._content.received.clear()
+                    current = self._scan(guard)
+                    if current is None or not self._accept_scan(current, guard):
+                        return
+                except OSError as error:
+                    raise_caused_run_interruption(error)
+                    autocontrol_logger.warning('folder sync scan: %r', error)
+                stop.wait(self._interval)
+        except (CancelledError, AsyncCancelledError, OperationCancelledError):
+            if self._thread is not threading.current_thread():
+                raise
+            stop.set()
+        finally:
+            with self._lifecycle_lock:
+                if self._thread is threading.current_thread():
+                    self._thread = None
+                    self._ready.clear()
 
 
-def live_engines() -> List[FolderSyncEngine]:
-    """Every :class:`FolderSyncEngine` that still exists in this process."""
-    with _ENGINES_LOCK:
-        return list(_ENGINES)
+def _identity(value: stat_result) -> tuple[int, int, int, int]:
+    # Windows path stat and descriptor fstat can expose different ctime semantics; compare ctime within one descriptor.
+    return value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns
 
 
-def note_incoming(final_path: str | Path,
-                  content_path: str | Path | None = None) -> int:
-    """Tell every engine mirroring ``final_path``'s folder that the peer sent it.
-
-    For the code that receives a file. Call it *before* the finished file is
-    renamed into place, passing the temporary file that holds the content as
-    ``content_path``: the note is then in place before any poll can see the
-    file under its final name. Returns how many engines were told; when no
-    engine mirrors that folder the file is not even read.
-    """
-    covering = [(engine, name) for engine in live_engines()
-                for name in [engine.relative_name(final_path)] if name is not None]
-    if not covering:
-        return 0
-    digest = _file_digest(Path(content_path if content_path is not None else final_path))
-    if digest is None:
-        return 0
-    for engine, name in covering:
-        engine.note_received(name, sha256=digest)
-    return len(covering)
+def _read_digest(stream: BinaryIO, stop: Optional[_StopFlag]) -> Optional[str]:
+    digest = sha256()
+    opened = fstat(stream.fileno())
+    while True:
+        if stop is not None and stop.is_set():
+            return None
+        chunk = stream.read(64 * 1024)
+        if not chunk:
+            break
+        digest.update(chunk)
+    after = fstat(stream.fileno())
+    if _identity(opened) != _identity(after) or opened.st_ctime_ns != after.st_ctime_ns:
+        raise OSError('folder sync file changed during hashing')
+    return digest.hexdigest()
 
 
-__all__ = [
-    "FolderSyncEngine", "IN_PROGRESS_SUFFIXES", "RACY_WINDOW_S", "live_engines", "note_incoming",
-]
+__all__ = ['FolderSyncEngine', 'FolderSyncCheckpoint', 'FolderSyncStateError']
