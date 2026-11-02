@@ -24,7 +24,8 @@ def test_changed_source_after_observation_stops_verification_and_retires_reader(
     with pytest.raises(AgentTaskError, match='snapshot'):
         runtime.finish(identifier)
     result = runtime.get(identifier)
-    assert result.state == 'waiting_user' and result.metadata['input_released'] is True
+    assert result.state == 'waiting_user'
+    assert result.metadata['input_released'] is True
     assert result.metadata['completion_contract'] == 0
 
 
@@ -50,7 +51,8 @@ def test_fresh_criteria_fail_then_resume_reads_current_files_without_source_repl
     runtime, identifier = completed.runtime, child(completed)
     completed.output.write_text('missing marker', encoding='utf-8')
     result = runtime.finish(identifier)
-    assert result.state == 'waiting_user' and result.metadata['input_released'] is True
+    assert result.state == 'waiting_user'
+    assert result.metadata['input_released'] is True
     assert [item['status'] for item in result.verification] == ['passed', 'failed']
     completed.output.write_text('complete', encoding='utf-8')
     runtime.resume(identifier)
@@ -84,7 +86,8 @@ def test_cancel_after_fresh_observation_prevents_completion_certificate(complete
     with pytest.raises(CancelledError):
         runtime.finish(identifier)
     result = runtime.get(identifier)
-    assert result.state == 'cancelled' and result.metadata['input_released'] is True
+    assert result.state == 'cancelled'
+    assert result.metadata['input_released'] is True
     assert result.metadata['completion_contract'] == 0
 
 
@@ -100,7 +103,8 @@ def test_restart_requires_explicit_resume_and_new_independent_evidence(completed
             restored.finish(identifier)
         restored.resume(identifier)
         result = restored.finish(identifier)
-        assert result.state == 'waiting_user' and result.metadata['completion_contract'] == 0
+        assert result.state == 'waiting_user'
+        assert result.metadata['completion_contract'] == 0
         assert result.metadata['input_released'] is True
     finally:
         restored.close()
@@ -118,8 +122,9 @@ def test_duplicate_approvals_create_exactly_one_private_bound_successor(complete
 
 def test_stale_approval_and_unreviewed_spec_fields_never_create_a_successor(completed):
     runtime, request = completed.runtime, approval(completed)
+    unreviewed = {**request, 'spec': runtime.store.get(completed.task_id)['spec']}
     with pytest.raises(AgentTaskError, match='fields'):
-        runtime.recovery.control('create_completion', {**request, 'spec': runtime.store.get(completed.task_id)['spec']})
+        runtime.recovery.control('create_completion', unreviewed)
     runtime.store.update(completed.task_id, 'paused', reason='changed after preview')
     with pytest.raises(AgentTaskError, match='snapshot'):
         runtime.recovery.control('create_completion', request)
@@ -143,9 +148,11 @@ def test_cancelled_readonly_child_can_only_create_another_reviewed_readonly_succ
     runtime.cancel(identifier)
     retry = child(completed, identifier)
     result = runtime.finish(retry)
-    assert result.state == 'succeeded' and result.metadata['completion_review']['effect_task'] == completed.task_id
+    assert result.state == 'succeeded'
+    assert result.metadata['completion_review']['effect_task'] == completed.task_id
     assert result.metadata['recovery']['source_task'] == identifier
-    assert runtime.get(identifier).state == 'cancelled' and runtime.store.actions(retry) == []
+    assert runtime.get(identifier).state == 'cancelled'
+    assert runtime.store.actions(retry) == []
 
 
 @pytest.mark.parametrize('revoked', ['owner', 'reviewer'])
@@ -171,5 +178,6 @@ def test_source_owned_completion_keeps_both_principals_live_during_maintenance(c
     users.set_role(revoked, 'viewer')
     runtime.maintain()
     result = runtime.get(identifier)
-    assert result.state == 'cancelled' and result.metadata['input_released'] is True
+    assert result.state == 'cancelled'
+    assert result.metadata['input_released'] is True
     assert result.metadata['completion_contract'] == 0

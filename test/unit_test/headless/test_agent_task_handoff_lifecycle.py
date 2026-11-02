@@ -61,7 +61,8 @@ def test_actual_grant_retry_and_other_caller_completion_survive_runtime_restart(
         candidate = reopened.skills.control('record', request_for(recording, handoff_id=grant['id']))
         assert candidate['state'] == 'draft'
         assert candidate['provenance']['completion_review']['evidence_handoff']['id'] == grant['id']
-        assert reopened.get(recording.task_id).state == 'paused' and recording.manifest.read_bytes() == before
+        assert reopened.get(recording.task_id).state == 'paused'
+        assert recording.manifest.read_bytes() == before
         with pytest.raises(AgentTaskError, match='another caller'):
             reopened.get(recording.child_id)
     finally:
@@ -84,10 +85,12 @@ def test_sixteen_real_renewed_readers_grant_completion_without_an_extra_link_or_
     monkeypatch.setattr(NativeDesktopTarget, '_launch', no_helper)
     grant = issue(completed, completed.source, parent)
     access = runtime.recovery.task_handoff_evidence(completed.source, parent, grant['id'])
-    assert len(access.links) == 16 and len(access.rows) == 17
+    assert len(access.links) == 16
+    assert len(access.rows) == 17
     candidate = runtime.skills.control('record', {'task_id': completed.source, 'completion_task_id': parent,
         'handoff_id': grant['id'], 'name': 'Sixteen actual reviewed readers'})
-    assert candidate['state'] == 'draft' and candidate['publication'] is None
+    assert candidate['state'] == 'draft'
+    assert candidate['publication'] is None
     assert candidate['provenance']['completion_review']['task_id'] == parent
     assert runtime.get(completed.source).state == 'paused'
     assert origin_policy._path(completed.old.identifier).read_bytes() == witness

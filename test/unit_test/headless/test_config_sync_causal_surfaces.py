@@ -25,7 +25,8 @@ def test_merge_command_preserves_both_json_alternatives_without_dispatch(monkeyp
     args={'left':left,'right':right}
     command=executor.event_dict['AC_sync_entry_merge'](**args)
     assert command==tools()['ac_sync_entry_merge'].handler(**args)
-    assert command['conflict']['local']==left and command['conflict']['remote']==right
+    assert command['conflict']['local']==left
+    assert command['conflict']['remote']==right
     assert 'AC_sync_entry_merge' in COMMAND_SPECS
 
 
@@ -37,10 +38,12 @@ def test_enqueue_and_status_share_a_local_store_and_explicit_builder_fields(tmp_
     item=operation()
     args={'path':str(tmp_path/'queue.sqlite3'),'operation':item.to_dict()}
     accepted=executor.event_dict['AC_sync_outbox_enqueue'](**args)
-    assert accepted['accepted'] is True and accepted['state']['pending']==1
+    assert accepted['accepted'] is True
+    assert accepted['state']['pending']==1
     result=tools()['ac_sync_outbox_status'].handler(path=args['path'],endpoint=item.endpoint,user_id='alice',
                                                   include_pending=True,limit=1)
-    assert result['operations']==[item.to_dict()] and result['truncated'] is False
+    assert result['operations']==[item.to_dict()]
+    assert result['truncated'] is False
     assert {'AC_sync_outbox_enqueue','AC_sync_outbox_status'}<=COMMAND_SPECS.keys()
 
 
@@ -58,13 +61,14 @@ def test_private_queue_access_is_drive_but_supplied_data_transforms_are_observab
 def test_cancelled_or_confined_queue_tools_do_not_create_a_database(tmp_path,monkeypatch):
     monkeypatch.setenv('AUTOCONTROL_ALLOWED_PATH_ROOTS',str(tmp_path))
     args={'path':str(tmp_path/'queue.sqlite3'),'operation':operation().to_dict()}
+    enqueue=tools()['ac_sync_outbox_enqueue'].handler
     ctx=ToolCallContext('cancelled')
     ctx.cancelled_event.set()
     with pytest.raises(OperationCancelledError):
-        tools()['ac_sync_outbox_enqueue'].handler(**args,ctx=ctx)
+        enqueue(**args,ctx=ctx)
     ctx=ToolCallContext('confined',path_policy=PathPolicy([tmp_path/'elsewhere']))
     with pytest.raises(PathNotAllowedError):
-        tools()['ac_sync_outbox_enqueue'].handler(**args,ctx=ctx)
+        enqueue(**args,ctx=ctx)
     assert not (tmp_path/'queue.sqlite3').exists()
 
 

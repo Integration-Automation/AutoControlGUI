@@ -16,6 +16,8 @@ from je_auto_control.utils.agent_runtime.target_continuity import require_contex
 from je_auto_control.utils.agent_runtime.browser_retirement import retirement_proof
 from je_auto_control.utils.agent_runtime.browser_readonly_scope import readonly_verification_scope
 
+_RETIREMENT_UNCONFIRMED = "browser retirement is unconfirmed"
+
 
 def _open_session(origins: tuple[str, ...], *, transfer: bool = False) -> Any:
     try:
@@ -108,19 +110,19 @@ class BrowserTarget:
             self._session = self._session.freeze_readonly()
             result = retirement_proof(self._session.capabilities(), identity)
         except Exception:  # noqa: BLE001  # reason: contain optional SDK failures without input revival or data leaks
-            raise AgentTaskError("browser retirement is unconfirmed") from None
+            raise AgentTaskError(_RETIREMENT_UNCONFIRMED) from None
         self._readonly = result["context_id"]
         return result
 
     def readonly_capabilities(self) -> dict:
         """Check the current actual SDK view rather than trusting a saved description."""
         if not self._readonly or self._session is None:
-            raise AgentTaskError("browser retirement is unconfirmed")
+            raise AgentTaskError(_RETIREMENT_UNCONFIRMED)
         try:
             return retirement_proof(self._session.capabilities(), self._readonly)
         except Exception:  # noqa: BLE001  # reason: SDK faults stay bounded and leave this target permanently read-only
             self._readonly = ""
-            raise AgentTaskError("browser retirement is unconfirmed") from None
+            raise AgentTaskError(_RETIREMENT_UNCONFIRMED) from None
 
     @property
     def readonly_spec(self) -> AgentTaskSpec:

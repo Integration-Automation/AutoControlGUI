@@ -110,7 +110,8 @@ def test_explicit_handoff_allows_completion_adoption_without_general_task_reads_
         assert review['approval_required'] is True
         grant = runtime.recovery.control('create_handoff', {**request_for(handoff),
             'review': review['handoff_review'], 'note': 'Share only this original DAG completion evidence'})['handoff']
-    assert 'store_path' not in json.dumps(review) and 'arguments' not in json.dumps(grant)
+    assert 'store_path' not in json.dumps(review)
+    assert 'arguments' not in json.dumps(grant)
     with pytest.raises(AgentTaskError, match='another caller'):
         runtime.get(handoff.child)
     decision = {'node_id': 'a', 'action': 'successor', 'task_id': handoff.child, 'handoff_id': grant['id']}
@@ -124,8 +125,10 @@ def test_explicit_handoff_allows_completion_adoption_without_general_task_reads_
         'definition': handoff.definition, 'approval_id': approved['approval_id'], 'max_parallel': 4})
     completed = runtime.batches.control('validate_node', {'batch_id': handoff.batch_id,
         'node_id': 'a', 'attempt': started['attempt']})
-    assert completed['outcome'] == 'completed' and completed['task_id'] == handoff.child
-    assert runtime.get(handoff.source).state == 'paused' and handoff.target.calls == calls
+    assert completed['outcome'] == 'completed'
+    assert completed['task_id'] == handoff.child
+    assert runtime.get(handoff.source).state == 'paused'
+    assert handoff.target.calls == calls
     for operation in (runtime.get, runtime.receipts, runtime.observe, runtime.resume):
         with pytest.raises(AgentTaskError, match='another caller'):
             operation(handoff.child)

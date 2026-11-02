@@ -50,7 +50,7 @@ class AndroidDeviceSession:
         if len(rows) != 1 or rows[0].state != "device":
             raise AgentTaskError("reviewed Android endpoint is ambiguous, offline or unauthorized")
         value = rows[0].transport_id
-        if (not isinstance(value, str) or re.fullmatch(r"[1-9][0-9]{0,19}", value) is None
+        if (not isinstance(value, str) or re.fullmatch(r"[1-9]\d{0,19}", value, re.ASCII) is None
                 or int(value) > 2**64 - 1):
             raise AgentTaskError("Android endpoint lacks an exact transport identity")
         return int(value)

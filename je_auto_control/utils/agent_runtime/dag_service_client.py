@@ -18,10 +18,9 @@ class DagServiceClient:
 
     def check(self) -> None:
         """Refresh the registrant and approver, and reject a fenced or replaced coordinator attempt."""
-        with self.actor.scope(), self.owner.scope():
-            with self.runtime.store.connection() as connection:
-                row = connection.execute("SELECT state,attempt FROM agent_dag_batches WHERE id=?",
-                                         (self.started["batch_id"],)).fetchone()
+        with self.actor.scope(), self.owner.scope(), self.runtime.store.connection() as connection:
+            row = connection.execute("SELECT state,attempt FROM agent_dag_batches WHERE id=?",
+                                     (self.started["batch_id"],)).fetchone()
         if row is None or row["state"] != "running" or row["attempt"] != self.started["attempt"]:
             raise AgentTaskError("background DAG attempt is inactive")
 

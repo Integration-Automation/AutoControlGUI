@@ -86,12 +86,16 @@ def test_registered_surfaces_preserve_cancellation(monkeypatch, tmp_path, surfac
     monkeypatch.setattr("je_auto_control.utils.self_healing.locator._try_vlm", lambda *_: calls.append("vlm"))
     monkeypatch.setattr("je_auto_control.utils.self_healing.locator._click_at", lambda *_: calls.append("click"))
     arguments = {"template_path": "probe.png", "description": "probe"}
-    with pytest.raises(OperationCancelledError) as caught:
+
+    def run_surface():
         if surface == "command":
             executor.execute_action([[f"AC_self_heal_{operation}", arguments]])
         else:
             tool = next(tool for tool in build_default_tool_registry() if tool.name == f"ac_self_heal_{operation}")
             tool.handler(**arguments)
+
+    with pytest.raises(OperationCancelledError) as caught:
+        run_surface()
     assert caught.value is signal
     assert calls == []
     assert not log.path.exists()
@@ -108,8 +112,9 @@ def test_cancellation_is_not_formatted(monkeypatch, tmp_path):
         raise signal
 
     monkeypatch.setattr("je_auto_control.wrapper.auto_control_image.locate_image_center", cancel)
+    log = HealEventLog(tmp_path / "events.jsonl")
     with pytest.raises(OperationCancelledError) as caught:
-        self_heal_locate(template_path="probe.png", log=HealEventLog(tmp_path / "events.jsonl"))
+        self_heal_locate(template_path="probe.png", log=log)
     assert caught.value is signal
 
 
@@ -125,7 +130,8 @@ def test_successful_fallback_keeps_original_outcome_and_masks_only_audit(monkeyp
     with secret_log_scope():
         remember_secret(secret)
         outcome = self_heal_locate(template_path=secret, description=secret, log=log)
-    assert outcome.found and outcome.coordinates == (4, 5)
+    assert outcome.found
+    assert outcome.coordinates == (4, 5)
     assert outcome.template_path == outcome.description == secret
     assert secret in outcome.image_error
     stored = log.list_events()[0]

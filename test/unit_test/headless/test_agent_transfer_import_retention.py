@@ -75,9 +75,11 @@ def test_expired_import_metadata_and_delivery_are_pruned_without_recreating_cons
                 status, denied = operation(server, token, 'create_import', request)
                 assert status == 409, denied
             else:
+                records = TransferRecords(runtime.store)
+                retry = {name: value for name, value in record.items()
+                         if name not in {'state', 'held', 'note_hash', 'key_hash'}} | {'key': 'lifecycle-import'}
                 with runtime.store.connection(write=True) as connection, pytest.raises(AgentTaskError) as failure:
-                    TransferRecords(runtime.store).reserve(connection, {name: value for name, value in record.items()
-                        if name not in {'state', 'held', 'note_hash', 'key_hash'}} | {'key': 'lifecycle-import'})
+                    records.reserve(connection, retry)
                 assert 'transfer' in str(failure.value)
         finally:
             if restart:
@@ -132,10 +134,14 @@ def test_import_metadata_pruning_requires_a_writer_and_rolls_back_all_three_fami
     monkeypatch.setattr(transfer_records.time, 'time', lambda: 2100.0)
     with records.store.connection() as connection, pytest.raises(AgentTaskError, match='writer'):
         ledger.prune(connection, 2100.0)
-    with pytest.raises(RuntimeError, match='rollback after metadata deletion'):
+
+    def prune_then_fail():
         with records.store.connection(write=True) as connection:
             assert ledger.prune(connection, 2100.0) == 1
             raise RuntimeError('rollback after metadata deletion')
+
+    with pytest.raises(RuntimeError, match='rollback after metadata deletion'):
+        prune_then_fail()
     with records.store.connection() as connection:
         assert records.find(connection, item['id'])['held'] is False
         assert ledger.read(connection, item['id'])['state'] == 'expired'

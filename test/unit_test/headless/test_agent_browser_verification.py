@@ -114,16 +114,18 @@ def test_page_change_during_readback_cannot_complete_the_old_page(fake_sdk, tmp_
     criterion("url", "https://allowed.test:bad/form"),
 ])
 def test_invalid_or_ungranted_checks_are_rejected_before_sdk_start(fake_sdk, tmp_path, clause):
+    specification = task(clause)
     with closing(AgentRuntime(tmp_path / "runtime.sqlite", targets={"reviewed-browser": BrowserTarget()})) as runtime:
         with pytest.raises(AgentTaskError):
-            runtime.submit(task(clause))
+            runtime.submit(specification)
     fake_sdk[1].assert_not_called()
 
 
 def test_read_permission_is_not_implicitly_added_by_a_completion_clause(fake_sdk, tmp_path):
+    specification = task(allowed_tools=["AC_browser_fill"])
     with closing(AgentRuntime(tmp_path / "runtime.sqlite", targets={"reviewed-browser": BrowserTarget()})) as runtime:
         with pytest.raises(AgentTaskError, match="explicit browser-read"):
-            runtime.submit(task(allowed_tools=["AC_browser_fill"]))
+            runtime.submit(specification)
     fake_sdk[1].assert_not_called()
 
 
@@ -160,8 +162,9 @@ def test_verifier_preserves_control_failures_instead_of_reporting_unknown(failur
     specification = task()
     def failed(_clause):
         raise failure
+    policy = TaskPolicy(specification)
     with pytest.raises(type(failure)):
-        verify(TaskPolicy(specification), [], {}, browser_read=failed)
+        verify(policy, [], {}, browser_read=failed)
 
 
 @pytest.mark.parametrize("value", ["passed", 1, {"passed": True}])
@@ -177,8 +180,9 @@ def test_helper_verifier_refuses_a_clause_not_pinned_in_its_task(fake_sdk):
     try:
         with operation_scope(TaskOperation(specification, lambda: None, None)):
             target.ready(specification)
+            different = criterion(value="different")
             with pytest.raises(AgentTaskError, match="outside the owned task"):
-                target.verify_browser(criterion(value="different"))
+                target.verify_browser(different)
     finally:
         target.cleanup()
     assert fake_sdk[0].actions == []

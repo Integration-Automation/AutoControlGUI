@@ -168,7 +168,8 @@ def test_restart_does_not_revive_the_stuck_run(monkeypatch, tmp_path, build):
         # Folder transfers now retain the blocked sender until it actually exits.
         try:
             assert len(_StuckThread.created) == 1
-            assert service.is_running() and first.is_set()
+            assert service.is_running()
+            assert first.is_set()
             assert not service.wait_until_ready(0)
         finally:
             service.stop()

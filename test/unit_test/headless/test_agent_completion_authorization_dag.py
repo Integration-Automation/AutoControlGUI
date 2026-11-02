@@ -30,7 +30,8 @@ def test_original_batch_adoption_is_invalidated_when_renewed_evidence_loses_auth
         assert connection.execute('SELECT phase FROM agent_dag_nodes WHERE batch_id=?',
                                   (renewal.batch_id,)).fetchone()[0] == 'unknown'
     assert renewal.runtime.get(renewal.source).state == 'paused'
-    assert len(renewal.runtime.store.actions(renewal.source)) == 1 and renewal.runtime.store.actions(child) == []
+    assert len(renewal.runtime.store.actions(renewal.source)) == 1
+    assert renewal.runtime.store.actions(child) == []
 
 
 @pytest.mark.parametrize('renewal', ['named_dag'], indirect=True)

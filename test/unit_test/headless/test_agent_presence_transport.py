@@ -85,7 +85,8 @@ def listening(namespace):
     try:
         ready = server.request('listen', {'namespace': namespace}, timeout=15)
         expected = Path(__file__).resolve().parents[3] / 'je_auto_control/utils/agent_runtime/presence_pipe_windows.py'
-        assert ready['ready'] and Path(ready['origin']) == expected
+        assert ready['ready']
+        assert Path(ready['origin']) == expected
         return server, ready
     except BaseException:
         server.close()
@@ -111,7 +112,8 @@ def pair():
     finally:
         client.close()
         server.close()
-    assert client.retired and server.retired
+    assert client.retired
+    assert server.retired
 
 
 def test_actual_background_peer_challenges_and_bounded_bytes_round_trip(pair):
@@ -131,7 +133,8 @@ def test_actual_first_instance_rejects_contender_without_retiring_existing_owner
     try:
         with pytest.raises(AgentControlBusy):
             contender.request('listen', {'namespace': namespace}, timeout=15)
-        assert contender.retired and not server.retired
+        assert contender.retired
+        assert not server.retired
         assert connect(server, client, namespace) == ready['generation']
     finally:
         client.close()
@@ -145,7 +148,8 @@ def test_blocked_actual_read_or_write_retires_only_that_owned_helper(pair, opera
     started = time.monotonic()
     with pytest.raises(AgentTaskError, match='deadline'):
         client.request(operation, {}, timeout=0.25)
-    assert client.retired and time.monotonic() - started < 5
+    assert client.retired
+    assert time.monotonic() - started < 5
     assert server.request('alive', {}, timeout=3) == {'alive': False}
     assert not server.retired
 
@@ -157,7 +161,8 @@ def test_blocked_actual_accept_retires_owner_and_allows_new_first_instance():
         started = time.monotonic()
         with pytest.raises(AgentTaskError, match='deadline'):
             server.request('accept', {}, timeout=0.25)
-        assert server.retired and time.monotonic() - started < 5
+        assert server.retired
+        assert time.monotonic() - started < 5
         replacement, new = listening(namespace)
         try:
             assert new['generation'] != old['generation']
@@ -183,11 +188,13 @@ def test_actual_half_handshake_is_bounded_by_owned_process_retirement(waiting_se
                 with pytest.raises(AgentTaskError, match='deadline'):
                     client.request('connect', {'namespace': namespace}, timeout=3)
                 assert accepted.result(timeout=16)
-            assert client.retired and not server.retired
+            assert client.retired
+            assert not server.retired
             return
         with pytest.raises(AgentTaskError, match='deadline'):
             waiting.request(operation, payload, timeout=0.25)
-        assert waiting.retired and not client.retired
+        assert waiting.retired
+        assert not client.retired
     finally:
         client.close()
         server.close()

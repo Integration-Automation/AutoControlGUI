@@ -102,7 +102,8 @@ def test_two_actual_brokers_share_generation_busy_and_borrower_only_token_cleanu
         ready = owner.request('bootstrap', {}, timeout=15)
         assert borrower.request('bootstrap', {}, timeout=15) == ready
         assert owner.request('acquire', {}, timeout=3)['status'] == 'busy'
-        assert not owner.retired and len(instances.read_text().splitlines()) == 1
+        assert not owner.retired
+        assert len(instances.read_text().splitlines()) == 1
         clock.write_text('60', encoding='utf-8')
         first = owner.request('acquire', {}, timeout=3)['result']
         second = borrower.request('acquire', {}, timeout=3)['result']
@@ -115,7 +116,8 @@ def test_two_actual_brokers_share_generation_busy_and_borrower_only_token_cleanu
     finally:
         borrower.close()
         owner.close()
-    assert borrower.retired and owner.retired
+    assert borrower.retired
+    assert owner.retired
 
 
 def test_actual_owner_loss_refuses_old_leases_and_replacement_observes_fresh_idle(tmp_path):
@@ -130,7 +132,8 @@ def test_actual_owner_loss_refuses_old_leases_and_replacement_observes_fresh_idl
         owner.close()
         with pytest.raises(AgentTaskError):
             borrower.request('check', old, timeout=3)
-        assert borrower.retired and len(instances.read_text().splitlines()) == 1
+        assert borrower.retired
+        assert len(instances.read_text().splitlines()) == 1
         replacement = create(namespace, clock, instances)
         new = replacement.request('bootstrap', {}, timeout=15)
         assert new['generation'] != ready['generation']
@@ -155,7 +158,8 @@ def test_concurrent_actual_startup_constructs_only_the_first_instance_source(tmp
             right = pool.submit(second.request, 'bootstrap', {}, timeout=15)
             assert left.result(timeout=16) == right.result(timeout=16)
         records = [json.loads(line) for line in instances.read_text().splitlines()]
-        assert len(records) == 1 and records[0]['generation'] == left.result()['generation']
+        assert len(records) == 1
+        assert records[0]['generation'] == left.result()['generation']
         assert first.request('acquire', {}, timeout=3)['status'] == 'busy'
         assert second.request('acquire', {}, timeout=3)['status'] == 'busy'
     finally:
@@ -187,7 +191,8 @@ def test_borrower_lost_during_acquire_revokes_late_token_without_stopping_the_ow
             wait_file(tmp_path / 'acquire-entered')
             with pytest.raises(AgentTaskError, match='deadline'):
                 waiting.result(timeout=4)
-        assert borrower.retired and not owner.retired
+        assert borrower.retired
+        assert not owner.retired
         gate.unlink()
         wait_file(tmp_path / 'releases.txt')
         assert owner.request('check', lease, timeout=3)['status'] == 'ok'

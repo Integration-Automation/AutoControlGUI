@@ -25,7 +25,7 @@ def _timeout(timeout: object) -> None:
 
 def _credential(environment: object) -> None:
     if environment is not None and (not isinstance(environment, str)
-                                   or re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,127}', environment) is None):
+                                   or re.fullmatch(r'[A-Za-z_]\w{0,127}', environment, re.ASCII) is None):
         raise ConfigSyncError('secret_env must name one environment variable')
 
 def _rebases(rebases: object) -> None:

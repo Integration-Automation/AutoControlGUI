@@ -15,6 +15,7 @@ INPUT_START = "Input Dispatcher State:\n"
 INPUT_END = "  RecentQueue:"
 POLICY_START = "    KeyguardServiceDelegate\n"
 POLICY_END = "    Looper state:\n"
+_EMPTY = "<empty>"
 
 
 def _text(value: bytes) -> str:
@@ -96,8 +97,8 @@ def _routing(prefix: str, snapshot: AndroidSnapshot) -> None:
 
 def _queues(current: str, snapshot: AndroidSnapshot) -> str:
     block = _section(current, "  PendingEvent:", "  AppSwitch:") + _one(current, r"^(  AppSwitch: [^\n]*\n)")
-    _required(block, {"PendingEvent": "<none>", "InboundQueue": "<empty>", "ReplacedKeys": "<empty>",
-        "CommandQueue": "<empty>", "AppSwitch": "not pending"}, indent=2, separator=": ")
+    _required(block, {"PendingEvent": "<none>", "InboundQueue": _EMPTY, "ReplacedKeys": _EMPTY,
+        "CommandQueue": _EMPTY, "AppSwitch": "not pending"}, indent=2, separator=": ")
     _connections(block, snapshot)
     return block
 
@@ -137,7 +138,7 @@ def _monitors(lines: list[str]) -> bool:
 
 
 def _display(prefix: str) -> tuple[int, int, list[str], bool]:
-    if re.findall(r"^  Display: ([^\n]*)$", prefix, re.MULTILINE) != ["0"]:
+    if re.findall(r"^ {2}Display: ([^\n]*)$", prefix, re.MULTILINE) != ["0"]:
         raise AgentTaskError("Android input proof requires one identified default display")
     match = re.search(r"^  Display: 0\n    logicalSize=(\d{1,5})x(\d{1,5})\n"
                       r"        transform \(ROT_0\) \(IDENTITY\)\n    Windows:\n", prefix, re.MULTILINE)

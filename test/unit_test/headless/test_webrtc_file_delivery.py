@@ -57,7 +57,8 @@ def test_caller_waits_for_the_channel_callback_and_receives_its_failure(bridge, 
         release.set()
         worker.join(5)
     assert not worker.is_alive()
-    assert len(caught) == 1 and isinstance(caught[0], FileTransferError)
+    assert len(caught) == 1
+    assert isinstance(caught[0], FileTransferError)
     active.submit(asyncio.sleep(0)).result(5)
     assert failures == [], 'channel exceptions escaped onto the event loop instead of reaching the sender'
 
@@ -87,7 +88,8 @@ def test_folder_retry_survives_a_failure_that_occurs_on_the_bridge_thread(bridge
 
     loop(engine, lambda: target.write_bytes(b'pending'), reconnect, lambda: None)
     active.submit(asyncio.sleep(0)).result(5)
-    assert done and done[0].read_bytes() == b'pending'
+    assert done
+    assert done[0].read_bytes() == b'pending'
     assert failures == []
 
 
@@ -102,8 +104,9 @@ def test_invalid_chunk_sizes_are_rejected_before_opening_a_channel(bridge, tmp_p
         def send(self, message):
             messages.append(message)
 
+    sender = FileTransferSender(Channel())
     with pytest.raises(FileTransferError, match='chunk'):
-        FileTransferSender(Channel()).send(source, chunk_size=chunk_size)
+        sender.send(source, chunk_size=chunk_size)
     active.submit(asyncio.sleep(0)).result(5)
     assert messages == []
 
@@ -117,8 +120,9 @@ def test_prestart_cancel_never_reads_the_selected_file(bridge, tmp_path, monkeyp
             pytest.fail('prestart cancellation wrote the channel')
 
     monkeypatch.setattr(Path, 'is_file', forbidden)
+    sender = FileTransferSender(Channel())
     with pytest.raises(CancelledError):
-        FileTransferSender(Channel()).send(tmp_path / 'missing', cancelled=lambda: True)
+        sender.send(tmp_path / 'missing', cancelled=lambda: True)
 
 
 def test_mid_file_cancel_aborts_partial_bytes_and_preserves_the_existing_target(bridge, tmp_path):
@@ -138,8 +142,9 @@ def test_mid_file_cancel_aborts_partial_bytes_and_preserves_the_existing_target(
         progress.append(sent)
         cancelled.set()
 
+    sender = FileTransferSender(Channel())
     with pytest.raises(CancelledError):
-        FileTransferSender(Channel()).send(source, chunk_size=4, on_progress=accepted, cancelled=cancelled.is_set)
+        sender.send(source, chunk_size=4, on_progress=accepted, cancelled=cancelled.is_set)
     assert progress == [4]
     assert target.read_bytes() == b'previous target'
     assert sorted(path.name for path in target.parent.iterdir()) == ['payload.bin']
@@ -160,7 +165,8 @@ def test_send_from_the_bridge_thread_does_not_deadlock(bridge, tmp_path):
         FileTransferSender(Channel()).send(source)
 
     active.submit(send()).result(5)
-    assert done[0].read_bytes() == b'data' and failures == []
+    assert done[0].read_bytes() == b'data'
+    assert failures == []
 
 
 def test_a_full_channel_buffer_waits_until_the_loop_drains_it(bridge, tmp_path):
@@ -184,7 +190,8 @@ def test_a_full_channel_buffer_waits_until_the_loop_drains_it(bridge, tmp_path):
 
     active.submit(drain())
     FileTransferSender(channel).send(source)
-    assert b'data' in messages and failures == []
+    assert b'data' in messages
+    assert failures == []
 
 
 @pytest.mark.parametrize('signal', [CancelledError('cancel'), KeyboardInterrupt(), SystemExit(8)])
@@ -197,8 +204,9 @@ def test_wrapped_channel_signals_reach_the_caller_by_identity(bridge, tmp_path, 
         def send(self, _message):
             raise RuntimeError('controlled channel carrier') from signal
 
+    sender = FileTransferSender(Channel())
     with pytest.raises(type(signal)) as caught:
-        FileTransferSender(Channel()).send(source)
+        sender.send(source)
     assert caught.value is signal
     active.submit(asyncio.sleep(0)).result(5)
     assert failures == []
@@ -254,7 +262,8 @@ def test_cancelled_cleanup_retains_the_channel_until_its_late_abort_executes(bri
         assert entered.wait(5)
         cancelled.set()
         assert finished.wait(3)
-        assert len(caught) == 1 and isinstance(caught[0], CancelledError)
+        assert len(caught) == 1
+        assert isinstance(caught[0], CancelledError)
         replacement.start()
         assert replacement_finished.wait(.1), 'a new transfer overlapped a pending abort'
         assert len(replacement_errors) == 1
@@ -264,9 +273,11 @@ def test_cancelled_cleanup_retains_the_channel_until_its_late_abort_executes(bri
         if replacement.ident is not None:
             replacement.join(5)
     active.submit(asyncio.sleep(0)).result(5)
-    assert completed == [] and list((tmp_path / 'inbox').iterdir()) == []
+    assert completed == []
+    assert list((tmp_path / 'inbox').iterdir()) == []
     FileTransferSender(channel).send(source)
-    assert completed[0].read_bytes() == b'abcdefgh' and failures == []
+    assert completed[0].read_bytes() == b'abcdefgh'
+    assert failures == []
 
 
 def test_stop_after_confirmed_end_does_not_turn_a_completed_send_into_cancellation(tmp_path, monkeypatch):
@@ -312,8 +323,9 @@ def test_cancellation_is_checked_when_a_queued_data_write_actually_executes(tmp_
 
     scheduler = Bridge()
     monkeypatch.setattr(webrtc_files, 'get_bridge', lambda: scheduler)
+    sender = FileTransferSender(Channel())
     with pytest.raises(CancelledError):
-        FileTransferSender(Channel()).send(source, chunk_size=4, cancelled=cancelled.is_set)
+        sender.send(source, chunk_size=4, cancelled=cancelled.is_set)
     assert not any(isinstance(message, bytes) for message in messages)
 
 
@@ -335,9 +347,11 @@ def test_replaced_bridge_epoch_cannot_receive_later_chunks_or_cleanup(tmp_path, 
 
     scheduler = Bridge()
     monkeypatch.setattr(webrtc_files, 'get_bridge', lambda: scheduler)
+    sender = FileTransferSender(Channel())
     with pytest.raises(FileTransferError):
-        FileTransferSender(Channel()).send(source, chunk_size=4)
-    assert len(messages) == 1 and json.loads(messages[0])['type'] == 'file_begin'
+        sender.send(source, chunk_size=4)
+    assert len(messages) == 1
+    assert json.loads(messages[0])['type'] == 'file_begin'
 
 
 def test_large_inbox_request_yields_to_the_bridge_while_its_file_buffer_drains(bridge, tmp_path, monkeypatch):
@@ -409,9 +423,11 @@ def test_a_source_that_changes_size_does_not_report_success_or_replace_the_targe
             receiver.handle_message(message, on_done=done.append)
 
     monkeypatch.setattr(Path, 'open', unbuffered)
+    sender = FileTransferSender(Channel())
     with pytest.raises(FileTransferError, match='size changed'):
-        FileTransferSender(Channel()).send(source, chunk_size=4, on_progress=edited)
-    assert done == [] and target.read_bytes() == b'previous target'
+        sender.send(source, chunk_size=4, on_progress=edited)
+    assert done == []
+    assert target.read_bytes() == b'previous target'
     assert sorted(path.name for path in target.parent.iterdir()) == ['payload.bin']
 
 
@@ -427,8 +443,9 @@ def test_a_channel_without_an_open_state_is_refused_before_any_message(bridge, t
         def send(self, message):
             messages.append(message)
 
+    sender = FileTransferSender(Channel())
     with pytest.raises(FileTransferError, match='not open'):
-        FileTransferSender(Channel()).send(source)
+        sender.send(source)
     assert messages == []
 
 
@@ -481,8 +498,10 @@ def test_stopping_a_host_cancels_and_awaits_its_pending_file_request_job(bridge,
     active.submit(host._async_stop()).result(5)
     assert exited.wait(3)
     active.submit(asyncio.sleep(0)).result(5)
-    assert host._closed.is_set() and not host._background_tasks
-    assert host._files_channel is None and not host.authenticated
+    assert host._closed.is_set()
+    assert not host._background_tasks
+    assert host._files_channel is None
+    assert not host.authenticated
     assert not any(isinstance(message, bytes) for message in sent)
     assert failures == []
 
@@ -542,7 +561,8 @@ def test_two_inbox_requests_queue_without_interleaving_or_losing_the_second_file
         channel.full = False
         assert completed.wait(5)
         active.submit(finish()).result(5)
-        assert names == ['one.bin', 'two.bin'] and failures == []
+        assert names == ['one.bin', 'two.bin']
+        assert failures == []
     finally:
         channel.full = False
         active.submit(host._async_stop()).result(5)
@@ -561,14 +581,18 @@ def test_inbox_queue_bounds_and_cancellation_before_start_release_capacity(monke
     async def scenario():
         for name in ('one', 'two', 'overflow'):
             tasks.start_file_request(owned, sender, name, name, channel, lambda: True, failures.append)
-        assert len(owned) == 2 and len(failures) == 1 and 'queue is full' in failures[0]
+        assert len(owned) == 2
+        assert len(failures) == 1
+        assert 'queue is full' in failures[0]
         await tasks.cancel_file_requests(owned)
         await asyncio.sleep(0)
-        assert not owned and sent == []
+        assert not owned
+        assert sent == []
         tasks.start_file_request(owned, sender, 'fresh', 'fresh', channel, lambda: True, failures.append)
         await asyncio.gather(*tuple(owned))
         await asyncio.sleep(0)
-        assert not owned and sent == [('fresh', 'fresh')]
+        assert not owned
+        assert sent == [('fresh', 'fresh')]
 
     asyncio.run(scenario())
 
@@ -599,6 +623,7 @@ def test_inbox_failure_reply_preserves_wrapped_controls(signal):
         def send(self, _message):
             raise RuntimeError('wrapped') from original
 
+    reply = file_request_failure(Channel(), 'one.bin', lambda: True)
     with pytest.raises(signal) as caught:
-        file_request_failure(Channel(), 'one.bin', lambda: True)('failed')
+        reply('failed')
     assert caught.value is original

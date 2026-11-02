@@ -29,7 +29,8 @@ def test_private_renewal_survives_runtime_restart_with_the_same_readonly_limits(
     try:
         assert reopened.finish(child).state == 'succeeded'
         assert reopened.store.get(child)['spec']['roots'] == [str(renewal.reports)]
-        assert reopened.store.actions(child) == [] and reopened.get(renewal.source).state == 'paused'
+        assert reopened.store.actions(child) == []
+        assert reopened.get(renewal.source).state == 'paused'
     finally:
         reopened.close()
 
@@ -43,7 +44,8 @@ def test_sixteen_real_readonly_links_succeed_and_a_seventeenth_is_refused(renewa
     assert renewal.runtime.finish(parent).state == 'succeeded'
     with pytest.raises(AgentTaskError, match='sixteen'):
         reviewed(renewal, parent)
-    assert renewal.runtime.store.actions(parent) == [] and len(renewal.runtime.list()) == 17
+    assert renewal.runtime.store.actions(parent) == []
+    assert len(renewal.runtime.list()) == 17
 
 
 def test_source_change_inside_final_completion_sql_cannot_publish_stale_success(renewal):

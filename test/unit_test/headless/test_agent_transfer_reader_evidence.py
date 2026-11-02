@@ -41,10 +41,14 @@ def test_actual_renewed_reader_exports_only_evidence_without_reviving_old_input(
         binding = actual_binding(value.runtime, value.source)
         status, proof = evidence_read(server, identifier, binding, token=owner_token)
         assert status == 200, proof
-        assert proof['task_id'] == child and proof['source_task'] == value.source
-        assert proof['evidence_only'] is True and proof['input_authorized'] is False
-        assert 'owner' not in proof and str(value.reports) not in json.dumps(proof)
-    assert value.runtime.store.actions(value.source) == actions and value.manifest.read_bytes() == output
+        assert proof['task_id'] == child
+        assert proof['source_task'] == value.source
+        assert proof['evidence_only'] is True
+        assert proof['input_authorized'] is False
+        assert 'owner' not in proof
+        assert str(value.reports) not in json.dumps(proof)
+    assert value.runtime.store.actions(value.source) == actions
+    assert value.manifest.read_bytes() == output
     assert value.runtime.store.actions(child) == []
     with authorization_scope(value.owner), pytest.raises(AgentTaskError, match='another caller'):
         value.runtime.get(child)
@@ -92,7 +96,8 @@ def test_lost_actual_reader_authority_cannot_create_or_resolve_a_portable_grant(
             status, result = evidence_read(server, identifier, binding, token=owner_token)
         assert status == 409, result
     assert value.runtime.store.actions(value.source) == before
-    assert value.runtime.store.actions(child) == [] and value.manifest.read_bytes() == output
+    assert value.runtime.store.actions(child) == []
+    assert value.manifest.read_bytes() == output
 
 
 def test_retained_readonly_consent_still_requires_the_original_batch_issuance_state(renewal, monkeypatch):

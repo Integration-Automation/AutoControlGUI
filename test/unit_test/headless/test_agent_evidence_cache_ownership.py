@@ -78,7 +78,8 @@ def test_backup_publication_creates_own_segment_without_mutating_original_histor
         assert Path(new_link['journal_path']).parent == backup.evidence.directory(source.task)
         assert backup.evidence.directory(source.task) != source.runtime.evidence.directory(source.task)
         runs = backup.evidence.history.list_runs()
-        assert len(runs) == 2 and old_run in runs
+        assert len(runs) == 2
+        assert old_run in runs
         old_journals = backup.evidence.history.journals_for_run(old_run.id)
         assert [item.journal_path for item in old_journals] == [old_link['journal_path']]
         backup.evidence.publish(source.task)

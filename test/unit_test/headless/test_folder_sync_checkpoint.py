@@ -29,7 +29,8 @@ def test_checkpoint_retains_baseline_failed_sends_and_receipts_without_reading_t
         guard.setattr(Path, 'stat', lambda *_args, **_kwargs: pytest.fail('checkpoint accessed the filesystem'))
         checkpoint = old.checkpoint()
         replacement = FolderSyncEngine(watch_dir=tmp_path, sender=lambda *_args: None, checkpoint=checkpoint)
-    assert checkpoint.baselined and dict(checkpoint.entries) == old._content.snapshot
+    assert checkpoint.baselined
+    assert dict(checkpoint.entries) == old._content.snapshot
     assert 'pending.bin' not in dict(checkpoint.entries)
     existing.write_bytes(b'offline edit')
     sent = []
@@ -60,13 +61,15 @@ def test_checkpoint_requires_explicit_stop_and_actual_worker_exit(tmp_path):
         assert entered.wait(5)
         worker = engine._thread
         engine.stop()
-        assert engine.is_running() and engine.stop_requested
+        assert engine.is_running()
+        assert engine.stop_requested
         with pytest.raises(FolderSyncStateError, match='retired'):
             engine.checkpoint()
     finally:
         release.set()
         engine.stop()
-    assert worker is not None and not worker.is_alive()
+    assert worker is not None
+    assert not worker.is_alive()
     assert 'pending.bin' in dict(engine.checkpoint().entries)
 
 

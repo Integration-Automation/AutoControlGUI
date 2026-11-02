@@ -70,8 +70,9 @@ def test_uncertain_chunk_reply_resumes_after_restart_without_reuploading_accepte
             lost.append(call['url'])
             raise OSError('controlled lost accepted chunk reply')
     transport['after'] = lose
+    client = ac.SyncAssetHTTPClient('https://controlled.invalid', user_id='alice')
     with pytest.raises(ac.ConfigSyncError):
-        ac.SyncAssetHTTPClient('https://controlled.invalid', user_id='alice').upload(blob, sender, 'source')
+        client.upload(blob, sender, 'source')
     transport['after'] = None
     transport['calls'].clear()
     assert ac.SyncAssetHTTPClient('https://controlled.invalid', user_id='alice').upload(blob, sender, 'source')
@@ -122,6 +123,7 @@ def test_invalid_asset_reply_never_reaches_a_target_cache(tmp_path, transport, m
     monkeypatch.setattr(http_client, 'perform_call', lambda _call: {
         'status': 200, 'text': json.dumps({'version': 1, 'complete': 'yes', 'missing': []})})
     target = ac.SyncAssetStore(tmp_path / 'target.sqlite3')
+    client = ac.SyncAssetHTTPClient('https://controlled.invalid', user_id='alice')
     with pytest.raises(ac.SyncWorkspaceError, match='asset'):
-        ac.SyncAssetHTTPClient('https://controlled.invalid', user_id='alice').download(blob, target, 'target')
+        client.download(blob, target, 'target')
     assert not target.contains('target', blob)

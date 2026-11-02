@@ -43,7 +43,8 @@ def test_executor_and_read_only_mcp_share_the_sdk_snapshot_without_accepting_sup
     tools = {tool.name: tool for tool in build_default_tool_registry(read_only=True)}
     tool = tools['ac_probe_capabilities']
     assert command() == tool.invoke({}) == expected
-    assert tool.annotations.read_only and tool.output_schema['type'] == 'object'
+    assert tool.annotations.read_only
+    assert tool.output_schema['type'] == 'object'
     assert tool.input_schema.get('additionalProperties') is False
     with pytest.raises(TypeError):
         tool.invoke({'context': {'input_state': 'available'}})

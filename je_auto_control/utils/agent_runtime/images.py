@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import base64
-import binascii
 import io
 from typing import Any, Mapping
 
@@ -34,7 +33,7 @@ def observation_image_bytes(image: Mapping[str, Any]) -> bytes:
         raise AgentTaskError("observation image exceeds its bounded encoding")
     try:
         data = base64.b64decode(encoded, validate=True)
-    except (ValueError, binascii.Error) as error:
+    except ValueError as error:  # includes binascii.Error
         raise AgentTaskError("observation image encoding is invalid") from error
     dimensions = verify_jpeg(data)
     expected = image.get("image_size")

@@ -25,6 +25,7 @@ from je_auto_control.utils.remote_desktop.webrtc_file_write import (
 _PROBE_TIMEOUT_S = 2.0
 _COMMIT_TIMEOUT_S = 5.0
 _MAX_ENVELOPE = 4096
+_OWNERSHIP_ENDED = 'file connection ownership ended'
 
 
 class FileCommitError(AutoControlException, RuntimeError):
@@ -265,7 +266,7 @@ class ConfirmedPeer:
         _checkpoint(self.cancelled)
         self.bridge.validate()
         if not self.binding.usable(self.bridge.identity, self._generation):
-            raise FileCommitError('file connection ownership ended')
+            raise FileCommitError(_OWNERSHIP_ENDED)
         return False
 
     def probe(self) -> None:
@@ -276,7 +277,7 @@ class ConfirmedPeer:
         probe = _Probe()
         with self.binding.state.lock:
             if self.binding.state.closed or self.binding.state.generation != self._generation:
-                raise FileCommitError('file connection ownership ended')
+                raise FileCommitError(_OWNERSHIP_ENDED)
             if self.binding.state.probe is not None:
                 raise FileCommitError('file capability probe already pending')
             self.binding.state.probe = probe
@@ -301,7 +302,7 @@ class ConfirmedPeer:
         pending = _Commit(transfer_id, size)
         with self.binding.state.lock:
             if self.binding.state.closed or self.binding.state.generation != self._generation:
-                raise FileCommitError('file connection ownership ended')
+                raise FileCommitError(_OWNERSHIP_ENDED)
             if self.binding.state.commit is not None:
                 raise FileCommitError('file publication confirmation already pending')
             self.binding.state.commit = pending

@@ -54,11 +54,14 @@ def verify_clauses(clauses: Sequence[Mapping[str, Any]], policy: TaskPolicy, rec
     for clause in clauses:
         try:
             passed = _evaluate(clause, policy, receipts, observation, browser_read)
-            status = "unknown" if passed is None else ("passed" if passed else "failed")
+            if passed is None:
+                status = "unknown"
+            else:
+                status = "passed" if passed else "failed"
             reports.append({"kind": clause["kind"], "status": status})
         except (CancelledError, AuthorizationError, AgentHumanReview):
             raise
-        except (OSError, UnicodeError, TypeError, ValueError, LookupError, AgentTaskError) as error:
+        except (OSError, TypeError, ValueError, LookupError) as error:
             reports.append({"kind": clause["kind"], "status": "unknown", "reason": type(error).__name__})
     return reports
 

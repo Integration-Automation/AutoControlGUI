@@ -57,8 +57,10 @@ def test_portal_cancel_wakes_socket_wait_and_sends_bounded_close_outside_cancell
         token.cancel()
         worker.join(1)
         assert not worker.is_alive(), 'the cancelled portal still waits for its 30-second response deadline'
-        assert len(failures) == 1 and isinstance(failures[0], CancelledError)
-        assert len(closes) == 1 and closes[0][1:] == (portal.REQUEST_INTERFACE, 'Close', 0.25, None)
+        assert len(failures) == 1
+        assert isinstance(failures[0], CancelledError)
+        assert len(closes) == 1
+        assert closes[0][1:] == (portal.REQUEST_INTERFACE, 'Close', 0.25, None)
         assert owned.fileno() == -1
     finally:
         peer.close()
@@ -93,8 +95,10 @@ def test_cancelled_capture_helper_is_terminated_and_reaped_without_waiting_for_c
         token.cancel()
         worker.join(2)
         assert not worker.is_alive(), 'capture cancellation still waits for the helper deadline'
-        assert len(failures) == 1 and isinstance(failures[0], CancelledError)
-        assert len(processes) == 1 and processes[0].poll() is not None
+        assert len(failures) == 1
+        assert isinstance(failures[0], CancelledError)
+        assert len(processes) == 1
+        assert processes[0].poll() is not None
     finally:
         for process in processes:
             if process.poll() is None:
@@ -127,7 +131,8 @@ def test_oeffis_cancel_during_poll_releases_only_its_session_and_never_returns_a
     monkeypatch.setattr(oeffis, 'select', SimpleNamespace(select=poll))
     with cancellation_scope(token), pytest.raises(CancelledError):
         oeffis.connect_eis_fd(timeout=30, symbols=fake)
-    assert waits and max(waits) <= 0.1
+    assert waits
+    assert max(waits) <= 0.1
     assert fake.calls.count(('unref', HANDLE)) == 1
 
 

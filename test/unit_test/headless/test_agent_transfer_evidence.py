@@ -66,18 +66,24 @@ def test_actual_local_dag_recovery_resolves_only_the_reviewed_portable_proof(tmp
             binding = actual_binding(runtime, source)
             status, proof = evidence_read(server, grant, binding)
             assert status == 200, proof
-            assert proof['source_task'] == source and proof['task_id'] == child
-            assert proof['grant_id'] == grant and proof['evidence_only'] is True and proof['input_authorized'] is False
+            assert proof['source_task'] == source
+            assert proof['task_id'] == child
+            assert proof['grant_id'] == grant
+            assert proof['evidence_only'] is True
+            assert proof['input_authorized'] is False
             assert proof['submitted_spec_digest'] == binding['submitted_spec_digest']
             expected = {'key_hash': binding['request_key_hash'],
                         'submitted_spec_digest': binding['submitted_spec_digest']}
             digest = sha256(json.dumps(expected, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
             assert proof['node']['request_digest'] == digest
-            assert len(proof['chain']) == 1 and proof['chain'][0]['source_task'] == source
+            assert len(proof['chain']) == 1
+            assert proof['chain'][0]['source_task'] == source
             assert str(tmp_path) not in json.dumps(proof)
-            assert runtime.store.actions(child) == before and output.read_bytes() == body
+            assert runtime.store.actions(child) == before
+            assert output.read_bytes() == body
             status, again = evidence_create(server, reviewed)
-            assert status == 200 and again == created
+            assert status == 200
+            assert again == created
 
 
 @pytest.mark.parametrize('boundary', ['create', 'resolve'])

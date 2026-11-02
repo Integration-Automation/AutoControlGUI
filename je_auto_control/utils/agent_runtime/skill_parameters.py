@@ -9,7 +9,7 @@ from typing import Any
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import detached
 
-_NAME = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}")
+_NAME = re.compile(r"[A-Za-z]\w{0,63}", re.ASCII)
 _DATA = re.compile(r"/(?:actions/[0-9]+/(?:arguments/[^/]+(?:/[^/]+)*|expect_result|expect_not_result)|"
                    r"inputs/[^/]+(?:/[^/]+)*|"
                    r"success_criteria/[0-9]+/value)")
@@ -103,7 +103,7 @@ def repair_data(spec: dict, changes: Any) -> dict:
             raise AgentTaskError("repair changes require path and value")
         pointer = change["path"]
         if not isinstance(pointer, str) or re.fullmatch(
-                r"/actions/[0-9]+/arguments/selector/(?:name|role|automation_id)", pointer) is None:
+                r"/actions/\d+/arguments/selector/(?:name|role|automation_id)", pointer, re.ASCII) is None:
             raise AgentTaskError("repair may change only existing semantic selector names/roles/IDs")
         parent, key = _slot(result, pointer)
         parent[key] = _typed(change["value"], "string")

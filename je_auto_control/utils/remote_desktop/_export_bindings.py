@@ -4,99 +4,98 @@ from je_auto_control._lazy_exports import AttributeBinding, ExportBinding, Modul
 
 PUBLIC_ORDER_SHA256 = 'ac0179e53e00c2ae7a2987a049919a50d6671cd27a66f95ef29046b822b11819'
 
+_UTILS_REMOTE_DESKTOP_ADDRESS_BOOK = 'je_auto_control.utils.remote_desktop.address_book'
+_UTILS_REMOTE_DESKTOP_AUDIO = 'je_auto_control.utils.remote_desktop.audio'
+_UTILS_REMOTE_DESKTOP_FILE_TRANSFER = 'je_auto_control.utils.remote_desktop.file_transfer'
+_UTILS_REMOTE_DESKTOP_FINGERPRINT = 'je_auto_control.utils.remote_desktop.fingerprint'
+_UTILS_REMOTE_DESKTOP_HOST_ACCESS = 'je_auto_control.utils.remote_desktop.host_access'
+_UTILS_REMOTE_DESKTOP_HOST_ID = 'je_auto_control.utils.remote_desktop.host_id'
+_UTILS_REMOTE_DESKTOP_INPUT_DISPATCH = 'je_auto_control.utils.remote_desktop.input_dispatch'
+_UTILS_REMOTE_DESKTOP_PRESENCE = 'je_auto_control.utils.remote_desktop.presence'
+_UTILS_REMOTE_DESKTOP_PROTOCOL = 'je_auto_control.utils.remote_desktop.protocol'
+_UTILS_REMOTE_DESKTOP_TRUST_LIST = 'je_auto_control.utils.remote_desktop.trust_list'
+_UTILS_REMOTE_DESKTOP_VIEWER_ID = 'je_auto_control.utils.remote_desktop.viewer_id'
+_UTILS_REMOTE_DESKTOP_WAKE_ON_LAN = 'je_auto_control.utils.remote_desktop.wake_on_lan'
+_UTILS_REMOTE_DESKTOP__OPTIONAL_FILE_TRANSFER = 'je_auto_control.utils.remote_desktop._optional.file_transfer'
+_UTILS_REMOTE_DESKTOP__OPTIONAL_HW_CODEC = 'je_auto_control.utils.remote_desktop._optional.hw_codec'
+_UTILS_REMOTE_DESKTOP__OPTIONAL_MIC_UPLINK = 'je_auto_control.utils.remote_desktop._optional.mic_uplink'
+_UTILS_REMOTE_DESKTOP__OPTIONAL_WEBRTC = 'je_auto_control.utils.remote_desktop._optional.webrtc'
+
 EXPORTS: dict[str, ExportBinding] = {
     'RemoteDesktopHost': AttributeBinding('je_auto_control.utils.remote_desktop.host', 'RemoteDesktopHost'),
     'RemoteDesktopViewer': AttributeBinding('je_auto_control.utils.remote_desktop.viewer', 'RemoteDesktopViewer'),
-    'PendingViewer': AttributeBinding('je_auto_control.utils.remote_desktop.host_access', 'PendingViewer'),
-    'PendingViewerCallback':
-        AttributeBinding('je_auto_control.utils.remote_desktop.host_access', 'PendingViewerCallback'),
+    'PendingViewer': AttributeBinding(_UTILS_REMOTE_DESKTOP_HOST_ACCESS, 'PendingViewer'),
+    'PendingViewerCallback': AttributeBinding(_UTILS_REMOTE_DESKTOP_HOST_ACCESS, 'PendingViewerCallback'),
     'list_host_monitors': AttributeBinding('je_auto_control.utils.remote_desktop.host_capture', 'list_host_monitors'),
     'WebSocketDesktopHost': AttributeBinding('je_auto_control.utils.remote_desktop.ws_host', 'WebSocketDesktopHost'),
     'WebSocketDesktopViewer':
         AttributeBinding('je_auto_control.utils.remote_desktop.ws_viewer', 'WebSocketDesktopViewer'),
-    'WebRTCDesktopHost': AttributeBinding('je_auto_control.utils.remote_desktop._optional.webrtc', 'WebRTCDesktopHost'),
-    'WebRTCDesktopViewer':
-        AttributeBinding('je_auto_control.utils.remote_desktop._optional.webrtc', 'WebRTCDesktopViewer'),
-    'WebRTCConfig': AttributeBinding('je_auto_control.utils.remote_desktop._optional.webrtc', 'WebRTCConfig'),
+    'WebRTCDesktopHost': AttributeBinding(_UTILS_REMOTE_DESKTOP__OPTIONAL_WEBRTC, 'WebRTCDesktopHost'),
+    'WebRTCDesktopViewer': AttributeBinding(_UTILS_REMOTE_DESKTOP__OPTIONAL_WEBRTC, 'WebRTCDesktopViewer'),
+    'WebRTCConfig': AttributeBinding(_UTILS_REMOTE_DESKTOP__OPTIONAL_WEBRTC, 'WebRTCConfig'),
     'signaling_client': ModuleBinding('je_auto_control.utils.remote_desktop.signaling_client'),
-    'TrustList': AttributeBinding('je_auto_control.utils.remote_desktop.trust_list', 'TrustList'),
-    'default_trust_list': AttributeBinding('je_auto_control.utils.remote_desktop.trust_list', 'default_trust_list'),
-    'default_trust_list_path':
-        AttributeBinding('je_auto_control.utils.remote_desktop.trust_list', 'default_trust_list_path'),
-    'AddressBook': AttributeBinding('je_auto_control.utils.remote_desktop.address_book', 'AddressBook'),
-    'default_address_book':
-        AttributeBinding('je_auto_control.utils.remote_desktop.address_book', 'default_address_book'),
-    'default_address_book_path':
-        AttributeBinding('je_auto_control.utils.remote_desktop.address_book', 'default_address_book_path'),
-    'ViewerIdError': AttributeBinding('je_auto_control.utils.remote_desktop.viewer_id', 'ViewerIdError'),
-    'generate_viewer_id': AttributeBinding('je_auto_control.utils.remote_desktop.viewer_id', 'generate_viewer_id'),
-    'load_or_create_viewer_id':
-        AttributeBinding('je_auto_control.utils.remote_desktop.viewer_id', 'load_or_create_viewer_id'),
-    'validate_viewer_id': AttributeBinding('je_auto_control.utils.remote_desktop.viewer_id', 'validate_viewer_id'),
-    'build_magic_packet': AttributeBinding('je_auto_control.utils.remote_desktop.wake_on_lan', 'build_magic_packet'),
-    'send_magic_packet': AttributeBinding('je_auto_control.utils.remote_desktop.wake_on_lan', 'send_magic_packet'),
+    'TrustList': AttributeBinding(_UTILS_REMOTE_DESKTOP_TRUST_LIST, 'TrustList'),
+    'default_trust_list': AttributeBinding(_UTILS_REMOTE_DESKTOP_TRUST_LIST, 'default_trust_list'),
+    'default_trust_list_path': AttributeBinding(_UTILS_REMOTE_DESKTOP_TRUST_LIST, 'default_trust_list_path'),
+    'AddressBook': AttributeBinding(_UTILS_REMOTE_DESKTOP_ADDRESS_BOOK, 'AddressBook'),
+    'default_address_book': AttributeBinding(_UTILS_REMOTE_DESKTOP_ADDRESS_BOOK, 'default_address_book'),
+    'default_address_book_path': AttributeBinding(_UTILS_REMOTE_DESKTOP_ADDRESS_BOOK, 'default_address_book_path'),
+    'ViewerIdError': AttributeBinding(_UTILS_REMOTE_DESKTOP_VIEWER_ID, 'ViewerIdError'),
+    'generate_viewer_id': AttributeBinding(_UTILS_REMOTE_DESKTOP_VIEWER_ID, 'generate_viewer_id'),
+    'load_or_create_viewer_id': AttributeBinding(_UTILS_REMOTE_DESKTOP_VIEWER_ID, 'load_or_create_viewer_id'),
+    'validate_viewer_id': AttributeBinding(_UTILS_REMOTE_DESKTOP_VIEWER_ID, 'validate_viewer_id'),
+    'build_magic_packet': AttributeBinding(_UTILS_REMOTE_DESKTOP_WAKE_ON_LAN, 'build_magic_packet'),
+    'send_magic_packet': AttributeBinding(_UTILS_REMOTE_DESKTOP_WAKE_ON_LAN, 'send_magic_packet'),
     'SessionRecorder':
         AttributeBinding('je_auto_control.utils.remote_desktop._optional.session_recorder', 'SessionRecorder'),
     'MultiViewerHost':
         AttributeBinding('je_auto_control.utils.remote_desktop._optional.multi_viewer', 'MultiViewerHost'),
     'available_hardware_codecs':
-        AttributeBinding('je_auto_control.utils.remote_desktop._optional.hw_codec', 'available_hardware_codecs'),
-    'active_hardware_codec':
-        AttributeBinding('je_auto_control.utils.remote_desktop._optional.hw_codec', 'active_hardware_codec'),
-    'install_hardware_codec':
-        AttributeBinding('je_auto_control.utils.remote_desktop._optional.hw_codec', 'install_hardware_codec'),
-    'uninstall_hardware_codec':
-        AttributeBinding('je_auto_control.utils.remote_desktop._optional.hw_codec', 'uninstall_hardware_codec'),
+        AttributeBinding(_UTILS_REMOTE_DESKTOP__OPTIONAL_HW_CODEC, 'available_hardware_codecs'),
+    'active_hardware_codec': AttributeBinding(_UTILS_REMOTE_DESKTOP__OPTIONAL_HW_CODEC, 'active_hardware_codec'),
+    'install_hardware_codec': AttributeBinding(_UTILS_REMOTE_DESKTOP__OPTIONAL_HW_CODEC, 'install_hardware_codec'),
+    'uninstall_hardware_codec': AttributeBinding(_UTILS_REMOTE_DESKTOP__OPTIONAL_HW_CODEC, 'uninstall_hardware_codec'),
     'SessionPermissions': AttributeBinding('je_auto_control.utils.remote_desktop.permissions', 'SessionPermissions'),
-    'KnownHosts': AttributeBinding('je_auto_control.utils.remote_desktop.fingerprint', 'KnownHosts'),
-    'default_known_hosts': AttributeBinding('je_auto_control.utils.remote_desktop.fingerprint', 'default_known_hosts'),
-    'fingerprint_for_display':
-        AttributeBinding('je_auto_control.utils.remote_desktop.fingerprint', 'fingerprint_for_display'),
+    'KnownHosts': AttributeBinding(_UTILS_REMOTE_DESKTOP_FINGERPRINT, 'KnownHosts'),
+    'default_known_hosts': AttributeBinding(_UTILS_REMOTE_DESKTOP_FINGERPRINT, 'default_known_hosts'),
+    'fingerprint_for_display': AttributeBinding(_UTILS_REMOTE_DESKTOP_FINGERPRINT, 'fingerprint_for_display'),
     'load_or_create_host_fingerprint':
-        AttributeBinding('je_auto_control.utils.remote_desktop.fingerprint', 'load_or_create_host_fingerprint'),
-    'MicUplinkSender': AttributeBinding('je_auto_control.utils.remote_desktop._optional.mic_uplink', 'MicUplinkSender'),
-    'MicUplinkReceiver':
-        AttributeBinding('je_auto_control.utils.remote_desktop._optional.mic_uplink', 'MicUplinkReceiver'),
-    'FileTransferSender':
-        AttributeBinding('je_auto_control.utils.remote_desktop._optional.file_transfer', 'FileTransferSender'),
-    'FileTransferReceiver':
-        AttributeBinding('je_auto_control.utils.remote_desktop._optional.file_transfer', 'FileTransferReceiver'),
+        AttributeBinding(_UTILS_REMOTE_DESKTOP_FINGERPRINT, 'load_or_create_host_fingerprint'),
+    'MicUplinkSender': AttributeBinding(_UTILS_REMOTE_DESKTOP__OPTIONAL_MIC_UPLINK, 'MicUplinkSender'),
+    'MicUplinkReceiver': AttributeBinding(_UTILS_REMOTE_DESKTOP__OPTIONAL_MIC_UPLINK, 'MicUplinkReceiver'),
+    'FileTransferSender': AttributeBinding(_UTILS_REMOTE_DESKTOP__OPTIONAL_FILE_TRANSFER, 'FileTransferSender'),
+    'FileTransferReceiver': AttributeBinding(_UTILS_REMOTE_DESKTOP__OPTIONAL_FILE_TRANSFER, 'FileTransferReceiver'),
     'FileTransferWebRTCError':
-        AttributeBinding('je_auto_control.utils.remote_desktop._optional.file_transfer', 'FileTransferWebRTCError'),
-    'InputDispatchError': AttributeBinding('je_auto_control.utils.remote_desktop.input_dispatch', 'InputDispatchError'),
-    'AuthenticationError': AttributeBinding('je_auto_control.utils.remote_desktop.protocol', 'AuthenticationError'),
-    'ProtocolError': AttributeBinding('je_auto_control.utils.remote_desktop.protocol', 'ProtocolError'),
-    'MessageType': AttributeBinding('je_auto_control.utils.remote_desktop.protocol', 'MessageType'),
-    'encode_frame': AttributeBinding('je_auto_control.utils.remote_desktop.protocol', 'encode_frame'),
-    'decode_frame_header': AttributeBinding('je_auto_control.utils.remote_desktop.protocol', 'decode_frame_header'),
-    'dispatch_input': AttributeBinding('je_auto_control.utils.remote_desktop.input_dispatch', 'dispatch_input'),
-    'HostIdError': AttributeBinding('je_auto_control.utils.remote_desktop.host_id', 'HostIdError'),
-    'format_host_id': AttributeBinding('je_auto_control.utils.remote_desktop.host_id', 'format_host_id'),
-    'generate_host_id': AttributeBinding('je_auto_control.utils.remote_desktop.host_id', 'generate_host_id'),
-    'load_or_create_host_id':
-        AttributeBinding('je_auto_control.utils.remote_desktop.host_id', 'load_or_create_host_id'),
-    'parse_host_id': AttributeBinding('je_auto_control.utils.remote_desktop.host_id', 'parse_host_id'),
-    'validate_host_id': AttributeBinding('je_auto_control.utils.remote_desktop.host_id', 'validate_host_id'),
-    'AudioBackendError': AttributeBinding('je_auto_control.utils.remote_desktop.audio', 'AudioBackendError'),
-    'AudioCapture': AttributeBinding('je_auto_control.utils.remote_desktop.audio', 'AudioCapture'),
-    'AudioPlayer': AttributeBinding('je_auto_control.utils.remote_desktop.audio', 'AudioPlayer'),
-    'is_audio_backend_available':
-        AttributeBinding('je_auto_control.utils.remote_desktop.audio', 'is_audio_backend_available'),
+        AttributeBinding(_UTILS_REMOTE_DESKTOP__OPTIONAL_FILE_TRANSFER, 'FileTransferWebRTCError'),
+    'InputDispatchError': AttributeBinding(_UTILS_REMOTE_DESKTOP_INPUT_DISPATCH, 'InputDispatchError'),
+    'AuthenticationError': AttributeBinding(_UTILS_REMOTE_DESKTOP_PROTOCOL, 'AuthenticationError'),
+    'ProtocolError': AttributeBinding(_UTILS_REMOTE_DESKTOP_PROTOCOL, 'ProtocolError'),
+    'MessageType': AttributeBinding(_UTILS_REMOTE_DESKTOP_PROTOCOL, 'MessageType'),
+    'encode_frame': AttributeBinding(_UTILS_REMOTE_DESKTOP_PROTOCOL, 'encode_frame'),
+    'decode_frame_header': AttributeBinding(_UTILS_REMOTE_DESKTOP_PROTOCOL, 'decode_frame_header'),
+    'dispatch_input': AttributeBinding(_UTILS_REMOTE_DESKTOP_INPUT_DISPATCH, 'dispatch_input'),
+    'HostIdError': AttributeBinding(_UTILS_REMOTE_DESKTOP_HOST_ID, 'HostIdError'),
+    'format_host_id': AttributeBinding(_UTILS_REMOTE_DESKTOP_HOST_ID, 'format_host_id'),
+    'generate_host_id': AttributeBinding(_UTILS_REMOTE_DESKTOP_HOST_ID, 'generate_host_id'),
+    'load_or_create_host_id': AttributeBinding(_UTILS_REMOTE_DESKTOP_HOST_ID, 'load_or_create_host_id'),
+    'parse_host_id': AttributeBinding(_UTILS_REMOTE_DESKTOP_HOST_ID, 'parse_host_id'),
+    'validate_host_id': AttributeBinding(_UTILS_REMOTE_DESKTOP_HOST_ID, 'validate_host_id'),
+    'AudioBackendError': AttributeBinding(_UTILS_REMOTE_DESKTOP_AUDIO, 'AudioBackendError'),
+    'AudioCapture': AttributeBinding(_UTILS_REMOTE_DESKTOP_AUDIO, 'AudioCapture'),
+    'AudioPlayer': AttributeBinding(_UTILS_REMOTE_DESKTOP_AUDIO, 'AudioPlayer'),
+    'is_audio_backend_available': AttributeBinding(_UTILS_REMOTE_DESKTOP_AUDIO, 'is_audio_backend_available'),
     'ClipboardSyncError': AttributeBinding('je_auto_control.utils.remote_desktop.clipboard_sync', 'ClipboardSyncError'),
-    'FileReceiver': AttributeBinding('je_auto_control.utils.remote_desktop.file_transfer', 'FileReceiver'),
-    'FileSendResult': AttributeBinding('je_auto_control.utils.remote_desktop.file_transfer', 'FileSendResult'),
-    'FileTransferError': AttributeBinding('je_auto_control.utils.remote_desktop.file_transfer', 'FileTransferError'),
-    'confine_destination':
-        AttributeBinding('je_auto_control.utils.remote_desktop.file_transfer', 'confine_destination'),
-    'default_download_dir':
-        AttributeBinding('je_auto_control.utils.remote_desktop.file_transfer', 'default_download_dir'),
-    'send_file': AttributeBinding('je_auto_control.utils.remote_desktop.file_transfer', 'send_file'),
-    'PresenceError': AttributeBinding('je_auto_control.utils.remote_desktop.presence', 'PresenceError'),
-    'PresenceListener': AttributeBinding('je_auto_control.utils.remote_desktop.presence', 'PresenceListener'),
-    'PresenceRegistry': AttributeBinding('je_auto_control.utils.remote_desktop.presence', 'PresenceRegistry'),
-    'ROLE_CONTROLLER': AttributeBinding('je_auto_control.utils.remote_desktop.presence', 'ROLE_CONTROLLER'),
-    'ROLE_OBSERVER': AttributeBinding('je_auto_control.utils.remote_desktop.presence', 'ROLE_OBSERVER'),
-    'ViewerPresence': AttributeBinding('je_auto_control.utils.remote_desktop.presence', 'ViewerPresence'),
-    'default_presence_registry':
-        AttributeBinding('je_auto_control.utils.remote_desktop.presence', 'default_presence_registry'),
+    'FileReceiver': AttributeBinding(_UTILS_REMOTE_DESKTOP_FILE_TRANSFER, 'FileReceiver'),
+    'FileSendResult': AttributeBinding(_UTILS_REMOTE_DESKTOP_FILE_TRANSFER, 'FileSendResult'),
+    'FileTransferError': AttributeBinding(_UTILS_REMOTE_DESKTOP_FILE_TRANSFER, 'FileTransferError'),
+    'confine_destination': AttributeBinding(_UTILS_REMOTE_DESKTOP_FILE_TRANSFER, 'confine_destination'),
+    'default_download_dir': AttributeBinding(_UTILS_REMOTE_DESKTOP_FILE_TRANSFER, 'default_download_dir'),
+    'send_file': AttributeBinding(_UTILS_REMOTE_DESKTOP_FILE_TRANSFER, 'send_file'),
+    'PresenceError': AttributeBinding(_UTILS_REMOTE_DESKTOP_PRESENCE, 'PresenceError'),
+    'PresenceListener': AttributeBinding(_UTILS_REMOTE_DESKTOP_PRESENCE, 'PresenceListener'),
+    'PresenceRegistry': AttributeBinding(_UTILS_REMOTE_DESKTOP_PRESENCE, 'PresenceRegistry'),
+    'ROLE_CONTROLLER': AttributeBinding(_UTILS_REMOTE_DESKTOP_PRESENCE, 'ROLE_CONTROLLER'),
+    'ROLE_OBSERVER': AttributeBinding(_UTILS_REMOTE_DESKTOP_PRESENCE, 'ROLE_OBSERVER'),
+    'ViewerPresence': AttributeBinding(_UTILS_REMOTE_DESKTOP_PRESENCE, 'ViewerPresence'),
+    'default_presence_registry': AttributeBinding(_UTILS_REMOTE_DESKTOP_PRESENCE, 'default_presence_registry'),
 }

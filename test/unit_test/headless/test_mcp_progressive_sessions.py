@@ -26,7 +26,8 @@ def test_enable_is_session_local_and_emits_one_change():
     first.enable(["fixture_0"])
     first.enable(["fixture_0"])
     assert first.state()["enabled"] == ["fixture_0"]
-    assert second.state()["enabled"] == [] and events == ["changed"]
+    assert second.state()["enabled"] == []
+    assert events == ["changed"]
     assert first.state()["snapshot_id"] != second.state()["snapshot_id"]
 
 
@@ -128,7 +129,8 @@ def test_stateless_requests_use_a_fixed_profile_and_create_no_session_views():
     page = request(server, "tools/list", {"_meta": meta})["result"]
     assert "fixture_0" in {item["name"] for item in page["tools"]}
     assert "fixture_1" not in {item["name"] for item in page["tools"]}
-    assert "nextCursor" not in page and server._disclosure_views == {}
+    assert "nextCursor" not in page
+    assert server._disclosure_views == {}
     result = request(server, "tools/call", {"_meta": meta, "name": "ac_mcp_tools_enable",
                                           "arguments": {"names": ["fixture_1"]}})
     assert result["result"]["isError"] is True
@@ -160,7 +162,9 @@ def test_two_real_http_sessions_keep_separate_views_across_connections():
     try:
         first, _ = rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}})
         second, _ = rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}})
-        assert first and second and first != second
+        assert first
+        assert second
+        assert first != second
         _, enabled = rpc("tools/call", {"name": "ac_mcp_tools_enable",
                                         "arguments": {"names": ["fixture_0"]}}, first)
         assert enabled["result"]["isError"] is False
@@ -168,7 +172,8 @@ def test_two_real_http_sessions_keep_separate_views_across_connections():
         _, second_page = rpc("tools/list", session=second)
         assert "fixture_0" in {item["name"] for item in first_page["result"]["tools"]}
         assert "fixture_0" not in {item["name"] for item in second_page["result"]["tools"]}
-        assert first in bridge._disclosure_views and second in bridge._disclosure_views
+        assert first in bridge._disclosure_views
+        assert second in bridge._disclosure_views
     finally:
         server.stop()
     assert bridge._disclosure_views == {}
@@ -182,5 +187,6 @@ def test_stdio_eof_retires_the_view_and_its_existing_callback():
     callback = server._build_call_context(1, {}).tool_catalog
     server.serve_stdio(io.StringIO(""), io.StringIO())
     assert server._disclosure_views == {}
+    view = callback()
     with pytest.raises(ToolDiscoveryError, match="closed"):
-        callback().state()
+        view.state()

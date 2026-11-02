@@ -22,8 +22,9 @@ def test_recording_retains_both_issuing_and_consuming_session_origins(recording)
             candidate = runtime.skills.control('record', request_for(recording, handoff_id=grant['id']))
         assert {issuer.identifier, recipient.identifier} <= set(candidate['spec']['options']['origin_policies'])
         issuer.revoke()
+        request = request_for(recording, handoff_id=grant['id'], name='No lost ceiling')
         with pytest.raises(AgentTaskError):
-            runtime.skills.control('record', request_for(recording, handoff_id=grant['id'], name='No lost ceiling'))
+            runtime.skills.control('record', request)
         assert len(runtime.skills.control('list')['candidates']) == 1
         assert runtime.recovery.control('get_handoff', {'handoff_id': grant['id']})['handoff']['id'] == grant['id']
         listed = runtime.recovery.control('list_handoffs', {'source_task': recording.task_id})

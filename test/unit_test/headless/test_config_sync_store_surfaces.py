@@ -29,7 +29,8 @@ def test_executor_mcp_and_builder_share_store_and_journal_evidence(tmp_path,monk
     reply=tools()['ac_config_store_commit'].handler(**args)
     assert reply=={'version':2,'revision':1,'cas':True}
     read=tools()['ac_config_store_get'].handler(path=args['path'],user_id='alice')
-    assert read['bucket']['revision']==1 and read['cas'] is True
+    assert read['bucket']['revision']==1
+    assert read['cas'] is True
     assert {'AC_config_store_commit','AC_config_store_get'}<=COMMAND_SPECS.keys()
     candidate=ac.generate_candidate_from_log(source.path,run_id='config-commit')
     assert candidate.actions==[['AC_config_store_commit',args]]
@@ -49,11 +50,12 @@ def test_cancelled_or_confined_mcp_does_not_open_a_database(tmp_path,monkeypatch
     args=arguments(tmp_path)
     ctx=ToolCallContext('cancelled')
     ctx.cancelled_event.set()
+    commit_tool=tools()['ac_config_store_commit']
     with pytest.raises(OperationCancelledError):
-        tools()['ac_config_store_commit'].handler(**args,ctx=ctx)
+        commit_tool.handler(**args,ctx=ctx)
     ctx=ToolCallContext('confined',path_policy=PathPolicy([tmp_path/'elsewhere']))
     with pytest.raises(PathNotAllowedError):
-        tools()['ac_config_store_commit'].handler(**args,ctx=ctx)
+        commit_tool.handler(**args,ctx=ctx)
     assert not (tmp_path/'config.sqlite3').exists()
 
 

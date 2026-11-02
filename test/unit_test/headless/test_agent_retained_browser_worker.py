@@ -181,8 +181,9 @@ def test_reader_scope_bind_does_not_reconfigure_original_input_or_change_context
     assert configured.worker._dispatch("bind_browser_reader", {"spec": reader_spec(configured)}) == PROOF
     assert configured.worker._spec is original
     assert configured.worker._dispatch("observe", {})["identity"] == configured.target.observe()["identity"]
+    reader = reader_spec(configured)
     with pytest.raises(AgentTaskError):
-        configured.worker._dispatch("configure", {"spec": reader_spec(configured)})
+        configured.worker._dispatch("configure", {"spec": reader})
 
 
 @pytest.mark.parametrize("changed", [
@@ -195,8 +196,9 @@ def test_reader_scope_bind_does_not_reconfigure_original_input_or_change_context
 ])
 def test_readonly_scope_bind_cannot_broaden_original_permissions_or_change_evidence(configured, changed):
     configured.worker._dispatch("retire_browser", {})
+    broadened = {**reader_spec(configured), **changed}
     with pytest.raises(AgentTaskError):
-        configured.worker._dispatch("bind_browser_reader", {"spec": {**reader_spec(configured), **changed}})
+        configured.worker._dispatch("bind_browser_reader", {"spec": broadened})
     assert configured.session.actions == []
 
 

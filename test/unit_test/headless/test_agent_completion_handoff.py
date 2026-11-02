@@ -50,7 +50,9 @@ def test_original_owner_adopts_renewed_other_caller_completion_without_reviving_
     assert authorization['approved_root_count'] == 1
     assert completed.old.identifier in authorization['replaced_origins']
     public = json.dumps([review, grant])
-    assert 'store_path' not in public and 'arguments' not in public and str(completed.reports) not in public
+    assert 'store_path' not in public
+    assert 'arguments' not in public
+    assert str(completed.reports) not in public
     with authorization_scope(completed.reviewer):
         assert runtime.recovery.control('create_handoff', request)['handoff']['id'] == grant['id']
     with pytest.raises(AgentTaskError, match='another caller'):
@@ -68,8 +70,10 @@ def test_original_owner_adopts_renewed_other_caller_completion_without_reviving_
     validation = {'batch_id': completed.batch_id, 'node_id': 'a', 'attempt': started['attempt']}
     assert runtime.batches.control('validate_node', validation)['outcome'] == 'completed'
     assert runtime.get(completed.source).state == 'paused'
-    assert runtime.store.actions(completed.source) == before and runtime.store.actions(completed.child) == []
-    assert completed.manifest.read_bytes() == manifest and old_path.read_bytes() == old_bytes
+    assert runtime.store.actions(completed.source) == before
+    assert runtime.store.actions(completed.child) == []
+    assert completed.manifest.read_bytes() == manifest
+    assert old_path.read_bytes() == old_bytes
     runtime.recovery.control('revoke_handoff', {'handoff_id': grant['id']})
     with pytest.raises(AgentTaskError):
         runtime.batches.control('validate_node', validation)

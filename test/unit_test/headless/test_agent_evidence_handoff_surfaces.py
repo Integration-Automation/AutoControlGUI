@@ -49,7 +49,8 @@ def test_shared_surfaces_review_issue_inspect_and_revoke_only_the_exact_handoff(
             review = invoke(surface, connection, tmp_path, 'review_handoff', request_for(handoff))
             grant = invoke(surface, connection, tmp_path, 'create_handoff', {**request_for(handoff),
                 'review': review['handoff_review'], 'note': 'Explicit immutable evidence-only consent'})['handoff']
-        assert grant['evidence_only'] is True and grant['input_authorized'] is False
+        assert grant['evidence_only'] is True
+        assert grant['input_authorized'] is False
         assert invoke(surface, connection, tmp_path, 'get_handoff', {'handoff_id': grant['id']})['handoff'] == grant
         listed = invoke(surface, connection, tmp_path, 'list_handoffs', {'batch_id': handoff.batch_id, 'node_id': 'a'})
         assert [item['id'] for item in listed['handoffs']] == [grant['id']]

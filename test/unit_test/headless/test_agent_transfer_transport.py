@@ -89,8 +89,9 @@ def test_chunk_reply_requires_exact_hash_bounded_bytes_and_canonical_base64(chan
 def test_unavailable_or_invalid_peer_request_fails_before_the_host_adapter(operation, payload):
     def forbidden(*_args):
         raise AssertionError('invalid peer request reached the host adapter')
+    transfer = peer_type()(forbidden)
     with pytest.raises(AgentTaskError):
-        peer_type()(forbidden).call('source', 'f' * 64, operation, payload, 3)
+        transfer.call('source', 'f' * 64, operation, payload, 3)
 
 
 def test_late_injected_wire_reply_is_discarded_even_when_its_manifest_is_well_formed(monkeypatch):
@@ -102,8 +103,9 @@ def test_late_injected_wire_reply_is_discarded_even_when_its_manifest_is_well_fo
     def late(*_args):
         clock[0] = 4.0
         return reply
+    transfer = peer(late)
     with pytest.raises(AgentTaskError, match='deadline'):
-        peer(late).call('source', 'f' * 64, 'export', {'export_id': 'a' * 32}, 3)
+        transfer.call('source', 'f' * 64, 'export', {'export_id': 'a' * 32}, 3)
 
 
 def test_a_rounded_remaining_time_never_exceeds_the_routes_thirty_second_bound(monkeypatch):
@@ -159,5 +161,6 @@ def test_retained_peer_refuses_a_closed_runtime_before_host_lookup_or_network(tm
 def test_invalid_peer_timeout_fails_with_typed_error_before_the_adapter(timeout):
     def forbidden(*_args):
         raise AssertionError('invalid timeout reached the adapter')
+    transfer = peer_type()(forbidden)
     with pytest.raises(AgentTaskError):
-        peer_type()(forbidden).call('source', 'f' * 64, 'export', {'export_id': 'a' * 32}, timeout)
+        transfer.call('source', 'f' * 64, 'export', {'export_id': 'a' * 32}, timeout)

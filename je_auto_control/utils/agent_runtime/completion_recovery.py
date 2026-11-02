@@ -100,6 +100,7 @@ def _principals(details: dict) -> None:
             if not owns_task(owner, current_authorization()):
                 raise AuthorizationError("completion reviewer can no longer manage the source owner")
         with DeferredAuthorization(AuthorizationContext(**owner) if owner else None).scope():
+            # reason: entering the scope re-checks the owner's current rights; nothing runs inside it
             pass
 
 
@@ -139,7 +140,7 @@ def completion_metadata(store: Any, task_id: str, *, runtime: Any = None) -> dic
         try:
             check_completion_authority(runtime, task_id)
             result['completion_authorization'] = 'active'
-        except (AuthorizationError, OSError, TypeError, ValueError, LookupError):
+        except (OSError, TypeError, ValueError, LookupError):  # AuthorizationError is a PermissionError
             result.update(completion_contract=0, completion_authorization='unavailable')
     return result
 
@@ -225,7 +226,10 @@ def _verification_template(value: dict) -> dict:
 
 def _details(runtime: Any, source: dict, effect: dict, ownership: dict | None, *, connection: Any = None) -> dict:
     actor = current_authorization()
-    reviewer = ownership["actor"] if ownership is not None else (asdict(actor) if actor else {})
+    if ownership is not None:
+        reviewer = ownership["actor"]
+    else:
+        reviewer = asdict(actor) if actor else {}
     details = {"contract": 1, "source_task": source["id"],
                "source_snapshot": _snapshot(runtime, source, connection=connection),
                "effect_task": effect["id"], "effect_snapshot": _snapshot(runtime, effect, connection=connection),

@@ -57,7 +57,8 @@ def run(worker):
 
 
 def test_constructing_sync_is_inert_and_local_actions_run_off_the_gui_thread(panel, app, tmp_path, monkeypatch):
-    assert not list(tmp_path.iterdir()) and panel.findChildren(QPushButton) == []
+    assert not list(tmp_path.iterdir())
+    assert panel.findChildren(QPushButton) == []
     assert len(panel.menu_actions()) == 17
     config = configuration(tmp_path)
     panel._configuration.setPlainText(json.dumps(config))
@@ -74,8 +75,10 @@ def test_constructing_sync_is_inert_and_local_actions_run_off_the_gui_thread(pan
     idle(app, panel)
     panel.begin('status')
     idle(app, panel)
-    assert threads and all(thread != gui_thread for thread in threads)
-    assert panel._status_key == 'done' and panel._last_sync is None
+    assert threads
+    assert all(thread != gui_thread for thread in threads)
+    assert panel._status_key == 'done'
+    assert panel._last_sync is None
     assert panel._reviewed is None
 
 
@@ -87,7 +90,8 @@ def test_review_selection_resolves_all_heads_and_configuration_change_discards_r
     panel._configuration.setPlainText(json.dumps(config))
     panel._kind.setCurrentText('workspace')
     panel.begin('preferences')
-    assert panel._handle is None and panel._status_key == 'error'
+    assert panel._handle is None
+    assert panel._status_key == 'error'
     panel.begin('review')
     idle(app, panel)
     assert panel._heads.rowCount() == 2
@@ -95,12 +99,14 @@ def test_review_selection_resolves_all_heads_and_configuration_change_discards_r
     panel._value.setPlainText('{"value":"light"}')
     panel.begin('resolve')
     idle(app, panel)
-    assert panel._status_key == 'done' and panel._reviewed is None
+    assert panel._status_key == 'done'
+    assert panel._reviewed is None
     assert len(ac.SyncWorkspace(config).review('workspace')) == 1
     panel.begin('review')
     idle(app, panel)
     panel._configuration.setPlainText('{}')
-    assert panel._reviewed is None and panel._heads.rowCount() == 0
+    assert panel._reviewed is None
+    assert panel._heads.rowCount() == 0
     assert not panel._value.toPlainText()
 
 
@@ -129,17 +135,21 @@ def test_loopback_sync_does_not_apply_preferences_until_explicit_reviewed_action
                 assert view._status_key == 'done', view._status.text()
             assert view._last_sync is not None
             successful_revision = view._last_sync
-            assert window._theme_name == 'dark' and window._user_font_pt == 0
+            assert window._theme_name == 'dark'
+            assert window._user_font_pt == 0
             view._kind.setCurrentText('workspace')
             assert view._last_sync == successful_revision
             view.begin('review')
             idle(app, view)
-            assert view._heads.rowCount() == 4 and window._theme_name == 'dark'
+            assert view._heads.rowCount() == 4
+            assert window._theme_name == 'dark'
             view.begin('preferences')
             idle(app, view)
             assert view._status_key == 'applied', view._status.text()
-            assert window._theme_name == 'light' and window._user_font_pt == 16
-            assert window._navigation_dock.isHidden() and window._navigation_width == 440
+            assert window._theme_name == 'light'
+            assert window._user_font_pt == 16
+            assert window._navigation_dock.isHidden()
+            assert window._navigation_width == 440
             assert settings.value('private/token') == 'keep-local'
             assert settings.value('workspace/theme') is None
     finally:
@@ -159,7 +169,8 @@ def test_live_preferences_validate_every_value_before_mutating_the_window(app, t
         with pytest.raises(ac.ConfigSyncError):
             window.apply_workspace_preferences({'theme': 'light', 'font_pt': True,
                 'navigation_visible': False, 'navigation_width': 440})
-        assert window._theme_name == 'dark' and window._user_font_pt == 0
+        assert window._theme_name == 'dark'
+        assert window._user_font_pt == 0
     finally:
         window.close()
         window.deleteLater()
@@ -185,7 +196,8 @@ def test_cancelled_or_closed_view_discards_delayed_preference_application(panel,
     panel.cancel()
     release.set()
     idle(app, panel)
-    assert applied == [] and panel._status_key == 'cancelled'
+    assert applied == []
+    assert panel._status_key == 'cancelled'
     release.clear()
     entered.clear()
     panel.begin('preferences')
@@ -253,10 +265,13 @@ def test_network_failure_masks_declared_secret_while_local_worker_never_resolves
     local = ConfigSyncWorker(SyncUIRequest(2, 'status', '{}', '{"secret_env":"SYNC_UI_TEST_SECRET"}'))
     try:
         outcome = run(network)
-        assert outcome.status == 'error' and secret not in outcome.error and '***' in outcome.error
+        assert outcome.status == 'error'
+        assert secret not in outcome.error
+        assert '***' in outcome.error
         assert accesses == ['SYNC_UI_TEST_SECRET']
         accesses.clear()
-        assert run(local).status == 'error' and accesses == []
+        assert run(local).status == 'error'
+        assert accesses == []
     finally:
         network.deleteLater()
         local.deleteLater()

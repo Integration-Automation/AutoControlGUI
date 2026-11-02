@@ -97,7 +97,9 @@ def test_completion_projection_and_public_consent_omit_private_task_fields(hando
     grant = grant_for(handoff)
     result = consume(handoff, grant['id'])
     combined = json.dumps([grant, result])
-    assert secret not in combined and 'store_path' not in combined and 'arguments' not in combined
+    assert secret not in combined
+    assert 'store_path' not in combined
+    assert 'arguments' not in combined
     assert all(set(report) == {'kind', 'status'} for report in result[0]['verification'])
 
 
@@ -120,8 +122,10 @@ def test_consent_survives_restart_but_does_not_reassign_or_replay_tasks(handoff)
 def test_malformed_historical_admitting_actor_is_a_typed_refusal(handoff):
     with handoff.runtime.store.connection(write=True) as connection:
         connection.execute('UPDATE agent_dag_local_tasks SET actor=? WHERE task_id=?', ('{', handoff.source))
-    with authorization_scope(handoff.reviewer), pytest.raises(AgentTaskError):
-        handoff.runtime.recovery.control('review_handoff', request_for(handoff))
+    request = request_for(handoff)
+    with authorization_scope(handoff.reviewer):
+        with pytest.raises(AgentTaskError):
+            handoff.runtime.recovery.control('review_handoff', request)
 
 
 @pytest.mark.parametrize(('field', 'value'), [('issuer', []), ('leaf_owner', None),

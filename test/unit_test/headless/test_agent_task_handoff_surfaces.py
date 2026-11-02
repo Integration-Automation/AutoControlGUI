@@ -50,8 +50,9 @@ def exercise(value, surface, operation, adoption, monkeypatch, temporary):
         connection = temporary / 'connection.json'
         connection.write_text(json.dumps({'url': server.base_url, 'token': server.token}), encoding='utf-8')
         monkeypatch.setattr('je_auto_control.utils.agent_runtime.client.default_connection_path', lambda: connection)
+        client = AgentRuntimeClient(connection)
         with pytest.raises(AgentTaskError):
-            AgentRuntimeClient(connection).call('get', {'task_id': value.child_id})
+            client.call('get', {'task_id': value.child_id})
         request = {'source_task': value.task_id, 'task_id': value.child_id}
         with authorization_scope(value.reviewer):
             preview = invoke(surface, 'recovery', 'review_handoff', request, connection, temporary)
@@ -69,11 +70,13 @@ def exercise(value, surface, operation, adoption, monkeypatch, temporary):
         result = invoke(surface, 'skill', operation, {**adoption, 'handoff_id': grant['id']}, connection, temporary)
         reviewed = (result['provenance']['completion_review'] if operation == 'record'
                     else result['publication']['completion_review'])
-        assert reviewed['evidence_handoff']['id'] == grant['id'] and result['owner']['user_id'] == 'owner'
+        assert reviewed['evidence_handoff']['id'] == grant['id']
+        assert result['owner']['user_id'] == 'owner'
         assert runtime.get(value.task_id).state == 'paused'
+        client = AgentRuntimeClient(connection)
         with pytest.raises(AgentTaskError):
-            AgentRuntimeClient(connection).call('get', {'task_id': value.child_id})
-        revoked = invoke(surface, 'recovery', 'revoke_handoff', {'handoff_id': grant['id']}, connection, temporary)
+            client.call('get', {'task_id': value.child_id})
+        revoked =invoke(surface, 'recovery', 'revoke_handoff', {'handoff_id': grant['id']}, connection, temporary)
         assert revoked['handoff']['state'] == 'revoked'
     finally:
         server.stop()

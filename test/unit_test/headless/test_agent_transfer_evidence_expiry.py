@@ -25,7 +25,8 @@ def test_evidence_expiry_preserves_later_artifact_grant_and_all_user_output(tmp_
         expiry = created['evidence']['summary']['expires']
         with runtime.store.connection() as connection:
             original = runtime.store.read_task(connection, source)
-            assert original['state'] == 'cancelled' and expiry == original['updated'] + 30 * 86400
+            assert original['state'] == 'cancelled'
+            assert expiry == original['updated'] + 30 * 86400
             intent = dict(connection.execute('SELECT * FROM agent_transfer_intents WHERE id=?', (grant,)).fetchone())
         assert exported['manifest']['expires'] > expiry + 100
         binding = actual_binding(runtime, source)
@@ -55,7 +56,8 @@ def test_evidence_expiry_preserves_later_artifact_grant_and_all_user_output(tmp_
                 assert dict(retained) == intent
                 assert connection.execute('SELECT 1 FROM agent_transfer_revocations WHERE id=?', (grant,)).fetchone()
                 artifact = runtime.transfers.source.records.find(connection, exported['export_id'])
-                assert artifact['state'] == 'active' and artifact['held'] is True
+                assert artifact['state'] == 'active'
+                assert artifact['held'] is True
             assert runtime.transfers.peer('export', {'export_id': exported['export_id']}) == exported['manifest']
             assert output.read_bytes() == body
         finally:

@@ -71,7 +71,8 @@ def test_cli_errors_are_masked_through_the_outer_error_handler(legacy, output, s
         from je_auto_control.cli import main
         assert main(["run", str(script)]) == 1
     error = capsys.readouterr().err
-    assert FAKE not in output.getvalue() and FAKE not in error
+    assert FAKE not in output.getvalue()
+    assert FAKE not in error
     assert "private failure: ***" in error
 
 
@@ -88,7 +89,8 @@ def test_real_local_rest_request_keeps_the_mask_until_error_handling_finishes(ou
         payload = json.loads(response.read())
         assert response.status == (200 if strict else 500)
         if strict:
-            assert payload["ok"] is False and FAKE in payload["error"]
+            assert payload["ok"] is False
+            assert FAKE in payload["error"]
         assert FAKE not in output.getvalue()
     finally:
         connection.close()
@@ -171,7 +173,8 @@ def test_background_run_owner_masks_history_and_outer_error_logs(kind, output, s
         assert FAKE not in trigger.last_error
     row = history.list_runs()[0]
     assert row.status == STATUS_ERROR
-    assert FAKE not in row.error_text and "***" in row.error_text
+    assert FAKE not in row.error_text
+    assert "***" in row.error_text
     assert FAKE not in output.getvalue()
 
 
@@ -195,7 +198,8 @@ def test_later_reports_cannot_persist_a_resolved_secret_from_the_action_record(o
     monkeypatch.setattr(test_record_instance, "init_record", True)
     monkeypatch.setattr(test_record_instance, "test_record_list", [])
     result = executor.execute_action(ACTIONS)
-    assert list(result.values()) == [FAKE] and source == {"value": FAKE}
+    assert list(result.values()) == [FAKE]
+    assert source == {"value": FAKE}
     assert FAKE not in json.dumps(test_record_instance.test_record_list)
     assert test_record_instance.test_record_list[0]["local_param"]["value"] == "***"
 
@@ -213,7 +217,8 @@ def test_secret_diagnostics_snapshot_cycles_and_opaque_values_without_repr():
         result = scrub_secret_data(source)
     assert result == {"value": "***", "opaque": "<opaque>", "tuple": ("***", 1, True, None),
                       "cycle": "<recursive>", "<opaque-key>": "visible"}
-    assert source["value"] == FAKE and source["cycle"] is source
+    assert source["value"] == FAKE
+    assert source["cycle"] is source
     assert FAKE not in json.dumps(result)
 
 

@@ -27,9 +27,11 @@ def test_capture_defers_body_variables_and_preserves_owner_scope(tmp_path):
         result = executor.execute_action([_capture(path, body, run_id="nested")], raise_on_error=True)
         assert executor.variables.get("message") == "after"
     summary = next(iter(result.values()))
-    assert summary["run_id"] == "nested" and summary["failed_actions"] == 0
+    assert summary["run_id"] == "nested"
+    assert summary["failed_actions"] == 0
     assert "after" in summary["record"].values()
-    assert body[-1][1]["name"] == "${variable_name}" and current_journal() is None
+    assert body[-1][1]["name"] == "${variable_name}"
+    assert current_journal() is None
     assert [event.command for event in read_events(path) if event.status == "ok"] == ["AC_set_var", "AC_get_var"]
 
 
@@ -63,7 +65,8 @@ def test_nested_validation_rejects_unknown_body_before_prior_actions(tmp_path, m
     actions = [["AC_journal_command_probe"], _capture(tmp_path / "invalid.jsonl", [["AC_unknown_journal_body"]])]
     with pytest.raises(AutoControlActionException, match="unknown command"):
         executor.execute_action(actions, raise_on_error=True)
-    assert seen == [] and not (tmp_path / "invalid.jsonl").exists()
+    assert seen == []
+    assert not (tmp_path / "invalid.jsonl").exists()
 
 
 @pytest.mark.parametrize("strict", [False, True])
@@ -95,16 +98,19 @@ def test_capture_preserves_break_and_cancellation_signals(tmp_path, monkeypatch)
         raise signal
     monkeypatch.setitem(executor.event_dict, "AC_journal_command_probe", cancel)
     cancelled = tmp_path / "cancelled.jsonl"
+    actions = [_capture(cancelled, [["AC_journal_command_probe"]])]
     with pytest.raises(asyncio.CancelledError) as caught:
-        executor.execute_action([_capture(cancelled, [["AC_journal_command_probe"]])])
-    assert caught.value is signal and current_journal() is None
+        executor.execute_action(actions)
+    assert caught.value is signal
+    assert current_journal() is None
     assert [event.status for event in read_events(cancelled)] == ["incomplete", "cancelled"]
 
 
 def test_capture_is_inert_during_outer_dry_run(tmp_path):
     path = tmp_path / "dry.jsonl"
     result = executor.execute_action([_capture(path, [["AC_screen_size"]])], dry_run=True)
-    assert any("dry-run" in key for key in result) and not path.exists()
+    assert any("dry-run" in key for key in result)
+    assert not path.exists()
 
 
 @pytest.mark.parametrize("name", ["AC_journal_capture", "AC_journal_read"])
@@ -124,8 +130,10 @@ def test_read_command_returns_sanitized_bounded_snapshots(tmp_path):
     result = executor.execute_action([["AC_journal_read", {"path": str(path), "run_id": "first", "limit": 1}]],
                                      raise_on_error=True)
     payload = next(iter(result.values()))
-    assert len(payload) == 1 and payload[0]["run_id"] == "first"
-    assert payload[0]["status"] == "incomplete" and path.read_bytes() == before
+    assert len(payload) == 1
+    assert payload[0]["run_id"] == "first"
+    assert payload[0]["status"] == "incomplete"
+    assert path.read_bytes() == before
 
 
 def test_schema_exposes_capture_body_and_linter_checks_it(tmp_path):
@@ -137,8 +145,9 @@ def test_schema_exposes_capture_body_and_linter_checks_it(tmp_path):
     actions = [_capture(tmp_path / "bad.jsonl", [["AC_unknown_journal_body"]])]
     issues = lint_actions(actions)
     assert any(issue.code == "unknown-command" for issue in issues)
+    known = executor.known_commands()
     with pytest.raises(AutoControlActionException):
-        validate_actions(actions, executor.known_commands())
+        validate_actions(actions, known)
 
 
 @pytest.mark.parametrize("name", ["AC_journal_capture", "AC_journal_read"])
@@ -202,10 +211,10 @@ def test_resolved_secrets_cannot_enter_capture_identifiers_or_destination(tmp_pa
     monkeypatch.setattr(default_secret_manager, "get", lambda name: "fake-private-metadata")
     path = tmp_path / ("leaked-${secrets.PRIVATE}.jsonl" if field == "path" else "metadata.jsonl")
     metadata = {} if field == "path" else {field: "${secrets.PRIVATE}"}
+    actions = [_capture(path, [["AC_set_var", {"name": "effect", "value": 1}]], **metadata)]
     with execution_scope():
         with pytest.raises(ActionJournalError, match="resolved secret"):
-            executor.execute_action([_capture(path, [["AC_set_var", {"name": "effect", "value": 1}]], **metadata)],
-                                    raise_on_error=True)
+            executor.execute_action(actions, raise_on_error=True)
         assert "effect" not in executor.variables
     assert list(tmp_path.glob("*.jsonl")) == []
 

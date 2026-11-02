@@ -103,7 +103,8 @@ def test_close_from_another_thread_stops_a_waiting_request():
     waiter.join(timeout=5)
     assert not waiter.is_alive()
     assert closed_after < 5
-    assert "result" not in outcome and "closed" in str(outcome["error"])
+    assert "result" not in outcome
+    assert "closed" in str(outcome["error"])
     assert worker.retired
 
 
@@ -131,7 +132,8 @@ def test_reply_already_queued_is_not_delivered_after_close():
 
     with pytest.raises(AgentTaskError, match="closed"):
         worker.request("echo", {"value": 1}, timeout=5, check=close_once_reply_is_dequeued)
-    assert closers and worker.retired
+    assert closers
+    assert worker.retired
 
 
 def test_closed_channel_refuses_new_requests():

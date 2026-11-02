@@ -43,7 +43,8 @@ def test_shared_surfaces_record_original_actions_as_an_unpublished_draft(recordi
                 value = tools['ac_agent_skill'].invoke({'operation': 'record', 'request': request})
         else:
             value = AgentRuntimeClient(connection).call('skill', {'operation': 'record', 'request': request})
-        assert value['state'] == 'draft' and value['publication'] is None
+        assert value['state'] == 'draft'
+        assert value['publication'] is None
         assert value['provenance']['source_task'] == recording.task_id
         assert value['provenance']['completion_review']['task_id'] == recording.child_id
         assert value['spec']['actions'] == [recording.action]
@@ -63,8 +64,10 @@ def test_http_revoked_reviewer_refuses_recording_with_409(recording, tmp_path):
         connection = tmp_path / 'connection.json'
         connection.write_text(json.dumps({'url': server.base_url, 'token': server.token}), encoding='utf-8')
         recording.users.remove_user('reviewer')
+        client = AgentRuntimeClient(connection)
+        request = {'operation': 'record', 'request': request_for(recording)}
         with pytest.raises(AgentTaskError) as error:
-            AgentRuntimeClient(connection).call('skill', {'operation': 'record', 'request': request_for(recording)})
+            client.call('skill', request)
         assert '(409)' in str(error.value)
         assert_no_draft(recording)
     finally:

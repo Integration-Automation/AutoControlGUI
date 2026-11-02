@@ -43,7 +43,8 @@ def test_another_process_invalidates_existing_dag_host_authority(tmp_path, monke
         connection = managed_tasks.bound_task_connection('source', pinned)
         old_url = book.list_hosts()[0].base_url
         replace_from_process(book, change)
-        assert book.list_hosts()[0].token == token and book.list_hosts()[0].base_url == old_url
+        assert book.list_hosts()[0].token == token
+        assert book.list_hosts()[0].base_url == old_url
 
         def forbidden(*_args, **_kwargs):
             raise AssertionError('stale DAG registration reached network dispatch')
@@ -52,13 +53,14 @@ def test_another_process_invalidates_existing_dag_host_authority(tmp_path, monke
         if boundary == 'binding' and change != 'removed':
             assert managed_tasks.task_host_binding('source') != pinned
             return
+        if boundary == 'binding':
+            attempt, arguments = managed_tasks.task_host_binding, ('source',)
+        elif boundary == 'connection':
+            attempt, arguments = managed_tasks.bound_task_connection, ('source', pinned)
+        else:
+            attempt, arguments = connection, ('get', {'task_id': exported['manifest']['source_task']}, 3)
         with pytest.raises(AgentTaskError):
-            if boundary == 'binding':
-                managed_tasks.task_host_binding('source')
-            elif boundary == 'connection':
-                managed_tasks.bound_task_connection('source', pinned)
-            else:
-                connection('get', {'task_id': exported['manifest']['source_task']}, 3)
+            attempt(*arguments)
 
 
 @pytest.mark.parametrize('change', ['registration', 'caller'])
@@ -82,7 +84,8 @@ def test_existing_dag_connection_rejects_a_real_reply_after_authority_changes(tm
         monkeypatch.setattr(transport, 'request_json', changed)
         with pytest.raises((AgentTaskError, AuthorizationError)):
             connection('get', {'task_id': exported['manifest']['source_task']}, 3)
-        assert len(calls) == 1 and calls[0]['state'] == 'succeeded'
+        assert len(calls) == 1
+        assert calls[0]['state'] == 'succeeded'
 
 
 def test_unbound_dag_connection_also_rejects_a_later_registration_change(tmp_path, monkeypatch):

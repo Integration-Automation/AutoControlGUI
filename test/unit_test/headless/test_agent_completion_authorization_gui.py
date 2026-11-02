@@ -27,7 +27,8 @@ def test_readonly_renewal_actions_use_the_shared_recovery_protocol(monkeypatch, 
         actions = dict(tab.menu_actions())
         assert action in actions
         actions[action]()
-        assert requests[0][0] == 'recovery' and requests[0][1]['operation'] == operation
+        assert requests[0][0] == 'recovery'
+        assert requests[0][1]['operation'] == operation
         expected = {'task_id': 'original-workflow'} if operation.startswith('review') else request
         assert requests[0][1]['request'] == expected
     finally:

@@ -620,7 +620,8 @@ def test_a_motion_refused_for_its_region_stops_before_the_cli(monkeypatch):
          binary, run:
         with pytest.raises(LibeiUnavailable, match='outside every region') as caught:
             wayland_mouse.set_position(4000, 30)
-    assert caught.value.state == 'failed' and not caught.value.status.fallback_allowed
+    assert caught.value.state == 'failed'
+    assert not caught.value.status.fallback_allowed
     assert not [call for call in fake.calls if call[0] == "motion"]
     assert captured == []
 

@@ -19,6 +19,7 @@ from je_auto_control.utils.path_guard.path_guard import validate_path
 from je_auto_control.utils.exception.control_signals import raise_caused_run_interruption
 
 _CHUNK_BYTES = 64 * 1024
+_MANIFEST = 'manifest.json'
 _Cancelled = Optional[Callable[[], bool]]
 
 
@@ -115,7 +116,7 @@ def _sync_assets(manifest: AssetManifest, transport: AssetTransport, *,
                 path = _asset_path(files, asset)
                 path.parent.mkdir(parents=True, exist_ok=True)
                 _copy_asset(transport, asset, path, cancelled, staging)
-            with _output_file(stage / 'manifest.json', staging) as output:
+            with _output_file(stage / _MANIFEST, staging) as output:
                 output.write(_encoded(manifest.to_dict()).encode('ascii'))
                 output.flush()
                 os.fsync(output.fileno())
@@ -201,7 +202,7 @@ def _generation_files(directory: Path, manifest: AssetManifest) -> Path:
     validate_path(directory, allowed_roots=[directory.parent])
     if directory.is_symlink() or not directory.is_dir():
         raise ConfigSyncError('asset generation is not an ordinary directory')
-    stamp = directory / 'manifest.json'
+    stamp = directory / _MANIFEST
     if stamp.is_symlink() or not stamp.is_file() or stamp.stat().st_size > 1024 * 1024:
         raise ConfigSyncError('invalid cached asset manifest')
     if stamp.read_bytes() != _encoded(manifest.to_dict()).encode('ascii'):
@@ -246,7 +247,7 @@ def _source_file(root: Path, asset: AssetFile) -> Path:
 
 def _verify_layout(directory: Path, manifest: AssetManifest) -> None:
     for item in directory.iterdir():
-        if item.name not in {'files', 'manifest.json'}:
+        if item.name not in {'files', _MANIFEST}:
             raise ConfigSyncError('asset generation contains unmanifested metadata')
     _verify_file_tree(directory / 'files', {item.path for item in manifest.files})
 

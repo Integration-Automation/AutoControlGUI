@@ -156,7 +156,8 @@ def test_identity_failure_after_input_never_masquerades_as_pre_input_refusal(run
     result = run_guard()
     assert result.returncode == code
     parsed = parse_android_action_result(AdbShellResult(result.stdout, result.stderr, result.returncode))
-    assert parsed.phase == "post_input_refused" and parsed.may_have_effect
+    assert parsed.phase == "post_input_refused"
+    assert parsed.may_have_effect
     assert (tmp_path / "actions").read_text().splitlines().count("tap") == 1
 
 
@@ -224,8 +225,9 @@ def test_proposal_only_queries_identity_and_never_dispatches_input():
 def test_selection_never_falls_back_to_first_device_or_ambiguous_transport(rows):
     server = Server()
     server.rows = rows
+    adapter = session(server)
     with pytest.raises(AgentTaskError):
-        session(server).inspect()
+        adapter.inspect()
     assert server.calls == ["devices"]
 
 
@@ -251,16 +253,18 @@ def test_server_reused_transport_must_still_identify_the_reviewed_physical_devic
 
 def test_bad_tool_arguments_are_refused_without_even_querying_the_server():
     server = Server()
+    adapter = session(server)
     with pytest.raises(AgentTaskError):
-        session(server).propose("AC_android_shell", {"command": "arbitrary"})
+        adapter.propose("AC_android_shell", {"command": "arbitrary"})
     assert not server.calls
 
 
 def test_remote_probe_diagnostics_cannot_escape_as_task_errors():
     server = Server()
     server.result = AdbShellResult(evidence(), b"private-untrusted-diagnostic", 1)
+    adapter = session(server)
     with pytest.raises(AgentTaskError) as caught:
-        session(server).inspect()
+        adapter.inspect()
     assert "private-untrusted-diagnostic" not in str(caught.value)
 
 
@@ -376,7 +380,8 @@ def test_concurrent_inspection_cannot_commit_two_different_boots_into_one_sessio
 
     class ConcurrentServer(Server):
         def shell(self, transport, command, **_kwargs):
-            assert transport == 42 and command == IDENTITY_PROBE
+            assert transport == 42
+            assert command == IDENTITY_PROBE
             boot = BOOT if threading.current_thread().name == "old-boot" else BOOT.replace("1", "2")
             return AdbShellResult(evidence(boot=boot), b"", 0)
 
@@ -481,8 +486,9 @@ def test_current_native_input_evidence_binds_owner_but_still_grants_no_input(sna
     ("  Global Monitors: <none>", "    unparsed-foreign-window"),
 ])
 def test_unsettled_or_unknown_dispatcher_state_is_refused(snapshot, old, new):
+    raw, policy = input_dump().replace(old.encode(), new.encode()), policy_dump()
     with pytest.raises(AgentTaskError):
-        parse_android_input_evidence(input_dump().replace(old.encode(), new.encode()), policy_dump(), snapshot)
+        parse_android_input_evidence(raw, policy, snapshot)
 
 
 @pytest.mark.parametrize("old,new", [
@@ -495,8 +501,9 @@ def test_unsettled_or_unknown_dispatcher_state_is_refused(snapshot, old, new):
     ("      showing=false", "      showing=false\n      showing=true"),
 ])
 def test_either_locked_or_inconsistent_keyguard_view_refuses_input_evidence(snapshot, old, new):
+    raw, policy = input_dump(), policy_dump().replace(old.encode(), new.encode())
     with pytest.raises(AgentTaskError):
-        parse_android_input_evidence(input_dump(), policy_dump().replace(old.encode(), new.encode()), snapshot)
+        parse_android_input_evidence(raw, policy, snapshot)
 
 
 @pytest.mark.parametrize("changes", [
@@ -505,8 +512,9 @@ def test_either_locked_or_inconsistent_keyguard_view_refuses_input_evidence(snap
     {"app": "another-app"}, {"token": "<null>"}, {"app_token": "<null>"},
 ])
 def test_native_target_must_have_one_matching_live_app_channel(snapshot, changes):
+    raw, policy = input_dump(input_record(**changes)), policy_dump()
     with pytest.raises(AgentTaskError):
-        parse_android_input_evidence(input_dump(input_record(**changes)), policy_dump(), snapshot)
+        parse_android_input_evidence(raw, policy, snapshot)
 
 
 def test_whole_swipe_must_stay_in_region_union_not_just_its_endpoints(snapshot):
@@ -534,8 +542,9 @@ def test_background_window_does_not_occlude_but_background_spy_still_receives_in
     behind = input_record(1, name="background", id=101)
     parse_android_input_evidence(input_dump(input_record(), behind), policy_dump(), snapshot).require_path((5, 5), (6, 6))
     spy = behind.replace("inputConfig=0x0", "inputConfig=SPY | TRUSTED_OVERLAY")
+    proof = parse_android_input_evidence(input_dump(input_record(), spy), policy_dump(), snapshot)
     with pytest.raises(AgentTaskError, match="foreign"):
-        parse_android_input_evidence(input_dump(input_record(), spy), policy_dump(), snapshot).require_path((5, 5), (6, 6))
+        proof.require_path((5, 5), (6, 6))
 
 
 def test_history_and_old_anr_cannot_replace_current_input_or_renew_its_fingerprint(snapshot):
@@ -544,9 +553,11 @@ def test_history_and_old_anr_cannot_replace_current_input_or_renew_its_fingerpri
     changed = live.replace(b"RecentQueue: <empty>", b"RecentQueue: length=1\n    historical-only")
     changed += b"\nInput Dispatcher State at time of last ANR:\n  DispatchEnabled: false\n"
     assert parse_android_input_evidence(changed, policy_dump(), snapshot).input_sha256 == proof.input_sha256
+    disabled = (live.replace(b"DispatchEnabled: true", b"DispatchEnabled: false")
+        + b"\nInput Dispatcher State at time of last ANR:\n" + live)
+    policy = policy_dump()
     with pytest.raises(AgentTaskError):
-        parse_android_input_evidence(live.replace(b"DispatchEnabled: true", b"DispatchEnabled: false")
-            + b"\nInput Dispatcher State at time of last ANR:\n" + live, policy_dump(), snapshot)
+        parse_android_input_evidence(disabled, policy, snapshot)
 
 
 def test_half_open_geometry_detects_even_an_isolated_missing_swipe_point():
@@ -569,7 +580,8 @@ def test_same_command_connection_refuses_changed_native_input_before_any_write(r
     result = run_guard(input_evidence=proof)
     assert result.returncode == 95
     parsed = parse_android_action_result(AdbShellResult(result.stdout, result.stderr, result.returncode))
-    assert parsed.phase == "pre_input_refused" and not parsed.may_have_effect
+    assert parsed.phase == "pre_input_refused"
+    assert not parsed.may_have_effect
     assert not (tmp_path / "actions").exists()
 
 
@@ -631,10 +643,11 @@ def test_global_monitors_remain_explicit_unapproved_metadata(snapshot):
 
 
 def test_native_connection_cannot_claim_a_window_with_a_different_channel_name(snapshot):
+    raw = input_dump().replace(b"channelName='abc123 org.example.app/.MainActivity (server)'",
+                               b"channelName='forged-other-channel'")
+    policy = policy_dump()
     with pytest.raises(AgentTaskError):
-        parse_android_input_evidence(input_dump().replace(b"channelName='abc123 org.example.app/.MainActivity (server)'",
-            b"channelName='forged-other-channel'"),
-                                     policy_dump(), snapshot)
+        parse_android_input_evidence(raw, policy, snapshot)
 
 
 @pytest.mark.parametrize("bad", [
@@ -645,5 +658,6 @@ def test_native_connection_cannot_claim_a_window_with_a_different_channel_name(s
     lambda raw: raw.replace(b"        transform (ROT_0) (IDENTITY)\n  Global", b"  Global"),
 ])
 def test_unparsed_duplicate_or_wrong_display_evidence_never_certifies_input(snapshot, bad):
+    raw, policy = bad(input_dump()), policy_dump()
     with pytest.raises(AgentTaskError):
-        parse_android_input_evidence(bad(input_dump()), policy_dump(), snapshot)
+        parse_android_input_evidence(raw, policy, snapshot)

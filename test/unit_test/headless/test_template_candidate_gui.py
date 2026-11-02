@@ -51,18 +51,22 @@ def test_actions_complete_preview_verify_accept_and_revert(panel, app, revision_
     panel._threshold.setValue(0.99)
     panel._start("create")
     until_idle(app, panel)
-    assert panel._status_key == "created" and target.read_bytes() == original
+    assert panel._status_key == "created"
+    assert target.read_bytes() == original
     assert not panel._revision.text()
     panel._start("preview")
     until_idle(app, panel)
     assert len(panel._revision.text()) == 64
-    assert not panel._original.pixmap().isNull() and not panel._replacement.pixmap().isNull()
+    assert not panel._original.pixmap().isNull()
+    assert not panel._replacement.pixmap().isNull()
     panel._start("verify")
     until_idle(app, panel)
-    assert panel._status_key == "eligible" and target.read_bytes() == original
+    assert panel._status_key == "eligible"
+    assert target.read_bytes() == original
     panel._start("accept")
     until_idle(app, panel)
-    assert panel._status_key == "done" and target.read_bytes() != original
+    assert panel._status_key == "done"
+    assert target.read_bytes() != original
     panel._start("revert")
     until_idle(app, panel)
     assert target.read_bytes() == original
@@ -71,7 +75,8 @@ def test_actions_complete_preview_verify_accept_and_revert(panel, app, revision_
 
 def test_preview_is_required_before_gui_acceptance(panel):
     panel._start("accept")
-    assert panel._handle is None and panel._status_key == "review_required"
+    assert panel._handle is None
+    assert panel._status_key == "review_required"
 
 
 def test_new_bundle_selection_discards_previous_review(panel, app, revision_files):
@@ -82,7 +87,8 @@ def test_new_bundle_selection_discards_previous_review(panel, app, revision_file
     until_idle(app, panel)
     assert panel._revision.text()
     panel._bundle.setText("different.json")
-    assert not panel._revision.text() and not panel._details.toPlainText()
+    assert not panel._revision.text()
+    assert not panel._details.toPlainText()
     panel._start("accept")
     assert panel._status_key == "review_required"
 
@@ -98,7 +104,8 @@ def test_deferred_worker_retains_viewer_authority(app, monkeypatch):
     outcomes = []
     worker.finished.connect(outcomes.append)
     worker.run()
-    assert outcomes[0].status == "error" and outcomes[0].data is None
+    assert outcomes[0].status == "error"
+    assert outcomes[0].data is None
     worker.deleteLater()
 
 
@@ -118,7 +125,8 @@ def test_committed_acceptance_is_not_relabelled_cancelled(app, monkeypatch, revi
     outcomes = []
     worker.finished.connect(outcomes.append)
     worker.run()
-    assert outcomes[0].status == "ok" and outcomes[0].data["changed"] is True
+    assert outcomes[0].status == "ok"
+    assert outcomes[0].data["changed"] is True
     assert target.read_bytes() == (FIXTURES / "new.png").read_bytes()
     worker.deleteLater()
 
@@ -146,4 +154,5 @@ def test_close_cancels_active_read_and_discards_late_result(panel, app, monkeypa
     finally:
         release.set()
     until_idle(app, panel)
-    assert panel._details.toPlainText() == "" and panel._status_key != "eligible"
+    assert panel._details.toPlainText() == ""
+    assert panel._status_key != "eligible"

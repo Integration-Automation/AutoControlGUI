@@ -16,6 +16,7 @@ from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 CORE_TOOLS = frozenset({"ac_mcp_tool_search", "ac_mcp_tool_schema", "ac_mcp_tools_state",
                         "ac_mcp_tools_enable", "ac_mcp_tools_disable"})
 MODES = frozenset({"full", "progressive", "static"})
+_CLOSED = "tool view is closed"
 
 
 class ToolPage(TypedDict, total=False):
@@ -68,14 +69,14 @@ class ToolView:
 
     def _index(self) -> ToolIndex:
         if self._provider is None:
-            raise ToolDiscoveryError("tool view is closed")
+            raise ToolDiscoveryError(_CLOSED)
         return self._provider()
 
     def check_open(self) -> None:
         """Refuse a retired accepted call without querying or recreating any session metadata."""
         with self._lock:
             if self._provider is None:
-                raise ToolDiscoveryError("tool view is closed")
+                raise ToolDiscoveryError(_CLOSED)
 
     def _visible(self, index: ToolIndex) -> tuple[str, ...]:
         names = index.names()
@@ -130,7 +131,7 @@ class ToolView:
 
     def _mutable(self) -> None:
         if self._provider is None:
-            raise ToolDiscoveryError("tool view is closed")
+            raise ToolDiscoveryError(_CLOSED)
         if self._mode != "progressive":
             raise ToolDiscoveryError("this disclosure profile is fixed")
 

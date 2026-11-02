@@ -33,7 +33,8 @@ def test_real_script_snapshot_is_stable_across_restart_and_materializes_inert_js
     receiver = script_adapter(tmp_path, 'laptop')
     monkeypatch.setattr(ac.executor, 'execute_action', lambda *_a, **_k: pytest.fail('sync executed a script'))
     report = receiver.apply(original)
-    assert report.stored == ('login.json',) and not report.conflicts
+    assert report.stored == ('login.json',)
+    assert not report.conflicts
     result = ac.materialize_sync_profile((receiver,), tmp_path / 'profile-cache')
     assert json.loads((result.directory / 'scripts' / 'login.json').read_text()) == [['AC_log', {'message': 'hello'}]]
     assert not (receiver.source_root / 'login.json').exists()
@@ -48,7 +49,8 @@ def test_secret_is_local_and_machine_paths_remain_named_references(tmp_path):
     (sender.source_root / 'login.json').write_text(json.dumps(actions), encoding='utf-8')
     entries = sender.snapshot()
     wire = json.dumps([entry.to_dict() for entry in entries.values()])
-    assert 'local-password-only' not in wire and 'private-sender' not in wire
+    assert 'local-password-only' not in wire
+    assert 'private-sender' not in wire
     assert b'local-password-only' not in (tmp_path / 'desktop.sqlite3').read_bytes()
     receiver = script_adapter(tmp_path, 'laptop',
                                bindings=ac.SyncBindings(local_values={'downloads': '/receiver/result.txt'}))
@@ -81,7 +83,8 @@ def test_sync_never_enables_trigger_or_hotkey_and_keeps_runtime_state_local(tmp_
     receiver = ac.TriggerSyncAdapter(target, state(tmp_path, 'laptop', 'target-triggers.sqlite3'),
                                      bindings=trigger_bindings)
     receiver.apply(entries)
-    assert target.list_triggers() == [] and not target.is_running
+    assert target.list_triggers() == []
+    assert not target.is_running
     assert all(value['enabled'] is False for value in receiver.definitions().values())
     daemon = ac.HotkeyDaemon(executor=lambda _actions: pytest.fail('hotkey ran'))
     daemon.bind('ctrl+alt+1', script, binding_id='login')
@@ -89,7 +92,8 @@ def test_sync_never_enables_trigger_or_hotkey_and_keeps_runtime_state_local(tmp_
     empty = ac.HotkeyDaemon(executor=lambda _actions: pytest.fail('remote hotkey ran'))
     received = ac.HotkeySyncAdapter(empty, state(tmp_path, 'laptop', 'target-hotkeys.sqlite3'), bindings=bindings)
     received.apply(hotkeys.snapshot())
-    assert empty.list_bindings() == [] and not empty.is_running
+    assert empty.list_bindings() == []
+    assert not empty.is_running
     assert received.definitions()['login']['enabled'] is False
 
 
@@ -111,7 +115,8 @@ def test_locator_and_address_book_profiles_use_real_native_storage_formats(tmp_p
     restored_locators = ac.ElementRepository(str(result.directory / 'locators.json'))
     assert restored_locators.get('login.submit') == repository.get('login.submit')
     restored = AddressBook(result.directory / 'address_book.json').list_entries()
-    assert restored[0]['label'] == 'Office' and restored[0]['tags'] == ['work']
+    assert restored[0]['label'] == 'Office'
+    assert restored[0]['tags'] == ['work']
     assert 'last_used' not in json.dumps([entry.to_dict() for entry in addresses.snapshot().values()])
 
 
@@ -237,9 +242,11 @@ def test_materialization_refuses_an_escaping_custom_profile_before_creating_file
             pass
         def profile_files(self):
             return {'../outside.txt': b'not allowed'}
+    profile = EscapingProfile()
     with pytest.raises(ac.ConfigSyncError):
-        ac.materialize_sync_profile((EscapingProfile(),), tmp_path / 'cache')
-    assert not (tmp_path / 'outside.txt').exists() and not (tmp_path / 'cache').exists()
+        ac.materialize_sync_profile((profile,), tmp_path / 'cache')
+    assert not (tmp_path / 'outside.txt').exists()
+    assert not (tmp_path / 'cache').exists()
 
 
 def test_delete_edit_conflict_can_be_explicitly_resolved_as_a_tombstone(tmp_path):

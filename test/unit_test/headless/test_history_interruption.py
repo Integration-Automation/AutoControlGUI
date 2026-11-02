@@ -91,8 +91,10 @@ def test_interruption_records_failure_and_never_captures_or_runs_the_next_action
     else:
         fire()
     row = history.list_runs()[0]
-    assert row.status == STATUS_ERROR and type(failure).__name__ in row.error_text
-    assert snapshots == [] and reached == []
+    assert row.status == STATUS_ERROR
+    assert type(failure).__name__ in row.error_text
+    assert snapshots == []
+    assert reached == []
     assert len(history.journals_for_run(row.id)) == 1
     assert read_events(path)[-1].status == "cancelled"
 
@@ -105,11 +107,14 @@ def test_history_outage_cannot_replace_a_pending_hard_interruption(kind, environ
     def unavailable(*_args, **_kwargs):
         raise HistoryStoreError("controlled history outage")
     monkeypatch.setattr(history, "finish_run", unavailable)
+    fire = _fire(kind, script, execute)
     with pytest.raises(KeyboardInterrupt) as raised:
-        _fire(kind, script, execute)()
+        fire()
     assert raised.value is failure
     assert history.list_runs()[0].status == STATUS_RUNNING
-    assert snapshots == [] and reached == [] and read_events(path)[-1].status == "cancelled"
+    assert snapshots == []
+    assert reached == []
+    assert read_events(path)[-1].status == "cancelled"
 
 
 @pytest.mark.parametrize("kind", KINDS)
@@ -124,12 +129,14 @@ def test_ordinary_soft_failures_still_capture_and_keep_their_existing_containmen
     else:
         fire()
     assert history.list_runs()[0].status == STATUS_ERROR
-    assert len(snapshots) == 1 and reached == [True]
+    assert len(snapshots) == 1
+    assert reached == [True]
 
 
 def test_mcp_cancellation_keeps_its_deliberate_control_signal_contract():
     failure = OperationCancelledError("controlled")
-    assert isinstance(failure, RuntimeError) and not isinstance(failure, AutoControlException)
+    assert isinstance(failure, RuntimeError)
+    assert not isinstance(failure, AutoControlException)
 
 
 @pytest.mark.parametrize("block", ["parallel", "dag"])
@@ -152,7 +159,8 @@ def test_worker_interruptions_reach_the_owner_without_becoming_success_or_an_ord
     else:
         fire()
     assert history.list_runs()[0].status == STATUS_ERROR
-    assert snapshots == [] and reached == []
+    assert snapshots == []
+    assert reached == []
     assert read_events(path)[-1].status == "cancelled"
 
 
@@ -200,5 +208,6 @@ def test_nested_recovery_and_callback_boundaries_cannot_swallow_cancellation(
     script.write_text(json.dumps(actions), encoding="utf-8")
     _fire("scheduler", script, execute)()
     assert history.list_runs()[0].status == STATUS_ERROR
-    assert snapshots == [] and reached == []
+    assert snapshots == []
+    assert reached == []
     assert read_events(path)[-1].status == "cancelled"

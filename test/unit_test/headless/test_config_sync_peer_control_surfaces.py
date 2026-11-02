@@ -45,14 +45,15 @@ def test_peer_control_is_private_and_cancellation_or_path_refusal_precedes_stora
         assert capability_for_tool('ac_sync_peer_control', True) == 'drive_input'
     arguments = {'path': str(tmp_path / 'unused.sqlite3'), 'endpoint': 'https://controlled.invalid',
                  'user_id': 'alice', 'operation': 'register'}
+    handler = tool().handler
     ctx = ToolCallContext('cancelled')
     ctx.cancelled_event.set()
     with pytest.raises(OperationCancelledError):
-        tool().handler(**arguments, ctx=ctx)
+        handler(**arguments, ctx=ctx)
     assert not (tmp_path / 'unused.sqlite3').exists()
     ctx = ToolCallContext('confined', path_policy=PathPolicy([tmp_path / 'elsewhere']))
     with pytest.raises(PathNotAllowedError):
-        tool().handler(**arguments, ctx=ctx)
+        handler(**arguments, ctx=ctx)
     assert not (tmp_path / 'unused.sqlite3').exists()
 
 
@@ -66,9 +67,11 @@ def test_peer_control_mid_fetch_cancellation_preserves_protocol_signal_and_local
         ctx.cancelled_event.set()
         return response
     monkeypatch.setattr(http_client, 'perform_call', cancel)
+    handler, path = tool().handler, str(tmp_path / 'outbox.sqlite3')
     with pytest.raises(OperationCancelledError):
-        tool().handler(path=str(tmp_path / 'outbox.sqlite3'), endpoint='https://controlled.invalid',
-                       user_id='alice', operation='register', ctx=ctx)
+        handler(path=path, endpoint='https://controlled.invalid', user_id='alice', operation='register', ctx=ctx)
     assert [call['method'] for call in calls] == ['GET']
     status = queue.control_status(endpoint='https://controlled.invalid', user_id='alice')
-    assert status['pending'] == 1 and status['state'] == 'pending' and status['error'] == ''
+    assert status['pending'] == 1
+    assert status['state'] == 'pending'
+    assert status['error'] == ''

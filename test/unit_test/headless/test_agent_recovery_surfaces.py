@@ -26,8 +26,9 @@ def test_public_facades_and_cli_forward_the_same_review_request(tmp_path, monkey
     arguments = build_parser().parse_args(["agent-task", "recovery", "preview", str(path)])
     assert run(arguments) == {"approval_required": True}
     assert call.call_count == 2
+    parser = build_parser()
     with pytest.raises(SystemExit):
-        build_parser().parse_args(["agent-task", "recovery", "preview"])
+        parser.parse_args(["agent-task", "recovery", "preview"])
 
 
 def test_real_service_authenticates_preview_and_deduplicates_explicit_creation(service, monkeypatch):
@@ -72,7 +73,8 @@ def test_http_dynamic_replan_preserves_scope_and_waits_for_new_results(service, 
         client.call("pause", {"task_id": source.task_id})
         view = client.call("recovery", {"operation": "preview", "request": {"task_id": source.task_id}})
         instance.runtime.background.start.assert_not_called()
-        assert view["draft"] is None and view["review_template"]["goal"] == ""
+        assert view["draft"] is None
+        assert view["review_template"]["goal"] == ""
         reviewed = view["review_template"]
         reviewed["goal"] = "Process only the remaining field and read its final value"
         child = client.call("recovery", {"operation": "create", "request": {"task_id": source.task_id,

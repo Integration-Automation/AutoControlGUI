@@ -10,7 +10,8 @@ from je_auto_control.utils.agent_runtime.presence_channel_linux import LinuxChan
 
 @pytest.mark.parametrize('platform', ['linux', 'darwin', 'freebsd'])
 def test_transport_types_do_not_enable_non_windows_presence_or_input(monkeypatch, platform):
-    assert LinuxChannel.connect and LinuxListener.create
+    assert LinuxChannel.connect
+    assert LinuxListener.create
     monkeypatch.setattr(sys, 'platform', platform)
     with pytest.raises(AgentControlBusy, match='Windows console session'):
         presence_host.require_windows()

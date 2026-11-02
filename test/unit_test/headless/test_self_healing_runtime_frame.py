@@ -60,8 +60,10 @@ def test_image_region_is_applied_before_matching(captured, tmp_path):
     assert captured == [((-64, -28, 24, 28), True)]
     assert outcome.coordinates == (-52, -18)
     event = log.list_events()[0]
-    assert event.schema_version == 2 and event.origin == [-64, -28]
-    assert event.frame_hash and event.locator_version
+    assert event.schema_version == 2
+    assert event.origin == [-64, -28]
+    assert event.frame_hash
+    assert event.locator_version
     assert event.verified is None
 
 
@@ -71,14 +73,19 @@ def test_fallback_reuses_capture_and_origin(captured, monkeypatch, tmp_path):
     outcome = self_heal_locate(str(FIXTURES / "old.png"), "submit", screen_region=[-72, -34, -60, -24],
                                model="controlled-model", log=log)
     assert captured == [((-72, -34, 12, 10), True)]
-    assert outcome.coordinates == (-66, -29) and outcome.method == "vlm"
+    assert outcome.coordinates == (-66, -29)
+    assert outcome.method == "vlm"
     with Image.open(io.BytesIO(images[0][0])) as image:
         assert image.size == (12, 10)
     event = log.list_events()[0]
-    assert event.backend == "controlled" and event.model == "controlled-model"
+    assert event.backend == "controlled"
+    assert event.model == "controlled-model"
     assert set(event.strategy_times_ms) == {"image", "vlm"}
-    assert event.run_id and event.step_id and event.locator_id
-    assert event.verified is None and event.operation_status == "not_requested"
+    assert event.run_id
+    assert event.step_id
+    assert event.locator_id
+    assert event.verified is None
+    assert event.operation_status == "not_requested"
     assert event.frame_hash == sha256(images[0][0]).hexdigest()
 
 
@@ -94,7 +101,8 @@ def test_capture_failure_is_not_retried_for_fallback(monkeypatch, tmp_path):
     monkeypatch.setattr("je_auto_control.utils.cv2_utils.region_capture.grab_screen_region", fail)
     images = backend(monkeypatch)
     outcome = self_heal_locate(str(FIXTURES / "old.png"), "submit", log=HealEventLog(tmp_path / "events.jsonl"))
-    assert calls == ["capture"] and images == []
+    assert calls == ["capture"]
+    assert images == []
     assert not outcome.found
 
 
@@ -111,8 +119,10 @@ def test_click_failure_is_recorded_once_without_claiming_verification(captured, 
     assert caught.value is signal
     assert len(captured) == 1
     event, = log.list_events()
-    assert event.operation == "click" and event.operation_status == "error"
-    assert event.verified is None and "controlled click failure" in event.operation_error
+    assert event.operation == "click"
+    assert event.operation_status == "error"
+    assert event.verified is None
+    assert "controlled click failure" in event.operation_error
 
 
 def test_primary_request_preserves_self_capturing_backend_origin(monkeypatch):
@@ -151,9 +161,11 @@ def test_clipped_capture_origin_is_used_instead_of_requested_corner(monkeypatch,
     backend(monkeypatch, (0, 0))
     log = HealEventLog(tmp_path / "events.jsonl")
     outcome = self_heal_locate(str(FIXTURES / "old.png"), "submit", screen_region=[-100, -60, -70, -30], log=log)
-    assert outcome.coordinates == (-80, -40) and calls == [(-100, -60, 30, 30)]
+    assert outcome.coordinates == (-80, -40)
+    assert calls == [(-100, -60, 30, 30)]
     event, = log.list_events()
-    assert event.origin == [-80, -40] and event.frame_size == [10, 10]
+    assert event.origin == [-80, -40]
+    assert event.frame_size == [10, 10]
     assert event.screen_region == [-100, -60, -70, -30]
 
 
@@ -173,9 +185,11 @@ def test_outside_reply_is_a_miss_not_a_click(captured, monkeypatch, tmp_path):
     monkeypatch.setattr("je_auto_control.utils.self_healing.locator._click_at", lambda *_: clicks.append(True))
     log = HealEventLog(tmp_path / "events.jsonl")
     assert not self_heal_click(description="submit", log=log).found
-    assert len(captured) == 1 and clicks == []
+    assert len(captured) == 1
+    assert clicks == []
     event, = log.list_events()
-    assert event.operation_status == "not_found" and event.verified is None
+    assert event.operation_status == "not_found"
+    assert event.verified is None
 
 
 @pytest.mark.parametrize("where", ["capture", "click"])
@@ -194,7 +208,8 @@ def test_cancelled_capture_or_click_preserves_signal_and_creates_no_event(captur
     log = HealEventLog(tmp_path / "events.jsonl")
     with pytest.raises(OperationCancelledError) as caught:
         self_heal_click(str(FIXTURES / "new.png"), log=log)
-    assert caught.value is signal and not log.path.exists()
+    assert caught.value is signal
+    assert not log.path.exists()
 
 
 def test_click_and_audit_failure_preserves_original(captured, monkeypatch, tmp_path):
@@ -259,8 +274,10 @@ def test_journal_command_identity_and_mcp_share_telemetry(captured, monkeypatch,
     tool = next(tool for tool in build_default_tool_registry() if tool.name == "ac_self_heal_locate")
     assert tool.handler(**arguments)["coordinates"] == [-52, -18]
     command, remote = log.list_events()
-    assert command.run_id == "source-run" and command.step_id == read_events(journal)[0].step_id
-    assert remote.run_id != command.run_id and remote.frame_hash == command.frame_hash
+    assert command.run_id == "source-run"
+    assert command.step_id == read_events(journal)[0].step_id
+    assert remote.run_id != command.run_id
+    assert remote.frame_hash == command.frame_hash
 
 
 def test_nested_scopes_restore_owner_and_release_frames(captured):
@@ -272,9 +289,11 @@ def test_nested_scopes_restore_owner_and_release_frames(captured):
         with locator_frame_scope(None, all_screens=False) as inner:
             assert inner.snapshot() is not frame
             assert current_locator_frame() is inner
-        assert current_locator_frame() is outer and outer.snapshot() is frame
+        assert current_locator_frame() is outer
+        assert outer.snapshot() is frame
         assert inner.captured is None
-    assert current_locator_frame() is None and outer.captured is None
+    assert current_locator_frame() is None
+    assert outer.captured is None
     with pytest.raises(AutoControlScreenException, match="closed"):
         outer.snapshot()
     assert len(captured) == 2
@@ -288,7 +307,8 @@ def test_old_records_and_analytics_do_not_invent_operation_success(tmp_path):
     log.path.write_text(json.dumps({"timestamp": "old", "method": "vlm", "coordinates": [1, 2],
                                     "duration_ms": 1.0}) + "\n", encoding="utf-8")
     event, = log.list_events()
-    assert event.schema_version == 1 and event.verified is None
+    assert event.schema_version == 1
+    assert event.verified is None
     stats = heal_stats([event])
     assert stats["healed"] == stats["located"] == 1
     assert stats["verified_operations"] == 0
@@ -302,11 +322,14 @@ def test_successful_click_is_only_issued_not_verified(captured, monkeypatch, tmp
     log = HealEventLog(tmp_path / "events.jsonl")
     assert self_heal_click(str(FIXTURES / "new.png"), log=log).found
     event, = log.list_events()
-    assert event.operation_status == "issued" and event.verified is None
+    assert event.operation_status == "issued"
+    assert event.verified is None
     assert set(event.strategy_times_ms) == {"image", "click"}
     stats = heal_stats([event])
-    assert stats["located"] == 1 and stats["verified_operations"] == 0
-    assert stats["verification_unknown"] == 1 and stats["operation_success_rate"]["denominator"] == 0
+    assert stats["located"] == 1
+    assert stats["verified_operations"] == 0
+    assert stats["verification_unknown"] == 1
+    assert stats["operation_success_rate"]["denominator"] == 0
 
 
 def test_explicit_operation_verification_has_its_own_population():
@@ -318,7 +341,8 @@ def test_explicit_operation_verification_has_its_own_population():
         {"coordinates": [1, 2], "operation": "click", "verified": None, "operation_status": "issued"},
         {"coordinates": [1, 2], "operation": "click", "verified": True, "operation_status": "error"},
     ])
-    assert stats["verified_operations"] == 1 and stats["verification_unknown"] == 1
+    assert stats["verified_operations"] == 1
+    assert stats["verification_unknown"] == 1
     assert stats["operation_success_rate"]["numerator"] == 1
     assert stats["operation_success_rate"]["denominator"] == 3
 
@@ -400,7 +424,8 @@ def test_broken_failure_repr_does_not_prevent_ordinary_fallback(monkeypatch, tmp
     monkeypatch.setattr("je_auto_control.wrapper.auto_control_image.locate_image_center", fail)
     monkeypatch.setattr("je_auto_control.utils.vision.vlm_api.locate_by_description", lambda *_a, **_k: (1, 2))
     outcome = self_heal_locate("unused.png", "submit", log=HealEventLog(tmp_path / "events.jsonl"))
-    assert outcome.found and "Broken" in outcome.image_error
+    assert outcome.found
+    assert "Broken" in outcome.image_error
 
 
 def test_concurrent_attempts_have_independent_owners(monkeypatch, tmp_path):
@@ -422,6 +447,7 @@ def test_concurrent_attempts_have_independent_owners(monkeypatch, tmp_path):
     with ThreadPoolExecutor(max_workers=2) as pool:
         jobs = [pool.submit(self_heal_locate, str(FIXTURES / "new.png"), log=log) for _ in range(2)]
         assert all(job.result(timeout=5).found for job in jobs)
-    assert len(owners) == 2 and owners[0] is not owners[1]
+    assert len(owners) == 2
+    assert owners[0] is not owners[1]
     assert all(owner.captured is None for owner in owners)
     assert len({event.step_id for event in log.list_events()}) == 2

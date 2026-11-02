@@ -65,7 +65,7 @@ def _field(text: str, name: str) -> str:
 
 
 def _decimal(value: str, minimum: int = 0) -> int:
-    if not re.fullmatch('[0-9]{1,20}', value):
+    if not re.fullmatch(r'\d{1,20}', value, re.ASCII):
         raise AgentTaskError('Linux connected-peer metadata integer is invalid')
     number = int(value)
     if not minimum <= number <= (1 << 64) - 1:
@@ -156,7 +156,7 @@ class LinuxPeerProcess:
                 return True
             except AgentTaskError:
                 raise
-            except (OSError, UnicodeError, ValueError):
+            except (OSError, ValueError):  # ValueError covers UnicodeError
                 raise AgentTaskError('Linux connected-peer identity cannot be verified') from None
 
     def close(self) -> None:
@@ -211,7 +211,7 @@ def retain_connected_peer(connection: socket.socket) -> LinuxPeerProcess:
         return peer
     except AgentTaskError:
         raise
-    except (OSError, UnicodeError, ValueError, struct.error):
+    except (OSError, ValueError, struct.error):  # ValueError covers UnicodeError
         raise AgentTaskError('Linux connected-peer process evidence cannot be verified') from None
     finally:
         if descriptor is not None and not retained:

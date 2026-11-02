@@ -58,7 +58,8 @@ def test_actual_coordinator_adopts_another_remote_owners_leaf_without_read_or_in
         running = start(value, reviewed, approved)
         result = value.coordinator.batches.control('validate_node', {'batch_id': reviewed['batch_id'],
             'node_id': 'remote-file', 'attempt': running['attempt']})
-        assert result['outcome'] == 'completed' and result['task_id'] == value.child
+        assert result['outcome'] == 'completed'
+        assert result['task_id'] == value.child
         with authorization_scope(value.owner), pytest.raises(AgentTaskError, match='another caller'):
             value.runtime.get(value.child)
         assert value.runtime.store.actions(value.child) == before
@@ -98,11 +99,12 @@ def test_source_authority_loss_after_provisional_write_prevents_approval_or_star
                 value.server.stop()
             return original(checks, approval_id, pending, commit)
         monkeypatch.setattr(DagTransferChecks, 'finish', finish)
+        if phase == 'provisional':
+            consent, arguments = approve, (value, reviewed)
+        else:
+            consent, arguments = start, (value, reviewed, approved)
         with pytest.raises(AgentTaskError):
-            if phase == 'provisional':
-                approve(value, reviewed)
-            else:
-                start(value, reviewed, approved)
+            consent(*arguments)
         with value.coordinator.store.connection() as connection:
             assert connection.execute('SELECT state FROM agent_dag_approvals').fetchone()[0] == 'cancelled'
             assert connection.execute('SELECT state FROM agent_dag_batches').fetchone()[0] == 'waiting_review'
@@ -126,7 +128,8 @@ def test_revoke_between_downstream_claim_and_return_never_authorizes_dispatch(tm
         status, absent = post(value.server, '/agent/lookup', {'idempotency_key': next(
             node['task']['idempotency_key'] for node in running['definition']['nodes'] if node['id'] == 'downstream')},
             token=value.owner_token)
-        assert status == 200 and absent['found'] is False
+        assert status == 200
+        assert absent['found'] is False
 
 
 @pytest.mark.parametrize('lost_ack', [False, True])
@@ -225,7 +228,8 @@ def test_interrupted_provisional_approval_resumes_only_its_exact_explicit_reques
             assert original['state'] == 'provisional'
             assert connection.execute('SELECT count(*) FROM agent_dag_adoptions').fetchone()[0] == 0
         approved = approve(value, reviewed)
-        assert approved['approval_id'] == original['id'] and approved['approval_state'] == 'ready'
+        assert approved['approval_id'] == original['id']
+        assert approved['approval_state'] == 'ready'
         with value.coordinator.store.connection() as connection:
             assert connection.execute('SELECT count(*) FROM agent_dag_approvals').fetchone()[0] == 1
 
@@ -240,11 +244,12 @@ def test_stop_all_cancels_pending_remote_consent_before_it_can_publish_an_attemp
             value.coordinator.batches.stop_all()
             return original(checks, identifier, pending, commit)
         monkeypatch.setattr(DagTransferChecks, 'finish', finish)
+        if phase == 'provisional':
+            consent, arguments = approve, (value, reviewed)
+        else:
+            consent, arguments = start, (value, reviewed, approved)
         with pytest.raises(AgentTaskError):
-            if phase == 'provisional':
-                approve(value, reviewed)
-            else:
-                start(value, reviewed, approved)
+            consent(*arguments)
         with value.coordinator.store.connection() as connection:
             assert connection.execute('SELECT state FROM agent_dag_approvals').fetchone()[0] == 'cancelled'
             assert connection.execute('SELECT state FROM agent_dag_batches').fetchone()[0] == 'waiting_review'

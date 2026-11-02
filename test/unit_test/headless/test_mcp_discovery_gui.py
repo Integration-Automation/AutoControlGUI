@@ -21,7 +21,8 @@ def test_metadata_controls_only_scan_through_actions(monkeypatch):
     tab = DiagnosticsTab()
     try:
         view = tab._mcp_discovery
-        assert calls == [] and view.findChildren(QPushButton) == []
+        assert calls == []
+        assert view.findChildren(QPushButton) == []
         view.query.setText("fixture")
         view.read_only.setChecked(True)
         actions = dict(tab.menu_actions())
@@ -35,7 +36,8 @@ def test_metadata_controls_only_scan_through_actions(monkeypatch):
         view.profile.setText("ac_screen_size")
         actions["mcp_disclosure_plan"]()
         plan = json.loads(view.output.toPlainText())
-        assert plan["mode"] == "static" and plan["read_only"] is True
+        assert plan["mode"] == "static"
+        assert plan["read_only"] is True
         assert plan["names"] == ["ac_screen_size"]
     finally:
         tab.close()

@@ -117,7 +117,7 @@ def _decode(raw: bytes, line_number: int) -> ActionEvent:
     try:
         payload: object = json.loads(raw.decode("utf-8"))
         return ActionEvent.from_dict(payload)
-    except (ValueError, TypeError, UnicodeError):
+    except (ValueError, TypeError):  # UnicodeError is a ValueError
         # Do not include raw data or JSON decoder messages: external journals
         # may contain secrets even though this writer never emits those bytes.
         raise ActionJournalError(f"invalid action journal record at line {line_number}") from None

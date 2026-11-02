@@ -47,8 +47,11 @@ def test_create_preview_and_verify_leave_active_template_unchanged(revision_file
     verified = ac.verify_template_candidate(bundle, dataset)
     assert target.read_bytes() == original
     assert created.revision == preview.state.revision == verified.state.revision
-    assert preview.state.state == "original" and preview.original_png and preview.candidate_png
-    assert verified.eligible and verified.reasons == ()
+    assert preview.state.state == "original"
+    assert preview.original_png
+    assert preview.candidate_png
+    assert verified.eligible
+    assert verified.reasons == ()
     assert verified.comparison.to_dict()["versions"]["candidate"]["unknown"] == 1
 
 
@@ -57,11 +60,13 @@ def test_accept_and_revert_are_explicit_exact_and_repeatable(revision_files):
     original = target.read_bytes()
     created = create(revision_files)
     accepted = ac.accept_template_candidate(bundle, dataset, created.revision)
-    assert accepted.changed and accepted.state.state == "candidate"
+    assert accepted.changed
+    assert accepted.state.state == "candidate"
     assert target.read_bytes() == (FIXTURES / "new.png").read_bytes()
     assert not ac.accept_template_candidate(bundle, dataset, created.revision).changed
     reverted = ac.revert_template_candidate(bundle, created.revision)
-    assert reverted.changed and reverted.state.state == "original"
+    assert reverted.changed
+    assert reverted.state.state == "original"
     assert target.read_bytes() == original
     assert not ac.revert_template_candidate(bundle, created.revision).changed
 
@@ -72,11 +77,12 @@ def test_intervening_edits_are_not_overwritten(revision_files, operation):
     created = create(revision_files)
     replacement = (FIXTURES / "absent.png").read_bytes()
     target.write_bytes(replacement)
+    if operation == "accept":
+        apply, arguments = ac.accept_template_candidate, (bundle, dataset, created.revision)
+    else:
+        apply, arguments = ac.revert_template_candidate, (bundle, created.revision)
     with pytest.raises(ac.TemplateRevisionConflict):
-        if operation == "accept":
-            ac.accept_template_candidate(bundle, dataset, created.revision)
-        else:
-            ac.revert_template_candidate(bundle, created.revision)
+        apply(*arguments)
     assert target.read_bytes() == replacement
 
 
@@ -95,8 +101,9 @@ def test_bundle_cannot_overwrite_existing_artifact_or_active_template(revision_f
     with pytest.raises(ac.TemplateRevisionConflict):
         create(revision_files)
     assert ac.preview_template_candidate(bundle).state.revision == created.revision
+    image = (FIXTURES / "new.png").read_bytes()
     with pytest.raises(ac.TemplateRevisionError):
-        ac.create_template_candidate(target, (FIXTURES / "new.png").read_bytes(), target)
+        ac.create_template_candidate(target, image, target)
 
 
 @pytest.mark.parametrize("labels", ["unknown", "positive_only", "miss_only", "wrong"])
@@ -114,7 +121,8 @@ def test_accept_requires_labelled_positive_and_negative_regression_evidence(revi
         payload["samples"][0]["expected_box"] = [0, 0, 5, 5]
     dataset.write_text(json.dumps(payload), encoding="utf-8")
     verified = ac.verify_template_candidate(bundle, dataset)
-    assert not verified.eligible and verified.reasons
+    assert not verified.eligible
+    assert verified.reasons
     original = target.read_bytes()
     with pytest.raises(ac.TemplateRevisionError):
         ac.accept_template_candidate(bundle, dataset, created.revision)
@@ -132,7 +140,8 @@ def test_atomic_replace_failure_keeps_original_and_bundle(revision_files, monkey
     monkeypatch.setattr("je_auto_control.utils.json_store.json_store._replace", fail)
     with pytest.raises(OSError):
         ac.accept_template_candidate(bundle, dataset, created.revision)
-    assert target.read_bytes() == original and bundle.exists()
+    assert target.read_bytes() == original
+    assert bundle.exists()
 
 
 @pytest.mark.parametrize("fmt,suffix", [("JPEG", ".jpg"), ("BMP", ".bmp")])
@@ -168,7 +177,8 @@ def test_cancellation_before_commit_preserves_template(revision_files):
 
     with pytest.raises(CancelledError) as caught:
         ac.accept_template_candidate(bundle, dataset, created.revision, observer=cancel)
-    assert caught.value is signal and target.read_bytes() == original
+    assert caught.value is signal
+    assert target.read_bytes() == original
 
 
 def test_loaded_frame_root_revocation_prevents_acceptance(revision_files):
@@ -313,9 +323,10 @@ def test_bundle_changed_at_final_checkpoint_cannot_commit(revision_files, monkey
             bundle.write_text(json.dumps(payload), encoding="utf-8")
 
     monkeypatch.setattr("je_auto_control.utils.self_healing.template_candidates._file_lock", lock)
+    if operation == "accept":
+        apply, arguments = ac.accept_template_candidate, (bundle, dataset, created.revision)
+    else:
+        apply, arguments = ac.revert_template_candidate, (bundle, created.revision)
     with pytest.raises(ac.TemplateRevisionConflict):
-        if operation == "accept":
-            ac.accept_template_candidate(bundle, dataset, created.revision, observer=checkpoint)
-        else:
-            ac.revert_template_candidate(bundle, created.revision, observer=checkpoint)
+        apply(*arguments, observer=checkpoint)
     assert target.read_bytes() == before

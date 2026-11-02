@@ -155,30 +155,36 @@ def merge_buckets(local: ConfigBucket,
     conflicts: List[ConflictRecord] = []
     sections = set(local.sections) | set(remote.sections)
     for name in sections:
-        merged_section: Dict[str, Dict[str, Any]] = {}
-        local_sec = local.sections.get(name, {})
-        remote_sec = remote.sections.get(name, {})
-        ids = set(local_sec) | set(remote_sec)
-        for entry_id in ids:
-            local_entry = local_sec.get(entry_id)
-            remote_entry = remote_sec.get(entry_id)
-            if local_entry is None:
-                if remote_entry is not None:
-                    merged_section[entry_id] = remote_entry
-                continue
-            if remote_entry is None:
-                merged_section[entry_id] = local_entry
-                continue
-            kept, dropped = _winner(local_entry, remote_entry)
-            merged_section[entry_id] = kept
-            if dropped is not None:
-                conflicts.append(ConflictRecord(
-                    section=name, entry_id=entry_id, dropped=dropped, kept=kept,
-                ))
+        merged_section = _merge_section(name, local.sections.get(name, {}),
+                                        remote.sections.get(name, {}), conflicts)
         merged.sections[name] = _without_expired(
             merged_section, (time.time() if now is None else now) - tombstone_retention_s)
     merged.revision = max(local.revision, remote.revision) + 1
     return merged, conflicts
+
+
+def _merge_section(name: str, local_sec: Dict[str, Dict[str, Any]], remote_sec: Dict[str, Dict[str, Any]],
+                   conflicts: List[ConflictRecord]) -> Dict[str, Dict[str, Any]]:
+    """Merge one section entry by entry, appending every overruled entry to ``conflicts``."""
+    merged_section: Dict[str, Dict[str, Any]] = {}
+    ids = set(local_sec) | set(remote_sec)
+    for entry_id in ids:
+        local_entry = local_sec.get(entry_id)
+        remote_entry = remote_sec.get(entry_id)
+        if local_entry is None:
+            if remote_entry is not None:
+                merged_section[entry_id] = remote_entry
+            continue
+        if remote_entry is None:
+            merged_section[entry_id] = local_entry
+            continue
+        kept, dropped = _winner(local_entry, remote_entry)
+        merged_section[entry_id] = kept
+        if dropped is not None:
+            conflicts.append(ConflictRecord(
+                section=name, entry_id=entry_id, dropped=dropped, kept=kept,
+            ))
+    return merged_section
 
 
 def _winner(local_entry: Dict[str, Any], remote_entry: Dict[str, Any],

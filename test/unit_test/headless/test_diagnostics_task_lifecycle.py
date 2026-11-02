@@ -64,11 +64,13 @@ def test_active_actions_run_off_the_gui_thread_and_duplicate_run_is_ignored(pane
     try:
         run()
         assert entered.wait(1)
-        assert threads == [threads[0]] and threads[0] != threading.get_ident()
+        assert threads == [threads[0]]
+        assert threads[0] != threading.get_ident()
         run()
         QTimer.singleShot(0, lambda: ticks.append('tick'))
         assert _pump(app, lambda: ticks)
-        assert len(threads) == 1 and widget._table.rowCount() == 0
+        assert len(threads) == 1
+        assert widget._table.rowCount() == 0
     finally:
         release.set()
     assert _pump(app, lambda: widget._active_task is None and widget._table.rowCount() == 1)
@@ -100,7 +102,8 @@ def test_stop_reaches_the_active_check_and_allows_a_deliberate_retry(panel, monk
     assert entered.wait(1)
     actions['diag_stop']()
     assert _pump(app, lambda: widget._active_task is None)
-    assert calls == ['waiting'] and widget._table.rowCount() == 0
+    assert calls == ['waiting']
+    assert widget._table.rowCount() == 0
     assert widget._summary_label.text() == language.translate('diag_summary_cancelled')
     monkeypatch.setattr(diagnostics, '_ALL_CHECKS', (later,))
     actions['diag_run']()
@@ -126,7 +129,8 @@ def test_close_drops_a_late_success_instead_of_populating_a_closed_panel(panel, 
     finally:
         release.set()
     assert _pump(app, lambda: widget._task_controller.active_count == 0)
-    assert widget._table.rowCount() == 0 and widget._active_task is None
+    assert widget._table.rowCount() == 0
+    assert widget._active_task is None
 
 
 @pytest.mark.parametrize('language', ['English', 'Traditional_Chinese', 'Simplified_Chinese', 'Japanese'])
@@ -198,7 +202,8 @@ def test_runner_error_is_displayed_as_plain_text_and_the_action_can_retry(panel,
     run = dict(widget.menu_actions())['diag_run']
     run()
     assert _pump(app, lambda: widget._active_task is None)
-    assert 'controlled error' in widget._summary_label.text() and widget._table.rowCount() == 0
+    assert 'controlled error' in widget._summary_label.text()
+    assert widget._table.rowCount() == 0
     assert widget._summary_label.textFormat().name == 'PlainText'
     monkeypatch.setattr(diagnostics_tab, 'run_diagnostics', lambda: diagnostics.DiagnosticsReport([]))
     run()
@@ -214,7 +219,8 @@ def test_failed_submission_restores_an_error_state_without_a_phantom_active_task
 
     monkeypatch.setattr(widget._task_controller, 'submit', failed_start)
     dict(widget.menu_actions())['diag_run']()
-    assert widget._active_task is None and 'controlled startup failure' in widget._summary_label.text()
+    assert widget._active_task is None
+    assert 'controlled startup failure' in widget._summary_label.text()
 
 
 def test_synchronous_submission_cancellation_keeps_the_original_control_and_restores_ui(panel, monkeypatch):
@@ -225,13 +231,11 @@ def test_synchronous_submission_cancellation_keeps_the_original_control_and_rest
         raise original
 
     monkeypatch.setattr(widget._task_controller, 'submit', failed_start)
+    run = dict(widget.menu_actions())['diag_run']
     try:
-        try:
-            dict(widget.menu_actions())['diag_run']()
-        except OperationCancelledError as caught:
-            assert caught is original
-        else:
-            pytest.fail('submission cancellation was converted into an ordinary failure')
+        with pytest.raises(OperationCancelledError) as caught:
+            run()
+        assert caught.value is original
     finally:
         original.__traceback__ = None
     assert widget._active_task is None

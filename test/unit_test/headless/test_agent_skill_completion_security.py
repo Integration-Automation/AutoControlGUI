@@ -39,15 +39,17 @@ def test_corrupt_or_stale_proof_cannot_publish(trial, damage):
     }
     with runtime.store.connection(write=True) as connection:
         connection.execute(*changes[damage])
+    request = acceptance(trial)
     with pytest.raises(AgentTaskError):
-        runtime.skills.control('accept', acceptance(trial))
+        runtime.skills.control('accept', request)
     assert_unpublished(trial)
 
 
 @pytest.mark.parametrize('identifier', [None, [], '', 'not-a-reviewed-completion'])
 def test_invalid_completion_identity_has_no_publication(trial, identifier):
+    request = {**acceptance(trial), 'completion_task_id': identifier}
     with pytest.raises(AgentTaskError):
-        trial.runtime.skills.control('accept', {**acceptance(trial), 'completion_task_id': identifier})
+        trial.runtime.skills.control('accept', request)
     assert_unpublished(trial)
 
 
@@ -62,8 +64,9 @@ def test_reader_cannot_masquerade_as_the_execution_trial(trial):
 
 def test_another_candidate_cannot_borrow_verified_effects(trial):
     other = trial.runtime.skills.control('record', {'task_id': trial.source_id, 'name': 'Different candidate'})
+    request = {**acceptance(trial), 'candidate_id': other['id']}
     with pytest.raises(AgentTaskError, match='exact candidate'):
-        trial.runtime.skills.control('accept', {**acceptance(trial), 'candidate_id': other['id']})
+        trial.runtime.skills.control('accept', request)
     assert_unpublished(trial)
 
 
@@ -72,8 +75,9 @@ def test_unwinding_input_witness_blocks_publication(trial, which):
     identifier = getattr(trial, which)
     trial.runtime._executing.add(identifier)
     try:
+        request = acceptance(trial)
         with pytest.raises(AgentTaskError, match='retired|stopped'):
-            trial.runtime.skills.control('accept', acceptance(trial))
+            trial.runtime.skills.control('accept', request)
         assert_unpublished(trial)
     finally:
         trial.runtime._executing.discard(identifier)
@@ -85,8 +89,9 @@ def test_options_and_success_flags_do_not_create_private_completion_provenance(t
     definition['options'] = {**definition['options'], 'completion_review': {'effect_task': trial.task_id}}
     forged = runtime.submit(definition)
     runtime.store.update(forged.task_id, 'succeeded', verification=runtime.store.get(trial.child_id)['verification'])
+    request = {**acceptance(trial), 'completion_task_id': forged.task_id}
     with pytest.raises(AgentTaskError, match='private reviewed'):
-        runtime.skills.control('accept', {**acceptance(trial), 'completion_task_id': forged.task_id})
+        runtime.skills.control('accept', request)
     assert_unpublished(trial)
 
 
@@ -103,6 +108,7 @@ def test_malformed_private_binding_returns_typed_refusal(trial, damage):
         encoded = '{' if damage == 'invalid_json' else json.dumps(details)
         connection.execute('UPDATE agent_readonly_completions SET details=? WHERE task_id=?',
                            (encoded, trial.child_id))
+    request = acceptance(trial)
     with pytest.raises(AgentTaskError):
-        trial.runtime.skills.control('accept', acceptance(trial))
+        trial.runtime.skills.control('accept', request)
     assert_unpublished(trial)

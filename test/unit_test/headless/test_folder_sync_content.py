@@ -112,7 +112,7 @@ def test_timed_out_stop_retains_worker_and_prevents_overlapping_restart(tmp_path
         assert engine.wait_until_ready()
         (tmp_path / 'new.txt').write_bytes(b'data')
         assert entered.wait(5)
-        with patch.object(worker, 'join', lambda timeout: None):
+        with patch.object(worker, 'join', return_value=None):
             engine.stop()
         assert engine.is_running(), 'the stopped but blocked worker must remain owned'
         engine.start()

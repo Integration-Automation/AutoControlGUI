@@ -6,17 +6,19 @@ from typing import Any, NoReturn
 
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 
+_UNCONFIRMED = "browser retirement is unconfirmed"
+
 
 def retirement_proof(value: Any, context_id: str | None = None) -> dict:
     """Validate a closed proof from the already owned helper, optionally pinning its actual context."""
     fields = {"contract", "input_supported", "network_retired", "context_id"}
     if not isinstance(value, dict) or set(value) != fields:
-        raise AgentTaskError("browser retirement is unconfirmed")
+        raise AgentTaskError(_UNCONFIRMED)
     # pylint: disable-next=unidiomatic-typecheck  # reason: protocol integers must exclude boolean versions
     if type(value["contract"]) is not int or value["contract"] != 1:
-        raise AgentTaskError("browser retirement is unconfirmed")
+        raise AgentTaskError(_UNCONFIRMED)
     if value["input_supported"] is not False or value["network_retired"] is not True:
-        raise AgentTaskError("browser retirement is unconfirmed")
+        raise AgentTaskError(_UNCONFIRMED)
     _require_context(value["context_id"], context_id)
     return dict(value)
 

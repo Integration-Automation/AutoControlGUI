@@ -25,7 +25,8 @@ def test_reviewed_helper_interpreter_selects_isolated_installed_modules():
     assert target._argv[0] == configuration.settings["helper_python"]
     assert "-I" in target._argv
     assert target._argv[-1] == "je_auto_control.utils.agent_runtime.native_worker"
-    assert target._channel is None and target._resource is None
+    assert target._channel is None
+    assert target._resource is None
 
 
 def test_target_probe_uses_existing_host_management_and_does_not_enable_target(tmp_path, monkeypatch):
@@ -81,8 +82,10 @@ def test_worker_probe_imports_without_starting_sdk_or_playwright(monkeypatch):
     worker = NativeWorker(io.BytesIO(), io.BytesIO())
     report = worker._dispatch("probe_browser", {"transfer": True})
     assert report["status"] == "python_dependencies_ready"
-    assert report["browser_launch"] == "not_probed" and report["native_evidence"] == "not_recorded"
-    assert worker._spec is None and worker._activity is None
+    assert report["browser_launch"] == "not_probed"
+    assert report["native_evidence"] == "not_recorded"
+    assert worker._spec is None
+    assert worker._activity is None
     sdk.open.assert_not_called()
     require_runtime.assert_called_once()
     runtime.assert_not_called()
@@ -130,7 +133,8 @@ def test_dependency_reply_cannot_claim_native_success_or_include_unknown_metadat
     channel = SimpleNamespace(request=Mock(side_effect=[{"protocol": 1}, report]), close=Mock())
     monkeypatch.setattr(helper_environment, "owned_channel", Mock(return_value=channel))
     result = helper_environment.probe_browser_helper((sys.executable,), transfer=True)
-    assert result["status"] == "unknown" and result["native_evidence"] == "not_recorded"
+    assert result["status"] == "unknown"
+    assert result["native_evidence"] == "not_recorded"
     channel.close.assert_called_once()
 
 
@@ -153,8 +157,10 @@ def test_default_environment_probe_does_not_acquire_target_input_or_start_a_brow
     target = build_target(profile())
     result = target.probe()
     assert result["status"] in {"python_dependencies_ready", "dependency_missing", "incompatible"}
-    assert result["native_evidence"] == "not_recorded" and result["browser_launch"] == "not_probed"
-    assert target._channel is None and target._resource is None
+    assert result["native_evidence"] == "not_recorded"
+    assert result["browser_launch"] == "not_probed"
+    assert target._channel is None
+    assert target._resource is None
 
 
 def test_cli_and_command_schema_offer_the_same_host_probe_operation():

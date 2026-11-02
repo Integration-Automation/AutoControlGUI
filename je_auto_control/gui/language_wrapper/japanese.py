@@ -12,6 +12,7 @@ _LOCATE_CLICK = "検索してクリック"  # NOSONAR python:S1192
 _HOTKEYS = "ホットキー"
 _ACTION = "アクション"
 _RUNNING = "実行中..."
+_VERSION = "バージョン"
 
 japanese_word_dict = {
     "application_name": "AutoControlGUI",
@@ -1076,7 +1077,7 @@ japanese_word_dict = {
     "self_heal_verify_label": "クリック後の検証",
     "self_heal_verify_placeholder": "任意の JSON チェック。例: {\"type\": \"image_gone\"}",
     "self_heal_verify_invalid": "チェックは JSON オブジェクトで指定してください",
-    "self_heal_cmp_version": "バージョン",
+    "self_heal_cmp_version": _VERSION,
     "self_heal_cmp_located": "検出",
     "self_heal_cmp_accuracy": "正解率",
     "self_heal_cmp_false_positive": "誤検出",
@@ -1103,7 +1104,7 @@ japanese_word_dict = {
     "self_heal_col_template_path": "テンプレート",
     "self_heal_col_description": "説明",
     "self_heal_col_duration_ms": "ミリ秒",
-    "self_heal_col_locator_version": "バージョン",
+    "self_heal_col_locator_version": _VERSION,
     "self_heal_col_action_verified": "検証",
     "self_heal_verified_yes": "検証済み",
     "self_heal_verified_no": "検証失敗",
@@ -1573,7 +1574,7 @@ japanese_word_dict = {
     "healing_eval_cancel": "比較をキャンセル",
     "healing_eval_export_json": "比較 JSON を保存",
     "healing_eval_export_html": "比較 HTML を保存",
-    "healing_eval_version": "バージョン",
+    "healing_eval_version": _VERSION,
     "healing_eval_accuracy": "正解／ラベル済み",
     "healing_eval_false_positive": "誤検出／検出済み",
     "healing_eval_recovery": "検証済み復旧",

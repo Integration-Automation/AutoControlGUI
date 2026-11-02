@@ -26,7 +26,8 @@ def assert_unpublished(value):
 def test_zero_effect_original_trial_can_adopt_its_complete_actual_successor(execution):
     assert execution.runtime.store.actions(execution.task_id) == []
     accepted = execution.runtime.skills.control('accept', accept_request(execution))
-    assert accepted['publication']['task_id'] == execution.task_id and accepted['version'] == 1
+    assert accepted['publication']['task_id'] == execution.task_id
+    assert accepted['version'] == 1
 
 
 @pytest.mark.parametrize('execution', ['named'], indirect=True)
@@ -38,8 +39,9 @@ def test_named_owner_can_adopt_explicit_source_owned_successor(execution):
 
 @pytest.mark.parametrize('execution', ['legacy_owner'], indirect=True)
 def test_original_owner_cannot_implicitly_adopt_an_admin_owned_successor(execution):
+    request = review_request(execution)
     with pytest.raises(AgentTaskError, match='another caller'):
-        execution.runtime.skills.control('review_execution', review_request(execution))
+        execution.runtime.skills.control('review_execution', request)
     assert_unpublished(execution)
 
 
@@ -72,9 +74,9 @@ def test_revocation_after_publication_sql_rolls_back_version_and_all_evidence(ex
 
 @pytest.mark.parametrize('identifier', [None, [], {}, '', 'missing', 1, True])
 def test_invalid_or_missing_executable_identity_does_not_publish(execution, identifier):
+    request = {**review_request(execution), 'execution_task_id': identifier}
     with pytest.raises(AgentTaskError):
-        execution.runtime.skills.control('review_execution', {**review_request(execution),
-                                                               'execution_task_id': identifier})
+        execution.runtime.skills.control('review_execution', request)
     assert_unpublished(execution)
 
 
@@ -89,8 +91,9 @@ def test_actual_private_recovery_chain_is_required(execution, corruption):
         else:
             connection.execute('UPDATE agent_task_recoveries SET source_task=? WHERE task_id=?',
                                (execution.child_id, execution.child_id))
+    request = review_request(execution)
     with pytest.raises(AgentTaskError):
-        execution.runtime.skills.control('review_execution', review_request(execution))
+        execution.runtime.skills.control('review_execution', request)
     assert_unpublished(execution)
 
 
@@ -98,8 +101,9 @@ def test_actual_private_recovery_chain_is_required(execution, corruption):
 def test_unknown_or_incomplete_final_effects_are_never_complete(execution, status):
     with execution.runtime.store.connection(write=True) as connection:
         connection.execute('UPDATE agent_actions SET status=? WHERE task_id=?', (status, execution.child_id))
+    request = review_request(execution)
     with pytest.raises(AgentTaskError, match='semantic plan'):
-        execution.runtime.skills.control('review_execution', review_request(execution))
+        execution.runtime.skills.control('review_execution', request)
     assert_unpublished(execution)
 
 
@@ -110,8 +114,9 @@ def test_final_independent_completion_and_retirement_are_mandatory(execution, fi
             connection.execute('UPDATE agent_tasks SET verification=? WHERE id=?', ('[]', execution.child_id))
         else:
             connection.execute('DELETE FROM agent_completion WHERE task_id=?', (execution.child_id,))
+    request = review_request(execution)
     with pytest.raises(AgentTaskError, match='completion'):
-        execution.runtime.skills.control('review_execution', review_request(execution))
+        execution.runtime.skills.control('review_execution', request)
     assert_unpublished(execution)
 
 
@@ -156,8 +161,9 @@ def test_malformed_private_ownership_evidence_is_a_typed_refusal(execution, dama
             value['review'] = 'not-the-review'
         connection.execute('UPDATE agent_recovery_owners SET details=? WHERE task_id=?',
                            ('{' if damage == 'json' else json.dumps(value), execution.child_id))
+    request = review_request(execution)
     with pytest.raises(AgentTaskError):
-        execution.runtime.skills.control('review_execution', review_request(execution))
+        execution.runtime.skills.control('review_execution', request)
     assert_unpublished(execution)
 
 
@@ -176,10 +182,11 @@ def test_legacy_admission_reviewer_must_remain_live_for_an_independent_current_a
 @pytest.mark.parametrize('participant', ['root', 'leaf'])
 def test_inflight_input_witness_prevents_passive_review(execution, participant):
     identifier = execution.task_id if participant == 'root' else execution.child_id
+    request = review_request(execution)
     execution.runtime._executing.add(identifier)
     try:
         with pytest.raises(AgentTaskError, match='input has not retired'):
-            execution.runtime.skills.control('review_execution', review_request(execution))
+            execution.runtime.skills.control('review_execution', request)
     finally:
         execution.runtime._executing.discard(identifier)
     assert_unpublished(execution)

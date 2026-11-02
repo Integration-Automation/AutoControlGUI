@@ -20,11 +20,10 @@ _ERRORS = (AutoControlException, OSError, RuntimeError, TypeError, ValueError, L
 def fence_delivery(runtime: Any, started: dict) -> None:
     """Retire only this delivery's scheduling attempt, preserving all node delivery evidence."""
     # pylint: disable-next=protected-access  # reason: serialize internal retirement with public batch transitions
-    with runtime._lock("dag:" + started["batch_id"]):
-        with runtime.store.connection(write=True) as connection:
-            connection.execute("UPDATE agent_dag_batches SET state='waiting_review',attempt='',updated=? "
-                               "WHERE id=? AND attempt=? AND state='running'",
-                               (time.time(), started["batch_id"], started["attempt"]))
+    with runtime._lock("dag:" + started["batch_id"]), runtime.store.connection(write=True) as connection:
+        connection.execute("UPDATE agent_dag_batches SET state='waiting_review',attempt='',updated=? "
+                           "WHERE id=? AND attempt=? AND state='running'",
+                           (time.time(), started["batch_id"], started["attempt"]))
 
 
 class BackgroundDags:

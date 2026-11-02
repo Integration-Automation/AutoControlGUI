@@ -48,7 +48,8 @@ def test_dag_gui_worker_does_not_borrow_ambient_admin_authority(monkeypatch):
     with authorization_scope(admin):
         worker.run()
         assert current_authorization() is admin
-    assert len(outcomes) == 1 and not outcomes[0].succeeded
+    assert len(outcomes) == 1
+    assert not outcomes[0].succeeded
     assert "manage_hosts" in outcomes[0].nodes["one"].error
     worker.deleteLater()
     app.processEvents()
@@ -66,7 +67,8 @@ def test_dag_inspection_worker_calls_only_inspection(monkeypatch):
     results = []
     worker.finished.connect(results.append)
     worker.run()
-    assert calls == [graph] and results == [{"inspection_only": True}]
+    assert calls == [graph]
+    assert results == [{"inspection_only": True}]
     worker.deleteLater()
     app.processEvents()
 

@@ -46,11 +46,14 @@ def test_process_death_retires_old_delivery_and_preserves_unknown_claim(tmp_path
         try:
             service.start()
             result = service.runtime.batches.control('get', {'batch_id': batch['batch_id']})
-            assert result['state'] == 'waiting_review' and result['background']['state'] == 'failed'
-            assert result['nodes'][0]['phase'] == 'claimed' and service.runtime.list() == []
+            assert result['state'] == 'waiting_review'
+            assert result['background']['state'] == 'failed'
+            assert result['nodes'][0]['phase'] == 'claimed'
+            assert service.runtime.list() == []
             review = service.runtime.batches.control('review_continuation', {
                 'batch_id': batch['batch_id'], 'definition': graph()})
-            assert not review['can_approve'] and review['decisions'][0]['action'] == 'wait'
+            assert not review['can_approve']
+            assert review['decisions'][0]['action'] == 'wait'
         finally:
             service.close()
     finally:

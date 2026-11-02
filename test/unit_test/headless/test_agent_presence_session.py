@@ -29,7 +29,8 @@ class Native:
         return self.metric_remote if code == 0x1000 else self.metric_shadow
 
     def query(self, server, session, info, pointer, count):
-        assert server is None and session == 0xFFFFFFFF
+        assert server is None
+        assert session == 0xFFFFFFFF
         value = ctypes.c_uint16(self.protocol) if info == 16 else ctypes.c_int32(
             self.remote if info == 29 else self.state)
         assert info in (16, 29, 8)
@@ -52,7 +53,8 @@ def console(native):
 def test_console_guard_construction_is_inert_and_all_checks_use_current_local_session_queries():
     native = Native()
     guard = console(native)
-    assert not native.kernel.GetCurrentProcessId.calls and not native.freed
+    assert not native.kernel.GetCurrentProcessId.calls
+    assert not native.freed
     guard.check()
     guard.check()
     assert [row[2] for row in native.wts.WTSQuerySessionInformationW.calls] == [16, 29, 8] * 2
@@ -69,8 +71,9 @@ def test_console_guard_construction_is_inert_and_all_checks_use_current_local_se
 def test_remote_shadow_unknown_detaching_and_malformed_native_queries_refuse_permission(field, value):
     native = Native()
     setattr(native, field, value)
+    session = console(native)
     with pytest.raises(AgentTaskError):
-        console(native).check()
+        session.check()
     if native.wts.WTSQuerySessionInformationW.calls and not native.null:
         assert native.freed
 
@@ -88,8 +91,9 @@ def test_console_guard_rechecks_session_change_instead_of_caching_initial_author
 def test_unsupported_platform_never_loads_dlls(monkeypatch):
     from je_auto_control.utils.agent_runtime import presence_session_windows
     monkeypatch.setattr(presence_session_windows, 'sys', SimpleNamespace(platform='linux'))
+    session = presence_session_windows.WindowsConsoleSession()
     with pytest.raises(AgentTaskError):
-        presence_session_windows.WindowsConsoleSession().check()
+        session.check()
 
 
 def test_observer_refuses_session_before_creating_any_window_or_raw_registration(monkeypatch):
@@ -101,7 +105,8 @@ def test_observer_refuses_session_before_creating_any_window_or_raw_registration
     api._support.session = refuse
     with pytest.raises(AgentTaskError, match='console'):
         api.open(lambda: None)
-    assert not native.user.CreateWindowExW.calls and not native.user.RegisterClassW.calls
+    assert not native.user.CreateWindowExW.calls
+    assert not native.user.RegisterClassW.calls
 
 
 def test_observer_rechecks_supported_session_for_every_fresh_poll(monkeypatch):

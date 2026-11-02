@@ -10,8 +10,9 @@ from je_auto_control.utils.agent_runtime import AgentTaskError, AgentTaskSpec
 def test_unsaved_modal_requires_human_review_even_with_a_known_file_title(monkeypatch, name):
     from je_auto_control.utils.agent_runtime import dialog_scope
     monkeypatch.setattr(dialog_scope, "_window_metadata", lambda _hwnd: {"modal": True, "class_name": "#32770"})
+    controls = [SimpleNamespace(name=name)]
     with pytest.raises(AgentTaskError, match="unsaved"):
-        dialog_scope.check_review(10, "Save As", [SimpleNamespace(name=name)], workspace=False)
+        dialog_scope.check_review(10, "Save As", controls, workspace=False)
 
 
 def test_unknown_modal_is_never_treated_as_a_file_picker(monkeypatch):
@@ -113,7 +114,8 @@ def test_external_observation_review_releases_input_and_requires_resume(tmp_path
         with pytest.raises(AgentHumanReview):
             runtime.observe(task.task_id)
         assert runtime.get(task.task_id).state == "waiting_user"
-        assert not runtime._leases and cleanup
+        assert not runtime._leases
+        assert cleanup
         assert runtime.store.actions(task.task_id) == []
         runtime.resume(task.task_id)
         assert runtime.get(task.task_id).state == "queued"
@@ -158,7 +160,8 @@ def test_file_dialog_rebinds_only_to_confirmed_own_foreground_and_canonicalizes_
     with operation_scope(TaskOperation(spec, lambda: None, None)):
         with file_dialog_scope.scoped_file_dialog(target, 11, 7, {}):
             assert handle_file_dialog("report.txt")["handled"]
-    assert focus == [20] and target._action_identity == (20, 7)
+    assert focus == [20]
+    assert target._action_identity == (20, 7)
     assert input_calls == [str((tmp_path / "report.txt").resolve()), "enter"]
 
 
@@ -172,8 +175,9 @@ def test_review_error_type_survives_the_native_channel_boundary():
     channel._replies = queue.Queue()
     channel._stop = threading.Event()
     channel._replies.put({"id": "fixture", "error_type": "AgentHumanReview", "error": "unsaved content"})
+    deadline = time.monotonic() + 1
     with pytest.raises(AgentHumanReview):
-        channel._receive("fixture", time.monotonic() + 1, lambda: None, None)
+        channel._receive("fixture", deadline, lambda: None, None)
 
 
 def test_local_http_review_type_and_waiting_state_share_the_same_gate(tmp_path):

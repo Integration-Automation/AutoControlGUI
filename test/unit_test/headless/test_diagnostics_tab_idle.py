@@ -58,9 +58,11 @@ def test_opening_and_translating_diagnostics_keeps_an_honest_localized_idle_stat
     assert calls == [], 'merely opening Diagnostics started its active runner'
     wrapper.reset_language(language)
     panel.retranslate()
-    assert calls == [] and panel._table.rowCount() == 0
+    assert calls == []
+    assert panel._table.rowCount() == 0
     message = wrapper.translate('diag_summary_idle')
-    assert message != 'diag_summary_idle' and panel._summary_label.text() == message
+    assert message != 'diag_summary_idle'
+    assert panel._summary_label.text() == message
     assert panel._table.horizontalHeaderItem(3).text() == wrapper.translate('diag_col_detail')
 
 
@@ -69,13 +71,15 @@ def test_actions_menu_runs_the_existing_diagnostic_runner_once_and_displays_its_
     assert calls == []
     dict(panel.menu_actions())['diag_run']()
     assert _finished(panel)
-    assert calls == ['explicit run'] and panel._table.rowCount() == 1
+    assert calls == ['explicit run']
+    assert panel._table.rowCount() == 1
     assert panel._table.item(0, 0).text() == 'controlled'
     assert panel._table.item(0, 3).text() == 'controlled subsystem'
     expected = wrapper.translate('diag_summary_failed').format(failed=1, count=1)
     assert panel._summary_label.text() == expected
     panel.retranslate()
-    assert calls == ['explicit run'] and panel._summary_label.text() == expected
+    assert calls == ['explicit run']
+    assert panel._summary_label.text() == expected
 
 
 def test_async_cancellation_is_displayed_without_an_ordinary_error_and_allows_deliberate_retry(tab, monkeypatch):
@@ -91,8 +95,10 @@ def test_async_cancellation_is_displayed_without_an_ordinary_error_and_allows_de
     action()
     handle = panel._active_task
     assert _finished(panel)
-    assert handle.outcome.status == 'cancelled' and handle.outcome.control == type(original).__name__
-    assert calls == [] and panel._table.rowCount() == 0
+    assert handle.outcome.status == 'cancelled'
+    assert handle.outcome.control == type(original).__name__
+    assert calls == []
+    assert panel._table.rowCount() == 0
     panel.retranslate()
     assert panel._summary_label.text() == wrapper.translate('diag_summary_cancelled')
     monkeypatch.setattr(diagnostics_tab, 'run_diagnostics', lambda: DiagnosticsReport([]))
@@ -121,12 +127,15 @@ def test_a_real_check_cancellation_stops_the_gui_run_and_allows_an_explicit_retr
     action()
     handle = panel._active_task
     assert _finished(panel)
-    assert handle.outcome.status == 'cancelled' and handle.outcome.control == type(original).__name__
-    assert events == ['cancelled'] and panel._table.rowCount() == 0
+    assert handle.outcome.status == 'cancelled'
+    assert handle.outcome.control == type(original).__name__
+    assert events == ['cancelled']
+    assert panel._table.rowCount() == 0
     panel.retranslate()
     assert panel._summary_label.text() == wrapper.translate('diag_summary_cancelled')
     monkeypatch.setattr(diagnostics, '_ALL_CHECKS', (later,))
     action()
     assert _finished(panel)
-    assert events == ['cancelled', 'later'] and panel._table.rowCount() == 1
+    assert events == ['cancelled', 'later']
+    assert panel._table.rowCount() == 1
     assert panel._summary_label.text() == wrapper.translate('diag_summary_ok').format(count=1)

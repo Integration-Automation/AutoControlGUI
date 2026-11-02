@@ -152,7 +152,7 @@ def run(source: Any, sink: Any, broker: PresenceBroker | None = None) -> None:
                 return
             try:
                 result = broker.dispatch(request['operation'], request['payload'])
-            except (OSError, EOFError, ValueError, AgentTaskError) as error:
+            except (OSError, EOFError, ValueError) as error:  # ValueError covers AgentTaskError
                 send_error(sink, request['id'], error)
                 return
             send_result(sink, request['id'], result)

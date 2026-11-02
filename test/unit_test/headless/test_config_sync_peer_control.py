@@ -35,7 +35,9 @@ def test_register_preserves_initial_offline_edits_then_flushes_them(tmp_path, mo
     client, queue, server, _calls, _perform = peer(tmp_path, monkeypatch)
     operation = edit(queue)
     result = client.control(queue, 'register')
-    assert result.delivered == 1 and result.pending == 0 and result.revision == 1
+    assert result.delivered == 1
+    assert result.pending == 0
+    assert result.revision == 1
     assert queue.pending(endpoint=operation.endpoint, user_id='alice') == (operation,)
     assert queue.snapshot(endpoint=operation.endpoint, user_id='alice') == server.get('alice')
     assert client.flush(queue).delivered == 1
@@ -71,7 +73,8 @@ def test_ack_and_collection_wait_for_every_active_peer(tmp_path, monkeypatch):
     client.control(other, 'ack')
     client.control(queue, 'collect')
     final = server.get('alice')
-    assert final.entries == () and len(final.fences) == 1
+    assert final.entries == ()
+    assert len(final.fences) == 1
     assert final.fences[0].deletion_revision == deletion_revision
 
 
@@ -90,7 +93,8 @@ def test_full_resync_requires_explicit_pending_retirement_and_adopts_new_epoch(t
         client.control(queue, 'full_resync')
     assert len(calls) == before
     result = client.control(queue, 'full_resync', discard_pending=True)
-    assert result.delivered == 1 and result.pending == 0
+    assert result.delivered == 1
+    assert result.pending == 0
     assert queue.identity(operation.endpoint, 'alice').epoch == 1
     assert queue.status(endpoint=operation.endpoint, user_id='alice')['retired'] == 1
     assert queue.pending(endpoint=operation.endpoint, user_id='alice') == ()
@@ -98,7 +102,8 @@ def test_full_resync_requires_explicit_pending_retirement_and_adopts_new_epoch(t
     with pytest.raises(ac.FullResyncRequired):
         edit(queue, operation_id='obsolete')
     fresh = edit(queue, epoch=1, operation_id='fresh')
-    assert client.flush(queue).delivered == 1 and server.get('alice').live_entries == fresh.entries
+    assert client.flush(queue).delivered == 1
+    assert server.get('alice').live_entries == fresh.entries
 
 
 def test_uncertain_register_replays_exact_control_before_fetch_after_restart(tmp_path, monkeypatch):
@@ -113,13 +118,15 @@ def test_uncertain_register_replays_exact_control_before_fetch_after_restart(tmp
         return response
     monkeypatch.setattr(http_client, 'perform_call', uncertain)
     result = client.control(queue, 'register', policy=ac.SyncRetryPolicy(max_attempts=1, backoff=0))
-    assert result.pending == 1 and result.delivered == 0
+    assert result.pending == 1
+    assert result.delivered == 0
     assert server.get('alice').revision == 1
     original_body = next(call['body'] for call in calls if call['method'] == 'PUT')
     calls.clear()
     reopened = ac.SyncOutbox(tmp_path / 'outbox.sqlite3')
     client.flush(reopened, policy=ac.SyncRetryPolicy(max_attempts=1, backoff=0))
-    assert [call['method'] for call in calls] == ['PUT'] and calls[0]['body'] == original_body
+    assert [call['method'] for call in calls] == ['PUT']
+    assert calls[0]['body'] == original_body
     assert reopened.control_status(endpoint='https://controlled.invalid', user_id='alice')['state'] == 'delivered'
 
 
@@ -138,7 +145,8 @@ def test_uncertain_resync_keeps_old_edits_until_receipt_is_durably_adopted(tmp_p
     monkeypatch.setattr(http_client, 'perform_call', uncertain)
     result = client.control(queue, 'full_resync', discard_pending=True,
                             policy=ac.SyncRetryPolicy(max_attempts=1, backoff=0))
-    assert result.pending == 1 and queue.identity(operation.endpoint, 'alice').epoch == 0
+    assert result.pending == 1
+    assert queue.identity(operation.endpoint, 'alice').epoch == 0
     assert queue.status(endpoint=operation.endpoint, user_id='alice')['retired'] == 0
     queue.enqueue(operation)
     with pytest.raises(ac.FullResyncRequired):
@@ -195,7 +203,8 @@ def test_a_live_control_lease_prevents_a_second_worker_from_sending_the_same_int
         try:
             assert entered.wait(3)
             second = client.control(ac.SyncOutbox(tmp_path / 'outbox.sqlite3'), 'register')
-            assert second.delivered == 0 and second.pending == 1
+            assert second.delivered == 0
+            assert second.pending == 1
             assert [call['method'] for call in calls] == ['GET', 'PUT']
         finally:
             release.set()
@@ -205,8 +214,9 @@ def test_a_live_control_lease_prevents_a_second_worker_from_sending_the_same_int
 def test_pre_cancelled_peer_control_never_opens_an_outbox(tmp_path):
     path = tmp_path / 'never-opened.sqlite3'
     client = ac.CausalSyncClient('https://controlled.invalid', user_id='alice')
+    queue = ac.SyncOutbox(path)
     with pytest.raises(CancelledError):
-        client.control(ac.SyncOutbox(path), 'register', cancelled=lambda: True)
+        client.control(queue, 'register', cancelled=lambda: True)
     assert not path.exists()
 
 
@@ -255,9 +265,12 @@ def test_metadata_stale_cas_budget_preserves_the_control_for_later_retry(tmp_pat
     monkeypatch.setattr(http_client, 'perform_call', busy)
     policy = ac.SyncRetryPolicy(max_attempts=1, backoff=0)
     result = client.control(queue, 'ack', policy=policy)
-    assert result.pending == 1 and result.failed == 1 and result.delivered == 0
+    assert result.pending == 1
+    assert result.failed == 1
+    assert result.delivered == 0
     requests = [json.loads(call['body']) for call in calls if call['method'] == 'PUT']
-    assert len(requests) == 4 and len({request['operation_id'] for request in requests}) == 1
+    assert len(requests) == 4
+    assert len({request['operation_id'] for request in requests}) == 1
     assert queue.control_status(endpoint='https://controlled.invalid', user_id='alice')['state'] == 'offline'
     monkeypatch.setattr(http_client, 'perform_call', perform)
     assert client.flush(queue, policy=policy).pending == 0
@@ -273,9 +286,12 @@ def test_full_resync_after_server_reset_rotates_local_origin_and_adopts_authorit
         connection.execute('DELETE FROM config_operations')
         connection.execute('DELETE FROM config_buckets')
     result = client.control(queue, 'full_resync', discard_pending=True)
-    assert result.delivered == 1 and result.revision == 1
+    assert result.delivered == 1
+    assert result.revision == 1
     identity = queue.identity(operation.endpoint, 'alice')
-    assert identity.origin != 'desktop' and identity.epoch == 0 and identity.confirmed_revision == 1
+    assert identity.origin != 'desktop'
+    assert identity.epoch == 0
+    assert identity.confirmed_revision == 1
     assert queue.snapshot(endpoint=operation.endpoint, user_id='alice') == server.get('alice')
     assert server.get('alice').live_entries == ()
 
@@ -297,7 +313,8 @@ def test_control_receipt_conflict_requires_explicit_recovery_instead_of_rebasing
         return perform(call)
     monkeypatch.setattr(http_client, 'perform_call', conflicting)
     result = client.control(queue, 'register')
-    assert result.pending == 1 and result.delivered == 0
+    assert result.pending == 1
+    assert result.delivered == 0
     assert [call['method'] for call in calls] == ['GET', 'PUT']
     assert queue.control_status(endpoint='https://controlled.invalid', user_id='alice')['state'] == 'conflict'
     assert client.control(queue, 'full_resync').delivered == 1
@@ -315,11 +332,14 @@ def test_historical_control_request_id_never_retires_work_queued_after_its_first
     queue = ac.SyncOutbox(tmp_path / 'outbox.sqlite3')
     before_calls, before_revision = len(calls), server.get('alice').revision
     repeated = client.control(queue, request)
-    assert repeated.revision == original.revision and repeated.pending == 0
-    assert len(calls) == before_calls and server.get('alice').revision == before_revision
+    assert repeated.revision == original.revision
+    assert repeated.pending == 0
+    assert len(calls) == before_calls
+    assert server.get('alice').revision == before_revision
     assert queue.pending(endpoint=fresh.endpoint, user_id='alice') == (fresh,)
+    reused = ac.SyncControlRequest('ack', operation_id='reviewed-resync')
     with pytest.raises(ac.ConfigSyncError):
-        client.control(queue, ac.SyncControlRequest('ack', operation_id='reviewed-resync'))
+        client.control(queue, reused)
 
 
 def test_adoption_and_pending_retirement_roll_back_when_local_receipt_storage_fails(tmp_path, monkeypatch):
@@ -332,7 +352,8 @@ def test_adoption_and_pending_retirement_roll_back_when_local_receipt_storage_fa
                            "BEGIN SELECT RAISE(ABORT,'controlled receipt failure'); END")
     result = client.control(queue, 'full_resync', discard_pending=True,
                             policy=ac.SyncRetryPolicy(max_attempts=1, backoff=0))
-    assert result.pending == 1 and result.delivered == 0
+    assert result.pending == 1
+    assert result.delivered == 0
     assert queue.identity(operation.endpoint, 'alice').epoch == 0
     assert queue.status(endpoint=operation.endpoint, user_id='alice')['retired'] == 0
     assert queue.pending(endpoint=operation.endpoint, user_id='alice') == (operation,)
@@ -354,8 +375,9 @@ def test_invalid_owned_version_one_schema_is_refused_before_migration_writes(tmp
         connection.execute('PRAGMA user_version=1')
         connection.execute('CREATE TABLE important (value TEXT)')
         connection.execute("INSERT INTO important VALUES ('preserve')")
+    queue = ac.SyncOutbox(path)
     with pytest.raises(ac.ConfigStoreError):
-        ac.SyncOutbox(path).status(endpoint='https://controlled.invalid', user_id='alice')
+        queue.status(endpoint='https://controlled.invalid', user_id='alice')
     with sqlite3.connect(path) as connection:
         assert connection.execute('PRAGMA user_version').fetchone()[0] == 1
         assert connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall() == [('important',)]

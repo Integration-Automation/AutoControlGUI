@@ -67,13 +67,15 @@ def test_another_real_clients_persisted_replacement_refuses_the_old_binding_befo
         else:
             other.add_host('source', server.base_url + '/changed' if change == 'endpoint' else server.base_url,
                            'replacement-credential' if change == 'token' else token)
-        assert book.list_hosts()[0].token == token and book.list_hosts()[0].base_url == server.base_url
+        assert book.list_hosts()[0].token == token
+        assert book.list_hosts()[0].base_url == server.base_url
         def forbidden(*_args, **_kwargs):
             raise AssertionError('replaced registration must fail before network dispatch')
         monkeypatch.setattr(transport, 'request_json', forbidden)
+        transfer = adapter()
         with pytest.raises(AgentTaskError):
-            adapter()('source', pinned, '/agent/transfer/peer',
-                      {'operation': 'export', 'request': {'export_id': exported['export_id']}}, 3)
+            transfer('source', pinned, '/agent/transfer/peer',
+                     {'operation': 'export', 'request': {'export_id': exported['export_id']}}, 3)
 
 
 @pytest.mark.parametrize('change', ['registration', 'caller'])
@@ -91,9 +93,10 @@ def test_real_successful_reply_is_discarded_after_local_authority_changes(tmp_pa
                 users.remove_user('coordinator')
             return result
         monkeypatch.setattr(transport, 'request_json', changed)
+        transfer = adapter()
         with pytest.raises((AgentTaskError, AuthorizationError)):
-            adapter()('source', pinned, '/agent/transfer/peer',
-                      {'operation': 'export', 'request': {'export_id': exported['export_id']}}, 3)
+            transfer('source', pinned, '/agent/transfer/peer',
+                     {'operation': 'export', 'request': {'export_id': exported['export_id']}}, 3)
 
 
 @pytest.mark.parametrize('payload', [b'not json', b'[]', b'{"hosts":null}', b'{"hosts":[]}'])
@@ -107,9 +110,10 @@ def test_malformed_or_missing_current_registration_is_not_loaded_quarantined_or_
             raise AssertionError('invalid book must not load/quarantine or dispatch')
         monkeypatch.setattr(admin_client.AdminConsoleClient, '_load', forbidden)
         monkeypatch.setattr(transport, 'request_json', forbidden)
+        transfer = adapter()
         with pytest.raises(AgentTaskError):
-            adapter()('source', pinned, '/agent/transfer/peer',
-                      {'operation': 'export', 'request': {'export_id': exported['export_id']}}, 3)
+            transfer('source', pinned, '/agent/transfer/peer',
+                     {'operation': 'export', 'request': {'export_id': exported['export_id']}}, 3)
         assert book.persist_path.read_bytes() == payload
 
 
@@ -121,9 +125,10 @@ def test_transfer_adapter_refuses_other_routes_before_dispatch(tmp_path, monkeyp
         def forbidden(*_args, **_kwargs):
             raise AssertionError('unapproved transfer route was dispatched')
         monkeypatch.setattr(transport, 'request_json', forbidden)
+        transfer = adapter()
         with pytest.raises(AgentTaskError):
-            adapter()('source', pinned, path,
-                      {'operation': 'export', 'request': {'export_id': exported['export_id']}}, 3)
+            transfer('source', pinned, path,
+                     {'operation': 'export', 'request': {'export_id': exported['export_id']}}, 3)
 
 
 @pytest.mark.parametrize('change', ['empty_query', 'empty_fragment', 'credential_control'])
@@ -166,9 +171,10 @@ else:
         def forbidden(*_args, **_kwargs):
             raise AssertionError('the stale registration was dispatched after a real process changed its book')
         monkeypatch.setattr(transport, 'request_json', forbidden)
+        transfer = adapter()
         with pytest.raises(AgentTaskError):
-            adapter()('source', pinned, '/agent/transfer/peer',
-                      {'operation': 'export', 'request': {'export_id': exported['export_id']}}, 3)
+            transfer('source', pinned, '/agent/transfer/peer',
+                     {'operation': 'export', 'request': {'export_id': exported['export_id']}}, 3)
         assert book.list_hosts()[0].token == token
         assert book.list_hosts()[0].base_url == server.base_url
 
@@ -177,6 +183,7 @@ def test_huge_transfer_timeout_is_a_typed_pre_dispatch_failure(monkeypatch):
     def forbidden(*_args, **_kwargs):
         raise AssertionError('huge transfer timeout reached a network request')
     monkeypatch.setattr(transport, 'request_json', forbidden)
+    transfer = adapter()
     with pytest.raises(AgentTaskError):
-        adapter()('source', 'f' * 64, '/agent/transfer/peer',
-                  {'operation': 'export', 'request': {'export_id': 'a' * 32}}, 1 << 4096)
+        transfer('source', 'f' * 64, '/agent/transfer/peer',
+                 {'operation': 'export', 'request': {'export_id': 'a' * 32}}, 1 << 4096)

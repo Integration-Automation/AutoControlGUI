@@ -83,8 +83,10 @@ def test_dynamic_confirmed_effects_can_be_completed_by_fresh_independent_criteri
         connection.execute('UPDATE agent_tasks SET spec=? WHERE id=?', (json.dumps(spec), completed.task_id))
     identifier = child(completed)
     result = runtime.finish(identifier)
-    assert result.state == 'succeeded' and len(result.verification) == 1
-    assert runtime.store.get(identifier)['spec']['mode'] == 'external' and runtime.store.actions(identifier) == []
+    assert result.state == 'succeeded'
+    assert len(result.verification) == 1
+    assert runtime.store.get(identifier)['spec']['mode'] == 'external'
+    assert runtime.store.actions(identifier) == []
 
 
 def test_missing_source_capture_is_a_typed_review_refusal_not_an_unhandled_lookup(completed):

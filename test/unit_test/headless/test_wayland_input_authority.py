@@ -126,7 +126,8 @@ def test_an_explicit_cli_choice_can_follow_a_portal_refusal_without_reopening_it
     commands = capture_cli(monkeypatch)
     with pytest.raises(libei.LibeiUnavailable) as caught:
         keyboard.press_key(28)
-    assert caught.value.state == 'needs_permission' and not caught.value.status.fallback_allowed
+    assert caught.value.state == 'needs_permission'
+    assert not caught.value.status.fallback_allowed
     monkeypatch.setenv('JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND', 'cli')
     keyboard.press_key(28)
     assert commands == [['/controlled/ydotool', 'key', '28:1']]
@@ -184,7 +185,8 @@ def test_wrapped_cancellation_never_becomes_an_optional_backend_miss(monkeypatch
              'emission': lambda: _select_input.emitted(object(), interrupted)}
     with pytest.raises(OperationCancelledError) as caught:
         calls[boundary]()
-    assert caught.value is original and commands == []
+    assert caught.value is original
+    assert commands == []
 
 
 def test_portal_timeout_remains_a_permission_refusal_not_a_cli_request(monkeypatch):
@@ -195,7 +197,8 @@ def test_portal_timeout_remains_a_permission_refusal_not_a_cli_request(monkeypat
     commands = capture_cli(monkeypatch)
     with pytest.raises(libei.LibeiUnavailable) as caught:
         keyboard.press_key(28)
-    assert caught.value.state == 'needs_permission' and commands == []
+    assert caught.value.state == 'needs_permission'
+    assert commands == []
     assert ('unref', HANDLE) in portal.calls
 
 
@@ -209,7 +212,8 @@ def test_incomplete_native_handshake_stops_and_closes_its_portal_session(monkeyp
     for _ in range(2):
         with pytest.raises(libei.LibeiUnavailable) as caught:
             keyboard.press_key(28)
-        assert caught.value.state == 'failed' and not caught.value.status.fallback_allowed
+        assert caught.value.state == 'failed'
+        assert not caught.value.status.fallback_allowed
     assert commands == []
     session.close.assert_called_once()
 
@@ -232,6 +236,7 @@ def test_native_failure_after_a_portal_grant_cannot_select_cli(monkeypatch, phas
     for _ in range(2):
         with pytest.raises(libei.LibeiUnavailable) as caught:
             keyboard.press_key(28)
-        assert caught.value.state == 'failed' and not caught.value.status.fallback_allowed
+        assert caught.value.state == 'failed'
+        assert not caught.value.status.fallback_allowed
     assert commands == []
     session.close.assert_called_once()

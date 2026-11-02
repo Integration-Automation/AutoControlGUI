@@ -46,14 +46,17 @@ def test_load_constructs_real_native_definitions_in_an_independent_editable_work
     loaded = ac.load_sync_profile(generation, tmp_path / 'workspaces', expected_digest=result['manifest_digest'])
     assert isinstance(loaded, ac.LoadedSyncProfile)
     assert loaded.directory.is_relative_to(tmp_path / 'workspaces')
-    assert loaded.directory != generation and loaded.manifest_digest == result['manifest_digest']
+    assert loaded.directory != generation
+    assert loaded.manifest_digest == result['manifest_digest']
     assert loaded.script_actions('demo.json') == [['AC_log', {'message': 'loaded but never executed'}]]
     assert loaded.scripts['demo.json'] == loaded.directory / 'scripts/demo.json'
     assert loaded.locators.all()['login'] == {'name': 'Sign in', 'role': 'button'}
     assert loaded.address_book.list_entries() == []
-    assert isinstance(loaded.hotkeys[0], ac.HotkeyBinding) and loaded.hotkeys[0].enabled is False
+    assert isinstance(loaded.hotkeys[0], ac.HotkeyBinding)
+    assert loaded.hotkeys[0].enabled is False
     assert loaded.hotkeys[0].script_path == str(loaded.directory / 'scripts/demo.json')
-    assert isinstance(loaded.triggers[0], ac.AllOfTrigger) and loaded.triggers[0].enabled is False
+    assert isinstance(loaded.triggers[0], ac.AllOfTrigger)
+    assert loaded.triggers[0].enabled is False
     assert loaded.triggers[0].children[0].enabled is False
     assert loaded.preferences == {'theme': 'light', 'font_pt': 0, 'navigation_visible': True, 'navigation_width': 260}
     assert loaded.settings == {'example': 'local working value'}
@@ -131,7 +134,8 @@ def test_every_supported_native_trigger_kind_loads_disabled_without_polling(tmp_
     loaded = ac.load_sync_profile(result['directory'], tmp_path / 'workspaces',
                                   expected_digest=result['manifest_digest'])
     trigger = loaded.triggers[0]
-    assert isinstance(trigger, expected) and trigger.enabled is False
+    assert isinstance(trigger, expected)
+    assert trigger.enabled is False
     assert trigger.script_path == str(loaded.directory / 'scripts/demo.json')
     if hasattr(trigger, 'children'):
         assert all(child.enabled is False for child in trigger.children)
