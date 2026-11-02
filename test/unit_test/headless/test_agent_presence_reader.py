@@ -1,5 +1,6 @@
 """Fresh capability checks and finite reader/watch retirement without native desktop observation."""
 from concurrent.futures import ThreadPoolExecutor
+import gc
 import json
 import threading
 import time
@@ -102,11 +103,22 @@ class Connection:
 
 @pytest.fixture
 def harness(monkeypatch):
-    value = Harness(monkeypatch)
+    # The reader must answer each probe within 0.25 s. Late in the suite, under coverage and gdb, one
+    # collection of the whole heap takes longer than that, and a fixed test order makes it land in the
+    # same window on every run: ready() failed twice in a row on the 1.2.0 release PR. Collect first and
+    # hold the collector off, so these tests measure the reader, not the size of the suite's heap.
+    enabled = gc.isenabled()
+    gc.collect()
+    gc.disable()
     try:
-        yield value
+        value = Harness(monkeypatch)
+        try:
+            yield value
+        finally:
+            value.cleanup()
     finally:
-        value.cleanup()
+        if enabled:
+            gc.enable()
 
 
 def test_reader_construction_status_check_before_ready_and_unstarted_close_are_inert(harness):
