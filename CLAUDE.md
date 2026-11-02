@@ -4,7 +4,7 @@
 
 AutoControl (`je_auto_control`) is a cross-platform GUI automation framework: mouse and keyboard control, image recognition, OCR, accessibility-tree and VLM element location, action scripting, and report generation behind one API. Backends: Windows (Win32 ctypes), macOS (pyobjc/Quartz), Linux X11 (python-Xlib), Linux Wayland (libei / ydotool), Android (adb), iOS (WebDriverAgent).
 
-- **Package**: `je_auto_control` · **Python** ≥ 3.10 · **License**: MIT · **Author**: JE-Chen
+- **Package**: `je_auto_control` · **Python** ≥ 3.11 · **License**: MIT · **Author**: JE-Chen
 - **[architecture_explore.md](architecture_explore.md)** is the per-module map — read it before changing structure; it lists all 312 `utils/` subpackages, every GUI tab, and file-level tables for the large subsystems.
 
 ## Architecture

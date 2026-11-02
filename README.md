@@ -786,8 +786,7 @@ management, the accessibility tree, the action executor, the MCP/REST/TCP
 servers and the GUI all work — measured, not assumed. Every other platform
 is unaffected.
 
-**Requirements:** Python ≥ 3.10 (≥ 3.11 on Windows arm64, which is where
-CPython's official builds for it start). On Linux, install build
+**Requirements:** Python ≥ 3.11. On Linux, install build
 prerequisites first:
 
 ```bash

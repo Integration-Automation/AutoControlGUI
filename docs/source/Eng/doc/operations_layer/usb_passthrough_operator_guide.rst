@@ -23,7 +23,7 @@ Prerequisites
 
 On the **host** (the machine with the physical USB device):
 
-- Python 3.10+ with AutoControl installed.
+- Python 3.11+ with AutoControl installed.
 - The optional ``webrtc`` extra: ``pip install je_auto_control[webrtc]``.
 - ``pyusb`` installed if you want the libusb backend:
   ``pip install pyusb``.
@@ -32,7 +32,7 @@ On the **host** (the machine with the physical USB device):
 
 On the **viewer** (the remote machine that will use the device):
 
-- Python 3.10+ with AutoControl installed.
+- Python 3.11+ with AutoControl installed.
 - Network reach to the host's REST API port (default 9939) **and** to
   the WebRTC signalling / TURN endpoints if the viewer is behind NAT.
 - The host's bearer token (operator hands it over out-of-band).

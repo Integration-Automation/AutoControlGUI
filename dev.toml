@@ -17,16 +17,14 @@ authors = [
     { name = "JE-Chen", email = "jechenmailman@gmail.com" },
 ]
 description = "GUI Automation Framework"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license-files = ["LICENSE"]
 dependencies = [
     "je_open_cv==0.0.22; sys_platform != 'win32' or platform_machine != 'ARM64'",
     "opencv-python>=4.8,<6; sys_platform != 'win32' or platform_machine != 'ARM64'",
     # Pillow 13.0.0 fixes the 12.x advisories (critical: GHSA-v9pv-5gc8-w2m6,
-    # GHSA-5x8w-8jj5-q52h) but needs Python >=3.11; 3.10 keeps 12.3.0, the
-    # newest release it can install.
-    "pillow==12.3.0; python_version < '3.11'",
-    "pillow==13.0.0; python_version >= '3.11'",
+    # GHSA-5x8w-8jj5-q52h).
+    "pillow==13.0.0",
     "pyobjc-core==12.2.2;platform_system=='Darwin'",
     "pyobjc==12.2.2;platform_system=='Darwin'",
     "python-Xlib==0.33;platform_system=='Linux' or platform_system=='FreeBSD' or platform_system=='OpenBSD' or platform_system=='NetBSD'",
@@ -35,7 +33,6 @@ dependencies = [
     "cryptography>=50.0.0; sys_platform != 'win32' or platform_machine != 'ARM64'"
 ]
 classifiers = [
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",

@@ -21,7 +21,7 @@ production。``default_passthrough_backend()`` 會依當前 OS 自動挑 backend
 
 在 **host**\ （有實體 USB 裝置的機器）上：
 
-- Python 3.10+ 並安裝 AutoControl。
+- Python 3.11+ 並安裝 AutoControl。
 - 選用的 ``webrtc`` 套件：``pip install je_auto_control[webrtc]``\ 。
 - 如要使用 libusb backend 需安裝 ``pyusb``\ ：
   ``pip install pyusb``\ 。
@@ -30,7 +30,7 @@ production。``default_passthrough_backend()`` 會依當前 OS 自動挑 backend
 
 在 **viewer**\ （將使用該裝置的遠端機器）上：
 
-- Python 3.10+ 並安裝 AutoControl。
+- Python 3.11+ 並安裝 AutoControl。
 - 能連到 host 的 REST API port（預設 9939），**且** 在 NAT 後方時
   能連到 WebRTC signalling / TURN 端點。
 - host 的 bearer token（操作員以帶外管道交付）。
