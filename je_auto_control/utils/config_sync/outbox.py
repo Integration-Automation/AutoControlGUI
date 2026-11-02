@@ -36,6 +36,7 @@ _Key = tuple[str, str, str]
 _Clock = Callable[[], float]
 _Sender = Callable[[SyncOperation], int | CausalReceipt]
 _Cancelled = Optional[Callable[[], bool]]
+_BEGIN_IMMEDIATE = "BEGIN IMMEDIATE"
 _SELECT = "SELECT wire, digest, prepared FROM sync_operations WHERE endpoint = ? AND user_id = ? AND operation_id = ?"
 
 
@@ -86,7 +87,7 @@ class SyncOutbox:
         if epoch is not None:
             _revision(epoch)
         with self._database.connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(_BEGIN_IMMEDIATE)
             connection.execute("INSERT OR IGNORE INTO sync_namespaces (endpoint,user_id,origin,epoch) VALUES (?,?,?,?)",
                                (*scope, origin or uuid4().hex, epoch or 0))
             row = connection.execute("SELECT origin,epoch,confirmed_revision FROM sync_namespaces "
@@ -161,7 +162,7 @@ class SyncOutbox:
         encoded = _encoded(prepared)
         key = operation.endpoint, operation.user_id, operation.operation_id
         with self._database.connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(_BEGIN_IMMEDIATE)
             row = connection.execute(_SELECT, key).fetchone()
             if row is None or _logical(_operation(row))[1] != _logical(operation)[1]:
                 raise ConfigSyncError("cannot prepare an unknown or changed operation")
@@ -177,7 +178,7 @@ class SyncOutbox:
         _revision(rejected_base)
         key = operation.endpoint, operation.user_id, operation.operation_id
         with self._database.connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(_BEGIN_IMMEDIATE)
             row = connection.execute(_SELECT, key).fetchone()
             if row is None or _logical(_operation(row))[1] != _logical(operation)[1]:
                 raise ConfigSyncError("unknown or changed queued operation")
@@ -287,7 +288,7 @@ class SyncOutbox:
     def _claim(self, key: _Key, owner: str, policy: SyncRetryPolicy) -> Optional[SyncOperation]:
         now = self._now()
         with self._database.connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(_BEGIN_IMMEDIATE)
             control = connection.execute("SELECT 1 FROM sync_controls WHERE endpoint=? AND user_id=? "
                                          "AND status!='delivered'", key[:2]).fetchone()
             if control is not None:
@@ -310,7 +311,7 @@ class SyncOutbox:
         revision = receipt.revision if isinstance(receipt, CausalReceipt) else receipt
         snapshot = _receipt_snapshot(receipt, key[1])
         with self._database.connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(_BEGIN_IMMEDIATE)
             changed = connection.execute("UPDATE sync_operations SET status='delivered',delivered_revision=?, "
                                          "error='',lease_owner='',lease_until=0 WHERE endpoint=? AND user_id=? "
                                          "AND operation_id=? AND lease_owner=?", (revision, *key, owner)).rowcount
@@ -336,10 +337,9 @@ class SyncOutbox:
                                (_encoded(snapshot.to_dict()), *scope))
 
     def _failed(self, key: _Key, owner: str, error: Exception, policy: SyncRetryPolicy) -> None:
-        status = ("blocked" if isinstance(error, FullResyncRequired) else
-                  "conflict" if isinstance(error, ConfigRevisionConflict) else "offline")
+        status = _failure_status(error)
         with self._database.connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(_BEGIN_IMMEDIATE)
             row = connection.execute("SELECT attempts FROM sync_operations WHERE endpoint=? AND user_id=? "
                                      "AND operation_id=? AND lease_owner=?", (*key, owner)).fetchone()
             if row is not None:
@@ -354,6 +354,14 @@ class SyncOutbox:
             connection.execute("UPDATE sync_operations SET status=CASE WHEN status='sending' THEN 'pending' "
                                "ELSE status END,lease_owner='',lease_until=0 WHERE endpoint=? AND user_id=? "
                                "AND operation_id=? AND lease_owner=?", (*key, owner))
+
+
+def _failure_status(error: Exception) -> str:
+    if isinstance(error, FullResyncRequired):
+        return "blocked"
+    if isinstance(error, ConfigRevisionConflict):
+        return "conflict"
+    return "offline"
 
 
 def _receipt_snapshot(receipt: int | CausalReceipt, user_id: str) -> Optional[CausalBucket]:

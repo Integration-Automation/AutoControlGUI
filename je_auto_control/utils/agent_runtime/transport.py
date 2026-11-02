@@ -31,23 +31,34 @@ def request_json(url: str, *, body: Any = None, token: str | None = None,
 
     def fetch() -> None:
         try:
-            headers = _headers(url, token, delegate_local, control=control)
-            from je_auto_control.utils.egress.egress_policy import get_egress_policy
-            get_egress_policy().check(url)
-            call = build_call(url, method="POST" if body is not None else "GET",
-                              headers=headers, json_body=body, timeout=timeout)
-            call["follow_redirects"] = False
-            if urlsplit(url).path.endswith(('/agent/transfer', '/agent/transfer/peer')):
-                call['max_response_bytes'] = 1024 * 1024
-                if len(call.get('body') or b'') > 1024 * 1024:
-                    raise AgentTaskError('transfer request exceeds 1MiB')
-            replies.put(urllib_transport(call))
+            replies.put(_fetch(url, body, token, timeout, control=control, delegate_local=delegate_local))
         except BaseException as error:  # reason: hand controls back to the owning caller; no failure is swallowed
             replies.put(error)
         finally:
             slots.release()
 
     threading.Thread(target=lambda: context.run(fetch), daemon=True, name="AgentHTTP").start()
+    return _await_reply(replies, timeout, check)
+
+
+def _fetch(url: str, body: Any, token: str | None, timeout: float, *,
+           control: bool, delegate_local: bool) -> Any:
+    """Perform the bounded request on the worker thread under the caller's copied context."""
+    headers = _headers(url, token, delegate_local, control=control)
+    from je_auto_control.utils.egress.egress_policy import get_egress_policy
+    get_egress_policy().check(url)
+    call = build_call(url, method="POST" if body is not None else "GET",
+                      headers=headers, json_body=body, timeout=timeout)
+    call["follow_redirects"] = False
+    if urlsplit(url).path.endswith(('/agent/transfer', '/agent/transfer/peer')):
+        call['max_response_bytes'] = 1024 * 1024
+        if len(call.get('body') or b'') > 1024 * 1024:
+            raise AgentTaskError('transfer request exceeds 1MiB')
+    return urllib_transport(call)
+
+
+def _await_reply(replies: queue.Queue[Any], timeout: float, check: Callable[[], None]) -> dict[str, Any]:
+    """Poll for the worker's reply, checking cancellation, until the request deadline."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         check()

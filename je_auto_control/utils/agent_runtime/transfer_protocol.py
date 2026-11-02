@@ -18,7 +18,6 @@ from je_auto_control.utils.agent_runtime.transfer_import import (
     IMPORT_FIELDS, TransferImporter, import_maintenance_pending,
 )
 from je_auto_control.utils.config_sync.contract import ConfigStoreError, ConfigSyncError
-from je_auto_control.utils.rbac.authorization import AuthorizationError
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
 
 _OPERATION_SECONDS = 30  # the most a peer accepts as one request's timeout
@@ -110,7 +109,8 @@ class AgentTransfers:
                 result = handler(operation, request)
                 self._checkpoint()
                 return result
-            except (AuthorizationError, ConfigStoreError, ConfigSyncError, OSError) as error:
+            # OSError covers AuthorizationError, which is a PermissionError.
+            except (ConfigStoreError, ConfigSyncError, OSError) as error:
                 raise AgentTaskError('transfer authority or private asset operation is unavailable') from error
             finally:
                 with self._state:

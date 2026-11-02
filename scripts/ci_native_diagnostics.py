@@ -68,19 +68,22 @@ def run(command: Sequence[str], directory: Path, *, native: bool = False) -> int
     report.write_text(json.dumps(record, indent=2), encoding='utf-8')
     environment = dict(os.environ, PYTHONFAULTHANDLER='1', PYTHONUNBUFFERED='1')
     started = time.monotonic()
-    with _debugger_argv(command, debugger) as actual, (directory / 'process.log').open('w', encoding='utf-8') as output:
-        with subprocess.Popen(  # nosec B603  # reason: explicit CI child argv; shell remains disabled
+    with (
+        _debugger_argv(command, debugger) as actual,
+        (directory / 'process.log').open('w', encoding='utf-8') as output,
+        subprocess.Popen(  # nosec B603  # reason: explicit CI child argv; shell remains disabled
             actual, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             env=environment, text=True, encoding='utf-8', errors='replace',
-        ) as child:
-            if child.stdout is None:
-                raise RuntimeError('child output pipe was not created')
-            for line in child.stdout:
-                output.write(line)
-                output.flush()
-                sys.stdout.write(line)
-                sys.stdout.flush()
-            result = child.wait()
+        ) as child,
+    ):
+        if child.stdout is None:
+            raise RuntimeError('child output pipe was not created')
+        for line in child.stdout:
+            output.write(line)
+            output.flush()
+            sys.stdout.write(line)
+            sys.stdout.flush()
+        result = child.wait()
     record.update(returncode=result, elapsed_seconds=round(time.monotonic() - started, 3))
     report.write_text(json.dumps(record, indent=2), encoding='utf-8')
     return result if result >= 0 else 128 - result

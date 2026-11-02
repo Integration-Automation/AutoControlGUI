@@ -171,12 +171,14 @@ def _commit_actions(actions: list[dict], config: dict, row: str) -> None:
     if "confirmation_value" not in config:
         raise AgentTaskError("submission requires a deterministic confirmation_value")
     confirmation = str(config["confirmation_value"])
-    actions.append({**_action("AC_workflow_control", {"operation": "get",
-                    "selector": config["confirmation_selector"]}), "expect_not_result": confirmation, "row": row})
-    actions.append({**_action("AC_workflow_control", {"operation": "invoke",
-                    "selector": config["submit_selector"]}, True), "row": row, "side_effect": "submit"})
-    actions.append({**_action("AC_workflow_wait", {"selector": config["confirmation_selector"],
-                    "expected": confirmation}, confirmation), "row": row})
+    actions.extend([
+        {**_action("AC_workflow_control", {"operation": "get", "selector": config["confirmation_selector"]}),
+         "expect_not_result": confirmation, "row": row},
+        {**_action("AC_workflow_control", {"operation": "invoke", "selector": config["submit_selector"]}, True),
+         "row": row, "side_effect": "submit"},
+        {**_action("AC_workflow_wait", {"selector": config["confirmation_selector"], "expected": confirmation},
+                   confirmation), "row": row},
+    ])
 
 
 def _transfer(config: dict, _policy: TaskPolicy) -> dict:

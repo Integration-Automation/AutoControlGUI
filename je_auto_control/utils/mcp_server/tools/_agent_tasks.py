@@ -21,22 +21,33 @@ def _handler(command: str) -> Any:
             ctx.check_cancelled()
             _paths(ctx, arguments)
         token = CancellationToken(0, event=ctx.cancelled_event) if ctx is not None else None
-        identity = current_authorization()
-        if host_management and ctx is not None and identity is None:
-            raise AgentTaskError("managed host tools require an authenticated host administrator")
-        if identity is None and not host_management:
-            if ctx is None or not ctx.session_id:
-                raise AgentTaskError("managed MCP tasks require an authenticated caller or a live session")
-            identity = AuthorizationContext("mcp:" + ctx.session_id, "operator")
+        identity = _caller_identity(ctx, host_management)
         origin = ctx.path_policy.managed_origin() if ctx is not None and ctx.path_policy is not None else None
         with authorization_scope(identity), cancellation_scope(token), origin_scope(origin):
-            try:
-                return function(**arguments)
-            except CancelledError:
-                if ctx is not None:
-                    ctx.check_cancelled()
-                raise
+            return _invoke(function, arguments, ctx)
     return handle
+
+
+def _caller_identity(ctx: ToolCallContext | None, host_management: bool) -> AuthorizationContext | None:
+    """Keep the caller's own authority, or bind a live MCP session as an operator for task tools."""
+    identity = current_authorization()
+    if host_management and ctx is not None and identity is None:
+        raise AgentTaskError("managed host tools require an authenticated host administrator")
+    if identity is None and not host_management:
+        if ctx is None or not ctx.session_id:
+            raise AgentTaskError("managed MCP tasks require an authenticated caller or a live session")
+        identity = AuthorizationContext("mcp:" + ctx.session_id, "operator")
+    return identity
+
+
+def _invoke(function: Any, arguments: dict[str, Any], ctx: ToolCallContext | None) -> Any:
+    """Run the task command, reporting a cancelled session call as the session's own cancellation."""
+    try:
+        return function(**arguments)
+    except CancelledError:
+        if ctx is not None:
+            ctx.check_cancelled()
+        raise
 
 
 def _paths(context: ToolCallContext, arguments: Any) -> None:

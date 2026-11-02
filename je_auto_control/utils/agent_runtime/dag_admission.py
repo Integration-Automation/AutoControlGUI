@@ -76,4 +76,5 @@ def check_admission(runtime: Any, task_id: str) -> None:
         if not owns_task(owner, current_authorization()):
             raise AuthorizationError("local DAG caller can no longer manage the original owner's work")
     with DeferredAuthorization(AuthorizationContext(**owner) if owner else None).scope():
+        # Entering the scope is the check: it refuses a revoked or read-only original owner.
         pass

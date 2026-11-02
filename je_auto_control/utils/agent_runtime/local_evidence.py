@@ -14,6 +14,7 @@ def runtime_evidence_scope(runtime: Any) -> Iterator[None]:
 
     def check() -> None:
         with caller.scope():
+            # Entering the scope is the check: it refuses a revoked or read-only caller.
             pass
 
     def read(operation: str, body: dict, _timeout: float) -> dict:

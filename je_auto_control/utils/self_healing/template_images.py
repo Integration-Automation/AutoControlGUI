@@ -46,9 +46,8 @@ def encode_candidate(original: bytes, candidate_png: bytes) -> bytes:
         return candidate_png
     # pylint: disable-next=import-outside-toplevel  # reason: initialize codecs only for an explicit candidate image
     from PIL import Image
-    with Image.open(io.BytesIO(candidate_png)) as image:
-        with image.convert("RGB") as decoded:
-            result = _encode(decoded, fmt)
+    with Image.open(io.BytesIO(candidate_png)) as image, image.convert("RGB") as decoded:
+        result = _encode(decoded, fmt)
     normalized_png(result)
     return result
 

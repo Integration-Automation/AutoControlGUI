@@ -43,9 +43,8 @@ def _view(sample: EvaluationSample) -> _FrameView:
     # pylint: disable-next=import-outside-toplevel  # reason: initialize optional decoders only when supplied pixels are used
     from PIL import Image
     stream = io.BytesIO()
-    with Image.open(io.BytesIO(sample.frame)) as image:
-        with image.crop(bounds) as cropped:
-            cropped.save(stream, format="PNG")
+    with Image.open(io.BytesIO(sample.frame)) as image, image.crop(bounds) as cropped:
+        cropped.save(stream, format="PNG")
     origin = ox + bounds[0] / sample.scale, oy + bounds[1] / sample.scale
     return _FrameView(stream.getvalue(), origin, sample.scale,
                       (bounds[2] - bounds[0], bounds[3] - bounds[1]))

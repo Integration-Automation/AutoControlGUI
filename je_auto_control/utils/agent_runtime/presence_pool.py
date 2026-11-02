@@ -312,7 +312,8 @@ class PresencePool:
     def _run(self) -> None:
         try:
             self._loop()
-        except (OSError, EOFError, ValueError, TypeError, RuntimeError, AgentTaskError, CancelledError) as error:
+        # ValueError covers AgentTaskError.
+        except (OSError, EOFError, ValueError, TypeError, RuntimeError, CancelledError) as error:
             self._owner.failure = error
             self._owner.stop.set()
         finally:
@@ -346,7 +347,7 @@ class PresencePool:
                         reference.tokens.clear()
                     self._references.difference_update(ref for ref in tuple(self._references) if ref.closed.is_set())
                 self._owner.retired.set()
-        except (OSError, RuntimeError, ValueError, TypeError, AgentTaskError) as error:
+        except (OSError, RuntimeError, ValueError, TypeError) as error:  # ValueError covers AgentTaskError
             self._owner.failure = error
 
 

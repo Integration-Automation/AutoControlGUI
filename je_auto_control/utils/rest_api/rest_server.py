@@ -105,7 +105,8 @@ _POST_ROUTES: Dict[str, HandlerFn] = {
 _GET_ROUTES.update({"/agent/tasks": agent_route("list"), "/agent/task": agent_route("get"),
                     "/agent/targets": agent_route("targets")})
 _POST_ROUTES.update({f"/agent/{operation}": agent_route(operation) for operation in AGENT_OPERATIONS})
-_POST_ROUTES['/agent/transfer/peer'] = agent_route('transfer_peer')
+_PATH_TRANSFER_PEER = '/agent/transfer/peer'
+_POST_ROUTES[_PATH_TRANSFER_PEER] = agent_route('transfer_peer')
 
 # /health is intentionally unauthenticated so probes / load balancers
 # can liveness-check without holding the bearer token.
@@ -329,7 +330,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         return result
 
     def _peer_authentication(self, result: AuthResult) -> AuthResult:
-        if urlparse(self.path).path != '/agent/transfer/peer':
+        if urlparse(self.path).path != _PATH_TRANSFER_PEER:
             return result
         if result.verdict == 'ok' and any(self.headers.get(name) is not None
                 for name in ('X-AutoControl-Principal', 'X-AutoControl-Agent-Origin')):
@@ -338,14 +339,13 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
 
     def _forwarded_principal(self, result: AuthResult) -> AuthResult:
         from je_auto_control.utils.agent_runtime.delegation import HEADER, verify_principal
-        from je_auto_control.utils.agent_runtime.errors import AgentTaskError
         forwarded = self.headers.get(HEADER)
         if not forwarded:
             return result
         try:
             principal = verify_principal(forwarded, getattr(self.server, "agent_token"), urlparse(self.path).path)
             return AuthResult("ok", principal)
-        except (AgentTaskError, AutoControlException):
+        except AutoControlException:  # AgentTaskError included
             return AuthResult("unauthorized")
 
     def _metrics(self) -> RestMetrics:
@@ -411,7 +411,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
 
     def _read_json_body(self) -> Any:
         length = parse_content_length(self.headers)
-        transfer = urlparse(self.path).path in {'/agent/transfer', '/agent/transfer/peer'}
+        transfer = urlparse(self.path).path in {'/agent/transfer', _PATH_TRANSFER_PEER}
         limit = 1024 * 1024 if transfer else _MAX_BODY_BYTES
         if transfer and length > limit:
             self._send_json({'error': 'transfer body exceeds 1MiB'}, status=413, headers={'Connection': 'close'})
@@ -557,8 +557,9 @@ class RestApiServer:
         self._server: Optional[ThreadingHTTPServer] = None
         self._thread: Optional[threading.Thread] = None
         self._token = token if token else generate_token()
-        self._users = user_store if user_store is not None else (
-            user_store_from_env() if use_environment_users else None)
+        if user_store is None and use_environment_users:
+            user_store = user_store_from_env()
+        self._users = user_store
         self._auth = RestAuthGate(expected_token=self._token, user_store=self._users)
         self._audit_log = self._open_audit_log() if enable_audit else None
         self._metrics = RestMetrics()

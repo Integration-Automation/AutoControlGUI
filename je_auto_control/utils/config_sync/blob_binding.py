@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
-from typing import BinaryIO, Callable, Mapping, Optional, cast
+from typing import BinaryIO, Callable, Iterable, Mapping, Optional, cast
 
 from je_auto_control.utils.config_sync.asset_models import AssetFile, MAX_FILE_BYTES
 from je_auto_control.utils.config_sync.assets import DirectoryAssetTransport, _source_file
@@ -29,7 +29,12 @@ def asset_references(value: object, depth: int = 0) -> tuple[SyncAssetReference,
     reference = asset_reference(value)
     if reference is not None:
         return (reference,)
-    values = value.values() if isinstance(value, dict) else value if isinstance(value, list) else ()
+    if isinstance(value, dict):
+        values: Iterable[object] = value.values()
+    elif isinstance(value, list):
+        values = value
+    else:
+        return ()
     result = {item for child in values for item in asset_references(child, depth + 1)}
     return tuple(sorted(result, key=lambda item: (item.path, item.blob.sha256)))
 
