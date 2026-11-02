@@ -42,7 +42,8 @@ def test_schema_lookup_is_single_tool_and_detached():
     index = ToolIndex(tools)
     tools[0].input_schema["changed"] = True
     descriptor = index.get_schema("ac_read")
-    assert descriptor["name"] == "ac_read" and "changed" not in descriptor["inputSchema"]
+    assert descriptor["name"] == "ac_read"
+    assert "changed" not in descriptor["inputSchema"]
     descriptor["inputSchema"]["corrupt"] = True
     assert "corrupt" not in index.get_schema("ac_read")["inputSchema"]
     assert index.snapshot_id == ToolIndex(catalog()).snapshot_id
@@ -52,8 +53,9 @@ def test_schema_lookup_is_single_tool_and_detached():
 @pytest.mark.parametrize("query,limit", [(None, 1), ("x" * 257, 1), ("", 0), ("", 51), ("", True)])
 def test_search_rejects_unbounded_inputs(query, limit):
     from je_auto_control.utils.mcp_server.discovery import ToolIndex
+    index = ToolIndex(catalog())
     with pytest.raises(ToolDiscoveryError, match="query|limit"):
-        ToolIndex(catalog()).search(query, limit=limit)
+        index.search(query, limit=limit)
 
 
 def test_mcp_discovery_uses_the_server_registry_including_plugins():

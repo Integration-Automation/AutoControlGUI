@@ -52,7 +52,8 @@ def test_bound_graph_executes_once_and_independent_receipts_release_dependencies
     result = run_dag(definition, batch_id=registered["batch_id"])
     assert result.succeeded, result.to_dict()
     batch = client.call("dag", {"operation": "get", "request": {"batch_id": registered["batch_id"]}})
-    assert batch["state"] == "succeeded" and target.count == 2
+    assert batch["state"] == "succeeded"
+    assert target.count == 2
     assert all(node["phase"] == "confirmed" for node in batch["nodes"])
     for node in batch["nodes"]:
         task = instance.runtime.store.get(node["receipt"]["task_id"])
@@ -82,12 +83,14 @@ def test_lost_submit_reply_remains_claimed_or_unknown_and_cannot_replay(service,
 
     monkeypatch.setattr(managed_tasks, "_connection", connection)
     result = run_dag(graph(), batch_id=registered["batch_id"])
-    assert not result.succeeded and target.performed.wait(5)
+    assert not result.succeeded
+    assert target.performed.wait(5)
     batch = client.call("dag", {"operation": "get", "request": {"batch_id": registered["batch_id"]}})
     assert batch["state"] == "waiting_review"
     assert [node["phase"] for node in batch["nodes"]] == ["unknown", "pending"]
+    retry = graph()
     with pytest.raises(AgentTaskError, match="explicit recovery"):
-        run_dag(graph(), batch_id=registered["batch_id"])
+        run_dag(retry, batch_id=registered["batch_id"])
     assert target.count == 1
 
 
@@ -120,7 +123,8 @@ def test_two_host_batch_tags_match_without_forwarding_local_principal_or_origins
         assert metadata["token"] not in str(saved)
         remote_row = remote.runtime.store.get(result.nodes["b"].result["task_id"])
         local_row = local.runtime.store.get(result.nodes["a"].result["task_id"])
-        assert remote_row["owner"] == {} and local_row["owner"]["user_id"] == "local-admin"
+        assert remote_row["owner"] == {}
+        assert local_row["owner"]["user_id"] == "local-admin"
         assert "origin_policies" not in remote_row["spec"]["options"]
         assert remote_row["spec"]["options"]["dag_batch"]["batch_id"] == registered["batch_id"]
     finally:

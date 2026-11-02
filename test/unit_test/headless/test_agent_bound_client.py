@@ -63,6 +63,7 @@ def test_legacy_ordinary_client_stays_adaptive_but_binding_requires_a_generation
 def test_malformed_local_metadata_is_a_typed_failure_without_transport(connection, value):
     path, _metadata, transport = connection
     path.write_text(json.dumps(value))
+    client = AgentRuntimeClient(path)
     with pytest.raises(AgentTaskError, match="connection metadata"):
-        AgentRuntimeClient(path).call("list")
+        client.call("list")
     transport.assert_not_called()

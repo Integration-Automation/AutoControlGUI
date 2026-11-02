@@ -156,9 +156,9 @@ def test_file_completion_cannot_escape_task_roots(managed, tmp_path):
     outside.write_text("secret", encoding="utf-8")
     root = tmp_path / "allowed"
     root.mkdir()
+    escaping = specification(roots=[str(root)], success_criteria=[{"kind": "file_exists", "path": str(outside)}])
     with pytest.raises(AgentTaskError, match="root"):
-        runtime.submit(specification(roots=[str(root)],
-                                     success_criteria=[{"kind": "file_exists", "path": str(outside)}]))
+        runtime.submit(escaping)
 
 
 def test_pause_does_not_transfer_control_before_running_action_retires(managed):

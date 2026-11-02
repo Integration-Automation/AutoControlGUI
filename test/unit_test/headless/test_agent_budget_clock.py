@@ -71,7 +71,8 @@ def test_concurrent_budget_reads_do_not_mistake_transaction_order_for_clock_roll
         finally:
             release.set()
             worker.join(timeout=3)
-        assert not worker.is_alive() and not failures
+        assert not worker.is_alive()
+        assert not failures
         assert result == [280]
     finally:
         release.set()

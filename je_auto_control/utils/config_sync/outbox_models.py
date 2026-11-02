@@ -18,7 +18,7 @@ def normalize_sync_endpoint(value: str) -> str:
     try:
         parts = _endpoint_parts(value)
         return urlunsplit((parts.scheme.lower(), _authority(parts), parts.path.rstrip("/"), "", ""))
-    except (ValueError, UnicodeError, AttributeError):
+    except (ValueError, AttributeError):  # ValueError covers UnicodeError
         raise ConfigSyncError("sync endpoint must be an HTTP URL without credentials, query or fragment") from None
 
 

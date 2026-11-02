@@ -29,11 +29,13 @@ def test_semantic_observation_is_stable_masked_and_resolves_reviewed_tap(android
             adapter.ready(current)
             first, second = adapter.observe(), adapter.observe()
             assert first == second
-            assert first['text'] == 'Save' and 'private-' not in json.dumps(first)
+            assert first['text'] == 'Save'
+            assert 'private-' not in json.dumps(first)
             args, _ground = resolve_action('AC_android_tap', {}, {'element_index': 1}, first)
             adapter.perform('AC_android_tap', args)
         assert (sdk.directory / 'actions').read_text().splitlines() == ['-d', '0', 'tap', '25', '25']
-        assert not adapter._journal.pending and not sdk.errors
+        assert not adapter._journal.pending
+        assert not sdk.errors
     finally:
         release_fixture(adapter)
 
@@ -53,7 +55,8 @@ def test_changed_semantic_content_or_capture_identity_refuses_input_before_begin
                 (sdk.directory / 'hierarchy.xml').write_bytes(semantic_tree().replace(old, new))
             with pytest.raises(AgentTaskError):
                 adapter.perform('AC_android_tap', {'x': 25, 'y': 25})
-        assert not (sdk.directory / 'actions').exists() and not adapter._journal.pending
+        assert not (sdk.directory / 'actions').exists()
+        assert not adapter._journal.pending
     finally:
         release_fixture(adapter)
 
@@ -76,7 +79,8 @@ def test_semantic_change_after_begin_ack_is_rechecked_inside_the_device_fence(an
             with pytest.raises(AgentTaskError):
                 adapter.perform('AC_android_tap', {'x': 25, 'y': 25})
         assert not (sdk.directory / 'actions').exists()
-        assert adapter._journal.pending and adapter._channel.retired
+        assert adapter._journal.pending
+        assert adapter._channel.retired
     finally:
         release_fixture(adapter)
 

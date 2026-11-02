@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from sqlite3 import Connection
 
 _APPLICATION = 0x41436164
+_BEGIN_IMMEDIATE = 'BEGIN IMMEDIATE'
 _TABLES = (
     'CREATE TABLE adapter_heads (scope TEXT NOT NULL,entry_id TEXT NOT NULL,change_id TEXT NOT NULL,'
     'wire TEXT NOT NULL,digest TEXT NOT NULL,PRIMARY KEY(scope,change_id))',
@@ -40,7 +41,7 @@ def _initialize(connection: Connection) -> None:
     version = _version(connection)
     if version == (_APPLICATION, 2):
         return
-    connection.execute('BEGIN IMMEDIATE')
+    connection.execute(_BEGIN_IMMEDIATE)
     version = _version(connection)
     if version == (_APPLICATION, 2):
         connection.execute('COMMIT')
@@ -151,7 +152,7 @@ class SyncAdapterState:
         _validate_compacted(incoming, compacted)
         stored: set[str] = set()
         with self._database.connection() as connection:
-            connection.execute('BEGIN IMMEDIATE')
+            connection.execute(_BEGIN_IMMEDIATE)
             _profile_heads(connection, scope, kind)
             if sources is not None:
                 capture_sources(connection, scope, kind, self.identity.origin, sources, checkpoint=self.checkpoint)
@@ -174,7 +175,7 @@ class SyncAdapterState:
         _validate_baseline(kind, baseline)
         scope = self._scope(kind)
         with self._database.connection() as connection:
-            connection.execute('BEGIN IMMEDIATE')
+            connection.execute(_BEGIN_IMMEDIATE)
             row = connection.execute('SELECT operation_id FROM adapter_adoptions WHERE scope=?', (scope,)).fetchone()
             if row is not None:
                 if row[0] != operation_id:
@@ -209,7 +210,7 @@ class SyncAdapterState:
         validate_portable(value, root_key=entry_id if kind == 'settings' else '')
         expected = resolution_ids(observed)
         with self._database.connection() as connection:
-            connection.execute('BEGIN IMMEDIATE')
+            connection.execute(_BEGIN_IMMEDIATE)
             current = [item for item in _profile_heads(connection, scope, kind).values() if item.entry_id == entry_id]
             if sorted(expected) != sorted(item.change_id for item in current):
                 raise ConfigSyncError('adapter conflict heads changed after review')
@@ -232,7 +233,7 @@ def resolution_ids(observed: Iterable[str]) -> tuple[str, ...]:
 
 
 def _validate_compacted(incoming: Mapping[str, SyncEntry], compacted: frozenset[str]) -> None:
-    if (not isinstance(compacted, frozenset) or not compacted <= incoming.keys()
+    if (not isinstance(compacted, frozenset) or not compacted.issubset(incoming.keys())
             or any(not incoming[key].is_deleted or incoming[key].value for key in compacted)):
         raise ConfigSyncError('compacted adapter evidence requires empty sealed deletion entries')
 

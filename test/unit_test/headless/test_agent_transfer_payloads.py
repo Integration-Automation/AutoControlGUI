@@ -75,7 +75,8 @@ def test_real_http_multi_file_chunks_publish_only_a_complete_verified_generation
     with import_hosts(tmp_path, monkeypatch, source_context=manifest_source, selection=selection) as values:
         host, server, exported, bodies, token, root, _actor = values
         manifests = {item['name']: item for item in exported['manifest']['files']}
-        assert manifests['empty.bin']['size'] == 0 and manifests['empty.bin']['chunks'] == []
+        assert manifests['empty.bin']['size'] == 0
+        assert manifests['empty.bin']['chunks'] == []
         if 'large.bin' in manifests:
             assert len(manifests['large.bin']['chunks']) == 3
         status, reply = operation(server, token, 'create_import', review(server, exported, token, root))

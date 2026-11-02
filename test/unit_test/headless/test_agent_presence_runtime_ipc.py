@@ -118,14 +118,17 @@ def test_actual_two_runtime_databases_and_standard_helpers_share_idle_and_source
     second, right_target = fixture.runtime('two')
     try:
         left, right = first.submit(spec()), second.submit(spec())
-        assert not fixture.sources and not fixture.helpers
+        assert not fixture.sources
+        assert not fixture.helpers
         fixture.first_observation(first, left)
         old = dict(left_target._presence._grant.binding)
         first.pause(left.task_id)
         second.observe(right.task_id)
         current = dict(right_target._presence._grant.binding)
-        assert current['generation'] == old['generation'] and current['lease_id'] != old['lease_id']
-        assert len(fixture.sources) == 1 and len(fixture.instances.read_text().splitlines()) == 1
+        assert current['generation'] == old['generation']
+        assert current['lease_id'] != old['lease_id']
+        assert len(fixture.sources) == 1
+        assert len(fixture.instances.read_text().splitlines()) == 1
         first.close()
         assert not fixture.sources[0].retired
         second.observe(right.task_id)
@@ -148,8 +151,10 @@ def test_actual_worker_watch_notice_pauses_and_explicit_resume_waits_fresh_idle(
         deadline = time.monotonic() + 3
         while runtime.get(task.task_id).state != 'paused' and time.monotonic() < deadline:
             time.sleep(0.01)
-        assert runtime.get(task.task_id).state == 'paused' and not runtime._leases
-        assert target._channel is None and target._ledger.empty
+        assert runtime.get(task.task_id).state == 'paused'
+        assert not runtime._leases
+        assert target._channel is None
+        assert target._ledger.empty
         assert not fixture.sources[0].retired
         runtime.resume(task.task_id)
         with pytest.raises(AgentControlBusy):
@@ -157,8 +162,10 @@ def test_actual_worker_watch_notice_pauses_and_explicit_resume_waits_fresh_idle(
         fixture.clock.write_text('120', encoding='utf-8')
         runtime.observe(task.task_id)
         current = target._presence._grant.binding
-        assert current['generation'] == original['generation'] and current['lease_id'] != original['lease_id']
-        assert len(fixture.sources) == 1 and len(fixture.instances.read_text().splitlines()) == 1
+        assert current['generation'] == original['generation']
+        assert current['lease_id'] != original['lease_id']
+        assert len(fixture.sources) == 1
+        assert len(fixture.instances.read_text().splitlines()) == 1
     assert fixture.retired()
 
 
@@ -174,15 +181,18 @@ def test_actual_source_owner_loss_requires_new_generation_and_explicit_fresh_idl
         while (runtime.get(task.task_id).state != 'paused' or not fixture.pools[0].retired
                ) and time.monotonic() < deadline:
             time.sleep(0.01)
-        assert runtime.get(task.task_id).state == 'paused' and fixture.pools[0].retired
-        assert len(fixture.sources) == 1 and target._channel is None
+        assert runtime.get(task.task_id).state == 'paused'
+        assert fixture.pools[0].retired
+        assert len(fixture.sources) == 1
+        assert target._channel is None
         runtime.resume(task.task_id)
         with pytest.raises(AgentControlBusy):
             runtime.observe(task.task_id)
         fixture.clock.write_text('120', encoding='utf-8')
         runtime.observe(task.task_id)
         assert target._presence._grant.binding['generation'] != previous['generation']
-        assert len(fixture.sources) == 2 and len(fixture.instances.read_text().splitlines()) == 2
+        assert len(fixture.sources) == 2
+        assert len(fixture.instances.read_text().splitlines()) == 2
     assert fixture.retired()
 
 
@@ -202,12 +212,15 @@ def test_actual_reader_loss_cannot_release_input_lease_until_owned_ack_cleanup_s
         deadline = time.monotonic() + 3
         while (target._channel is not None and not target._channel.retired) and time.monotonic() < deadline:
             time.sleep(0.01)
-        assert runtime.get(task.task_id).state == 'pausing' and runtime._leases
+        assert runtime.get(task.task_id).state == 'pausing'
+        assert runtime._leases
         deadline = time.monotonic() + 1
         while target.presence_status['takeover']['cleanup_error'] is None and time.monotonic() < deadline:
             time.sleep(0.01)
         assert target.presence_status['takeover']['cleanup_error'] == 'AgentTaskError'
-        assert not target._ledger.empty and target._resource is not None and target._presence._grant is not None
+        assert not target._ledger.empty
+        assert target._resource is not None
+        assert target._presence._grant is not None
         with pytest.raises(AgentTaskError):
             runtime.resume(task.task_id)
         other = runtime.submit(spec())
@@ -215,8 +228,11 @@ def test_actual_reader_loss_cannot_release_input_lease_until_owned_ack_cleanup_s
             runtime.observe(other.task_id)
         failed.unlink()
         runtime.pause(task.task_id)
-        assert runtime.get(task.task_id).state == 'paused' and not runtime._leases and target._ledger.empty
-        assert target._resource is None and target._presence._grant is None
+        assert runtime.get(task.task_id).state == 'paused'
+        assert not runtime._leases
+        assert target._ledger.empty
+        assert target._resource is None
+        assert target._presence._grant is None
         fixture.clock.write_text('120', encoding='utf-8')
         runtime.observe(other.task_id)
         assert (tmp_path / 'input-events.txt').read_text().splitlines() == ['pressed', 'released']

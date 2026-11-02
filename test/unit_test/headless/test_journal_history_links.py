@@ -30,7 +30,8 @@ def test_multiple_journals_attach_to_one_history_run_idempotently(store, tmp_pat
     assert [(item.run_id, item.journal_path, item.journal_run_id) for item in links] == [
         (run, first, "one"), (run, second, "two"),
     ]
-    assert not Path(first).exists() and not Path(second).exists()
+    assert not Path(first).exists()
+    assert not Path(second).exists()
     assert store.journals_for_run(run + 1) == []
     assert not store.attach_journal(run + 1, first, "unknown")
 
@@ -107,7 +108,8 @@ def test_failed_history_initialization_releases_the_connection(store, monkeypatc
     try:
         with pytest.raises(HistoryStoreError, match="controlled schema failure"):
             store.attach_journal(1, "unused.jsonl", "unused")
-        assert connection.closed and store._conn is None
+        assert connection.closed
+        assert store._conn is None
     finally:
         connection.close()
 
@@ -135,9 +137,9 @@ def test_unknown_history_owner_prevents_the_action_before_any_effect(store, tmp_
     from je_auto_control.utils.run_history.context import HistoryBinding, bound_history
     reached = []
     monkeypatch.setitem(executor.event_dict, "AC_history_probe", lambda: reached.append(True))
-    with bound_history(HistoryBinding(store, 999)), pytest.raises(ActionJournalError, match="history"):
-        with journal_scope(ActionJournal(tmp_path / "no-effect.jsonl")):
-            executor.execute_action([["AC_history_probe"]])
+    scope = journal_scope(ActionJournal(tmp_path / "no-effect.jsonl"))
+    with bound_history(HistoryBinding(store, 999)), pytest.raises(ActionJournalError, match="history"), scope:
+        executor.execute_action([["AC_history_probe"]])
     assert reached == []
 
 
@@ -146,10 +148,10 @@ def test_history_bindings_restore_on_nested_failure_and_explicitly_clear_ambient
     first = HistoryBinding(store, 1)
     second = HistoryBinding(store, 2)
     with bound_history(first):
-        with pytest.raises(RuntimeError):
-            with bound_history(second):
-                assert current_history() is second
-                raise RuntimeError("controlled")
+        nested, failure = bound_history(second), RuntimeError("controlled")
+        with pytest.raises(RuntimeError), nested:
+            assert current_history() is second
+            raise failure
         assert current_history() is first
         with bound_history(None):
             assert current_history() is None
@@ -213,6 +215,7 @@ def test_background_run_owners_link_explicit_journals_to_their_existing_row(kind
         trigger = owner.add("imap.invalid", "user", "unused", str(script))
         owner._execute_with_history(trigger, {})
     rows = store.list_runs()
-    assert len(rows) == 1 and rows[0].status == STATUS_OK
+    assert len(rows) == 1
+    assert rows[0].status == STATUS_OK
     links = store.journals_for_run(rows[0].id)
     assert [(item.journal_path, item.journal_run_id) for item in links] == [(str(path.resolve()), "background")]

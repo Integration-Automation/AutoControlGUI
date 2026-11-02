@@ -21,8 +21,9 @@ def test_enqueue_many_rolls_back_a_late_sql_failure_without_partial_edits(tmp_pa
     with sqlite3.connect(path) as connection:
         connection.execute("CREATE TRIGGER fail_second BEFORE INSERT ON sync_operations "
                            "WHEN NEW.operation_id='second' BEGIN SELECT RAISE(ABORT,'controlled failure'); END")
+    batch = (operation('first'), operation('second'))
     with pytest.raises(ac.ConfigStoreError):
-        queue.enqueue_many((operation('first'), operation('second')))
+        queue.enqueue_many(batch)
     assert queue.pending(endpoint=ENDPOINT, user_id='alice') == ()
     with sqlite3.connect(path) as connection:
         connection.execute('DROP TRIGGER fail_second')
@@ -33,8 +34,9 @@ def test_enqueue_many_rolls_back_a_late_sql_failure_without_partial_edits(tmp_pa
 def test_changed_late_batch_identity_cannot_insert_earlier_new_work(tmp_path):
     queue = ac.SyncOutbox(tmp_path / 'outbox.sqlite3')
     queue.enqueue(operation('existing'))
+    batch = (operation('new'), operation('existing', 'light'))
     with pytest.raises(ac.ConfigSyncError, match='different'):
-        queue.enqueue_many((operation('new'), operation('existing', 'light')))
+        queue.enqueue_many(batch)
     assert queue.pending(endpoint=ENDPOINT, user_id='alice') == (operation('existing'),)
 
 

@@ -34,7 +34,8 @@ def test_adapter_commands_capture_apply_materialize_and_builder_preserve_complet
     receiver = profile(tmp_path, 'laptop', {'records': {}})
     snapshot = tools()['ac_sync_adapter_snapshot'].handler(sender)
     applied = tools()['ac_sync_adapter_apply'].handler(receiver, snapshot['entries'])
-    assert applied['stored'] == ('login.json',) and not applied['conflicts']
+    assert applied['stored'] == ('login.json',)
+    assert not applied['conflicts']
     materialize = {'profiles': [receiver], 'target_root': str(tmp_path / 'cache')}
     result = tools()['ac_sync_profile_materialize'].handler(**materialize)
     from pathlib import Path
@@ -55,13 +56,14 @@ def test_adapter_surfaces_are_private_and_prestart_refusal_creates_no_database(t
                 authorize_command('AC_' + name)
             assert capability_for_tool('ac_' + name, True) == 'drive_input'
     receiver = profile(tmp_path, 'laptop', {'records': {}})
+    snapshot = tools()['ac_sync_adapter_snapshot'].handler
     ctx = ToolCallContext('cancelled')
     ctx.cancelled_event.set()
     with pytest.raises(OperationCancelledError):
-        tools()['ac_sync_adapter_snapshot'].handler(receiver, ctx=ctx)
+        snapshot(receiver, ctx=ctx)
     ctx = ToolCallContext('confined', path_policy=PathPolicy([tmp_path / 'other']))
     with pytest.raises(PathNotAllowedError):
-        tools()['ac_sync_adapter_snapshot'].handler(receiver, ctx=ctx)
+        snapshot(receiver, ctx=ctx)
     assert not (tmp_path / 'laptop.sqlite3').exists()
 
 
@@ -77,9 +79,10 @@ def test_adapter_resolution_command_binds_the_exact_reviewed_versions(tmp_path, 
                  'observed': [item.change_id for item in entries]}
     action = ['AC_sync_adapter_resolve', arguments]
     assert step_to_action(action_to_step(action)) == action
-    assert tools()['ac_sync_adapter_resolve'].handler(**arguments)['version'] == {'one': 1, 'two': 1, 'laptop': 1}
+    resolve = tools()['ac_sync_adapter_resolve'].handler
+    assert resolve(**arguments)['version'] == {'one': 1, 'two': 1, 'laptop': 1}
     with pytest.raises(ac.ConfigSyncError):
-        tools()['ac_sync_adapter_resolve'].handler(**arguments)
+        resolve(**arguments)
 
 
 @pytest.mark.parametrize('change', ['cancel', 'roots'])
@@ -101,7 +104,8 @@ def test_materialization_keeps_the_source_profiles_authority_live_until_publicat
         return stream
     monkeypatch.setattr(ac.DirectoryAssetTransport, 'open', revoke)
     expected = OperationCancelledError if change == 'cancel' else PathNotAllowedError
+    materialize, cache = tools()['ac_sync_profile_materialize'].handler, str(tmp_path / 'cache')
     with pytest.raises(expected):
-        tools()['ac_sync_profile_materialize'].handler([receiver], str(tmp_path / 'cache'), ctx=ctx)
+        materialize([receiver], cache, ctx=ctx)
     assert not list((tmp_path / 'cache').glob('generation-*'))
     assert not list((tmp_path / 'cache').glob('.incoming-*'))

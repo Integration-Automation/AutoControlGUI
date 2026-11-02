@@ -15,7 +15,8 @@ def test_focus_guard_accepts_all_field_orders_without_normalizing_values(run_gua
     lines = WM.splitlines(keepends=True)
     (tmp_path / "wm").write_text("".join(lines[index] for index in order), encoding="utf-8", newline="")
     result = run_guard()
-    assert result.returncode == 0 and (tmp_path / "actions").read_text().splitlines().count("tap") == 1
+    assert result.returncode == 0
+    assert (tmp_path / "actions").read_text().splitlines().count("tap") == 1
 
 
 @pytest.mark.parametrize("data", [b"", b"line\n\n", b"no-final-newline", b"a\x00b\x00\x00", b"\xff\xfe\n\\  \r\n"])
@@ -25,7 +26,8 @@ def test_fast_fixture_reader_preserves_exact_bytes_including_nulls_and_newlines(
     (tmp_path / "device").write_bytes(data)
     prefix = "unset BASH_VERSION; " if fallback else ""
     result = fixture.run(prefix + "/system/bin/getprop ro.serialno")
-    assert result.returncode == 0 and result.stdout == data
+    assert result.returncode == 0
+    assert result.stdout == data
 
 
 def test_fixture_timeout_diagnostic_has_phase_and_duration_but_no_command_or_output(tmp_path, snapshot, monkeypatch):
@@ -37,9 +39,11 @@ def test_fixture_timeout_diagnostic_has_phase_and_duration_but_no_command_or_out
         fixture.run("/system/bin/input -d 0 text " + secret)
     assert str(error.value) == "Android fixture action shell exceeded its five-second deadline"
     diagnostics = fixture.diagnostics()
-    assert diagnostics[-1]["phase"] == "action" and diagnostics[-1]["outcome"] == "timeout"
+    assert diagnostics[-1]["phase"] == "action"
+    assert diagnostics[-1]["outcome"] == "timeout"
     assert isinstance(diagnostics[-1]["seconds"], float)
-    assert secret not in repr(diagnostics) and "private" not in repr(diagnostics)
+    assert secret not in repr(diagnostics)
+    assert "private" not in repr(diagnostics)
     assert run.call_args.kwargs["timeout"] == 5
 
 
@@ -61,7 +65,8 @@ def test_duplicate_focus_fields_including_empty_values_fail_on_the_correct_side_
 def test_raw_labels_cannot_replace_a_missing_native_focus_field(run_guard, tmp_path):
     missing = WM.replace("mTopFocusedDisplayId=0", "display=0")
     (tmp_path / "wm").write_text(missing, encoding="utf-8", newline="")
-    assert run_guard().returncode == 93 and not (tmp_path / "actions").exists()
+    assert run_guard().returncode == 93
+    assert not (tmp_path / "actions").exists()
 
 
 def test_shell_metacharacters_and_globs_in_current_focus_cannot_match_or_execute(tmp_path, snapshot):
@@ -69,5 +74,6 @@ def test_shell_metacharacters_and_globs_in_current_focus_cannot_match_or_execute
     hostile = WM.replace(snapshot.window, "Window{[a]* $(touch injected) 'quoted'}")
     (tmp_path / "wm").write_text(hostile, encoding="utf-8", newline="")
     result = fixture.run(compile_android_action(snapshot, "AC_android_tap", {"x": 1, "y": 2}))
-    assert result.returncode == 93 and not (tmp_path / "injected").exists()
+    assert result.returncode == 93
+    assert not (tmp_path / "injected").exists()
     assert not (tmp_path / "actions").exists()

@@ -107,5 +107,5 @@ def _decode(raw: bytes, line: int) -> ActionEvent:
     try:
         payload = json.loads(raw, object_pairs_hook=unique_object)
         return ActionEvent.from_dict(payload)
-    except (ValueError, TypeError, UnicodeError, RecursionError):
+    except (ValueError, TypeError, RecursionError):
         raise CandidateGenerationError(f"invalid journal record at line {line}") from None

@@ -143,7 +143,8 @@ class _AnswerIn(BaseModel):
     sdp: str
 
 
-_AUTH_RESPONSES = {401: {"description": "bad shared secret"}}
+_AUTH_FAILURE = "bad shared secret"
+_AUTH_RESPONSES = {401: {"description": _AUTH_FAILURE}}
 _VALIDATION_RESPONSES = {
     400: {"description": "invalid host_id or sdp"},
     **_AUTH_RESPONSES,
@@ -166,7 +167,7 @@ def _build_secret_dependency(shared_secret: Optional[str]):
         ] = None,
     ) -> None:
         if not _secret_matches(x_signaling_secret, shared_secret):
-            raise HTTPException(status_code=401, detail="bad shared secret")
+            raise HTTPException(status_code=401, detail=_AUTH_FAILURE)
     return _check
 
 
@@ -287,7 +288,7 @@ def _guard_refusal(request: Request, shared_secret: Optional[str]) -> Optional[J
     if not path.startswith(("/sessions", "/config")) or request.method == "OPTIONS":
         return None
     if not _secret_matches(request.headers.get("X-Signaling-Secret"), shared_secret):
-        return JSONResponse({"detail": "bad shared secret"}, status_code=401)
+        return JSONResponse({"detail": _AUTH_FAILURE}, status_code=401)
     if request.method not in ("POST", "PUT"):
         return None
     length = request.headers.get("Content-Length")

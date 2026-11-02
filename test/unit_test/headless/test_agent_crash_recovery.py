@@ -22,7 +22,8 @@ def test_unfinished_host_ownership_requires_explicit_recovery(tmp_path):
         replacement.acquire()
     probes = []
     result = replacement.recover("Operator released held inputs and reviewed effects", lambda: probes.append(1), "host")
-    assert result["recovered"] and probes == [1]
+    assert result["recovered"]
+    assert probes == [1]
     assert replacement.read()["held"] == {}
     replacement.acquire()
     replacement.release()
@@ -74,10 +75,12 @@ def test_durable_witness_is_written_before_native_ack(tmp_path):
         runtime.act(task.task_id, {"tool": "AC_increment", "arguments": {"hold": True},
                                    "observation_id": frame.observation_id})
         data = json.loads((tmp_path / "input.lock.journal").read_text(encoding="utf-8"))
-        assert data["owner"] and data["held"]["keys"] == [{"keycode": 65, "is_shift": False}]
+        assert data["owner"]
+        assert data["held"]["keys"] == [{"keycode": 65, "is_shift": False}]
         runtime.pause(task.task_id)
         data = json.loads((tmp_path / "input.lock.journal").read_text(encoding="utf-8"))
-        assert not data["owner"] and not data["held"]
+        assert not data["owner"]
+        assert not data["held"]
     finally:
         runtime.close()
 

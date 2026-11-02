@@ -179,7 +179,8 @@ def test_push_round_trip_uses_put():
     assert len(calls) == 1
     method, body = calls[0]
     assert method == "PUT"
-    assert body["version"] == 2 and body["base_revision"] == 0
+    assert body["version"] == 2
+    assert body["base_revision"] == 0
     assert body["bucket"]["user_id"] == "alice"
     assert "hk1" in body["bucket"]["sections"]["hotkeys"]
 

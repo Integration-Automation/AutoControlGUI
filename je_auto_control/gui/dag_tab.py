@@ -3,7 +3,7 @@ import json
 import threading
 from functools import partial
 from contextvars import copy_context
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtWidgets import (
@@ -264,8 +264,13 @@ class DagTab(TranslatableMixin, QWidget):
         self._inspection_source = self._editor.toPlainText()
         self.setProperty("dag_batch_source", self._batch_id.text())
         self._inspection_output.clear()
-        on_done = (self._on_batch_finished if batch_operation and batch_operation != "run_continuation"
-                   else self._on_inspection_finished if inspect_only else self._on_worker_finished)
+        on_done: Callable[[Any], None]
+        if batch_operation and batch_operation != "run_continuation":
+            on_done = self._on_batch_finished
+        elif inspect_only:
+            on_done = self._on_inspection_finished
+        else:
+            on_done = self._on_worker_finished
         self._thread = start_worker(
             self, worker, on_done=on_done,
             on_fail=self._on_worker_failed, on_thread_done=self._on_thread_done)

@@ -66,7 +66,8 @@ def test_android_semantic_selection_uses_the_shared_action_without_native_input(
     tab._present_result(frame)
     tab._observation._elements.cellClicked.emit(0, 0)
     action = json.loads(tab._action.toPlainText())
-    assert action['tool'] == 'AC_android_tap' and action['arguments'] == {}
+    assert action['tool'] == 'AC_android_tap'
+    assert action['arguments'] == {}
     assert calls == []
     resolved, _ground = resolve_action(action['tool'], action['arguments'], action['reference'], frame['data'])
     assert resolved == {'x': 25, 'y': 40}

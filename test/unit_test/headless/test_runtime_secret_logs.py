@@ -56,7 +56,8 @@ def test_errors_and_tracebacks_are_scrubbed(output, monkeypatch, strict):
     else:
         assert FAKE in next(iter(executor.execute_action(actions).values()))
     assert FAKE not in output.getvalue()
-    assert "Traceback" in output.getvalue() and "ValueError" in output.getvalue()
+    assert "Traceback" in output.getvalue()
+    assert "ValueError" in output.getvalue()
 
 
 @pytest.mark.parametrize("block", ["loop", "parallel", "dag"])
@@ -138,7 +139,8 @@ def test_closed_mask_cannot_retain_values_via_an_inherited_binding():
         scope = current_secret_scope()
         remember_secret(FAKE)
         assert scope.scrub(FAKE) == "***"
-    assert not scope.active and not scope.has_values
+    assert not scope.active
+    assert not scope.has_values
     with bound_secret_scope(scope):
         remember_secret("later-private-value")
         assert current_secret_scope() is None
@@ -163,7 +165,8 @@ def test_filter_masks_cached_exception_stack_and_unformattable_records():
         record.stack_info = "stack " + FAKE
         assert SecretLogFilter().filter(record)
         assert record.getMessage() == "<unformattable application log record>"
-        assert record.exc_text == "cached ***" and record.stack_info == "stack ***"
+        assert record.exc_text == "cached ***"
+        assert record.stack_info == "stack ***"
 
 
 def test_an_unformattable_outcome_cannot_abort_execution(output, monkeypatch):

@@ -96,7 +96,9 @@ def test_close_serializes_with_a_chunk_write_instead_of_closing_its_open_file(tm
         release.set()
         writer.join(5)
         closer.join(5)
-    assert not writer.is_alive() and not closer.is_alive() and errors == []
+    assert not writer.is_alive()
+    assert not closer.is_alive()
+    assert errors == []
     assert list(tmp_path.iterdir()) == []
 
 
@@ -181,7 +183,8 @@ def test_connection_or_control_loss_discards_partial_without_another_file_frame(
             owner._wire_pc_handlers(pc)
         pc.connectionState = state
         asyncio.run(pc.handlers['connectionstatechange']())
-    assert not owner.authenticated and list(inbox.iterdir()) == []
+    assert not owner.authenticated
+    assert list(inbox.iterdir()) == []
 
 
 def test_late_state_and_control_close_callbacks_do_not_revoke_a_new_connection(endpoint):
@@ -229,12 +232,14 @@ def test_receive_cleanup_removes_partial_and_preserves_wrapped_control(tmp_path,
                 raise OSError('wrapped close') from original
 
     receiver._current['fh'] = FailedStream()
+    if boundary == 'write':
+        attempt, arguments = receiver.handle_message, (b'half',)
+    else:
+        attempt, arguments = receiver.close, ()
     with pytest.raises(signal) as caught:
-        if boundary == 'write':
-            receiver.handle_message(b'half')
-        else:
-            receiver.close()
-    assert caught.value is original and list(tmp_path.iterdir()) == []
+        attempt(*arguments)
+    assert caught.value is original
+    assert list(tmp_path.iterdir()) == []
 
 
 @pytest.mark.parametrize('signal', [KeyboardInterrupt, SystemExit, asyncio.CancelledError,
@@ -249,9 +254,11 @@ def test_native_file_received_callback_preserves_wrapped_control_after_publicati
     owner.set_file_received_callback(failed)
     channel.fire('message', begin(size=4))
     channel.fire('message', b'done')
+    finished = end()
     with pytest.raises(signal) as caught:
-        channel.fire('message', end())
-    assert caught.value is original and (inbox / 'payload.bin').read_bytes() == b'done'
+        channel.fire('message', finished)
+    assert caught.value is original
+    assert (inbox / 'payload.bin').read_bytes() == b'done'
     assert list(inbox.glob('*.part')) == []
 
 
@@ -271,9 +278,11 @@ def test_native_file_audit_preserves_wrapped_control_after_publication(endpoint,
     monkeypatch.setattr(webrtc_host, 'default_audit_log', lambda: SimpleNamespace(log=failed))
     channel.fire('message', begin(size=4))
     channel.fire('message', b'done')
+    finished = end()
     with pytest.raises(signal) as caught:
-        channel.fire('message', end())
-    assert caught.value is original and (inbox / 'payload.bin').read_bytes() == b'done'
+        channel.fire('message', finished)
+    assert caught.value is original
+    assert (inbox / 'payload.bin').read_bytes() == b'done'
     assert list(inbox.glob('*.part')) == []
 
 
@@ -332,7 +341,9 @@ def test_state_callback_control_survives_after_terminal_receive_cleanup(endpoint
         return caught.value
 
     caught = asyncio.run(observe_native_callback())
-    assert caught is original and not owner.authenticated and list(inbox.iterdir()) == []
+    assert caught is original
+    assert not owner.authenticated
+    assert list(inbox.iterdir()) == []
 
 
 @pytest.mark.parametrize('endpoint', ['host'], indirect=True)

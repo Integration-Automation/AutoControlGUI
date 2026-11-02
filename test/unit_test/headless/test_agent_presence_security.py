@@ -38,7 +38,8 @@ class Native:
             ConvertStringSecurityDescriptorToSecurityDescriptorW=Function(self.descriptor))
 
     def open(self, access, inherit, pid):
-        assert access == 0x101000 and not inherit
+        assert access == 0x101000
+        assert not inherit
         handle = 0x100000000 + pid
         self.handles[handle] = pid
         return handle
@@ -114,7 +115,8 @@ def test_constructor_is_inert_and_current_identity_releases_all_query_handles():
     assert not fake.kernel.OpenProcess.calls
     value = api.current()
     assert (value.pid, value.sid, value.session, value.birth) == (10, fake.sid, 2, (1 << 32) + 10)
-    assert not fake.handles and not fake.buffers
+    assert not fake.handles
+    assert not fake.buffers
     assert fake.kernel.OpenProcess.restype is ctypes.c_void_p
 
 
@@ -122,7 +124,8 @@ def test_constructor_is_inert_and_current_identity_releases_all_query_handles():
 def test_peer_identity_comes_from_connected_pipe_and_only_owned_handles_are_closed(server):
     api, fake = native()
     peer = api.peer(999, server=server)
-    assert peer.identity.pid == 11 and peer.identity.birth == (1 << 32) + 11
+    assert peer.identity.pid == 11
+    assert peer.identity.birth == (1 << 32) + 11
     assert peer.alive()
     getter = fake.kernel.GetNamedPipeClientProcessId if server else fake.kernel.GetNamedPipeServerProcessId
     assert len(getter.calls) == 1
@@ -130,7 +133,8 @@ def test_peer_identity_comes_from_connected_pipe_and_only_owned_handles_are_clos
     peer.close()
     peer.close()
     assert not peer.alive()
-    assert not fake.handles and not fake.buffers
+    assert not fake.handles
+    assert not fake.buffers
 
 
 @pytest.mark.parametrize('attribute,value', [('peer_sid', 'S-1-5-21-2'), ('peer_session', 3), ('live', False)])
@@ -139,7 +143,8 @@ def test_wrong_os_user_session_or_dead_peer_is_refused_without_process_terminati
     setattr(fake, attribute, value)
     with pytest.raises(AgentTaskError):
         api.peer(999, server=False)
-    assert not fake.handles and not fake.buffers
+    assert not fake.handles
+    assert not fake.buffers
 
 
 @pytest.mark.parametrize('attribute,value', [('token_ok', False), ('info_ok', False),
@@ -149,7 +154,8 @@ def test_invalid_token_data_cannot_select_endpoint_or_descriptor_and_keeps_no_ha
     setattr(fake, attribute, value)
     with pytest.raises(AgentTaskError):
         api.current()
-    assert not fake.handles and not fake.buffers
+    assert not fake.handles
+    assert not fake.buffers
     assert not fake.advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW.calls
 
 
@@ -157,11 +163,13 @@ def test_pipe_security_descriptor_grants_only_current_user_system_and_is_not_inh
     api, fake = native()
     with api.attributes() as value:
         assert value.length == ctypes.sizeof(type(value))
-        assert value.inherit == 0 and value.descriptor
+        assert value.inherit == 0
+        assert value.descriptor
         assert len(fake.buffers) == 1
         text = fake.advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW.calls[0][0]
         assert text == 'D:P(A;;GA;;;SY)(A;;GA;;;S-1-5-21-1)'
-    assert not fake.handles and not fake.buffers
+    assert not fake.handles
+    assert not fake.buffers
 
 
 def test_endpoint_is_derived_from_actual_sid_session_and_survives_process_restart():
@@ -182,6 +190,9 @@ def test_real_current_process_identity_is_query_only_and_never_starts_observatio
     api = WindowsPresenceSecurity()
     value = api.current()
     assert value.pid == os.getpid()
-    assert value.sid.startswith('S-1-') and value.birth > 0 and value.session >= 0
+    assert value.sid.startswith('S-1-')
+    assert value.birth > 0
+    assert value.session >= 0
     with api.attributes() as attributes:
-        assert attributes.descriptor and not attributes.inherit
+        assert attributes.descriptor
+        assert not attributes.inherit

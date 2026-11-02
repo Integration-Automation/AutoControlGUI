@@ -53,8 +53,9 @@ def test_target_names_are_immutable_even_when_disabled(configured, tmp_path):
     runtime, _calls, _instances = configured
     runtime.target_profiles.control("register", profile(tmp_path))
     runtime.target_profiles.control("disable", {"name": "archive"})
+    renamed = profile(tmp_path, roots=[str(tmp_path.parent)])
     with pytest.raises(AgentTaskError, match="already|immutable"):
-        runtime.target_profiles.control("register", profile(tmp_path, roots=[str(tmp_path.parent)]))
+        runtime.target_profiles.control("register", renamed)
 
 
 @pytest.mark.parametrize("updates", [
@@ -63,8 +64,9 @@ def test_target_names_are_immutable_even_when_disabled(configured, tmp_path):
 ])
 def test_invalid_profiles_cannot_publish_an_adapter(configured, tmp_path, updates):
     runtime, calls, _instances = configured
+    invalid = profile(tmp_path, **updates)
     with pytest.raises(AgentTaskError):
-        runtime.target_profiles.control("register", profile(tmp_path, **updates))
+        runtime.target_profiles.control("register", invalid)
     assert calls == []
 
 
@@ -72,15 +74,17 @@ def test_task_cannot_expand_profile_tools_roots_or_apps(configured, tmp_path):
     runtime, _calls, _instances = configured
     runtime.target_profiles.control("register", profile(tmp_path))
     for updates in ({"roots": [str(tmp_path.parent)]}, {"apps": ["other"]}, {"allowed_tools": ["AC_write"]}):
+        expanded = task(tmp_path, **updates)
         with pytest.raises(AgentTaskError):
-            runtime.submit(task(tmp_path, **updates))
+            runtime.submit(expanded)
 
 
 def test_profile_change_controls_require_host_authority(configured, tmp_path):
     runtime, calls, _instances = configured
+    config = profile(tmp_path)
     with authorization_scope(AuthorizationContext("operator", "operator")):
         with pytest.raises(AgentTaskError):
-            runtime.target_profiles.control("register", profile(tmp_path))
+            runtime.target_profiles.control("register", config)
     assert calls == []
 
 
@@ -107,11 +111,12 @@ def test_restart_preserves_profile_scope_and_disabled_state(configured, tmp_path
     runtime.target_profiles.control("disable", {"name": "archive"})
     runtime.close()
     restored = AgentRuntime(tmp_path / "runtime.sqlite", targets={})
+    disabled = task(tmp_path)
     try:
         assert len(calls) == 2
         assert restored.target_profiles.describe()["targets"][0]["enabled"] is False
         with pytest.raises(AgentTaskError):
-            restored.submit(task(tmp_path))
+            restored.submit(disabled)
     finally:
         restored.close()
 
@@ -123,8 +128,9 @@ def test_anonymous_mcp_context_cannot_reuse_local_host_authority(monkeypatch):
     calls = []
     original = CATALOG["AC_agent_target"]
     monkeypatch.setitem(CATALOG, "AC_agent_target", (lambda **kwargs: calls.append(kwargs), *original[1:]))
+    handle, ctx = _handler("AC_agent_target"), ToolCallContext(1, session_id="anonymous")
     with pytest.raises(AgentTaskError, match="administrator"):
-        _handler("AC_agent_target")(ctx=ToolCallContext(1, session_id="anonymous"), operation="register", request={})
+        handle(ctx=ctx, operation="register", request={})
     assert calls == []
 
 
@@ -136,9 +142,9 @@ def test_anonymous_mcp_legacy_wrapper_cannot_expand_to_host_configuration(monkey
     calls = []
     monkeypatch.setitem(executor.event_dict, "AC_agent_target", lambda **kwargs: calls.append(kwargs))
     tool = next(item for item in build_default_tool_registry() if item.name == "ac_execute_actions")
+    ctx = ToolCallContext(1, session_id="anonymous")
     with pytest.raises(AuthorizationError):
-        tool.invoke({"actions": [["AC_agent_target", {"operation": "get", "request": {"name": "archive"}}]]},
-                    ctx=ToolCallContext(1, session_id="anonymous"))
+        tool.invoke({"actions": [["AC_agent_target", {"operation": "get", "request": {"name": "archive"}}]]}, ctx=ctx)
     assert calls == []
 
 
@@ -188,9 +194,10 @@ def test_profile_lifecycle_and_sensitive_configuration_are_protected_over_http(t
     try:
         service.start()
         client = AgentRuntimeClient(tmp_path / "agent_runtime.json")
+        unauthorized = {"operation": "register", "request": profile(tmp_path)}
         with authorization_scope(AuthorizationContext("operator", "operator")):
             with pytest.raises(AgentTaskError):
-                client.call("target", {"operation": "register", "request": profile(tmp_path)})
+                client.call("target", unauthorized)
         with authorization_scope(AuthorizationContext("admin", "admin")):
             result = client.call("target", {"operation": "register", "request": profile(tmp_path)})
             assert result["profile"]["roots"] == [str(tmp_path.resolve())]

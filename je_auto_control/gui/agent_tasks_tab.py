@@ -34,6 +34,9 @@ from je_auto_control.utils.agent_runtime.browser_commands import (
 )
 from je_auto_control.utils.exception.cancellation import CancellationToken
 
+_EXAMPLE_ORIGIN = "https://example.invalid"
+_TRIGGER_VIEW_PREFIX = "trigger:"
+
 
 def _translate(key: str) -> str:
     return language_wrapper.translate(key, key)
@@ -297,14 +300,14 @@ class AgentTasksTab(TranslatableMixin, QWidget):
     def _browser_example(self) -> None:
         profile = AgentTargetProfile(name="reviewed-browser", kind="browser",
                                      allowed_tools=tuple(sorted(BROWSER_CORE_TOOLS)),
-                                     settings={"allowed_origins": ["https://example.invalid"]})
+                                     settings={"allowed_origins": [_EXAMPLE_ORIGIN]})
         self._target_request.setPlainText(json.dumps(profile.to_dict(), ensure_ascii=False, indent=2))
         self._pages.setCurrentIndex(self._page_keys.index("agent_page_targets"))
 
     def _browser_completion_example(self) -> None:
         spec = AgentTaskSpec(goal="Review browser completion", target="reviewed-browser",
             allowed_tools=("AC_browser_navigate", "AC_browser_read"),
-            options={"allowed_origins": ["https://example.invalid"]},
+            options={"allowed_origins": [_EXAMPLE_ORIGIN]},
             success_criteria=({"kind": "browser", "operation": "text", "selector": "#confirmation",
                                "value": "expected"},)).to_dict()
         self._target.setText(spec.pop("target"))
@@ -317,12 +320,12 @@ class AgentTasksTab(TranslatableMixin, QWidget):
         root = str(Path.cwd() / "agent-files")
         profile = AgentTargetProfile(name="reviewed-browser", kind="browser", roots=(root,),
             allowed_tools=tuple(sorted(BROWSER_ADAPTER_TOOLS)),
-            settings={"allowed_origins": ["https://example.invalid"]})
+            settings={"allowed_origins": [_EXAMPLE_ORIGIN]})
         self._target_request.setPlainText(json.dumps(profile.to_dict(), ensure_ascii=False, indent=2))
         self._workflow.setCurrentText("download_archive")
         self._workflow_config.setPlainText(json.dumps({"backend": "browser", "roots": [root],
-            "directory": root, "url": "https://example.invalid/reports", "target": "reviewed-browser",
-            "allowed_origins": ["https://example.invalid"],
+            "directory": root, "url": _EXAMPLE_ORIGIN + "/reports", "target": "reviewed-browser",
+            "allowed_origins": [_EXAMPLE_ORIGIN],
             "files": [{"name": "report.bin", "selector": "#download"}]}, ensure_ascii=False, indent=2))
         self._action.setPlainText(json.dumps({"tool": "AC_browser_upload", "arguments": {
             "selector": "input[type=file]", "path": str(Path(root) / "upload.bin"), "sha256": ""}}, indent=2))
@@ -511,7 +514,7 @@ class AgentTasksTab(TranslatableMixin, QWidget):
                 self._view_task = ''
                 self._handoff_view = (self._handoff_operation.currentData(), self._handoff_request.toPlainText())
         if operation == "trigger" and "trigger_id" in data.get("request", {}):
-            self._view_task = "trigger:" + str(data["request"]["trigger_id"])
+            self._view_task = _TRIGGER_VIEW_PREFIX + str(data["request"]["trigger_id"])
 
     def _completed(self, outcome: TaskOutcome) -> None:
         if self._handle is not None and outcome.task_id != self._handle.task_id:
@@ -532,8 +535,8 @@ class AgentTasksTab(TranslatableMixin, QWidget):
     def _view_current(self) -> bool:
         if self._handoff_view is not None:
             return self._handoff_view == (self._handoff_operation.currentData(), self._handoff_request.toPlainText())
-        if self._view_task.startswith("trigger:"):
-            return self._view_task == "trigger:" + self._trigger_id.text()
+        if self._view_task.startswith(_TRIGGER_VIEW_PREFIX):
+            return self._view_task == _TRIGGER_VIEW_PREFIX + self._trigger_id.text()
         return not self._view_task or self._view_task == self._task_id.text()
 
     def _present_result(self, result: dict) -> None:

@@ -55,8 +55,10 @@ def test_out_of_region_native_refusal_stops_before_cli_motion_frame_or_click(
         lambda: mouse.click_mouse(mouse.wayland_mouse_left, *point))
     with pytest.raises(libei.LibeiUnavailable, match='outside every region') as caught:
         action()
-    assert caught.value.state == 'failed' and caught.value.status.fallback_allowed is False
-    assert commands == [] and not [call for call in native.calls if call[0] in _EMISSIONS]
+    assert caught.value.state == 'failed'
+    assert caught.value.status.fallback_allowed is False
+    assert commands == []
+    assert not [call for call in native.calls if call[0] in _EMISSIONS]
 
 
 @pytest.mark.parametrize('regions,origin,point,expected', [
@@ -74,7 +76,8 @@ def test_valid_native_mapping_raw_priority_and_unbounded_devices_are_preserved(
     monkeypatch.setattr(libei, 'layout_origin', lambda: origin)
     mouse.set_position(*point)
     assert ('motion', POINTER_DEVICE, *expected) in native.calls
-    assert len([call for call in native.calls if call[0] == 'frame']) == 1 and commands == []
+    assert len([call for call in native.calls if call[0] == 'frame']) == 1
+    assert commands == []
 
 
 @pytest.mark.parametrize('mode', ['auto', 'libei'])
@@ -85,7 +88,8 @@ def test_invalid_request_does_not_revoke_the_sender_or_prevent_a_later_valid_mov
         mouse.set_position(150, 150)
     assert backend.is_connected
     mouse.set_position(20, 30)
-    assert ('motion', POINTER_DEVICE, 20.0, 30.0) in native.calls and commands == []
+    assert ('motion', POINTER_DEVICE, 20.0, 30.0) in native.calls
+    assert commands == []
 
 
 def test_an_explicit_cli_choice_remains_an_independent_provider(sender):
@@ -112,5 +116,6 @@ def test_region_lookup_controls_remain_original_and_never_emit_or_fallback(sende
     monkeypatch.setattr(backend, '_device_regions', interrupted)
     with pytest.raises(type(original)) as caught:
         mouse.set_position(20, 30)
-    assert caught.value is original and commands == []
+    assert caught.value is original
+    assert commands == []
     assert not [call for call in native.calls if call[0] in _EMISSIONS]

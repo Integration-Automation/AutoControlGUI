@@ -37,7 +37,8 @@ def test_mixed_executable_and_renewed_reader_chain_adopts_all_original_confirmed
     _review, _request, grant = issue(mixed)
     reply, chain = mixed.runtime.recovery.handoff_evidence(mixed.batch_id, 'a', mixed.source,
                                                          mixed.child, grant['id'])
-    assert reply['state'] == 'succeeded' and len(chain) == 2
+    assert reply['state'] == 'succeeded'
+    assert len(chain) == 2
     assert len(mixed.runtime.store.actions(mixed.source)) == 1
     assert len(mixed.runtime.store.actions(mixed.execution_child)) == 1
     assert mixed.runtime.store.actions(mixed.child) == []

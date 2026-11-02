@@ -90,7 +90,8 @@ def test_completed_batch_expires_with_owned_evidence_and_completed_delivery(serv
     age(host.runtime, batch["batch_id"])
     result = client.call("prune", {"keep_days": 30})
     assert result["deleted_batches"] == [batch["batch_id"]]
-    assert set(result["deleted"]) == set(task_ids) and result["deleted_dag_deliveries"] == 1
+    assert set(result["deleted"]) == set(task_ids)
+    assert result["deleted_dag_deliveries"] == 1
     assert target.count == 2
     with host.runtime.store.connection() as connection:
         for table in ("agent_dag_batches", "agent_dag_nodes", "agent_dag_inputs", "agent_dag_local_tasks"):
@@ -153,7 +154,8 @@ def test_completed_batch_keeps_its_gate_when_related_work_is_unsettled(service, 
                 connection.execute("UPDATE agent_dag_nodes SET phase='unknown' WHERE batch_id=?", (batch["batch_id"],))
     try:
         result = instance.prune()
-        assert result["deleted_batches"] == [] and result["deleted"] == []
+        assert result["deleted_batches"] == []
+        assert result["deleted"] == []
         with instance.store.connection() as connection:
             assert connection.execute("SELECT 1 FROM agent_dag_local_tasks WHERE task_id=?", (task_id,)).fetchone()
     finally:
@@ -198,5 +200,6 @@ def test_begin_that_wins_the_batch_lock_prevents_collection_of_an_old_registrati
         assert selected.wait(5)
         runtime.batches.control("begin", {"batch_id": batch["batch_id"], "definition": graph(), "max_parallel": 4})
     worker.join(5)
-    assert not worker.is_alive() and results[0]["deleted_batches"] == []
+    assert not worker.is_alive()
+    assert results[0]["deleted_batches"] == []
     assert runtime.batches.control("get", {"batch_id": batch["batch_id"]})["state"] == "running"

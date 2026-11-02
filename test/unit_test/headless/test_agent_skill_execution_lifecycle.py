@@ -24,8 +24,9 @@ def test_actual_capture_receipts_can_match_fresh_reviewed_literals_without_resto
 @pytest.mark.parametrize('execution', ['capture_mismatch'], indirect=True)
 def test_fresh_literal_recovery_cannot_claim_different_original_capture_semantics(execution):
     assert execution.runtime.get(execution.child_id).state == 'succeeded'
+    request = review_request(execution)
     with pytest.raises(AgentTaskError, match='semantic plan'):
-        execution.runtime.skills.control('review_execution', review_request(execution))
+        execution.runtime.skills.control('review_execution', request)
     assert_unpublished(execution)
 
 

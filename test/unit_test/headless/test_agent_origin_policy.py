@@ -30,7 +30,8 @@ def test_removed_origin_root_pauses_before_the_next_action(tmp_path):
         with pytest.raises(AgentTaskError, match="origin roots changed"):
             runtime.act(task.task_id, {"tool": "AC_increment", "observation_id": frame.observation_id})
         assert target.calls == []
-        assert runtime.get(task.task_id).state == "paused" and not runtime._leases
+        assert runtime.get(task.task_id).state == "paused"
+        assert not runtime._leases
         assert "scope requires review" in runtime.get(task.task_id).reason
     finally:
         runtime.close()
@@ -45,7 +46,8 @@ def test_origin_revocation_retires_active_input_between_requests(tmp_path):
         runtime.observe(task.task_id)
         policy.revoke_managed_origin()
         runtime.maintain()
-        assert runtime.get(task.task_id).state == "cancelled" and not runtime._leases
+        assert runtime.get(task.task_id).state == "cancelled"
+        assert not runtime._leases
     finally:
         runtime.close()
 
@@ -77,9 +79,10 @@ def test_live_origin_survives_runtime_restart_and_task_scope_never_expands(tmp_p
 @pytest.mark.parametrize("value", ["not-an-array", [{}], [True], ["../outside"], ["a" * 32] * 17])
 def test_malformed_origin_references_fail_at_submission(tmp_path, value):
     runtime = AgentRuntime(tmp_path / "tasks.sqlite", targets={"fixture": FakeTarget()})
+    malformed = specification(options={"origin_policies": value})
     try:
         with pytest.raises(AgentTaskError):
-            runtime.submit(specification(options={"origin_policies": value}))
+            runtime.submit(malformed)
     finally:
         runtime.close()
 
@@ -161,8 +164,9 @@ def test_nested_origin_scopes_intersect_instead_of_overriding_outer_authority(tm
     runtime = AgentRuntime(tmp_path / "tasks.sqlite", targets={"fixture": FakeTarget()})
     try:
         with origin_scope(restrictive.managed_origin()), origin_scope(broad.managed_origin()):
+            escaping = specification(roots=[str(outside)])
             with pytest.raises(AgentTaskError, match="origin roots changed"):
-                runtime.submit(specification(roots=[str(outside)]))
+                runtime.submit(escaping)
             task = runtime.submit(specification(roots=[str(allowed)]))
         assert len(runtime.store.get(task.task_id)["spec"]["options"]["origin_policies"]) == 2
     finally:
@@ -181,7 +185,8 @@ def test_legacy_mcp_tool_cannot_submit_a_task_beyond_its_path_ceiling(tmp_path):
         context = ToolCallContext(1, path_policy=PathPolicy([allowed]))
         with pytest.raises(AgentTaskError, match="origin roots changed"):
             tool.invoke({}, ctx=context)
-        assert runtime.list() == [] and origin_policy.current_origin() is None
+        assert runtime.list() == []
+        assert origin_policy.current_origin() is None
     finally:
         runtime.close()
 

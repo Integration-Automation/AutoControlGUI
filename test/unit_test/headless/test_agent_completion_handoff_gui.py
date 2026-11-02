@@ -28,7 +28,8 @@ def test_existing_handoff_action_and_result_keep_the_renewed_review_explicit(mon
                                          'approved_root_count': 1, 'replaced_origins': ['expired-origin']}}}
         tab._completed(SimpleNamespace(task_id='review', status='ok', value=result))
         assert json.loads(tab._output.toPlainText()) == result
-        assert json.loads(tab._handoff_request.toPlainText()) == request and len(requests) == 1
+        assert json.loads(tab._handoff_request.toPlainText()) == request
+        assert len(requests) == 1
     finally:
         tab.close()
         shiboken6.delete(tab)

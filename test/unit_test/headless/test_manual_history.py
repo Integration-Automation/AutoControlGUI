@@ -30,12 +30,18 @@ def test_scope_preserves_existing_variables_results_and_owner(store):
     assert ac.manual_history_scope is manual_module.manual_history_scope
     with execution_scope({"message": "before"}):
         with ac.manual_history_scope(store=store, source_id="editor", script_path="<editor>") as binding:
-            assert isinstance(binding, ac.HistoryBinding) and current_history() is binding
+            assert isinstance(binding, ac.HistoryBinding)
+            assert current_history() is binding
             result = executor.execute_action([["AC_set_var", {"name": "message", "value": "after"}]])
-        assert executor.variables.get("message") == "after" and result
+        assert executor.variables.get("message") == "after"
+        assert result
     row = store.get_run(binding.run_id)
-    assert row.source_type == "manual" and row.source_id == "editor" and row.script_path == "<editor>"
-    assert row.status == "ok" and row.finished_at is not None and row.artifact_path is None
+    assert row.source_type == "manual"
+    assert row.source_id == "editor"
+    assert row.script_path == "<editor>"
+    assert row.status == "ok"
+    assert row.finished_at is not None
+    assert row.artifact_path is None
     assert current_history() is None
 
 
@@ -47,7 +53,8 @@ def test_scope_counts_only_its_own_soft_failures(store, monkeypatch):
     before = recorded_failures()
     with ac.manual_history_scope(store=store) as clean:
         executor.execute_action([["AC_set_var", {"name": "x", "value": 1}]])
-    assert store.get_run(clean.run_id).status == "ok" and recorded_failures() == before
+    assert store.get_run(clean.run_id).status == "ok"
+    assert recorded_failures() == before
     with ac.manual_history_scope(store=store) as failed:
         result = executor.execute_action([["AC_manual_failure"]])
     assert any("controlled failure" in str(value) for value in result.values())
@@ -64,7 +71,8 @@ def test_original_signal_is_retained_and_history_is_error(store, signal):
     with pytest.raises(type(signal)) as caught:
         with ac.manual_history_scope(store=store) as binding:
             raise signal
-    assert caught.value is signal and current_history() is None
+    assert caught.value is signal
+    assert current_history() is None
     assert store.get_run(binding.run_id).status == "error"
 
 
@@ -76,7 +84,8 @@ def test_failed_completion_does_not_replace_pending_signal(store, monkeypatch, s
     with pytest.raises(type(signal)) as caught:
         with ac.manual_history_scope(store=store) as binding:
             raise signal
-    assert caught.value is signal and store.get_run(binding.run_id).status == "running"
+    assert caught.value is signal
+    assert store.get_run(binding.run_id).status == "running"
 
 
 def test_failed_completion_without_original_signal_propagates(store, monkeypatch):
@@ -92,8 +101,9 @@ def test_start_failure_has_no_body_effect_and_restores_parent(store, monkeypatch
         raise HistoryStoreError("start unavailable")
     monkeypatch.setattr(store, "start_run", fail)
     with bound_history(parent):
+        scope = ac.manual_history_scope(store=store)
         with pytest.raises(HistoryStoreError):
-            with ac.manual_history_scope(store=store):
+            with scope:
                 pytest.fail("body executed after failed start")
         assert current_history() is parent
 
@@ -137,18 +147,21 @@ def test_worker_captures_link_to_the_manual_owner(store, tmp_path, worker):
         actions = [["AC_run_dag", {"definition": {"nodes": [{"id": "one", "actions": body}]}}]]
     with ac.manual_history_scope(store=store) as owner:
         executor.execute_action(actions, raise_on_error=True)
-    assert len(store.journals_for_run(owner.run_id)) == 1 and path.exists()
+    assert len(store.journals_for_run(owner.run_id)) == 1
+    assert path.exists()
 
 
 def test_metadata_and_failure_text_are_masked_before_sqlite(store):
     secret = "manual-private-marker"
     with secret_log_scope():
         remember_secret(secret)
+        scope = ac.manual_history_scope(store=store, source_id=secret, script_path=secret)
         with pytest.raises(ValueError):
-            with ac.manual_history_scope(store=store, source_id=secret, script_path=secret) as owner:
+            with scope as owner:
                 raise ValueError(secret)
     row = store.get_run(owner.run_id)
-    assert row.source_id == row.script_path == "***" and secret not in row.error_text
+    assert row.source_id == row.script_path == "***"
+    assert secret not in row.error_text
 
 
 def test_ambient_journal_policy_is_checked_before_linking(store, tmp_path):
@@ -156,10 +169,12 @@ def test_ambient_journal_policy_is_checked_before_linking(store, tmp_path):
     policy.set_client_roots([tmp_path])
     with ac.journal_scope(ac.ActionJournal(tmp_path / "events.jsonl"), path_policy=policy):
         policy.set_client_roots([tmp_path / "elsewhere"])
+        scope = ac.manual_history_scope(store=store)
         with pytest.raises(ac.PathNotAllowedError):
-            with ac.manual_history_scope(store=store):
+            with scope:
                 pytest.fail("body executed outside active roots")
-    assert store.list_runs()[0].status == "error" and store.journals_for_run(store.list_runs()[0].id) == []
+    assert store.list_runs()[0].status == "error"
+    assert store.journals_for_run(store.list_runs()[0].id) == []
 
 
 def test_viewer_is_refused_before_store_effects(store, monkeypatch):
@@ -196,18 +211,21 @@ def test_existing_journal_secret_metadata_is_refused_before_link(store, tmp_path
     with secret_log_scope():
         with ac.journal_scope(ac.ActionJournal(tmp_path / (secret + ".jsonl")), run_id="ambient"):
             remember_secret(secret)
+            scope = ac.manual_history_scope(store=store)
             with pytest.raises(HistoryStoreError, match="resolved secret"):
-                with ac.manual_history_scope(store=store):
+                with scope:
                     pytest.fail("unsafe provenance reached body")
     row = store.list_runs()[0]
-    assert row.status == "error" and store.journals_for_run(row.id) == []
+    assert row.status == "error"
+    assert store.journals_for_run(row.id) == []
     assert secret not in row.error_text
 
 
 @pytest.mark.parametrize("field,value", [("source_id", ""), ("source_id", None), ("script_path", "")])
 def test_invalid_labels_have_no_store_effects(store, field, value):
+    scope = ac.manual_history_scope(store=store, **{field: value})
     with pytest.raises(HistoryStoreError):
-        with ac.manual_history_scope(store=store, **{field: value}):
+        with scope:
             pytest.fail("invalid labels executed")
     assert store._conn is None
 
@@ -220,7 +238,8 @@ def test_error_formatting_does_not_replace_the_original_failure(store):
     with pytest.raises(BrokenError) as caught:
         with ac.manual_history_scope(store=store) as owner:
             raise original
-    assert caught.value is original and store.get_run(owner.run_id).status == "error"
+    assert caught.value is original
+    assert store.get_run(owner.run_id).status == "error"
 
 
 def test_public_binding_annotations_resolve_at_runtime():

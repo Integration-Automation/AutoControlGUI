@@ -82,5 +82,6 @@ def test_a_miss_on_both_reports_each_reason_and_taps_nothing():
 
 
 def test_neither_a_template_nor_a_description_is_refused():
+    session = _Session(_Frame())
     with pytest.raises(ValueError):
-        mobile_commands._self_heal(_Session(_Frame()))
+        mobile_commands._self_heal(session)

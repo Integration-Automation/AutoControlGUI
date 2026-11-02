@@ -47,7 +47,9 @@ def test_workspace_capture_is_offline_restart_stable_and_sync_materializes_an_in
     assert not transport['calls']
     assert ac.SyncWorkspace(config).capture() == 0
     result = workspace.synchronize(options=OPTIONS)
-    assert result.delivered == 1 and result.pending == 0 and not result.conflicts
+    assert result.delivered == 1
+    assert result.pending == 0
+    assert not result.conflicts
     remote, remote_config = build_workspace(tmp_path, 'laptop')
     remote.synchronize(options=OPTIONS)
     generation = remote.materialize(tmp_path / 'cache')
@@ -156,7 +158,8 @@ def test_uncertain_resync_keeps_its_original_source_baseline_across_restart(tmp_
     transport['calls'].clear()
     result = ac.SyncWorkspace(config).synchronize(options=OPTIONS)
     assert result.pending == 0
-    assert transport['calls'][0]['method'] == 'PUT' and transport['calls'][0]['body'] == lost[0]['body']
+    assert transport['calls'][0]['method'] == 'PUT'
+    assert transport['calls'][0]['body'] == lost[0]['body']
     current = transport['server'].get('alice')
     assert any(entry.entry_id == 'font_pt' for entry in current.entries)
     assert all(entry.value != {'value': 'dark'} for entry in current.entries)
@@ -205,7 +208,8 @@ def test_workspace_refreshes_credentials_and_masks_late_transport_errors(tmp_pat
     assert transport['calls'][0]['headers']['X-Signaling-Secret'] == old
     assert all(call['headers']['X-Signaling-Secret'] == new for call in transport['calls'][1:])
     for path in Path(config['outbox_path']).parent.glob('*.sqlite3'):
-        assert old.encode() not in path.read_bytes() and new.encode() not in path.read_bytes()
+        assert old.encode() not in path.read_bytes()
+        assert new.encode() not in path.read_bytes()
 
 
 def test_configured_network_credential_is_known_before_capturing_source_data(tmp_path, transport, monkeypatch):
@@ -215,8 +219,9 @@ def test_configured_network_credential_is_known_before_capturing_source_data(tmp
     config['profiles'] = [{'kind': 'settings', 'state_path': str(tmp_path / 'desktop/state.sqlite3'),
                            'source': {'path': str(source)}}]
     monkeypatch.setenv('WORKSPACE_CREDENTIAL', 'short-lease-key')
+    workspace = ac.SyncWorkspace(config)
     with pytest.raises(ac.ConfigSyncError, match='credential'):
-        ac.SyncWorkspace(config).synchronize(options={**OPTIONS, 'secret_env': 'WORKSPACE_CREDENTIAL'})
+        workspace.synchronize(options={**OPTIONS, 'secret_env': 'WORKSPACE_CREDENTIAL'})
     assert not transport['calls']
     for path in (tmp_path / 'desktop').glob('*.sqlite3'):
         assert b'short-lease-key' not in path.read_bytes()
@@ -235,8 +240,9 @@ def test_credential_rotation_is_revalidated_before_preparing_or_sending_an_edit(
             monkeypatch.setenv('WORKSPACE_CREDENTIAL', 'becomes-secret')
     transport['after'] = rotate
     transport['calls'].clear()
+    reloaded = ac.SyncWorkspace(config)
     with pytest.raises(ac.SyncWorkspaceError, match='snapshot'):
-        ac.SyncWorkspace(config).synchronize(options={**OPTIONS, 'secret_env': 'WORKSPACE_CREDENTIAL'})
+        reloaded.synchronize(options={**OPTIONS, 'secret_env': 'WORKSPACE_CREDENTIAL'})
     assert all(call['method'] == 'GET' for call in transport['calls'])
     queue = ac.SyncOutbox(config['outbox_path'])
     assert all(item.prepared is None for item in queue.pending(endpoint=ENDPOINT, user_id='alice'))
@@ -277,12 +283,14 @@ def test_second_coordinator_cannot_capture_while_the_first_owns_the_namespace(tm
     worker.start()
     try:
         assert entered.wait(5)
+        second = ac.SyncWorkspace(config)
         with pytest.raises(ac.SyncWorkspaceError, match='active'):
-            ac.SyncWorkspace(config).capture()
+            second.capture()
     finally:
         release.set()
         worker.join(timeout=10)
-    assert not worker.is_alive() and results[0].pending == 0
+    assert not worker.is_alive()
+    assert results[0].pending == 0
 
 
 def test_cancelled_constructor_and_invalid_configuration_open_no_databases(tmp_path, monkeypatch):
@@ -326,7 +334,8 @@ def test_historical_workspace_reset_is_idempotent_after_source_selection_changes
     assert changed.capture() == 1
     before = len(transport['calls'])
     replay = changed.control(request, options=OPTIONS)
-    assert replay.revision == original.revision and len(transport['calls']) == before
+    assert replay.revision == original.revision
+    assert len(transport['calls']) == before
     assert changed.status()['outbox']['pending'] == 1
 
 
@@ -350,7 +359,8 @@ def test_workspace_path_authority_is_rechecked_after_each_rpc(tmp_path, transpor
     transport['after'] = withdraw
     with pytest.raises(PathNotAllowedError):
         workspace.synchronize(options=OPTIONS)
-    assert len(transport['calls']) == 1 and transport['calls'][0]['method'] == 'GET'
+    assert len(transport['calls']) == 1
+    assert transport['calls'][0]['method'] == 'GET'
 
 
 def test_seven_selected_domains_converge_without_activating_received_definitions(tmp_path, transport):
@@ -393,8 +403,10 @@ def test_resync_baseline_and_control_intent_roll_back_together_on_a_late_failure
     with sqlite3.connect(config['outbox_path']) as connection:
         connection.execute("CREATE TRIGGER reject_second_baseline BEFORE INSERT ON sync_workspace_baselines "
                            "WHEN NEW.kind='settings' BEGIN SELECT RAISE(ABORT,'controlled baseline failure'); END")
+    workspace = ac.SyncWorkspace(config)
+    request = ac.SyncControlRequest('full_resync', discard_pending=True)
     with pytest.raises(ac.ConfigStoreError):
-        ac.SyncWorkspace(config).control(ac.SyncControlRequest('full_resync', discard_pending=True), options=OPTIONS)
+        workspace.control(request, options=OPTIONS)
     with sqlite3.connect(config['outbox_path']) as connection:
         assert connection.execute('SELECT count(*) FROM sync_workspace_baselines').fetchone()[0] == 0
         assert connection.execute('SELECT count(*) FROM sync_controls').fetchone()[0] == 0

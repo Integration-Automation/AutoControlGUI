@@ -35,6 +35,7 @@ _REQUEST_FIELDS = {
     "create_authorized_completion": {"task_id", "snapshot", "authorization_review", "note"},
 }
 OPERATIONS = tuple(_REQUEST_FIELDS) + HANDOFF_OPERATIONS
+_CAPTURE_KEY = "$capture"
 _STOPPED = frozenset({"paused", "waiting_user", "recovering", "cancelled", "timed_out", "failed"})
 _POINTER_TOOLS = ("AC_click_mouse", "AC_set_mouse_position", "AC_mouse_scroll", "AC_press_mouse", "AC_release_mouse",
                   "AC_android_tap", "AC_android_swipe")
@@ -384,7 +385,7 @@ def _source_issues(spec: AgentTaskSpec, receipts: list[dict]) -> list[str]:
         return []
     try:
         return [] if verified_prefix(spec, receipts) else ["source_readback_mismatch"]
-    except (KeyError, TypeError, ValueError, AgentTaskError):
+    except (KeyError, TypeError, ValueError):
         return ["source_readback_mismatch"]
 
 
@@ -422,12 +423,12 @@ def _capture_names(value: Any) -> set[str]:
 
 
 def _capture_reference(value: dict) -> set[str]:
-    if "$capture" not in value:
+    if _CAPTURE_KEY not in value:
         return set()
-    if set(value) - {"$capture", "transform"} or not isinstance(value["$capture"], str) or not value["$capture"]:
+    if set(value) - {_CAPTURE_KEY, "transform"} or not isinstance(value[_CAPTURE_KEY], str) or not value[_CAPTURE_KEY]:
         raise AgentTaskError("capture references require a fresh named capture")
     _check_transform(value.get("transform", "identity"))
-    return {value["$capture"]}
+    return {value[_CAPTURE_KEY]}
 
 
 def _action_issues(actions: list[dict]) -> list[str]:

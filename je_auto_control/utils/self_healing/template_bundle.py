@@ -1,6 +1,5 @@
 """Immutable bounded template revision bundles and content-derived active-file state."""
 import base64
-import binascii
 import json
 import os
 from dataclasses import dataclass, field
@@ -42,7 +41,12 @@ class TemplateBundle:
             current = None
         original, candidate = digest(self.original), digest(self.candidate)
         state: Literal["original", "candidate", "conflict", "missing"]
-        state = "missing" if current is None else "original" if current == original else "candidate"
+        if current is None:
+            state = "missing"
+        elif current == original:
+            state = "original"
+        else:
+            state = "candidate"
         if current is not None and current not in (original, candidate):
             state = "conflict"
         fmt, size = image_metadata(self.original)
@@ -112,7 +116,7 @@ def read_bundle(bundle_path: str | Path, policy: Optional[PathPolicy]) -> Templa
     data = _read(path, 48 * 1024 * 1024)
     try:
         body = json.loads(data, object_pairs_hook=_unique_object)
-    except (ValueError, UnicodeError) as error:
+    except ValueError as error:
         raise TemplateRevisionError("candidate bundle must be UTF-8 JSON") from error
     body = _schema(body)
     target = _target(body["target"], path, policy)
@@ -156,7 +160,7 @@ def _image(value: object) -> bytes:
         raise TemplateRevisionError("invalid candidate bundle image")
     try:
         result = base64.b64decode(value, validate=True)
-    except (ValueError, binascii.Error) as error:
+    except ValueError as error:  # includes binascii.Error
         raise TemplateRevisionError("invalid candidate bundle image encoding") from error
     if not result or len(result) > MAX_IMAGE_BYTES:
         raise TemplateRevisionError("candidate bundle image exceeds 16 MiB")

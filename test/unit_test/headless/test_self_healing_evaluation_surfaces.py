@@ -23,7 +23,9 @@ def tool():
 
 
 def test_facade_command_mcp_and_builder_return_shared_report():
-    assert ac.evaluate_locators and ac.TemplateFrameLocator and ac.VLMFrameLocator
+    assert ac.evaluate_locators
+    assert ac.TemplateFrameLocator
+    assert ac.VLMFrameLocator
     actions = [["AC_self_heal_evaluate", {"path": str(DATASET)}]]
     result = next(iter(executor.execute_action(actions, raise_on_error=True).values()))
     remote = tool().handler(str(DATASET))
@@ -52,8 +54,10 @@ def test_mcp_checks_explicit_policy_on_nested_assets(tmp_path):
     manifest.write_bytes(DATASET.read_bytes())
     # The manifest itself is allowed; no asset is in its isolated root.
     ctx = ToolCallContext("evaluation", path_policy=PathPolicy([manifest]))
+    handler = tool().handler
+    target = str(manifest)
     with pytest.raises(PathNotAllowedError):
-        tool().handler(str(manifest), ctx=ctx)
+        handler(target, ctx=ctx)
 
 
 def test_mcp_cancels_between_pairs_without_partial_success():
@@ -66,6 +70,9 @@ def test_mcp_cancels_between_pairs_without_partial_success():
             ctx.cancelled_event.set()
 
     ctx.notifier = notify
+    handler = tool().handler
+    target = str(DATASET)
     with pytest.raises(OperationCancelledError):
-        tool().handler(str(DATASET), ctx=ctx)
-    assert 1 in counts and 2 not in counts
+        handler(target, ctx=ctx)
+    assert 1 in counts
+    assert 2 not in counts

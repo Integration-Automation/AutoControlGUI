@@ -22,14 +22,19 @@ def test_facade_capture_and_filtered_read_keep_original_results(tmp_path, monkey
     path = tmp_path / "public.jsonl"
     actions = [["AC_public_journal_probe", {"value": "${message}"}]]
     result = ac.execute_action_with_journal(actions, path, variables={"message": "hello"}, run_id="public")
-    assert seen == ["hello"] and result["failed_actions"] == 0
-    assert result["record"] and result["run_id"] == "public"
+    assert seen == ["hello"]
+    assert result["failed_actions"] == 0
+    assert result["record"]
+    assert result["run_id"] == "public"
     assert ac.read_events(path, run_id="other") == []
     assert [event.status for event in ac.read_events(path, run_id="public")] == ["incomplete", "ok"]
-    assert actions[0][1]["value"] == "${message}" and current_journal() is None
+    assert actions[0][1]["value"] == "${message}"
+    assert current_journal() is None
     for name in action_journal.__all__:
-        assert name in ac.__all__ and getattr(ac, name) is getattr(action_journal, name)
-    assert ac.JournalLink is JournalLink and "JournalLink" in ac.__all__
+        assert name in ac.__all__
+        assert getattr(ac, name) is getattr(action_journal, name)
+    assert ac.JournalLink is JournalLink
+    assert "JournalLink" in ac.__all__
 
 
 def _script(tmp_path, actions):
@@ -46,7 +51,8 @@ def test_cli_capture_keeps_stdout_and_variable_execution(tmp_path, monkeypatch, 
     assert main(["run", script, "--var", "message=hello", "--journal", str(path),
                  "--journal-run-id", "cli"]) == 0
     payload = json.loads(capsys.readouterr().out)
-    assert "journal_path" not in payload and seen == ["hello"]
+    assert "journal_path" not in payload
+    assert seen == ["hello"]
     events = action_journal.read_events(path)
     assert [event.status for event in events] == ["incomplete", "ok"]
     assert all(event.run_id == "cli" for event in events)
@@ -82,8 +88,10 @@ def test_cli_foreign_destination_is_preserved_before_effects(tmp_path, monkeypat
     path = tmp_path / "foreign.txt"
     path.write_bytes(b"leave this file intact\n")
     assert main(["run", script, "--journal", str(path)]) == 1
-    assert seen == [] and path.read_bytes() == b"leave this file intact\n"
-    assert "error:" in capsys.readouterr().err and current_journal() is None
+    assert seen == []
+    assert path.read_bytes() == b"leave this file intact\n"
+    assert "error:" in capsys.readouterr().err
+    assert current_journal() is None
 
 
 def test_cli_run_id_requires_capture(tmp_path, capsys):
@@ -123,7 +131,8 @@ def test_cli_capture_preserves_cancellation_and_restores_context(tmp_path, monke
     path = tmp_path / "cancelled.jsonl"
     with pytest.raises(asyncio.CancelledError) as caught:
         main(["run", script, "--journal", str(path)])
-    assert caught.value is signal and current_journal() is None
+    assert caught.value is signal
+    assert current_journal() is None
     assert [event.status for event in action_journal.read_events(path)] == ["incomplete", "cancelled"]
 
 
@@ -139,13 +148,15 @@ def test_cli_journal_corruption_never_prints_raw_input(tmp_path, capsys):
     path.write_text('{"password":"fake-private-value"}\n', encoding="utf-8")
     assert main(["journal", str(path)]) == 1
     captured = capsys.readouterr()
-    assert captured.out == "" and "fake-private-value" not in captured.err
+    assert captured.out == ""
+    assert "fake-private-value" not in captured.err
 
 
 def test_cli_journal_missing_path_is_empty_without_creation(tmp_path, capsys):
     path = tmp_path / "absent.jsonl"
     assert main(["journal", str(path)]) == 0
-    assert json.loads(capsys.readouterr().out) == [] and not path.exists()
+    assert json.loads(capsys.readouterr().out) == []
+    assert not path.exists()
 
 
 @pytest.mark.parametrize("command", ["run", "journal"])
@@ -158,7 +169,8 @@ def test_cli_journal_paths_use_allowed_roots(tmp_path, monkeypatch, capsys, comm
     args = ["journal", str(path)] if command == "journal" else [
         "run", _script(tmp_path, [["AC_screen_size"]]), "--journal", str(path)]
     assert main(args) == 1
-    assert "error:" in capsys.readouterr().err and not path.exists()
+    assert "error:" in capsys.readouterr().err
+    assert not path.exists()
 
 
 def test_public_and_cli_journals_work_without_qt_or_sqlite(tmp_path):

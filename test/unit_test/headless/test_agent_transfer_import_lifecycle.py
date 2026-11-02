@@ -169,7 +169,8 @@ def test_stopping_an_attached_observer_keeps_the_same_service_import_and_runtime
                 delivered = host.runtime.transfers._life.importer._state.jobs.ledger.read(connection, identifier)
             assert delivered['generation'] == before['generation']
             assert delivered['queue_id'] == before['queue_id']
-            assert after['scope'] == original['scope'] and after['expires'] == original['expires']
+            assert after['scope'] == original['scope']
+            assert after['expires'] == original['expires']
             assert host.runtime.list() == []
         finally:
             release.set()

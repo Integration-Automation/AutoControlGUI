@@ -36,7 +36,8 @@ def test_actual_private_file_is_refused_before_opening_selected_bytes(tmp_path, 
                      'evidence': runtime.evidence.directory(initial) / 'report.json',
                      'cache': runtime.transfers.source._cache.path}
             private = paths[kind]
-            assert private.is_file() and private.stat().st_size > 0
+            assert private.is_file()
+            assert private.stat().st_size > 0
             task = completed_file(runtime, tmp_path, private)
             actual_open = transfer_files.os.open
 
@@ -71,16 +72,19 @@ def test_current_private_root_prevents_reading_an_older_approved_snapshot(tmp_pa
     with completed_source(tmp_path) as (runtime, task, output, _body, _users):
         review = review_for(runtime, task)
         exported = create_for(runtime, review)
+
+        def attempt():
+            if boundary == 'retry':
+                return create_for(runtime, review)
+            request = {'export_id': exported['export_id']}
+            if boundary == 'chunk':
+                request['sha256'] = exported['manifest']['files'][0]['chunks'][0]
+            return runtime.transfers.peer(boundary, request)
+
         with monkeypatch.context() as scoped:
             scoped.setattr(type(runtime.evidence), 'root', property(lambda _self: output.parent))
             with pytest.raises(AgentTaskError, match='private'):
-                if boundary == 'retry':
-                    create_for(runtime, review)
-                else:
-                    request = {'export_id': exported['export_id']}
-                    if boundary == 'chunk':
-                        request['sha256'] = exported['manifest']['files'][0]['chunks'][0]
-                    runtime.transfers.peer(boundary, request)
+                attempt()
 
 
 def test_path_authority_deadline_is_checked_before_reading_a_cached_chunk(tmp_path, monkeypatch):

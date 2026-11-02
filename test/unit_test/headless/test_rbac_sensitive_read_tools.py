@@ -66,7 +66,8 @@ def test_sensitive_read_call_is_refused_before_handler_invocation(name):
             assert reply["error"]["code"] == FORBIDDEN_CODE
             assert called == []
         else:
-            assert names == [name] and "result" in reply
+            assert names == [name]
+            assert "result" in reply
     assert called == [True, True]
 
 
@@ -109,7 +110,8 @@ def test_http_user_tokens_cannot_bypass_sensitive_tool_policy(tmp_path):
                     assert response.status == 200
                     reply = json.loads(response.read())
                     if role == Role.VIEWER:
-                        assert reply["error"]["code"] == FORBIDDEN_CODE and called == []
+                        assert reply["error"]["code"] == FORBIDDEN_CODE
+                        assert called == []
                     else:
                         assert "result" in reply
                 finally:

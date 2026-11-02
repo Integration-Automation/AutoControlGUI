@@ -179,7 +179,8 @@ def _until(predicate, seconds=3.0):
 
 def test_wire_layout_matches_the_native_frames():
     assert (wire.REQUEST_SIZE, wire.REPLY_SIZE) == (9384, 8312)
-    assert wire.REQUEST_OFFSETS["data"] == 1188 and wire.REPLY_OFFSETS["data"] == 120
+    assert wire.REQUEST_OFFSETS["data"] == 1188
+    assert wire.REPLY_OFFSETS["data"] == 120
     frame = wire.ServiceRequest(wire.OP_WRITE, (1, 2), ticket=((3, 4), (5, 6)), data=b"abc").pack()
     assert len(frame) == wire.REQUEST_SIZE
     assert frame[wire.REQUEST_OFFSETS["ticket"]:wire.REQUEST_OFFSETS["ticket"] + 8] == struct.pack("<Q", 3)
@@ -187,10 +188,12 @@ def test_wire_layout_matches_the_native_frames():
 
 
 def test_wire_refuses_oversized_and_malformed_frames():
+    oversized = wire.ServiceRequest(wire.OP_WRITE, (1, 1), data=b"x" * (wire.DATA_BYTES + 1))
     with pytest.raises(AgentTaskError):
-        wire.ServiceRequest(wire.OP_WRITE, (1, 1), data=b"x" * (wire.DATA_BYTES + 1)).pack()
+        oversized.pack()
+    overlong = wire.ServiceRequest(wire.OP_START, (1, 1), arguments=("x" * wire.ARGUMENT_BYTES,))
     with pytest.raises(AgentTaskError):
-        wire.ServiceRequest(wire.OP_START, (1, 1), arguments=("x" * wire.ARGUMENT_BYTES,)).pack()
+        overlong.pack()
     with pytest.raises(AgentTaskError):
         wire.unpack_reply(b"\0" * wire.REPLY_SIZE)
     with pytest.raises(AgentTaskError):
@@ -206,7 +209,9 @@ def test_round_trip_then_idempotent_retirement():
     assert len(service.records) == 1
     channel.close()
     channel.close()
-    assert channel.retired and service.transport_closed and service.calls.count(wire.OP_CLOSE) == 1
+    assert channel.retired
+    assert service.transport_closed
+    assert service.calls.count(wire.OP_CLOSE) == 1
 
 
 def test_lost_open_and_start_acknowledgments_never_launch_twice():
@@ -214,7 +219,8 @@ def test_lost_open_and_start_acknowledgments_never_launch_twice():
     service.drop_once = {wire.OP_OPEN_TOP, wire.OP_START}
     channel = OwnerServiceChannel(service, 1)
     assert channel.request("echo", "x", timeout=5) == "x"
-    assert len(service.leases) == 1 and len(service.records) == 1
+    assert len(service.leases) == 1
+    assert len(service.records) == 1
     assert service.calls.count(wire.OP_START) == 2
     channel.close()
 
@@ -261,7 +267,8 @@ def test_unavailable_service_refuses_and_still_retires_without_a_helper():
     channel = OwnerServiceChannel(service, 1)
     with pytest.raises(AgentTaskError, match="unavailable"):
         channel.request("echo", {}, timeout=5)
-    assert channel.retired and not service.records
+    assert channel.retired
+    assert not service.records
 
 
 def test_close_from_another_thread_stops_a_waiting_request():
@@ -281,8 +288,10 @@ def test_close_from_another_thread_stops_a_waiting_request():
     started = time.monotonic()
     channel.close()
     waiter.join(timeout=5)
-    assert not waiter.is_alive() and time.monotonic() - started < 5
-    assert "result" not in outcome and "closed" in str(outcome["error"])
+    assert not waiter.is_alive()
+    assert time.monotonic() - started < 5
+    assert "result" not in outcome
+    assert "closed" in str(outcome["error"])
     assert channel.retired
 
 
@@ -300,7 +309,8 @@ def test_reply_read_after_close_began_is_not_delivered():
 
     with pytest.raises(AgentTaskError, match="closed"):
         channel.request("echo", "late", timeout=5, check=close_once_the_reply_is_buffered)
-    assert closers and channel.retired
+    assert closers
+    assert channel.retired
 
 
 def test_unsettled_helper_keeps_the_channel_unretired_until_a_later_close():
@@ -310,7 +320,8 @@ def test_unsettled_helper_keeps_the_channel_unretired_until_a_later_close():
     channel.request("echo", 1, timeout=5)
     with pytest.raises(AgentTaskError, match="not retired"):
         channel.close()
-    assert not channel.retired and not service.transport_closed
+    assert not channel.retired
+    assert not service.transport_closed
     service.settled = True
     channel.close()
     assert channel.retired
@@ -336,7 +347,8 @@ def test_nested_channel_opens_a_child_lease_of_its_parent():
     service.drop_once = {wire.OP_OPEN_CHILD}
     channel = OwnerServiceChannel(service, 2, parent=service.grant)
     assert channel.request("echo", "nested", timeout=5) == "nested"
-    assert service.calls.count(wire.OP_OPEN_CHILD) == 2 and wire.OP_OPEN_TOP not in service.calls
+    assert service.calls.count(wire.OP_OPEN_CHILD) == 2
+    assert wire.OP_OPEN_TOP not in service.calls
     assert len(service.leases) == 1
     channel.close()
     assert channel.retired
@@ -348,7 +360,8 @@ def test_nested_channel_with_a_copied_or_wrong_capability_is_refused_and_retired
     channel = OwnerServiceChannel(service, 2, parent=forged)
     with pytest.raises(AgentTaskError, match="refused to open a lease"):
         channel.request("echo", 1, timeout=5)
-    assert channel.retired and not service.leases
+    assert channel.retired
+    assert not service.leases
 
 
 def test_idle_channel_keeps_its_lease_renewed_until_closed():
@@ -361,7 +374,8 @@ def test_idle_channel_keeps_its_lease_renewed_until_closed():
     assert time.monotonic_ns() < service.deadline
     assert channel.request("echo", 2, timeout=5) == 2
     channel.close()
-    assert channel.retired and _until(lambda: not channel._renewer.is_alive())
+    assert channel.retired
+    assert _until(lambda: not channel._renewer.is_alive())
 
 
 def test_refused_renewal_reports_an_expired_lease_and_retires():
@@ -394,7 +408,8 @@ def test_a_start_with_an_unknown_outcome_is_never_reported_retired():
     channel = OwnerServiceChannel(service, 1)
     with pytest.raises(AgentTaskError, match="did not answer"):
         channel.request("echo", 1, timeout=0.5)
-    assert not channel.retired and service.calls.count(wire.OP_CLOSE) >= 1
+    assert not channel.retired
+    assert service.calls.count(wire.OP_CLOSE) >= 1
     with pytest.raises(AgentTaskError, match="unknown start"):
         channel.close()
     assert not channel.retired
@@ -425,7 +440,8 @@ def test_connection_turned_away_before_a_lease_is_busy_not_broken():
     channel = OwnerServiceChannel(service, 1)
     with pytest.raises(AgentControlBusy, match="turned the connection away"):
         channel.request("echo", 1, timeout=5)
-    assert channel.retired and not service.calls
+    assert channel.retired
+    assert not service.calls
 
 
 def test_renewer_survives_a_failed_connection_without_a_thread_error(monkeypatch):
@@ -437,7 +453,8 @@ def test_renewer_survives_a_failed_connection_without_a_thread_error(monkeypatch
     channel = OwnerServiceChannel(service, 1)
     assert channel.request("echo", 1, timeout=5) == 1
     assert _until(lambda: not channel._renewer.is_alive())
-    assert not raised and channel._lease_lost
+    assert not raised
+    assert channel._lease_lost
 
 
 def test_close_learns_a_lost_start_ticket_by_replay_and_retires():
@@ -449,4 +466,5 @@ def test_close_learns_a_lost_start_ticket_by_replay_and_retires():
     assert not channel.retired
     service.drop_always = set()  # The service answers again: the replay returns the kept ticket.
     channel.close()
-    assert channel.retired and wire.OP_OBSERVE in service.calls
+    assert channel.retired
+    assert wire.OP_OBSERVE in service.calls

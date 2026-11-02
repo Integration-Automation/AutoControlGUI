@@ -59,7 +59,8 @@ def test_changing_source_clears_review_and_prevents_stale_import(journal, panel,
     panel._start_generate()
     idle(app, panel)
     panel._run_id.setText("other")
-    assert panel._candidate is None and not panel._code.toPlainText()
+    assert panel._candidate is None
+    assert not panel._code.toPlainText()
 
 
 def test_builder_import_is_explicit_and_never_dispatches(journal, app):
@@ -133,7 +134,8 @@ def test_viewer_worker_cannot_open_source_after_leaving_registration_scope(app, 
     outcomes = []
     worker.finished.connect(outcomes.append)
     worker.run()
-    assert outcomes[0].status == "error" and outcomes[0].candidate is None
+    assert outcomes[0].status == "error"
+    assert outcomes[0].candidate is None
     worker.deleteLater()
     app.processEvents()
 
@@ -158,7 +160,8 @@ def test_completed_export_is_not_relabelled_cancelled(journal, app, tmp_path, mo
     outcomes = []
     worker.finished.connect(outcomes.append)
     worker.run()
-    assert outcomes[0].status == "ok" and output.exists()
+    assert outcomes[0].status == "ok"
+    assert output.exists()
     worker.deleteLater()
     app.processEvents()
 
@@ -185,7 +188,8 @@ def test_close_cancels_generation_and_discards_late_result(journal, panel, app, 
     finally:
         release.set()
     idle(app, panel)
-    assert panel._candidate is None and not panel._code.toPlainText()
+    assert panel._candidate is None
+    assert not panel._code.toPlainText()
 
 
 def test_owned_dialog_retranslates_and_releases_language_listener(app):

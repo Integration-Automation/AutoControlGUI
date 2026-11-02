@@ -58,11 +58,12 @@ def test_workspace_status_is_drive_only_and_prestart_refusal_has_no_database(tmp
         assert capability_for_tool('ac_sync_workspace', True) == 'drive_input'
     ctx = ToolCallContext('cancelled')
     ctx.cancelled_event.set()
+    handler = tool().handler
     with pytest.raises(OperationCancelledError):
-        tool().handler(config, ctx=ctx)
+        handler(config, ctx=ctx)
     ctx = ToolCallContext('confined', path_policy=PathPolicy([tmp_path / 'other']))
     with pytest.raises(PathNotAllowedError):
-        tool().handler(config, ctx=ctx)
+        handler(config, ctx=ctx)
     assert not list(tmp_path.glob('*.sqlite3'))
 
 
@@ -72,6 +73,8 @@ def test_workspace_status_is_drive_only_and_prestart_refusal_has_no_database(tmp
     ('full_resync', {'discard_pending': 'yes'}), ('retire', {})])
 def test_workspace_routing_rejects_invalid_arguments_before_io(tmp_path, monkeypatch, operation, options):
     monkeypatch.setenv('AUTOCONTROL_ALLOWED_PATH_ROOTS', str(tmp_path))
+    handler = tool().handler
+    config = configuration(tmp_path)
     with pytest.raises(ac.ConfigSyncError):
-        tool().handler(configuration(tmp_path), operation, options)
+        handler(config, operation, options)
     assert not list(tmp_path.glob('*.sqlite3'))

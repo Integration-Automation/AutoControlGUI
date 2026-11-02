@@ -30,8 +30,9 @@ def test_unknown_destination_operations_are_typed_boundary_errors(operation):
 def test_invalid_destination_request_never_reaches_an_adapter(field, value):
     calls = []
     peer = TransferPeer(lambda *_args: calls.append(True))
+    invalid = {**request(), field: value}
     with pytest.raises(AgentTaskError):
-        peer.manage('destination', 'f' * 64, 'review_import', {**request(), field: value}, 3)
+        peer.manage('destination', 'f' * 64, 'review_import', invalid, 3)
     assert calls == []
 
 
@@ -51,8 +52,9 @@ def test_destination_review_reply_is_closed_and_binds_the_requested_export(chang
     else:
         reply['review_expires'] = False
     peer = TransferPeer(lambda *_args: deepcopy(reply))
+    reviewed = request()
     with pytest.raises(AgentTaskError):
-        peer.manage('destination', 'f' * 64, 'review_import', request(), 3)
+        peer.manage('destination', 'f' * 64, 'review_import', reviewed, 3)
 
 
 @pytest.mark.parametrize('field,value', [('import_id', 'wrong'), ('state', True), ('expires', True),

@@ -153,5 +153,6 @@ def test_local_model_never_follows_redirects_and_only_receives_offered_tools():
 @pytest.mark.parametrize("options", [{"model": "some-cloud-model"},
                                      {"model": "local", "endpoint": "https://example.org"}, {}])
 def test_local_backend_rejects_remote_or_implicit_models(options):
+    spec = task_spec(mode="ollama", options=options)
     with pytest.raises(AgentTaskError):
-        OllamaTaskBackend(task_spec(mode="ollama", options=options))
+        OllamaTaskBackend(spec)

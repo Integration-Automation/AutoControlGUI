@@ -62,16 +62,18 @@ def test_selection_round_trips_an_immutable_detached_criterion_selection():
     None, [], True,
 ])
 def test_selection_rejects_ambiguous_or_nonportable_wire_objects(value):
+    selection = selection_type()
     with pytest.raises(AgentTaskError):
-        selection_type().from_dict(value)
+        selection.from_dict(value)
 
 
 @pytest.mark.parametrize(('criterion', 'names'), [
     (True, ()), (-1, ()), (0, ['report.csv']), (0, ('../report.csv',)),
 ])
 def test_selection_constructor_keeps_the_same_immutable_value_bounds(criterion, names):
+    selection = selection_type()
     with pytest.raises(AgentTaskError):
-        selection_type()(criterion, names)
+        selection(criterion, names)
 
 
 @pytest.mark.parametrize('names', [[], ['報告.csv'], ['e\u0301.csv']])

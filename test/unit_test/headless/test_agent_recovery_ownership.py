@@ -63,7 +63,8 @@ def owned_request(stopped, *, reauthorize=False):
 def test_admin_source_owned_child_is_adopted_without_broadening_reads(stopped, monkeypatch):
     client, host, target, _users, owner, actor, batch, definition, _source = stopped
     value, request = owned_request(stopped)
-    assert value["ownership"]["owner"] == "owner" and value["ownership"]["actor"] == "reviewer"
+    assert value["ownership"]["owner"] == "owner"
+    assert value["ownership"]["actor"] == "reviewer"
     assert "store_path" not in str(value["ownership"])
     child = recovery(stopped, "create", request)["task_id"]
     assert recovery(stopped, "create", request)["task_id"] == child
@@ -79,7 +80,8 @@ def test_admin_source_owned_child_is_adopted_without_broadening_reads(stopped, m
         selected = review(client, batch, definition, decisions=selected["decisions"])
         assert selected["can_approve"]
         result = run_dag(definition, batch_id=batch["batch_id"], recovery=approval(selected))
-    assert result.succeeded and target.count == 3
+    assert result.succeeded
+    assert target.count == 3
 
 
 def test_default_admin_recovery_keeps_legacy_caller_ownership(stopped):
@@ -105,7 +107,8 @@ def test_owned_recovery_rejects_unreviewed_and_caller_authored_identity(stopped,
         request.pop("owner_policy")
     with pytest.raises(AgentTaskError):
         recovery(stopped, "create", request)
-    assert len(stopped[1].runtime.list()) == 1 and stopped[2].count == 1
+    assert len(stopped[1].runtime.list()) == 1
+    assert stopped[2].count == 1
 
 
 @pytest.mark.parametrize("user,role", [("owner", "viewer"), ("reviewer", "viewer"), ("reviewer", "operator")])
@@ -129,7 +132,9 @@ def test_maintenance_retires_owned_successor_when_reviewer_loses_cross_owner_aut
     # cancelling and a later one settles it.
     until(lambda: runtime.maintain() or runtime.get(child).state != "cancelling")
     result = runtime.get(child)
-    assert result.state == "cancelled" and result.metadata["input_released"] is True and stopped[2].count == 1
+    assert result.state == "cancelled"
+    assert result.metadata["input_released"] is True
+    assert stopped[2].count == 1
 
 
 def test_revocation_during_grounding_cannot_reach_successor_input(stopped, monkeypatch):
@@ -150,7 +155,8 @@ def test_revocation_during_grounding_cannot_reach_successor_input(stopped, monke
         # successor's input is refused before dispatch, which is what the assertions below hold.
         with pytest.raises((AuthorizationError, CancelledError)):
             instance.act(child, {"tool": "AC_increment", "observation_id": frame.observation_id})
-    assert target.count == 1 and [item["status"] for item in instance.store.actions(child)] == ["failed"]
+    assert target.count == 1
+    assert [item["status"] for item in instance.store.actions(child)] == ["failed"]
 
 
 @pytest.mark.parametrize("reauthorize", [False, True])
@@ -164,7 +170,8 @@ def test_owned_admission_failure_rolls_back_task_lineage_and_both_audits(stopped
     with stopped[1].runtime.store.connection() as connection:
         for table in ("agent_task_recoveries", "agent_task_authorizations", "agent_recovery_owners"):
             assert connection.execute("SELECT COUNT(*) FROM " + table).fetchone()[0] == 0
-    assert len(stopped[1].runtime.list()) == 1 and stopped[2].count == 1
+    assert len(stopped[1].runtime.list()) == 1
+    assert stopped[2].count == 1
 
 
 def test_owned_and_default_recovery_retries_cannot_switch_accepted_policy(stopped):
@@ -220,7 +227,8 @@ def test_changed_live_owner_role_requires_a_fresh_ownership_review_even_when_inp
         recovery(stopped, "create", request)
     _value, fresh = owned_request(stopped)
     assert fresh["ownership_review"] != request["ownership_review"]
-    assert recovery(stopped, "create", fresh)["state"] == "queued" and stopped[2].count == 1
+    assert recovery(stopped, "create", fresh)["state"] == "queued"
+    assert stopped[2].count == 1
 
 
 def test_ownership_audit_outlives_child_retention_until_source_retention_cascades_it(standalone):

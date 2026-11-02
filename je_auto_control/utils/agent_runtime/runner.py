@@ -39,18 +39,15 @@ def run_task(runtime: Any, task_id: str, *, backend: Any = None) -> AgentTaskRes
 
 def _loop(runtime: Any, task_id: str, spec: AgentTaskSpec, backend: Any, guard: LoopGuard) -> AgentTaskResult:
     stale_attempts = 0
+    step_guard = None if spec.mode == "skill" else guard
     while runtime.get(task_id).state in {"queued", "running"}:
         observation = runtime.observe(task_id)
         receipts = effective_actions(runtime.store.actions(task_id))
         if spec.mode == "skill":
-            if not verified_prefix(spec, receipts):
-                raise AgentTaskError("previous workflow read-back did not match; review before continuing")
-            if len(receipts) >= len(spec.actions):
-                return runtime.finish(task_id)
-            proposal = thaw(spec.actions[len(receipts)])
+            proposal = _skill_proposal(spec, receipts)
         else:
             proposal = _decision(runtime, task_id, spec, backend, observation.data, receipts)
-        if proposal.get("stop"):
+        if proposal is None or proposal.get("stop"):
             return runtime.finish(task_id)
         values = captures(spec, receipts)
         action = _grounded_action(proposal, values, observation.observation_id)
@@ -62,8 +59,17 @@ def _loop(runtime: Any, task_id: str, spec: AgentTaskSpec, backend: Any, guard: 
             stale_attempts += 1
             continue
         stale_attempts = 0
-        _check_step(proposal, values, result.result, action, guard if spec.mode != "skill" else None)
+        _check_step(proposal, values, result.result, action, step_guard)
     return runtime.get(task_id)
+
+
+def _skill_proposal(spec: AgentTaskSpec, receipts: list[dict]) -> dict | None:
+    """Return the next declared workflow action, or None once every action has a receipt."""
+    if not verified_prefix(spec, receipts):
+        raise AgentTaskError("previous workflow read-back did not match; review before continuing")
+    if len(receipts) >= len(spec.actions):
+        return None
+    return thaw(spec.actions[len(receipts)])
 
 
 def _grounded_action(proposal: dict, values: dict, observation_id: str) -> dict:

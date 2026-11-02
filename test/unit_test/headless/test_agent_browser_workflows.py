@@ -110,8 +110,9 @@ def test_browser_transfer_captures_transforms_and_reads_back_before_save(browser
     {"confirmation_column": "missing"}, {"submit_selector": ""},
 ])
 def test_invalid_browser_drafts_have_no_session_or_action_effects(fake_sdk, tmp_path, changes):
+    config = form_config(tmp_path, **changes)
     with pytest.raises(AgentTaskError):
-        draft_agent_workflow("batch_form", form_config(tmp_path, **changes))
+        draft_agent_workflow("batch_form", config)
     fake_sdk[1].assert_not_called()
     assert fake_sdk[0].actions == []
 

@@ -92,7 +92,7 @@ def emitted(backend, send) -> bool:
     from je_auto_control.linux_wayland.libei import LibeiUnavailable
     try:
         send(backend)
-    except (LibeiUnavailable, RuntimeError, OSError) as error:
+    except (RuntimeError, OSError) as error:  # LibeiUnavailable is a RuntimeError
         _refuse_required(error)
         if not isinstance(error, LibeiUnavailable):
             raise

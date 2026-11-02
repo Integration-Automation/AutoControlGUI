@@ -69,7 +69,9 @@ def test_linux_binding_launches_only_through_the_owner_service(monkeypatch, tmp_
     monkeypatch.setattr(helper_owner_linux, "SeqpacketTransport", FakeTransport)
     channel = factory.owned_channel(ARGV)
     assert isinstance(channel, helper_owner_linux.OwnerServiceChannel)
-    assert channel._transport.endpoint == VALID["endpoint"] and channel._policy == 3 and channel._arguments == ()
+    assert channel._transport.endpoint == VALID["endpoint"]
+    assert channel._policy == 3
+    assert channel._arguments == ()
     assert not local.calls
 
 
@@ -110,7 +112,8 @@ def test_untrusted_binding_refuses(monkeypatch, tmp_path):
 def test_valid_binding_parses_exact_rows(monkeypatch, tmp_path):
     path = bind(monkeypatch, tmp_path, VALID)
     binding = factory.load_binding(str(path))
-    assert binding.endpoint == VALID["endpoint"] and binding.policies == {tuple(ARGV): 3}
+    assert binding.endpoint == VALID["endpoint"]
+    assert binding.policies == {tuple(ARGV): 3}
 
 
 def test_every_consumer_obtains_its_channel_through_the_factory():
@@ -118,7 +121,8 @@ def test_every_consumer_obtains_its_channel_through_the_factory():
     for name in ("helper_environment.py", "native_target.py", "remote_target.py", "presence_pool.py",
                  "presence_worker.py"):
         source = (package / name).read_text(encoding="utf-8")
-        assert "owned_channel" in source and "OwnedChannel(" not in source, name
+        assert "owned_channel" in source, name
+        assert "OwnedChannel(" not in source, name
 
 
 def test_nested_grant_reaches_the_service_channel_and_refuses_elsewhere(monkeypatch, tmp_path, local):
@@ -152,12 +156,15 @@ def test_containment_status_on_linux_never_claims_native_evidence(monkeypatch, t
     assert factory.helper_containment()["status"] == "not_configured"
     bind(monkeypatch, tmp_path, {"endpoint": "relative"})
     refused = factory.helper_containment()
-    assert refused["status"] == "binding_refused" and refused["mode"] == "owner_service" and refused["reason"]
+    assert refused["status"] == "binding_refused"
+    assert refused["mode"] == "owner_service"
+    assert refused["reason"]
     bind(monkeypatch, tmp_path, VALID)
     for reachable, status in ((False, "unreachable"), (True, "reachable_unverified")):
         monkeypatch.setattr(factory, "_endpoint_reachable", lambda _endpoint, value=reachable: value)
         result = factory.helper_containment()
-        assert result["status"] == status and result["policies"] == 1
+        assert result["status"] == status
+        assert result["policies"] == 1
         assert result["native_evidence"] == "not_recorded"
 
 
@@ -165,7 +172,8 @@ def test_runtime_status_carries_the_containment_section(monkeypatch, tmp_path):
     from je_auto_control.utils.agent_runtime import api
     monkeypatch.setattr(api, "default_connection_path", lambda: tmp_path / "absent.json")
     status = api.agent_runtime_status()
-    assert status["configured"] is False and status["helper_containment"]["native_evidence"] == "not_recorded"
+    assert status["configured"] is False
+    assert status["helper_containment"]["native_evidence"] == "not_recorded"
 
 
 def test_binding_under_a_writable_directory_refuses(monkeypatch, tmp_path):

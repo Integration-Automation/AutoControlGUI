@@ -20,7 +20,8 @@ def test_asset_commands_mcp_and_builder_preserve_explicit_manifest_and_verified_
     assert tools['ac_sync_asset_manifest'].handler(**capture)['manifest'] == manifest.to_dict()
     arguments = {'manifest': manifest.to_dict(), 'source_root': str(source), 'target_root': str(transport.target_root)}
     result = tools['ac_sync_assets'].handler(**arguments)
-    assert result['manifest_digest'] == manifest.digest and result['file_count'] == 2
+    assert result['manifest_digest'] == manifest.digest
+    assert result['file_count'] == 2
     for command, args in [('AC_sync_asset_manifest', capture), ('AC_sync_assets', arguments)]:
         action = [command, args]
         assert step_to_action(action_to_step(action)) == action
@@ -65,7 +66,8 @@ def test_asset_mcp_live_authority_change_stops_before_publication(tmp_path, monk
     monkeypatch.setattr(ac.DirectoryAssetTransport, 'open', revoke)
     tool = next(item for item in build_default_tool_registry() if item.name == 'ac_sync_assets')
     expected = OperationCancelledError if change == 'cancel' else PathNotAllowedError
+    arguments = (manifest.to_dict(), str(source), str(transport.target_root))
     with pytest.raises(expected):
-        tool.handler(manifest.to_dict(), str(source), str(transport.target_root), ctx=ctx)
+        tool.handler(*arguments, ctx=ctx)
     assert not list(transport.target_root.glob('generation-*'))
     assert not list(transport.target_root.glob('.incoming-*'))

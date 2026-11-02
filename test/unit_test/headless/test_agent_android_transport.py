@@ -129,8 +129,9 @@ def test_nonliteral_or_unreviewable_endpoints_fail_before_connection(host, port,
 ])
 def test_invalid_shell_bounds_never_open_a_connection(transport, command, changes, monkeypatch):
     monkeypatch.setattr(socket, "create_connection", lambda *_args, **_kwargs: pytest.fail("must not connect"))
+    client = ManagedAdbServer("127.0.0.1", 5037)
     with pytest.raises(AgentTaskError):
-        ManagedAdbServer("127.0.0.1", 5037).shell(transport, command, **changes)
+        client.shell(transport, command, **changes)
 
 
 def test_server_failure_message_cannot_publish_typed_secret():
@@ -140,9 +141,10 @@ def test_server_failure_message_cannot_publish_typed_secret():
         assert request(connection) == b"host:transport-id:42"
         connection.sendall(b"FAIL" + f"{len(secret):04x}".encode("ascii") + secret)
 
+    command = "input text " + secret.decode()
     with server(dialogue) as (client, connections):
         with pytest.raises(AgentTaskError) as caught:
-            client.shell(42, "input text " + secret.decode())
+            client.shell(42, command)
     assert secret.decode() not in "".join(traceback.format_exception(caught.value))
     assert len(connections) == 1
 
@@ -211,8 +213,9 @@ def test_missing_server_is_not_started_or_repaired_and_error_chain_is_redacted(m
         raise OSError("untrusted diagnostic with private-value")
 
     monkeypatch.setattr(socket, "create_connection", fail_connect)
+    client = ManagedAdbServer("127.0.0.1", 5037)
     with pytest.raises(AgentTaskError, match="server state was not changed") as caught:
-        ManagedAdbServer("127.0.0.1", 5037).list_devices()
+        client.list_devices()
     assert calls == [True]
     assert "private-value" not in "".join(traceback.format_exception(caught.value))
 

@@ -122,7 +122,8 @@ def test_native_clipboard_change_notifications_do_not_echo_and_explicit_repeat_p
     try:
         enqueue(peer, kind, value)
         qapp.processEvents()
-        assert applied == [(kind, value)] and sent == []
+        assert applied == [(kind, value)]
+        assert sent == []
         native.text_value = 'deliberate repeat'
         native.dataChanged.emit()
         assert sent == []
@@ -171,7 +172,8 @@ def test_gui_clipboard_boundary_retains_wrapped_original_controls(qapp, applied,
         delivery = ClipboardDelivery(panel._own_viewer(), 'text', 'controlled', DeferredAuthorization.capture())
         with pytest.raises(type(original)) as caught:
             panel._on_clipboard_main(delivery)
-        assert caught.value is original and applied == []
+        assert caught.value is original
+        assert applied == []
     finally:
         panel._disconnect()
         panel.deleteLater()
@@ -244,7 +246,8 @@ def test_control_exception_fixtures_do_not_retain_deleted_qt_panels(qapp, applie
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     qapp.processEvents()
     gc.collect()
-    assert created and created[0]() is None, 'the parametrized exception retained a deleted native Qt panel'
+    assert created, 'the parametrized exception retained a deleted native Qt panel'
+    assert created[0]() is None, 'the parametrized exception retained a deleted native Qt panel'
 
 
 def test_disconnected_clipboard_callback_does_not_retain_its_own_viewer_until_gc(qapp):

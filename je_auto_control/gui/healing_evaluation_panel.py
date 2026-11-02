@@ -56,8 +56,14 @@ def _version_row(name: str, version: HealingVersionReport) -> list[str]:
     return [name, *ratios, str(version.unknown), *latency]
 
 
+def _correctness(correct: bool | None) -> str:
+    if correct is None:
+        return _t("unknown")
+    return _t("correct_true" if correct else "correct_false")
+
+
 def _case_row(row: HealingAttempt) -> list[str]:
-    correct = _t("unknown") if row.correct is None else _t("correct_true" if row.correct else "correct_false")
+    correct = _correctness(row.correct)
     return [row.version, row.sample_id, correct, row.run_id or "", row.step_id or ""]
 
 

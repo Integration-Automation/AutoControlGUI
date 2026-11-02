@@ -78,10 +78,12 @@ def test_only_fresh_state_kinds_are_allowed_and_the_count_is_bounded():
 
 def test_submission_rejects_an_invalid_resume_condition(managed):
     runtime, _target = managed
+    unknown = spec(resume_conditions=[{"kind": "actions_complete"}])
+    incomplete = spec(resume_conditions=[{"kind": "screen"}])
     with pytest.raises(AgentTaskError):
-        runtime.submit(spec(resume_conditions=[{"kind": "actions_complete"}]))
+        runtime.submit(unknown)
     with pytest.raises(AgentTaskError):
-        runtime.submit(spec(resume_conditions=[{"kind": "screen"}]))
+        runtime.submit(incomplete)
 
 
 def test_the_first_action_waits_while_the_state_is_not_re_established(managed):

@@ -86,4 +86,5 @@ def test_bootstrap_focus_waits_for_scoped_window_and_refuses_unapproved_title(tm
         assert workspace_scope.focus_approved(spec, {"title_substring": "report"}) == 42
         with pytest.raises(AgentTaskError, match="approved plan"):
             workspace_scope.focus_approved(spec, {"title_substring": "other"})
-    assert len(probes) == 2 and len(calls) == 1
+    assert len(probes) == 2
+    assert len(calls) == 1

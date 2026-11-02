@@ -21,8 +21,10 @@ def test_options_keep_isolation_and_observe_durable_completions(tmp_path):
     options = ac.JournalRunOptions(variables=variables, run_id="observed", observer=observe)
     result = ac.execute_journal_run([["AC_set_var", {"name": "message", "value": "after"}]], path,
                                     options=options)
-    assert statuses == ["incomplete", "ok"] and result["run_id"] == "observed"
-    assert variables == {"message": "before"} and current_journal() is None
+    assert statuses == ["incomplete", "ok"]
+    assert result["run_id"] == "observed"
+    assert variables == {"message": "before"}
+    assert current_journal() is None
 
 
 @pytest.mark.parametrize("worker", ["loop", "parallel", "dag", "capture"])
@@ -52,10 +54,12 @@ def test_cancellation_before_dispatch_opens_no_file(tmp_path):
     signal = asyncio.CancelledError("controlled cancellation")
     def observe(_status):
         raise signal
+    options = ac.JournalRunOptions(observer=observe)
     with pytest.raises(asyncio.CancelledError) as caught:
-        ac.execute_journal_run([["AC_set_var", {"name": "x", "value": 1}]], path,
-                               options=ac.JournalRunOptions(observer=observe))
-    assert caught.value is signal and not path.exists() and current_journal() is None
+        ac.execute_journal_run([["AC_set_var", {"name": "x", "value": 1}]], path, options=options)
+    assert caught.value is signal
+    assert not path.exists()
+    assert current_journal() is None
 
 
 @pytest.mark.parametrize("signal", [ValueError("original"), KeyboardInterrupt(), asyncio.CancelledError()])
@@ -66,10 +70,11 @@ def test_completion_observer_never_replaces_an_existing_failure(tmp_path, monkey
         if status != "incomplete":
             raise RuntimeError("observer unavailable")
     monkeypatch.setitem(executor.event_dict, "AC_observed_failure", fail)
-    with pytest.raises(type(signal)) as caught:
-        with ac.journal_scope(ac.ActionJournal(tmp_path / "failure.jsonl"), observer=observe):
-            executor.execute_action([["AC_observed_failure"]], raise_on_error=True)
-    assert caught.value is signal and current_journal() is None
+    scope = ac.journal_scope(ac.ActionJournal(tmp_path / "failure.jsonl"), observer=observe)
+    with pytest.raises(type(signal)) as caught, scope:
+        executor.execute_action([["AC_observed_failure"]], raise_on_error=True)
+    assert caught.value is signal
+    assert current_journal() is None
 
 
 def test_observer_failure_after_success_leaves_a_durable_success(tmp_path):
@@ -77,9 +82,9 @@ def test_observer_failure_after_success_leaves_a_durable_success(tmp_path):
     def observe(status):
         if status == "ok":
             raise RuntimeError("observer unavailable")
+    options = ac.JournalRunOptions(observer=observe)
     with pytest.raises(RuntimeError, match="observer unavailable"):
-        ac.execute_journal_run([["AC_set_var", {"name": "x", "value": 1}]], path,
-                               options=ac.JournalRunOptions(observer=observe))
+        ac.execute_journal_run([["AC_set_var", {"name": "x", "value": 1}]], path, options=options)
     assert [event.status for event in ac.read_events(path)] == ["incomplete", "ok"]
 
 
@@ -95,12 +100,14 @@ def test_nested_controls_compose_without_relaxing_or_duplicating(tmp_path):
                               path_policy=policy) as binding:
             assert len(binding.observers) == len(binding.path_policies) == 1
             executor.execute_action([["AC_set_var", {"name": "x", "value": 1}]])
+        refused = ac.journal_scope(ac.ActionJournal(outside / "refused.jsonl"), path_policy=PathPolicy())
+        with pytest.raises(PathNotAllowedError), refused:
+            pytest.fail("nested policy relaxed its enclosing roots")
+        unrestricted = PathPolicy()
         with pytest.raises(PathNotAllowedError):
-            with ac.journal_scope(ac.ActionJournal(outside / "refused.jsonl"), path_policy=PathPolicy()):
-                pytest.fail("nested policy relaxed its enclosing roots")
-        with pytest.raises(PathNotAllowedError):
-            ac.inspect_journal(outside / "absent.jsonl", path_policy=PathPolicy())
-    assert statuses == ["incomplete", "ok"] and list(outside.iterdir()) == []
+            ac.inspect_journal(outside / "absent.jsonl", path_policy=unrestricted)
+    assert statuses == ["incomplete", "ok"]
+    assert list(outside.iterdir()) == []
 
 
 @pytest.mark.parametrize("worker", ["direct", "parallel", "dag"])
@@ -117,7 +124,8 @@ def test_dynamic_nested_journal_paths_cannot_escape_captured_roots(tmp_path, wor
     assert not outside.exists()
     if worker == "dag":
         outcome = next(iter(result["record"].values()))
-        assert outcome["succeeded"] is False and outcome["nodes"]["one"]["status"] == "failed"
+        assert outcome["succeeded"] is False
+        assert outcome["nodes"]["one"]["status"] == "failed"
         assert "PathNotAllowedError" in outcome["nodes"]["one"]["error"]
     else:
         assert result["failed_actions"] > 0
@@ -133,9 +141,9 @@ def test_policy_revocation_stops_the_next_append(tmp_path):
     def observe(status):
         if status == "ok":
             policy.set_client_roots([other])
+    options = ac.JournalRunOptions(path_policy=policy, observer=observe)
     with pytest.raises(PathNotAllowedError):
-        ac.execute_journal_run([["AC_set_var", {"name": "x", "value": 1}]] * 2, path,
-                               options=ac.JournalRunOptions(path_policy=policy, observer=observe))
+        ac.execute_journal_run([["AC_set_var", {"name": "x", "value": 1}]] * 2, path, options=options)
     assert [event.status for event in ac.read_events(path)] == ["incomplete", "ok"]
 
 
@@ -151,8 +159,9 @@ def test_completion_policy_failure_preserves_a_pending_hard_signal(tmp_path, mon
         raise signal
     monkeypatch.setitem(executor.event_dict, "AC_policy_interruption", fail)
     path = allowed / "unfinished.jsonl"
+    options = ac.JournalRunOptions(path_policy=policy)
     with pytest.raises(KeyboardInterrupt) as caught:
-        ac.execute_journal_run([["AC_policy_interruption"]], path, options=ac.JournalRunOptions(path_policy=policy))
+        ac.execute_journal_run([["AC_policy_interruption"]], path, options=options)
     assert caught.value is signal
     assert [event.status for event in ac.read_events(path)] == ["incomplete"]
 
@@ -173,7 +182,9 @@ def test_cancelled_reader_closes_its_file_and_preserves_the_signal(tmp_path, mon
     monkeypatch.setattr(Path, "open", track)
     with pytest.raises(asyncio.CancelledError) as caught:
         ac.inspect_journal(path, observer=observe)
-    assert caught.value is signal and opened and all(handle.closed for handle in opened)
+    assert caught.value is signal
+    assert opened
+    assert all(handle.closed for handle in opened)
 
 
 def test_reader_observes_all_validated_records_before_filtering(tmp_path):
@@ -182,4 +193,6 @@ def test_reader_observes_all_validated_records_before_filtering(tmp_path):
         ac.execute_action_with_journal([["AC_set_var", {"name": "x", "value": 1}]], path, run_id=run_id)
     seen = []
     payload = ac.inspect_journal(path, run_id="two", limit=1, observer=seen.append)
-    assert seen == [1, 2, 3, 4] and len(payload) == 1 and payload[0]["run_id"] == "two"
+    assert seen == [1, 2, 3, 4]
+    assert len(payload) == 1
+    assert payload[0]["run_id"] == "two"

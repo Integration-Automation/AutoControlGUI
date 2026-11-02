@@ -135,9 +135,11 @@ def _commit(actions: list[dict], config: dict, confirmation: Any = None) -> None
     expected = _text(confirmation if confirmation is not None else config.get("confirmation_value"), "confirmation")
     locator = _locator(config.get("confirmation_selector"), config.get("confirmation_frame", ""))
     submit = _locator(config.get("submit_selector"), config.get("submit_frame", ""))
-    actions.append({**_action("AC_browser_read", {**locator, "operation": "text"}), "expect_not_result": expected})
-    actions.append({**_action("AC_browser_click", submit, True), "side_effect": "submit"})
-    actions.append(_action("AC_browser_wait", _wait_arguments(config, locator, "text", expected), expected))
+    actions.extend([
+        {**_action("AC_browser_read", {**locator, "operation": "text"}), "expect_not_result": expected},
+        {**_action("AC_browser_click", submit, True), "side_effect": "submit"},
+        _action("AC_browser_wait", _wait_arguments(config, locator, "text", expected), expected),
+    ])
 
 
 def _wait_arguments(config: dict, locator: dict, operation: str, expected: Any) -> dict:

@@ -23,7 +23,8 @@ def routed(tmp_path, monkeypatch):
         wire, invoke = [], transport.request_json
         def observe(url, **kwargs):
             if url == value.server.base_url + '/agent/transfer':
-                assert kwargs['token'] == value.reviewer_token and kwargs.get('delegate_local') is False
+                assert kwargs['token'] == value.reviewer_token
+                assert kwargs.get('delegate_local') is False
                 record = deepcopy(kwargs['body'])
                 wire.append(record)
                 result = invoke(url, **kwargs)
@@ -62,23 +63,28 @@ def test_named_coordinator_reviews_creates_lists_and_revokes_one_actual_source_e
     control = value.coordinator.transfers.control
     reviewed = review(value)
     assert reviewed['review'] != value.wire[-1]['reply']['review']
-    assert reviewed['evidence']['task_id'] == value.child and count_grants(value) == 0
+    assert reviewed['evidence']['task_id'] == value.child
+    assert count_grants(value) == 0
     request = approval(reviewed)
     created = control('create_evidence', request)['evidence']
-    assert created['summary'] == reviewed['evidence'] and created['state'] == 'active'
+    assert created['summary'] == reviewed['evidence']
+    assert created['state'] == 'active'
     assert control('create_evidence', request)['evidence'] == created
     assert control('get_evidence', {'host': 'source', 'grant_id': created['grant_id']})['evidence'] == created
     listed = control('list_evidence', {'host': 'source', 'source_task': value.source})['evidence']
     assert listed == [created]
     revoked = control('revoke_evidence', {'host': 'source', 'grant_id': created['grant_id']})['evidence']
-    assert revoked['state'] == 'revoked' and revoked['summary'] == created['summary']
+    assert revoked['state'] == 'revoked'
+    assert revoked['summary'] == created['summary']
     with pytest.raises(AgentTaskError):
         control('create_evidence', request)
-    assert count_grants(value) == 1 and value.coordinator.list() == []
+    assert count_grants(value) == 1
+    assert value.coordinator.list() == []
     with authorization_scope(value.owner), pytest.raises(AgentTaskError, match='another caller'):
         value.runtime.get(value.child)
     encoded = json.dumps(value.wire)
-    assert str(value.coordinator_users.path) not in encoded and value.owner_token not in encoded
+    assert str(value.coordinator_users.path) not in encoded
+    assert value.owner_token not in encoded
     assert all('host' not in item['request'] and 'owner' not in item['request'] for item in value.wire)
     assert value.output.read_bytes() == value.body
 
@@ -110,13 +116,17 @@ def test_ambiguous_creation_recovers_one_exact_durable_evidence_consent(routed, 
         value.coordinator.close()
         value.coordinator = AgentRuntime(path, targets={})
     current = value.coordinator.transfers.control('create_evidence', request)['evidence']
-    assert current['summary'] == reviewed['evidence'] and current['state'] == 'active'
-    assert count_grants(value) == 1 and len(dropped) == 1
+    assert current['summary'] == reviewed['evidence']
+    assert current['state'] == 'active'
+    assert count_grants(value) == 1
+    assert len(dropped) == 1
     with value.coordinator.store.connection() as database:
         records = value.coordinator.transfers.source.records
         routes = records.entries(database, 'route')
-    assert len(routes) == 1 and routes[0]['scope']['evidence'] == reviewed['evidence']
-    assert 'manifest' not in routes[0]['scope'] and routes[0]['account'] is None
+    assert len(routes) == 1
+    assert routes[0]['scope']['evidence'] == reviewed['evidence']
+    assert 'manifest' not in routes[0]['scope']
+    assert routes[0]['account'] is None
 
 
 @pytest.mark.parametrize('change', ['host', 'actor', 'key', 'issuer-role'])
@@ -134,4 +144,5 @@ def test_changed_host_identity_key_or_source_role_cannot_mint_a_routed_grant(rou
              if change == 'actor' else value.actor)
     with authorization_scope(actor), pytest.raises(AgentTaskError):
         value.coordinator.transfers.control('create_evidence', request)
-    assert count_grants(value) == 0 and value.output.read_bytes() == value.body
+    assert count_grants(value) == 0
+    assert value.output.read_bytes() == value.body

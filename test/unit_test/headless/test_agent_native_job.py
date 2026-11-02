@@ -60,13 +60,16 @@ class Kernel:
         return self.close_ok
 
     def OpenProcess(self, access, inherit, pid):
-        assert access == 0x101000 and not inherit and pid in self.processes
+        assert access == 0x101000
+        assert not inherit
+        assert pid in self.processes
         handle = 0x200000000 + pid
         self.handles[handle] = pid
         return handle
 
     def IsProcessInJob(self, process, job, pointer):
-        assert process in self.handles and job == 0x100000001
+        assert process in self.handles
+        assert job == 0x100000001
         ctypes.cast(pointer, ctypes.POINTER(ctypes.c_int)).contents.value = self.belongs
         return True
 
@@ -117,8 +120,10 @@ def test_nonempty_tree_exhausts_original_bound_and_remains_owned(monkeypatch):
     monkeypatch.setattr(module, 'time', SimpleNamespace(monotonic=lambda: now[0], sleep=sleep), raising=False)
     with pytest.raises(AgentTaskError):
         job.close(timeout=0.03)
-    assert now[0] <= 0.03 and sleeps
-    assert job._handle == 0x100000001 and 'close' not in kernel.events
+    assert now[0] <= 0.03
+    assert sleeps
+    assert job._handle == 0x100000001
+    assert 'close' not in kernel.events
     kernel.counts = [0]
     job.close()
     assert job._handle is None
@@ -161,13 +166,15 @@ def test_process_objects_must_signal_even_after_the_job_reports_no_active_proces
     kernel.signals[202] = 258
     with pytest.raises(AgentTaskError):
         job.close(timeout=0.03)
-    assert job._handle == 0x100000001 and 'close' not in kernel.events
+    assert job._handle == 0x100000001
+    assert 'close' not in kernel.events
     assert any(event[:2] == ('process-wait', 202) for event in kernel.events if isinstance(event, tuple))
     assert kernel.handles
     kernel.processes = []
     kernel.signals[202] = 0
     job.close()
-    assert job._handle is None and not kernel.handles
+    assert job._handle is None
+    assert not kernel.handles
 
 
 def test_process_object_queries_may_never_select_a_process_outside_the_actual_owned_job(monkeypatch):
@@ -175,7 +182,8 @@ def test_process_object_queries_may_never_select_a_process_outside_the_actual_ow
     kernel.processes, kernel.belongs = [201], False
     with pytest.raises(AgentTaskError):
         job.close()
-    assert 'terminate' in kernel.events and 'close' not in kernel.events
+    assert 'terminate' in kernel.events
+    assert 'close' not in kernel.events
     assert not kernel.handles
 
 
@@ -193,8 +201,10 @@ def test_member_capture_cannot_spend_past_the_original_retirement_deadline(monke
     monkeypatch.setattr(module, 'time', SimpleNamespace(monotonic=lambda: now[0]))
     with pytest.raises(AgentTaskError):
         job.close(timeout=0.03)
-    assert now[0] <= 0.03 and 'terminate' in kernel.events
-    assert job._handle is not None and 'close' not in kernel.events
+    assert now[0] <= 0.03
+    assert 'terminate' in kernel.events
+    assert job._handle is not None
+    assert 'close' not in kernel.events
 
 
 def test_already_exhausted_deadline_still_terminates_only_the_owned_job(monkeypatch):
@@ -202,5 +212,6 @@ def test_already_exhausted_deadline_still_terminates_only_the_owned_job(monkeypa
     kernel.counts = [1]
     with pytest.raises(AgentTaskError):
         job.close(timeout=0)
-    assert 'terminate' in kernel.events and 'close' not in kernel.events
+    assert 'terminate' in kernel.events
+    assert 'close' not in kernel.events
     assert job._handle == 0x100000001

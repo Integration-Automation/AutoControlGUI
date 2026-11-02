@@ -69,7 +69,7 @@ def validate_browser_probe(value: Any, transfer: bool) -> dict[str, Any]:
     if not isinstance(value, dict) or set(value) != _KEYS:
         raise AgentTaskError("invalid browser dependency probe response")
     python = value["python"]
-    if not isinstance(python, str) or re.fullmatch(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", python) is None:
+    if not isinstance(python, str) or re.fullmatch(r"\d{1,3}\.\d{1,3}\.\d{1,3}", python, re.ASCII) is None:
         raise AgentTaskError("invalid browser dependency probe Python version")
     if any(not isinstance(value[key], bool) for key in _FLAGS):
         raise AgentTaskError("invalid browser dependency probe flags")

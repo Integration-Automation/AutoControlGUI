@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from sqlite3 import Connection
 
 _SELECT = "SELECT wire,digest,prepared FROM sync_controls WHERE endpoint=? AND user_id=?"
+_BEGIN_IMMEDIATE = "BEGIN IMMEDIATE"
 _Scope = tuple[str, str]
 
 
@@ -60,7 +61,7 @@ class ControlStore:
                                           identity, kind, peer_id, discard_pending)
         scope = identity.endpoint, identity.user_id
         with self._database.connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(_BEGIN_IMMEDIATE)
             historical = _historical(connection, candidate)
             if historical is not None:
                 connection.execute("COMMIT")
@@ -103,7 +104,7 @@ class ControlStore:
         """Claim due metadata work without holding a database lock around HTTP callbacks."""
         now = self._clock()
         with self._database.connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(_BEGIN_IMMEDIATE)
             row = connection.execute("SELECT status,next_attempt,last_attempt,lease_owner,lease_until "
                                      "FROM sync_controls WHERE endpoint=? AND user_id=?", scope).fetchone()
             if row is None or not due(row, now):
@@ -122,7 +123,7 @@ class ControlStore:
         prepared = {"base_revision": bucket.get("revision"), "bucket": bucket}
         candidate = replace(operation, prepared=prepared)
         with self._database.connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(_BEGIN_IMMEDIATE)
             current = _owned(connection, operation, owner)
             if current.prepared is not None and _encoded(current.prepared) != _encoded(prepared):
                 raise ConfigSyncError("uncertain peer control cannot be replaced")
@@ -134,7 +135,7 @@ class ControlStore:
     def reject(self, operation: SyncControlOperation, owner: str) -> SyncControlOperation:
         """Clear only the current owner's definitely rejected frozen request before bounded rebasing."""
         with self._database.connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(_BEGIN_IMMEDIATE)
             current = _owned(connection, operation, owner)
             if (current.prepared is None or operation.prepared is None
                     or _encoded(current.prepared) != _encoded(operation.prepared)):
@@ -147,7 +148,7 @@ class ControlStore:
     def complete(self, operation: SyncControlOperation, owner: str, receipt: CausalReceipt) -> bool:
         """Confirm the original receipt, authoritative snapshot and any generation adoption in one transaction."""
         with self._database.connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(_BEGIN_IMMEDIATE)
             scope = operation.identity.endpoint, operation.identity.user_id
             row = connection.execute("SELECT operation_id,lease_owner FROM sync_controls "
                                      "WHERE endpoint=? AND user_id=?", scope).fetchone()
@@ -167,11 +168,15 @@ class ControlStore:
 
     def failed(self, operation: SyncControlOperation, owner: str, error: Exception, policy: SyncRetryPolicy) -> None:
         """Persist bounded retry/error state; definite generation failures block until explicit recovery."""
-        state = ("blocked" if isinstance(error, FullResyncRequired) else
-                 "conflict" if isinstance(error, ConfigRevisionConflict) else "offline")
+        if isinstance(error, FullResyncRequired):
+            state = "blocked"
+        elif isinstance(error, ConfigRevisionConflict):
+            state = "conflict"
+        else:
+            state = "offline"
         scope = operation.identity.endpoint, operation.identity.user_id
         with self._database.connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(_BEGIN_IMMEDIATE)
             row = connection.execute("SELECT attempts FROM sync_controls WHERE endpoint=? AND user_id=? "
                                      "AND operation_id=? AND lease_owner=?",
                                      (*scope, operation.operation_id, owner)).fetchone()

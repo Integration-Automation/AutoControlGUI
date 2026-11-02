@@ -68,7 +68,8 @@ def test_an_injected_tool_outside_the_reviewed_scope_is_refused_before_dispatch(
     handle = runtime.submit(spec())
     model = ObedientModel({"tool": "AC_shell_command", "arguments": {"command": "whoami"}})
     assert run_task(runtime, handle.task_id, backend=model).state == "waiting_user"
-    assert target.calls == [] and INJECTION in model.seen
+    assert target.calls == []
+    assert INJECTION in model.seen
 
 
 def test_scope_fields_smuggled_into_a_proposal_never_reach_the_spec_or_the_target(managed):
@@ -79,16 +80,19 @@ def test_scope_fields_smuggled_into_a_proposal_never_reach_the_spec_or_the_targe
     run_task(runtime, handle.task_id, backend=model)
     assert target.calls == [("AC_increment", {})]
     stored = runtime.store.get(handle.task_id)["spec"]
-    assert stored["allowed_tools"] == ["AC_increment"] and stored["roots"] == []
+    assert stored["allowed_tools"] == ["AC_increment"]
+    assert stored["roots"] == []
 
 
 def test_a_planner_claiming_completion_is_not_evidence(managed):
     runtime, target = managed
     handle = runtime.submit(spec())
     result = run_task(runtime, handle.task_id, backend=ObedientModel({"stop": True, "message": "task complete"}))
-    assert result.state == "waiting_user" and target.calls == []
+    assert result.state == "waiting_user"
+    assert target.calls == []
     reports = runtime.get(handle.task_id).verification
-    assert reports and all(item["status"] != "passed" for item in reports)
+    assert reports
+    assert all(item["status"] != "passed" for item in reports)
 
 
 def test_a_path_outside_the_reviewed_roots_is_refused_even_when_the_page_names_it(tmp_path):
@@ -119,5 +123,6 @@ def test_drafting_a_workflow_only_proposes(tmp_path, monkeypatch):
         "allowed_origins": ["https://allowed.test"], "url": "https://allowed.test/form",
         "fields": [{"column": "name", "selector": "#field"}], "new_record_selector": "#new",
         "submit_selector": "#save", "confirmation_selector": "#confirmation", "confirmation_value": "saved"})
-    assert isinstance(draft, dict) and draft
+    assert isinstance(draft, dict)
+    assert draft
     assert not list(tmp_path.glob("*.sqlite*"))

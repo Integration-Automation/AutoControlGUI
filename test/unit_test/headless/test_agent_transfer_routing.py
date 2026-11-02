@@ -74,11 +74,13 @@ def create(routed, reviewed, **changes):
 def test_real_routed_consent_returns_a_local_token_and_exact_source_bytes(routed):
     reviewed = review(routed)
     peer_review = routed.wire[-1]['reply']['review']
-    assert reviewed['review'] != peer_review and reviewed['approval_required'] is True
+    assert reviewed['review'] != peer_review
+    assert reviewed['approval_required'] is True
     assert reviewed['digest'] == routed.wire[-1]['reply']['digest']
     assert 'host' not in routed.wire[-1]['request']
     created = create(routed, reviewed)['export']
-    assert created['manifest'] == reviewed['manifest'] and created['state'] == 'active'
+    assert created['manifest'] == reviewed['manifest']
+    assert created['state'] == 'active'
     assert routed.wire[-1]['request']['review'] == peer_review
     pin = routed.runtime.batches.transfer_binding('source')
     digest = created['manifest']['files'][0]['chunks'][0]
@@ -89,7 +91,8 @@ def test_real_routed_consent_returns_a_local_token_and_exact_source_bytes(routed
     with pytest.raises(AgentTaskError):
         routed.runtime.get(routed.task)
     encoded = json.dumps(reviewed)
-    assert str(routed.users.path) not in encoded and routed.actor.user_id not in encoded
+    assert str(routed.users.path) not in encoded
+    assert routed.actor.user_id not in encoded
     with routed.source.store.connection() as connection:
         scope = json.loads(connection.execute('SELECT payload FROM agent_transfer_grants').fetchone()[0])['scope']
     assert scope['issuer']['user_id'] == scope['recipient']['user_id'] == 'owner'
@@ -102,7 +105,8 @@ def test_routed_management_get_list_and_revoke_use_the_actual_source(routed):
     assert controller.control('get_export', {'host': 'source', 'export_id': created['export_id']})['export'] == created
     assert controller.control('list_exports', {'host': 'source', 'source_task': routed.task})['exports'] == [created]
     revoked = controller.control('revoke_export', {'host': 'source', 'export_id': created['export_id']})['export']
-    assert revoked['state'] == 'revoked' and revoked['cleanup_pending'] is False
+    assert revoked['state'] == 'revoked'
+    assert revoked['cleanup_pending'] is False
     assert routed.runtime.list() == []
 
 
@@ -116,7 +120,9 @@ def test_approved_intent_precedes_wire_and_lost_ack_recovers_after_coordinator_r
         if envelope.get('operation') == 'create_export':
             with routed.runtime.store.connection() as connection:
                 rows = connection.execute('SELECT state,note_hash FROM agent_transfer_routed_reviews').fetchall()
-                assert len(rows) == 1 and rows[0]['state'] == 'active' and rows[0]['note_hash']
+                assert len(rows) == 1
+                assert rows[0]['state'] == 'active'
+                assert rows[0]['note_hash']
             sent.append(deepcopy(envelope))
             reply = original(url, **kwargs)
             if len(sent) == 1:
@@ -133,7 +139,8 @@ def test_approved_intent_precedes_wire_and_lost_ack_recovers_after_coordinator_r
     routed.runtime.close()
     routed.runtime = AgentRuntime(path, targets={})
     created = create(routed, reviewed)['export']
-    assert created['export_id'] == identifier and sent[0] == sent[1]
+    assert created['export_id'] == identifier
+    assert sent[0] == sent[1]
     with routed.source.store.connection() as connection:
         assert connection.execute('SELECT count(*) FROM agent_transfer_grants').fetchone()[0] == 1
 
@@ -143,7 +150,8 @@ def test_routed_recipient_policy_derives_only_the_sources_actual_identities(rout
     created = create(routed, review(routed, recipient_policy='source_owner'))['export']
     with routed.source.store.connection() as connection:
         scope = json.loads(connection.execute('SELECT payload FROM agent_transfer_grants').fetchone()[0])['scope']
-    assert scope['issuer']['user_id'] == 'reviewer' and scope['recipient']['user_id'] == 'owner'
+    assert scope['issuer']['user_id'] == 'reviewer'
+    assert scope['recipient']['user_id'] == 'owner'
     pin = routed.runtime.batches.transfer_binding('source')
     with pytest.raises(AgentTaskError):
         routed.runtime.transfers.remote.call('source', pin, 'export', {'export_id': created['export_id']}, 3)
@@ -331,7 +339,8 @@ def test_network_budget_uses_the_remaining_whole_operation_deadline(routed, monk
 
     monkeypatch.setattr(controller._routing, '_prepare', elapsed)
     monkeypatch.setattr(transport, 'request_json', limited)
-    assert review(routed)['approval_required'] is True and len(observed) == 1
+    assert review(routed)['approval_required'] is True
+    assert len(observed) == 1
 
 
 def test_pending_route_cap_refuses_more_source_requests(routed, monkeypatch):

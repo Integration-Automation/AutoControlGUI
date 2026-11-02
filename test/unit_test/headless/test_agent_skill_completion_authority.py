@@ -22,8 +22,9 @@ def test_http_revoked_reviewer_is_typed_refusal_without_publication(trial, tmp_p
         connection = tmp_path / 'connection.json'
         connection.write_text(json.dumps({'url': server.base_url, 'token': server.token}), encoding='utf-8')
         trial.users.remove_user('reviewer')
+        client, request = AgentRuntimeClient(connection), acceptance(trial)
         with pytest.raises(AgentTaskError) as error:
-            AgentRuntimeClient(connection).call('skill', {'operation': 'accept', 'request': acceptance(trial)})
+            client.call('skill', {'operation': 'accept', 'request': request})
         assert '(409)' in str(error.value)
         assert_unpublished(trial)
     finally:
@@ -37,8 +38,9 @@ def test_current_authority_is_required_before_adoption(trial, change):
         trial.users.set_role('reviewer', 'operator')
     else:
         trial.users.remove_user(change)
+    request = acceptance(trial)
     with pytest.raises((AgentTaskError, AuthorizationError)):
-        trial.runtime.skills.control('accept', acceptance(trial))
+        trial.runtime.skills.control('accept', request)
     assert_unpublished(trial)
 
 
@@ -50,13 +52,15 @@ def test_revocation_after_proof_rolls_back_publication_and_adoption(trial, monke
         check(connection, candidate, row)
         trial.users.remove_user('reviewer')
     monkeypatch.setattr(AgentSkills, '_check_trial', staticmethod(revoked))
+    request = acceptance(trial)
     with pytest.raises((AgentTaskError, AuthorizationError)):
-        trial.runtime.skills.control('accept', acceptance(trial))
+        trial.runtime.skills.control('accept', request)
     assert_unpublished(trial)
 
 
 @pytest.mark.parametrize('trial', ['named_caller'], indirect=True)
 def test_source_owner_cannot_implicitly_read_an_existing_admin_owned_child(trial):
+    request = acceptance(trial)
     with pytest.raises(AgentTaskError, match='another caller'):
-        trial.runtime.skills.control('accept', acceptance(trial))
+        trial.runtime.skills.control('accept', request)
     assert_unpublished(trial)

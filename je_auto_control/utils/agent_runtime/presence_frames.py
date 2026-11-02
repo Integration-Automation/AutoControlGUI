@@ -19,7 +19,7 @@ def encode_frame(value: dict) -> bytes:
         raise AgentTaskError('physical presence frame must be an object')
     try:
         result = json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(',', ':')).encode('utf-8')
-    except (TypeError, ValueError, UnicodeError, RecursionError) as error:
+    except (TypeError, ValueError, RecursionError) as error:
         raise AgentTaskError('physical presence frame must be finite UTF-8 JSON') from error
     if len(result) > 4096:
         raise AgentTaskError('physical presence frame exceeds4096bytes')
@@ -43,7 +43,7 @@ def decode_frame(raw: bytes) -> dict:
         value = json.loads(raw.decode('utf-8'), object_pairs_hook=_unique)
         encode_frame(value)
         return value
-    except (TypeError, ValueError, UnicodeError, RecursionError) as error:
+    except (TypeError, ValueError, RecursionError) as error:
         raise AgentTaskError('physical presence frame is invalid') from error
 
 

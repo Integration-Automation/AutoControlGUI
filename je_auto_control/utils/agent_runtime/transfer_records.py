@@ -11,6 +11,7 @@ from je_auto_control.utils.agent_runtime.transfer_models import (
     MAX_MANIFEST_BYTES, MAX_TRANSFER_BYTES, _canonical, _deadline, _hex,
 )
 
+_UNSUPPORTED_FAMILY = 'unsupported private transfer family'
 _FAMILIES = {'export': 'agent_transfer_grants', 'evidence': 'agent_transfer_grants',
              'import': 'agent_transfer_imports', 'route': 'agent_transfer_routed_reviews'}
 _TABLES = tuple(dict.fromkeys(_FAMILIES.values()))
@@ -67,7 +68,7 @@ def _payload(record: dict[str, Any]) -> tuple[str, str]:
     _hex(record['actor'], 64)
     kind = record['kind']
     if not isinstance(kind, str) or kind not in _FAMILIES:
-        raise AgentTaskError('unsupported private transfer family')
+        raise AgentTaskError(_UNSUPPORTED_FAMILY)
     _capacity_fields(record)
     _record_times(record)
     if not isinstance(record['scope'], dict):
@@ -77,7 +78,7 @@ def _payload(record: dict[str, Any]) -> tuple[str, str]:
     values['key_hash'] = key_hash
     try:
         encoded = _canonical(values)
-    except (TypeError, ValueError, RecursionError, UnicodeError) as error:
+    except (TypeError, ValueError, RecursionError) as error:  # ValueError covers UnicodeError
         raise AgentTaskError('transfer scope must contain finite JSON data') from error
     if len(encoded) > MAX_MANIFEST_BYTES:
         raise AgentTaskError('private transfer record exceeds one mebibyte')
@@ -241,7 +242,7 @@ class TransferRecords:
     def entries(self, connection: Any, kind: str) -> list[dict[str, Any]]:
         """Return a bounded private family view for host-authorized management filtering."""
         if kind not in _FAMILIES:
-            raise AgentTaskError('unsupported private transfer family')
+            raise AgentTaskError(_UNSUPPORTED_FAMILY)
         return [_view(row) for row in connection.execute(_sql(_FAMILIES[kind], 'entries'), (kind,))]
 
     def revoke(self, connection: Any, identifier: str) -> None:
@@ -276,7 +277,7 @@ class TransferRecords:
         """Prune one cleaned expired family under its owner's writer, preserving all consent tombstones."""
         _writer(connection)
         if kind not in _FAMILIES:
-            raise AgentTaskError('unsupported private transfer family')
+            raise AgentTaskError(_UNSUPPORTED_FAMILY)
         _deadline(cutoff)
         cursor = connection.execute(_sql(_FAMILIES[kind], 'prune_kind'), (kind, min(cutoff, time.time())))
         return cursor.rowcount

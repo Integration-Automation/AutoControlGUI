@@ -5,6 +5,8 @@ from tempfile import TemporaryDirectory
 
 from je_auto_control import DirectoryAssetTransport, build_asset_manifest, sync_assets
 
+_TEMPLATE = 'template.bin'
+
 
 def main() -> None:
     """Round-trip a script and referenced template as inert files with no device or network calls."""
@@ -12,10 +14,10 @@ def main() -> None:
         root = Path(temporary)
         source = root / 'source'
         source.mkdir()
-        (source / 'template.bin').write_bytes(b'controlled-template-bytes')
-        actions = [['AC_locate', {'template': 'template.bin'}]]
+        (source / _TEMPLATE).write_bytes(b'controlled-template-bytes')
+        actions = [['AC_locate', {'template': _TEMPLATE}]]
         (source / 'script.json').write_text(json.dumps(actions), encoding='utf-8')
-        manifest = build_asset_manifest(source, ['script.json', 'template.bin'])
+        manifest = build_asset_manifest(source, ['script.json', _TEMPLATE])
         transport = DirectoryAssetTransport(source, root / 'cache')
         result = sync_assets(manifest, transport)
         repeated = sync_assets(manifest, transport)

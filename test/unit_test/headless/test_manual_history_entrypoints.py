@@ -29,10 +29,14 @@ def test_cli_history_and_journal_preserve_stdout_and_link(tmp_path, store, capsy
     journal = tmp_path / "events.jsonl"
     assert main(["run", script, "--history", "--var", "seed=hello", "--journal", str(journal)]) == 0
     payload = json.loads(capsys.readouterr().out)
-    assert "history_id" not in payload and "journal_path" not in payload
+    assert "history_id" not in payload
+    assert "journal_path" not in payload
     rows = store.list_runs()
-    assert len(rows) == 1 and rows[0].source_type == "manual" and rows[0].script_path == script
-    assert rows[0].status == "ok" and len(store.journals_for_run(rows[0].id)) == 1
+    assert len(rows) == 1
+    assert rows[0].source_type == "manual"
+    assert rows[0].script_path == script
+    assert rows[0].status == "ok"
+    assert len(store.journals_for_run(rows[0].id)) == 1
 
 
 def test_cli_custom_history_database_is_explicit(tmp_path, store, capsys):
@@ -42,7 +46,8 @@ def test_cli_custom_history_database_is_explicit(tmp_path, store, capsys):
     capsys.readouterr()
     check = ac.HistoryStore(custom)
     try:
-        assert check.list_runs()[0].status == "ok" and store.list_runs() == []
+        assert check.list_runs()[0].status == "ok"
+        assert store.list_runs() == []
     finally:
         check.close()
 
@@ -64,7 +69,8 @@ def test_cli_history_failure_keeps_exit_code_and_result(tmp_path, store, capsys,
     script = _script(tmp_path, [["AC_manual_cli_fail"]])
     assert main(["run", script, "--history"]) == 1
     output = capsys.readouterr()
-    assert json.loads(output.out) and "1 action(s) failed" in output.err
+    assert json.loads(output.out)
+    assert "1 action(s) failed" in output.err
     assert store.list_runs()[0].status == "error"
 
 
@@ -74,7 +80,8 @@ def test_cli_history_preview_has_no_action_effects(tmp_path, store, capsys, monk
     monkeypatch.setitem(executor.event_dict, "AC_manual_cli_preview", fail)
     script = _script(tmp_path, [["AC_manual_cli_preview"]])
     assert main(["run", script, "--history", "--dry-run"]) == 0
-    assert "dry-run" in capsys.readouterr().out and store.list_runs()[0].status == "ok"
+    assert "dry-run" in capsys.readouterr().out
+    assert store.list_runs()[0].status == "ok"
     assert store.list_runs()[0].source_id == "cli.preview"
 
 
@@ -83,7 +90,9 @@ def test_cli_history_database_requires_opt_in(tmp_path, store, capsys, monkeypat
     monkeypatch.setitem(executor.event_dict, "AC_manual_cli_probe", lambda: effects.append(1))
     script = _script(tmp_path, [["AC_manual_cli_probe"]])
     assert main(["run", script, "--history-db", str(tmp_path / "unused.sqlite")]) == 1
-    assert "requires --history" in capsys.readouterr().err and effects == [] and store._conn is None
+    assert "requires --history" in capsys.readouterr().err
+    assert effects == []
+    assert store._conn is None
 
 
 def test_named_history_body_defers_values_and_keeps_private_executor(store):
@@ -93,8 +102,10 @@ def test_named_history_body_defers_values_and_keeps_private_executor(store):
     result = private.execute_action([["AC_history_capture", {"body": body, "source_id": "nested"}]],
                                     raise_on_error=True)
     summary = next(iter(result.values()))
-    assert private.variables.get("message") == "after" and "after" in summary["record"].values()
-    assert store.get_run(summary["history_id"]).status == "ok" and summary["failed_actions"] == 0
+    assert private.variables.get("message") == "after"
+    assert "after" in summary["record"].values()
+    assert store.get_run(summary["history_id"]).status == "ok"
+    assert summary["failed_actions"] == 0
 
 
 def test_history_command_validation_is_before_any_prior_action(store, monkeypatch):
@@ -103,7 +114,8 @@ def test_history_command_validation_is_before_any_prior_action(store, monkeypatc
     with pytest.raises(ac.AutoControlActionException, match="unknown command"):
         executor.execute_action([["AC_manual_command_probe"],
                                  ["AC_history_capture", {"body": [["AC_unknown_manual_body"]]}]], raise_on_error=True)
-    assert effects == [] and store._conn is None
+    assert effects == []
+    assert store._conn is None
 
 
 def test_positional_capture_is_rejected_without_body_effects(store):
@@ -134,7 +146,8 @@ def test_command_body_data_is_interpolated_once(store, monkeypatch):
     with execution_scope({"message": "${secrets.PRIVATE}"}):
         executor.execute_action([["AC_history_capture", {"body": [
             ["AC_manual_data_probe", {"value": "${message}"}]]}]], raise_on_error=True)
-    assert seen == ["${secrets.PRIVATE}"] and store.list_runs()[0].status == "ok"
+    assert seen == ["${secrets.PRIVATE}"]
+    assert store.list_runs()[0].status == "ok"
 
 
 def test_mcp_generic_execute_rejects_admin_body_before_manual_history(store):
@@ -146,7 +159,8 @@ def test_mcp_generic_execute_rejects_admin_body_before_manual_history(store):
         "name": tool.name, "arguments": {"actions": [["AC_history_capture", {"body": [["AC_admin_list_hosts"]]}]]}}}
     with authorization_scope(AuthorizationContext("operator", Role.OPERATOR)):
         reply = json.loads(server.handle_line(json.dumps(request)))
-    assert "error" in reply and store._conn is None
+    assert "error" in reply
+    assert store._conn is None
 
 
 @pytest.mark.parametrize("signal,rows", [("AC_break", 1), ("AC_continue", 3)])
@@ -155,7 +169,8 @@ def test_normal_loop_signals_do_not_mark_manual_history_failed(store, signal, ro
         ["AC_history_capture", {"body": [[signal]]}]]}]]
     executor.execute_action(actions, raise_on_error=True)
     history = store.list_runs()
-    assert len(history) == rows and all(row.status == "ok" for row in history)
+    assert len(history) == rows
+    assert all(row.status == "ok" for row in history)
 
 
 def test_loop_signal_keeps_preceding_recorded_failure(store, monkeypatch):
@@ -164,7 +179,8 @@ def test_loop_signal_keeps_preceding_recorded_failure(store, monkeypatch):
     monkeypatch.setitem(executor.event_dict, "AC_manual_command_fail", fail)
     executor.execute_action([["AC_loop", {"times": 2, "body": [
         ["AC_history_capture", {"body": [["AC_manual_command_fail"], ["AC_break"]]}]]}]])
-    assert len(store.list_runs()) == 1 and store.list_runs()[0].status == "error"
+    assert len(store.list_runs()) == 1
+    assert store.list_runs()[0].status == "error"
 
 
 def test_mcp_generic_execute_records_an_explicit_manual_owner(store):
@@ -180,4 +196,5 @@ def test_mcp_generic_execute_records_an_explicit_manual_owner(store):
     assert reply["result"]["isError"] is False
     data = json.loads(reply["result"]["content"][0]["text"])
     assert "history_id" in json.dumps(data)
-    assert store.list_runs()[0].status == "ok" and store.list_runs()[0].source_type == "manual"
+    assert store.list_runs()[0].status == "ok"
+    assert store.list_runs()[0].source_type == "manual"

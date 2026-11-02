@@ -18,6 +18,8 @@ from je_auto_control.utils.agent_runtime.presence_state import PresenceState
 from je_auto_control.utils.agent_runtime.presence_platform import default_presence_api
 from je_auto_control.utils.agent_runtime.presence_frames import presence_body as _body
 
+_DEADLINE_EXHAUSTED = 'physical presence request deadline exhausted'
+
 
 @dataclass
 class _Ticket:
@@ -153,12 +155,12 @@ class WindowsPresenceSource:
             except queue.Empty:
                 return
             if self._expired(ticket):
-                ticket.reply.put_nowait(AgentTaskError('physical presence request deadline exhausted'))
+                ticket.reply.put_nowait(AgentTaskError(_DEADLINE_EXHAUSTED))
                 continue
             if not self._fresh(api, ticket):
                 continue
             if self._expired(ticket):
-                ticket.reply.put_nowait(AgentTaskError('physical presence request deadline exhausted'))
+                ticket.reply.put_nowait(AgentTaskError(_DEADLINE_EXHAUSTED))
                 continue
             try:
                 result: Any = self._dispatch(ticket)
@@ -187,10 +189,10 @@ class WindowsPresenceSource:
     @contextmanager
     def _locked(self, deadline: float) -> Iterator[None]:
         if not self._mutex.acquire(timeout=max(0, deadline - time.monotonic())):
-            raise AgentTaskError('physical presence request deadline exhausted')
+            raise AgentTaskError(_DEADLINE_EXHAUSTED)
         try:
             if time.monotonic() >= deadline:
-                raise AgentTaskError('physical presence request deadline exhausted')
+                raise AgentTaskError(_DEADLINE_EXHAUSTED)
             yield
         finally:
             self._mutex.release()
@@ -220,10 +222,10 @@ class WindowsPresenceSource:
             result = ticket.reply.get(timeout=max(0, ticket.deadline - time.monotonic()))
         except queue.Empty as error:
             ticket.abandoned.set()
-            raise AgentTaskError('physical presence request deadline exhausted') from error
+            raise AgentTaskError(_DEADLINE_EXHAUSTED) from error
         if time.monotonic() >= ticket.deadline:
             ticket.abandoned.set()
-            raise AgentTaskError('physical presence request deadline exhausted')
+            raise AgentTaskError(_DEADLINE_EXHAUSTED)
         if isinstance(result, AgentTaskError):
             raise result
         ticket.accepted.set()

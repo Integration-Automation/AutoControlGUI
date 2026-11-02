@@ -63,23 +63,27 @@ def test_actual_coordinator_reopen_preserves_consent_identity_and_revalidates_re
         if change == 'none':
             if phase == 'provisional':
                 approved = approve(value, reviewed)
-            assert approved['approval_id'] == stored['id'] and approved['approval_state'] == 'ready'
+            assert approved['approval_id'] == stored['id']
+            assert approved['approval_state'] == 'ready'
             running = start(value, reviewed, approved)
             result = value.coordinator.batches.control('validate_node', {'batch_id': reviewed['batch_id'],
                 'node_id': 'remote-file', 'attempt': running['attempt']})
-            assert result['outcome'] == 'completed' and result['task_id'] == value.child
+            assert result['outcome'] == 'completed'
+            assert result['task_id'] == value.child
             with value.runtime.store.connection() as database:
                 record = value.runtime.transfers.source.records.find(database, identifier)
             assert record['expires'] == expires, 'Coordinator restart cannot renew the source evidence deadline'
         else:
+            if phase == 'provisional':
+                step, arguments = approve, (value, reviewed)
+            else:
+                step, arguments = start, (value, reviewed, approved)
             with pytest.raises(AgentTaskError):
-                if phase == 'provisional':
-                    approve(value, reviewed)
-                else:
-                    start(value, reviewed, approved)
+                step(*arguments)
             with value.coordinator.store.connection() as database:
                 assert database.execute('SELECT state FROM agent_dag_batches').fetchone()[0] != 'running'
         with value.coordinator.store.connection() as database:
             assert database.execute('SELECT count(*) FROM agent_dag_approvals').fetchone()[0] == 1
-        assert value.coordinator.list() == [] and value.runtime.store.actions(value.child) == actions
+        assert value.coordinator.list() == []
+        assert value.runtime.store.actions(value.child) == actions
         assert value.output.read_bytes() == value.body

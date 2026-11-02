@@ -23,7 +23,7 @@ _WINDOW = re.compile(
     r"touchOcclusionMode=(?:BLOCK_UNTRUSTED|USE_OPACITY|ALLOW)")
 _TRANSFORM = re.compile(r"        transform \((?:ROT_0|ROT_90|ROT_180|ROT_270|FLIP_H|FLIP_V)\) "
                         r"\((?:IDENTITY|(?:SCALE |ROTATE |TRANSLATE){1,3})\)")
-_MATRIX = re.compile(r"            -?\d{1,10}\.\d{4}  -?\d{1,10}\.\d{4}  -?\d{1,10}\.\d{4}")
+_MATRIX = re.compile(r" {12}-?\d{1,10}\.\d{4} {2}-?\d{1,10}\.\d{4} {2}-?\d{1,10}\.\d{4}")
 
 
 def android_input_name(snapshot: AndroidSnapshot) -> str:

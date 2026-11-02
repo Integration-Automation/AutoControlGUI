@@ -88,7 +88,8 @@ def test_registry_reports_environment_configured_rbac(tmp_path, monkeypatch):
     registry = _RestApiRegistry()
     try:
         status = registry.start(port=0, enable_audit=False)
-        assert status["rbac_enabled"] is True and status["token"] is None
+        assert status["rbac_enabled"] is True
+        assert status["token"] is None
     finally:
         registry.stop()
 
@@ -130,7 +131,8 @@ def test_gui_restores_shared_token_controls_after_rbac_stops(qapp, monkeypatch):
         assert not tab._token_input.isEnabled()
         status.update(running=False, rbac_enabled=False)
         tab._refresh_status()
-        assert tab._token_input.isEnabled() and tab._token_value.text() == "-"
+        assert tab._token_input.isEnabled()
+        assert tab._token_value.text() == "-"
         status.update(running=True, token="new-shared")
         tab._refresh_status()
         assert tab._token_value.text() == "new-shared"

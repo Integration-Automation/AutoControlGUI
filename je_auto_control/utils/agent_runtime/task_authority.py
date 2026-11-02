@@ -14,6 +14,8 @@ from je_auto_control.utils.agent_runtime.policy import owns_task, TaskPolicy
 from je_auto_control.utils.rbac.authorization import AuthorizationContext, AuthorizationError, current_authorization
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 
+_INVALID_PRINCIPAL = 'invalid recovery execution principal'
+
 
 @dataclass(frozen=True)
 class RecoveryBinding:
@@ -137,14 +139,14 @@ def check_task_authority(runtime: Any, task_id: str) -> None:
 
 def _principal(value: Any) -> None:
     if not isinstance(value, dict):
-        raise AgentTaskError('invalid recovery execution principal')
+        raise AgentTaskError(_INVALID_PRINCIPAL)
     if not value:
         return
     if not {'user_id', 'role'} <= set(value) or set(value) - {'user_id', 'role', 'store_path'}:
-        raise AgentTaskError('invalid recovery execution principal')
+        raise AgentTaskError(_INVALID_PRINCIPAL)
     if (not all(isinstance(value[key], str) for key in ('user_id', 'role'))
             or value.get('store_path') is not None and not isinstance(value['store_path'], str)):
-        raise AgentTaskError('invalid recovery execution principal')
+        raise AgentTaskError(_INVALID_PRINCIPAL)
 
 
 def recorded_recovery_owner(connection: Any, task_id: str) -> dict | None:
@@ -200,6 +202,7 @@ def _task_effect_identity(runtime: Any, connection: Any, row: dict, historical: 
     else:
         check_task_authority(runtime, row['id'])
     with DeferredAuthorization(AuthorizationContext(**row['owner']) if row['owner'] else None).scope():
+        # reason: entering the scope re-checks the owner's current rights; nothing runs inside it
         pass
 
 
@@ -309,4 +312,5 @@ def _check_pair(value: dict) -> None:
         if not owns_task(owner, current_authorization()):
             raise AuthorizationError("recovery reviewer can no longer manage the source owner's work")
     with DeferredAuthorization(AuthorizationContext(**owner) if owner else None).scope():
+        # reason: entering the scope re-checks the owner's current rights; nothing runs inside it
         pass

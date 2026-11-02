@@ -30,8 +30,10 @@ def test_actions_preserve_exact_completion_review_without_creating_an_executable
             response['ownership'] = {'review': 'b' * 64}
         tab._present_result(response)
         approved = json.loads(tab._remainder_request.toPlainText())
-        assert approved['task_id'] == 'source-task' and approved['snapshot'] == 'a' * 64
-        assert 'spec' not in approved and approved['note'] == ''
+        assert approved['task_id'] == 'source-task'
+        assert approved['snapshot'] == 'a' * 64
+        assert 'spec' not in approved
+        assert approved['note'] == ''
         approved['note'] = 'Reviewed independently'
         tab._remainder_request.setPlainText(json.dumps(approved))
         actions['agent_completion_create']()

@@ -32,14 +32,17 @@ def test_registry_open_is_lazy_and_close_recreates_the_same_key(qapp):
     entry = TabEntry("feature", "feature", factory)
     registry = TabRegistry([entry], on_close=closed.append)
     registry.close("feature")
-    assert not entry.built and built == []
+    assert not entry.built
+    assert built == []
     first = registry.open("feature")
     assert registry.open("feature") is first
     registry.close("feature")
-    assert not entry.built and closed == [first]
+    assert not entry.built
+    assert closed == [first]
     _flush(qapp)
     second = registry.open("feature")
-    assert second is not first and second.tab_key == first.tab_key
+    assert second is not first
+    assert second.tab_key == first.tab_key
     registry.close("feature")
     _flush(qapp)
 
@@ -57,7 +60,8 @@ def test_registry_respects_a_rejected_close(qapp):
     registry = TabRegistry([entry], on_close=closed.append)
     page = registry.open("unsaved")
     registry.close("unsaved")
-    assert entry.built and registry.open("unsaved") is page
+    assert entry.built
+    assert registry.open("unsaved") is page
     assert closed == []
     page.deleteLater()
 
@@ -90,7 +94,8 @@ def test_close_button_releases_presence_listener_and_reopen_resubscribes(workspa
     _flush(qapp)
     assert len(registry._listeners) == baseline
     workspace.show_tab("presence")
-    assert entry.widget is not first and len(registry._listeners) == baseline + 1
+    assert entry.widget is not first
+    assert len(registry._listeners) == baseline + 1
 
 
 def test_close_detaches_hud_log_tail(workspace, qapp):
@@ -102,7 +107,8 @@ def test_close_detaches_hud_log_tail(workspace, qapp):
     assert tail in autocontrol_logger.handlers
     workspace.close_tab("live_hud")
     _flush(qapp)
-    assert not entry.built and tail not in autocontrol_logger.handlers
+    assert not entry.built
+    assert tail not in autocontrol_logger.handlers
 
 
 def test_hide_still_reuses_a_panel_and_explicit_close_can_release_it(workspace, qapp):
@@ -133,6 +139,7 @@ def test_legacy_form_and_remote_session_owner_are_retained_on_close(workspace, k
     entry = workspace._find_entry(key)
     first = entry.widget
     workspace.close_tab(key)
-    assert entry.built and workspace.tabs.indexOf(first) == -1
+    assert entry.built
+    assert workspace.tabs.indexOf(first) == -1
     workspace.show_tab(key)
     assert entry.widget is first

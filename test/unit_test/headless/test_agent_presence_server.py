@@ -86,7 +86,8 @@ def connected(pipe):
 
 def test_constructor_close_and_status_do_not_reserve_or_construct_an_observer(monkeypatch):
     server, _source, _pipe, events = service(monkeypatch)
-    assert not server.status()['running'] and not events
+    assert not server.status()['running']
+    assert not events
     server.close()
     assert not events
     with pytest.raises(AgentTaskError):
@@ -107,7 +108,8 @@ def test_reservation_precedes_observation_and_failed_start_keeps_no_ready_servic
     with pytest.raises(AgentTaskError):
         server.start()
     assert events[:3] == ['reserve', 'construct', 'start']
-    assert 'listener-close' in events and 'source-close' in events
+    assert 'listener-close' in events
+    assert 'source-close' in events
     assert not server.status()['running']
 
 
@@ -122,10 +124,12 @@ def test_busy_preserves_shared_source_and_disconnect_revokes_only_issued_tokens(
         assert lease['generation'] == ready['generation']
         assert second.request(1, 'check', lease)['status'] == 'ok'
         first.close()
-        assert source.released.wait(1) and first.peer_closed.wait(1)
+        assert source.released.wait(1)
+        assert first.peer_closed.wait(1)
         assert second.request(2, 'check', lease)['status'] == 'lease_lost'
         assert second.request(3, 'inspect')['result']['generation'] == ready['generation']
-        assert 'source-close' not in events and server.status()['running']
+        assert 'source-close' not in events
+        assert server.status()['running']
     finally:
         server.close()
 
@@ -172,7 +176,8 @@ def test_close_fences_leases_and_retires_only_this_server_resources(monkeypatch)
     server.close()
     server.close()
     assert time.monotonic() - started < 2
-    assert client.closed.is_set() and 'listener-close' in events
+    assert client.closed.is_set()
+    assert 'listener-close' in events
     assert not server.status()['running']
     with pytest.raises(AgentTaskError):
         source.state.check(**lease)

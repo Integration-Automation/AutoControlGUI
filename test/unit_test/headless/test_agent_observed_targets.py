@@ -80,7 +80,8 @@ def test_invalid_or_outside_observation_references_never_dispatch(managed, refer
     with pytest.raises(AgentTaskError):
         runtime.act(task_id, {"tool": "AC_click_mouse", "reference": reference,
                               "observation_id": frame.observation_id})
-    assert target.calls == [] and runtime.store.actions(task_id) == []
+    assert target.calls == []
+    assert runtime.store.actions(task_id) == []
 
 
 def test_reference_and_explicit_coordinates_cannot_conflict(managed):
@@ -124,7 +125,8 @@ def test_image_metadata_cannot_supply_a_different_scale_from_the_actual_pixels(m
     with pytest.raises(AgentTaskError, match="actual pixels"):
         runtime.act(task_id, {"tool": "AC_click_mouse", "arguments": {"mouse_keycode": "left"},
                               "reference": {"image_point": [10, 5]}, "observation_id": frame.observation_id})
-    assert target.calls == [] and runtime.store.actions(task_id) == []
+    assert target.calls == []
+    assert runtime.store.actions(task_id) == []
 
 
 def test_legacy_explicit_coordinates_are_preserved(managed):

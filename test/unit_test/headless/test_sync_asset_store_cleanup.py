@@ -73,6 +73,7 @@ def test_owned_orphan_chunks_are_removed_without_relying_on_account_counter(tmp_
 @pytest.mark.parametrize('account', [None, True, '', 'x' * 129])
 def test_invalid_account_is_rejected_before_creating_a_database(tmp_path, account):
     path = tmp_path / 'must-not-exist.sqlite3'
+    store = SyncAssetStore(path)
     with pytest.raises(ConfigSyncError):
-        SyncAssetStore(path).delete_account(account)
+        store.delete_account(account)
     assert not path.exists()

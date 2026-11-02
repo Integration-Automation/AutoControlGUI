@@ -14,6 +14,7 @@ from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 
 _CAPACITY = 16
 _LIFETIME = 300
+_UNAVAILABLE = "retained browser context is unavailable"
 
 
 def _binding(row: Mapping) -> dict:
@@ -74,7 +75,7 @@ class RetainedBrowsers:
         description = retirement_proof(proof)
         with self._lock:
             if self._closed or entry.invalid or channel.retired or self._clock() >= entry.expires:
-                raise AgentTaskError("retained browser context is unavailable")
+                raise AgentTaskError(_UNAVAILABLE)
             entry.proof = description
 
     def require(self, row: Mapping) -> RetainedBrowser:
@@ -83,7 +84,7 @@ class RetainedBrowsers:
         with self._lock:
             entry = self._records.get(source["id"])
             if entry is None or (entry.proof is None and not entry.invalid):
-                raise AgentTaskError("retained browser context is unavailable")
+                raise AgentTaskError(_UNAVAILABLE)
             same_source = (json.dumps(entry.source, sort_keys=True, allow_nan=False)
                            == json.dumps(source, sort_keys=True, allow_nan=False))
             invalid = (self._closed or entry.invalid or not same_source
@@ -92,14 +93,14 @@ class RetainedBrowsers:
                 return entry
             entry.invalid = True
         self.discard(source["id"])
-        raise AgentTaskError("retained browser context is unavailable")
+        raise AgentTaskError(_UNAVAILABLE)
 
     def borrow(self, row: Mapping) -> RetainedBrowser:
         """Grant one transient read borrower while process lifetime stays with this collection."""
         entry = self.require(row)
         with self._lock:
             if self._records.get(entry.source["id"]) is not entry or entry.invalid:
-                raise AgentTaskError("retained browser context is unavailable")
+                raise AgentTaskError(_UNAVAILABLE)
             if entry.busy:
                 raise AgentTaskError("retained browser context is busy")
             entry.busy = True

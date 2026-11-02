@@ -64,7 +64,8 @@ def test_plugin_list_changes_reach_all_open_http_session_streams_once():
     try:
         first, second = host.sessions.create(), host.sessions.create()
         left, right = [], []
-        assert first.attach_stream(left.append) and second.attach_stream(right.append)
+        assert first.attach_stream(left.append)
+        assert second.attach_stream(right.append)
         bridge.register_tool(MCPTool("fixture", "Read", {}, lambda: None, MCPToolAnnotations(read_only=True)))
         assert len(left) == len(right) == 1
         assert json.loads(left[0])["method"] == "notifications/tools/list_changed"
@@ -84,7 +85,8 @@ def test_closed_async_acceptance_does_not_recreate_a_session_view():
     with server.connection_scope(connection_id="second"):
         callback()
         assert server._connection_id == "second"
-    assert "error" in json.loads(replies[0]) and calls == []
+    assert "error" in json.loads(replies[0])
+    assert calls == []
     assert "first" not in server._disclosure_views
     server.stop()
 
@@ -109,13 +111,15 @@ def test_targeted_http_notifications_are_not_broadcast_or_duplicated():
     try:
         first, second = host.sessions.create(), host.sessions.create()
         left, right = [], []
-        assert first.attach_stream(left.append) and second.attach_stream(right.append)
+        assert first.attach_stream(left.append)
+        assert second.attach_stream(right.append)
         with bridge.connection_scope(connection_id=first.id, notifier=lambda method, params: left.append(
             json.dumps({"jsonrpc": "2.0", "method": method, "params": params}))):
             reply = bridge.handle_line(json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/call",
                 "params": {"name": "ac_mcp_tools_enable", "arguments": {"names": ["fixture"]}}}))
             assert json.loads(reply)["result"]["isError"] is False
-        assert len(left) == 1 and right == []
+        assert len(left) == 1
+        assert right == []
     finally:
         host.stop()
     assert bridge._tool_change_sinks == {}
@@ -144,7 +148,8 @@ def test_core_discovery_shortcut_still_checks_the_actual_readonly_annotation():
     server.configure_tool_disclosure("progressive", read_only=True)
     reply = server.handle_line(json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/call",
                                           "params": {"name": "ac_mcp_tool_search"}}))
-    assert "error" in json.loads(reply) and calls == []
+    assert "error" in json.loads(reply)
+    assert calls == []
     server.stop()
 
 
@@ -219,7 +224,8 @@ def test_discovered_call_uses_existing_policy(tmp_path, monkeypatch):
     assert _call(server, "fixture", {"path": str(tmp_path / "denied.txt")})["result"]["isError"] is True
     assert _call(server, "fixture", {"reference": "env://FIXTURE_DENIED"})["result"]["isError"] is True
     assert calls == [{"path": str((root / "ok.txt").resolve())}]
-    assert confirmations == ["ac_mcp_tools_enable", "fixture"] and len(rate_checks) == 2
+    assert confirmations == ["ac_mcp_tools_enable", "fixture"]
+    assert len(rate_checks) == 2
     server.stop()
 
 
@@ -244,7 +250,8 @@ def test_removed_tool_cannot_run():
     server.configure_tool_disclosure("progressive")
     assert _call(server, "ac_mcp_tools_enable", {"names": ["fixture"]})["result"]["isError"] is False
     server.unregister_tool("fixture")
-    assert "error" in _call(server, "fixture") and calls == []
+    assert "error" in _call(server, "fixture")
+    assert calls == []
     server.stop()
 
 

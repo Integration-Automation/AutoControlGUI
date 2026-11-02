@@ -24,7 +24,8 @@ def owned(tmp_path):
             if operation == "bootstrap":
                 assert payload == {}
                 return self.bootstrap
-            assert operation == "retire_browser" and payload == {}
+            assert operation == "retire_browser"
+            assert payload == {}
             if isinstance(self.response, Exception):
                 raise self.response
             return self.response
@@ -45,11 +46,13 @@ def owned(tmp_path):
 
 def test_detach_transfers_actual_channel_after_proof_and_releases_only_input_resources(owned):
     channel, proof = owned.target.detach_readonly()
-    assert channel is owned.channel and proof == PROOF
+    assert channel is owned.channel
+    assert proof == PROOF
     assert owned.events == ["bootstrap", "journal-update", "retire_browser", "journal-release", "resource-close"]
     assert not channel.retired
     assert owned.target._channel is None
-    assert owned.target._resource is None and owned.target._journal is None
+    assert owned.target._resource is None
+    assert owned.target._journal is None
     assert owned.target._pending is None
 
 
@@ -73,9 +76,11 @@ def test_unsettled_input_cannot_be_detached_or_falsely_released(owned, damage):
 def test_unsupported_sdk_keeps_original_normal_cleanup_owner(owned):
     owned.channel.response = {"supported": False}
     assert owned.target.detach_readonly() is None
-    assert owned.target._channel is owned.channel and not owned.channel.retired
+    assert owned.target._channel is owned.channel
+    assert not owned.channel.retired
     assert owned.target._pending is None
-    assert "journal-release" not in owned.events and "resource-close" not in owned.events
+    assert "journal-release" not in owned.events
+    assert "resource-close" not in owned.events
 
 
 @pytest.mark.parametrize("response", [
@@ -88,7 +93,8 @@ def test_failed_or_forged_retirement_preserves_source_ownership_and_prevents_fre
     with pytest.raises(AgentTaskError):
         owned.target.detach_readonly()
     assert owned.target._channel is owned.channel
-    assert owned.target._resource is not None and owned.target._journal is not None
+    assert owned.target._resource is not None
+    assert owned.target._journal is not None
     assert owned.target._pending == "retire_browser"
     before = list(owned.events)
     owned.channel.response = dict(PROOF)
@@ -112,4 +118,5 @@ def test_legacy_helper_capability_does_not_break_normal_browser_cleanup(owned, v
     assert owned.target.detach_readonly() is None
     assert owned.events == ["bootstrap"]
     assert owned.target._pending is None
-    assert owned.target._channel is owned.channel and not owned.channel.retired
+    assert owned.target._channel is owned.channel
+    assert not owned.channel.retired

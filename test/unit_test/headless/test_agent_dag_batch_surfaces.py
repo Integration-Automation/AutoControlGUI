@@ -27,11 +27,13 @@ def test_versioned_api_and_catalog_expose_the_same_managed_batch_protocol():
     from je_auto_control.utils.agent_runtime.commands import CATALOG
     assert root.manage_agent_dag is api.manage_agent_dag is core.manage_agent_dag
     function, fields, required, _read_only, _host_management = CATALOG["AC_agent_dag"]
-    assert function is root.manage_agent_dag and required == ("operation",)
+    assert function is root.manage_agent_dag
+    assert required == ("operation",)
     assert fields["operation"]["enum"] == list(OPERATIONS)
     for operation in OPERATIONS:
         parsed = build_parser().parse_args(["agent-task", "dag", operation, "request.json"])
-        assert parsed.dag_operation == operation and parsed.request == "request.json"
+        assert parsed.dag_operation == operation
+        assert parsed.request == "request.json"
 
 
 def test_gui_registers_only_on_action_and_discards_graph_or_batch_selection_changes(monkeypatch):
@@ -52,7 +54,8 @@ def test_gui_registers_only_on_action_and_discards_graph_or_batch_selection_chan
         tab._inspection_source = tab._editor.toPlainText()
         tab.setProperty("dag_batch_source", "")
         tab._on_batch_finished({"batch_id": "registered", "nodes": []})
-        assert tab._batch_id.text() == "registered" and len(requests) == 1
+        assert tab._batch_id.text() == "registered"
+        assert len(requests) == 1
         tab._batch_id.setText("other-batch")
         tab._on_batch_finished({"batch_id": "late-old", "nodes": []})
         assert tab._batch_id.text() == "other-batch"

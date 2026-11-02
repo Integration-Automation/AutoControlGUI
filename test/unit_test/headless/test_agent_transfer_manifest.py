@@ -62,14 +62,16 @@ def test_manifest_round_trip_detaches_empty_file_and_hashes_exact_canonical_enve
 def test_manifest_rejects_malformed_identity_deadline_shape_and_authority_fields(field, value):
     payload = manifest_value()
     payload[field] = value
+    parse = manifest_type().from_dict
     with pytest.raises(AgentTaskError):
-        manifest_type().from_dict(payload)
+        parse(payload)
 
 
 @pytest.mark.parametrize('value', [None, [], True, {'contract': 1}])
 def test_manifest_requires_the_exact_complete_wire_object(value):
+    parse = manifest_type().from_dict
     with pytest.raises(AgentTaskError):
-        manifest_type().from_dict(value)
+        parse(value)
 
 
 @pytest.mark.parametrize(('field', 'value'), [
@@ -86,8 +88,9 @@ def test_manifest_requires_the_exact_complete_wire_object(value):
 def test_manifest_rejects_nonportable_or_inconsistent_file_envelopes(field, value):
     payload = manifest_value()
     payload['files'][0][field] = value
+    parse = manifest_type().from_dict
     with pytest.raises(AgentTaskError):
-        manifest_type().from_dict(payload)
+        parse(payload)
 
 
 @pytest.mark.parametrize('names', [
@@ -96,15 +99,17 @@ def test_manifest_rejects_nonportable_or_inconsistent_file_envelopes(field, valu
 def test_manifest_rejects_output_names_that_collide_on_supported_filesystems(names):
     payload = manifest_value()
     payload['files'] = [{**payload['files'][0], 'name': name} for name in names]
+    parse = manifest_type().from_dict
     with pytest.raises(AgentTaskError):
-        manifest_type().from_dict(payload)
+        parse(payload)
 
 
 def test_manifest_rejects_501_distinct_files_before_publication():
     payload = manifest_value()
     payload['files'] = [{**payload['files'][0], 'name': f'{number}.bin'} for number in range(501)]
+    parse = manifest_type().from_dict
     with pytest.raises(AgentTaskError):
-        manifest_type().from_dict(payload)
+        parse(payload)
 
 
 def file_descriptor(name, size):
@@ -115,8 +120,9 @@ def file_descriptor(name, size):
 def test_manifest_rejects_combined_file_bytes_above_64_mib():
     payload = manifest_value()
     payload['files'] = [file_descriptor('full.bin', 64 * 1024 * 1024), file_descriptor('extra.bin', 1)]
+    parse = manifest_type().from_dict
     with pytest.raises(AgentTaskError):
-        manifest_type().from_dict(payload)
+        parse(payload)
 
 
 @pytest.mark.parametrize(('field', 'value'), [

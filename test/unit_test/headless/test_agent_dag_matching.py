@@ -62,7 +62,8 @@ def test_older_or_invalid_contract_never_receives_spec(version, monkeypatch):
     monkeypatch.setattr(managed_tasks, "_connection", lambda _host: call)
     result = inspect_agent_dag(definition())
     assert result["nodes"][0]["request_match"] == "unverified"
-    assert len(calls) == 1 and set(calls[0][1]) == {"idempotency_key"}
+    assert len(calls) == 1
+    assert set(calls[0][1]) == {"idempotency_key"}
 
 
 @pytest.mark.parametrize("changed", ["removed", "replaced"])
@@ -80,9 +81,12 @@ def test_key_mapping_change_invalidates_old_completion_snapshot(changed, monkeyp
     monkeypatch.setattr(managed_tasks, "_connection", lambda _host: call)
     result = inspect_agent_dag(definition())
     node = result["nodes"][0]
-    assert node["lookup"] == "unavailable" and node["request_match"] == "unverifiable"
-    assert node["recorded_completion"] is None and node["input_released"] is None
-    assert result["resume_permitted"] is False and calls == ["lookup", "lookup"]
+    assert node["lookup"] == "unavailable"
+    assert node["request_match"] == "unverifiable"
+    assert node["recorded_completion"] is None
+    assert node["input_released"] is None
+    assert result["resume_permitted"] is False
+    assert calls == ["lookup", "lookup"]
 
 
 def test_remote_matching_never_sends_local_origin_witnesses(monkeypatch):
@@ -114,8 +118,9 @@ def test_owner_revocation_during_match_discards_proof(tmp_path, monkeypatch):
 
     monkeypatch.setattr(managed_tasks, "_connection", lambda _host: call)
     owner = AuthorizationContext("caller", "operator", store_path=str(store.path))
+    graph = definition()
     with authorization_scope(owner), pytest.raises(AuthorizationError):
-        inspect_agent_dag(definition())
+        inspect_agent_dag(graph)
     assert calls == ["lookup", "lookup"]
 
 
@@ -143,10 +148,12 @@ def test_real_destination_matches_the_reviewed_skill_without_repeating_effects(t
             changed["nodes"][0]["task"]["spec"]["goal"] = "changed reviewed goal"
             different = inspect_agent_dag(changed)
         first = result["nodes"][0]
-        assert first["request_match"] == "matches" and first["recorded_completion"] is True
+        assert first["request_match"] == "matches"
+        assert first["recorded_completion"] is True
         assert different["nodes"][0]["request_match"] == "differs"
         assert result["resume_permitted"] is False
-        assert target.calls == ["AC_increment"] and len(service.runtime.list()) == 1
+        assert target.calls == ["AC_increment"]
+        assert len(service.runtime.list()) == 1
         assert not service.runtime._leases
     finally:
         service.close()

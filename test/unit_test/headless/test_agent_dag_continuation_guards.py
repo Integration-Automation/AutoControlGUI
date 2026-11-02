@@ -43,7 +43,8 @@ def test_lost_adoption_evidence_after_start_cannot_publish_false_batch_success(s
             "batch_id": batch["batch_id"], "attempt": started["attempt"], "node_id": "a"}})
     finished = client.call("dag", {"operation": "finish", "request": {
         "batch_id": batch["batch_id"], "attempt": started["attempt"]}})
-    assert finished["state"] == "waiting_review" and finished["nodes"][0]["phase"] == "unknown"
+    assert finished["state"] == "waiting_review"
+    assert finished["nodes"][0]["phase"] == "unknown"
     assert target.count == 1
 
 
@@ -61,7 +62,8 @@ def test_only_one_concurrent_caller_can_consume_approval(stopped):
 
     with ThreadPoolExecutor(max_workers=2) as workers:
         results = list(workers.map(consume, (0, 1)))
-    assert sum(value is not None for value in results) == 1 and target.count == 1
+    assert sum(value is not None for value in results) == 1
+    assert target.count == 1
 
 
 def test_another_admin_cannot_reuse_an_actors_review_and_audit_keeps_the_real_actor(stopped):
@@ -73,7 +75,8 @@ def test_another_admin_cannot_reuse_an_actors_review_and_audit_keeps_the_real_ac
         approve(client, batch, definition)
         current = client.call("dag", {"operation": "get", "request": {"batch_id": batch["batch_id"]}})
     assert current["continuations"][0]["actor"] == "reviewer"
-    assert current["continuations"][0]["note"] and target.count == 1
+    assert current["continuations"][0]["note"]
+    assert target.count == 1
 
 
 @pytest.mark.parametrize("fault", ["missing", "duplicate", "unknown", "extra", "null"])
@@ -112,7 +115,8 @@ def test_tagged_submission_witness_is_atomic_and_legacy_retries_never_backfill(s
         connection.execute("DROP TRIGGER fail_admission")
     task = instance.runtime.submit(data, idempotency_key="tagged")
     metadata = instance.runtime.get(task.task_id).metadata
-    assert metadata["submission_contract"] == 1 and metadata["submitted_spec_digest"] == submitted_digest(data)
+    assert metadata["submission_contract"] == 1
+    assert metadata["submitted_spec_digest"] == submitted_digest(data)
     legacy = instance.runtime._create_task(instance.runtime._validated_spec(data), "legacy-tagged")
     assert instance.runtime.submit(data, idempotency_key="legacy-tagged").task_id == legacy.task_id
     assert "submission_contract" not in instance.runtime.get(legacy.task_id).metadata
@@ -127,4 +131,5 @@ def test_fencing_a_started_continuation_rejects_its_next_claim(stopped):
         client.call("dag", {"operation": "claim", "request": {
             "batch_id": batch["batch_id"], "attempt": started["attempt"], "node_id": "b"}})
     current = client.call("dag", {"operation": "get", "request": {"batch_id": batch["batch_id"]}})
-    assert current["nodes"][1]["phase"] == "pending" and target.count == 1
+    assert current["nodes"][1]["phase"] == "pending"
+    assert target.count == 1

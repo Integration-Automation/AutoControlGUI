@@ -58,6 +58,7 @@ def make_folder_engine(viewer: _Viewer, directory: str, current_viewer: Callable
     """Create inert polling work; the caller attaches the returned engine before starting it."""
     authority = DeferredAuthorization.capture()
     with authority.scope():
+        # reason: entering the scope re-checks the owner's current rights; nothing runs inside it
         pass
     engine: FolderSyncEngine
     connection = viewer.connection_identity
@@ -71,6 +72,7 @@ def make_folder_engine(viewer: _Viewer, directory: str, current_viewer: Callable
             return True
         try:
             with authority.scope():
+                # reason: entering the scope re-checks the owner's current rights; nothing runs inside it
                 pass
         except (AutoControlException, OSError, ValueError) as error:
             raise_caused_run_interruption(error)

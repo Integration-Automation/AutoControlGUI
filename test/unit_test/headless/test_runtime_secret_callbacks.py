@@ -42,7 +42,8 @@ def test_watchdog_masks_both_detection_and_action_failures(output, phase):
     owner = PopupWatchdog()
     owner.add_rule(WatchdogRule("private", _fail if phase == "matcher" else lambda: True, _fail))
     assert owner.check_once() == 0
-    assert FAKE not in output.getvalue() and "private callback failure: ***" in output.getvalue()
+    assert FAKE not in output.getvalue()
+    assert "private callback failure: ***" in output.getvalue()
 
 
 @pytest.mark.parametrize("phase", ["predicate", "handler"])
@@ -52,7 +53,8 @@ def test_observer_masks_predicate_and_handler_failures(output, phase):
     owner.add("private", _fail if phase == "predicate" else lambda: True, _fail)
     events = owner.poll_once()
     assert len(events) == (0 if phase == "predicate" else 1)
-    assert FAKE not in output.getvalue() and "private callback failure: ***" in output.getvalue()
+    assert FAKE not in output.getvalue()
+    assert "private callback failure: ***" in output.getvalue()
 
 
 @pytest.mark.parametrize("phase", ["trigger", "callback"])
@@ -64,7 +66,8 @@ def test_callback_executor_retains_the_trigger_mask_through_callback_logging(out
         raise RuntimeError("private callback failure: " + FAKE)
     result = owner.callback_function("AC_probe", callback)
     assert result == (None if phase == "trigger" else FAKE)
-    assert FAKE not in output.getvalue() and "private callback failure: ***" in output.getvalue()
+    assert FAKE not in output.getvalue()
+    assert "private callback failure: ***" in output.getvalue()
 
 
 def test_callback_calls_do_not_retain_an_earlier_invocations_mask(output):
@@ -103,7 +106,8 @@ def test_direct_observer_callback_boundary_also_masks_its_own_error(output):
     from je_auto_control.utils.observer.observer import ScreenObserver, WatchRule
     owner = ScreenObserver()
     owner._fire(WatchRule("private", lambda: True, _fail), "appear", True)
-    assert FAKE not in output.getvalue() and "private callback failure: ***" in output.getvalue()
+    assert FAKE not in output.getvalue()
+    assert "private callback failure: ***" in output.getvalue()
 
 
 @pytest.mark.parametrize("kind", ["watchdog", "observer"])
@@ -120,4 +124,5 @@ def test_detection_and_callback_share_the_same_mask_until_diagnostics_finish(out
         owner = ScreenObserver()
         owner.add("private", _resolve, later_failure)
         assert len(owner.poll_once()) == 1
-    assert FAKE not in output.getvalue() and "later callback failure: ***" in output.getvalue()
+    assert FAKE not in output.getvalue()
+    assert "later callback failure: ***" in output.getvalue()

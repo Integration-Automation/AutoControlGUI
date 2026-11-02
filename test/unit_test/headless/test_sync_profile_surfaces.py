@@ -32,11 +32,13 @@ def test_private_native_load_ac_mcp_builder_create_disabled_independent_workspac
     assert step_to_action(action_to_step(action)) == action
     ac.executor.execute_action([action], raise_on_error=True)
     first = list((tmp_path / 'workspaces').iterdir())
-    assert len(first) == 1 and (first[0] / 'hotkeys.json').is_file()
+    assert len(first) == 1
+    assert (first[0] / 'hotkeys.json').is_file()
     result = tool().handler(**values)
     assert Path(result['directory']) != first[0]
     assert all(item['enabled'] is False for item in result['hotkeys'] + result['triggers'])
-    assert (ac.default_hotkey_daemon.is_running, ac.default_trigger_engine.is_running) == initial_running
+    running = (ac.default_hotkey_daemon.is_running, ac.default_trigger_engine.is_running)
+    assert running == initial_running
 
 
 def test_native_load_requires_drive_and_is_excluded_from_read_only_discovery():
@@ -51,10 +53,11 @@ def test_native_load_mcp_rechecks_explicit_roots_and_cancellation_before_copy(tm
     monkeypatch.setenv('AUTOCONTROL_ALLOWED_PATH_ROOTS', str(tmp_path))
     values = arguments(tmp_path)
     context = ToolCallContext('outside', path_policy=PathPolicy([tmp_path / 'other-root']))
+    load = tool()
     with pytest.raises(PathNotAllowedError):
-        tool().handler(**values, ctx=context)
+        load.handler(**values, ctx=context)
     context = ToolCallContext('cancelled')
     context.cancelled_event.set()
     with pytest.raises(OperationCancelledError):
-        tool().handler(**values, ctx=context)
+        load.handler(**values, ctx=context)
     assert not (tmp_path / 'workspaces').exists()

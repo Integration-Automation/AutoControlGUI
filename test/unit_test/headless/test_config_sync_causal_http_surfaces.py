@@ -30,10 +30,12 @@ def test_causal_http_commands_and_builder_use_explicit_json_and_live_environment
     commit = dict(common, bucket=state.with_entries(operation.entries).to_dict(),
                   actor=ac.SyncActor('desktop', 0).to_dict(), operation_id='explicit-commit')
     result = tools()['ac_config_causal_commit'].handler(**commit)
-    assert result['revision'] == 2 and result['bucket']['revision'] == 2
+    assert result['revision'] == 2
+    assert result['bucket']['revision'] == 2
     flush = dict(common, path=str(tmp_path / 'outbox.sqlite3'))
     result = tools()['ac_sync_outbox_flush'].handler(**flush)
-    assert result['report']['delivered'] == 1 and result['snapshot'] == server.get('alice').to_dict()
+    assert result['report']['delivered'] == 1
+    assert result['snapshot'] == server.get('alice').to_dict()
     for command, args in [('AC_config_causal_fetch', common), ('AC_config_causal_commit', commit),
                           ('AC_sync_outbox_flush', flush)]:
         action = [command, args]
@@ -53,12 +55,13 @@ def test_causal_http_tools_require_drive_even_when_reading_and_cancel_before_sto
     ctx = ToolCallContext('cancelled')
     ctx.cancelled_event.set()
     args = {'path': str(tmp_path / 'outbox.sqlite3'), 'endpoint': 'https://controlled.invalid', 'user_id': 'alice'}
+    flush_tool = tools()['ac_sync_outbox_flush']
     with pytest.raises(OperationCancelledError):
-        tools()['ac_sync_outbox_flush'].handler(**args, ctx=ctx)
+        flush_tool.handler(**args, ctx=ctx)
     assert not (tmp_path / 'outbox.sqlite3').exists()
     ctx = ToolCallContext('confined', path_policy=PathPolicy([tmp_path / 'elsewhere']))
     with pytest.raises(PathNotAllowedError):
-        tools()['ac_sync_outbox_flush'].handler(**args, ctx=ctx)
+        flush_tool.handler(**args, ctx=ctx)
     assert not (tmp_path / 'outbox.sqlite3').exists()
 
 
@@ -74,9 +77,12 @@ def test_mid_request_mcp_cancellation_preserves_its_protocol_signal_and_durable_
             ctx.cancelled_event.set()
         return response
     monkeypatch.setattr(http_client, 'perform_call', cancelled_after_fetch)
+    flush_tool = tools()['ac_sync_outbox_flush']
+    path = str(tmp_path / 'outbox.sqlite3')
     with pytest.raises(OperationCancelledError):
-        tools()['ac_sync_outbox_flush'].handler(path=str(tmp_path / 'outbox.sqlite3'), endpoint=operation.endpoint,
+        flush_tool.handler(path=path, endpoint=operation.endpoint,
             user_id='alice', options={'secret_env': 'AC_TEST_CAUSAL_SHARED_SECRET'}, ctx=ctx)
     assert [call['method'] for call in calls] == ['GET']
     state = queue.status(endpoint=operation.endpoint, user_id='alice')
-    assert state['pending'] == 1 and state['offline'] == 0
+    assert state['pending'] == 1
+    assert state['offline'] == 0

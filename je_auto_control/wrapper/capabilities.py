@@ -181,11 +181,16 @@ def probe_capabilities(context: BackendContext) -> CapabilitySnapshot:
     if not context.platform.startswith(('linux', 'freebsd', 'openbsd', 'netbsd')):
         return _unsupported(context)
     wayland = _is_wayland(context.environ)
-    override = context.environ.get('JE_AUTOCONTROL_LINUX_DISPLAY_SERVER', '').strip().lower()
-    selected = override if override in ('x11', 'wayland') else ('wayland' if wayland else 'x11')
-    if not context.platform.startswith('linux') or selected == 'x11':
+    if not context.platform.startswith('linux') or _display_server(context, wayland) == 'x11':
         return _x11(context, wayland)
     return CapabilitySnapshot(context.platform, 'wayland', _wayland_input(context), _wayland_capture(context))
+
+
+def _display_server(context: BackendContext, wayland: bool) -> str:
+    override = context.environ.get('JE_AUTOCONTROL_LINUX_DISPLAY_SERVER', '').strip().lower()
+    if override in ('x11', 'wayland'):
+        return override
+    return 'wayland' if wayland else 'x11'
 
 
 def _is_wayland(env: Mapping[str, str]) -> bool:
@@ -207,11 +212,18 @@ def _unsupported(context: BackendContext) -> CapabilitySnapshot:
     return CapabilitySnapshot(context.platform, 'none', *statuses)
 
 
+def _x11_reason(wayland: bool, present: bool) -> str:
+    if wayland:
+        return 'XWayland covers X11 clients only; native Wayland windows are outside its scope.'
+    if present:
+        return 'DISPLAY is configured; no X11 connection was attempted.'
+    return 'DISPLAY is not configured.'
+
+
 def _x11(context: BackendContext, wayland: bool) -> CapabilitySnapshot:
     present = bool(context.environ.get('DISPLAY', '').strip())
     state = 'unverified' if present else 'needs_dependency'
-    reason = 'XWayland covers X11 clients only; native Wayland windows are outside its scope.' if wayland else (
-        'DISPLAY is configured; no X11 connection was attempted.' if present else 'DISPLAY is not configured.')
+    reason = _x11_reason(wayland, present)
     statuses = [_observation(context, name, 'x11') or CapabilityStatus(
         name, state, 'x11', reason, 'Provide a reachable X11 display and explicitly verify the intended operation.',
         not wayland) for name in ('input', 'capture')]

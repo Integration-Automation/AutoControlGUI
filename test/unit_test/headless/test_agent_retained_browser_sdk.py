@@ -85,7 +85,8 @@ def test_input_lease_releases_while_runtime_still_owns_the_original_readonly_pro
     source = live.runtime.submit(live.definition).task_id
     assert run_task(live.runtime, source).state == "waiting_user"
     assert source not in live.runtime._leases
-    assert len(live.processes) == 1 and live.processes[0].poll() is None
+    assert len(live.processes) == 1
+    assert live.processes[0].poll() is None
     live.runtime.close()
     assert live.processes[0].poll() is not None
 
@@ -110,7 +111,8 @@ def test_older_sdk_closes_normally_but_cannot_create_a_completion_context(live):
     assert live.processes[0].poll() is not None
     with pytest.raises(AgentTaskError, match="context.*unavailable"):
         completion(live.runtime, source)
-    assert len(live.processes) == 1 and source not in live.runtime._leases
+    assert len(live.processes) == 1
+    assert source not in live.runtime._leases
 
 
 def test_expired_context_is_reaped_without_replacement_or_historical_fallback(live, monkeypatch):
@@ -119,7 +121,8 @@ def test_expired_context_is_reaped_without_replacement_or_historical_fallback(li
     monkeypatch.setattr(live.runtime._retained_browsers, "_clock", lambda: float("inf"))
     with pytest.raises(AgentTaskError, match="context.*unavailable"):
         completion(live.runtime, source)
-    assert live.processes[0].poll() is not None and len(live.processes) == 1
+    assert live.processes[0].poll() is not None
+    assert len(live.processes) == 1
 
 
 def test_disabled_target_maintenance_retires_the_original_owned_context(live):
@@ -145,7 +148,8 @@ def test_forged_live_capability_description_cannot_revive_a_reaped_context(live,
     monkeypatch.setattr(entry.channel, "request", original)
     with pytest.raises(AgentTaskError, match="unavailable"):
         completion(runtime, source)
-    assert live.processes[0].poll() is not None and len(live.processes) == 1
+    assert live.processes[0].poll() is not None
+    assert len(live.processes) == 1
 
 
 def test_source_snapshot_change_during_live_read_cannot_publish_completion(live, monkeypatch):
@@ -189,7 +193,8 @@ def test_cancelled_live_read_reaps_only_original_readonly_context(live, monkeypa
     with pytest.raises(CancelledError):
         runtime.finish(child)
     assert runtime.get(child).state == "cancelled"
-    assert live.processes[0].poll() is not None and len(live.processes) == 1
+    assert live.processes[0].poll() is not None
+    assert len(live.processes) == 1
 
 
 @pytest.fixture
@@ -232,7 +237,8 @@ def test_skill_publication_uses_actual_trial_and_separate_same_context_completio
     accepted = runtime.skills.control("accept", {
         "candidate_id": value.candidate["id"], "task_id": value.trial, "completion_task_id": value.trial_reader,
         "expected_version": 0, "note": "Reviewed actual new trial and original-context independent evidence"})
-    assert accepted["version"] == 1 and accepted["state"] == "accepted"
+    assert accepted["version"] == 1
+    assert accepted["state"] == "accepted"
     assert accepted["publication"]["task_id"] == value.trial
     assert accepted["publication"]["completion_review"]["task_id"] == value.trial_reader
     assert runtime.store.actions(value.trial) == before
@@ -264,7 +270,8 @@ def test_dead_source_helper_is_refused_by_actual_probe_without_new_process(live)
     live.processes[0].wait(timeout=3)
     with pytest.raises(AgentTaskError):
         completion(live.runtime, source)
-    assert live.processes[0].poll() is not None and len(live.processes) == 1
+    assert live.processes[0].poll() is not None
+    assert len(live.processes) == 1
 
 
 def test_explicit_private_scope_renewal_reads_original_context_without_reviving_old_origin(live, tmp_path):
@@ -308,7 +315,8 @@ def test_exact_creation_retry_returns_existing_task_after_context_retirement_wit
     runtime._retained_browsers.discard(source)
     assert runtime.recovery.control("create_completion", request)["task_id"] == child
     assert runtime.get(child).state == "queued"
-    assert len(live.processes) == 1 and live.processes[0].poll() is not None
+    assert len(live.processes) == 1
+    assert live.processes[0].poll() is not None
 
 
 def test_source_change_during_admission_probe_rolls_back_the_private_completion_task(live, monkeypatch):
@@ -365,9 +373,11 @@ def test_public_surfaces_verify_the_actual_retained_browser_without_replaying_in
         assert run_tool_call("AC_agent_task_recovery", {
             "operation": "create_completion", "request": request})["task_id"] == child
         result = AgentRuntimeClient(connection).call("finish", {"task_id": child})
-        assert result["state"] == "succeeded" and result["metadata"]["input_released"] is True
+        assert result["state"] == "succeeded"
+        assert result["metadata"]["input_released"] is True
         assert result["metadata"]["completion_review"]["effect_task"] == source
-        assert runtime.store.actions(source) == original and runtime.store.actions(child) == []
+        assert runtime.store.actions(source) == original
+        assert runtime.store.actions(child) == []
         assert len(live.processes) == 1
     finally:
         server.stop()

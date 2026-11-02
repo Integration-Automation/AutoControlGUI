@@ -18,7 +18,9 @@ def test_transfer_contract_probe_is_registered_and_does_not_touch_a_service_or_r
     monkeypatch.setattr('je_auto_control.utils.agent_runtime.transport.request_json', forbidden)
     before = set(tmp_path.rglob('*'))
     result = check()
-    assert result.name == 'agent_transfer_contract' and result.ok and result.severity == 'info'
+    assert result.name == 'agent_transfer_contract'
+    assert result.ok
+    assert result.severity == 'info'
     assert result.extra == {'contract': TransferManifest.contract, 'operations': list(OPERATIONS),
         'max_manifest_bytes': MAX_MANIFEST_BYTES, 'max_transfer_bytes': MAX_TRANSFER_BYTES,
         'max_files': 500, 'state': 'contract_only', 'authority_granted': False,
@@ -41,5 +43,7 @@ def test_existing_shared_diagnostics_surface_reports_only_contract_availability(
         report = run_tool_call('AC_diagnose', {})
     assert report['count'] == 1
     extra = report['checks'][0]['extra']
-    assert extra['state'] == 'contract_only' and extra['authority_granted'] is False
-    assert extra['remote_verified'] is False and extra['native_verified'] is False
+    assert extra['state'] == 'contract_only'
+    assert extra['authority_granted'] is False
+    assert extra['remote_verified'] is False
+    assert extra['native_verified'] is False

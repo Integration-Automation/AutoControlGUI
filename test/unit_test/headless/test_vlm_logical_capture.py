@@ -86,7 +86,8 @@ def test_geometry_scope_resets_on_nested_reads_and_errors(monkeypatch):
         return data
 
     data, frame = capture_with_geometry(reader, None)
-    assert frame.origin == (-10, -20) and frame.png == data
+    assert frame.origin == (-10, -20)
+    assert frame.png == data
 
     def fail(region):
         capture_png(region)
@@ -131,6 +132,9 @@ def test_callback_isolates_parent_frame_and_restores_it(monkeypatch):
             return vlm_api.locate_by_description("fresh", backend=Backend()) == (23, 4)
 
         proof = prepare_verification(VerificationRequest(verifier=callback), None)()
-        assert proof.verified and proof.frame_hash is None
-        assert current_locator_frame() is parent and parent.snapshot().origin == (10, 0)
-    assert len(captures) == 2 and current_locator_frame() is None
+        assert proof.verified
+        assert proof.frame_hash is None
+        assert current_locator_frame() is parent
+        assert parent.snapshot().origin == (10, 0)
+    assert len(captures) == 2
+    assert current_locator_frame() is None

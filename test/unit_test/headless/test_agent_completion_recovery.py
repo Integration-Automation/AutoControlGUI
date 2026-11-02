@@ -43,7 +43,8 @@ def completed(tmp_path, monkeypatch):
 def approval(value, task_id=None):
     identifier = task_id or value.task_id
     review = value.runtime.recovery.control('preview_completion', {'task_id': identifier})
-    assert review['approval_required'] is True and review['source_completion_inherited'] is False
+    assert review['approval_required'] is True
+    assert review['source_completion_inherited'] is False
     return {'task_id': identifier, 'snapshot': review['snapshot'], 'note': 'Reviewed confirmed effects and criteria'}
 
 
@@ -55,14 +56,17 @@ def test_reviewed_completion_verifies_fresh_file_without_replaying_a_confirmed_a
     runtime, source = completed.runtime, completed.task_id
     historical = runtime.store.actions(source)
     ordinary = runtime.recovery.control('preview', {'task_id': source})
-    assert ordinary['draft'] is None and 'no_remaining_actions' in ordinary['issues']
+    assert ordinary['draft'] is None
+    assert 'no_remaining_actions' in ordinary['issues']
     identifier = child(completed)
     result = runtime.finish(identifier)
     assert result.state == 'succeeded'
-    assert result.metadata['input_released'] is True and result.metadata['completion_contract'] == 1
+    assert result.metadata['input_released'] is True
+    assert result.metadata['completion_contract'] == 1
     assert [item['status'] for item in result.verification] == ['passed', 'passed']
     assert runtime.store.actions(identifier) == []
-    assert runtime.get(source).state == 'paused' and runtime.store.actions(source) == historical
+    assert runtime.get(source).state == 'paused'
+    assert runtime.store.actions(source) == historical
 
 
 def test_source_changes_during_reader_retirement_cannot_publish_stale_success(completed, monkeypatch):
@@ -75,7 +79,8 @@ def test_source_changes_during_reader_retirement_cannot_publish_stale_success(co
     with pytest.raises(AgentTaskError, match='snapshot'):
         runtime.finish(identifier)
     result = runtime.get(identifier)
-    assert result.state != 'succeeded' and result.metadata['completion_contract'] == 0
+    assert result.state != 'succeeded'
+    assert result.metadata['completion_contract'] == 0
 
 
 def test_observe_then_finish_reuses_the_same_readonly_authority_without_reconfiguration(completed):
@@ -84,7 +89,8 @@ def test_observe_then_finish_reuses_the_same_readonly_authority_without_reconfig
     assert frame.data['identity'] == 'local-files'
     assert runtime.get(identifier).metadata['input_released'] is False
     result = runtime.finish(identifier)
-    assert result.state == 'succeeded' and result.metadata['input_released'] is True
+    assert result.state == 'succeeded'
+    assert result.metadata['input_released'] is True
     assert runtime.store.actions(identifier) == []
 
 

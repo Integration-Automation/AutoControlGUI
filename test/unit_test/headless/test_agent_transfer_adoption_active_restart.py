@@ -79,15 +79,18 @@ def test_cold_coordinator_pauses_only_owned_inflight_effect_and_never_attests_un
                 value.coordinator.close()
                 value.coordinator = AgentRuntime(path, targets={})
                 current = value.coordinator.batches.control('get', {'batch_id': reviewed['batch_id']})
-                assert current['state'] == 'waiting_review' and not future.done()
+                assert current['state'] == 'waiting_review'
+                assert not future.done()
                 node = next(row for row in current['nodes'] if row['id'] == 'downstream')
                 assert node['phase'] == 'unknown'
                 assert node['receipt'] == {'outcome': 'requires_review', 'task_id': dependent}
                 with authorization_scope(value.owner):
                     stopped = value.runtime.get(dependent)
-                assert stopped.state == 'pausing' and stopped.metadata['input_released'] is False
+                assert stopped.state == 'pausing'
+                assert stopped.metadata['input_released'] is False
                 assert value.runtime.store.get(independent)['state'] == previous
-                assert effect.read_bytes() == original_bytes and calls == ['AC_workflow_manifest']
+                assert effect.read_bytes() == original_bytes
+                assert calls == ['AC_workflow_manifest']
             finally:
                 release.set()
                 try:

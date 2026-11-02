@@ -55,7 +55,8 @@ def test_shared_transfer_surfaces_list_the_actual_source_without_creating_a_gran
         result = AgentRuntimeClient(value.connection).call('transfer', {
             'operation': 'list_exports', 'request': request})
     assert result == {'exports': []}
-    assert value.runtime.get(value.source).state == 'succeeded' and value.runtime.store.actions(value.source) == []
+    assert value.runtime.get(value.source).state == 'succeeded'
+    assert value.runtime.store.actions(value.source) == []
     assert value.output.read_bytes() == value.body
     with value.runtime.store.connection() as database:
         assert database.execute('SELECT count(*) FROM agent_transfer_grants').fetchone()[0] == 0
@@ -75,8 +76,10 @@ def test_public_api_names_and_builder_fields_share_the_same_management_contract(
     for module in (ac, api, core, agent_runtime):
         assert 'manage_agent_transfer' in module.__all__
     function, fields, required, readonly, management = CATALOG['AC_agent_transfer']
-    assert function is ac.manage_agent_transfer and required == ('operation',)
-    assert readonly is False and management is False
+    assert function is ac.manage_agent_transfer
+    assert required == ('operation',)
+    assert readonly is False
+    assert management is False
     assert fields['operation']['enum'] == list(OPERATIONS)
     assert not {'export', 'chunk', 'evidence'} & set(fields['operation']['enum'])
     specification = COMMAND_SPECS['AC_agent_transfer']
@@ -110,7 +113,8 @@ def test_public_creation_requires_its_review_and_keeps_peer_reads_on_the_separat
                'idempotency_key': 'public-consent-flow'}
     first = ac.manage_agent_transfer('create_export', request)
     second = ac.manage_agent_transfer('create_export', request)
-    assert first == second and first['export']['state'] == 'active'
+    assert first == second
+    assert first['export']['state'] == 'active'
     manifest = first['export']['manifest']
     assert manifest['files'][0]['sha256'] == sha256(value.body).hexdigest()
     identifier = first['export']['export_id']
@@ -119,4 +123,5 @@ def test_public_creation_requires_its_review_and_keeps_peer_reads_on_the_separat
     assert value.runtime.transfers.peer('export', {'export_id': identifier}) == manifest
     with value.runtime.store.connection() as database:
         assert database.execute('SELECT count(*) FROM agent_transfer_grants').fetchone()[0] == 1
-    assert value.output.read_bytes() == value.body and value.runtime.store.actions(value.source) == []
+    assert value.output.read_bytes() == value.body
+    assert value.runtime.store.actions(value.source) == []

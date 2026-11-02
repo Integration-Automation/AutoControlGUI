@@ -10,6 +10,8 @@ from je_auto_control.utils.agent_runtime.transfer_models import _deadline
 
 QUEUE = 'agent_transfer_import'
 FINAL = frozenset({'published', 'requires_review', 'cancelled', 'expired'})
+_FAIL_OPEN_ITEM = ("UPDATE work_items SET status='failed',claim=claim+1,error=?,updated=? WHERE id=? "
+                   "AND queue=? AND status IN ('new','in_progress')")
 
 
 def _delivery_data(data: Any, identifier: str, generation: int) -> bool:
@@ -102,8 +104,7 @@ class TransferImportLedger:
                 continue
             connection.execute("UPDATE agent_transfer_deliveries SET state='requires_review',"
                                'generation=generation+1,updated=? WHERE id=?', (time.time(), row['id']))
-            connection.execute("UPDATE work_items SET status='failed',claim=claim+1,error=?,updated=? WHERE id=? "
-                               "AND queue=? AND status IN ('new','in_progress')",
+            connection.execute(_FAIL_OPEN_ITEM,
                                ('runtime restarted; import review required', time.time(), row['queue_id'], QUEUE))
 
     def claim(self, item: Any) -> None:
@@ -160,8 +161,7 @@ class TransferImportLedger:
         state = 'requires_review' if row['publication'] else 'cancelled'
         connection.execute('UPDATE agent_transfer_deliveries SET state=?,generation=generation+1,updated=? '
                            'WHERE id=?', (state, time.time(), identifier))
-        connection.execute("UPDATE work_items SET status='failed',claim=claim+1,error=?,updated=? WHERE id=? "
-                           "AND queue=? AND status IN ('new','in_progress')",
+        connection.execute(_FAIL_OPEN_ITEM,
                            ('import cancelled', time.time(), row['queue_id'], QUEUE))
 
     def expire(self, connection: Any, identifier: str) -> None:
@@ -171,8 +171,7 @@ class TransferImportLedger:
             return
         connection.execute("UPDATE agent_transfer_deliveries SET state='expired',generation=generation+1,updated=? "
                            'WHERE id=?', (time.time(), identifier))
-        connection.execute("UPDATE work_items SET status='failed',claim=claim+1,error=?,updated=? WHERE id=? "
-                           "AND queue=? AND status IN ('new','in_progress')",
+        connection.execute(_FAIL_OPEN_ITEM,
                            ('import receipt expired', time.time(), row['queue_id'], QUEUE))
 
     def prunable(self, connection: Any, cutoff: float) -> list[str]:

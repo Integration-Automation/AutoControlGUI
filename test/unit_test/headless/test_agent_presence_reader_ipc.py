@@ -123,7 +123,9 @@ def test_actual_reader_replacement_checks_same_capability_and_never_releases_iss
         for child in (first, second, owner):
             if child is not None:
                 child.close()
-    assert first.retired and second.retired and owner.retired
+    assert first.retired
+    assert second.retired
+    assert owner.retired
 
 
 @pytest.mark.parametrize('mode', ['send', 'receive'])
@@ -138,9 +140,12 @@ def test_actual_blocked_watch_retires_owned_reader_job_without_stopping_source(t
         gate.write_text('block', encoding='utf-8')
         assert not wait_notice(child)['retired']
         closing = child.request('close', {}, timeout=3)
-        assert not closing['ok'] and not closing['retired'] and closing['elapsed'] < 0.7
+        assert not closing['ok']
+        assert not closing['retired']
+        assert closing['elapsed'] < 0.7
         child.close()
-        assert child.retired and not owner.retired
+        assert child.retired
+        assert not owner.retired
         assert owner.request('check', binding, timeout=3)['status'] == 'ok'
         assert len(instances.read_text().splitlines()) == 1
     finally:
@@ -159,12 +164,17 @@ def test_actual_first_bind_and_uncertain_handoff_never_claim_reader_retirement(t
         gate.write_text('block', encoding='utf-8')
         child = reader(namespace, gate, mode)
         initial = child.request('bootstrap', binding, timeout=15)
-        assert not initial['ok'] and initial['notice'] and initial['elapsed'] < 0.7
+        assert not initial['ok']
+        assert initial['notice']
+        assert initial['elapsed'] < 0.7
         assert not initial['retired']
         closing = child.request('close', {}, timeout=3)
-        assert not closing['ok'] and not closing['retired'] and closing['elapsed'] < 0.7
+        assert not closing['ok']
+        assert not closing['retired']
+        assert closing['elapsed'] < 0.7
         child.close()
-        assert child.retired and not owner.retired
+        assert child.retired
+        assert not owner.retired
         assert owner.request('check', binding, timeout=3)['status'] == 'ok'
     finally:
         if child is not None:

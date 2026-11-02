@@ -30,8 +30,10 @@ def test_receipt_is_frozen_and_describes_received_content_after_atomic_publicati
     receive(receiver, content, receipts, done=lambda path: done.append(path.read_bytes()))
     receipt, = receipts
     assert receipt.path == tmp_path / 'shared.bin'
-    assert receipt.sha256 == hashlib.sha256(content).hexdigest() and receipt.size == len(content)
-    assert done == [content] and receipt.path.read_bytes() == content
+    assert receipt.sha256 == hashlib.sha256(content).hexdigest()
+    assert receipt.size == len(content)
+    assert done == [content]
+    assert receipt.path.read_bytes() == content
     with pytest.raises(FrozenInstanceError):
         receipt.sha256 = '0' * 64
 
@@ -89,7 +91,9 @@ def test_failed_receive_has_no_publication_receipt_and_preserves_the_previous_ta
     receiver.handle_message(b'part' if boundary != 'truncated' else b'x', on_error=errors.append)
     kind = 'file_abort' if boundary == 'abort' else 'file_end'
     receiver.handle_message(json.dumps({'type': kind}), on_receipt=receipts.append, on_error=errors.append)
-    assert errors and receipts == [] and target.read_bytes() == b'previous'
+    assert errors
+    assert receipts == []
+    assert target.read_bytes() == b'previous'
     assert sorted(p.name for p in tmp_path.iterdir()) == ['shared.bin']
 
 
@@ -111,7 +115,8 @@ def test_receipt_cannot_register_an_unselected_or_missing_path(tmp_path, placeme
         target.write_bytes(b'received')
     engine = FolderSyncEngine(watch_dir=watch, sender=lambda *_args: None)
     receipt = FileReceiveReceipt(target, hashlib.sha256(b'received').hexdigest(), 8)
-    assert not engine.record_receipt(receipt) and engine._content.snapshot == {}
+    assert not engine.record_receipt(receipt)
+    assert engine._content.snapshot == {}
 
 
 @pytest.mark.parametrize('digest,size', [('bad', 1), ('G' * 64, 1), ('0' * 64, -1), ('0' * 64, True),
@@ -150,8 +155,10 @@ def test_relative_inbox_remains_bound_when_another_operation_changes_cwd(tmp_pat
     receipts = []
     receiver.handle_message(b'data')
     receiver.handle_message(json.dumps({'type': 'file_end'}), on_receipt=receipts.append)
-    assert len(receipts) == 1 and receipts[0].path == tmp_path / 'inbox' / 'shared.bin'
-    assert receipts[0].path.read_bytes() == b'data' and list(changed.iterdir()) == []
+    assert len(receipts) == 1
+    assert receipts[0].path == tmp_path / 'inbox' / 'shared.bin'
+    assert receipts[0].path.read_bytes() == b'data'
+    assert list(changed.iterdir()) == []
 
 
 def test_relative_watch_keeps_its_original_selected_root_when_cwd_changes(tmp_path, monkeypatch):
@@ -171,7 +178,8 @@ def test_relative_watch_keeps_its_original_selected_root_when_cwd_changes(tmp_pa
     assert engine.record_receipt(receipts[0])
     (watch / 'shared.bin').write_bytes(b'original watch edit')
     loop(engine, lambda: None)
-    assert sent == [b'original watch edit'] and sentinel.read_bytes() == b'unselected content'
+    assert sent == [b'original watch edit']
+    assert sentinel.read_bytes() == b'unselected content'
 
 
 @pytest.fixture(params=['host', 'viewer'])
@@ -207,7 +215,8 @@ def test_native_receipt_listener_can_be_replaced_and_cleared_without_changing_pa
     native_deliver(channel, b'second')
     owner.set_file_receipt_callback(None)
     native_deliver(channel, b'third')
-    assert len(first) == len(second) == 1 and len(paths) == 3
+    assert len(first) == len(second) == 1
+    assert len(paths) == 3
     assert first[0].sha256 == hashlib.sha256(b'first').hexdigest()
     assert second[0].sha256 == hashlib.sha256(b'second').hexdigest()
     assert (inbox / 'shared.bin').read_bytes() == b'third'
@@ -223,7 +232,8 @@ def test_native_ordinary_receipt_callback_failure_still_delivers_the_path_notice
     owner.set_file_receipt_callback(failed)
     owner.set_file_received_callback(paths.append)
     native_deliver(channel)
-    assert paths == [inbox / 'shared.bin'] and paths[0].read_bytes() == b'bytes'
+    assert paths == [inbox / 'shared.bin']
+    assert paths[0].read_bytes() == b'bytes'
 
 
 @pytest.mark.parametrize('signal', [KeyboardInterrupt, SystemExit, asyncio.CancelledError,
@@ -238,5 +248,6 @@ def test_native_receipt_callback_preserves_wrapped_controls_after_publication(na
     owner.set_file_receipt_callback(failed)
     with pytest.raises(signal) as caught:
         native_deliver(channel)
-    assert caught.value is original and (inbox / 'shared.bin').read_bytes() == b'bytes'
+    assert caught.value is original
+    assert (inbox / 'shared.bin').read_bytes() == b'bytes'
     assert list(inbox.glob('*.part')) == []

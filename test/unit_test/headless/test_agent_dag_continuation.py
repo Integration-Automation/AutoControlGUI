@@ -32,7 +32,8 @@ def stopped(service, monkeypatch):
 
     monkeypatch.setattr(AgentRuntimeClient, "call", after_first_record)
     result = run_dag(definition, batch_id=batch["batch_id"], stop_event=stop)
-    assert not result.succeeded and target.count == 1
+    assert not result.succeeded
+    assert target.count == 1
     return client, instance, target, batch, definition
 
 
@@ -49,8 +50,10 @@ def approval(value):
 def test_explicit_whole_graph_continuation_adopts_parent_and_dispatches_only_pending_child(stopped):
     client, _instance, target, batch, definition = stopped
     value = review(client, batch, definition)
-    assert value["can_approve"] and [item["action"] for item in value["decisions"]] == ["adopt", "dispatch"]
-    assert target.count == 1 and not value["resume_permitted"]
+    assert value["can_approve"]
+    assert [item["action"] for item in value["decisions"]] == ["adopt", "dispatch"]
+    assert target.count == 1
+    assert not value["resume_permitted"]
     request = approval(value)
     recorded = client.call("dag", {"operation": "approve_continuation", "request": request})
     assert target.count == 1
@@ -73,10 +76,12 @@ def test_lookup_absence_never_turns_a_claimed_node_back_into_dispatch(service):
         "batch_id": batch["batch_id"], "attempt": started["attempt"], "node_id": "a"}})
     client.call("dag", {"operation": "pause_batch", "request": {"batch_id": batch["batch_id"]}})
     value = review(client, batch, definition)
-    assert not value["can_approve"] and value["decisions"][0]["action"] == "wait"
+    assert not value["can_approve"]
+    assert value["decisions"][0]["action"] == "wait"
     value["decisions"][0] = {"node_id": "a", "action": "dispatch", "spec": definition["nodes"][0]["task"]["spec"]}
+    request = {"operation": "approve_continuation", "request": approval(value)}
     with pytest.raises(AgentTaskError, match="evidence or decisions changed"):
-        client.call("dag", {"operation": "approve_continuation", "request": approval(value)})
+        client.call("dag", request)
     assert target.count == 0
 
 
@@ -158,14 +163,16 @@ def test_successor_adoption_uses_real_recovery_provenance_and_fresh_completion(s
         "max_parallel": 4}})
     result = client.call("dag", {"operation": "validate_node", "request": {
         "batch_id": batch["batch_id"], "attempt": begun["attempt"], "node_id": "a"}})
-    assert result["task_id"] == child and target.count == 2
+    assert result["task_id"] == child
+    assert target.count == 2
     unrelated = instance.runtime.submit(graph()["nodes"][1]["task"]["spec"])
     assert run_task(instance.runtime, unrelated.task_id).state == "succeeded"
     client.call("dag", {"operation": "pause_batch", "request": {"batch_id": batch["batch_id"]}})
     value = review(client, batch, definition)
     value["decisions"][0] = {"node_id": "a", "action": "successor", "task_id": unrelated.task_id}
     value = review(client, batch, definition, decisions=value["decisions"])
-    assert not value["can_approve"] and target.count == 3
+    assert not value["can_approve"]
+    assert target.count == 3
 
 
 def test_expired_origin_can_be_replaced_only_for_never_dispatched_scoped_work(service, monkeypatch, tmp_path):
@@ -200,4 +207,5 @@ def test_expired_origin_can_be_replaced_only_for_never_dispatched_scoped_work(se
         result = run_dag(definition, batch_id=batch["batch_id"], recovery=approval(value))
         assert result.succeeded, result.to_dict()
         child = instance.runtime.store.get(result.nodes["b"].result["task_id"])
-        assert child["spec"]["roots"] == [str(narrow)] and target.count == 2
+        assert child["spec"]["roots"] == [str(narrow)]
+        assert target.count == 2
