@@ -101,7 +101,9 @@ class AgentObservationView(QWidget):
         try:
             pixels = observation_image_bytes(image)
             pixmap = QPixmap()
-            if not pixmap.loadFromData(pixels, "JPEG"):
+            # No format argument: the header says JPEG, and that argument's type
+            # differs between the PySide6 releases the contract is checked against.
+            if not pixmap.loadFromData(pixels):
                 raise AgentTaskError("observation preview image could not be decoded")
             pixmap.setDevicePixelRatio(1.0)
             self._image.setPixmap(pixmap)
