@@ -138,7 +138,8 @@ def test_staging_cleanup_refuses_unrecognized_or_replaced_objects(tmp_path, chan
             unexpected.write_bytes(b'preserve unrelated data')
     assert unexpected.read_bytes() == b'preserve unrelated data'
     assert retired == []
-    assert journal and journal[0]['cleaned'] is False
+    assert journal
+    assert journal[0]['cleaned'] is False
 
 
 @pytest.mark.parametrize('cancelled', [False, True])

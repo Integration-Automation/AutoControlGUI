@@ -20,7 +20,8 @@ def test_directory_redirection_preserves_foreign_files(source, kind):
     sentinel = foreign / 'report.json'
     sentinel.write_bytes(b'foreign bytes must not change')
     assert link.resolve().is_relative_to(source.root.resolve())
-    assert holding.resolve().is_relative_to(source.root.resolve()) and not holding.exists()
+    assert holding.resolve().is_relative_to(source.root.resolve())
+    assert not holding.exists()
     link.rename(holding)
     _junction(link, foreign)
     try:
@@ -48,7 +49,8 @@ def test_hardlinked_artifact_refuses_mutation_and_cleanup(source, name, operatio
         expire(source.runtime, source.task)
     with pytest.raises(AgentTaskError, match='ownership'):
         source.runtime.prune() if operation == 'prune' else source.runtime.evidence.publish(source.task)
-    assert foreign.read_bytes() == b'keep this separate file' and path.exists()
+    assert foreign.read_bytes() == b'keep this separate file'
+    assert path.exists()
     assert source.runtime.store.get(source.task)['state'] == 'succeeded'
 
 

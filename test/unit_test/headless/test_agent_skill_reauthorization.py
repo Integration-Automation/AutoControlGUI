@@ -61,7 +61,8 @@ def test_renewal_requires_fresh_trial_and_publication_without_mutating_old_versi
         request = approval(runtime, parent)
         assert request["spec"]["roots"] == [str(narrow)]
         candidate = runtime.skills.control("create_authorized", request)
-        assert candidate["state"] == "draft" and candidate["version"] == 0
+        assert candidate["state"] == "draft"
+        assert candidate["version"] == 0
         assert candidate["parameters"] == parent["parameters"]
         assert candidate["spec"]["actions"] == parent["spec"]["actions"]
         assert candidate["provenance"]["reauthorization"]["context"]["replaced_origins"] == [old_id]
@@ -262,6 +263,8 @@ def test_narrowed_scope_never_drops_an_inaccessible_completion_criterion(publish
     runtime, parent, _old_id, current_id, _allowed, _narrow = published
     with origin_scope(current_id):
         view = runtime.skills.control("review_authorization", {"candidate_id": parent["id"]})
-        assert view["spec"] is None and view["issues"] == ["authorization_scope_unavailable"]
-        assert view["approval_required"] and view["validation_required"]
+        assert view["spec"] is None
+        assert view["issues"] == ["authorization_scope_unavailable"]
+        assert view["approval_required"]
+        assert view["validation_required"]
     assert runtime.skills.control("get", {"candidate_id": parent["id"]}) == parent

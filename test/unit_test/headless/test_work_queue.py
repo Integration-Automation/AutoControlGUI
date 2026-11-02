@@ -130,10 +130,13 @@ def test_concurrent_pollers_claim_a_new_item_only_once(q):
     finally:
         for worker in workers:
             worker.join(5)
-    assert not failures and all(not worker.is_alive() for worker in workers)
+    assert not failures
+    assert all(not worker.is_alive() for worker in workers)
     claimed = [item for item in results if item is not None]
-    assert len(results) == 8 and len(claimed) == 1
-    assert claimed[0].id == identifier and claimed[0].claim == 1
+    assert len(results) == 8
+    assert len(claimed) == 1
+    assert claimed[0].id == identifier
+    assert claimed[0].claim == 1
     q.complete(identifier, claim=claimed[0].claim)
     assert q.stats()["success"] == 1
 

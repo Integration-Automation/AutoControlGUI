@@ -32,7 +32,8 @@ def test_offline_capture_freezes_referenced_bytes_and_restart_sends_assets_befor
     monkeypatch.setenv('AUTOCONTROL_ALLOWED_PATH_ROOTS', str(tmp_path))
     original = b'a' * (256 * 1024) + b'referenced-tail'
     sender, config = workspace(tmp_path, 'desktop', content=original)
-    assert sender.capture() == 1 and not transport['calls']
+    assert sender.capture() == 1
+    assert not transport['calls']
     frozen = next(iter(sender.review('scripts').values())).value
     marker = frozen['actions'][0][1]['image']
     assert ac.SyncAssetReference.from_dict(marker).blob.sha256 == sha256(original).hexdigest()
@@ -45,7 +46,9 @@ def test_offline_capture_freezes_referenced_bytes_and_restart_sends_assets_befor
     edits = [index for index, call in enumerate(transport['calls']) if call['method'] == 'PUT'
              and '/causal' in call['url'] and json.loads(call['body'])['bucket']['_actor']['mode'] == 'edit']
     commits = [index for index, call in enumerate(transport['calls']) if '/assets/blobs/' in call['url']]
-    assert commits and edits and commits[0] < edits[0]
+    assert commits
+    assert edits
+    assert commits[0] < edits[0]
     receiver, _ = workspace(tmp_path, 'laptop')
     assert receiver.synchronize(options=OPTIONS).state == 'ready'
     generation = receiver.materialize(tmp_path / 'cache')
@@ -62,7 +65,8 @@ def test_asset_only_changes_create_new_causal_versions(tmp_path, transport, monk
     Path(config['profiles'][0]['bindings']['local_values']['button']).write_bytes(b'second')
     assert sender.capture() == 1
     after = next(iter(sender.review('scripts').values()))
-    assert before.change_id != after.change_id and before.value != after.value
+    assert before.change_id != after.change_id
+    assert before.value != after.value
     assert sender.synchronize(options=OPTIONS).pending == 0
     receiver, _ = workspace(tmp_path, 'laptop')
     receiver.synchronize(options=OPTIONS)
@@ -79,7 +83,8 @@ def test_incomplete_or_damaged_asset_download_cannot_publish_a_script_only_gener
             raise OSError('controlled download interruption')
     transport['after'] = offline
     result = receiver.synchronize(options=OPTIONS)
-    assert result.state == 'offline' and result.unresolved
+    assert result.state == 'offline'
+    assert result.unresolved
     with pytest.raises(ac.ConfigSyncError):
         receiver.materialize(tmp_path / 'cache')
     assert not list((tmp_path / 'cache').glob('generation-*'))
@@ -103,7 +108,8 @@ def test_uncertain_definition_retry_sends_its_exact_put_before_asset_probe(tmp_p
     transport['after'] = None
     transport['calls'].clear()
     assert ac.SyncWorkspace(config).synchronize(options=OPTIONS).pending == 0
-    assert transport['calls'][0]['method'] == 'PUT' and '/causal' in transport['calls'][0]['url']
+    assert transport['calls'][0]['method'] == 'PUT'
+    assert '/causal' in transport['calls'][0]['url']
     assert transport['calls'][0]['body'] == lost[0]
 
 
@@ -164,7 +170,8 @@ def test_assets_cannot_replace_a_private_command_secret_argument(tmp_path, trans
     sender = ac.SyncWorkspace(config)
     with pytest.raises(ac.ConfigSyncError):
         sender.synchronize(options=OPTIONS)
-    assert not transport['calls'] and sender.status()['outbox']['pending'] == 0
+    assert not transport['calls']
+    assert sender.status()['outbox']['pending'] == 0
 
 
 def test_script_and_image_trigger_share_complete_bytes_without_arming_received_work(tmp_path, transport, monkeypatch):

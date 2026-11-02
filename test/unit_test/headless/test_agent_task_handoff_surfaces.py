@@ -69,7 +69,8 @@ def exercise(value, surface, operation, adoption, monkeypatch, temporary):
         result = invoke(surface, 'skill', operation, {**adoption, 'handoff_id': grant['id']}, connection, temporary)
         reviewed = (result['provenance']['completion_review'] if operation == 'record'
                     else result['publication']['completion_review'])
-        assert reviewed['evidence_handoff']['id'] == grant['id'] and result['owner']['user_id'] == 'owner'
+        assert reviewed['evidence_handoff']['id'] == grant['id']
+        assert result['owner']['user_id'] == 'owner'
         assert runtime.get(value.task_id).state == 'paused'
         with pytest.raises(AgentTaskError):
             AgentRuntimeClient(connection).call('get', {'task_id': value.child_id})

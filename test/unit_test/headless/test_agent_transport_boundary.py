@@ -52,7 +52,8 @@ def test_explicit_local_service_delegation_preserves_principal_and_live_roots(ca
             request_json("http://127.0.0.1:1234/agent/tasks", token="fixture-token", delegate_local=True)
         headers = calls[0]["headers"]
         principal = verify_principal(headers[PRINCIPAL_HEADER], "fixture-token", "/agent/tasks")
-        assert principal.user_id == "fixture-user" and principal.role == "operator"
+        assert principal.user_id == "fixture-user"
+        assert principal.role == "operator"
         assert headers[ORIGIN_HEADER] == identifier
     finally:
         policy.revoke_managed_origin()

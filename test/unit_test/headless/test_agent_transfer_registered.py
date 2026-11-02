@@ -67,7 +67,8 @@ def test_another_real_clients_persisted_replacement_refuses_the_old_binding_befo
         else:
             other.add_host('source', server.base_url + '/changed' if change == 'endpoint' else server.base_url,
                            'replacement-credential' if change == 'token' else token)
-        assert book.list_hosts()[0].token == token and book.list_hosts()[0].base_url == server.base_url
+        assert book.list_hosts()[0].token == token
+        assert book.list_hosts()[0].base_url == server.base_url
         def forbidden(*_args, **_kwargs):
             raise AssertionError('replaced registration must fail before network dispatch')
         monkeypatch.setattr(transport, 'request_json', forbidden)

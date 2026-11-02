@@ -64,8 +64,10 @@ def test_admin_caller_executes_all_nodes_under_original_owner_and_records_actual
             row = connection.execute("SELECT actor FROM agent_dag_local_tasks WHERE task_id=?", (task_id,)).fetchone()
         assert json.loads(row["actor"])["user_id"] == "reviewer"
         visible = instance.runtime.get(task_id).metadata["local_dag_admission"]
-        assert visible["actor"] == "reviewer" and visible["contract"] == 1
-        assert "store_path" not in visible and "attempt" not in visible
+        assert visible["actor"] == "reviewer"
+        assert visible["contract"] == 1
+        assert "store_path" not in visible
+        assert "attempt" not in visible
 
 
 def test_local_admission_is_idempotent_and_cannot_bind_an_unrelated_task(owned, monkeypatch):
@@ -76,7 +78,8 @@ def test_local_admission_is_idempotent_and_cannot_bind_an_unrelated_task(owned, 
     assert local(owned, started, "submit", submission(node)) == first
     with pytest.raises(AgentTaskError, match="identity or admitting actor"):
         local(owned, started, "get", {"task_id": "unrelated-task"})
-    assert len(instance.runtime.list()) == 1 and target.count == 0
+    assert len(instance.runtime.list()) == 1
+    assert target.count == 0
 
 
 @pytest.mark.parametrize("fault", ["goal", "key", "extra", "operation", "task_id"])
@@ -97,7 +100,8 @@ def test_local_transport_rejects_changed_contracts_and_unbounded_operations(owne
         operation, body = "get", {"task_id": []}
     with pytest.raises(AgentTaskError):
         local(owned, started, operation, body)
-    assert instance.runtime.list() == [] and target.count == 0
+    assert instance.runtime.list() == []
+    assert target.count == 0
 
 
 def test_preexisting_request_without_admission_witness_is_never_backfilled(owned, monkeypatch):
@@ -111,7 +115,8 @@ def test_preexisting_request_without_admission_witness_is_never_backfilled(owned
     with instance.runtime.store.connection() as connection:
         assert connection.execute("SELECT 1 FROM agent_dag_local_tasks WHERE task_id=?",
                                   (task.task_id,)).fetchone() is None
-    assert target.count == 0 and len(instance.runtime.list()) == 1
+    assert target.count == 0
+    assert len(instance.runtime.list()) == 1
 
 
 def test_admission_failure_rolls_back_task_key_and_both_witnesses(owned, monkeypatch):
@@ -154,7 +159,9 @@ def test_fenced_attempt_can_retire_only_its_admitted_task_after_original_owner_l
     with authorization_scope(actor):
         client.call("dag", {"operation": "pause_batch", "request": {"batch_id": batch["batch_id"]}})
     paused = local(owned, started, "pause", {"task_id": task["task_id"]})
-    assert paused["state"] == "paused" and paused["metadata"]["input_released"] is True and target.count == 0
+    assert paused["state"] == "paused"
+    assert paused["metadata"]["input_released"] is True
+    assert target.count == 0
 
 
 def test_maintenance_retires_lease_when_admin_loses_cross_owner_authority(owned, monkeypatch):
@@ -170,7 +177,9 @@ def test_maintenance_retires_lease_when_admin_loses_cross_owner_authority(owned,
     # cancelling and a later one settles it.
     until(lambda: runtime.maintain() or runtime.get(task["task_id"]).state != "cancelling")
     result = runtime.get(task["task_id"])
-    assert result.state == "cancelled" and result.metadata["input_released"] is True and target.count == 0
+    assert result.state == "cancelled"
+    assert result.metadata["input_released"] is True
+    assert target.count == 0
 
 
 def test_revocation_during_grounding_is_refused_before_the_target_input_call(owned, monkeypatch):
@@ -191,4 +200,5 @@ def test_revocation_during_grounding_is_refused_before_the_target_input_call(own
         with pytest.raises(AuthorizationError):
             instance.runtime.act(task["task_id"], {"tool": "AC_increment", "observation_id": frame.observation_id})
     receipts = instance.runtime.store.actions(task["task_id"])
-    assert target.count == 0 and [item["status"] for item in receipts] == ["failed"]
+    assert target.count == 0
+    assert [item["status"] for item in receipts] == ["failed"]

@@ -156,7 +156,8 @@ def test_identity_failure_after_input_never_masquerades_as_pre_input_refusal(run
     result = run_guard()
     assert result.returncode == code
     parsed = parse_android_action_result(AdbShellResult(result.stdout, result.stderr, result.returncode))
-    assert parsed.phase == "post_input_refused" and parsed.may_have_effect
+    assert parsed.phase == "post_input_refused"
+    assert parsed.may_have_effect
     assert (tmp_path / "actions").read_text().splitlines().count("tap") == 1
 
 
@@ -376,7 +377,8 @@ def test_concurrent_inspection_cannot_commit_two_different_boots_into_one_sessio
 
     class ConcurrentServer(Server):
         def shell(self, transport, command, **_kwargs):
-            assert transport == 42 and command == IDENTITY_PROBE
+            assert transport == 42
+            assert command == IDENTITY_PROBE
             boot = BOOT if threading.current_thread().name == "old-boot" else BOOT.replace("1", "2")
             return AdbShellResult(evidence(boot=boot), b"", 0)
 
@@ -569,7 +571,8 @@ def test_same_command_connection_refuses_changed_native_input_before_any_write(r
     result = run_guard(input_evidence=proof)
     assert result.returncode == 95
     parsed = parse_android_action_result(AdbShellResult(result.stdout, result.stderr, result.returncode))
-    assert parsed.phase == "pre_input_refused" and not parsed.may_have_effect
+    assert parsed.phase == "pre_input_refused"
+    assert not parsed.may_have_effect
     assert not (tmp_path / "actions").exists()
 
 

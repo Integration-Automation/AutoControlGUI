@@ -53,7 +53,9 @@ class Native:
     def create(self, *args):
         from je_auto_control.utils.agent_runtime.presence_security_windows import _SecurityAttributes
         attributes = ctypes.cast(args[-1], ctypes.POINTER(_SecurityAttributes)).contents
-        assert self.security.active and attributes.descriptor == 12345 and attributes.inherit == 0
+        assert self.security.active
+        assert attributes.descriptor == 12345
+        assert attributes.inherit == 0
         self.calls.append('create')
         return ctypes.c_void_p(-1).value if self.fail_create else self.allocate()
 
@@ -75,7 +77,8 @@ class Native:
         return True
 
     def connect(self, handle, *, overlapped):
-        assert handle in self.handles and overlapped is True
+        assert handle in self.handles
+        assert overlapped is True
         self.calls.append(('accept', handle))
 
         def wait(block):
@@ -107,13 +110,15 @@ def factory(monkeypatch):
 
 def test_constructor_is_inert_and_first_instance_uses_actual_noninheritable_descriptor(monkeypatch):
     api, native, security = factory(monkeypatch)
-    assert not native.calls and not security.names
+    assert not native.calls
+    assert not security.names
     listener = api.listen()
     try:
         args, = native.kernel.CreateNamedPipeW.calls
         assert args[0] == r'\\.\pipe\je-auto-presence-v1-test'
         assert args[1:7] == (0x40080003, 14, 17, 4096, 4096, 0)
-        assert security.names == ['a' * 32] and not security.active
+        assert security.names == ['a' * 32]
+        assert not security.active
         assert native.kernel.CreateNamedPipeW.restype is ctypes.c_void_p
     finally:
         listener.close()
@@ -126,7 +131,8 @@ def test_accept_reserves_next_instance_before_wait_and_transfers_only_connected_
     connection = listener.accept()
     assert native.calls[:3] == ['create', 'create', ('accept', 0x100000001)]
     assert native.kernel.CreateNamedPipeW.calls[1][1] == 0x40000003
-    assert connection.fileno() == 0x100000001 and len(native.handles) == 2
+    assert connection.fileno() == 0x100000001
+    assert len(native.handles) == 2
     listener.close()
     listener.close()
     assert native.handles == {0x100000001}
@@ -154,7 +160,8 @@ def test_only_verified_missing_endpoint_may_be_reported_as_absent(monkeypatch):
     api, native, _security = factory(monkeypatch)
     native.fail_create, native.error = True, 2
     assert api.connect_if_present() is None
-    assert len(native.kernel.CreateFileW.calls) == 1 and not native.handles
+    assert len(native.kernel.CreateFileW.calls) == 1
+    assert not native.handles
 
 
 @pytest.mark.parametrize('error,kind', [(5, AgentTaskError), (231, AgentControlBusy), (53, AgentTaskError)])
@@ -163,7 +170,8 @@ def test_denied_busy_or_unknown_endpoint_is_never_reported_missing(monkeypatch, 
     native.fail_create, native.error = True, error
     with pytest.raises(kind):
         api.connect_if_present()
-    assert len(native.kernel.CreateFileW.calls) == 1 and not native.handles
+    assert len(native.kernel.CreateFileW.calls) == 1
+    assert not native.handles
 
 
 @pytest.mark.parametrize('listen', [True, False])
@@ -174,7 +182,8 @@ def test_open_failure_never_wraps_or_borrows_a_foreign_handle(monkeypatch, liste
     with pytest.raises(AgentControlBusy if listen else AgentTaskError):
         api.listen() if listen else api.connect()
     assert len(native.kernel.CreateNamedPipeW.calls if listen else native.kernel.CreateFileW.calls) == 1
-    assert not native.handles and not native.async_api.ConnectNamedPipe.calls
+    assert not native.handles
+    assert not native.async_api.ConnectNamedPipe.calls
 
 
 @pytest.mark.parametrize('failure', ['fail_state', 'fail_wrap'])
@@ -248,7 +257,8 @@ def test_connection_only_sends_bounded_immutable_bytes(monkeypatch, raw):
         with pytest.raises(AgentTaskError):
             connection.send_bytes(raw)
         assert not any(isinstance(item, tuple) and item[0] == 'send' for item in native.calls)
-        assert not hasattr(connection, 'send') and not hasattr(connection, 'recv')
+        assert not hasattr(connection, 'send')
+        assert not hasattr(connection, 'recv')
         connection.send_bytes(b'{}')
         assert ('send', b'{}') in native.calls
         assert len(connection.recv_bytes(4096)) == 4096

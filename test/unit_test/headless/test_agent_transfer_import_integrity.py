@@ -61,7 +61,8 @@ def test_late_import_mutation_requires_review_without_republishing(tmp_path, mon
         status, accepted = operation(server, token, 'create_import', review(server, exported, token, root))
         assert status == 200, accepted
         current = wait_import(server, token, accepted['import']['import_id'])
-        assert len(publications) == 1 and changed == [True]
+        assert len(publications) == 1
+        assert changed == [True]
         if fault == 'none':
             assert current['state'] == 'published', current
             assert sha256((publications[0] / 'report.txt').read_bytes()).hexdigest() == (

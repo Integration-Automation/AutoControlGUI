@@ -36,7 +36,8 @@ def test_explicit_task_source_mode_prepares_a_real_source_request_without_fabric
     assert calls == []
     monkeypatch.setattr('je_auto_control.gui.agent_tasks_tab._translate', lambda key: 'translated:' + key)
     widget.retranslate()
-    assert mode.currentData() == 'task' and mode.currentText().startswith('translated:')
+    assert mode.currentData() == 'task'
+    assert mode.currentText().startswith('translated:')
     request['source_task'] = 'actual-original-task'
     widget._handoff_request.setPlainText(json.dumps(request))
     actions['agent_handoff_apply']()
@@ -56,5 +57,6 @@ def test_skill_actions_prepare_selected_grant_adoption_without_issuing_or_publis
         actions[name]()
         request = json.loads(widget._skill_request.toPlainText())
         assert widget._skill_operation.currentData() == operation
-        assert request['handoff_id'] == '<handoff-id>' and request[selected] == 'reviewed-evidence-task'
+        assert request['handoff_id'] == '<handoff-id>'
+        assert request[selected] == 'reviewed-evidence-task'
     assert calls == []

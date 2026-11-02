@@ -124,8 +124,10 @@ def test_actual_renewed_mixed_file_chain_keeps_original_trial_and_old_witness_wi
                'execution_task_id': value.child_id, 'completion_task_id': value.reader, 'handoff_id': grant['id']}
     accepted = publish(value, request)
     proof = accepted['publication']['execution_review']
-    assert accepted['publication']['task_id'] == value.task_id and accepted['version'] == 1
-    assert proof['task_id'] == value.child_id and proof['verification_task'] == value.reader
+    assert accepted['publication']['task_id'] == value.task_id
+    assert accepted['version'] == 1
+    assert proof['task_id'] == value.child_id
+    assert proof['verification_task'] == value.reader
     assert proof['completion_review']['effect_task'] == value.child_id
     assert proof['evidence_handoff']['id'] == grant['id']
     assert runtime.get(value.task_id).state == 'paused'
@@ -133,7 +135,8 @@ def test_actual_renewed_mixed_file_chain_keeps_original_trial_and_old_witness_wi
     assert runtime.store.actions(value.reader) == []
     assert [path.read_bytes() for path in value.manifests] == before
     assert origin_policy._path(value.old.identifier).read_bytes() == witness
-    assert 'arguments' not in json.dumps(proof) and 'store_path' not in json.dumps(proof)
+    assert 'arguments' not in json.dumps(proof)
+    assert 'store_path' not in json.dumps(proof)
     with pytest.raises(AgentTaskError, match='another caller'):
         runtime.get(value.child_id)
     with pytest.raises(AgentTaskError, match='managed origin'):

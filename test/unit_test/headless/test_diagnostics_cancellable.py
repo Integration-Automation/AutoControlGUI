@@ -22,7 +22,8 @@ def _scope(token):
 
 def test_cancellation_primitives_are_shared_by_both_public_sdk_namespaces():
     for name in ('CancellationToken', 'TaskProgress', 'cancellation_scope'):
-        assert name in ac.__all__ and name in api.__all__
+        assert name in ac.__all__
+        assert name in api.__all__
         assert getattr(ac, name) is getattr(api, name) is getattr(cancellation, name)
 
 
@@ -93,7 +94,8 @@ def test_cancel_during_a_check_stops_before_error_reporting_progress_or_the_next
     monkeypatch.setattr(diagnostics, '_ALL_CHECKS', (stopping, later))
     with _scope(token), pytest.raises(CancelledError):
         diagnostics.run_diagnostics()
-    assert calls == ['first'] and [item.completed for item in progress] == [0]
+    assert calls == ['first']
+    assert [item.completed for item in progress] == [0]
 
 
 def test_progress_and_report_stay_shared_with_read_only_executor_and_active_mcp(monkeypatch, tmp_path):
@@ -116,7 +118,8 @@ def test_progress_and_report_stay_shared_with_read_only_executor_and_active_mcp(
         request = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
                    'params': {'name': 'ac_diagnose', 'arguments': {}}}
         reply = json.loads(server.handle_line(json.dumps(request)))
-    assert not reply['result']['isError'] and reply['result']['structuredContent'] == expected
+    assert not reply['result']['isError']
+    assert reply['result']['structuredContent'] == expected
     assert [item['progress'] for item in progress] == [0, 1]
     request['params']['arguments'] = {'token': 'caller-supplied-authority'}
     refused = json.loads(server.handle_line(json.dumps(request)))
@@ -132,7 +135,8 @@ def test_mcp_request_cancellation_stops_providers_and_keeps_its_established_sign
     ctx.cancelled_event.set()
     with pytest.raises(OperationCancelledError) as caught:
         tool.invoke({}, ctx=ctx)
-    assert caught.value.request_id == 'diagnostic-request' and calls == []
+    assert caught.value.request_id == 'diagnostic-request'
+    assert calls == []
 
 
 def test_real_jsonrpc_cancel_is_connection_scoped_and_never_becomes_an_error_screenshot(monkeypatch, tmp_path):
@@ -180,7 +184,8 @@ def test_real_jsonrpc_cancel_is_connection_scoped_and_never_becomes_an_error_scr
             assert server.handle_line(json.dumps({'jsonrpc': '2.0', 'method': 'notifications/cancelled',
                                                  'params': {'requestId': 1}})) is None
         workers['first'].join(1)
-        assert not workers['first'].is_alive() and workers['second'].is_alive()
+        assert not workers['first'].is_alive()
+        assert workers['second'].is_alive()
         assert replies['first']['error']['code'] == -32800
         assert 'finish first' not in calls
     finally:

@@ -38,5 +38,7 @@ def test_completion_between_stop_read_and_write_preserves_terminal_evidence(mana
         finally:
             published.set()
         result = pending.result(timeout=5)
-    assert result.state == "succeeded" and result.verification == completed.verification
-    assert result.metadata["input_released"] is True and target.calls == ["AC_increment"]
+    assert result.state == "succeeded"
+    assert result.verification == completed.verification
+    assert result.metadata["input_released"] is True
+    assert target.calls == ["AC_increment"]

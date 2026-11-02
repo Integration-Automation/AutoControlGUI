@@ -74,7 +74,8 @@ def test_native_readiness_captures_exact_host_callback_without_changing_operatio
         assert context.current_takeover() is parent.takeover
     captured()
     assert calls == ["bound"]
-    assert context.current_operation() is None and context.current_takeover() is None
+    assert context.current_operation() is None
+    assert context.current_takeover() is None
 
 
 def test_nested_operation_cannot_borrow_outer_readiness_callback():
@@ -110,7 +111,8 @@ def test_failed_readiness_restores_exact_scope_and_default_callback():
     with context.operation_scope(parent):
         with pytest.raises(AgentTaskError, match="owned failure"):
             context.ready_with_takeover(Target(), spec, lambda: None)
-        assert context.current_operation() is parent and context.current_takeover() is parent.takeover
+        assert context.current_operation() is parent
+        assert context.current_takeover() is parent.takeover
     assert context.current_takeover() is None
 
 

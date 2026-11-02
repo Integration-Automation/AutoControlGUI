@@ -32,12 +32,15 @@ def test_token_cancel_wakes_its_waiter_and_stops_further_progress():
     assert entered.wait(1)
     token.cancel()
     thread.join(1)
-    assert not thread.is_alive() and woke.is_set() and token.is_cancelled
+    assert not thread.is_alive()
+    assert woke.is_set()
+    assert token.is_cancelled
     with pytest.raises(CancelledError):
         token.checkpoint()
     with pytest.raises(CancelledError):
         token.report(2, 3)
-    assert observations == [progress] and token.wait(0)
+    assert observations == [progress]
+    assert token.wait(0)
 
 
 @pytest.mark.parametrize('timeout', [-1, float('inf'), float('-inf'), float('nan'), 1e308])
@@ -65,7 +68,8 @@ def test_invalid_totals_are_rejected_before_notifying(total):
 def test_progress_details_need_text_and_a_callback_is_optional():
     token = CancellationToken(1)
     token.report(0)
-    assert not token.wait(0) and not token.is_cancelled
+    assert not token.wait(0)
+    assert not token.is_cancelled
     with pytest.raises(TypeError, match='must be text'):
         token.report(1, detail=7)
 

@@ -52,7 +52,8 @@ def test_isolated_expected_teardown_fault_retains_its_native_trace(verifier, mon
     trace = 'Fatal Python error: Segmentation fault\n  controlled native frame'
     monkeypatch.setattr(subprocess, 'run', lambda *_args, **_kwargs: completed(-11, READY, trace))
     result = verifier._check_unref_sentinel('/controlled/eis')
-    assert 'still segfaults' in result and 'rc=-11' in result
+    assert 'still segfaults' in result
+    assert 'rc=-11' in result
     assert trace in capsys.readouterr().out
 
 
@@ -67,7 +68,8 @@ def test_completed_cleanup_reports_exact_descriptor_counts(verifier, monkeypatch
     output = READY+DONE+'EI_UNREF_RESULT='+json.dumps({'fd_before': 4, 'fd_after': 4})+'\n'
     monkeypatch.setattr(subprocess, 'run', lambda *_args, **_kwargs: completed(0, output))
     result = verifier._check_unref_sentinel('/controlled/eis')
-    assert 'no longer crashes' in result and '4 -> 4' in result
+    assert 'no longer crashes' in result
+    assert '4 -> 4' in result
 
 
 @pytest.mark.parametrize('before,after', [(4, 5), (4, 4.0), (1, True), (4, None)])
@@ -81,7 +83,8 @@ def test_successful_unref_with_invalid_descriptor_evidence_remains_a_failure(ver
 def test_child_has_a_finite_timeout_and_native_fault_handler(verifier, monkeypatch):
     def run(argv, **kwargs):
         assert 0 < kwargs.get('timeout', 0) <= 30
-        assert argv[1:3] == ['-X', 'faulthandler'] and kwargs['check'] is False
+        assert argv[1:3] == ['-X', 'faulthandler']
+        assert kwargs['check'] is False
         assert kwargs['capture_output'] is True
         compile(argv[-1], '<controlled-native-probe>', 'exec')
         raise subprocess.TimeoutExpired(argv, kwargs['timeout'])
@@ -135,9 +138,11 @@ def test_dev_native_workflow_runs_both_probes_and_retains_failure_logs():
     assert all('always()' in step['if'] and "steps.build.outcome == 'success'" in step['if'] for step in (probe, peer))
     assert not any(step.get('continue-on-error') == 'true' for step in (probe, peer))
     upload = next(step for step in steps if step.get('uses', '').startswith('actions/upload-artifact@'))
-    assert upload['if'] == 'always()' and upload['with']['path'] == 'native-ei/'
+    assert upload['if'] == 'always()'
+    assert upload['with']['path'] == 'native-ei/'
     cleanup = next(step for step in steps if step.get('name') == 'Remove owned verification containers')
-    assert cleanup['if'] == 'always()' and 'docker rm -f' in cleanup['run']
+    assert cleanup['if'] == 'always()'
+    assert 'docker rm -f' in cleanup['run']
     assert not any('--privileged' in step.get('run', '') or '--device' in step.get('run', '') for step in steps)
     dockerfile = (ROOT/'docker/Dockerfile.eis').read_text(encoding='utf-8')
     assert 'COPY docker/libei_verify.py /opt/verify/libei_verify.py' in dockerfile
@@ -168,7 +173,8 @@ def test_live_native_boundary_and_trace_are_retained(live_verifier, monkeypatch,
         with pytest.raises(AssertionError, match='ei_unref.*SIGSEGV'):
             live_verifier._live_teardown_sentinel('/controlled/eis')
     captured = capsys.readouterr().out
-    assert output in captured and trace in captured
+    assert output in captured
+    assert trace in captured
 
 
 def test_live_fault_before_unref_does_not_misidentify_the_native_root(live_verifier, monkeypatch):
@@ -179,7 +185,8 @@ def test_live_fault_before_unref_does_not_misidentify_the_native_root(live_verif
 
 def test_live_child_is_bounded_and_releases_owned_devices_before_context(live_verifier, monkeypatch):
     def run(argv, **kwargs):
-        assert argv[1:3] == ['-X', 'faulthandler'] and kwargs['check'] is False
+        assert argv[1:3] == ['-X', 'faulthandler']
+        assert kwargs['check'] is False
         assert 0 < kwargs.get('timeout', 0) <= 60
         assert kwargs['capture_output'] is True
         program = argv[-1]

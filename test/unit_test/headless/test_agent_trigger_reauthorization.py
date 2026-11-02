@@ -65,7 +65,8 @@ def test_renewal_preserves_event_dedup_and_pending_limit_without_dispatching_old
         start.assert_not_called()
         assert runtime.triggers.control("create_authorized", request)["trigger_id"] == child
         duplicate = fire(runtime, child, "old-event", {"row": 1})
-        assert duplicate["duplicate"] and duplicate["task_id"] == old_task
+        assert duplicate["duplicate"]
+        assert duplicate["task_id"] == old_task
         start.assert_not_called()
         with pytest.raises(AgentTaskError, match="different payload"):
             fire(runtime, child, "old-event", {"row": 2})
@@ -75,13 +76,15 @@ def test_renewal_preserves_event_dedup_and_pending_limit_without_dispatching_old
         assert fresh["task_id"] != old_task
         start.assert_called_once_with(fresh["task_id"])
         assert fire(runtime, child, "future-event")["duplicate"]
-        assert start.call_count == 2 and start.call_args.args == (fresh["task_id"],)
+        assert start.call_count == 2
+        assert start.call_args.args == (fresh["task_id"],)
         assert runtime.store.get(fresh["task_id"])["spec"]["roots"] == [str(narrow)]
         with pytest.raises(AgentTaskError, match="replacement"):
             runtime.triggers.control("enable", {"trigger_id": source})
     after = runtime.triggers._row(source)
     assert not after["enabled"]
-    assert after["spec"] == original["spec"] and after["spec"]["roots"] == [str(allowed)]
+    assert after["spec"] == original["spec"]
+    assert after["spec"]["roots"] == [str(allowed)]
 
 
 @pytest.mark.parametrize("change", ["root", "actions", "tools", "criteria", "options", "snapshot", "digest"])
@@ -151,7 +154,9 @@ def test_three_generations_share_dedup_pending_and_do_not_resurrect_a_removed_ch
         assert fire(runtime, grandchild, "future-event")["deferred"]
         runtime.triggers.control("remove", {"trigger_id": grandchild})
         repeat = runtime.triggers.control("create_authorized", second)
-        assert repeat["trigger_id"] == grandchild and repeat["retired"] and not repeat["enabled"]
+        assert repeat["trigger_id"] == grandchild
+        assert repeat["retired"]
+        assert not repeat["enabled"]
         assert runtime.triggers.control("review_authorization", {"trigger_id": child})["spec"] is None
         with pytest.raises(AgentTaskError, match="replacement"):
             runtime.triggers.control("enable", {"trigger_id": child})
@@ -219,7 +224,8 @@ def test_schedule_renewal_starts_in_the_future_without_replaying_missed_slots(re
     with origin_scope(current_id):
         child = runtime.triggers.control("create_authorized", approval(runtime, source))["trigger_id"]
     row = runtime.triggers._row(child)
-    assert row["next_run"] > time.time() + 50 and row["config"] == {"seconds": 60}
+    assert row["next_run"] > time.time() + 50
+    assert row["config"] == {"seconds": 60}
     runtime.triggers.poll()
     assert len(runtime.store.list()) == 1
 
@@ -256,7 +262,8 @@ def test_concurrent_identical_approvals_reuse_one_registration(retired_trigger):
 
     with ThreadPoolExecutor(max_workers=2) as workers:
         results = list(workers.map(create, (0, 1)))
-    assert results[0] == results[1] and len(runtime.triggers.list()["triggers"]) == 2
+    assert results[0] == results[1]
+    assert len(runtime.triggers.list()["triggers"]) == 2
 
 
 def test_new_event_history_failure_rolls_back_task_and_local_event_together(retired_trigger):
@@ -290,4 +297,5 @@ def test_unavailable_fixed_watch_path_withholds_runnable_review(retired_trigger)
     path.write_text(json.dumps(data))
     with origin_scope(current_id):
         view = runtime.triggers.control("review_authorization", {"trigger_id": source})
-        assert view["spec"] is None and view["issues"] == ["authorization_scope_unavailable"]
+        assert view["spec"] is None
+        assert view["issues"] == ["authorization_scope_unavailable"]

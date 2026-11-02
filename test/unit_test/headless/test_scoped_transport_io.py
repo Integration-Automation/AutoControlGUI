@@ -43,7 +43,8 @@ def test_scoped_read_retains_fragmented_message_bytes_across_poll_timeouts():
     reader._socket = incoming
     with cancellation_scope(CancellationToken(1)):
         message = reader.read_message(time.monotonic()+1)
-    assert message.body == ['controlled payload'] and reader._buffer == b''
+    assert message.body == ['controlled payload']
+    assert reader._buffer == b''
     assert all(0 < value <= 0.1 for value in incoming.timeouts)
 
 
@@ -71,7 +72,8 @@ def test_partial_send_retries_only_unsent_bytes_and_restores_the_call_timeout():
     with cancellation_scope(CancellationToken(1)):
         cancellable_io.send(sender, b'abcdef')
     assert b''.join(sent) == b'abcdef'
-    assert attempted == [b'abcdef', b'cdef', b'cdef'] and sender.timeout == 1.0
+    assert attempted == [b'abcdef', b'cdef', b'cdef']
+    assert sender.timeout == 1.0
 
 
 def test_repeated_receive_polls_do_not_restart_the_total_deadline(monkeypatch):
@@ -142,7 +144,8 @@ def test_process_stream_cleanup_cannot_replace_the_original_cancel_control(monke
         with cancellation_scope(CancellationToken(1)), pytest.raises(CancelledError) as caught:
             cancellable_process.run_capture_helper(['controlled'], 10)
         assert caught.value is primary
-        assert calls == ['signal', 'reaped', 'close'] and process.stderr.closed
+        assert calls == ['signal', 'reaped', 'close']
+        assert process.stderr.closed
     finally:
         primary.__traceback__ = None
 

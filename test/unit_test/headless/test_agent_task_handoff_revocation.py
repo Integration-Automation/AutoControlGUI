@@ -63,7 +63,8 @@ def test_revocation_inside_publication_sql_rolls_back_acceptance_and_its_provena
     with pytest.raises(AgentTaskError, match='revoked'):
         runtime.skills.control('accept', {**acceptance(trial), 'handoff_id': grant['id']})
     candidate = runtime.skills.control('get', {'candidate_id': trial.candidate['id']})
-    assert candidate['state'] == 'draft' and candidate['publication'] is None
+    assert candidate['state'] == 'draft'
+    assert candidate['publication'] is None
     with runtime.store.connection() as connection:
         for table in ('agent_skill_publications', 'agent_skill_completions', 'agent_task_handoff_revocations'):
             assert connection.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0] == 0

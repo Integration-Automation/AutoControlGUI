@@ -84,12 +84,15 @@ def test_publish_keeps_actual_validation_trial_and_separate_completion_provenanc
     receipts = runtime.store.actions(trial.task_id)
     manifest = trial.manifest.read_bytes()
     accepted = runtime.skills.control('accept', acceptance(trial))
-    assert accepted['state'] == 'accepted' and accepted['version'] == 1
+    assert accepted['state'] == 'accepted'
+    assert accepted['version'] == 1
     assert accepted['publication']['task_id'] == trial.task_id
     review = accepted['publication']['completion_review']
-    assert review['task_id'] == trial.child_id and review['effect_task'] == trial.task_id
+    assert review['task_id'] == trial.child_id
+    assert review['effect_task'] == trial.task_id
     assert runtime.get(trial.task_id).state == 'paused'
-    assert runtime.store.actions(trial.task_id) == receipts and runtime.store.actions(trial.child_id) == []
+    assert runtime.store.actions(trial.task_id) == receipts
+    assert runtime.store.actions(trial.child_id) == []
     assert trial.manifest.read_bytes() == manifest
     assert runtime.get(trial.child_id).metadata['completion_contract'] == 1
     with runtime.store.connection() as connection:
@@ -121,14 +124,16 @@ def test_changed_candidate_before_write_admission_cannot_commit_a_publication(tr
         state = connection.execute('SELECT state FROM agent_skill_candidates WHERE id=?',
                                    (trial.candidate['id'],)).fetchone()[0]
         publications = connection.execute('SELECT COUNT(*) FROM agent_skill_publications').fetchone()[0]
-    assert state == 'draft' and publications == 0
+    assert state == 'draft'
+    assert publications == 0
 
 
 @pytest.mark.parametrize('trial', ['retry'], indirect=True)
 def test_retried_reader_chain_retains_the_original_execution_trial(trial):
     value = trial.runtime.skills.control('accept', acceptance(trial))
     review = value['publication']['completion_review']
-    assert review['effect_task'] == trial.task_id and review['source_task'] != trial.task_id
+    assert review['effect_task'] == trial.task_id
+    assert review['source_task'] != trial.task_id
     assert trial.runtime.get(review['source_task']).state == 'cancelled'
     assert value['publication']['task_id'] == trial.task_id
 

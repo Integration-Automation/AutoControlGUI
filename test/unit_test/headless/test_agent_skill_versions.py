@@ -68,9 +68,11 @@ def test_record_preview_validate_accept_and_run_pinned_version(managed):
     preview = runtime.skills.control("preview", {"candidate_id": candidate["id"], "parameters": {"value": "Ada"}})
     assert preview["spec"]["actions"][0]["arguments"]["value"] == "Ada"
     assert candidate["spec"]["actions"][0]["arguments"]["value"] == "done"
-    assert candidate["state"] == "draft" and candidate["version"] == 0
+    assert candidate["state"] == "draft"
+    assert candidate["version"] == 0
     accepted = publish(runtime, candidate)
-    assert accepted["version"] == 1 and accepted["digest"] == candidate["digest"]
+    assert accepted["version"] == 1
+    assert accepted["digest"] == candidate["digest"]
     assert accepted["publication"]["note"] == "Reviewed exact candidate trial"
     task = runtime.skills.control("run", {"skill_id": accepted["skill_id"], "version": 1,
                                             "parameters": {"value": "Grace"}})
@@ -281,6 +283,7 @@ def test_public_skill_api_and_http_service_share_verified_publication(tmp_path, 
             threading.Event().wait(0.1)  # At most 50 polls within the live service's request budget.
         accepted = api.manage_agent_skill("accept", {"candidate_id": candidate["id"], "task_id": trial["task_id"],
                                                    "expected_version": 0, "note": "Reviewed HTTP fake-target evidence"})
-        assert accepted["version"] == 1 and accepted["publication"]["task_id"] == trial["task_id"]
+        assert accepted["version"] == 1
+        assert accepted["publication"]["task_id"] == trial["task_id"]
     finally:
         service.close()

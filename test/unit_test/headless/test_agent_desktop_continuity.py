@@ -45,7 +45,8 @@ def test_retired_desktop_context_cannot_submit_an_edited_form_after_pause(tmp_pa
         target.values["Field"] = "changed while paused"
         runtime.resume(task.task_id)
         outcome = run_task(runtime, task.task_id)
-        assert outcome.state == "waiting_user" and "desktop context" in outcome.reason
+        assert outcome.state == "waiting_user"
+        assert "desktop context" in outcome.reason
         assert target.submissions == 0
         assert len(runtime.store.actions(task.task_id)) == 1
 
@@ -56,7 +57,8 @@ def test_profiled_desktop_prefix_is_refused_before_any_helper_launch():
     target = NativeDesktopTarget(profile=profile.to_dict())
     with pytest.raises(AgentHumanReview, match="desktop context"):
         target.check_resume(form(), [{"status": "confirmed"}])
-    assert target._channel is None and target._resource is None
+    assert target._channel is None
+    assert target._resource is None
 
 
 def test_uninterrupted_desktop_skill_keeps_its_context(tmp_path):

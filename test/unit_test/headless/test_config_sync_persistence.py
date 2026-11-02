@@ -75,7 +75,8 @@ def test_default_store_path_is_resolved_only_on_use(tmp_path,monkeypatch):
     assert not first.exists()
     monkeypatch.setenv('AUTOCONTROL_CONFIG_STORE',str(second))
     store.commit('alice',bucket(),base_revision=0,operation_id='first')
-    assert second.is_file() and not first.exists()
+    assert second.is_file()
+    assert not first.exists()
 
 
 def test_server_reopen_and_retry_do_not_overwrite_a_later_commit(tmp_path):

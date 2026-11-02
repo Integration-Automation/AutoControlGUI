@@ -76,7 +76,8 @@ def execution(tmp_path, request):
         with authorization_scope(reviewer):
             if kind.startswith('capture'):
                 preview = runtime.recovery.control('preview', {'task_id': trial['task_id']})
-                assert preview['draft'] is None and 'fresh_capture_required' in preview['issues']
+                assert preview['draft'] is None
+                assert 'fresh_capture_required' in preview['issues']
                 reviewed = runtime.store.get(trial['task_id'])['spec']
                 reviewed['options'].pop('skill_pin')
                 reviewed['actions'] = [edit('Last', 'different' if kind == 'capture_mismatch' else 'first')]
@@ -116,17 +117,23 @@ def test_reviewed_complete_recovery_publishes_original_trial_without_replaying_o
     monkeypatch.setattr(execution.target, 'perform', forbidden)
     request = review_request(execution)
     review = runtime.skills.control('review_execution', request)
-    assert review['approval_required'] is True and review['publication_inherited'] is False
+    assert review['approval_required'] is True
+    assert review['publication_inherited'] is False
     assert runtime.skills.control('get', {'candidate_id': execution.candidate['id']})['state'] == 'draft'
     accepted = runtime.skills.control('accept', {**request, 'execution_review': review['execution_review'],
         'expected_version': 0, 'note': 'Reviewed the exact full semantic effect chain'})
-    assert accepted['version'] == 1 and accepted['publication']['task_id'] == execution.task_id
+    assert accepted['version'] == 1
+    assert accepted['publication']['task_id'] == execution.task_id
     proof = accepted['publication']['execution_review']
-    assert proof['task_id'] == execution.child_id and proof['source_task'] == execution.task_id
-    assert proof['verification_task'] == execution.child_id and len(proof['segments']) == 1
-    assert 'store_path' not in json.dumps(proof) and 'arguments' not in json.dumps(proof)
+    assert proof['task_id'] == execution.child_id
+    assert proof['source_task'] == execution.task_id
+    assert proof['verification_task'] == execution.child_id
+    assert len(proof['segments']) == 1
+    assert 'store_path' not in json.dumps(proof)
+    assert 'arguments' not in json.dumps(proof)
     assert runtime.get(execution.task_id).state == 'paused'
-    assert runtime.store.actions(execution.task_id) == receipts and execution.target.calls == calls
+    assert runtime.store.actions(execution.task_id) == receipts
+    assert execution.target.calls == calls
     with runtime.store.connection() as connection:
         trials = connection.execute('SELECT task_id FROM agent_skill_trials').fetchall()
         assert [row[0] for row in trials] == [execution.task_id]
@@ -142,7 +149,8 @@ def accept_request(value, **changes):
 def test_multiple_real_recovery_segments_match_the_complete_original_plan(execution):
     accepted = execution.runtime.skills.control('accept', accept_request(execution))
     proof = accepted['publication']['execution_review']
-    assert len(proof['segments']) == 2 and proof['source_task'] == execution.task_id
+    assert len(proof['segments']) == 2
+    assert proof['source_task'] == execution.task_id
     assert accepted['publication']['task_id'] == execution.task_id
 
 

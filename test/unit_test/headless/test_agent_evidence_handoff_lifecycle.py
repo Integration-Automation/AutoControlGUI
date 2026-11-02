@@ -97,7 +97,9 @@ def test_completion_projection_and_public_consent_omit_private_task_fields(hando
     grant = grant_for(handoff)
     result = consume(handoff, grant['id'])
     combined = json.dumps([grant, result])
-    assert secret not in combined and 'store_path' not in combined and 'arguments' not in combined
+    assert secret not in combined
+    assert 'store_path' not in combined
+    assert 'arguments' not in combined
     assert all(set(report) == {'kind', 'status'} for report in result[0]['verification'])
 
 

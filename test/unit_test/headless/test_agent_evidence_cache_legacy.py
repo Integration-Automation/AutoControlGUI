@@ -54,7 +54,8 @@ def test_old_layout_status_keeps_original_links_without_creating_or_reading_a_se
     with monkeypatch.context() as scoped:
         scoped.setattr(Path, 'iterdir', current_only)
         result = legacy.runtime.get(legacy.task)
-    assert result.state == 'succeeded' and result.metadata['artifact_cache_state'] == 'historical'
+    assert result.state == 'succeeded'
+    assert result.metadata['artifact_cache_state'] == 'historical'
     assert result.metadata['journal_path'] == str(legacy.directory / 'journal.jsonl')
     assert result.to_dict()['metadata']['artifacts'] == []
     assert not legacy.runtime.evidence.directory(legacy.task).exists()

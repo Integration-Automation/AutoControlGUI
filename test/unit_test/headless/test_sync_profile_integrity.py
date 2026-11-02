@@ -51,7 +51,8 @@ def test_only_explicit_assets_rebase_while_literals_and_secret_placeholders_keep
                                   expected_digest=result['manifest_digest'])
     arguments = loaded.script_actions('demo.json')[0][1]
     assert arguments['image'] == str(loaded.directory / 'assets/button.bin')
-    assert arguments['label'] == 'assets/button.bin' and arguments['password'] == '${secrets.LOGIN}'
+    assert arguments['label'] == 'assets/button.bin'
+    assert arguments['password'] == '${secrets.LOGIN}'
     assert (loaded.directory / 'assets/button.bin').read_bytes() == image.read_bytes()
     source = json.loads((Path(result['directory']) / 'scripts/demo.json').read_text(encoding='utf-8'))
     assert source[0][1]['image'] == 'assets/button.bin'
@@ -139,8 +140,10 @@ def test_stop_after_atomic_publication_does_not_claim_the_working_copy_was_rolle
     monkeypatch.setattr(Path, 'rename', committed)
     loaded = ac.load_sync_profile(result['directory'], tmp_path / 'workspaces',
                                   expected_digest=result['manifest_digest'], cancelled=stop.is_set)
-    assert stop.is_set() and loaded.directory.is_dir()
-    assert loaded.hotkeys[0].enabled is False and loaded.triggers[0].enabled is False
+    assert stop.is_set()
+    assert loaded.directory.is_dir()
+    assert loaded.hotkeys[0].enabled is False
+    assert loaded.triggers[0].enabled is False
 
 
 def test_a_working_copy_cannot_be_published_inside_its_immutable_source(tmp_path, monkeypatch):

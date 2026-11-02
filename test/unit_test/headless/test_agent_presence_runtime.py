@@ -73,12 +73,14 @@ def test_two_runtime_databases_keep_one_source_across_input_task_and_borrower_re
     first, second = fixture.runtime('one'), fixture.runtime('two')
     try:
         left, right = first.submit(spec()), second.submit(spec())
-        assert not fixture.source.calls and not fixture.helpers
+        assert not fixture.source.calls
+        assert not fixture.helpers
         first.observe(left.task_id)
         first.pause(left.task_id)
         second.observe(right.task_id)
         bindings = fixture.bindings()
-        assert len(bindings) == 2 and bindings[0]['generation'] == bindings[1]['generation']
+        assert len(bindings) == 2
+        assert bindings[0]['generation'] == bindings[1]['generation']
         assert bindings[0]['lease_id'] != bindings[1]['lease_id']
         assert sum(name == 'bootstrap' for name, _body in fixture.source.calls) == 1
         first.close()
@@ -89,7 +91,9 @@ def test_two_runtime_databases_keep_one_source_across_input_task_and_borrower_re
     finally:
         first.close()
         second.close()
-    assert fixture.source.retired and fixture.pool.retired and all(helper.retired for helper in fixture.helpers)
+    assert fixture.source.retired
+    assert fixture.pool.retired
+    assert all(helper.retired for helper in fixture.helpers)
 
 
 def test_new_task_uses_a_new_lease_without_resetting_runtime_source_idle(fixture):
@@ -100,8 +104,10 @@ def test_new_task_uses_a_new_lease_without_resetting_runtime_source_idle(fixture
         second = runtime.submit(spec())
         runtime.observe(second.task_id)
         left, right = fixture.bindings()
-        assert left['generation'] == right['generation'] and left['lease_id'] != right['lease_id']
-        assert len(fixture.helpers) == 2 and fixture.helpers[0].retired
+        assert left['generation'] == right['generation']
+        assert left['lease_id'] != right['lease_id']
+        assert len(fixture.helpers) == 2
+        assert fixture.helpers[0].retired
 
 
 def test_custom_reviewed_worker_and_passive_runtime_paths_never_bind_presence(fixture):
@@ -110,7 +116,8 @@ def test_custom_reviewed_worker_and_passive_runtime_paths_never_bind_presence(fi
         runtime.list()
         runtime.get(task.task_id)
         runtime.observe(task.task_id)
-        assert not fixture.source.calls and not fixture.bindings()
+        assert not fixture.source.calls
+        assert not fixture.bindings()
 
 
 def test_failed_source_retirement_keeps_runtime_and_store_owned_for_explicit_retry(fixture, monkeypatch):
@@ -127,14 +134,16 @@ def test_failed_source_retirement_keeps_runtime_and_store_owned_for_explicit_ret
         monkeypatch.setattr(reference, 'close', fail)
         with pytest.raises(AgentTaskError, match='unproven'):
             runtime.close()
-        assert not runtime._closed and not runtime._leases
+        assert not runtime._closed
+        assert not runtime._leases
         assert all(helper.retired for helper in fixture.helpers)
         with pytest.raises(AgentControlBusy):
             fixture.runtime('one')
     finally:
         monkeypatch.setattr(reference, 'close', original)
         runtime.close()
-    assert runtime._closed and fixture.pool.retired
+    assert runtime._closed
+    assert fixture.pool.retired
 
 
 def test_runtime_close_during_first_acquire_cancels_caller_before_final_source_closure(fixture):
@@ -149,11 +158,13 @@ def test_runtime_close_during_first_acquire_cancels_caller_before_final_source_c
                 runtime.close()
             with pytest.raises(CancelledError):
                 waiting.result(timeout=1)
-            assert not fixture.source.retired and not runtime._closed
+            assert not fixture.source.retired
+            assert not runtime._closed
     finally:
         fixture.source.allow.set()
         runtime.close()
-    assert fixture.pool.retired and all(helper.retired for helper in fixture.helpers)
+    assert fixture.pool.retired
+    assert all(helper.retired for helper in fixture.helpers)
 
 
 def test_cancelled_host_scope_never_opens_input_resource_or_helper_before_bind(fixture):
@@ -167,7 +178,9 @@ def test_cancelled_host_scope_never_opens_input_resource_or_helper_before_bind(f
         with pytest.raises(CancelledError):
             adapter.ready(definition)
     try:
-        assert adapter._resource is None and adapter._channel is None and not fixture.helpers
+        assert adapter._resource is None
+        assert adapter._channel is None
+        assert not fixture.helpers
         assert not fixture.source.calls
     finally:
         adapter.cleanup()
@@ -178,7 +191,8 @@ def test_passive_target_description_exposes_coarse_presence_without_creating_a_s
         summary, = runtime.target_profiles.describe()['targets']
         assert summary['presence']['state'] in {'not_bound', 'not_supported'}
         assert summary['presence']['native_evidence'] == 'not_recorded'
-        assert not fixture.source.calls and not fixture.helpers
+        assert not fixture.source.calls
+        assert not fixture.helpers
 
 
 def test_unsupported_default_desktop_refuses_before_helper_or_input_journal(fixture, monkeypatch):
@@ -189,7 +203,8 @@ def test_unsupported_default_desktop_refuses_before_helper_or_input_journal(fixt
         task = runtime.submit(spec())
         with pytest.raises(AgentControlBusy, match='Windows'):
             runtime.observe(task.task_id)
-        assert not fixture.helpers and not fixture.source.calls
+        assert not fixture.helpers
+        assert not fixture.source.calls
 
 
 def test_named_owner_takeover_is_negative_only_and_old_helper_notice_cannot_stop_resumed_lease(fixture):
@@ -211,7 +226,8 @@ def test_named_owner_takeover_is_negative_only_and_old_helper_notice_cannot_stop
         deadline = time.monotonic() + 1
         while runtime.get(task.task_id).state != 'paused' and time.monotonic() < deadline:
             time.sleep(0.01)
-        assert runtime.get(task.task_id).state == 'paused' and not runtime._leases
+        assert runtime.get(task.task_id).state == 'paused'
+        assert not runtime._leases
 
 
 def test_task_options_cannot_select_source_provider_or_presence_capability(fixture):

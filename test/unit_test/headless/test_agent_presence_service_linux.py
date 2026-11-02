@@ -119,7 +119,8 @@ def test_an_owned_worker_hands_its_endpoint_to_the_broker_and_serves_presence(tm
     broker = OwnedChannel([sys.executable, '-u', '-c', _broker_script(clock)])
     try:
         ready = broker.request('bootstrap', {}, timeout=15)
-        assert ready['ready'] is True and len(ready['generation']) == 32, json.dumps(ready)
+        assert ready['ready'] is True, json.dumps(ready)
+        assert len(ready['generation']) == 32, json.dumps(ready)
         assert broker.request('acquire', {}, timeout=3)['status'] == 'busy'
         clock.write_text('60', encoding='utf-8')
         lease = broker.request('acquire', {}, timeout=3)['result']

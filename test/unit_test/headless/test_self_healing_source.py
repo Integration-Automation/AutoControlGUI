@@ -35,15 +35,19 @@ def test_captured_heal_records_actual_source_and_reader_selects_after_filtering(
     assert event.journal_path == str(path.resolve())
     original = path.read_bytes()
     snapshots = ac.inspect_heal_source(event.journal_path, event.run_id, event.step_id, limit=1)
-    assert len(snapshots) == 1 and snapshots[0]["command"] == "AC_self_heal_locate"
-    assert snapshots[0]["run_id"] == event.run_id and snapshots[0]["step_id"] == event.step_id
+    assert len(snapshots) == 1
+    assert snapshots[0]["command"] == "AC_self_heal_locate"
+    assert snapshots[0]["run_id"] == event.run_id
+    assert snapshots[0]["step_id"] == event.step_id
     assert path.read_bytes() == original
 
 
 def test_uncaptured_heal_and_legacy_rows_do_not_invent_source(controlled, tmp_path):
     ac.self_heal_locate("unused.png")
     event, = controlled.list_events()
-    assert event.run_id and event.step_id and event.journal_path is None
+    assert event.run_id
+    assert event.step_id
+    assert event.journal_path is None
     legacy = ac.HealEventLog(tmp_path / "legacy.jsonl")
     legacy.path.write_text('{"timestamp":"then","method":"miss","coordinates":null,"duration_ms":0}\n',
                            encoding="utf-8")
@@ -145,7 +149,8 @@ def test_commands_cli_mcp_and_builder_read_the_same_source(controlled, tmp_path,
     tool = next(tool for tool in build_default_tool_registry() if tool.name == "ac_self_heal_source")
     remote = tool.handler(**arguments)
     assert next(iter(record.values())) == remote
-    assert tool.annotations.read_only and capability_for_tool(tool.name, True) == "drive_input"
+    assert tool.annotations.read_only
+    assert capability_for_tool(tool.name, True) == "drive_input"
     assert {field.name for field in COMMAND_SPECS["AC_self_heal_source"].fields} == {*arguments, "limit"}
     script = tmp_path / "source.json"
     script.write_text(json.dumps(actions), encoding="utf-8")

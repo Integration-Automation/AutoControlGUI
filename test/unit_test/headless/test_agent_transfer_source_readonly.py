@@ -34,9 +34,12 @@ def test_actual_renewed_reader_exports_only_the_selected_file_with_old_input_sti
     child, exported = export_reader(renewal, monkeypatch)
     with authorization_scope(renewal.reviewer):
         manifest = renewal.runtime.transfers.peer('export', {'export_id': exported['export_id']})
-    assert manifest['source_task'] == child and manifest['files'][0]['name'] == renewal.output.name
+    assert manifest['source_task'] == child
+    assert manifest['files'][0]['name'] == renewal.output.name
     public = json.dumps(exported)
-    assert str(renewal.reports) not in public and 'store_path' not in public and 'origin_policies' not in public
+    assert str(renewal.reports) not in public
+    assert 'store_path' not in public
+    assert 'origin_policies' not in public
     assert renewal.runtime.store.actions(renewal.source) == before
     assert renewal.old.identifier not in renewal.runtime.store.get(child)['spec']['options']['origin_policies']
 

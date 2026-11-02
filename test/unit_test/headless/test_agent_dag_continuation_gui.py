@@ -29,7 +29,9 @@ def test_review_and_run_actions_preserve_source_selection_and_do_not_auto_execut
         tab._on_batch_finished({"batch_id": "batch-a", "definition": graph(), "snapshot": "a" * 64,
                                 "decisions": [{"node_id": "a", "action": "wait"}], "nodes": []})
         request = json.loads(tab._continuation_request.toPlainText())
-        assert request["note"] == "" and tab._editor.toPlainText() == ordinary and dispatched == []
+        assert request["note"] == ""
+        assert tab._editor.toPlainText() == ordinary
+        assert dispatched == []
         actions["dag_continuation_run_btn"]()
         assert dispatched.pop()[1] == {"inspect_only": False, "batch_operation": "run_continuation"}
         tab._batch_id.setText("batch-b")

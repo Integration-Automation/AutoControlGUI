@@ -23,9 +23,11 @@ def test_matching_normalizes_defaults_and_destination_roots_without_dispatch(tmp
         expected["roots"] = [str(root / "child" / "..")]
         expected = dict(reversed(list(expected.items())))
         match = runtime.lookup("key", expected)
-        assert match["spec_match_contract"] == 1 and match["spec_match"] == "matches"
+        assert match["spec_match_contract"] == 1
+        assert match["spec_match"] == "matches"
         assert match["task"]["task_id"] == accepted.task_id
-        assert target.calls == [] and not runtime._leases
+        assert target.calls == []
+        assert not runtime._leases
         assert len(runtime.list()) == 1
     finally:
         runtime.close()
@@ -51,9 +53,12 @@ def test_changed_reviewed_spec_is_reported_without_resubmission(tmp_path, change
         else:
             expected["success_criteria"][0]["value"] = 2
         result = runtime.lookup("key", expected)
-        assert result["found"] is True and result["spec_match"] == "differs"
+        assert result["found"] is True
+        assert result["spec_match"] == "differs"
         assert result["task"]["task_id"] == accepted.task_id
-        assert target.calls == [] and not runtime._leases and len(runtime.list()) == 1
+        assert target.calls == []
+        assert not runtime._leases
+        assert len(runtime.list()) == 1
     finally:
         runtime.close()
 
@@ -66,7 +71,8 @@ def test_lookup_remains_readable_but_matching_is_unverifiable_when_target_is_abs
     replacement = AgentRuntime(path, targets={})
     try:
         result = replacement.lookup("key", specification())
-        assert result["found"] is True and result["task"]["task_id"] == accepted.task_id
+        assert result["found"] is True
+        assert result["task"]["task_id"] == accepted.task_id
         assert result["spec_match"] == "unverifiable"
         assert not replacement._leases
     finally:
@@ -80,7 +86,8 @@ def test_spec_match_does_not_search_another_owner_or_create_missing_requests(tmp
             runtime.submit(specification(), idempotency_key="key")
         with authorization_scope(AuthorizationContext("bob", "operator")):
             result = runtime.lookup("key", specification())
-            assert result["found"] is False and result["spec_match"] == "not_found"
+            assert result["found"] is False
+            assert result["spec_match"] == "not_found"
         assert len(runtime.list()) == 1
     finally:
         runtime.close()
@@ -94,8 +101,10 @@ def test_http_spec_match_is_closed_and_never_dispatches(tmp_path):
         original = specification().to_dict()
         accepted = client.call("submit", {"spec": original, "idempotency_key": "key"})
         result = client.call("lookup", {"idempotency_key": "key", "spec": original})
-        assert result["spec_match"] == "matches" and result["task"]["task_id"] == accepted["task_id"]
-        assert not service.runtime._leases and service.runtime.store.actions(accepted["task_id"]) == []
+        assert result["spec_match"] == "matches"
+        assert result["task"]["task_id"] == accepted["task_id"]
+        assert not service.runtime._leases
+        assert service.runtime.store.actions(accepted["task_id"]) == []
         for invalid in (None, [], {"unknown": True}):
             with pytest.raises(AgentTaskError):
                 client.call("lookup", {"idempotency_key": "key", "spec": invalid})

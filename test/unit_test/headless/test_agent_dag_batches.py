@@ -27,7 +27,8 @@ def runtime(tmp_path):
 
 def test_registered_batch_is_durable_and_does_not_dispatch(runtime):
     value = runtime.batches.control("register", {"definition": graph()})
-    assert value["state"] == "registered" and runtime.list() == []
+    assert value["state"] == "registered"
+    assert runtime.list() == []
     assert value["definition"]["nodes"][1]["depends_on"] == ["a"]
     assert value["resume_permitted"] is False
     assert runtime.batches.control("get", {"batch_id": value["batch_id"]}) == value
@@ -135,7 +136,8 @@ def test_claim_survives_restart_and_never_becomes_proof_of_non_delivery(runtime)
     restored = AgentRuntime(runtime.store.path, targets={"fixture": object()})
     try:
         current = restored.batches.control("get", {"batch_id": value["batch_id"]})
-        assert current["state"] == "waiting_review" and current["nodes"][0]["phase"] == "claimed"
+        assert current["state"] == "waiting_review"
+        assert current["nodes"][0]["phase"] == "claimed"
         assert not current["resume_permitted"]
         with pytest.raises(AgentTaskError, match="inactive"):
             restored.batches.control("claim", {"batch_id": value["batch_id"],

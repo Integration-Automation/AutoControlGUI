@@ -125,7 +125,8 @@ def test_successful_fallback_keeps_original_outcome_and_masks_only_audit(monkeyp
     with secret_log_scope():
         remember_secret(secret)
         outcome = self_heal_locate(template_path=secret, description=secret, log=log)
-    assert outcome.found and outcome.coordinates == (4, 5)
+    assert outcome.found
+    assert outcome.coordinates == (4, 5)
     assert outcome.template_path == outcome.description == secret
     assert secret in outcome.image_error
     stored = log.list_events()[0]

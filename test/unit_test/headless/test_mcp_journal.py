@@ -34,10 +34,13 @@ def _data(reply):
 
 def test_tools_expose_capture_and_sensitive_read_hints():
     capture, reader = _tool("ac_journal_capture"), _tool("ac_journal_read")
-    assert capture.annotations.destructive and not capture.annotations.read_only
-    assert reader.annotations.read_only and reader.annotations.idempotent
+    assert capture.annotations.destructive
+    assert not capture.annotations.read_only
+    assert reader.annotations.read_only
+    assert reader.annotations.idempotent
     readonly = {tool.name for tool in build_default_tool_registry(read_only=True, aliases=False)}
-    assert reader.name in readonly and capture.name not in readonly
+    assert reader.name in readonly
+    assert capture.name not in readonly
     for tool in (capture, reader):
         assert tool.input_schema["properties"]["path"]["format"] == "path"
 
@@ -50,13 +53,16 @@ def test_rpc_capture_read_and_metadata_round_trip(tmp_path):
                     "actions": [["AC_get_var", {"name": "message"}]]})
     assert captured["result"]["isError"] is False
     result = _data(captured)
-    assert result["run_id"] == "rpc" and result["failed_actions"] == 0
+    assert result["run_id"] == "rpc"
+    assert result["failed_actions"] == 0
     assert "hello" in result["record"].values()
     reply = _rpc(server, "ac_journal_read", {"path": str(path), "run_id": "rpc", "limit": 1})
     assert reply["result"]["isError"] is False
     events = _data(reply)["events"]
-    assert len(events) == 1 and events[0]["status"] == "incomplete"
-    assert events[0]["device_id"] == "device" and events[0]["session_id"] == "session"
+    assert len(events) == 1
+    assert events[0]["status"] == "incomplete"
+    assert events[0]["device_id"] == "device"
+    assert events[0]["session_id"] == "session"
 
 
 def test_recorded_failures_are_tool_errors_with_structured_run_metadata(tmp_path, monkeypatch):
@@ -68,8 +74,10 @@ def test_recorded_failures_are_tool_errors_with_structured_run_metadata(tmp_path
     reply = _rpc(server, "ac_journal_capture", {"path": str(path), "actions": [["AC_mcp_journal_failure"]]})
     assert reply["result"]["isError"] is True
     result = reply["result"]["structuredContent"]
-    assert result["failed_actions"] == 1 and result["journal_path"] == str(path.resolve())
-    assert result["run_id"] and _data(reply) == result
+    assert result["failed_actions"] == 1
+    assert result["journal_path"] == str(path.resolve())
+    assert result["run_id"]
+    assert _data(reply) == result
     assert [event.status for event in ac.read_events(path)] == ["incomplete", "error"]
 
 
@@ -82,7 +90,8 @@ def test_viewers_cannot_list_or_call_private_journal_operations(tmp_path, name):
     with authorization_scope(AuthorizationContext("viewer", Role.VIEWER)):
         listed = json.loads(server.handle_line('{"jsonrpc":"2.0","id":2,"method":"tools/list"}'))
         reply = _rpc(server, name, args)
-    assert listed["result"]["tools"] == [] and "error" in reply
+    assert listed["result"]["tools"] == []
+    assert "error" in reply
     assert not (tmp_path / "refused.jsonl").exists()
 
 
@@ -108,7 +117,8 @@ def test_server_passes_its_policy_to_dynamic_nested_captures(tmp_path):
     reply = _rpc(server, "ac_journal_capture", {"path": str(allowed / "outer.jsonl"),
                  "variables": {"destination": str(outside)}, "actions": [["AC_journal_capture", {
                  "path": "${destination}", "body": [["AC_set_var", {"name": "x", "value": 1}]]}]]})
-    assert reply["result"]["isError"] is True and not outside.exists()
+    assert reply["result"]["isError"] is True
+    assert not outside.exists()
     assert _data(reply)["failed_actions"] == 1
 
 
@@ -163,7 +173,8 @@ def test_invalid_fields_are_rejected_before_effects(tmp_path, extra):
     if name.endswith("capture"):
         args["actions"] = [["AC_set_var", {"name": "x", "value": 1}]]
     reply = _rpc(MCPServer(tools=[_tool(name)]), name, args)
-    assert reply["result"]["isError"] is True and not path.exists()
+    assert reply["result"]["isError"] is True
+    assert not path.exists()
 
 
 def test_explicit_object_results_signal_errors_without_changing_json_data():
@@ -171,7 +182,8 @@ def test_explicit_object_results_signal_errors_without_changing_json_data():
     assert json.loads(json.dumps(result)) == {"value": 3}
     tool = MCPTool(name="controlled", description="controlled result", input_schema=schema({}), handler=lambda: result)
     reply = _rpc(MCPServer(tools=[tool]), "controlled", {})
-    assert reply["result"]["isError"] is True and _data(reply) == {"value": 3}
+    assert reply["result"]["isError"] is True
+    assert _data(reply) == {"value": 3}
     plain = MCPTool(name="ordinary", description="ordinary data", input_schema=schema({}),
                     handler=lambda: {"is_error": True})
     assert _rpc(MCPServer(tools=[plain]), "ordinary", {})["result"]["isError"] is False
@@ -184,7 +196,9 @@ def test_operator_cannot_hide_administration_inside_capture(tmp_path, monkeypatc
     server = MCPServer(tools=[_tool("ac_journal_capture")])
     with authorization_scope(AuthorizationContext("operator", Role.OPERATOR)):
         reply = _rpc(server, "ac_journal_capture", {"path": str(path), "actions": [["AC_secret_init", {}]]})
-    assert "error" in reply and not effects and not path.exists()
+    assert "error" in reply
+    assert not effects
+    assert not path.exists()
 
 
 def test_stdio_capture_uses_the_same_typed_journal_result(tmp_path):
@@ -196,5 +210,6 @@ def test_stdio_capture_uses_the_same_typed_journal_result(tmp_path):
     server = MCPServer(tools=[_tool("ac_journal_capture")])
     server.serve_stdio(stdin=io.StringIO(json.dumps(request) + "\n"), stdout=output)
     reply = next(json.loads(line) for line in output.getvalue().splitlines() if json.loads(line).get("id") == 44)
-    assert reply["result"]["isError"] is False and reply["result"]["structuredContent"]["run_id"] == "stdio"
+    assert reply["result"]["isError"] is False
+    assert reply["result"]["structuredContent"]["run_id"] == "stdio"
     assert [event.status for event in ac.read_events(path)] == ["incomplete", "ok"]

@@ -52,7 +52,8 @@ def test_a_cancelled_check_preserves_original_control_and_stops_all_later_checks
     with pytest.raises(type(original)) as caught:
         entry()
     assert caught.value is original
-    assert events == ['before', 'cancelled'] and warnings == []
+    assert events == ['before', 'cancelled']
+    assert warnings == []
 
 
 @pytest.mark.parametrize('error_type', [RuntimeError, ValueError, OSError])
@@ -74,7 +75,8 @@ def test_ordinary_probe_failures_still_become_report_rows_and_allow_later_checks
     monkeypatch.setattr(diagnostics, '_ALL_CHECKS', (broken, later))
     monkeypatch.setattr(diagnostics, 'autocontrol_logger', SimpleNamespace(warning=lambda *args: warnings.append(args)))
     report = diagnostics.run_diagnostics()
-    assert events == ['broken', 'later'] and len(warnings) == 1
+    assert events == ['broken', 'later']
+    assert len(warnings) == 1
     assert report.to_dict() == {
         'ok': False,
         'checks': [

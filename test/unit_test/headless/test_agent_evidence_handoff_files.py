@@ -92,6 +92,7 @@ def test_real_file_handoff_runs_the_original_dag_without_replaying_or_transferri
         assert files.runtime.store.get(files.child)['owner']['user_id'] == 'reviewer'
         with pytest.raises(AgentTaskError, match='another caller'):
             files.runtime.get(files.child)
-        assert files.manifest.read_bytes() == before and files.runtime.store.actions(files.child) == []
+        assert files.manifest.read_bytes() == before
+        assert files.runtime.store.actions(files.child) == []
     finally:
         server.stop()

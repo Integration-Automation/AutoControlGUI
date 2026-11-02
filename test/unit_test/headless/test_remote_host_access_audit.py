@@ -90,7 +90,8 @@ def test_terminal_auth_rejection_releases_capacity_before_the_viewer_receives_it
             kind, _payload = read_message(first)
         else:
             first, kind = _connect(host, token='wrong-token' if reason == 'bad_token' else TOKEN)
-        assert kind is MessageType.AUTH_FAIL and entered.wait(5)
+        assert kind is MessageType.AUTH_FAIL
+        assert entered.wait(5)
         host._on_pending_viewer = None
         second, kind = _connect(host)
         assert kind is MessageType.AUTH_OK

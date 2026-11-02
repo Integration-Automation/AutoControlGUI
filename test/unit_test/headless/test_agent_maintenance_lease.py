@@ -59,7 +59,8 @@ def test_stale_maintenance_does_not_change_an_already_retired_source(owned, monk
             users.set_role("owner", "viewer")
         proceed.set()
         watcher.join(5)
-        assert not watcher.is_alive() and not failures
+        assert not watcher.is_alive()
+        assert not failures
         assert runtime.store.get(task) == before, "A stale watcher cannot rewrite retired recovery evidence"
         assert target.calls == []
     finally:
@@ -76,7 +77,8 @@ def test_current_input_owner_still_retires_on_expiry_or_revocation(owned, monkey
         users.set_role("owner", "viewer")
     runtime.maintain()
     assert runtime.store.get(task)["state"] == ("timed_out" if cause == "expired" else "cancelled")
-    assert task not in runtime._leases and target.calls == []
+    assert task not in runtime._leases
+    assert target.calls == []
 
 
 @pytest.mark.parametrize("reacquire", [False, True])
@@ -105,9 +107,11 @@ def test_maintenance_rechecks_the_actual_lease_at_stop_publication(owned, monkey
     monkeypatch.setattr(runtime.clock, "remaining", expired_once)
     monkeypatch.setattr(runtime.store, "request_stop", changed)
     runtime.maintain()
-    assert snapshots and runtime.store.get(task) == snapshots[0]
+    assert snapshots
+    assert runtime.store.get(task) == snapshots[0]
     if reacquire:
-        assert task in runtime._leases and not runtime._token(task).is_cancelled
+        assert task in runtime._leases
+        assert not runtime._token(task).is_cancelled
     else:
         assert task not in runtime._leases
     assert target.calls == []
@@ -158,8 +162,10 @@ def test_concurrent_retirement_cannot_validate_an_already_released_lease(owned, 
     finally:
         proceed.set()
         worker.join(5)
-    assert not worker.is_alive() and not failures
-    assert results[0].state == "paused" and task not in runtime._leases
+    assert not worker.is_alive()
+    assert not failures
+    assert results[0].state == "paused"
+    assert task not in runtime._leases
 
 
 def test_revocation_reason_is_final_when_cancellation_is_published(owned, monkeypatch):
@@ -176,5 +182,6 @@ def test_revocation_reason_is_final_when_cancellation_is_published(owned, monkey
     monkeypatch.setattr(runtime.store, "transition", capture)
     users.set_role("owner", "viewer")
     runtime.maintain()
-    assert published and published[0]["reason"] == "owner authorization or origin scope requires review"
+    assert published
+    assert published[0]["reason"] == "owner authorization or origin scope requires review"
     assert runtime.store.get(task) == published[0], "Terminal publication must leave a stable recovery snapshot"

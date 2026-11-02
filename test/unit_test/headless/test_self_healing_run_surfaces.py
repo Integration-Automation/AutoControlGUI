@@ -44,7 +44,8 @@ def test_command_mcp_and_builder_default_to_locate(controlled):
     result = next(iter(executor.execute_action(actions, raise_on_error=True).values()))
     remote = tool().handler(request)
     assert result["coordinates"] == remote["coordinates"] == [2, 3]
-    assert result["operation_status"] == "not_requested" and result["verified"] is None
+    assert result["operation_status"] == "not_requested"
+    assert result["verified"] is None
     assert not remote.is_error
     assert COMMAND_SPECS["AC_self_heal_run"].fields[0].name == "request"
     assert capability_for_tool(tool().name, True) == "drive_input"
@@ -54,7 +55,8 @@ def test_command_mcp_and_builder_default_to_locate(controlled):
 def test_mcp_does_not_assume_dict_annotation_promises_verification_key(monkeypatch):
     monkeypatch.setattr("je_auto_control.utils.self_healing.commands.run_json_request", lambda *_a, **_k: {})
     result = tool().handler({})
-    assert result == {} and not result.is_error
+    assert result == {}
+    assert not result.is_error
 
 
 def test_cli_uses_json_request_without_native_effects(tmp_path, capsys):
@@ -123,8 +125,11 @@ def test_false_postcondition_is_command_error_and_mcp_structured_error(false_ver
         executor.execute_action([["AC_self_heal_run", {"request": request}]], raise_on_error=True)
     assert caught.value.result["verified"] is False
     result = tool().handler(request)
-    assert result.is_error and result["found"] and result["operation_status"] == "verification_failed"
-    assert calls == ["click", "click"] and len(controlled.list_events()) == 2
+    assert result.is_error
+    assert result["found"]
+    assert result["operation_status"] == "verification_failed"
+    assert calls == ["click", "click"]
+    assert len(controlled.list_events()) == 2
 
 
 def test_false_postcondition_makes_cli_fail(false_verification, tmp_path, capsys):

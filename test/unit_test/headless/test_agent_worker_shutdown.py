@@ -25,11 +25,13 @@ def test_shutdown_cancels_model_initialization_before_any_lease_or_display_page(
     try:
         task = runtime.submit(specification(mode="ollama"))
         jobs.start(task.task_id)
-        assert entered.wait(3) and not runtime._leases
+        assert entered.wait(3)
+        assert not runtime._leases
         assert runtime.get(task.task_id).state == "queued"
         jobs.close()
         assert runtime.get(task.task_id).state == "cancelled"
-        assert not jobs._running and all(not thread.is_alive() for thread in jobs._workers)
+        assert not jobs._running
+        assert all(not thread.is_alive() for thread in jobs._workers)
     finally:
         jobs.close()
         runtime.close()

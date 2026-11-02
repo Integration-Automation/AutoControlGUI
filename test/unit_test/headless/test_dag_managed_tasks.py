@@ -31,7 +31,8 @@ def test_versioned_dag_exports_match_historical_facade():
     for name in ("DagDefinition", "DagDefinitionError", "DagNode", "DagRunResult", "NodeResult",
                  "parse_dag", "run_dag"):
         assert getattr(je_auto_control, name) is getattr(core, name) is getattr(api, name)
-        assert name in core.__all__ and name in api.__all__
+        assert name in core.__all__
+        assert name in api.__all__
 
 
 def definition(payload=None, host="local"):

@@ -25,13 +25,17 @@ def test_inspection_uses_lookup_only_and_never_grants_matching_or_resume(monkeyp
 
     monkeypatch.setattr(managed_tasks, "_connection", connection)
     result = inspect_agent_dag(definition())
-    assert result["inspection_only"] is True and result["resume_permitted"] is False
+    assert result["inspection_only"] is True
+    assert result["resume_permitted"] is False
     first, second = result["nodes"]
-    assert first["task_id"] == "task-one" and first["lookup"] == "found"
-    assert first["recorded_completion"] is True and first["request_match"] == "unverified"
+    assert first["task_id"] == "task-one"
+    assert first["lookup"] == "found"
+    assert first["recorded_completion"] is True
+    assert first["request_match"] == "unverified"
     assert second["lookup"] == "not_managed"
     assert "private-remote-path" not in str(result)
-    assert len(calls) == 1 and calls[0][0:2] == ("lookup", {"idempotency_key": "reviewed-one"})
+    assert len(calls) == 1
+    assert calls[0][0:2] == ("lookup", {"idempotency_key": "reviewed-one"})
     assert 0 < calls[0][2] <= 5
 
 
@@ -195,12 +199,16 @@ def test_real_registered_host_lookup_does_not_submit_even_when_reviewed_spec_dif
         with authorization_scope(AuthorizationContext("local-admin", "admin")):
             result = inspect_agent_dag(graph)
         first = result["nodes"][0]
-        assert first["task_id"] == accepted.task_id and first["recorded_completion"] is True
-        assert first["request_match"] == "differs" and result["resume_permitted"] is False
-        assert len(calls) == 2 and all(call[0].endswith("/agent/lookup") for call in calls)
+        assert first["task_id"] == accepted.task_id
+        assert first["recorded_completion"] is True
+        assert first["request_match"] == "differs"
+        assert result["resume_permitted"] is False
+        assert len(calls) == 2
+        assert all(call[0].endswith("/agent/lookup") for call in calls)
         assert calls[0][1]["body"] == {"idempotency_key": "reviewed-one"}
         assert set(calls[1][1]["body"]) == {"idempotency_key", "spec"}
-        assert target.calls == ["AC_increment"] and len(service.runtime.list()) == 1
+        assert target.calls == ["AC_increment"]
+        assert len(service.runtime.list()) == 1
         assert "history_path" not in str(result)
     finally:
         service.close()

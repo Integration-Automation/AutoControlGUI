@@ -28,10 +28,12 @@ def test_native_preference_capture_excludes_other_settings_and_materializes_a_co
     assert receiver.apply(entries).stored == ('font_pt', 'navigation_visible', 'navigation_width', 'theme')
     result = ac.materialize_sync_profile([receiver], tmp_path / 'cache')
     assert '[workspace]' in (result.directory / 'workspace.ini').read_text(encoding='utf-8')
-    assert source.read_text(encoding='utf-8') == original and not (tmp_path / 'laptop.ini').exists()
+    assert source.read_text(encoding='utf-8') == original
+    assert not (tmp_path / 'laptop.ini').exists()
     stored = (tmp_path / 'desktop.sqlite3', tmp_path / 'laptop.sqlite3', result.directory / 'profile/workspace.json')
     for path in stored:
-        assert b'local-only-credential' not in path.read_bytes() and b'sender-display' not in path.read_bytes()
+        assert b'local-only-credential' not in path.read_bytes()
+        assert b'sender-display' not in path.read_bytes()
     assert adapter(tmp_path, 'desktop').snapshot() == entries
 
 
@@ -131,8 +133,10 @@ def test_materialized_ini_loads_in_a_fresh_real_gui_without_changing_the_current
         spec for spec in main_widget.TAB_SPECS if spec.key in {'record', 'variables'}))
     window = AutoControlGUIUI(settings=settings)
     try:
-        assert window._theme_name == 'light' and window._user_font_pt == 16
-        assert window._navigation_dock.isHidden() and window._navigation_width == 480
+        assert window._theme_name == 'light'
+        assert window._user_font_pt == 16
+        assert window._navigation_dock.isHidden()
+        assert window._navigation_width == 480
         assert not (tmp_path / 'laptop.ini').exists()
     finally:
         window.close()
@@ -155,7 +159,8 @@ def test_workspace_descriptor_commands_and_all_seven_domains_publish_together(tm
     ac.executor.execute_action([command], raise_on_error=True)
     tools = {tool.name: tool for tool in build_default_tool_registry()}
     result = tools['ac_sync_profile_materialize'].handler(**command[1])
-    assert result['reused'] and result['file_count'] == 13
+    assert result['reused']
+    assert result['file_count'] == 13
     assert (Path(result['directory']) / 'workspace.ini').is_file()
     source = tmp_path / 'gui.ini'
     source.write_text('[workspace]\ntheme=light\n', encoding='utf-8')

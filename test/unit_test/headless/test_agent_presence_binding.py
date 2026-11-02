@@ -70,7 +70,8 @@ def test_repeated_configure_reuses_one_reader_and_never_acquires_a_new_capabilit
     assert worker._dispatch('configure', payload())['ready']
     assert worker._dispatch('configure', payload())['ready']
     assert len(Gate.instances) == 1
-    assert Gate.instances[0].binding == BINDING and Gate.instances[0].readies == 2
+    assert Gate.instances[0].binding == BINDING
+    assert Gate.instances[0].readies == 2
 
 
 @pytest.mark.parametrize('change', ['binding', 'spec', 'owner'])
@@ -85,13 +86,15 @@ def test_configured_reader_cannot_change_capability_or_host_scope_without_retire
         altered['owner'] = {'user_id': 'other', 'role': 'admin', 'store_path': 'not-an-authority'}
     with pytest.raises(AgentTaskError):
         worker._dispatch('configure', altered)
-    assert len(Gate.instances) == 1 and Gate.instances[0].binding == BINDING
+    assert len(Gate.instances) == 1
+    assert Gate.instances[0].binding == BINDING
 
 
 def test_release_only_cleanup_retires_reader_and_notice_thread_without_rearming(worker):
     worker._dispatch('configure', payload())
     assert worker._release_owned({'keys': [], 'buttons': []}) == {'cleaned': True}
-    assert Gate.instances[0].retired and not worker._notice_thread.is_alive()
+    assert Gate.instances[0].retired
+    assert not worker._notice_thread.is_alive()
     with pytest.raises(AgentTaskError):
         worker._dispatch('configure', payload())
     assert len(Gate.instances) == 1
@@ -100,7 +103,8 @@ def test_release_only_cleanup_retires_reader_and_notice_thread_without_rearming(
 def test_owner_eof_closes_actual_worker_reader_and_notice_lifetime(worker):
     worker._dispatch('configure', payload())
     worker.run()
-    assert Gate.instances[0].retired and not worker._notice_thread.is_alive()
+    assert Gate.instances[0].retired
+    assert not worker._notice_thread.is_alive()
 
 
 def test_notice_start_failure_is_typed_and_closes_unstarted_reader_without_rearming(worker, monkeypatch):

@@ -41,11 +41,13 @@ def test_failed_retained_reaping_keeps_runtime_open_and_service_ownership_until_
     try:
         with pytest.raises(AgentTaskError):
             runtime.close()
-        assert runtime._closed is False and not process.retired
+        assert runtime._closed is False
+        assert not process.retired
     finally:
         process.failure = False
         runtime.close()
-    assert runtime._closed is True and process.retired
+    assert runtime._closed is True
+    assert process.retired
 
 
 def test_nonbrowser_input_retirement_survives_unreadable_action_evidence(tmp_path, monkeypatch):

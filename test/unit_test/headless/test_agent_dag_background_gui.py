@@ -57,7 +57,8 @@ def test_closing_the_view_does_not_stop_a_batch_already_accepted_by_the_service(
         tab.close()
         proceed.set()
         result = until(lambda: finished(instance, batch))
-        assert result["state"] == "succeeded" and target.count == 2
+        assert result["state"] == "succeeded"
+        assert target.count == 2
     finally:
         proceed.set()
         tab.close()

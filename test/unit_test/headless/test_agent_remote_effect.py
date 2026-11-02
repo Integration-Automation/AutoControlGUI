@@ -130,7 +130,8 @@ def test_child_configuration_cannot_equate_json_boolean_or_float_to_integer(valu
     sink, adapter = io.BytesIO(), Adapter()
     RemoteWorker(source, sink, adapter).run()
     replies = [json.loads(line) for line in sink.getvalue().splitlines()]
-    assert replies[0]['result']['ready'] is True and 'error' in replies[1]
+    assert replies[0]['result']['ready'] is True
+    assert 'error' in replies[1]
     assert not adapter.calls
 
 

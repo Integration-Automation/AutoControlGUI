@@ -32,7 +32,8 @@ def test_shared_surfaces_review_issue_inspect_and_revoke_the_exact_renewed_reade
             assert preview['evidence']['completion_authorization']['completion_task'] == completed.child
             grant = invoke(surface, connection, tmp_path, 'create_handoff', {**request_for(completed),
                 'review': preview['handoff_review'], 'note': 'Explicit current read-only evidence handoff'})['handoff']
-        assert grant['evidence_only'] is True and grant['input_authorized'] is False
+        assert grant['evidence_only'] is True
+        assert grant['input_authorized'] is False
         listed = invoke(surface, connection, tmp_path, 'list_handoffs',
                         {'batch_id': completed.batch_id, 'node_id': 'a'})
         assert [item['id'] for item in listed['handoffs']] == [grant['id']]

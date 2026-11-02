@@ -180,7 +180,9 @@ def test_source_bytes_changed_after_review_never_publish_and_user_file_is_preser
         assert output.read_bytes() == b'changed after review'
         with runtime.store.connection() as connection:
             rows = runtime.transfers.source.records.entries(connection, 'export')
-        assert len(rows) == 1 and rows[0]['state'] == 'revoked' and rows[0]['held'] is False
+        assert len(rows) == 1
+        assert rows[0]['state'] == 'revoked'
+        assert rows[0]['held'] is False
 
 
 @pytest.mark.parametrize('operation', [[], {}])

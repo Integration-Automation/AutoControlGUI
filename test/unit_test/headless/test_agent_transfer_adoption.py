@@ -58,7 +58,8 @@ def test_actual_coordinator_adopts_another_remote_owners_leaf_without_read_or_in
         running = start(value, reviewed, approved)
         result = value.coordinator.batches.control('validate_node', {'batch_id': reviewed['batch_id'],
             'node_id': 'remote-file', 'attempt': running['attempt']})
-        assert result['outcome'] == 'completed' and result['task_id'] == value.child
+        assert result['outcome'] == 'completed'
+        assert result['task_id'] == value.child
         with authorization_scope(value.owner), pytest.raises(AgentTaskError, match='another caller'):
             value.runtime.get(value.child)
         assert value.runtime.store.actions(value.child) == before
@@ -126,7 +127,8 @@ def test_revoke_between_downstream_claim_and_return_never_authorizes_dispatch(tm
         status, absent = post(value.server, '/agent/lookup', {'idempotency_key': next(
             node['task']['idempotency_key'] for node in running['definition']['nodes'] if node['id'] == 'downstream')},
             token=value.owner_token)
-        assert status == 200 and absent['found'] is False
+        assert status == 200
+        assert absent['found'] is False
 
 
 @pytest.mark.parametrize('lost_ack', [False, True])
@@ -225,7 +227,8 @@ def test_interrupted_provisional_approval_resumes_only_its_exact_explicit_reques
             assert original['state'] == 'provisional'
             assert connection.execute('SELECT count(*) FROM agent_dag_adoptions').fetchone()[0] == 0
         approved = approve(value, reviewed)
-        assert approved['approval_id'] == original['id'] and approved['approval_state'] == 'ready'
+        assert approved['approval_id'] == original['id']
+        assert approved['approval_state'] == 'ready'
         with value.coordinator.store.connection() as connection:
             assert connection.execute('SELECT count(*) FROM agent_dag_approvals').fetchone()[0] == 1
 

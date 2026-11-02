@@ -50,7 +50,8 @@ class Channel:
 
     def send_bytes(self, raw):
         self.security.events.append('send')
-        assert isinstance(raw, bytes) and len(raw) <= 4096
+        assert isinstance(raw, bytes)
+        assert len(raw) <= 4096
         self.sent.append(json.loads(raw))
 
     def recv_bytes(self, maximum):
@@ -87,25 +88,33 @@ def test_client_opens_actual_peer_before_read_and_retains_query_handle_through_b
     security = Security()
     channel = Channel(security, [hello(), client_final])
     generation, peer = module().client_handshake(channel, security)
-    assert generation == GENERATION and peer is security.process
+    assert generation == GENERATION
+    assert peer is security.process
     assert security.events[0] == ('peer-open', False)
-    assert not peer.closed and not channel.closed
+    assert not peer.closed
+    assert not channel.closed
     assert len(channel.sent) == 1
     proof, = channel.sent
     assert set(proof) == {'protocol', 'server_challenge', 'challenge', 'birth'}
-    assert proof['protocol'] == 1 and proof['birth'] == 11 and proof['server_challenge'] == REMOTE_NONCE
-    assert len(proof['challenge']) == 32 and proof['challenge'] != REMOTE_NONCE
+    assert proof['protocol'] == 1
+    assert proof['birth'] == 11
+    assert proof['server_challenge'] == REMOTE_NONCE
+    assert len(proof['challenge']) == 32
+    assert proof['challenge'] != REMOTE_NONCE
 
 
 def test_server_opens_actual_peer_before_issuing_challenge_and_echoes_only_fresh_client_proof():
     security = Security()
     channel = Channel(security, [server_proof])
     peer = module().server_handshake(channel, security, GENERATION)
-    assert peer is security.process and not peer.closed and not channel.closed
+    assert peer is security.process
+    assert not peer.closed
+    assert not channel.closed
     assert security.events[0] == ('peer-open', True)
     first, last = channel.sent
     assert set(first) == set(last) == {'protocol', 'challenge', 'birth', 'generation'}
-    assert first['challenge'] != REMOTE_NONCE and len(first['challenge']) == 32
+    assert first['challenge'] != REMOTE_NONCE
+    assert len(first['challenge']) == 32
     assert first['birth'] == last['birth'] == 11
     assert first['generation'] == last['generation'] == GENERATION
     assert last['challenge'] == REMOTE_NONCE
@@ -120,7 +129,9 @@ def test_client_refuses_invalid_first_frame_without_disclosing_proof(field, valu
     channel = Channel(security, [frame])
     with pytest.raises(AgentTaskError):
         module().client_handshake(channel, security)
-    assert not channel.sent and channel.closed and security.process.closed
+    assert not channel.sent
+    assert channel.closed
+    assert security.process.closed
 
 
 @pytest.mark.parametrize('field,value', [('challenge', REMOTE_NONCE), ('birth', 23),
@@ -136,7 +147,8 @@ def test_client_refuses_buffered_or_changed_final_proof(field, value):
     channel = Channel(security, [hello(), forged])
     with pytest.raises(AgentTaskError):
         module().client_handshake(channel, security)
-    assert channel.closed and security.process.closed
+    assert channel.closed
+    assert security.process.closed
 
 
 @pytest.mark.parametrize('field,value', [('server_challenge', REMOTE_NONCE), ('birth', 23),
@@ -152,7 +164,9 @@ def test_server_refuses_old_challenge_wrong_native_birth_and_unknown_fields(fiel
     channel = Channel(security, [forged])
     with pytest.raises(AgentTaskError):
         module().server_handshake(channel, security, GENERATION)
-    assert len(channel.sent) == 1 and channel.closed and security.process.closed
+    assert len(channel.sent) == 1
+    assert channel.closed
+    assert security.process.closed
 
 
 @pytest.mark.parametrize('server', [True, False])
@@ -169,7 +183,8 @@ def test_peer_that_exits_during_challenge_cannot_authenticate(server):
             module().server_handshake(channel, security, GENERATION)
         else:
             module().client_handshake(channel, security)
-    assert channel.closed and security.process.closed
+    assert channel.closed
+    assert security.process.closed
 
 
 @pytest.mark.parametrize('raw', [b'\xff', b'{"protocol":1,"protocol":1}', b' ' * 4097],
@@ -179,4 +194,5 @@ def test_handshake_uses_closed_bounded_json_frames_and_closes_on_parse_failure(r
     channel = Channel(security, [raw])
     with pytest.raises(AgentTaskError):
         module().client_handshake(channel, security)
-    assert channel.closed and security.process.closed
+    assert channel.closed
+    assert security.process.closed

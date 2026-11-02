@@ -15,7 +15,8 @@ def test_default_example_is_controlled_and_never_starts_active_diagnostics(monke
     monkeypatch.setattr(example, 'run_diagnostics', forbidden)
     assert example.main([]) == 0
     data = json.loads(capsys.readouterr().out)
-    assert data['mode'] == 'demo' and data['status'] == 'cancelled'
+    assert data['mode'] == 'demo'
+    assert data['status'] == 'cancelled'
     assert [value['completed'] for value in data['progress']] == [0]
     assert current_cancellation_token() is None
 
@@ -28,7 +29,9 @@ def test_active_example_binds_the_sdk_token_and_prints_the_existing_report(monke
     monkeypatch.setattr(example, 'run_diagnostics', controlled)
     assert example.main(['--active']) == 0
     data = json.loads(capsys.readouterr().out)
-    assert data['mode'] == 'active' and data['status'] == 'completed' and data['report']['count'] == 1
+    assert data['mode'] == 'active'
+    assert data['status'] == 'completed'
+    assert data['report']['count'] == 1
     assert current_cancellation_token() is None
 
 

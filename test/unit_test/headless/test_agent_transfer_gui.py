@@ -41,8 +41,10 @@ def test_examples_prepare_explicit_source_destination_and_grant_selection(tab, m
     actions['agent_transfer_example_' + example]()
     assert view._operation.currentData() == operation
     request = json.loads(view._request.toPlainText())
-    assert set(request) == fields and request['idempotency_key'] == '<idempotency-key>'
-    assert tab._pages.currentWidget() is view and tab.findChildren(QPushButton) == []
+    assert set(request) == fields
+    assert request['idempotency_key'] == '<idempotency-key>'
+    assert tab._pages.currentWidget() is view
+    assert tab.findChildren(QPushButton) == []
     tab.retranslate()
     assert json.loads(view._request.toPlainText()) == request
 
@@ -91,7 +93,8 @@ def test_review_only_prepares_approval_after_an_explicit_action_preserving_key_a
     actions = dict(tab.menu_actions())
     actions['agent_transfer_apply']()
     view._completed(TaskOutcome(41, 'ok', {'review': 'a' * 64, 'approval_required': True}))
-    assert view._operation.currentData() == 'review_export' and len(calls) == 1
+    assert view._operation.currentData() == 'review_export'
+    assert len(calls) == 1
     assert json.loads(view._request.toPlainText()) == request
     actions['agent_transfer_prepare_approval']()
     assert view._operation.currentData() == 'create_export'
@@ -103,7 +106,8 @@ def test_review_only_prepares_approval_after_an_explicit_action_preserving_key_a
     view._request.setPlainText(json.dumps(prepared))
     handle.outcome = 'finished'
     actions['agent_transfer_apply']()
-    assert len(calls) == 2 and calls[1].args == ('create_export', prepared)
+    assert len(calls) == 2
+    assert calls[1].args == ('create_export', prepared)
 
 
 @pytest.mark.parametrize('language', ['english', 'traditional_chinese', 'simplified_chinese', 'japanese'])
@@ -129,7 +133,8 @@ def test_create_rejects_missing_blank_or_nontext_approval_before_dispatch(tab, m
     view._operation.setCurrentIndex(view._operation.findData('create_evidence'))
     view._request.setPlainText(json.dumps({'review': 'a' * 64, 'idempotency_key': 'key', 'note': note}))
     dict(tab.menu_actions())['agent_transfer_apply']()
-    assert calls == [] and view._status.text()
+    assert calls == []
+    assert view._status.text()
 
 
 def test_closed_transfer_gui_leaves_the_actual_accepted_import_owned_by_the_service(tab, tmp_path, monkeypatch):
@@ -181,8 +186,10 @@ def test_closed_transfer_gui_leaves_the_actual_accepted_import_owned_by_the_serv
             assert (Path(current['files_directory']) / 'report.txt').read_bytes() == body
             with host.runtime.store.connection() as database:
                 after = host.runtime.transfers.source.records.find(database, identifier)
-            assert before['scope'] == after['scope'] and before['expires'] == after['expires']
-            assert view._result.toPlainText() == '' and host.runtime.list() == []
+            assert before['scope'] == after['scope']
+            assert before['expires'] == after['expires']
+            assert view._result.toPlainText() == ''
+            assert host.runtime.list() == []
         finally:
             release.set()
             deadline = time.monotonic() + 5

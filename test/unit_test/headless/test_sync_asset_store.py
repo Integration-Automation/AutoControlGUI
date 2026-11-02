@@ -102,7 +102,8 @@ def test_late_blob_receipt_failure_leaves_verified_chunks_for_exact_retry(tmp_pa
                            "BEGIN SELECT RAISE(ABORT,'controlled late failure'); END")
     with pytest.raises(ac.ConfigStoreError):
         store.commit('alice', blob)
-    assert not store.contains('alice', blob) and not store.missing_chunks('alice', blob)
+    assert not store.contains('alice', blob)
+    assert not store.missing_chunks('alice', blob)
     with sqlite3.connect(path) as connection:
         connection.execute('DROP TRIGGER fail_blob')
     assert ac.SyncAssetStore(path).commit('alice', blob)

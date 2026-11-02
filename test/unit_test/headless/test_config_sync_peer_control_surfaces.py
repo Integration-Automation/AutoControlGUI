@@ -71,4 +71,6 @@ def test_peer_control_mid_fetch_cancellation_preserves_protocol_signal_and_local
                        user_id='alice', operation='register', ctx=ctx)
     assert [call['method'] for call in calls] == ['GET']
     status = queue.control_status(endpoint='https://controlled.invalid', user_id='alice')
-    assert status['pending'] == 1 and status['state'] == 'pending' and status['error'] == ''
+    assert status['pending'] == 1
+    assert status['state'] == 'pending'
+    assert status['error'] == ''

@@ -23,7 +23,8 @@ def test_real_reader_chain_keeps_successful_intermediate_readers_and_sixteen_lin
     assert len(review['evidence']['segments']) == count
     reply, chain = completed.runtime.recovery.handoff_evidence(completed.batch_id, 'a', completed.source,
                                                               completed.child, grant['id'])
-    assert reply['state'] == 'succeeded' and len(chain) == count
+    assert reply['state'] == 'succeeded'
+    assert len(chain) == count
     assert all(not completed.runtime.store.actions(item['task_id']) for item in chain)
 
 
@@ -34,7 +35,8 @@ def test_existing_renewed_grant_survives_real_runtime_restart(completed):
     try:
         reply, _chain = reopened.recovery.handoff_evidence(completed.batch_id, 'a', completed.source,
                                                          completed.child, grant['id'])
-        assert reply['state'] == 'succeeded' and reopened.get(completed.source).state == 'paused'
+        assert reply['state'] == 'succeeded'
+        assert reopened.get(completed.source).state == 'paused'
         with pytest.raises(AgentTaskError, match='another caller'):
             reopened.get(completed.child)
     finally:

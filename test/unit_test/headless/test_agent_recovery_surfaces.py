@@ -72,7 +72,8 @@ def test_http_dynamic_replan_preserves_scope_and_waits_for_new_results(service, 
         client.call("pause", {"task_id": source.task_id})
         view = client.call("recovery", {"operation": "preview", "request": {"task_id": source.task_id}})
         instance.runtime.background.start.assert_not_called()
-        assert view["draft"] is None and view["review_template"]["goal"] == ""
+        assert view["draft"] is None
+        assert view["review_template"]["goal"] == ""
         reviewed = view["review_template"]
         reviewed["goal"] = "Process only the remaining field and read its final value"
         child = client.call("recovery", {"operation": "create", "request": {"task_id": source.task_id,

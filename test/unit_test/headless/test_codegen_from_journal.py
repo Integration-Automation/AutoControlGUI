@@ -152,7 +152,8 @@ def test_generation_does_not_append_to_enclosing_journal(journal, tmp_path):
 def test_all_targets_are_generated_without_dispatch(journal, target):
     append_step(journal, "kept")
     generated = candidate(journal, target=target)
-    assert generated.code and generated.manifest["target"] == target
+    assert generated.code
+    assert generated.manifest["target"] == target
     assert generated.manifest["validation"]["static"] == "passed"
 
 

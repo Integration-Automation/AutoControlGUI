@@ -36,9 +36,11 @@ def test_worker_reserves_before_constructing_source_and_owner_eof_retires_it():
 
     module().run(io.BytesIO(packet()), output, source_factory=construct, pipe_factory=transport)
     response, = [json.loads(line) for line in output.getvalue().splitlines()]
-    assert response['id'] == 'a' * 32 and response['result']['ready'] is True
+    assert response['id'] == 'a' * 32
+    assert response['result']['ready'] is True
     assert events[:3] == ['reserve', 'construct', 'start']
-    assert 'source-close' in events and 'listener-close' in events
+    assert 'source-close' in events
+    assert 'listener-close' in events
 
 
 def test_worker_does_nothing_before_bootstrap_or_when_endpoint_is_already_owned():
@@ -62,7 +64,8 @@ def test_worker_rejects_untrusted_fields_before_any_transport_or_source_is_const
     calls, output = [], io.BytesIO()
     module().run(io.BytesIO(packet(payload)), output,
         source_factory=lambda: calls.append('source'), pipe_factory=lambda **_kwargs: calls.append('pipe'))
-    assert not calls and json.loads(output.getvalue())['error_type'] == 'AgentTaskError'
+    assert not calls
+    assert json.loads(output.getvalue())['error_type'] == 'AgentTaskError'
 
 
 def test_source_process_is_inert_and_uses_fixed_owned_channel_argv_before_bootstrap():

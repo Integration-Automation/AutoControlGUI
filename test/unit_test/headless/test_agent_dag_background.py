@@ -50,8 +50,10 @@ def test_service_runs_without_any_default_client_connection_file(service, monkey
     accepted = submit(client, batch, definition)
     assert accepted["background"]["state"] in {"new", "in_progress", "success"}
     result = until(lambda: finished(instance, batch))
-    assert result["state"] == "succeeded" and result["background"]["state"] == "success"
-    assert target.count == 2 and all(node["phase"] == "confirmed" for node in result["nodes"])
+    assert result["state"] == "succeeded"
+    assert result["background"]["state"] == "success"
+    assert target.count == 2
+    assert all(node["phase"] == "confirmed" for node in result["nodes"])
     with instance.runtime.store.connection() as connection:
         data = json.loads(connection.execute("SELECT data FROM work_items WHERE queue='agent_dag'").fetchone()[0])
     assert data["started"]["max_parallel"] == 2
@@ -67,7 +69,8 @@ def test_admin_dispatch_refreshes_actor_but_destination_tasks_belong_to_original
     with authorization_scope(AuthorizationContext("reviewer", "admin")):
         submit(client, batch, graph())
         result = until(lambda: finished(instance, batch))
-    assert result["state"] == "succeeded" and target.count == 2
+    assert result["state"] == "succeeded"
+    assert target.count == 2
     for node in result["nodes"]:
         assert instance.runtime.store.get(node["receipt"]["task_id"])["owner"]["user_id"] == "alice"
 
@@ -78,7 +81,8 @@ def test_approved_continuation_runs_in_background_without_redispatching_complete
     approved = client.call("dag", {"operation": "approve_continuation", "request": request})
     submit(client, batch, definition, approval_id=approved["approval_id"])
     result = until(lambda: finished(instance, batch))
-    assert result["state"] == "succeeded" and target.count == 2
+    assert result["state"] == "succeeded"
+    assert target.count == 2
     assert result["continuations"][0]["state"] == "used"
     with pytest.raises(AgentTaskError, match="consumed"):
         submit(client, batch, definition, approval_id=approved["approval_id"])
@@ -90,7 +94,8 @@ def test_failed_queue_acceptance_fences_attempt_without_input(service, monkeypat
     monkeypatch.setattr(instance._dag_jobs.queue, "add", Mock(side_effect=AgentTaskError("fixture queue failure")))
     with pytest.raises(AgentTaskError, match="fixture queue failure"):
         submit(client, batch, graph())
-    assert read(instance, batch)["state"] == "waiting_review" and target.count == 0
+    assert read(instance, batch)["state"] == "waiting_review"
+    assert target.count == 0
 
 
 def test_background_requires_an_explicit_service_and_never_runs_on_import(tmp_path):
@@ -120,11 +125,14 @@ def test_shutdown_and_restart_do_not_replay_a_queued_delivery_or_reset_a_claim(s
     try:
         restarted.start()
         record = read(restarted, batch)
-        assert record["state"] == "waiting_review" and record["background"]["state"] == "failed"
-        assert record["nodes"][0]["phase"] == "claimed" and target.count == 0
+        assert record["state"] == "waiting_review"
+        assert record["background"]["state"] == "failed"
+        assert record["nodes"][0]["phase"] == "claimed"
+        assert target.count == 0
         inspected = restarted.runtime.batches.control("review_continuation", {
             "batch_id": batch["batch_id"], "definition": graph()})
-        assert not inspected["can_approve"] and target.count == 0
+        assert not inspected["can_approve"]
+        assert target.count == 0
     finally:
         restarted.close()
 
@@ -153,7 +161,8 @@ def test_delayed_background_work_refreshes_both_owners_before_any_claim(service,
         users.set_role(revoked, "viewer")
         proceed.set()
         result = until(lambda: finished(instance, batch))
-        assert result["state"] == "waiting_review" and target.count == 0
+        assert result["state"] == "waiting_review"
+        assert target.count == 0
         assert all(node["phase"] == "pending" for node in result["nodes"])
     finally:
         proceed.set()
@@ -177,7 +186,8 @@ def test_stop_all_fences_accepted_coordinators_before_any_delayed_node_dispatch(
         client.call("stop_all", {})
         proceed.set()
         result = until(lambda: finished(instance, batch))
-        assert result["state"] == "waiting_review" and target.count == 0
+        assert result["state"] == "waiting_review"
+        assert target.count == 0
     finally:
         proceed.set()
 
@@ -197,10 +207,12 @@ def test_service_background_keeps_local_ownership_and_never_forwards_it_to_remot
             batch = client.call("dag", {"operation": "register", "request": {"definition": definition}})
             submit(client, batch, definition)
             result = until(lambda: finished(local, batch))
-        assert result["state"] == "succeeded" and target.count == remote_target.count == 1
+        assert result["state"] == "succeeded"
+        assert target.count == remote_target.count == 1
         local_row = local.runtime.store.get(result["nodes"][0]["receipt"]["task_id"])
         remote_row = remote.runtime.store.get(result["nodes"][1]["receipt"]["task_id"])
-        assert local_row["owner"]["user_id"] == "source-admin" and remote_row["owner"] == {}
+        assert local_row["owner"]["user_id"] == "source-admin"
+        assert remote_row["owner"] == {}
         assert "origin_policies" not in remote_row["spec"]["options"]
     finally:
         remote.close()

@@ -43,7 +43,8 @@ def test_shared_surfaces_record_original_actions_as_an_unpublished_draft(recordi
                 value = tools['ac_agent_skill'].invoke({'operation': 'record', 'request': request})
         else:
             value = AgentRuntimeClient(connection).call('skill', {'operation': 'record', 'request': request})
-        assert value['state'] == 'draft' and value['publication'] is None
+        assert value['state'] == 'draft'
+        assert value['publication'] is None
         assert value['provenance']['source_task'] == recording.task_id
         assert value['provenance']['completion_review']['task_id'] == recording.child_id
         assert value['spec']['actions'] == [recording.action]

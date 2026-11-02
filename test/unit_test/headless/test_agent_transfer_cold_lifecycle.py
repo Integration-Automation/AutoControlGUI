@@ -116,7 +116,8 @@ def test_cold_cleanup_rejects_redirected_cache_before_opening_storage_and_preser
                 reopened.maintain()
             with reopened.store.connection() as connection:
                 retained = reopened.transfers.source.records.find(connection, record['id'])
-            assert retained['state'] == 'revoked' and retained['held'] is True
+            assert retained['state'] == 'revoked'
+            assert retained['held'] is True
             assert retained['expires'] == record['expires']
             assert foreign.path.read_bytes() == before
             assert foreign.store.read_chunk(record['account'], digest) == foreign_body

@@ -29,7 +29,8 @@ def test_executor_mcp_and_builder_share_store_and_journal_evidence(tmp_path,monk
     reply=tools()['ac_config_store_commit'].handler(**args)
     assert reply=={'version':2,'revision':1,'cas':True}
     read=tools()['ac_config_store_get'].handler(path=args['path'],user_id='alice')
-    assert read['bucket']['revision']==1 and read['cas'] is True
+    assert read['bucket']['revision']==1
+    assert read['cas'] is True
     assert {'AC_config_store_commit','AC_config_store_get'}<=COMMAND_SPECS.keys()
     candidate=ac.generate_candidate_from_log(source.path,run_id='config-commit')
     assert candidate.actions==[['AC_config_store_commit',args]]

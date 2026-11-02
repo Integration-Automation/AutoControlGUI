@@ -22,8 +22,10 @@ def test_event_is_frozen_and_unfinished_is_not_success(tmp_path):
     journal = ActionJournal(tmp_path / "events.jsonl")
     journal.append(event)
     loaded = read_events(journal.path)
-    assert loaded[0].status == "incomplete" and loaded[0].finished_at is None
-    assert loaded[0].schema_version == 1 and loaded[0].sequence == 1
+    assert loaded[0].status == "incomplete"
+    assert loaded[0].finished_at is None
+    assert loaded[0].schema_version == 1
+    assert loaded[0].sequence == 1
 
 
 def test_redaction_precedes_append_and_keeps_secret_references(tmp_path, monkeypatch):
@@ -33,7 +35,8 @@ def test_redaction_precedes_append_and_keeps_secret_references(tmp_path, monkeyp
 
     def append(path, line):
         seen.append(line)
-        assert "literal-password" not in line and "literal-token" not in line
+        assert "literal-password" not in line
+        assert "literal-token" not in line
         original(path, line)
 
     monkeypatch.setattr(store, "append_json_line", append)
@@ -41,7 +44,8 @@ def test_redaction_precedes_append_and_keeps_secret_references(tmp_path, monkeyp
     event = _event(parameters={"password": "literal-password", "headers": {"Authorization": "literal-token"},
                                "text": "${secrets.LOGIN}"})
     journal.append(event)
-    assert seen and "${secrets.LOGIN}" in seen[0]
+    assert seen
+    assert "${secrets.LOGIN}" in seen[0]
     assert event.parameters["password"] == "literal-password"
     assert read_events(journal.path)[0].parameters["password"] == "***"
 
@@ -53,7 +57,8 @@ def test_secret_command_outcome_and_error_are_not_persisted(tmp_path):
                           status="error", finished_at=2.0))
     assert "hidden" not in journal.path.read_text(encoding="utf-8")
     event = read_events(journal.path)[0]
-    assert event.outcome == "***" and event.error == "***"
+    assert event.outcome == "***"
+    assert event.error == "***"
     assert event.non_replayable
 
 
@@ -70,9 +75,11 @@ def test_opaque_outcome_keys_cannot_leak_credentials(tmp_path):
     journal.append(_event(outcome={"private-result": {"another-credential": "anything"}},
                           status="ok", finished_at=2.0))
     text = journal.path.read_text(encoding="utf-8")
-    assert "private-result" not in text and "another-credential" not in text
+    assert "private-result" not in text
+    assert "another-credential" not in text
     event = read_events(journal.path)[0]
-    assert "redacted_outcome" in event.non_replayable and event.outcome_type == "object"
+    assert "redacted_outcome" in event.non_replayable
+    assert event.outcome_type == "object"
 
 
 def test_sensitive_fields_can_retain_explicit_secret_references(tmp_path):
@@ -103,7 +110,8 @@ def test_unknown_payload_is_not_serialized_using_repr(tmp_path):
     journal = ActionJournal(tmp_path / "events.jsonl")
     journal.append(_event(parameters={"payload": Payload()}))
     event = read_events(journal.path)[0]
-    assert event.non_replayable and "unsupported" in str(event.parameters)
+    assert event.non_replayable
+    assert "unsupported" in str(event.parameters)
 
 
 def test_run_filter_and_parent_links_survive_round_trip(tmp_path):
@@ -136,9 +144,11 @@ def test_parallel_writers_share_one_order_even_across_instances(tmp_path):
         thread.start()
     for thread in threads:
         thread.join(timeout=15)
-    assert not any(thread.is_alive() for thread in threads) and failures == []
+    assert not any(thread.is_alive() for thread in threads)
+    assert failures == []
     events = read_events(path)
-    assert len(events) == 32 and [event.sequence for event in events] == list(range(1, 33))
+    assert len(events) == 32
+    assert [event.sequence for event in events] == list(range(1, 33))
     assert all(event.run_id == "run" and event.parent_id == "parent" for event in events)
 
 

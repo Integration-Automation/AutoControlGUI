@@ -56,7 +56,8 @@ def test_distinct_effect_tasks_keep_their_own_process_on_one_profile():
     assert pool.require(source("second")) is second
     assert first.channel is not second.channel
     pool.discard("first")
-    assert first.channel.retired and not second.channel.retired
+    assert first.channel.retired
+    assert not second.channel.retired
     with pytest.raises(AgentTaskError, match="unavailable"):
         pool.require(source())
     pool.close()
@@ -111,7 +112,8 @@ def test_capacity_counts_pending_reservations_and_never_evicts_a_borrower():
     entries = [retain(pool, source(str(index))) for index in range(15)]
     borrowed = pool.borrow(source("0"))
     with pool.reserve(source("pending")) as pending:
-        assert pending is not None and pool.full
+        assert pending is not None
+        assert pool.full
         with pool.reserve(source("overflow")) as refused:
             assert refused is None
         assert not borrowed.channel.retired
@@ -135,7 +137,8 @@ def test_unconfirmed_reaping_stays_tracked_unavailable_and_counts_against_capaci
     entry.channel.failure = False
     entry.channel.confirmed = True
     pool.close()
-    assert entry.channel.retired and not pool.full
+    assert entry.channel.retired
+    assert not pool.full
 
 
 def test_collection_close_invalidates_borrow_and_closes_other_owned_processes_after_a_failure():
@@ -229,7 +232,8 @@ def test_failed_detached_transfer_has_one_cleanup_owner_and_can_be_reaped_after_
         assert pool.sources() == [row]
         process.failure = False
         maintain_retained(runtime)
-        assert process.retired and pool.sources() == []
+        assert process.retired
+        assert pool.sources() == []
     finally:
         process.failure = False
         pool.close()

@@ -168,12 +168,14 @@ def test_failed_owned_cache_cleanup_keeps_revocation_and_capacity_until_confirme
             runtime.transfers.control('revoke_export', request)
         with runtime.store.connection() as connection:
             retained = source.records.find(connection, exported['export_id'])
-        assert retained['state'] == 'revoked' and retained['held']
+        assert retained['state'] == 'revoked'
+        assert retained['held']
         with pytest.raises(AgentTaskError):
             runtime.transfers.peer('export', request)
         monkeypatch.setattr(source._cache, 'delete_account', original)
         revoked = runtime.transfers.control('revoke_export', request)['export']
-        assert revoked['state'] == 'revoked' and not revoked['cleanup_pending']
+        assert revoked['state'] == 'revoked'
+        assert not revoked['cleanup_pending']
         assert output.read_bytes() == body
 
 
@@ -201,7 +203,8 @@ def test_artifact_expiry_uses_its_actual_completed_source_not_an_older_terminal_
         with runtime.store.connection() as connection:
             ancestor = runtime.store.read_task(connection, source)
             leaf = runtime.store.read_task(connection, child)
-        assert ancestor['state'] == 'cancelled' and leaf['updated'] - ancestor['updated'] >= 120
+        assert ancestor['state'] == 'cancelled'
+        assert leaf['updated'] - ancestor['updated'] >= 120
         exported = create_for(runtime, review_for(runtime, child))
         assert exported['manifest']['expires'] == leaf['updated'] + 30 * 86400
 
@@ -272,7 +275,8 @@ def test_cancelled_reply_after_real_grant_commit_recovers_exact_intent_without_a
             create_for(runtime, review)
         with runtime.store.connection() as connection:
             committed = source.records.entries(connection, 'export')
-        assert len(committed) == 1 and committed[0]['state'] == 'active'
+        assert len(committed) == 1
+        assert committed[0]['state'] == 'active'
         recovered = create_for(runtime, review)
         assert recovered['export_id'] == committed[0]['id']
         with runtime.store.connection() as connection:

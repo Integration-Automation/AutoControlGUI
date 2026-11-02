@@ -87,7 +87,8 @@ def test_real_template_dataset_and_versioned_acceptance():
         assert actual.recovery.value is None
     attempt = next(row for row in report.attempts if row.version == "new" and row.sample_id.startswith("negative"))
     assert attempt.candidate.coordinates == (-66, -29)
-    assert attempt.correct is True and attempt.step_id == "scaled-submit"
+    assert attempt.correct is True
+    assert attempt.step_id == "scaled-submit"
 
 
 def test_image_miss_and_vlm_use_same_crop_and_transform_without_capture(monkeypatch):
@@ -114,8 +115,10 @@ def test_image_miss_and_vlm_use_same_crop_and_transform_without_capture(monkeypa
     vlm = VLMFrameLocator(Backend(), "submit", model="fake")
     image = TemplateFrameLocator((DATASET / "fixtures/old.png").read_bytes(), .99, vlm)
     result = image.locate(sample)
-    assert result.coordinates == (-66, -29) and result.method == "vlm"
-    assert result.verified is None and result.fallback_used
+    assert result.coordinates == (-66, -29)
+    assert result.method == "vlm"
+    assert result.verified is None
+    assert result.fallback_used
     assert [name for name, _ in result.timings_ms] == ["image", "fallback.vlm"]
     with Image.open(io.BytesIO(frame)) as original, Image.open(io.BytesIO(seen[0])) as actual:
         assert actual.size == (24, 20)
@@ -128,8 +131,10 @@ def test_measured_percentiles_costs_and_verified_recovery(monkeypatch):
     locator = FixedLocator(LocatorCandidate((4, 5), "vlm", fallback_used=True, verified=True, cost=.01))
     samples = [EvaluationSample(str(index), png(), expected_box=(0, 0, 10, 10)) for index in range(2)]
     version = evaluate_locators(samples, {"v1": locator}).versions["v1"]
-    assert version.p50_ms == 1500 and version.p95_ms == 1950
-    assert version.cost_total == .02 and version.cost_known == 2
+    assert version.p50_ms == 1500
+    assert version.p95_ms == 1950
+    assert version.cost_total == .02
+    assert version.cost_known == 2
     assert version.recovery.to_dict() == {"numerator": 2, "denominator": 2, "value": 1}
 
 
@@ -157,10 +162,12 @@ def test_strategy_and_observer_errors_propagate_without_partial_report():
     samples = [EvaluationSample("first", png()), EvaluationSample("second", png())]
     with pytest.raises(RuntimeError) as caught:
         evaluate_locators(samples, {"v1": Failure()})
-    assert caught.value is signal and seen == ["first"]
+    assert caught.value is signal
+    assert seen == ["first"]
     with pytest.raises(RuntimeError) as caught:
         evaluate_locators(samples, {"v1": Failure()}, observer=lambda _: (_ for _ in ()).throw(signal))
-    assert caught.value is signal and seen == ["first"]
+    assert caught.value is signal
+    assert seen == ["first"]
 
 
 def test_exports_escape_html_and_contain_provenance_without_images(tmp_path):
@@ -169,9 +176,11 @@ def test_exports_escape_html_and_contain_provenance_without_images(tmp_path):
     json_path = write_healing_report(report, tmp_path / "report.json")
     html_path = write_healing_report(report, tmp_path / "report.html")
     payload = json.loads(json_path.read_text(encoding="utf-8"))
-    assert payload["attempts"][0]["run_id"] == "run" and "frame" not in payload["attempts"][0]
+    assert payload["attempts"][0]["run_id"] == "run"
+    assert "frame" not in payload["attempts"][0]
     html = html_path.read_text(encoding="utf-8")
-    assert "<script>" not in html and "&lt;script&gt;" in html
+    assert "<script>" not in html
+    assert "&lt;script&gt;" in html
     assert payload["versions"]["<candidate>"]["accuracy"]["value"] == 1
 
 

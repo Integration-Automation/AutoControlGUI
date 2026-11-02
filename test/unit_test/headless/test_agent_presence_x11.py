@@ -93,9 +93,11 @@ def test_xtest_events_never_count_as_physical(opened):
 def test_real_device_events_count_and_track_what_is_held(opened):
     api, display, physical = opened
     display.queue[:] = [raw(13, KEYBOARD, 38)]
-    assert api.poll(0) == (True, True) and physical == [1]
+    assert api.poll(0) == (True, True)
+    assert physical == [1]
     display.queue[:] = [raw(14, KEYBOARD, 38)]
-    assert api.poll(0) == (True, False) and physical == [1, 1]
+    assert api.poll(0) == (True, False)
+    assert physical == [1, 1]
 
 
 def test_core_state_counts_as_held_even_without_a_tracked_press(opened):
@@ -111,7 +113,8 @@ def test_an_unknown_source_refreshes_devices_and_counts_once_it_is_a_real_slave(
     display.devices.append(SimpleNamespace(deviceid=12, use=3, name='USB mouse'))
     display.queue[:] = [raw(17, 12)]
     api.poll(0)
-    assert physical == [1] and display.queries == 2
+    assert physical == [1]
+    assert display.queries == 2
 
 
 def test_a_master_device_is_never_a_source(opened):
@@ -156,9 +159,11 @@ def test_close_deselects_closes_and_belongs_to_the_opening_thread(opened):
     worker = threading.Thread(target=foreign_close)
     worker.start()
     worker.join()
-    assert outcome == ['refused'] and not display.closed
+    assert outcome == ['refused']
+    assert not display.closed
     api.close()
-    assert display.selected[-1] == [(0, 0)] and display.closed
+    assert display.selected[-1] == [(0, 0)]
+    assert display.closed
     with pytest.raises(AgentTaskError):
         api.poll(0)
 
@@ -199,13 +204,15 @@ def test_logind_is_queried_with_a_fixed_argv_and_cached_for_its_interval(monkeyp
     monkeypatch.setattr(presence_x11.shutil, 'which', lambda _name: '/usr/bin/loginctl')
     calls, now = [], [0.0]
     session = LogindSession('c2', runner=_runner('Active=yes\nLockedHint=no', calls=calls), clock=lambda: now[0])
-    assert session.interactive() and session.interactive()
+    assert session.interactive()
+    assert session.interactive()
     now[0] = 1.5
     session.interactive()
     assert len(calls) == 2
     argv, kwargs = calls[0]
     assert argv == ['/usr/bin/loginctl', 'show-session', 'c2', '-p', 'Active', '-p', 'LockedHint']
-    assert kwargs['shell'] is False and kwargs['timeout'] == 1
+    assert kwargs['shell'] is False
+    assert kwargs['timeout'] == 1
 
 
 @pytest.mark.skipif(not sys.platform.startswith('linux') or not os.environ.get('DISPLAY'),

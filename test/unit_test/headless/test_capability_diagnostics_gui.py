@@ -59,7 +59,8 @@ def test_capability_inspection_is_explicit_and_matches_the_headless_snapshot(pan
     widget, snapshot, calls = panel
     assert calls == []
     dict(widget.menu_actions())['diag_probe']()
-    assert calls == ['passive'] and widget._table.rowCount() == 0
+    assert calls == ['passive']
+    assert widget._table.rowCount() == 0
     table = widget._capability_view._table
     assert table.rowCount() == 2
     assert table.item(0, 1).text() == snapshot.input.backend
@@ -93,4 +94,6 @@ def test_passive_probe_cancellation_retains_the_original_control(panel, monkeypa
     monkeypatch.setattr(diagnostics_tab, 'probe_capabilities', canceled)
     with pytest.raises(OperationCancelledError) as caught:
         dict(widget.menu_actions())['diag_probe']()
-    assert caught.value is original and calls == [] and widget._table.rowCount() == 0
+    assert caught.value is original
+    assert calls == []
+    assert widget._table.rowCount() == 0

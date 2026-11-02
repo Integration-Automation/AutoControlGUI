@@ -16,7 +16,8 @@ def test_cli_exposes_distinct_review_and_approval_operations_without_startup():
     parser = build_parser()
     for operation in ("review_authorization", "create_authorized"):
         parsed = parser.parse_args(["agent-task", "recovery", operation, "review.json"])
-        assert parsed.recovery_operation == operation and parsed.request == "review.json"
+        assert parsed.recovery_operation == operation
+        assert parsed.request == "review.json"
 
 
 def test_authenticated_http_reapproval_keeps_owner_and_scope_bound(service, tmp_path, monkeypatch):

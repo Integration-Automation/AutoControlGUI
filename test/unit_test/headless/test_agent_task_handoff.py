@@ -16,7 +16,8 @@ def issue(value, source, leaf):
     with authorization_scope(value.reviewer):
         review = value.runtime.recovery.control('review_handoff', request)
         assert review['evidence']['source_task'] == source
-        assert 'batch_id' not in review['evidence'] and 'node_id' not in review['evidence']
+        assert 'batch_id' not in review['evidence']
+        assert 'node_id' not in review['evidence']
         created = {**request, 'review': review['handoff_review'],
                    'note': 'Explicitly adopt only this actual non-DAG completion evidence'}
         return value.runtime.recovery.control('create_handoff', created)['handoff']
@@ -43,13 +44,16 @@ def test_source_owner_records_other_caller_completion_only_with_an_explicit_task
     grant = issue(recording, recording.task_id, recording.child_id)
     candidate = runtime.skills.control('record', request_for(recording, handoff_id=grant['id']))
     assert candidate['owner']['user_id'] == 'owner'
-    assert candidate['state'] == 'draft' and candidate['publication'] is None
+    assert candidate['state'] == 'draft'
+    assert candidate['publication'] is None
     proof = candidate['provenance']['completion_review']
-    assert proof['task_id'] == recording.child_id and proof['effect_task'] == recording.task_id
+    assert proof['task_id'] == recording.child_id
+    assert proof['effect_task'] == recording.task_id
     assert proof['evidence_handoff']['id'] == grant['id']
     assert runtime.get(recording.task_id).state == 'paused'
     assert runtime.store.get(recording.child_id)['owner']['user_id'] == 'reviewer'
-    assert runtime.store.actions(recording.task_id) == before and recording.manifest.read_bytes() == manifest
+    assert runtime.store.actions(recording.task_id) == before
+    assert recording.manifest.read_bytes() == manifest
     with pytest.raises(AgentTaskError, match='another caller'):
         runtime.get(recording.child_id)
     assert_no_dag(runtime)
@@ -69,12 +73,16 @@ def test_original_validation_trial_publishes_with_other_caller_task_evidence_wit
     monkeypatch.setattr(NativeDesktopTarget, '_launch', no_helper)
     grant = issue(trial, trial.task_id, trial.child_id)
     result = runtime.skills.control('accept', {**acceptance(trial), 'handoff_id': grant['id']})
-    assert result['state'] == 'accepted' and result['version'] == 1
-    assert result['owner']['user_id'] == 'owner' and result['publication']['task_id'] == trial.task_id
+    assert result['state'] == 'accepted'
+    assert result['version'] == 1
+    assert result['owner']['user_id'] == 'owner'
+    assert result['publication']['task_id'] == trial.task_id
     proof = result['publication']['completion_review']
-    assert proof['task_id'] == trial.child_id and proof['effect_task'] == trial.task_id
+    assert proof['task_id'] == trial.child_id
+    assert proof['effect_task'] == trial.task_id
     assert proof['evidence_handoff']['id'] == grant['id']
-    assert runtime.get(trial.task_id).state == 'paused' and runtime.store.actions(trial.task_id) == before
+    assert runtime.get(trial.task_id).state == 'paused'
+    assert runtime.store.actions(trial.task_id) == before
     assert runtime.store.get(trial.child_id)['owner']['user_id'] == 'reviewer'
     assert trial.manifest.read_bytes() == manifest
     with pytest.raises(AgentTaskError, match='another caller'):

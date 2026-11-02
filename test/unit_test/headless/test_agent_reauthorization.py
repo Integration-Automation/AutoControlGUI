@@ -152,7 +152,8 @@ def test_host_reapproval_without_a_client_origin_is_explicit_and_still_source_bo
     assert "origin_policies" not in request["spec"]["options"]
     child = runtime.recovery.control("create_authorized", request)["task_id"]
     proof = runtime.get(child).metadata["recovery"]["reauthorization"]
-    assert proof["actor"] == "local" and list(proof["context"]["current_origins"]) == []
+    assert proof["actor"] == "local"
+    assert list(proof["context"]["current_origins"]) == []
     assert list(proof["context"]["replaced_origins"]) == [old_id]
 
 
@@ -273,9 +274,12 @@ def test_dynamic_tasks_reauthorize_without_inventing_steps_or_contacting_a_model
     monkeypatch.setattr("je_auto_control.utils.agent_runtime.ollama.request_json", network)
     with origin_scope(current_id):
         view = runtime.recovery.control("review_authorization", {"task_id": source})
-        assert view["draft"] is None and view["completed_steps"] is None and view["remaining_actions"] == []
+        assert view["draft"] is None
+        assert view["completed_steps"] is None
+        assert view["remaining_actions"] == []
         spec = view["review_template"]
-        assert spec["goal"] == "" and spec["mode"] == mode
+        assert spec["goal"] == ""
+        assert spec["mode"] == mode
         spec["goal"] = "Process only the remaining field under the new report scope"
         child = runtime.recovery.control("create_authorized", {"task_id": source, "snapshot": view["snapshot"],
             "authorization_review": view["authorization_review"], "spec": spec, "note": "Reviewed the new source"})
@@ -291,7 +295,8 @@ def test_inaccessible_completion_scope_produces_no_runnable_authorization_draft(
         connection.execute("UPDATE agent_tasks SET spec=? WHERE id=?", (json.dumps(data), source))
     with origin_scope(current_id):
         view = runtime.recovery.control("review_authorization", {"task_id": source})
-        assert view["draft"] is None and view["review_template"] is None
+        assert view["draft"] is None
+        assert view["review_template"] is None
         assert view["issues"] == ["authorization_scope_unavailable"]
     assert len(runtime.list()) == 1
 

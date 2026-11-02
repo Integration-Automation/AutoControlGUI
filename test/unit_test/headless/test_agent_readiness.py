@@ -25,7 +25,8 @@ def test_every_area_uses_the_closed_vocabulary_and_records_no_native_evidence():
                               ('linux', {'WAYLAND_DISPLAY': 'wayland-0', 'XDG_SESSION_TYPE': 'wayland'}),
                               ('sunos5', {})):
         report = _report(platform, environ)
-        assert report['passive'] is True and report['states'] == list(readiness.STATES)
+        assert report['passive'] is True
+        assert report['states'] == list(readiness.STATES)
         assert {item['state'] for item in report['areas']} <= set(readiness.STATES)
         assert all(item['native_evidence'] == 'not_recorded' for item in report['areas'])
         assert 'measured' not in {item['state'] for item in report['areas']}
@@ -68,7 +69,8 @@ def test_only_a_platform_with_a_presence_source_reports_one(platform, environ, s
 def test_a_local_capability_observation_maps_without_becoming_measured(observed, state):
     status = CapabilityStatus('input', observed, 'win32', 'observed locally', 'none', True)
     area = _area(_report(input_state=status), 'desktop_input')
-    assert area['state'] == state and area['observed'] == observed
+    assert area['state'] == state
+    assert area['observed'] == observed
 
 
 def test_the_report_never_contacts_a_device_or_imports_the_browser_package():

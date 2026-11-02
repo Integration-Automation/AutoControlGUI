@@ -48,9 +48,11 @@ def test_callback_runs_after_click_and_records_explicit_result(monkeypatch, tmp_
     result = self_heal_run(SelfHealRequest(template_path=str(FIXTURES / "new.png"), log=log, operation="click",
                                            verification=VerificationRequest(verifier=verify)))
     assert calls == ["capture", "click", "verify"]
-    assert result.verified is True and result.operation_status == "verified"
+    assert result.verified is True
+    assert result.operation_status == "verified"
     event, = log.list_events()
-    assert event.verified is True and event.verification_backend == "callback"
+    assert event.verified is True
+    assert event.verification_backend == "callback"
 
 
 def test_request_validation_happens_before_any_effect():
@@ -78,7 +80,8 @@ def test_explicit_verdict_and_unknown_remain_distinct(located, verdict):
     assert result.verified is verdict
     assert result.operation_status == {True: "verified", False: "verification_failed", None: "issued"}[verdict]
     event, = log.list_events()
-    assert event.verified is verdict and event.operation_status == result.operation_status
+    assert event.verified is verdict
+    assert event.operation_status == result.operation_status
     assert ("verify" in event.strategy_times_ms) == (verdict is not None)
 
 
@@ -122,12 +125,15 @@ def test_vlm_verification_captures_after_click_and_shares_only_new_frame(monkeyp
         template_path=str(FIXTURES / "new.png"), operation="click", model="chosen", log=log,
         verification=ac.VerificationRequest(description="done", backend=bound, screen_region=[100, 200, 132, 216])))
     assert calls == [("capture", None, True), "click", ("capture", (100, 200, 32, 16), False)]
-    assert bound.nested == [bound.images[0][0]] and bound.images[0][1] == "chosen"
-    assert result.verified is True and result.verification_model == "chosen"
+    assert bound.nested == [bound.images[0][0]]
+    assert bound.images[0][1] == "chosen"
+    assert result.verified is True
+    assert result.verification_model == "chosen"
     event, = log.list_events()
     assert event.verification_frame_hash == sha256(bound.images[0][0]).hexdigest()
     assert event.frame_hash != event.verification_frame_hash
-    assert event.verification_description == "done" and event.verification_backend == "controlled-verifier"
+    assert event.verification_description == "done"
+    assert event.verification_backend == "controlled-verifier"
 
 
 def test_unavailable_verifier_refuses_before_locate_or_input(located, monkeypatch):
@@ -139,7 +145,8 @@ def test_unavailable_verifier_refuses_before_locate_or_input(located, monkeypatc
     with pytest.raises(VLMNotAvailableError):
         ac.self_heal_run(ac.SelfHealRequest(template_path="fake.png", operation="click", log=log,
                                             verification=ac.VerificationRequest(description="done", backend=bound)))
-    assert calls == [] and log.list_events() == []
+    assert calls == []
+    assert log.list_events() == []
 
 
 @pytest.mark.parametrize("signal_type", [RuntimeError, AutoControlAssertionException, OperationCancelledError,
@@ -155,12 +162,15 @@ def test_verifier_failure_propagates_once_and_never_retries(located, signal_type
     with pytest.raises(signal_type) as caught:
         ac.self_heal_run(ac.SelfHealRequest(template_path="fake.png", operation="click", log=log,
                                             verification=ac.VerificationRequest(verifier=verify)))
-    assert caught.value is signal and calls == ["click", "verify"]
+    assert caught.value is signal
+    assert calls == ["click", "verify"]
     events = log.list_events()
     if signal_type in (RuntimeError, AutoControlAssertionException):
         event, = events
-        assert event.operation_status == "verification_error" and event.verified is None
-        assert event.verification_error and event.operation_error is None
+        assert event.operation_status == "verification_error"
+        assert event.verified is None
+        assert event.verification_error
+        assert event.operation_error is None
     else:
         assert not events
 
@@ -186,7 +196,8 @@ def test_callback_rejects_truthy_or_unknown_values(located, value):
         ac.self_heal_run(ac.SelfHealRequest(template_path="fake.png", operation="click", log=log,
                                             verification=ac.VerificationRequest(verifier=lambda: value)))
     event, = log.list_events()
-    assert event.verified is None and event.operation_status == "verification_error"
+    assert event.verified is None
+    assert event.operation_status == "verification_error"
 
 
 def test_vlm_rejects_non_boolean_result(located, monkeypatch):
@@ -216,7 +227,8 @@ def test_verification_never_runs_without_successful_dispatch(located, monkeypatc
             ac.self_heal_run(request)
     else:
         assert not ac.self_heal_run(request).outcome.found
-    assert calls == [] and log.list_events()[0].verified is None
+    assert calls == []
+    assert log.list_events()[0].verified is None
 
 
 @pytest.mark.parametrize("options", [{"detect_threshold": True}, {"detect_threshold": float("nan")},
@@ -251,6 +263,7 @@ def test_verification_metadata_masks_current_secrets(located):
         log.append(replace(event, verification_description="private-value", verification_model="private-value",
                            verification_backend="private-value", verification_error="private-value"))
         saved, = log.list_events()
-    assert calls == ["click"] and saved.verification_description == "***"
+    assert calls == ["click"]
+    assert saved.verification_description == "***"
     assert saved.verification_model == saved.verification_backend == saved.verification_error == "***"
     assert "private-value" not in log.path.read_text(encoding="utf-8")

@@ -66,8 +66,10 @@ def test_selected_log_shows_version_frame_and_unknown_verification(widget):
     view.refresh_log()
     view._table.setCurrentCell(0, 0)
     details = json.loads(view._details.toPlainText())
-    assert details["locator_version"] == "revision" and details["frame_hash"] == "frame-hash"
-    assert details["operation_status"] == "issued" and details["verified"] is None
+    assert details["locator_version"] == "revision"
+    assert details["frame_hash"] == "frame-hash"
+    assert details["operation_status"] == "issued"
+    assert details["verified"] is None
     log.clear()
     view.refresh_log()
     assert view._details.toPlainText() == ""
@@ -109,7 +111,8 @@ def test_verification_input_is_explicit_and_reports_its_result(widget, monkeypat
     view._on_locate()
     assert calls == []
     view._on_click()
-    assert len(calls) == 1 and calls[0].operation == "click"
+    assert len(calls) == 1
+    assert calls[0].operation == "click"
     assert calls[0].verification.description == "confirmation is visible"
     key = "self_heal_verification_passed" if verdict else "self_heal_verification_failed"
     assert view._status.text() == _t(key)
@@ -180,7 +183,8 @@ def test_source_action_reads_only_selected_original_step_off_thread(widget, monk
     assert view._source._links.currentText() == language_wrapper.translate("journal_links_step")
     assert len(view._source._events) == 2
     assert all(row["step_id"] == source.step_id for row in view._source._events)
-    assert threads and threads[0] != threading.get_ident()
+    assert threads
+    assert threads[0] != threading.get_ident()
     view._table.clearSelection()
     assert not view._source._events
 

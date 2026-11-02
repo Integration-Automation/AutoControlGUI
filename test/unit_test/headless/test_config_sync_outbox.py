@@ -43,7 +43,8 @@ def test_bounded_views_and_drains_report_the_full_remaining_count(tmp_path):
     assert queue.pending(endpoint=first.endpoint,user_id='alice',limit=1)==(first,)
     assert queue.status(endpoint=first.endpoint,user_id='alice')['pending']==2
     report=queue.flush(lambda _item:1,endpoint=first.endpoint,user_id='alice',policy=SyncRetryPolicy(max_batch=1))
-    assert report.delivered==1 and report.pending==1
+    assert report.delivered==1
+    assert report.pending==1
 
 
 def test_prepared_request_survives_restart_and_cannot_change_without_rejection(tmp_path):
@@ -55,7 +56,8 @@ def test_prepared_request_survives_restart_and_cannot_change_without_rejection(t
     prepared=queue.prepare(original,base_revision=0,bucket=bucket)
     bucket['revision']=99
     recovered=SyncOutbox(path).pending(endpoint=original.endpoint,user_id='alice')[0]
-    assert recovered==prepared and recovered.prepared['bucket']['revision']==0
+    assert recovered==prepared
+    assert recovered.prepared['bucket']['revision']==0
     with pytest.raises(ConfigSyncError):
         queue.prepare(original,base_revision=1,bucket={'user_id':'alice','revision':1,'sections':{}})
     wrong=replace(original,entries=(replace(original.entries[0],value={'value':'wrong'}),))
@@ -75,14 +77,16 @@ def test_pre_cancel_and_cancel_after_commit_keep_exact_pending_work(tmp_path):
     cancelled.set()
     report=queue.flush(lambda item:calls.append(item) or 1,endpoint=first.endpoint,user_id='alice',
                        cancelled=cancelled.is_set)
-    assert report.cancelled and calls==[]
+    assert report.cancelled
+    assert calls==[]
     cancelled.clear()
     def send(item):
         calls.append(item)
         cancelled.set()
         return 1
     report=queue.flush(send,endpoint=first.endpoint,user_id='alice',cancelled=cancelled.is_set)
-    assert report.delivered==1 and report.cancelled
+    assert report.delivered==1
+    assert report.cancelled
     assert queue.pending(endpoint=first.endpoint,user_id='alice')==(second,)
 
 
@@ -98,7 +102,8 @@ def test_wrapped_interruption_is_not_an_offline_failure(tmp_path):
     with pytest.raises(CancelledError):
         queue.flush(interrupted,endpoint=item.endpoint,user_id='alice')
     state=queue.status(endpoint=item.endpoint,user_id='alice')
-    assert state['queued']==1 and state['offline']==0
+    assert state['queued']==1
+    assert state['offline']==0
 
 
 def test_backoff_survives_reopen_without_sleeping(tmp_path):
@@ -113,11 +118,13 @@ def test_backoff_survives_reopen_without_sleeping(tmp_path):
         raise OSError('controlled offline')
     policy=SyncRetryPolicy(backoff=2,max_delay=10)
     report=queue.flush(offline,endpoint=item.endpoint,user_id='alice',policy=policy)
-    assert report.failed==1 and len(calls)==1
+    assert report.failed==1
+    assert len(calls)==1
     reopened=SyncOutbox(path,clock=lambda:now[0])
     assert reopened.status(endpoint=item.endpoint,user_id='alice')['next_attempt']==102
     report=reopened.flush(offline,endpoint=item.endpoint,user_id='alice',policy=policy)
-    assert report.failed==0 and len(calls)==1
+    assert report.failed==0
+    assert len(calls)==1
     now[0]=102
     assert reopened.flush(lambda _item:1,endpoint=item.endpoint,user_id='alice').delivered==1
 

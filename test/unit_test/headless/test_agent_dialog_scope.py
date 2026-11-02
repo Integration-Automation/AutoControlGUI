@@ -113,7 +113,8 @@ def test_external_observation_review_releases_input_and_requires_resume(tmp_path
         with pytest.raises(AgentHumanReview):
             runtime.observe(task.task_id)
         assert runtime.get(task.task_id).state == "waiting_user"
-        assert not runtime._leases and cleanup
+        assert not runtime._leases
+        assert cleanup
         assert runtime.store.actions(task.task_id) == []
         runtime.resume(task.task_id)
         assert runtime.get(task.task_id).state == "queued"
@@ -158,7 +159,8 @@ def test_file_dialog_rebinds_only_to_confirmed_own_foreground_and_canonicalizes_
     with operation_scope(TaskOperation(spec, lambda: None, None)):
         with file_dialog_scope.scoped_file_dialog(target, 11, 7, {}):
             assert handle_file_dialog("report.txt")["handled"]
-    assert focus == [20] and target._action_identity == (20, 7)
+    assert focus == [20]
+    assert target._action_identity == (20, 7)
     assert input_calls == [str((tmp_path / "report.txt").resolve()), "enter"]
 
 

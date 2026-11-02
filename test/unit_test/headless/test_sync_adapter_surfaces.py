@@ -34,7 +34,8 @@ def test_adapter_commands_capture_apply_materialize_and_builder_preserve_complet
     receiver = profile(tmp_path, 'laptop', {'records': {}})
     snapshot = tools()['ac_sync_adapter_snapshot'].handler(sender)
     applied = tools()['ac_sync_adapter_apply'].handler(receiver, snapshot['entries'])
-    assert applied['stored'] == ('login.json',) and not applied['conflicts']
+    assert applied['stored'] == ('login.json',)
+    assert not applied['conflicts']
     materialize = {'profiles': [receiver], 'target_root': str(tmp_path / 'cache')}
     result = tools()['ac_sync_profile_materialize'].handler(**materialize)
     from pathlib import Path

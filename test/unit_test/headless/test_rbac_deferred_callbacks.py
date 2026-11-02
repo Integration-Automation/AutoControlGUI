@@ -94,7 +94,8 @@ def test_callback_runs_have_fresh_variables_and_clear_unscoped_authority(kind, c
         fire()
     assert len(seen) == 1
     assert seen[0][0] is None
-    assert seen[0][1] is not None and seen[0][1] is not outer
+    assert seen[0][1] is not None
+    assert seen[0][1] is not outer
 
 
 @pytest.mark.parametrize("kind", KINDS)

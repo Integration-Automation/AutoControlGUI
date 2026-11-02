@@ -90,7 +90,8 @@ def test_only_a_process_posting_from_a_non_hid_state_counts_as_injected(pid, sta
 def test_hardware_events_count_and_track_held_keys_and_buttons(opened):
     api, quartz, physical = opened
     quartz.pending[:] = [event(10, keycode=4), event(1)]
-    assert api.poll(0) == (True, True) and physical == [1, 1]
+    assert api.poll(0) == (True, True)
+    assert physical == [1, 1]
     quartz.pending[:] = [event(11, keycode=4), event(2)]
     assert api.poll(0) == (True, False)
 
@@ -98,7 +99,8 @@ def test_hardware_events_count_and_track_held_keys_and_buttons(opened):
 def test_events_a_process_posted_never_count(opened):
     api, quartz, physical = opened
     quartz.pending[:] = [event(10, pid=4242, state=0, keycode=4), event(5, pid=4242, state=-1)]
-    assert api.poll(0) == (True, False) and physical == []
+    assert api.poll(0) == (True, False)
+    assert physical == []
 
 
 def test_a_key_down_before_the_tap_started_still_counts_as_held(opened):

@@ -50,9 +50,11 @@ def test_buffered_old_viewer_clipboard_is_rejected_after_disconnect_or_reconnect
     finally:
         channel.release.set()
         worker.join(5)
-    assert not worker.is_alive() and channel.closed
+    assert not worker.is_alive()
+    assert channel.closed
     assert applied == [], 'old buffered clipboard reached the replacement/current callback'
-    assert results == [False] and viewer.connected is replacement
+    assert results == [False]
+    assert viewer.connected is replacement
 
 
 def host_handler(payload, applied):
@@ -106,7 +108,8 @@ def test_clipboard_receiver_does_not_own_its_peer_without_a_queued_delivery():
     receiver.bind(peer)
     reference = weakref.ref(peer)
     del peer
-    assert reference() is None and pending == []
+    assert reference() is None
+    assert pending == []
     receiver('text', 'retired')
     assert pending == []
 
@@ -123,9 +126,11 @@ def test_queued_clipboard_receiver_keeps_the_original_peer_and_authority_until_d
     receiver.bind(peer)
     reference = weakref.ref(peer)
     receiver('text', 'original')
-    assert pending[0].peer is peer and pending[0].authority is authority
+    assert pending[0].peer is peer
+    assert pending[0].authority is authority
     del peer
-    assert reference() is not None and pending[0].data == 'original'
+    assert reference() is not None
+    assert pending[0].data == 'original'
     pending.clear()
     assert reference() is None
 
@@ -186,7 +191,8 @@ def test_clipboard_send_does_not_migrate_to_a_replacement_channel_during_encodin
     monkeypatch.setattr(viewer_module, 'encode_' + kind, replaced)
     with pytest.raises(ConnectionError):
         getattr(viewer, 'send_clipboard_' + kind)(value)
-    assert old == [] and new == [], 'a clipboard send adopted the replacement transport'
+    assert old == [], 'a clipboard send adopted the replacement transport'
+    assert new == [], 'a clipboard send adopted the replacement transport'
 
 
 @pytest.mark.parametrize('kind,value', [('text', 'text'), ('image', b'image')])
@@ -263,7 +269,9 @@ def test_explicit_two_viewer_broadcasts_do_not_echo_or_discard_deliberate_repeat
     for _ in range(2):
         assert getattr(host, 'broadcast_clipboard_' + kind)(value) == 2
     assert first[1] == second[1] == [(kind, value)] * 2
-    assert applied == [(kind, value)] * 2 and len(first[2]) == 2 and second[2] == []
+    assert applied == [(kind, value)] * 2
+    assert len(first[2]) == 2
+    assert second[2] == []
     assert len(first[3]) == len(second[3]) == 2
 
 
@@ -279,4 +287,5 @@ def test_ordinary_clipboard_callback_failures_remain_logged_and_contained(bounda
         receiver = host_handler(encode_text('text'), [])
         receiver._host._apply_clipboard = failed
     receiver._handle_clipboard_payload(encode_text('text'))
-    assert 'clipboard' in caplog.text and str(error) in caplog.text
+    assert 'clipboard' in caplog.text
+    assert str(error) in caplog.text

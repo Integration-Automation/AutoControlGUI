@@ -30,7 +30,8 @@ def test_multiple_journals_attach_to_one_history_run_idempotently(store, tmp_pat
     assert [(item.run_id, item.journal_path, item.journal_run_id) for item in links] == [
         (run, first, "one"), (run, second, "two"),
     ]
-    assert not Path(first).exists() and not Path(second).exists()
+    assert not Path(first).exists()
+    assert not Path(second).exists()
     assert store.journals_for_run(run + 1) == []
     assert not store.attach_journal(run + 1, first, "unknown")
 
@@ -107,7 +108,8 @@ def test_failed_history_initialization_releases_the_connection(store, monkeypatc
     try:
         with pytest.raises(HistoryStoreError, match="controlled schema failure"):
             store.attach_journal(1, "unused.jsonl", "unused")
-        assert connection.closed and store._conn is None
+        assert connection.closed
+        assert store._conn is None
     finally:
         connection.close()
 
@@ -213,6 +215,7 @@ def test_background_run_owners_link_explicit_journals_to_their_existing_row(kind
         trigger = owner.add("imap.invalid", "user", "unused", str(script))
         owner._execute_with_history(trigger, {})
     rows = store.list_runs()
-    assert len(rows) == 1 and rows[0].status == STATUS_OK
+    assert len(rows) == 1
+    assert rows[0].status == STATUS_OK
     links = store.journals_for_run(rows[0].id)
     assert [(item.journal_path, item.journal_run_id) for item in links] == [(str(path.resolve()), "background")]

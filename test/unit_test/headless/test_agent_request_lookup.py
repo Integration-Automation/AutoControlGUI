@@ -21,9 +21,11 @@ def test_lookup_miss_then_late_acceptance_does_not_create_or_dispatch_work(tmp_p
         assert runtime.list() == []
         task = runtime.submit(specification(), idempotency_key="late-key")
         result = runtime.lookup("late-key")
-        assert result["found"] is True and result["task"]["task_id"] == task.task_id
+        assert result["found"] is True
+        assert result["task"]["task_id"] == task.task_id
         assert result["task"]["state"] == "queued"
-        assert target.calls == [] and not runtime._leases
+        assert target.calls == []
+        assert not runtime._leases
         assert runtime.store.actions(task.task_id) == []
     finally:
         runtime.close()
@@ -89,7 +91,8 @@ def test_accepted_key_survives_service_restart_without_resume(tmp_path):
     replacement = AgentRuntime(tmp_path / "tasks.sqlite", targets={"fixture": FakeTarget()})
     try:
         found = replacement.lookup("stable-key")
-        assert found["task"]["task_id"] == task.task_id and found["task"]["state"] == "queued"
+        assert found["task"]["task_id"] == task.task_id
+        assert found["task"]["state"] == "queued"
         assert not replacement._leases
     finally:
         replacement.close()
@@ -118,9 +121,11 @@ def test_real_http_lost_submit_reply_is_recovered_by_lookup_without_resubmission
             with pytest.raises(AgentTaskError, match="lost accepted reply"):
                 client.call("submit", {"spec": specification().to_dict(), "idempotency_key": "lost-reply"})
             result = client.call("lookup", {"idempotency_key": "lost-reply"})
-        assert result["found"] is True and result["task"]["state"] == "queued"
+        assert result["found"] is True
+        assert result["task"]["state"] == "queued"
         assert calls == ["submit", "lookup"]
-        assert len(service.runtime.list()) == 1 and not service.runtime._leases
+        assert len(service.runtime.list()) == 1
+        assert not service.runtime._leases
         assert target.calls == []
         with authorization_scope(AuthorizationContext("bob", "operator")):
             assert client.call("lookup", {"idempotency_key": "lost-reply"})["found"] is False
@@ -143,7 +148,8 @@ def test_public_command_mcp_and_api_share_read_only_lookup_contract():
 
     assert ac.lookup_agent_task is api.lookup_agent_task is core.lookup_agent_task is task_api.lookup_agent_task
     entry = CATALOG["AC_agent_task_lookup"]
-    assert entry[0] is ac.lookup_agent_task and entry[3] is True
+    assert entry[0] is ac.lookup_agent_task
+    assert entry[3] is True
     registry = build_default_tool_registry()
     tool = next((tool for tool in registry if tool.name == "ac_agent_task_lookup"), None)
     assert tool is not None

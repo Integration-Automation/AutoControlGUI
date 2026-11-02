@@ -40,7 +40,8 @@ def store(tmp_path, monkeypatch):
 def test_controls_default_to_no_recording_or_database(app, store):
     controls = ManualRunControls()
     try:
-        assert not controls.record_history.isChecked() and controls.journal_path.text() == ""
+        assert not controls.record_history.isChecked()
+        assert controls.journal_path.text() == ""
         with controls.capture(source_id="test", script_path="<test>"):
             pass
         assert store._conn is None
@@ -59,11 +60,13 @@ def test_editor_capture_preserves_result_and_links_opted_in_owner(app, store, tm
     host = _host(output, script_editor=editor, script_history_controls=controls)
     try:
         ScriptTabMixin._execute_manual_script(host)
-        assert json.loads(output.toPlainText()) and len(ac.read_events(journal)) == 2
+        assert json.loads(output.toPlainText())
+        assert len(ac.read_events(journal)) == 2
         rows = store.list_runs()
         assert len(rows) == int(enabled)
         if enabled:
-            assert rows[0].status == "ok" and len(store.journals_for_run(rows[0].id)) == 1
+            assert rows[0].status == "ok"
+            assert len(store.journals_for_run(rows[0].id)) == 1
     finally:
         controls.deleteLater()
         editor.deleteLater()
@@ -96,9 +99,11 @@ def test_builder_records_with_optional_journal_without_result_wrapper(app, store
         builder._on_run()
         assert settle(builder._runs, "task")
         result = json.loads(builder._result.toPlainText())
-        assert result and "history_id" not in result
+        assert result
+        assert "history_id" not in result
         row = store.list_runs()[0]
-        assert row.status == "ok" and len(store.journals_for_run(row.id)) == 1
+        assert row.status == "ok"
+        assert len(store.journals_for_run(row.id)) == 1
     finally:
         builder.deleteLater()
 
@@ -113,7 +118,8 @@ def test_capture_command_form_keeps_body_when_metadata_changes(app):
         form.load_step(step)
         form._editors["source_id"].setText("after")
         result = step_to_action(step)
-        assert result[1]["source_id"] == "after" and result[1]["body"] == body
+        assert result[1]["source_id"] == "after"
+        assert result[1]["body"] == body
     finally:
         form.deleteLater()
 
@@ -133,7 +139,8 @@ def test_directory_execution_records_one_batch_and_all_snapshots(app, store, tmp
     try:
         ScriptTabMixin._execute_dir(host)
         assert len(json.loads(output.toPlainText())) == 2
-        assert len(store.list_runs()) == 1 and len(ac.read_events(journal)) == 4
+        assert len(store.list_runs()) == 1
+        assert len(ac.read_events(journal)) == 4
         assert store.list_runs()[0].script_path == str(directory)
     finally:
         for widget in (controls, source, output):
@@ -150,7 +157,8 @@ def test_manual_controls_retranslate_without_resetting_options(app):
         language_wrapper.reset_language("Japanese")
         controls.retranslate()
         assert controls.record_history.text() == "実行履歴に記録"
-        assert controls.record_history.isChecked() and controls.journal_path.text() == "events.jsonl"
+        assert controls.record_history.isChecked()
+        assert controls.journal_path.text() == "events.jsonl"
     finally:
         language_wrapper.reset_language(old)
         controls.deleteLater()

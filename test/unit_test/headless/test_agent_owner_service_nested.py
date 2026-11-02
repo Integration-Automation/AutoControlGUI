@@ -28,10 +28,12 @@ def test_frame_layout_matches_the_native_record():
 def test_valid_frame_is_read_once_and_its_descriptor_closed():
     fd = piped(frame())
     grant = nested.read_nested_bootstrap(fd)
-    assert grant.parent == ((142, 1), (0, 3)) and grant.capability == CAPABILITY
+    assert grant.parent == ((142, 1), (0, 3))
+    assert grant.capability == CAPABILITY
     with pytest.raises(OSError):
         os.fstat(fd)
-    assert "capability=<32 bytes>" in repr(grant) and str(CAPABILITY[0]) not in repr(grant).split("capability")[1]
+    assert "capability=<32 bytes>" in repr(grant)
+    assert str(CAPABILITY[0]) not in repr(grant).split("capability")[1]
 
 
 def test_absent_descriptor_means_not_nested():

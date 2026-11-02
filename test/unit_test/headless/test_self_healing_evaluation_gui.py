@@ -53,14 +53,16 @@ def test_background_comparison_details_and_shared_exports(panel, app, tmp_path, 
     panel._path.setText(str(DATASET))
     panel.evaluate()
     until(app, lambda: panel._report is not None and panel._handle is None)
-    assert panel._summary.rowCount() == 2 and panel._cases.rowCount() == 10
+    assert panel._summary.rowCount() == 2
+    assert panel._cases.rowCount() == 10
     panel._cases.setCurrentCell(0, 0)
     assert json.loads(panel._details.toPlainText())["step_id"] == "legacy-submit"
     for suffix in ("json", "html"):
         path = tmp_path / f"comparison.{suffix}"
         monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *_args, **_kwargs: (str(path), ""))
         getattr(panel, "export_" + suffix)()
-        assert path.is_file() and "frame_hash" in path.read_text(encoding="utf-8")
+        assert path.is_file()
+        assert "frame_hash" in path.read_text(encoding="utf-8")
 
 
 def test_changed_selection_cancels_and_discards_late_result(panel, app, monkeypatch):
@@ -81,7 +83,8 @@ def test_changed_selection_cancels_and_discards_late_result(panel, app, monkeypa
     panel._path.setText("different.json")
     release.set()
     until(app, lambda: panel._handle is None)
-    assert panel._report is None and panel._cases.rowCount() == 0
+    assert panel._report is None
+    assert panel._cases.rowCount() == 0
     assert thread_ids[0] != get_ident()
 
 

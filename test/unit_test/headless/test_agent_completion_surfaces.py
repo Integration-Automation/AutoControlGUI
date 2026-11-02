@@ -79,4 +79,5 @@ def test_fenced_dag_adopts_readonly_successor_without_replaying_the_last_action(
     approved['note'] = 'Reviewed independent completion after the fenced finite action'
     result = run_dag(definition, batch_id=batch['batch_id'], recovery=approved)
     assert result.succeeded, result.to_dict()
-    assert runtime.get(source).state == 'paused' and runtime.store.actions(successor) == []
+    assert runtime.get(source).state == 'paused'
+    assert runtime.store.actions(successor) == []

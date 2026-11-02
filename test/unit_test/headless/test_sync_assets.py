@@ -31,7 +31,8 @@ def test_script_asset_hash_round_trip_publishes_one_complete_generation(tmp_path
         assert (result.directory / item.path).read_bytes() == (source / item.path).read_bytes()
         assert sha256((result.directory / item.path).read_bytes()).hexdigest() == item.sha256
     repeated = ac.sync_assets(manifest, transport)
-    assert repeated.directory == result.directory and repeated.reused is True
+    assert repeated.directory == result.directory
+    assert repeated.reused is True
 
 
 def test_late_hash_failure_publishes_no_partial_script_or_template(tmp_path):

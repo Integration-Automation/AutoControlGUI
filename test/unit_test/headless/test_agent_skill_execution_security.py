@@ -26,7 +26,8 @@ def assert_unpublished(value):
 def test_zero_effect_original_trial_can_adopt_its_complete_actual_successor(execution):
     assert execution.runtime.store.actions(execution.task_id) == []
     accepted = execution.runtime.skills.control('accept', accept_request(execution))
-    assert accepted['publication']['task_id'] == execution.task_id and accepted['version'] == 1
+    assert accepted['publication']['task_id'] == execution.task_id
+    assert accepted['version'] == 1
 
 
 @pytest.mark.parametrize('execution', ['named'], indirect=True)

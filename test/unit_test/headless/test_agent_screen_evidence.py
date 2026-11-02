@@ -89,7 +89,8 @@ def test_bounded_desktop_labels_keep_safe_matches_and_exclude_mask_placeholders(
     monkeypatch.setattr(target, "_check_foreground", lambda: (1, "Owned", 2))
     monkeypatch.setattr(accessibility_api, "list_accessibility_elements", lambda **_kwargs: controls)
     observation = target.observe()
-    assert observation["semantic_observation"] is True and observation["text_redacted"] is True
+    assert observation["semantic_observation"] is True
+    assert observation["text_redacted"] is True
     assert len(observation["elements"]) == 2
     assert "SECRET" not in str(observation)
     assert status(observation, {"text_present": "Saved"}) == "passed"
@@ -105,7 +106,8 @@ def test_bounded_browser_previews_never_prove_global_absence(frames):
         "elements": [{"selector": "#save", "text": "Saved", "is_visible": True, "is_enabled": True},
                      {"selector": "#hidden", "text": "Hidden", "is_visible": False}]})
     observation = target.observe()
-    assert observation["semantic_observation"] is True and observation["text_redacted"] is True
+    assert observation["semantic_observation"] is True
+    assert observation["text_redacted"] is True
     assert status(observation, {"text_present": "Saved"}) == "passed"
     assert status(observation, {"text_absent": "Saved"}) == "failed"
     for text in ("Missing", "Other body text", "Hidden"):

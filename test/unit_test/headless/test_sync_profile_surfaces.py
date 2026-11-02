@@ -32,7 +32,8 @@ def test_private_native_load_ac_mcp_builder_create_disabled_independent_workspac
     assert step_to_action(action_to_step(action)) == action
     ac.executor.execute_action([action], raise_on_error=True)
     first = list((tmp_path / 'workspaces').iterdir())
-    assert len(first) == 1 and (first[0] / 'hotkeys.json').is_file()
+    assert len(first) == 1
+    assert (first[0] / 'hotkeys.json').is_file()
     result = tool().handler(**values)
     assert Path(result['directory']) != first[0]
     assert all(item['enabled'] is False for item in result['hotkeys'] + result['triggers'])

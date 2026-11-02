@@ -20,7 +20,8 @@ def test_cli_exposes_explicit_skill_authorization_operations():
     parser = build_parser()
     for operation in ("review_authorization", "create_authorized"):
         parsed = parser.parse_args(["agent-task", "skill", operation, "review.json"])
-        assert parsed.skill_operation == operation and parsed.request == "review.json"
+        assert parsed.skill_operation == operation
+        assert parsed.request == "review.json"
 
 
 def test_authenticated_http_can_review_and_create_without_executing_or_publishing(published, monkeypatch):
@@ -42,7 +43,8 @@ def test_authenticated_http_can_review_and_create_without_executing_or_publishin
             request = {"candidate_id": parent["id"], "snapshot": view["snapshot"], "spec": view["spec"],
                        "authorization_review": view["authorization_review"], "note": "Reviewed report-root candidate"}
             child = client.call("skill", {"operation": "create_authorized", "request": request})
-            assert child["state"] == "draft" and child["version"] == 0
+            assert child["state"] == "draft"
+            assert child["version"] == 0
             assert child["provenance"]["reauthorization"]["actor"] == "alice"
             start.assert_not_called()
         with origin_scope(current_id), authorization_scope(AuthorizationContext("bob", "operator")):

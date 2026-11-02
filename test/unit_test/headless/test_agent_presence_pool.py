@@ -58,11 +58,13 @@ def test_pool_reference_status_and_unstarted_close_do_not_create_any_helper():
     calls = []
     instance = pool(lambda _argv: calls.append('created'))
     first, second = instance.reference(), instance.reference()
-    assert instance.status()['state'] == 'not_started' and not calls
+    assert instance.status()['state'] == 'not_started'
+    assert not calls
     first.close()
     assert not calls
     second.close()
-    assert instance.retired and not calls
+    assert instance.retired
+    assert not calls
 
 
 def test_two_references_share_one_broker_and_closing_one_keeps_the_other_lease():
@@ -78,10 +80,12 @@ def test_two_references_share_one_broker_and_closing_one_keeps_the_other_lease()
     first, second = instance.reference(), instance.reference()
     try:
         left, right = first.acquire(noop, 2), second.acquire(noop, 2)
-        assert left['generation'] == right['generation'] and len(channels) == 1
+        assert left['generation'] == right['generation']
+        assert len(channels) == 1
         first.close()
         another = second.acquire(noop, 2)
-        assert another['generation'] == right['generation'] and not channels[0].retired
+        assert another['generation'] == right['generation']
+        assert not channels[0].retired
         assert channels[0].source.released.wait(1)
         assert len(channels[0].threads) == 1
         with pytest.raises(AgentTaskError):
@@ -89,7 +93,8 @@ def test_two_references_share_one_broker_and_closing_one_keeps_the_other_lease()
     finally:
         first.close()
         second.close()
-    assert channels[0].retired and instance.retired
+    assert channels[0].retired
+    assert instance.retired
 
 
 def test_busy_acquisition_does_not_retire_or_restart_the_source():
@@ -129,7 +134,8 @@ def test_cancelled_waiter_cannot_cancel_a_different_references_shared_rpc_or_lat
             channel.allow.set()
         token = second.acquire(noop, 2)
         assert channel.source.released.wait(1)
-        assert token['generation'] == channel.protocol.generation and not channel.retired
+        assert token['generation'] == channel.protocol.generation
+        assert not channel.retired
     finally:
         channel.allow.set()
         first.close()
@@ -145,7 +151,8 @@ def test_individual_wait_deadline_abandons_late_grant_without_killing_shared_sou
         started = time.monotonic()
         with pytest.raises(AgentTaskError, match='deadline'):
             first.acquire(noop, 0.1)
-        assert time.monotonic() - started < 0.5 and not channel.retired
+        assert time.monotonic() - started < 0.5
+        assert not channel.retired
         channel.allow.set()
         assert second.acquire(noop, 2)['generation'] == channel.protocol.generation
         assert channel.source.released.wait(1)
@@ -165,7 +172,9 @@ def test_last_close_cancels_shared_lifetime_and_proves_owned_thread_retirement()
         assert channel.entered.wait(1)
         started = time.monotonic()
         reference.close()
-        assert time.monotonic() - started < 3 and channel.retired and instance.retired
+        assert time.monotonic() - started < 3
+        assert channel.retired
+        assert instance.retired
         with pytest.raises(AgentTaskError):
             waiting.result(timeout=1)
     with pytest.raises(AgentTaskError):
@@ -195,7 +204,9 @@ def test_late_helper_construction_after_last_close_never_receives_a_bootstrap():
         closing.result(timeout=3)
         with pytest.raises(AgentTaskError):
             acquiring.result(timeout=1)
-    assert channel.retired and not channel.calls and instance.retired
+    assert channel.retired
+    assert not channel.calls
+    assert instance.retired
 
 
 def test_fatal_source_rpc_does_not_rearm_an_existing_reference():
@@ -236,10 +247,12 @@ def test_failed_retirement_keeps_process_owned_and_allows_only_explicit_cleanup_
     reference.acquire(noop, 2)
     with pytest.raises(AgentTaskError):
         reference.close()
-    assert not instance.retired and not channel.retired
+    assert not instance.retired
+    assert not channel.retired
     fail[0] = False
     reference.close()
-    assert instance.retired and channel.retired
+    assert instance.retired
+    assert channel.retired
     with pytest.raises(AgentTaskError):
         reference.acquire(noop, 2)
 
@@ -257,7 +270,8 @@ def test_failed_owner_thread_start_never_constructs_a_source_or_leaves_an_unjoin
         with pytest.raises(AgentTaskError, match='thread'):
             reference.acquire(noop, 2)
     reference.close()
-    assert instance.retired and not calls
+    assert instance.retired
+    assert not calls
     with pytest.raises(AgentTaskError):
         reference.acquire(noop, 2)
 
@@ -283,10 +297,12 @@ def test_failed_cleanup_thread_start_keeps_the_original_process_owned_for_retry(
         patch.setattr(threading.Thread, 'start', fail_start)
         with pytest.raises(AgentTaskError, match='thread'):
             reference.close()
-    assert not instance.retired and not channel.retired
+    assert not instance.retired
+    assert not channel.retired
     channel.close = original
     reference.close()
-    assert instance.retired and channel.retired
+    assert instance.retired
+    assert channel.retired
 
 
 def registry(monkeypatch, channels):
@@ -308,10 +324,12 @@ def registry(monkeypatch, channels):
 def test_shared_registry_is_passive_and_replaces_only_a_retired_closed_lifetime(monkeypatch):
     channels = [Channel(), Channel()]
     module, pools = registry(monkeypatch, channels)
-    assert module.shared_status()['state'] == 'not_started' and not pools
+    assert module.shared_status()['state'] == 'not_started'
+    assert not pools
     first, second = module.shared_reference(), module.shared_reference()
     try:
-        assert len(pools) == 1 and not channels[0].calls
+        assert len(pools) == 1
+        assert not channels[0].calls
         old = first.acquire(noop, 2)
         first.close()
         assert second.acquire(noop, 2)['generation'] == old['generation']
@@ -321,7 +339,8 @@ def test_shared_registry_is_passive_and_replaces_only_a_retired_closed_lifetime(
         second.close()
     fresh = module.shared_reference()
     try:
-        assert len(pools) == 2 and pools[0].retired
+        assert len(pools) == 2
+        assert pools[0].retired
         assert fresh.acquire(noop, 2)['generation'] != old['generation']
         first.close()
         second.close()
@@ -374,12 +393,15 @@ def test_shared_registry_refuses_replacement_until_actual_process_retirement(mon
             old.close()
         with pytest.raises(AgentTaskError):
             module.shared_reference()
-        assert len(pools) == 1 and not channels[0].retired and not channels[1].calls
+        assert len(pools) == 1
+        assert not channels[0].retired
+        assert not channels[1].calls
     finally:
         channels[0].close = original
         old.close()
     fresh = module.shared_reference()
     try:
-        assert len(pools) == 2 and pools[0].retired
+        assert len(pools) == 2
+        assert pools[0].retired
     finally:
         fresh.close()

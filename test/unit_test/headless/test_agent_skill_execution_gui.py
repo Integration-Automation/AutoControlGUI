@@ -24,7 +24,8 @@ def test_gui_prepares_original_trial_and_separate_execution_without_dispatch(mon
                     'execution_task_id': 'actual-final-executable-successor'}
         if operation == 'accept':
             expected.update(execution_review='<review-token>', expected_version=0, note='')
-        assert request == expected and tab._skill_operation.currentData() == operation
+        assert request == expected
+        assert tab._skill_operation.currentData() == operation
         assert tab._pages.currentIndex() == tab._page_keys.index('agent_page_skills')
     finally:
         tab.close()

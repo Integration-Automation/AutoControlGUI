@@ -42,7 +42,8 @@ def test_commands_builder_and_mcp_complete_the_same_revision_workflow(revision_f
     assert tool("verify").handler(str(bundle), str(dataset))["eligible"]
     accepted = command("accept", bundle_path=str(bundle), dataset_path=str(dataset),
                        expected_revision=created["revision"])
-    assert accepted["changed"] and target.read_bytes() != original
+    assert accepted["changed"]
+    assert target.read_bytes() != original
     assert tool("revert").handler(str(bundle), created["revision"])["changed"]
     assert target.read_bytes() == original
     for operation in ("create", "preview", "verify", "accept", "revert"):

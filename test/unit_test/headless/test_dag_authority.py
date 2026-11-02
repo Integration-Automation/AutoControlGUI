@@ -98,7 +98,9 @@ def test_default_remote_dispatch_keeps_admin_and_trusted_python_support(role, mo
 
     class Console:
         def broadcast_execute(self, actions, *, labels, raise_on_error):
-            assert actions == [] and labels == ["other-host"] and raise_on_error
+            assert actions == []
+            assert labels == ["other-host"]
+            assert raise_on_error
             return [{"ok": True, "result": {"verified": True}}]
 
     monkeypatch.setattr(admin_client, "default_admin_console", Console)

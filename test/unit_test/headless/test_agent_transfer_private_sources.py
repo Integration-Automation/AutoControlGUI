@@ -36,7 +36,8 @@ def test_actual_private_file_is_refused_before_opening_selected_bytes(tmp_path, 
                      'evidence': runtime.evidence.directory(initial) / 'report.json',
                      'cache': runtime.transfers.source._cache.path}
             private = paths[kind]
-            assert private.is_file() and private.stat().st_size > 0
+            assert private.is_file()
+            assert private.stat().st_size > 0
             task = completed_file(runtime, tmp_path, private)
             actual_open = transfer_files.os.open
 

@@ -45,12 +45,17 @@ def test_preview_does_not_invent_remaining_actions_or_contact_a_model(dynamic_so
     network = Mock(side_effect=AssertionError("preview contacted a model"))
     monkeypatch.setattr("je_auto_control.utils.agent_runtime.ollama.request_json", network)
     view = runtime.recovery.control("preview", {"task_id": source})
-    assert view["source_mode"] == mode and view["draft"] is None
-    assert view["completed_steps"] is None and view["attempted_steps"] == 1
-    assert view["remaining_actions"] == [] and view["rows"] == []
+    assert view["source_mode"] == mode
+    assert view["draft"] is None
+    assert view["completed_steps"] is None
+    assert view["attempted_steps"] == 1
+    assert view["remaining_actions"] == []
+    assert view["rows"] == []
     assert view["issues"] == ["new_plan_required"]
     template = view["review_template"]
-    assert template["goal"] == "" and template["mode"] == mode and template["actions"] == []
+    assert template["goal"] == ""
+    assert template["mode"] == mode
+    assert template["actions"] == []
     assert template["options"] == runtime.store.get(source)["spec"]["options"]
     assert target.calls == ["AC_increment"]
     assert (runtime.store.get(source), runtime.receipts(source)) == before
@@ -77,8 +82,10 @@ def test_reviewed_dynamic_successor_starts_with_fresh_history_and_completion(dyn
                         if not history else {"stop": True})
 
         assert run_task(runtime, child, backend=Model()).state == "succeeded"
-        assert histories[0] == [] and len(histories[1]) == 1
-    assert len(target.calls) == 2 and runtime.get(source).state == "paused"
+        assert histories[0] == []
+        assert len(histories[1]) == 1
+    assert len(target.calls) == 2
+    assert runtime.get(source).state == "paused"
     assert runtime.get(child).metadata["recovery"]["source_task"] == source
     assert runtime.recovery.control("create", request)["task_id"] == child
     with pytest.raises(AgentTaskError, match="reviewed successor"):
@@ -103,7 +110,8 @@ def test_dynamic_approval_requires_a_new_goal_without_switching_execution_author
         request["spec"]["options"]["endpoint"] = "http://unapproved.invalid"
     with pytest.raises(AgentTaskError):
         runtime.recovery.control("create", request)
-    assert len(runtime.list()) == 1 and runtime.get(source).state == "paused"
+    assert len(runtime.list()) == 1
+    assert runtime.get(source).state == "paused"
 
 
 def test_explicit_approval_can_retain_goal_wording_without_inheriting_source_progress(dynamic_source):
@@ -113,7 +121,8 @@ def test_explicit_approval_can_retain_goal_wording_without_inheriting_source_pro
     request["note"] = "Reviewed the same overall goal with a new application context and no receipt inheritance"
     child = runtime.recovery.control("create", request)["task_id"]
     assert runtime.store.actions(child) == []
-    assert runtime.get(child).state == "queued" and runtime.get(source).state == "paused"
+    assert runtime.get(child).state == "queued"
+    assert runtime.get(source).state == "paused"
 
 
 def test_new_dynamic_goal_is_not_accepted_while_source_effects_are_unknown(dynamic_source):
@@ -139,7 +148,9 @@ def test_dormant_dynamic_action_arrays_do_not_claim_finite_progress(dynamic_sour
     with runtime.store.connection(write=True) as connection:
         connection.execute("UPDATE agent_tasks SET spec=? WHERE id=?", (json.dumps(data), source))
     view = runtime.recovery.control("preview", {"task_id": source})
-    assert view["completed_steps"] is None and view["rows"] == [] and view["remaining_actions"] == []
+    assert view["completed_steps"] is None
+    assert view["rows"] == []
+    assert view["remaining_actions"] == []
     assert view["review_template"]["actions"] == []
 
 
@@ -154,7 +165,8 @@ def test_finish_without_new_results_cannot_inherit_a_matching_source_result(dyna
         result = run_task(runtime, child, backend=stop)
     else:
         result = runtime.finish(child)
-    assert result.state == "waiting_user" and result.verification[0]["status"] == "unknown"
+    assert result.state == "waiting_user"
+    assert result.verification[0]["status"] == "unknown"
     assert runtime.store.actions(child) == []
     assert runtime.store.actions(source)[0]["result"] == {"value": 3}
 
@@ -213,9 +225,11 @@ def test_explicit_local_replan_uses_the_pinned_http_model_with_fresh_goal_and_hi
         assert all(body["model"] == "fixture-tools" for _, body in server.calls)
         first = json.loads(server.calls[1][1]["messages"][1]["content"])
         second = json.loads(server.calls[2][1]["messages"][1]["content"])
-        assert first["goal"] == reviewed["goal"] and first["recent_results"] == []
+        assert first["goal"] == reviewed["goal"]
+        assert first["recent_results"] == []
         assert len(second["recent_results"]) == 1
-        assert len(runtime.store.actions(child)) == 1 and len(runtime.store.actions(source.task_id)) == 1
+        assert len(runtime.store.actions(child)) == 1
+        assert len(runtime.store.actions(source.task_id)) == 1
         assert runtime.get(source.task_id).state == "paused"
     finally:
         jobs.close()

@@ -138,12 +138,14 @@ def test_remainder_preview_is_passive_bound_to_selected_task_and_requires_explic
             tab._task_id.setText("other-task")
         tab._completed(TaskOutcome(42, "ok", {"source_task": "source-task", "snapshot": "a" * 64,
                                              "draft": {"goal": "review remaining actions"}}))
-        assert len(requests) == 1 and tab._scope.toPlainText() == original_scope
+        assert len(requests) == 1
+        assert tab._scope.toPlainText() == original_scope
         review = json.loads(tab._remainder_request.toPlainText())
         if change_task:
             assert review == {}
             return
-        assert review["task_id"] == "source-task" and review["note"] == ""
+        assert review["task_id"] == "source-task"
+        assert review["note"] == ""
         handle.outcome = "finished"
         review["note"] = "Reviewed remaining actions in the new context"
         tab._remainder_request.setPlainText(json.dumps(review))
@@ -170,9 +172,11 @@ def test_dynamic_review_template_requires_manual_goal_and_note_without_submittin
         template = {"goal": "", "mode": "ollama", "options": {"model": "fixture-tools"}, "actions": []}
         tab._present_result({"source_task": "source-task", "source_mode": "ollama", "snapshot": "a" * 64,
             "draft": None, "review_template": template, "issues": ["new_plan_required"]})
-        assert submitted == [] and tab._scope.toPlainText() == original_scope
+        assert submitted == []
+        assert tab._scope.toPlainText() == original_scope
         request = json.loads(tab._remainder_request.toPlainText())
-        assert request["spec"]["goal"] == "" and request["note"] == ""
+        assert request["spec"]["goal"] == ""
+        assert request["note"] == ""
         request["spec"]["goal"] = "Read only the remaining field"
         request["note"] = "Reviewed the new plan"
         tab._remainder_request.setPlainText(json.dumps(request))
@@ -198,7 +202,8 @@ def test_authorization_review_and_creation_are_distinct_explicit_actions(monkeyp
             "draft": {"goal": "reviewed remaining work", "roots": ["D:/reports"]}, "issues": []})
         assert len(submitted) == 1
         request = json.loads(tab._remainder_request.toPlainText())
-        assert request["authorization_review"] == "b" * 64 and request["note"] == ""
+        assert request["authorization_review"] == "b" * 64
+        assert request["note"] == ""
         request["note"] = "Reviewed the new report root"
         tab._remainder_request.setPlainText(json.dumps(request))
         dict(tab.menu_actions())["agent_reauthorize_create"]()
@@ -257,7 +262,8 @@ def test_source_owner_recovery_requires_its_preview_and_cannot_reuse_another_own
             result["authorization_review"] = "c" * 64
         tab._present_remainder(result)
         request = json.loads(tab._remainder_request.toPlainText())
-        assert request["owner_policy"] == "source_owner" and request["ownership_review"] == "b" * 64
+        assert request["owner_policy"] == "source_owner"
+        assert request["ownership_review"] == "b" * 64
         request["note"] = "Reviewed original ownership and remainder"
         tab._remainder_request.setPlainText(json.dumps(request))
         create = "create_authorized" if reauthorize else "create"
@@ -265,7 +271,8 @@ def test_source_owner_recovery_requires_its_preview_and_cannot_reuse_another_own
         assert submitted[-1] == ("recovery", {"operation": create, "request": request})
         tab._owner_policy.setCurrentIndex(0)
         tab._create_remainder(create)
-        assert len(submitted) == 2 and "selection changed" in tab._status.text()
+        assert len(submitted) == 2
+        assert "selection changed" in tab._status.text()
     finally:
         tab.close()
         shiboken6.delete(tab)

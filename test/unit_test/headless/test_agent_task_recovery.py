@@ -46,10 +46,12 @@ def test_preview_is_passive_reports_progress_and_does_not_reuse_receipts(stopped
     monkeypatch.setattr(target, "ready", Mock(side_effect=AssertionError("target probe")))
     first = preview(runtime, source)
     assert first == preview(runtime, source)
-    assert first["completed_steps"] == 1 and first["issues"] == []
+    assert first["completed_steps"] == 1
+    assert first["issues"] == []
     assert first["draft"]["actions"] == [{"tool": "AC_increment", "arguments": {"amount": 2},
                                          "expect_result": {"value": 3}}]
-    assert first["approval_required"] is True and first["source_completion_inherited"] is False
+    assert first["approval_required"] is True
+    assert first["source_completion_inherited"] is False
     assert first["source_receipts"][0]["status"] == "confirmed"
     assert (runtime.store.get(source), runtime.store.actions(source)) == before
     assert target.calls == ["AC_increment"]
@@ -64,7 +66,8 @@ def test_new_successor_executes_only_reviewed_remaining_steps_and_keeps_parent_s
     assert child["recovery"]["source_task"] == source
     assert run_task(runtime, child["task_id"]).state == "succeeded"
     assert len(target.calls) == 2
-    assert runtime.get(source).state == "paused" and runtime.receipts(source) == before
+    assert runtime.get(source).state == "paused"
+    assert runtime.receipts(source) == before
     with pytest.raises(AgentTaskError, match="reviewed successor"):
         runtime.resume(source)
     assert runtime.get(child["task_id"]).metadata["recovery"]["snapshot"] == request["snapshot"]
@@ -117,7 +120,8 @@ def test_unknown_effects_must_be_reconciled_and_are_never_discarded(stopped):
     with runtime.store.connection(write=True) as connection:
         connection.execute("UPDATE agent_actions SET status='uncertain' WHERE id=?", (action["id"],))
     view = preview(runtime, source)
-    assert view["draft"] is None and "unknown_source_effects" in view["issues"]
+    assert view["draft"] is None
+    assert "unknown_source_effects" in view["issues"]
     request = {"task_id": source, "snapshot": view["snapshot"],
                "spec": deepcopy(runtime.store.get(source)["spec"]), "note": "Must not erase unknown input"}
     with pytest.raises(AgentTaskError, match="reconcile unknown"):
@@ -142,7 +146,8 @@ def test_old_capture_values_and_observation_indexes_are_not_transplanted(stopped
         import json
         connection.execute("UPDATE agent_tasks SET spec=? WHERE id=?", (json.dumps(data), source))
     view = preview(runtime, source)
-    assert issue in view["issues"] and view["draft"] is None
+    assert issue in view["issues"]
+    assert view["draft"] is None
     request = {"task_id": source, "snapshot": view["snapshot"], "spec": data, "note": "review"}
     with pytest.raises(AgentTaskError, match="fresh semantic actions"):
         runtime.recovery.control("create", request)
@@ -270,5 +275,6 @@ def test_caller_request_keys_cannot_preclaim_or_supply_a_recovery_successor(stop
                          verification=[{"kind": "actions_complete", "status": "passed"}])
     child = runtime.recovery.control("create", request)
     assert child["task_id"] != preclaimed.task_id
-    assert child["state"] == "queued" and runtime.store.actions(child["task_id"]) == []
+    assert child["state"] == "queued"
+    assert runtime.store.actions(child["task_id"]) == []
     assert child["recovery"]["source_task"] == source

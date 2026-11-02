@@ -23,7 +23,9 @@ def tool():
 
 
 def test_facade_command_mcp_and_builder_return_shared_report():
-    assert ac.evaluate_locators and ac.TemplateFrameLocator and ac.VLMFrameLocator
+    assert ac.evaluate_locators
+    assert ac.TemplateFrameLocator
+    assert ac.VLMFrameLocator
     actions = [["AC_self_heal_evaluate", {"path": str(DATASET)}]]
     result = next(iter(executor.execute_action(actions, raise_on_error=True).values()))
     remote = tool().handler(str(DATASET))
@@ -68,4 +70,5 @@ def test_mcp_cancels_between_pairs_without_partial_success():
     ctx.notifier = notify
     with pytest.raises(OperationCancelledError):
         tool().handler(str(DATASET), ctx=ctx)
-    assert 1 in counts and 2 not in counts
+    assert 1 in counts
+    assert 2 not in counts

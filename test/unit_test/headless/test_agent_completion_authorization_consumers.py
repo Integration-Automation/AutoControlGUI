@@ -28,7 +28,8 @@ def test_recording_uses_reviewed_scope_and_still_requires_its_own_fresh_validati
     before = renewal.manifest.read_bytes()
     candidate = renewal.runtime.skills.control('record', {'task_id': renewal.source,
         'completion_task_id': child, 'name': 'Explicitly renewed file workflow'})
-    assert candidate['state'] == 'draft' and candidate['version'] == 0
+    assert candidate['state'] == 'draft'
+    assert candidate['version'] == 0
     assert candidate['spec']['roots'] == [str(renewal.reports)]
     assert candidate['spec']['actions'] == [renewal.action]
     assert renewal.old.identifier not in candidate['spec']['options']['origin_policies']
@@ -44,4 +45,5 @@ def test_recording_uses_reviewed_scope_and_still_requires_its_own_fresh_validati
     assert run_task(renewal.runtime, trial['task_id']).state == 'succeeded'
     accepted = renewal.runtime.skills.control('accept', {'candidate_id': candidate['id'], 'task_id': trial['task_id'],
         'expected_version': 0, 'note': 'Accepted only the separately executed current-scope trial'})
-    assert accepted['version'] == 1 and renewal.runtime.get(renewal.source).state == 'paused'
+    assert accepted['version'] == 1
+    assert renewal.runtime.get(renewal.source).state == 'paused'

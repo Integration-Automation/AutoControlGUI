@@ -42,7 +42,8 @@ def test_source_expiry_cleans_owned_cache_and_preserves_user_output_and_foreign_
                     runtime.transfers.maintain()
                 with runtime.store.connection() as connection:
                     retained = source.records.find(connection, exported['export_id'])
-                assert retained['state'] == 'revoked' and retained['held'] is True
+                assert retained['state'] == 'revoked'
+                assert retained['held'] is True
                 assert source._cache.store.status(original['account'])['chunks'] > 0
             runtime.maintain()
             with runtime.store.connection() as connection:
@@ -51,7 +52,8 @@ def test_source_expiry_cleans_owned_cache_and_preserves_user_output_and_foreign_
                                           (exported['export_id'],)).fetchone() is not None
                 assert connection.execute('SELECT 1 FROM agent_transfer_revocations WHERE id=?',
                                           (exported['export_id'],)).fetchone() is not None
-            assert retained['state'] == 'revoked' and retained['held'] is False
+            assert retained['state'] == 'revoked'
+            assert retained['held'] is False
             assert retained['expires'] == original['expires']
             assert retained['scope'] == original['scope']
             assert source._cache.store.status(original['account']) == {'bytes': 0, 'chunks': 0, 'blobs': 0}
@@ -145,7 +147,8 @@ def test_source_expiry_does_not_retire_another_live_export_of_the_same_bytes(tmp
         assert runtime.transfers.peer('export', {'export_id': second['export_id']}) == second['manifest']
         with runtime.store.connection() as connection:
             retained = source.records.find(connection, second['export_id'])
-        assert retained['held'] is True and retained['state'] == 'active'
+        assert retained['held'] is True
+        assert retained['state'] == 'active'
         assert retained['expires'] == live['expires']
         assert output.read_bytes() == body
 
