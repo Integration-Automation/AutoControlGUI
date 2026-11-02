@@ -28,15 +28,19 @@ def asset_references(value: object, depth: int = 0) -> tuple[SyncAssetReference,
         raise ConfigSyncError('asset reference traversal exceeds the nesting limit')
     reference = asset_reference(value)
     if reference is not None:
-        return (reference,)
-    if isinstance(value, dict):
-        values: Iterable[object] = value.values()
-    elif isinstance(value, list):
-        values = value
+        result = {reference}
     else:
-        return ()
-    result = {item for child in values for item in asset_references(child, depth + 1)}
+        result = {item for child in _children(value) for item in asset_references(child, depth + 1)}
     return tuple(sorted(result, key=lambda item: (item.path, item.blob.sha256)))
+
+
+def _children(value: object) -> Iterable[object]:
+    """Return the values a reference search descends into; scalars have none."""
+    if isinstance(value, dict):
+        return value.values()
+    if isinstance(value, list):
+        return value
+    return ()
 
 
 def convert_asset_bindings(value: object, aliases: Mapping[str, str],
