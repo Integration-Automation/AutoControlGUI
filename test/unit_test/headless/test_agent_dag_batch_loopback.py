@@ -88,8 +88,9 @@ def test_lost_submit_reply_remains_claimed_or_unknown_and_cannot_replay(service,
     batch = client.call("dag", {"operation": "get", "request": {"batch_id": registered["batch_id"]}})
     assert batch["state"] == "waiting_review"
     assert [node["phase"] for node in batch["nodes"]] == ["unknown", "pending"]
+    retry = graph()
     with pytest.raises(AgentTaskError, match="explicit recovery"):
-        run_dag(graph(), batch_id=registered["batch_id"])
+        run_dag(retry, batch_id=registered["batch_id"])
     assert target.count == 1
 
 

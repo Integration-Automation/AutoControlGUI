@@ -68,8 +68,9 @@ def test_an_entry_builds_its_widget_once_and_only_when_asked():
 def test_a_lazy_factory_imports_at_call_time():
     factory = lazy_factory("collections", "OrderedDict")
     assert type(factory()).__name__ == "OrderedDict"
+    missing = lazy_factory("je_auto_control.gui.no_such_tab", "Missing")
     with pytest.raises(ModuleNotFoundError):
-        lazy_factory("je_auto_control.gui.no_such_tab", "Missing")()
+        missing()
 
 
 _PROBE = r"""

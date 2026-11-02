@@ -34,12 +34,13 @@ def test_source_expiry_cleans_owned_cache_and_preserves_user_output_and_foreign_
         try:
             source = runtime.transfers.source
             if boundary == 'cleanup-failure':
-                with monkeypatch.context() as scoped, pytest.raises(OSError, match='owned expiry cleanup failure'):
-                    def failed(account):
-                        assert account == original['account']
-                        raise OSError('owned expiry cleanup failure')
+                def failed(account):
+                    assert account == original['account']
+                    raise OSError('owned expiry cleanup failure')
+                with monkeypatch.context() as scoped:
                     scoped.setattr(source._cache, 'delete_account', failed)
-                    runtime.transfers.maintain()
+                    with pytest.raises(OSError, match='owned expiry cleanup failure'):
+                        runtime.transfers.maintain()
                 with runtime.store.connection() as connection:
                     retained = source.records.find(connection, exported['export_id'])
                 assert retained['state'] == 'revoked'
@@ -90,8 +91,9 @@ def test_source_maintenance_holds_runtime_ownership_until_exact_cleanup_finishes
                 assert entered.wait(5)
                 with pytest.raises(AgentTaskError, match='active transfer'):
                     runtime.close()
+                targets = {'local-files': FileTarget()}
                 with pytest.raises(AgentTaskError, match='still owns'):
-                    AgentRuntime(runtime.store.path, targets={'local-files': FileTarget()})
+                    AgentRuntime(runtime.store.path, targets=targets)
             finally:
                 release.set()
             cleaning.result(timeout=5)

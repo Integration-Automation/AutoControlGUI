@@ -55,10 +55,14 @@ def test_scope_does_not_appear_in_an_independent_context():
 @pytest.mark.parametrize('invalid', [1, True, 'token', object()])
 def test_invalid_scope_values_are_rejected_before_changing_the_current_owner(invalid):
     owner = cancellation.CancellationToken(1)
+
+    def bind_invalid():
+        with _scope(invalid):
+            pytest.fail('invalid cancellation binding was accepted')
+
     with _scope(owner):
         with pytest.raises(TypeError, match='CancellationToken or None'):
-            with _scope(invalid):
-                pytest.fail('invalid cancellation binding was accepted')
+            bind_invalid()
         assert cancellation.current_cancellation_token() is owner
 
 

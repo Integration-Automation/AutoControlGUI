@@ -125,8 +125,9 @@ def test_matching_preserves_authority_and_cancellation_controls(tmp_path, monkey
             raise error
 
         monkeypatch.setattr(runtime, "_validated_spec", reject)
+        requested = specification()
         with pytest.raises(type(error)):
-            runtime.lookup("key", specification())
+            runtime.lookup("key", requested)
         assert not runtime._leases
     finally:
         runtime.close()

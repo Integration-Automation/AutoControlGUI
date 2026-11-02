@@ -51,14 +51,18 @@ def test_current_registry_reclassification_invalidates_an_older_approved_artifac
         review = review_for(runtime, task)
         exported = create_for(runtime, review)
         monkeypatch.setattr(admin_client, '_default_console', second)
+        if boundary == 'retry':
+            def cross():
+                return create_for(runtime, review)
+        else:
+            request = {'export_id': exported['export_id']}
+            if boundary == 'chunk':
+                request['sha256'] = exported['manifest']['files'][0]['chunks'][0]
+
+            def cross():
+                return runtime.transfers.peer(boundary, request)
         with pytest.raises(AgentTaskError, match='private'):
-            if boundary == 'retry':
-                create_for(runtime, review)
-            else:
-                request = {'export_id': exported['export_id']}
-                if boundary == 'chunk':
-                    request['sha256'] = exported['manifest']['files'][0]['chunks'][0]
-                runtime.transfers.peer(boundary, request)
+            cross()
 
 
 def test_ordinary_output_with_the_actual_books_basename_is_not_reserved(tmp_path, monkeypatch):

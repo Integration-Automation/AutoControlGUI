@@ -64,8 +64,10 @@ def test_http_revoked_reviewer_refuses_recording_with_409(recording, tmp_path):
         connection = tmp_path / 'connection.json'
         connection.write_text(json.dumps({'url': server.base_url, 'token': server.token}), encoding='utf-8')
         recording.users.remove_user('reviewer')
+        client = AgentRuntimeClient(connection)
+        request = {'operation': 'record', 'request': request_for(recording)}
         with pytest.raises(AgentTaskError) as error:
-            AgentRuntimeClient(connection).call('skill', {'operation': 'record', 'request': request_for(recording)})
+            client.call('skill', request)
         assert '(409)' in str(error.value)
         assert_no_draft(recording)
     finally:

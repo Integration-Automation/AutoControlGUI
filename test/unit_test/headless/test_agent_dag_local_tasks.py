@@ -110,8 +110,9 @@ def test_preexisting_request_without_admission_witness_is_never_backfilled(owned
     monkeypatch.setattr(instance.runtime.background, "start", Mock())
     with authorization_scope(owner):
         task = instance.runtime.submit(node["task"]["spec"], idempotency_key=node["task"]["idempotency_key"])
+    request = submission(node)
     with pytest.raises(AgentTaskError, match="trusted admission evidence"):
-        local(owned, started, "submit", submission(node))
+        local(owned, started, "submit", request)
     with instance.runtime.store.connection() as connection:
         assert connection.execute("SELECT 1 FROM agent_dag_local_tasks WHERE task_id=?",
                                   (task.task_id,)).fetchone() is None
@@ -127,8 +128,9 @@ def test_admission_failure_rolls_back_task_key_and_both_witnesses(owned, monkeyp
     with instance.runtime.store.connection(write=True) as connection:
         connection.execute("CREATE TRIGGER fail_dag_admission BEFORE INSERT ON agent_dag_local_tasks "
                            "BEGIN SELECT RAISE(ABORT,'fixture rollback'); END")
+    request = submission(node)
     with pytest.raises(AgentTaskError, match="database operation failed"):
-        local(owned, started, "submit", submission(node))
+        local(owned, started, "submit", request)
     with instance.runtime.store.connection() as connection:
         for table in ("agent_tasks", "agent_request_keys", "agent_task_submissions", "agent_dag_local_tasks"):
             assert connection.execute("SELECT COUNT(*) FROM " + table).fetchone()[0] == 0

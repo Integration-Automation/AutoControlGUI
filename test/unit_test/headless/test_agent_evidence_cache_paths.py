@@ -47,8 +47,12 @@ def test_hardlinked_artifact_refuses_mutation_and_cleanup(source, name, operatio
     os.link(foreign, path)
     if operation == 'prune':
         expire(source.runtime, source.task)
+        mutate = source.runtime.prune
+    else:
+        def mutate():
+            return source.runtime.evidence.publish(source.task)
     with pytest.raises(AgentTaskError, match='ownership'):
-        source.runtime.prune() if operation == 'prune' else source.runtime.evidence.publish(source.task)
+        mutate()
     assert foreign.read_bytes() == b'keep this separate file'
     assert path.exists()
     assert source.runtime.store.get(source.task)['state'] == 'succeeded'

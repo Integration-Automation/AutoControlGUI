@@ -49,12 +49,14 @@ def test_begin_ack_is_required_before_call_and_end_ack_before_next_sequence():
 ])
 def test_wrong_incomplete_or_coerced_settlement_never_emits_end_or_allows_reuse(proof):
     controller, calls, events = RemoteEffectController(GUARD, DEVICE), [], []
+    settling = action(calls, proof=proof)
     with pytest.raises(AgentTaskError):
-        controller.perform(action(calls, proof=proof), events.append, lambda: None)
+        controller.perform(settling, events.append, lambda: None)
     assert calls == ['invoke']
     assert [event['kind'] for event in events] == ['remote_begin']
+    reuse = action(calls)
     with pytest.raises(AgentTaskError, match='recovery'):
-        controller.perform(action(calls), events.append, lambda: None)
+        controller.perform(reuse, events.append, lambda: None)
     assert calls == ['invoke']
 
 
@@ -73,11 +75,13 @@ def test_lost_ack_never_replays_and_only_begin_ack_can_allow_one_invocation(fail
         if event['kind'] == fail_phase:
             raise AgentTaskError('fixture lost ACK')
 
+    first = action(calls)
     with pytest.raises(AgentTaskError, match='ACK'):
-        controller.perform(action(calls), notify, lambda: None)
+        controller.perform(first, notify, lambda: None)
     assert calls == ([] if fail_phase == 'remote_begin' else ['invoke'])
+    second = action(calls)
     with pytest.raises(AgentTaskError, match='recovery'):
-        controller.perform(action(calls), notify, lambda: None)
+        controller.perform(second, notify, lambda: None)
 
 
 class Adapter:

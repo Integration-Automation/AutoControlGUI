@@ -86,8 +86,10 @@ def test_source_reader_honors_explicit_and_revoked_roots(controlled, tmp_path):
     path = tmp_path / "actions.jsonl"
     capture(path)
     event, = controlled.list_events()
+    source = str(path)
+    confined = PathPolicy([tmp_path / "other"])
     with pytest.raises(PathNotAllowedError):
-        ac.inspect_heal_source(str(path), event.run_id, event.step_id, path_policy=PathPolicy([tmp_path / "other"]))
+        ac.inspect_heal_source(source, event.run_id, event.step_id, path_policy=confined)
     policy = PathPolicy(use_client_roots=True)
     policy.set_client_roots([tmp_path])
     with pytest.raises(PathNotAllowedError):

@@ -71,8 +71,9 @@ def test_corrupt_or_oversized_native_ini_is_refused_without_state(tmp_path):
 def test_native_ini_errors_do_not_include_private_source_lines(tmp_path):
     import traceback
     (tmp_path / 'desktop.ini').write_text('private-credential-in-a-malformed-source\n', encoding='utf-8')
+    source = adapter(tmp_path, 'desktop')
     with pytest.raises(ac.ConfigSyncError) as caught:
-        adapter(tmp_path, 'desktop').snapshot()
+        source.snapshot()
     assert 'private-credential-in-a-malformed-source' not in ''.join(traceback.format_exception(caught.value))
 
 

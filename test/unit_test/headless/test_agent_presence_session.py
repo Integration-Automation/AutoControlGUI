@@ -71,8 +71,9 @@ def test_console_guard_construction_is_inert_and_all_checks_use_current_local_se
 def test_remote_shadow_unknown_detaching_and_malformed_native_queries_refuse_permission(field, value):
     native = Native()
     setattr(native, field, value)
+    session = console(native)
     with pytest.raises(AgentTaskError):
-        console(native).check()
+        session.check()
     if native.wts.WTSQuerySessionInformationW.calls and not native.null:
         assert native.freed
 
@@ -90,8 +91,9 @@ def test_console_guard_rechecks_session_change_instead_of_caching_initial_author
 def test_unsupported_platform_never_loads_dlls(monkeypatch):
     from je_auto_control.utils.agent_runtime import presence_session_windows
     monkeypatch.setattr(presence_session_windows, 'sys', SimpleNamespace(platform='linux'))
+    session = presence_session_windows.WindowsConsoleSession()
     with pytest.raises(AgentTaskError):
-        presence_session_windows.WindowsConsoleSession().check()
+        session.check()
 
 
 def test_observer_refuses_session_before_creating_any_window_or_raw_registration(monkeypatch):

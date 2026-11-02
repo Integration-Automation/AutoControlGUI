@@ -87,8 +87,9 @@ def test_profile_is_inert_narrows_origins_and_refuses_unreviewed_settings(fake_s
     configuration = profile()
     configuration.check(spec())
     assert configuration.settings["allowed_origins"] == ("https://allowed.test:443",)
+    outside = spec(options={"allowed_origins": ["https://outside.test"]})
     with pytest.raises(AgentTaskError, match="network origins"):
-        configuration.check(spec(options={"allowed_origins": ["https://outside.test"]}))
+        configuration.check(outside)
     for settings in ({"allowed_origins": []}, {"allowed_origins": ["https://allowed.test/path"]},
                      {"allowed_origins": ["https://allowed.test"], "argv": ["external"]}):
         with pytest.raises(AgentTaskError):
@@ -269,6 +270,8 @@ def test_browser_fill_rejects_incompatible_unicode_before_sdk_effect(fake_sdk, v
 def test_readiness_keeps_actionable_trusted_sdk_compatibility_failure(fake_sdk):
     session, opener = fake_sdk
     opener.side_effect = AgentTaskError("managed browser contract version 1 is required before startup")
+    target = BrowserTarget()
+    specification = spec()
     with pytest.raises(AgentTaskError, match="contract version 1"):
-        BrowserTarget().ready(spec())
+        target.ready(specification)
     assert session.actions == []

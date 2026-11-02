@@ -17,8 +17,9 @@ def test_live_source_owner_and_reviewer_are_required(recording, change):
         recording.users.set_role('reviewer', 'operator')
     else:
         recording.users.remove_user(change)
+    request = request_for(recording)
     with pytest.raises(AgentTaskError, match='authority changed'):
-        recording.runtime.skills.control('record', request_for(recording))
+        recording.runtime.skills.control('record', request)
     assert_no_draft(recording)
 
 
@@ -31,15 +32,17 @@ def test_revocation_after_draft_sql_rolls_back_recording(recording, monkeypatch,
         recording.users.remove_user(principal)
         return identifier
     monkeypatch.setattr(AgentSkills, '_insert_candidate', staticmethod(revoked))
+    request = request_for(recording)
     with pytest.raises(AgentTaskError, match='authority changed'):
-        recording.runtime.skills.control('record', request_for(recording))
+        recording.runtime.skills.control('record', request)
     assert_no_draft(recording)
 
 
 @pytest.mark.parametrize('recording', ['named_caller'], indirect=True)
 def test_source_owner_cannot_implicitly_adopt_an_admin_owned_reader(recording):
+    request = request_for(recording)
     with pytest.raises(AgentTaskError, match='another caller'):
-        recording.runtime.skills.control('record', request_for(recording))
+        recording.runtime.skills.control('record', request)
     assert_no_draft(recording)
 
 
@@ -61,6 +64,8 @@ def test_separate_callers_revocation_after_insert_rolls_back_draft(recording, mo
         recording.users.remove_user('manager')
         return identifier
     monkeypatch.setattr(AgentSkills, '_insert_candidate', staticmethod(revoked))
-    with authorization_scope(manager), pytest.raises(AgentTaskError, match='authority changed'):
-        recording.runtime.skills.control('record', request_for(recording))
+    request = request_for(recording)
+    with authorization_scope(manager):
+        with pytest.raises(AgentTaskError, match='authority changed'):
+            recording.runtime.skills.control('record', request)
     assert_no_draft(recording)

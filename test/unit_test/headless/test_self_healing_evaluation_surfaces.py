@@ -54,8 +54,10 @@ def test_mcp_checks_explicit_policy_on_nested_assets(tmp_path):
     manifest.write_bytes(DATASET.read_bytes())
     # The manifest itself is allowed; no asset is in its isolated root.
     ctx = ToolCallContext("evaluation", path_policy=PathPolicy([manifest]))
+    handler = tool().handler
+    target = str(manifest)
     with pytest.raises(PathNotAllowedError):
-        tool().handler(str(manifest), ctx=ctx)
+        handler(target, ctx=ctx)
 
 
 def test_mcp_cancels_between_pairs_without_partial_success():
@@ -68,7 +70,9 @@ def test_mcp_cancels_between_pairs_without_partial_success():
             ctx.cancelled_event.set()
 
     ctx.notifier = notify
+    handler = tool().handler
+    target = str(DATASET)
     with pytest.raises(OperationCancelledError):
-        tool().handler(str(DATASET), ctx=ctx)
+        handler(target, ctx=ctx)
     assert 1 in counts
     assert 2 not in counts

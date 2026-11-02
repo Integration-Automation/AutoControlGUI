@@ -54,8 +54,9 @@ def request(connection, sequence, operation, body=None):
     b'{"body":{"x":1,"x":2}}', b'{"x":NaN}', b'{"x":Infinity}', b'{"x":1e309}',
     b'{"x":"\xff"}', b'{"x":"\\ud800"}', b'{' + b'x' * 4096])
 def test_wire_rejects_nonobjects_duplicates_nonfinite_unicode_and_oversized_data(raw):
+    codec = frames()
     with pytest.raises(AgentTaskError):
-        frames().decode_frame(raw)
+        codec.decode_frame(raw)
 
 
 def test_exact_frame_bound_and_nested_finite_roundtrip():
@@ -63,22 +64,25 @@ def test_exact_frame_bound_and_nested_finite_roundtrip():
     encoded = frames().encode_frame(value)
     assert len(encoded) == 4096
     assert frames().decode_frame(encoded) == value
+    codec = frames()
     with pytest.raises(AgentTaskError):
-        frames().encode_frame({'padding': 'x' * 4083})
+        codec.encode_frame({'padding': 'x' * 4083})
     value = {'values': [1, 0.25, True, '中文', None]}
     assert frames().decode_frame(frames().encode_frame(value)) == value
 
 
 @pytest.mark.parametrize('value', [[], {'x': float('nan')}, {'x': float('inf')}, {'x': object()}])
 def test_wire_encoder_does_not_serialize_objects_or_nonfinite_values(value):
+    codec = frames()
     with pytest.raises(AgentTaskError):
-        frames().encode_frame(value)
+        codec.encode_frame(value)
 
 
 @pytest.mark.parametrize('sequence', [True, False, 0, -1, 1.0, '1', 2 ** 63])
 def test_request_sequence_requires_a_bounded_positive_integer(sequence):
+    codec = frames()
     with pytest.raises(AgentTaskError):
-        frames().validate_request({'request_id': sequence, 'operation': 'inspect', 'body': {}})
+        codec.validate_request({'request_id': sequence, 'operation': 'inspect', 'body': {}})
 
 
 @pytest.mark.parametrize('mutation', [{'pid': 123}, {'operation': 'stop'}, {'body': {'idle_seconds': 60}},
@@ -86,8 +90,9 @@ def test_request_sequence_requires_a_bounded_positive_integer(sequence):
 def test_closed_request_cannot_select_processes_methods_or_fake_idle(mutation):
     value = {'request_id': 1, 'operation': 'inspect', 'body': {}}
     value.update(mutation)
+    codec = frames()
     with pytest.raises(AgentTaskError):
-        frames().validate_request(value)
+        codec.validate_request(value)
 
 
 def test_busy_is_a_normal_result_and_source_survives_until_it_is_idle():
@@ -179,8 +184,9 @@ def test_response_snapshot_is_closed_typed_and_bound_to_the_live_generation(fiel
     generation = snapshot['generation']
     snapshot[field] = value
     response = {'request_id': 1, 'status': 'ok', 'result': snapshot}
+    codec = frames()
     with pytest.raises(AgentTaskError):
-        frames().validate_response(response, 'inspect', 1, generation)
+        codec.validate_response(response, 'inspect', 1, generation)
 
 
 @pytest.mark.parametrize('response', [
@@ -190,15 +196,17 @@ def test_response_snapshot_is_closed_typed_and_bound_to_the_live_generation(fiel
     {'request_id': 1, 'status': 'unexpected', 'result': None},
     {'request_id': 1, 'status': 'busy', 'result': None, 'input_authorized': True}])
 def test_response_status_sequence_and_fields_cannot_forge_authority(response):
+    codec = frames()
     with pytest.raises(AgentTaskError):
-        frames().validate_response(response, 'inspect', 1, 'a' * 32)
+        codec.validate_response(response, 'inspect', 1, 'a' * 32)
 
 
 def test_release_success_requires_actual_true_and_acquire_token_shape_is_exact():
+    codec = frames()
     for value in (1, 1.0, False):
         with pytest.raises(AgentTaskError):
-            frames().validate_response({'request_id': 1, 'status': 'ok', 'result': {'released': value}},
-                                       'release', 1, 'a' * 32)
+            codec.validate_response({'request_id': 1, 'status': 'ok', 'result': {'released': value}},
+                                    'release', 1, 'a' * 32)
     result = {'generation': 'a' * 32, 'lease_id': 'b' * 32}
     response = {'request_id': 1, 'status': 'ok', 'result': result}
     assert frames().validate_response(response, 'acquire', 1, 'a' * 32) == response

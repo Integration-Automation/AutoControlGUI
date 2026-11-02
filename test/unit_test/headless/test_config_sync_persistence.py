@@ -60,8 +60,9 @@ def test_retry_id_is_bound_to_account_and_content(tmp_path):
     from je_auto_control.utils.config_sync.store import ConfigRevisionConflict,ConfigStore
     store=ConfigStore(tmp_path/'config.sqlite3')
     assert store.commit('alice',bucket(),base_revision=0,operation_id='same')==1
+    changed=bucket(value='changed')
     with pytest.raises(ConfigRevisionConflict):
-        store.commit('alice',bucket(value='changed'),base_revision=0,operation_id='same')
+        store.commit('alice',changed,base_revision=0,operation_id='same')
     assert store.commit('bob',bucket('bob'),base_revision=0,operation_id='same')==1
     assert store.get('nobody') is None
 
@@ -143,8 +144,10 @@ def test_capacity_and_independent_reads_survive_reopen(tmp_path):
     assert read.sections
     read.sections.clear()
     assert store.get('alice').sections
+    bounded=ConfigStore(path,max_users=1)
+    second=bucket('bob')
     with pytest.raises(ConfigStoreFull):
-        ConfigStore(path,max_users=1).commit('bob',bucket('bob'),base_revision=0,operation_id='first')
+        bounded.commit('bob',second,base_revision=0,operation_id='first')
     assert store.get('bob') is None
 
 
@@ -153,9 +156,10 @@ def test_client_rejects_unconfirmed_conditional_commits(reply):
     from unittest.mock import patch
     from je_auto_control.utils.config_sync import ConfigSyncClient,ConfigSyncError
     client=ConfigSyncClient('https://synthetic.invalid',user_id='alice')
+    local=bucket()
     with patch.object(client,'_request',return_value=reply):
         with pytest.raises(ConfigSyncError):
-            client.push(bucket(),operation_id='first')
+            client.push(local,operation_id='first')
 
 
 def test_conditional_client_never_writes_an_unsupported_legacy_server(monkeypatch):
@@ -176,6 +180,8 @@ def test_conditional_client_never_writes_an_unsupported_legacy_server(monkeypatc
                                    content=call['body'],headers=call['headers'])
         return {'status':response.status_code,'text':response.text,'headers':dict(response.headers)}
     monkeypatch.setattr('je_auto_control.utils.http_client.http_client.perform_call',perform)
+    client=ConfigSyncClient('https://synthetic.invalid',user_id='alice')
+    local=bucket()
     with pytest.raises(ConfigSyncError):
-        ConfigSyncClient('https://synthetic.invalid',user_id='alice').push(bucket(),operation_id='first')
+        client.push(local,operation_id='first')
     assert writes==[]

@@ -180,8 +180,9 @@ def test_foreign_database_is_not_modified(tmp_path):
     path=tmp_path/'foreign.sqlite3'
     store=ConfigStore(path)
     store.commit('alice',ConfigBucket('alice'),base_revision=0,operation_id='original')
+    outbox=SyncOutbox(path)
     with pytest.raises(ConfigStoreError):
-        SyncOutbox(path).pending(endpoint='https://sync.invalid',user_id='alice')
+        outbox.pending(endpoint='https://sync.invalid',user_id='alice')
     assert store.get('alice').revision==1
 
 
@@ -189,8 +190,9 @@ def test_foreign_database_is_not_modified(tmp_path):
                                      'file:///local','https://sync.invalid/#fragment'])
 def test_credential_urls_are_rejected_before_queue_io(tmp_path,endpoint):
     path=tmp_path/'queue.sqlite3'
+    outbox=SyncOutbox(path)
     with pytest.raises(ConfigSyncError):
-        SyncOutbox(path).identity(endpoint,'alice')
+        outbox.identity(endpoint,'alice')
     assert not path.exists()
 
 
@@ -228,8 +230,9 @@ def test_namespace_epoch_is_stable_and_obsolete_edits_are_refused(tmp_path):
     current=replace(operation(),epoch=1)
     queue.enqueue(current)
     assert queue.identity(current.endpoint,'alice').epoch==1
+    obsolete=replace(current,operation_id='obsolete',epoch=0)
     with pytest.raises(FullResyncRequired):
-        queue.enqueue(replace(current,operation_id='obsolete',epoch=0))
+        queue.enqueue(obsolete)
     assert queue.pending(endpoint=current.endpoint,user_id='alice')==(current,)
 
 

@@ -86,8 +86,9 @@ def test_foreign_packages_and_descendants_never_escape_the_owned_app_scope():
     assert len(view.elements) == 2
     assert view.text == 'own label'
     assert 'secret' not in json.dumps(view.to_dict())
+    foreign_only = sample(document(node(children=[foreign])), grants=('0/1',))
     with pytest.raises(AgentTaskError):
-        parse(sample(document(node(children=[foreign])), grants=('0/1',)))
+        parse(foreign_only)
 
 
 def test_sensitive_ancestor_overrides_descendant_text_grants():
@@ -104,8 +105,9 @@ def test_sensitive_ancestor_overrides_descendant_text_grants():
     {'resource-id': 'org.foreign.app:id/secret'}, {'text': 'x' * 513},
 ])
 def test_unknown_or_ambiguous_metadata_is_refused_without_echoing_source(attrs):
+    value = sample(document(node(attrs)))
     with pytest.raises(AgentTaskError):
-        parse(sample(document(node(attrs))))
+        parse(value)
 
 
 @pytest.mark.parametrize('raw', [
@@ -118,15 +120,17 @@ def test_unknown_or_ambiguous_metadata_is_refused_without_echoing_source(attrs):
     b'<?xml version="1.0" encoding="iso-8859-1"?><hierarchy rotation="0"/>',
 ], ids=lambda value: f'xml-bytes-{len(value)}')
 def test_malformed_xml_entities_dtd_instructions_and_encodings_are_never_accepted(raw):
+    value = sample(raw)
     with pytest.raises(AgentTaskError) as error:
-        parse(sample(raw))
+        parse(value)
     assert 'private-' not in str(error.value)
 
 
 @pytest.mark.parametrize('grants', [('0/9',), ('0', '0'), ['0'], (True,), ('0/00',)])
 def test_text_authority_requires_unique_existing_host_paths(grants):
+    value = sample(grants=grants)
     with pytest.raises(AgentTaskError):
-        parse(sample(grants=grants))
+        parse(value)
 
 
 @pytest.mark.parametrize('change', ['nonce', 'window', 'size', 'size_bool', 'key'])
@@ -165,8 +169,9 @@ def test_duplicate_siblings_and_excessive_depth_or_nodes_are_rejected():
         deep = node(children=[deep])
     wide = document(node(children=[node({'index': str(index)}) for index in range(1000)]))
     for raw in (duplicate, document(deep), wide):
+        value = sample(raw)
         with pytest.raises(AgentTaskError):
-            parse(sample(raw))
+            parse(value)
 
 
 def test_cancellation_is_checked_during_decode_and_remains_the_primary_exception():
@@ -177,8 +182,9 @@ def test_cancellation_is_checked_during_decode_and_remains_the_primary_exception
         if count[0] == 3:
             raise CancelledError('cancel fixture')
 
+    value = sample(semantic_tree())
     with pytest.raises(CancelledError):
-        parse(sample(semantic_tree()), check=check)
+        parse(value, check=check)
 
 
 def test_android_reference_requires_semantic_scope_and_an_actionable_element():

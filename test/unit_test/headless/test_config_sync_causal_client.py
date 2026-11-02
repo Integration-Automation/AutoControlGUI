@@ -140,11 +140,12 @@ def test_old_server_is_refused_without_any_mutation(tmp_path, monkeypatch):
 
 def test_snapshot_receipt_rejects_uncommitted_or_mismatched_evidence(tmp_path, monkeypatch):
     _client, queue, operation, server, _calls, _perform = connected(tmp_path, monkeypatch)
+    snapshot = server.get('alice')
     with pytest.raises(ac.ConfigSyncError):
-        ac.CausalReceipt(99, server.get('alice'))
+        ac.CausalReceipt(99, snapshot)
     receipt = ac.CausalReceipt(server.get('alice').revision, server.get('alice'))
     with pytest.raises(ac.ConfigSyncError):
-        ac.CausalReceipt(receipt.revision, replace(receipt.snapshot, committed={'unknown': 1}))
+        replace(receipt.snapshot, committed={'unknown': 1})
     assert queue.status(endpoint=operation.endpoint, user_id='alice')['pending'] == 1
 
 

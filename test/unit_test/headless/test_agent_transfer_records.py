@@ -61,8 +61,9 @@ def test_kind_pruning_reclaims_source_metadata_quota_without_erasing_consent_tom
         assert connection.execute('SELECT count(*) FROM agent_transfer_intents').fetchone()[0] == 128
         assert connection.execute('SELECT count(*) FROM agent_transfer_revocations').fetchone()[0] == 128
     assert reserve(records, fresh)['id'] == fresh['id']
+    pruned = record(1)
     with pytest.raises(AgentTaskError):
-        reserve(records, record(1))
+        reserve(records, pruned)
 
 
 def transfer_records_time(records):
@@ -211,8 +212,9 @@ def test_global_revocation_tombstone_rejects_even_a_previously_absent_identity(t
     records = make_records(tmp_path, monkeypatch)
     with records.store.connection(write=True) as connection:
         records.revoke(connection, record()['id'])
+    absent = record()
     with pytest.raises(AgentTaskError):
-        reserve(records, record())
+        reserve(records, absent)
 
 
 def test_private_blob_account_is_unique_across_families_even_after_cleanup(tmp_path, monkeypatch):
@@ -220,15 +222,17 @@ def test_private_blob_account_is_unique_across_families_even_after_cleanup(tmp_p
     item = record()
     activate(records, item)
     for kind in ('export', 'import'):
+        sharing = record(2, kind=kind, account=item['account'])
         with pytest.raises(AgentTaskError):
-            reserve(records, record(2, kind=kind, account=item['account']))
+            reserve(records, sharing)
     with records.store.connection(write=True) as connection:
         records.revoke(connection, item['id'])
         records.release(connection, item['id'])
     monkeypatch.setattr(importlib.import_module(MODULE).time, 'time', lambda: 2100.0)
     assert records.prune(2100.0) == {'removed': 1, 'held': 0}
+    reused = record(3, account=item['account'], created=2100.0, review_expires=2400.0, expires=3100.0)
     with pytest.raises(AgentTaskError):
-        reserve(records, record(3, account=item['account'], created=2100.0, review_expires=2400.0, expires=3100.0))
+        reserve(records, reused)
 
 
 def test_expiry_blocks_exact_retry_and_active_metadata_without_clearing_bytes(tmp_path, monkeypatch):
@@ -247,11 +251,15 @@ def test_expiry_blocks_exact_retry_and_active_metadata_without_clearing_bytes(tm
 def test_late_failure_rolls_back_review_key_and_reservation_together(tmp_path, monkeypatch):
     records = make_records(tmp_path, monkeypatch)
     item = record()
-    with pytest.raises(RuntimeError, match='crash'):
+
+    def crash():
         with records.store.connection(write=True) as connection:
             records.reserve(connection, item)
             records.consume_review(connection, item['review'], item['key'], 'approved')
             raise RuntimeError('crash after consent before commit')
+
+    with pytest.raises(RuntimeError, match='crash'):
+        crash()
     assert records.prune(2100.0) == {'removed': 0, 'held': 0}
     assert activate(records, item)['id'] == item['id']
 
@@ -270,8 +278,9 @@ def test_global_capacity_remains_held_after_revoke(tmp_path, monkeypatch, kind, 
     extra = dict(changes)
     if extra.get('chunks') == 500:
         extra.update(size=193, chunks=193)
+    overflow = record(999, kind=kind, **extra)
     with pytest.raises(AgentTaskError):
-        reserve(records, record(999, kind=kind, **extra))
+        reserve(records, overflow)
 
 
 def test_two_writers_cannot_overbook_last_retained_grant_slot(tmp_path, monkeypatch):
@@ -302,8 +311,9 @@ def test_cleaned_but_retained_source_grants_still_count_against_metadata_limit(t
             records.reserve(connection, item)
             records.revoke(connection, item['id'])
             records.release(connection, item['id'])
+    overflow = record(999)
     with pytest.raises(AgentTaskError):
-        reserve(records, record(999))
+        reserve(records, overflow)
 
 
 def test_route_review_uses_own_family_and_exact_private_peer_binding(tmp_path, monkeypatch):
@@ -331,8 +341,9 @@ def test_review_deadline_is_not_refreshed_but_exact_consumed_retry_is_allowed(tm
     with records.store.connection(write=True) as connection:
         with pytest.raises(AgentTaskError):
             records.consume_review(connection, second['review'], second['key'], 'approved')
+    third = record(3)
     with pytest.raises(AgentTaskError):
-        reserve(records, record(3))
+        reserve(records, third)
 
 
 @pytest.mark.parametrize('change', [
@@ -344,8 +355,9 @@ def test_review_deadline_is_not_refreshed_but_exact_consumed_retry_is_allowed(tm
 ])
 def test_invalid_private_reservation_never_commits(tmp_path, monkeypatch, change):
     records = make_records(tmp_path, monkeypatch)
+    invalid = record(**change)
     with pytest.raises(AgentTaskError):
-        reserve(records, record(**change))
+        reserve(records, invalid)
     assert records.prune(2100.0) == {'removed': 0, 'held': 0}
 
 
@@ -362,11 +374,15 @@ def test_invalid_note_does_not_consume_review(tmp_path, monkeypatch, note):
 
 def test_initialize_inside_writer_does_not_implicitly_commit_unrelated_changes(tmp_path, monkeypatch):
     records = make_records(tmp_path, monkeypatch)
-    with pytest.raises(RuntimeError):
+
+    def initialize_then_fail():
         with records.store.connection(write=True) as connection:
             connection.execute('CREATE TABLE owned_marker(value TEXT)')
             connection.execute("INSERT INTO owned_marker VALUES ('must roll back')")
             records.initialize(connection)
             raise RuntimeError('rollback initialization too')
+
+    with pytest.raises(RuntimeError):
+        initialize_then_fail()
     with records.store.connection() as connection:
         assert not connection.execute("SELECT name FROM sqlite_master WHERE name='owned_marker'").fetchall()

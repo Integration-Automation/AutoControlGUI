@@ -138,8 +138,9 @@ def test_poll_deadlines_are_bounded(opened, timeout):
 
 
 def test_xinput_one_and_a_second_open_are_refused():
+    legacy = X11PresenceAPI(lambda: FakeDisplay(version=1), interactive=lambda: True)
     with pytest.raises(AgentTaskError, match='could not start|XInput 2'):
-        X11PresenceAPI(lambda: FakeDisplay(version=1), interactive=lambda: True).open(lambda: None)
+        legacy.open(lambda: None)
     api = X11PresenceAPI(FakeDisplay, interactive=lambda: True)
     api.open(lambda: None)
     with pytest.raises(AgentTaskError, match='cannot restart'):

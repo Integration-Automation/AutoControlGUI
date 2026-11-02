@@ -56,9 +56,9 @@ def test_callback_runs_after_click_and_records_explicit_result(monkeypatch, tmp_
 
 
 def test_request_validation_happens_before_any_effect():
+    verification = ac.VerificationRequest(verifier=lambda: True)
     with pytest.raises(ac.SelfHealRequestError):
-        ac.SelfHealRequest(description="submit", operation="locate",
-                           verification=ac.VerificationRequest(verifier=lambda: True))
+        ac.SelfHealRequest(description="submit", operation="locate", verification=verification)
 
 
 @pytest.fixture
@@ -142,9 +142,10 @@ def test_unavailable_verifier_refuses_before_locate_or_input(located, monkeypatc
                         lambda *_a, **_k: pytest.fail("must preflight before locating"))
     bound = Verifier()
     bound.available = False
+    request = ac.SelfHealRequest(template_path="fake.png", operation="click", log=log,
+                                 verification=ac.VerificationRequest(description="done", backend=bound))
     with pytest.raises(VLMNotAvailableError):
-        ac.self_heal_run(ac.SelfHealRequest(template_path="fake.png", operation="click", log=log,
-                                            verification=ac.VerificationRequest(description="done", backend=bound)))
+        ac.self_heal_run(request)
     assert calls == []
     assert log.list_events() == []
 
@@ -159,9 +160,10 @@ def test_verifier_failure_propagates_once_and_never_retries(located, signal_type
         calls.append("verify")
         raise signal
 
+    request = ac.SelfHealRequest(template_path="fake.png", operation="click", log=log,
+                                 verification=ac.VerificationRequest(verifier=verify))
     with pytest.raises(signal_type) as caught:
-        ac.self_heal_run(ac.SelfHealRequest(template_path="fake.png", operation="click", log=log,
-                                            verification=ac.VerificationRequest(verifier=verify)))
+        ac.self_heal_run(request)
     assert caught.value is signal
     assert calls == ["click", "verify"]
     events = log.list_events()
@@ -183,18 +185,20 @@ def test_audit_failure_preserves_original_verifier_exception(located, monkeypatc
         raise signal
 
     monkeypatch.setattr(log, "append", lambda *_: (_ for _ in ()).throw(TypeError("audit failed")))
+    request = ac.SelfHealRequest(template_path="fake.png", operation="click", log=log,
+                                 verification=ac.VerificationRequest(verifier=fail))
     with pytest.raises(RuntimeError) as caught:
-        ac.self_heal_run(ac.SelfHealRequest(template_path="fake.png", operation="click", log=log,
-                                            verification=ac.VerificationRequest(verifier=fail)))
+        ac.self_heal_run(request)
     assert caught.value is signal
 
 
 @pytest.mark.parametrize("value", [1, "yes", None])
 def test_callback_rejects_truthy_or_unknown_values(located, value):
     _, log = located
+    request = ac.SelfHealRequest(template_path="fake.png", operation="click", log=log,
+                                 verification=ac.VerificationRequest(verifier=lambda: value))
     with pytest.raises(ac.SelfHealRequestError, match="return bool"):
-        ac.self_heal_run(ac.SelfHealRequest(template_path="fake.png", operation="click", log=log,
-                                            verification=ac.VerificationRequest(verifier=lambda: value)))
+        ac.self_heal_run(request)
     event, = log.list_events()
     assert event.verified is None
     assert event.operation_status == "verification_error"
@@ -204,9 +208,10 @@ def test_vlm_rejects_non_boolean_result(located, monkeypatch):
     _, log = located
     monkeypatch.setattr("je_auto_control.utils.monitor_layout.logical_frame.grab_logical",
                         lambda *_a, **_k: (Image.new("RGB", (8, 8)), 100, 200))
+    request = ac.SelfHealRequest(template_path="fake.png", operation="click", log=log,
+                                 verification=ac.VerificationRequest(description="done", backend=Verifier(1)))
     with pytest.raises(VLMRequestError, match="return bool"):
-        ac.self_heal_run(ac.SelfHealRequest(template_path="fake.png", operation="click", log=log,
-                                            verification=ac.VerificationRequest(description="done", backend=Verifier(1))))
+        ac.self_heal_run(request)
     assert log.list_events()[0].verified is None
 
 

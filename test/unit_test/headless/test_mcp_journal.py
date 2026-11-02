@@ -131,9 +131,11 @@ def test_progress_and_cancellation_reach_nested_loop_steps(tmp_path):
             ctx.cancelled_event.set()
     ctx.notifier = notify
     path = tmp_path / "cancelled.jsonl"
+    capture = _tool("ac_journal_capture")
+    arguments = {"path": str(path), "actions": [["AC_loop", {"times": 3,
+                 "body": [["AC_set_var", {"name": "x", "value": 1}]]}]]}
     with pytest.raises(OperationCancelledError):
-        _tool("ac_journal_capture").invoke({"path": str(path), "actions": [["AC_loop", {"times": 3,
-               "body": [["AC_set_var", {"name": "x", "value": 1}]]}]]}, ctx=ctx)
+        capture.invoke(arguments, ctx=ctx)
     assert updates == [0, 1]
     assert [event.status for event in ac.read_events(path)] == ["incomplete", "incomplete", "ok", "cancelled"]
 
@@ -142,8 +144,10 @@ def test_cancellation_before_capture_has_no_file_effect(tmp_path):
     path = tmp_path / "unused.jsonl"
     ctx = ToolCallContext(18)
     ctx.cancelled_event.set()
+    capture = _tool("ac_journal_capture")
+    arguments = {"path": str(path), "actions": [["AC_screen_size"]]}
     with pytest.raises(OperationCancelledError):
-        _tool("ac_journal_capture").invoke({"path": str(path), "actions": [["AC_screen_size"]]}, ctx=ctx)
+        capture.invoke(arguments, ctx=ctx)
     assert not path.exists()
 
 
@@ -160,8 +164,10 @@ def test_read_cancellation_keeps_the_source_unchanged(tmp_path, monkeypatch):
             ctx.cancelled_event.set()
         check()
     monkeypatch.setattr(ctx, "check_cancelled", cancel)
+    reader = _tool("ac_journal_read")
+    arguments = {"path": str(path)}
     with pytest.raises(OperationCancelledError):
-        _tool("ac_journal_read").invoke({"path": str(path)}, ctx=ctx)
+        reader.invoke(arguments, ctx=ctx)
     assert path.read_bytes() == before
 
 

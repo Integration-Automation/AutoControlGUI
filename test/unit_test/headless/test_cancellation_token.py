@@ -45,23 +45,26 @@ def test_token_cancel_wakes_its_waiter_and_stops_further_progress():
 
 @pytest.mark.parametrize('timeout', [-1, float('inf'), float('-inf'), float('nan'), 1e308])
 def test_wait_refuses_unbounded_or_negative_intervals(timeout):
+    token = CancellationToken(1)
     with pytest.raises(ValueError, match='finite nonnegative'):
-        CancellationToken(1).wait(timeout)
+        token.wait(timeout)
 
 
 @pytest.mark.parametrize('completed', [-1, True, 1.5, '1'])
 def test_invalid_completed_counts_are_rejected_before_notifying(completed):
     observations = []
+    token = CancellationToken(1, observations.append)
     with pytest.raises(ValueError, match='nonnegative integer'):
-        CancellationToken(1, observations.append).report(completed)
+        token.report(completed)
     assert observations == []
 
 
 @pytest.mark.parametrize('total', [-1, True, 0, 1.5, '3'])
 def test_invalid_totals_are_rejected_before_notifying(total):
     observations = []
+    token = CancellationToken(1, observations.append)
     with pytest.raises(ValueError, match='at least as large'):
-        CancellationToken(1, observations.append).report(1, total)
+        token.report(1, total)
     assert observations == []
 
 

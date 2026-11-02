@@ -108,9 +108,10 @@ def test_failed_readiness_restores_exact_scope_and_default_callback():
             assert context.current_operation() is parent
             raise AgentTaskError("owned failure")
 
+    target = Target()
     with context.operation_scope(parent):
         with pytest.raises(AgentTaskError, match="owned failure"):
-            context.ready_with_takeover(Target(), spec, lambda: None)
+            context.ready_with_takeover(target, spec, lambda: None)
         assert context.current_operation() is parent
         assert context.current_takeover() is parent.takeover
     assert context.current_takeover() is None
