@@ -196,7 +196,13 @@ def test_failed_client_thread_start_retires_the_accepted_connection(monkeypatch)
     client = connected(pipe)
     try:
         assert client.closed.wait(1)
-        assert 'source-close' in events and server.status()['failed']
+        # The server drops the connection first and retires its source after it:
+        # on a slow runner the client sees the close before the retirement lands.
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and not ('source-close' in events and server.status()['failed']):
+            threading.Event().wait(0.01)
+        assert 'source-close' in events
+        assert server.status()['failed']
     finally:
         client.close()
         with pytest.raises(AgentTaskError):
