@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.0] - 2026-11-02
+
+Python 3.11 is now the minimum. Pillow 13.0.0 and dnspython 2.9.0, the releases that fix the advisories
+Dependabot reports, need 3.11. While 3.10 was supported, the package had to pin Pillow 12.3.0 for it, and the
+lock kept dnspython 2.8.0. `pip` on Python 3.10 keeps installing 1.1.0.
+
+- `requires-python` is `>=3.11`. The dependency is a single `pillow==13.0.0`, and the dnspython constraint
+  applies on every interpreter.
+- The CI cells that ran 3.10 to cover Windows, Ubuntu and macOS now run 3.11, and mypy checks against 3.11.
+- `je_auto_control.api` is unchanged.
+
 ## [1.1.0] - 2026-11-02
 
 1.1.0 merges the development line into the release line. The development line re-implemented several

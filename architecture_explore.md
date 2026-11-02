@@ -34,7 +34,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | `test_*.py` 測試檔／測試函式 | 846 / 8,825 |
 | 範例腳本 | 45 |
 
-**技術基線**：Python ≥ 3.10、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
+**技術基線**：Python ≥ 3.11、MIT 授權、必要相依只有 `je_open_cv`／`opencv-python`／`pillow`／`mss`／
 `defusedxml`／`cryptography`（加上各平台專屬的 pyobjc、python-Xlib）；其餘全部是選用 extras
 （`gui`、`webrtc`、`signaling`、`discovery`、`pdf`、`office`、`fuzzy`、`s3`、`locale`、`audio`）。
 大量子系統刻意只用標準庫實作（REST 伺服器、JSON Schema、JWT、TOTP、WebSocket 框架、ACME、
@@ -1435,7 +1435,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，只需要 PySide6
 | 檔案 | 用途 |
 | --- | --- |
 | `stable.yml` | 每次 push／PR 到 `main` 與每日排程跑 Windows 五版本的示範腳本；合併到 main 後由 `scripts/stable_release.py` 決定版本（`pyproject.toml` 宣告的版本已有 tag 就加一個 patch，還沒有 tag 就照寫的發，minor／major 版就是這樣發的）並上傳 PyPI（使用 `PYPI_API_TOKEN`）。`publish` job 只安裝雜湊鎖定的 `.github/requirements/publish.txt`（`build`、`twine` 與建置後端 `setuptools`，由同目錄的 `publish.in` 用 `uv pip compile` 產生），並以 `python -m build --no-isolation` 建置，所以建置後端也是鎖定的那一版。 |
-| `dev.yml` | 每次 push／PR 到 `dev` 跑 headless pytest（四格：Windows 的 3.10 與 3.14、Ubuntu 3.14、macOS 3.10，都是 `quality.yml` 九格裡的格子，不量 coverage）。push 通過後由 `publish-dev` job 用 `dev.toml` 建置並上傳 `je_auto_control_dev`（同一個 `PYPI_API_TOKEN`）；只有這個 commit 仍是 `dev` 的最新一筆、而且 wheel 內容跟 PyPI 最新一版不同時才上傳，版本由 `scripts/dev_release.py` 向 PyPI 查，不回寫 repo。`publish-dev` 跟 `stable.yml` 的 `publish` 一樣只安裝 `.github/requirements/publish.txt` 並以 `python -m build --no-isolation` 建置；`test_publish_tooling_lock.py` 守住這兩個 job 的安裝行、建置指令，以及鎖定版本滿足 `pyproject.toml`／`dev.toml` 的 `build-system.requires`。 |
+| `dev.yml` | 每次 push／PR 到 `dev` 跑 headless pytest（四格：Windows 的 3.11 與 3.14、Ubuntu 3.14、macOS 3.11，都是 `quality.yml` 九格裡的格子，不量 coverage）。push 通過後由 `publish-dev` job 用 `dev.toml` 建置並上傳 `je_auto_control_dev`（同一個 `PYPI_API_TOKEN`）；只有這個 commit 仍是 `dev` 的最新一筆、而且 wheel 內容跟 PyPI 最新一版不同時才上傳，版本由 `scripts/dev_release.py` 向 PyPI 查，不回寫 repo。`publish-dev` 跟 `stable.yml` 的 `publish` 一樣只安裝 `.github/requirements/publish.txt` 並以 `python -m build --no-isolation` 建置；`test_publish_tooling_lock.py` 守住這兩個 job 的安裝行、建置指令，以及鎖定版本滿足 `pyproject.toml`／`dev.toml` 的 `build-system.requires`。 |
 | `release.yml` | 發佈流程（上傳步驟目前關閉）。 |
 | `quality.yml` | ruff、bandit、dependency review、九格矩陣的 headless pytest（含 coverage 地板）與 mypy。 |
 | `platform-smoke.yml` | 跨平台煙霧測試。 |

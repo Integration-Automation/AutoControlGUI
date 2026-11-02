@@ -5,7 +5,7 @@ Installation
 Requirements
 ============
 
-* **Python** >= 3.10
+* **Python** >= 3.11
 * **pip** >= 19.3
 
 Basic Installation

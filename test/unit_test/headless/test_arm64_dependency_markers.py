@@ -71,10 +71,8 @@ ENVIRONMENTS: Dict[str, Dict[str, str]] = {
 def _dependencies() -> List[str]:
     """Return the project's required dependencies, verbatim.
 
-    Read with a small regex rather than `tomllib`, which is 3.11+ while this
-    project supports 3.10 back to the floor. A guard that cannot run on the
-    oldest supported interpreter is not a guard, and using `tomllib` here
-    took the whole 3.10 collection down with it.
+    Read with a small regex rather than `tomllib`: the dependency list is all
+    this needs.
     """
     text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     block = re.search(r"^dependencies = \[(.*?)^\]", text, re.S | re.M)
@@ -125,8 +123,8 @@ def test_the_unavailable_wheels_are_marked_off_windows_arm64(name: str) -> None:
 def test_the_available_wheels_are_not_marked_off_anything(name: str) -> None:
     """Pillow, mss and defusedxml ship for arm64 and carry no platform marker.
 
-    A requirement may be split by Python version (Pillow 13 needs 3.11, so
-    3.10 keeps 12.3.0), but no line may depend on the platform.
+    A requirement may be split by Python version, but no line may depend on
+    the platform.
     """
     requirements = _requirements(name)
     assert requirements, f"{name} is missing from the dependencies"

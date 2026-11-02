@@ -6,12 +6,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "je_auto_control"
-version = "1.1.0"
+version = "1.2.0"
 authors = [
     { name = "JE-Chen", email = "jechenmailman@gmail.com" },
 ]
 description = "GUI Automation Framework"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license-files = ["LICENSE"]
 dependencies = [
     # Three requirements below carry the same marker, and it excludes exactly
@@ -45,10 +45,8 @@ dependencies = [
     # OpenCV release cannot silently change cv2 return shapes under us.
     "opencv-python>=4.8,<6; sys_platform != 'win32' or platform_machine != 'ARM64'",
     # Pillow 13.0.0 fixes the 12.x advisories (critical: GHSA-v9pv-5gc8-w2m6,
-    # GHSA-5x8w-8jj5-q52h) but needs Python >=3.11; 3.10 keeps 12.3.0, the
-    # newest release it can install.
-    "pillow==12.3.0; python_version < '3.11'",
-    "pillow==13.0.0; python_version >= '3.11'",
+    # GHSA-5x8w-8jj5-q52h).
+    "pillow==13.0.0",
     "pyobjc-core==12.2.2;platform_system=='Darwin'",
     "pyobjc==12.2.2;platform_system=='Darwin'",
     # The BSDs run the same X11 stack, and platform_system is the kernel
@@ -60,7 +58,6 @@ dependencies = [
     "cryptography>=50.0.0; sys_platform != 'win32' or platform_machine != 'ARM64'"
 ]
 classifiers = [
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -129,10 +126,9 @@ locale = ["babel>=2.12"]
 audio = ["pycaw>=20240210"]
 
 # Lock-only security floor for a transitive dependency (uv.lock; the wheel
-# metadata is unchanged). dnspython 2.9.0 fixes the advisory in 2.8.0 but
-# needs Python >=3.11, so 3.10 keeps 2.8.0.
+# metadata is unchanged). dnspython 2.9.0 fixes the advisory in 2.8.0.
 [tool.uv]
-constraint-dependencies = ["dnspython>=2.9.0; python_version >= '3.11'"]
+constraint-dependencies = ["dnspython>=2.9.0"]
 
 # CLAUDE.md's 120-character line limit. Without this table CI's `ruff check`
 # ran the default rule set, which has no E501, so the documented limit was
@@ -246,7 +242,7 @@ precision = 2
 fail_under = 81
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_redundant_casts = true
 check_untyped_defs = true
 no_implicit_optional = true
@@ -334,7 +330,7 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 # numpy's stubs use `type` statements, which mypy rejects while parsing under
-# python_version 3.10 — skip them; the stable API does not expose numpy types.
+# python_version below 3.12 — skip them; the stable API does not expose numpy types.
 # The top-level `numpy` module must be listed explicitly: `numpy.*` only matches
 # submodules, so numpy>=2.5's PEP 695 statements in numpy/__init__.pyi would leak.
 # `follow_imports_for_stubs` is required — otherwise `follow_imports = skip` is
