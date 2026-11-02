@@ -68,8 +68,9 @@ class _OwnedPause:
             result['task_id'] = identifier
             self._call(node, 'pause', {'task_id': identifier})
         except _ERRORS:
-            # Missing acknowledgement cannot clear the claim or certify remote input retirement.
-            return result
+            # Missing acknowledgement cannot clear the claim or certify remote input retirement,
+            # so the result keeps its requires_review outcome.
+            pass
         return result
 
     def _local_admission(self, node: dict, identifier: str) -> None:

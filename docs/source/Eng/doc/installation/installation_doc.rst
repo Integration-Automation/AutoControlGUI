@@ -12,7 +12,7 @@ Install from PyPI
 Requirements
 ============
 
-* Python 3.10 or higher
+* Python 3.11 or higher
 * pip 19.3 or higher
 
 With GUI Support

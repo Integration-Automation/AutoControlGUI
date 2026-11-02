@@ -218,8 +218,9 @@ def test_transfer_marker_cannot_substitute_for_required_sdk_methods(monkeypatch,
 
 
 def test_file_grants_require_explicit_roots_in_profiles_and_task_policies(tmp_path):
+    specification = scoped(tmp_path, roots=[])
     with pytest.raises(AgentTaskError, match="roots"):
-        TaskPolicy(scoped(tmp_path, roots=[]))
+        TaskPolicy(specification)
     with pytest.raises(AgentTaskError, match="roots"):
         AgentTargetProfile(name="files-browser", kind="browser", allowed_tools=("AC_browser_download",),
                            settings={"allowed_origins": ["https://allowed.test"]})

@@ -41,7 +41,8 @@ def test_shared_surfaces_publish_the_original_trial_with_explicit_completion(tri
                 value = tools['ac_agent_skill'].invoke({'operation': 'accept', 'request': request})
         else:
             value = AgentRuntimeClient(connection).call('skill', {'operation': 'accept', 'request': request})
-        assert value['publication']['task_id'] == trial.task_id and value['version'] == 1
+        assert value['publication']['task_id'] == trial.task_id
+        assert value['version'] == 1
         assert value['publication']['completion_review']['task_id'] == trial.child_id
         assert trial.runtime.get(trial.task_id).state == 'paused'
         assert 'accept' in tools['ac_agent_skill'].input_schema['properties']['operation']['enum']

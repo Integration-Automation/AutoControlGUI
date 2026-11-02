@@ -77,7 +77,8 @@ def test_two_host_dag_deduplicates_and_keeps_local_principal_and_witnesses_local
         assert "origin_policies" not in remote_row["spec"]["options"]
         assert str(store.path) not in str(remote_row)
         assert witness.identifier not in str(remote_row)
-        assert not local.runtime._leases and not remote.runtime._leases
+        assert not local.runtime._leases
+        assert not remote.runtime._leases
     finally:
         local.close()
         remote.close()

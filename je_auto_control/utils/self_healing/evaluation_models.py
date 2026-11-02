@@ -48,14 +48,15 @@ def png_size(frame: bytes) -> tuple[int, int]:
     if not isinstance(frame, bytes) or not frame or len(frame) > 16 * 1024 * 1024:
         raise HealingEvaluationError("frame must be immutable PNG bytes, at most 16 MiB")
     # pylint: disable-next=import-outside-toplevel  # reason: importing the facade does not initialize image decoders
-    from PIL import Image, UnidentifiedImageError
+    from PIL import Image
     try:
         with Image.open(io.BytesIO(frame)) as image:
             if image.format != "PNG" or image.width * image.height > 16_000_000:
                 raise HealingEvaluationError("frame must be a PNG of at most 16 million pixels")
             image.verify()
             return image.size
-    except (OSError, UnidentifiedImageError, Image.DecompressionBombError, SyntaxError) as error:
+    # OSError covers PIL.UnidentifiedImageError.
+    except (OSError, Image.DecompressionBombError, SyntaxError) as error:
         raise HealingEvaluationError("cannot decode evaluation PNG") from error
 
 

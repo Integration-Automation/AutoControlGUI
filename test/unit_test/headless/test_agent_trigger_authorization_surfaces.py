@@ -18,7 +18,8 @@ from .test_agent_trigger_reauthorization import retired_trigger as retired_trigg
 def test_cli_exposes_review_and_explicit_creation():
     for operation in ("review_authorization", "create_authorized"):
         parsed = build_parser().parse_args(["agent-task", "trigger", operation, "review.json"])
-        assert parsed.trigger_operation == operation and parsed.request == "review.json"
+        assert parsed.trigger_operation == operation
+        assert parsed.request == "review.json"
 
 
 def test_authenticated_http_preserves_owner_and_does_not_dispatch_inherited_queued_tasks(retired_trigger, monkeypatch):
@@ -42,7 +43,8 @@ def test_authenticated_http_preserves_owner_and_does_not_dispatch_inherited_queu
             start.assert_not_called()
             duplicate = client.call("trigger", {"operation": "fire", "request": {"trigger_id": child,
                 "event_key": "old-event", "payload": {"row": 1}}})
-            assert duplicate["duplicate"] and duplicate["task_id"] == old_task
+            assert duplicate["duplicate"]
+            assert duplicate["task_id"] == old_task
             start.assert_not_called()
             proof = client.call("trigger", {"operation": "get", "request": {"trigger_id": child}})
             assert proof["trigger"]["reauthorization"]["actor"] == "alice"
@@ -72,14 +74,17 @@ def test_gui_review_prepares_separate_explicit_request_and_refuses_wrong_selecti
         tab._present_result({"trigger_id": "source-a", "snapshot": "a" * 64,
             "authorization_review": "b" * 64, "spec": {"goal": "future only"}, "approval_required": True})
         request = json.loads(tab._trigger_config.toPlainText())
-        assert request["note"] == "" and request["authorization_review"] == "b" * 64
-        assert tab._scope.toPlainText() == original_scope and calls == []
+        assert request["note"] == ""
+        assert request["authorization_review"] == "b" * 64
+        assert tab._scope.toPlainText() == original_scope
+        assert calls == []
         tab._trigger_operation.setCurrentIndex(tab._trigger_operation.findData("create_authorized"))
         dict(tab.menu_actions())["agent_trigger_apply"]()
         assert calls.pop() == ("trigger", {"operation": "create_authorized", "request": request})
         tab._trigger_id.setText("source-b")
         dict(tab.menu_actions())["agent_trigger_apply"]()
-        assert calls == [] and "selected registration" in tab._status.text()
+        assert calls == []
+        assert "selected registration" in tab._status.text()
         tab._view_task = "trigger:source-a"
         tab._handle = None
         tab._completed(TaskOutcome(100, "ok", {"trigger_id": "late-created"}))

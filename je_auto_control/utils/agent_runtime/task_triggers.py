@@ -22,6 +22,7 @@ from je_auto_control.utils.rbac.authorization import AuthorizationContext, Autho
 from je_auto_control.utils.rbac.deferred import DeferredAuthorization
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
+_TRIGGER_PREFIX = "trigger:"
 OPERATIONS = ("register", "list", "get", "enable", "disable", "fire", "remove") + AUTHORIZATION_OPERATIONS
 
 
@@ -61,11 +62,10 @@ class AgentTriggers:
         spec = self.runtime._validated_spec(value["spec"])
         config = validate_config(value["kind"], value.get("config", {}), TaskPolicy(spec))
         identifier, now = uuid.uuid4().hex, time.time()
-        with DeferredAuthorization.capture().context_scope() as owner:
-            with DeferredAuthorization(owner).scope():
-                metadata = {"user_id": owner.user_id, "role": owner.role,
-                            "store_path": owner.store_path} if owner else {}
-                self._insert(identifier, value, spec, config, metadata, now)
+        with DeferredAuthorization.capture().context_scope() as owner, DeferredAuthorization(owner).scope():
+            metadata = {"user_id": owner.user_id, "role": owner.role,
+                        "store_path": owner.store_path} if owner else {}
+            self._insert(identifier, value, spec, config, metadata, now)
         return {"trigger_id": identifier, "enabled": True, "kind": value["kind"]}
 
     def _insert(self, identifier: str, value: dict, spec: AgentTaskSpec, config: dict, owner: dict, now: float) -> None:
@@ -113,7 +113,7 @@ class AgentTriggers:
             with self.runtime.store.connection() as connection:
                 metadata = authorization_metadata(connection, row["id"])
             return {"trigger": {**{key: item for key, item in row.items() if key != "owner"}, **metadata}}
-        with self.runtime._lock("trigger:" + row["id"]):
+        with self.runtime._lock(_TRIGGER_PREFIX + row["id"]):
             row = self._row(row["id"])
             if operation in {"enable", "disable"}:
                 return self._enabled(row, operation == "enable")
@@ -158,9 +158,8 @@ class AgentTriggers:
             raise AgentTaskError("trigger event payload exceeds sixty-four kilobytes")
         digest = _digest(event_key)
         owner = AuthorizationContext(**row["owner"]) if row["owner"] else None
-        with DeferredAuthorization(owner).scope():
-            with self.runtime._lock("trigger:" + row["id"]):
-                return self._fire_owned(row, digest, payload)
+        with DeferredAuthorization(owner).scope(), self.runtime._lock(_TRIGGER_PREFIX + row["id"]):
+            return self._fire_owned(row, digest, payload)
 
     def _fire_owned(self, row: dict, digest: str, payload: Any) -> dict:
         with self.runtime.store.connection() as connection:
@@ -186,7 +185,7 @@ class AgentTriggers:
         spec["inputs"] = {**spec.get("inputs", {}), "event": {"key": digest, "payload": payload}}
         spec["options"] = {**spec.get("options", {}), "trigger": {"id": row["id"], "event": digest}}
         validated = self.runtime._validated_spec(spec)
-        task = self.runtime._create_task(validated, "trigger:" + row["id"] + ":" + digest,
+        task = self.runtime._create_task(validated, _TRIGGER_PREFIX + row["id"] + ":" + digest,
                                          (row["id"], digest, _digest(payload)))
         if self.runtime.background is not None:
             self.runtime.background.start(task.task_id)

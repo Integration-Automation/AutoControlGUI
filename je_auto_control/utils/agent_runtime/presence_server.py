@@ -81,7 +81,7 @@ class PresenceServer:
         if self._life.source is not None:
             try:
                 self._life.source.close()
-            except (OSError, RuntimeError, ValueError, AgentTaskError) as cleanup:
+            except (OSError, RuntimeError, ValueError) as cleanup:
                 with self._mutex:
                     self._life.failures.append(type(cleanup).__name__)
 
@@ -93,7 +93,7 @@ class PresenceServer:
                 except queue.Full:
                     continue
                 self._accept_one()
-        except (OSError, EOFError, RuntimeError, ValueError, AgentTaskError) as error:
+        except (OSError, EOFError, RuntimeError, ValueError) as error:
             if not self._life.stop.is_set():
                 self._failure(error)
 
@@ -126,7 +126,7 @@ class PresenceServer:
             protocol = PresenceProtocol(self._life.source)
             peer = server_handshake(connection, self._security, protocol.generation)
             self._exchange(connection, protocol, peer)
-        except (OSError, EOFError, ValueError, AgentTaskError):
+        except (OSError, EOFError, ValueError):
             pass  # reason: malformed/disconnected clients retire their own tokens, not the shared source
         finally:
             self._retire_client(connection, protocol, peer)
@@ -149,7 +149,7 @@ class PresenceServer:
                     cleanup.callback(peer.close)
                 if protocol is not None:
                     cleanup.callback(protocol.close)
-        except (OSError, RuntimeError, ValueError, AgentTaskError) as error:
+        except (OSError, RuntimeError, ValueError) as error:
             self._failure(error)
         finally:
             with self._mutex:
@@ -167,7 +167,7 @@ class PresenceServer:
             try:
                 if resource is not None:
                     resource.close()
-            except (OSError, RuntimeError, ValueError, AgentTaskError) as error:
+            except (OSError, RuntimeError, ValueError) as error:
                 errors.append(type(error).__name__)
         self._join([self._life.acceptor, *clients.values()])
         if errors or self._life.failures:

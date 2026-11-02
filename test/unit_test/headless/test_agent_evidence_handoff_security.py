@@ -35,9 +35,10 @@ def test_grant_never_applies_to_another_binding(handoff, field):
 def test_recipient_cannot_issue_its_own_grant_using_an_admins_review_token(handoff):
     with authorization_scope(handoff.reviewer):
         review = handoff.runtime.recovery.control('review_handoff', request_for(handoff))
+    request = {**request_for(handoff), 'review': review['handoff_review'],
+               'note': 'Cannot approve someone else\'s evidence'}
     with pytest.raises(AgentTaskError, match='another caller'):
-        handoff.runtime.recovery.control('create_handoff', {**request_for(handoff),
-            'review': review['handoff_review'], 'note': 'Cannot approve someone else\'s evidence'})
+        handoff.runtime.recovery.control('create_handoff', request)
     with handoff.runtime.store.connection() as connection:
         assert connection.execute('SELECT COUNT(*) FROM agent_evidence_handoffs').fetchone()[0] == 0
 
@@ -114,15 +115,17 @@ def test_a_consent_record_never_extends_the_terminal_evidence_deadline(handoff, 
     assert handoff.runtime.recovery.control('get_handoff', {'handoff_id': grant['id']})['handoff']['state'] == 'expired'
     with pytest.raises(AgentTaskError, match='expired'):
         consume(handoff, grant['id'])
+    request = request_for(handoff)
     with authorization_scope(handoff.reviewer), pytest.raises(AgentTaskError, match='expired'):
-        handoff.runtime.recovery.control('review_handoff', request_for(handoff))
+        handoff.runtime.recovery.control('review_handoff', request)
 
 
 def test_grants_require_private_original_admission_not_the_existing_public_tags(handoff):
     with handoff.runtime.store.connection(write=True) as connection:
         connection.execute('DELETE FROM agent_dag_local_tasks WHERE task_id=?', (handoff.source,))
+    request = request_for(handoff)
     with authorization_scope(handoff.reviewer), pytest.raises(AgentTaskError, match='real bound local DAG admission'):
-        handoff.runtime.recovery.control('review_handoff', request_for(handoff))
+        handoff.runtime.recovery.control('review_handoff', request)
 
 
 @pytest.mark.parametrize('field', ['budget', 'inputs', 'roots', 'success_criteria'])
@@ -138,17 +141,19 @@ def test_changed_scope_cannot_issue_a_handoff_even_when_the_child_succeeded(hand
         row['spec']['success_criteria'][-1]['value'] = 'a different goal'
     with handoff.runtime.store.connection(write=True) as connection:
         connection.execute('UPDATE agent_tasks SET spec=? WHERE id=?', (json.dumps(row['spec']), handoff.child))
+    request = request_for(handoff)
     with authorization_scope(handoff.reviewer), pytest.raises(AgentTaskError):
-        handoff.runtime.recovery.control('review_handoff', request_for(handoff))
+        handoff.runtime.recovery.control('review_handoff', request)
 
 
 @pytest.mark.parametrize('participant', ['source', 'child'])
 def test_unwinding_input_never_supplies_handoff_evidence(handoff, participant):
     identifier = getattr(handoff, participant)
+    request = request_for(handoff)
     handoff.runtime._executing.add(identifier)
     try:
         with authorization_scope(handoff.reviewer), pytest.raises(AgentTaskError, match='input has not retired'):
-            handoff.runtime.recovery.control('review_handoff', request_for(handoff))
+            handoff.runtime.recovery.control('review_handoff', request)
     finally:
         handoff.runtime._executing.discard(identifier)
 
@@ -163,11 +168,12 @@ def test_grant_chain_bound_is_sixteen_real_links(handoff):
                 current = connection.execute('SELECT source_task FROM agent_task_recoveries WHERE task_id=?',
                                               (current,)).fetchone()[0]
                 links += 1
+        request = request_for(handoff)
         if links == 16:
-            assert handoff.runtime.recovery.control('review_handoff', request_for(handoff))['approval_required']
+            assert handoff.runtime.recovery.control('review_handoff', request)['approval_required']
         else:
             with pytest.raises(AgentTaskError, match='bounded real recovery chain'):
-                handoff.runtime.recovery.control('review_handoff', request_for(handoff))
+                handoff.runtime.recovery.control('review_handoff', request)
 
 
 def test_exact_concurrent_consent_retries_create_one_active_grant(handoff):

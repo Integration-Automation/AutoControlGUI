@@ -30,6 +30,7 @@ MCP_PATH_ROOTS_ENV = "JE_AUTOCONTROL_MCP_PATH_ROOTS"
 MCP_CLIENT_ROOTS_ENV = "JE_AUTOCONTROL_MCP_PATH_ROOTS_FROM_CLIENT"
 
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
+_POLICY_RETIRED = "origin path policy has retired"
 
 
 class PathPolicy:
@@ -80,7 +81,7 @@ class PathPolicy:
         resolved = tuple(_canonical(root) for root in roots)
         with self._lock:
             if self._origin_closed:
-                raise PathNotAllowedError("origin path policy has retired")
+                raise PathNotAllowedError(_POLICY_RETIRED)
             if self._origin_witness is not None:
                 self._origin_witness.update(self._static + resolved)
             self._client = resolved
@@ -95,7 +96,7 @@ class PathPolicy:
             return None
         with self._lock:
             if self._origin_closed:
-                raise PathNotAllowedError("origin path policy has retired")
+                raise PathNotAllowedError(_POLICY_RETIRED)
             if self._origin_witness is None:
                 from je_auto_control.utils.agent_runtime.origin_policy import OriginWitness
                 self._origin_witness = OriginWitness(self._static + self._client)
@@ -142,7 +143,7 @@ class PathPolicy:
     def _check_origin_active(self) -> None:
         with self._lock:
             if self._origin_closed:
-                raise PathNotAllowedError("origin path policy has retired")
+                raise PathNotAllowedError(_POLICY_RETIRED)
 
 
 __all__ = ["MCP_CLIENT_ROOTS_ENV", "MCP_PATH_ROOTS_ENV", "PathPolicy"]

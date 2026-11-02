@@ -73,18 +73,23 @@ def test_native_load_runs_in_worker_without_configuration_and_opens_only_by_expl
     idle(app, panel)
     assert panel._status_key == 'done', panel._status.text()
     profile = panel._native_profile
-    assert isinstance(profile, ac.LoadedSyncProfile) and threads and all(item != current_thread for item in threads)
-    assert profile.hotkeys[0].enabled is False and profile.triggers[0].enabled is False
+    assert isinstance(profile, ac.LoadedSyncProfile)
+    assert threads
+    assert all(item != current_thread for item in threads)
+    assert profile.hotkeys[0].enabled is False
+    assert profile.triggers[0].enabled is False
     panel._kind.setCurrentText('hotkeys')
     panel._inspect_loaded()
     assert json.loads(panel._details.toPlainText())['definitions']['demo-key']['enabled'] is False
-    assert window._theme_name == 'dark' and window._user_font_pt == 0
+    assert window._theme_name == 'dark'
+    assert window._user_font_pt == 0
     builder = window.auto_control_gui_widget.tab_registry.open('script_builder')
     with authorization_scope(AuthorizationContext('viewer', Role.VIEWER)):
         panel._open_loaded_script()
         assert panel._status_key == 'error'
         panel._apply_loaded_preferences()
-        assert panel._status_key == 'error' and window._theme_name == 'dark'
+        assert panel._status_key == 'error'
+        assert window._theme_name == 'dark'
     assert steps_to_actions(builder._tree.root_steps()) == []
     window.auto_control_gui_widget.activate_tab('script_builder')
     window.auto_control_gui_widget.activate_tab('config_sync')
@@ -95,7 +100,8 @@ def test_native_load_runs_in_worker_without_configuration_and_opens_only_by_expl
     assert builder._source_path == str(profile.scripts['demo.json'])
     assert window._theme_name == 'dark'
     panel._apply_loaded_preferences()
-    assert panel._status_key == 'loaded_preferences_applied' and window._theme_name == 'light'
+    assert panel._status_key == 'loaded_preferences_applied'
+    assert window._theme_name == 'light'
     assert (Path(result['directory']) / 'workspace.ini').read_bytes() == original
     assert panel._last_sync is None
 
@@ -107,14 +113,16 @@ def test_revoked_loaded_profile_owner_cannot_import_scripts_or_apply_preferences
     with authorization_scope(AuthorizationContext('owner', Role.OPERATOR, store_path=str(store.path))):
         panel.begin('load_profile')
     idle(app, panel)
-    assert panel._native_profile is not None and panel._status_key == 'done'
+    assert panel._native_profile is not None
+    assert panel._status_key == 'done'
     store.set_role('owner', Role.VIEWER)
     monkeypatch.setattr(window, 'import_sync_script', lambda *_a: pytest.fail('revoked editor import'))
     monkeypatch.setattr(window, 'apply_workspace_preferences', lambda *_a: pytest.fail('revoked GUI preferences'))
     panel._open_loaded_script()
     assert panel._status_key == 'error'
     panel._apply_loaded_preferences()
-    assert panel._status_key == 'error' and window._theme_name == 'dark'
+    assert panel._status_key == 'error'
+    assert window._theme_name == 'dark'
 
 
 def test_cancel_before_copy_and_close_before_delivery_never_attach_delayed_profiles(window, app, tmp_path, monkeypatch):
@@ -133,7 +141,8 @@ def test_cancel_before_copy_and_close_before_delivery_never_attach_delayed_profi
     panel.cancel()
     release.set()
     idle(app, panel)
-    assert panel._native_profile is None and panel._status_key == 'cancelled'
+    assert panel._native_profile is None
+    assert panel._status_key == 'cancelled'
     assert not (tmp_path / 'workspaces').exists()
     committed = load(result['directory'], tmp_path / 'workspaces', expected_digest=result['manifest_digest'])
     entered.clear()
@@ -150,7 +159,8 @@ def test_cancel_before_copy_and_close_before_delivery_never_attach_delayed_profi
     panel.close()
     release.set()
     idle(app, panel)
-    assert panel._native_profile is None and committed.directory.is_dir()
+    assert panel._native_profile is None
+    assert committed.directory.is_dir()
 
 
 def test_worker_keeps_committed_native_load_success_after_a_late_stop(app, tmp_path, monkeypatch):
@@ -169,7 +179,8 @@ def test_worker_keeps_committed_native_load_success_after_a_late_stop(app, tmp_p
     monkeypatch.setattr(config_sync_worker, 'load_sync_profile', committed)
     try:
         outcome = run(worker)
-        assert outcome.status == 'ok' and outcome.profile.directory.is_dir()
+        assert outcome.status == 'ok'
+        assert outcome.profile.directory.is_dir()
         assert outcome.profile.hotkeys[0].enabled is False
     finally:
         worker.deleteLater()

@@ -120,7 +120,7 @@ class WindowsPresenceSecurity:
             if not pointer.value:
                 raise AgentTaskError('physical presence native SID is empty')
             text = ctypes.wstring_at(pointer.value)
-            if len(text) > 192 or not re.fullmatch(r'S-1-(?:[0-9]+-)*[0-9]+', text):
+            if len(text) > 192 or not re.fullmatch(r'S-1-(?:\d+-)*\d+', text, re.ASCII):
                 raise AgentTaskError('physical presence native SID is invalid')
             return text
         finally:

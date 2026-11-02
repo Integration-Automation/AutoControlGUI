@@ -67,7 +67,7 @@ def run(source: Any, sink: Any, *, source_factory: Callable[[], Any] = WindowsPr
                 namespace = _namespace(request['payload'])
                 server = PresenceServer(source_factory, pipe=pipe_factory(namespace=namespace))
                 result = server.start()
-            except (OSError, ValueError, AgentTaskError) as error:
+            except (OSError, ValueError) as error:
                 send_error(sink, request['id'], error)
                 return
             send_result(sink, request['id'], result)

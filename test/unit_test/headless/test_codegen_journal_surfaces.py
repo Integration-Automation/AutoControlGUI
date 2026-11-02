@@ -65,8 +65,9 @@ def test_cancelled_mcp_request_never_reads_source(monkeypatch):
     monkeypatch.setattr("je_auto_control.utils.codegen.journal_source.Path.open", forbidden)
     context = ToolCallContext("candidate")
     context.cancelled_event.set()
+    generator = tool()
     with pytest.raises(OperationCancelledError):
-        tool().handler("private.jsonl", "selected", ctx=context)
+        generator.handler("private.jsonl", "selected", ctx=context)
 
 
 def test_archive_checks_cached_review_and_leaves_existing_file_on_replace_failure(journal, tmp_path, monkeypatch):

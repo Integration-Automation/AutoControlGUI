@@ -32,7 +32,9 @@ def test_default_connection_discovery_change_keeps_all_nodes_and_verification_on
         monkeypatch.setattr(AgentRuntimeClient, "call", after_first_record)
         result = run_dag(graph(), batch_id=batch["batch_id"])
         assert result.succeeded, result.to_dict()
-        assert target.count == 2 and other_target.count == 0 and other.runtime.list() == []
+        assert target.count == 2
+        assert other_target.count == 0
+        assert other.runtime.list() == []
         assert source.runtime.batches.control("get", {"batch_id": batch["batch_id"]})["state"] == "succeeded"
     finally:
         other.close()
@@ -61,13 +63,15 @@ def test_replaced_owner_file_stops_future_dispatch_and_never_sends_control_to_re
         batch = client.call("dag", {"operation": "register", "request": {"definition": graph()}})
         monkeypatch.setattr(AgentRuntimeClient, "call", after_first_record)
         result = run_dag(graph(), batch_id=batch["batch_id"])
-        assert not result.succeeded and target.count == 1 and other_target.count == 0
+        assert not result.succeeded
+        assert target.count == 1
+        assert other_target.count == 0
         assert other.runtime.list() == []
         saved = source.runtime.batches.control("get", {"batch_id": batch["batch_id"]})
         assert [row["phase"] for row in saved["nodes"]] == ["confirmed", "pending"]
+        restart = {"batch_id": batch["batch_id"], "definition": graph(), "max_parallel": 4}
         with pytest.raises(AgentTaskError, match="already started"):
-            source.runtime.batches.control("begin", {"batch_id": batch["batch_id"],
-                "definition": graph(), "max_parallel": 4})
+            source.runtime.batches.control("begin", restart)
     finally:
         path.write_text(json.dumps(metadata))
         other.close()
@@ -88,7 +92,8 @@ def test_admin_inspection_uses_original_owners_keys_on_the_owning_runtime(servic
             monkeypatch.setattr("je_auto_control.utils.agent_runtime.client.default_connection_path",
                                 lambda: other.directory / "agent_runtime.json")
             result = client.call("dag", {"operation": "inspect", "request": {"batch_id": batch["batch_id"]}})
-        assert target.count == 2 and other.runtime.list() == []
+        assert target.count == 2
+        assert other.runtime.list() == []
         assert all(node["recorded_completion"] is True for node in result["nodes"])
         assert all(node["request_match"] == "matches" for node in result["nodes"])
     finally:

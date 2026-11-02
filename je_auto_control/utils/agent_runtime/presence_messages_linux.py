@@ -96,7 +96,7 @@ def _receive(connection: socket.socket, peer: LinuxPeerProcess) -> dict:
         return decode_frame(raw)
     except AgentTaskError:
         raise
-    except (OSError, UnicodeError, ValueError):
+    except (OSError, ValueError):
         raise AgentTaskError('Linux packet writer evidence cannot be verified') from None
     finally:
         _release(descriptors)

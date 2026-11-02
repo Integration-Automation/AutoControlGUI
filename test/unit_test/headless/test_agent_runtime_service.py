@@ -80,9 +80,10 @@ def test_emergency_stop_keeps_other_principals_tasks(service):
 
 def test_viewer_cannot_become_local_operator(service):
     client, instance = service
+    request = {"spec": spec()}
     with authorization_scope(AuthorizationContext("reader", "viewer")):
         with pytest.raises(AgentTaskError):
-            client.call("submit", {"spec": spec()})
+            client.call("submit", request)
     assert instance.runtime.list() == []
 
 
@@ -122,8 +123,9 @@ def test_abandoned_external_lease_expires_without_another_client_request(service
 
 def test_second_runtime_cannot_recover_live_tasks(service):
     _client, instance = service
+    targets = {"counter": Counter()}
     with pytest.raises(AgentTaskError, match="owns"):
-        AgentRuntimeService(instance.directory, targets={"counter": Counter()})
+        AgentRuntimeService(instance.directory, targets=targets)
 
 
 def test_internal_skill_runs_after_submission(service):

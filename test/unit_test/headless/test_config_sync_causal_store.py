@@ -29,13 +29,16 @@ def test_causal_upgrade_preserves_plain_data_and_guards_old_writers(tmp_path):
     plain.commit('alice',bucket,base_revision=0,operation_id='plain')
     store=CausalConfigStore(path)
     before=store.get('alice')
-    assert before.revision==1 and before.live_entries[0].value=={'value':'dark'}
+    assert before.revision==1
+    assert before.live_entries[0].value=={'value':'dark'}
     state=register(store,'desktop')
-    assert state.revision==2 and state.live_entries==before.live_entries
+    assert state.revision==2
+    assert state.live_entries==before.live_entries
     with pytest.raises(ConfigRevisionConflict):
         plain.commit('alice',bucket,base_revision=2,operation_id='old-writer')
+    legacy=bucket.to_dict()
     with pytest.raises(ConfigRevisionConflict):
-        plain.put_legacy('alice',bucket.to_dict())
+        plain.put_legacy('alice',legacy)
     assert store.get('alice').revision==2
 
 
@@ -47,18 +50,21 @@ def test_concurrent_edits_are_retained_and_missing_alternatives_are_rejected(tmp
     left=SyncEntry('settings','theme',{'value':'dark'},{'desktop':1},'left','desktop')
     right=SyncEntry('settings','theme',{'value':'light'},{'laptop':1},'right','laptop')
     store.commit('alice',base.with_entries((left,)),base_revision=base.revision,operation_id='left',actor=actor('desktop'))
+    stale=base.with_entries((right,))
+    laptop=actor('laptop')
     with pytest.raises(ConfigRevisionConflict):
-        store.commit('alice',base.with_entries((right,)),base_revision=base.revision,
-                     operation_id='stale-right',actor=actor('laptop'))
+        store.commit('alice',stale,base_revision=base.revision,operation_id='stale-right',actor=laptop)
     current=store.get('alice')
     store.commit('alice',current.with_entries((right,)),base_revision=current.revision,
                  operation_id='right',actor=actor('laptop'))
     current=store.get('alice')
-    assert len(current.conflicts)==1 and set(current.conflicts[0].origins)=={'desktop','laptop'}
+    assert len(current.conflicts)==1
+    assert set(current.conflicts[0].origins)=={'desktop','laptop'}
     assert current.live_entries==()
     bad=replace(current,entries=(left,),committed={left.change_id:current.committed[left.change_id]})
+    desktop=actor('desktop')
     with pytest.raises(ConfigSyncError):
-        store.commit('alice',bad,base_revision=current.revision,operation_id='drop-right',actor=actor('desktop'))
+        store.commit('alice',bad,base_revision=current.revision,operation_id='drop-right',actor=desktop)
     assert store.get('alice').revision==current.revision
 
 
@@ -83,10 +89,13 @@ def test_collection_waits_for_acknowledgements_and_keeps_a_deletion_fence(tmp_pa
                      operation_id=f'ack-{peer_id}',actor=actor(peer_id,'ack',revision=deletion_revision))
         state=store.get('alice')
     collected=state.collect()
-    assert collected.entries==() and collected.fences[0].version==deleted.version
+    assert collected.entries==()
+    assert collected.fences[0].version==deleted.version
     store.commit('alice',collected,base_revision=state.revision,operation_id='collect',actor=actor('desktop','collect'))
     restored=store.get('alice').with_entries((live,))
-    assert restored.live_entries==() and restored.entries==() and len(restored.fences)==1
+    assert restored.live_entries==()
+    assert restored.entries==()
+    assert len(restored.fences)==1
     concurrent=SyncEntry('settings','theme',{'value':'light'},{'laptop':1},'offline-edit','laptop')
     assert len(restored.with_entries((concurrent,)).conflicts)==1
 
@@ -102,16 +111,18 @@ def test_retired_peer_needs_explicit_rejoin_and_old_epoch_stays_invalid(tmp_path
     store.commit('alice',state.with_peers(peers),base_revision=state.revision,
                  operation_id='retire',actor=actor('desktop','retire',peer_id='laptop'))
     state=store.get('alice')
+    laptop=actor('laptop')
     with pytest.raises(FullResyncRequired):
-        store.commit('alice',state,base_revision=state.revision,operation_id='old-epoch',actor=actor('laptop'))
+        store.commit('alice',state,base_revision=state.revision,operation_id='old-epoch',actor=laptop)
     peers=state.peers
     peers.register('laptop',full_revision=state.revision,full_resync=True)
     store.commit('alice',state.with_peers(peers),base_revision=state.revision,operation_id='rejoin',
                  actor=actor('laptop','full_sync',epoch=1,revision=state.revision))
     current=store.get('alice')
     assert current.peers.require_active('laptop',epoch=1).epoch==1
+    laptop=actor('laptop')
     with pytest.raises(FullResyncRequired):
-        store.commit('alice',current,base_revision=current.revision,operation_id='stale-callback',actor=actor('laptop'))
+        store.commit('alice',current,base_revision=current.revision,operation_id='stale-callback',actor=laptop)
 
 
 def test_dedicated_causal_http_protocol_is_private_and_retries_are_idempotent(tmp_path):
@@ -121,10 +132,12 @@ def test_dedicated_causal_http_protocol_is_private_and_retries_are_idempotent(tm
     from je_auto_control.utils.config_sync.causal_state import CausalBucket
     path=tmp_path/'config.sqlite3'
     client=TestClient(create_app(config_store_path=path,shared_secret='synthetic-only',serve_web_viewer=False))
-    assert client.get('/config/alice/causal').status_code==401 and not path.exists()
+    assert client.get('/config/alice/causal').status_code==401
+    assert not path.exists()
     headers={'X-Signaling-Secret':'synthetic-only'}
     response=client.get('/config/alice/causal',headers=headers)
-    assert response.status_code==200 and response.json()['version']==3
+    assert response.status_code==200
+    assert response.json()['version']==3
     state=CausalBucket.from_dict(response.json()['bucket'])
     peers=state.peers
     peers.register('desktop',full_revision=0)
@@ -132,7 +145,9 @@ def test_dedicated_causal_http_protocol_is_private_and_retries_are_idempotent(tm
     body['_actor']=actor('desktop','full_sync',revision=0).to_dict()
     envelope={'version':3,'base_revision':0,'operation_id':'register','bucket':body}
     first=client.put('/config/alice/causal',json=envelope,headers=headers)
-    assert first.status_code==200 and first.json()['revision']==1
+    assert first.status_code==200
+    assert first.json()['revision']==1
     repeated=client.put('/config/alice/causal',json=envelope,headers=headers)
-    assert repeated.json()['revision']==1 and repeated.json()['bucket']['revision']==1
+    assert repeated.json()['revision']==1
+    assert repeated.json()['bucket']['revision']==1
     assert client.get('/config/alice',headers=headers).status_code==409

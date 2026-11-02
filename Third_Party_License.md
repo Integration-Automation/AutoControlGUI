@@ -11,7 +11,7 @@ Full copies of the upstream license texts are archived under `LICENSEs/`.
 | Package | Version | License | Purpose |
 |---|---|---|---|
 | [je_open_cv](https://pypi.org/project/je-open-cv/) | 0.0.22 | MIT | OpenCV-based image recognition helpers (`locate_all_image`, template match) |
-| [Pillow](https://pypi.org/project/Pillow/) | 13.0.0 (12.3.0 on Python 3.10) | MIT-CMU (HPND) | Screenshot encoding, image I/O |
+| [Pillow](https://pypi.org/project/Pillow/) | 13.0.0 | MIT-CMU (HPND) | Screenshot encoding, image I/O |
 | [mss](https://pypi.org/project/mss/) | 10.1.0 | MIT | Fast multi-monitor screenshot backend |
 | [pyobjc-core](https://pypi.org/project/pyobjc-core/) | 12.1 | MIT | macOS backend — Python/Objective-C bridge *(Darwin only)* |
 | [pyobjc](https://pypi.org/project/pyobjc/) | 12.1 | MIT | macOS backend — Cocoa / Quartz bindings *(Darwin only)* |

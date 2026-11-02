@@ -244,7 +244,8 @@ def test_explicit_restart_resumes_owned_chunks_with_a_new_queue_generation(tmp_p
             current = wait_import(named, token, identifier)
             assert current['state'] == 'published', current
             assert (Path(current['files_directory']) / 'report.txt').read_bytes() == body
-            assert 'export' in calls and 'chunk' not in calls, 'resume rechecks the real grant and owned cached bytes'
+            assert 'export' in calls, 'resume rechecks the real grant and owned cached bytes'
+            assert 'chunk' not in calls, 'resume rechecks the real grant and owned cached bytes'
             with restarted.runtime.store.connection() as connection:
                 after = restarted.runtime.transfers.source.records.find(connection, identifier)
                 delivery = connection.execute('SELECT queue_id,generation FROM agent_transfer_deliveries WHERE id=?',

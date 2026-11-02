@@ -66,8 +66,9 @@ def test_revocation_during_draft_sql_rolls_back_the_draft_and_tombstone(recordin
         connection.execute('CREATE TRIGGER owned_draft_revoke AFTER INSERT ON agent_skill_candidates '
                            "BEGIN UPDATE agent_task_handoffs SET state='revoked'; "
                            "INSERT INTO agent_task_handoff_revocations SELECT id,'{}',0 FROM agent_task_handoffs; END")
+    request = request_for(recording, handoff_id=grant['id'])
     with pytest.raises(AgentTaskError, match='revoked'):
-        runtime.skills.control('record', request_for(recording, handoff_id=grant['id']))
+        runtime.skills.control('record', request)
     no_draft(recording)
     with runtime.store.connection() as connection:
         assert connection.execute('SELECT COUNT(*) FROM agent_task_handoff_revocations').fetchone()[0] == 0
@@ -94,8 +95,9 @@ def test_matching_private_digest_cannot_supply_different_completion_authority(re
             proof[field] = {'input_authorized': True}
         connection.execute('UPDATE agent_task_handoffs SET details=?,review=? WHERE id=?',
                            (json.dumps(proof), _digest(proof), grant['id']))
+    request = request_for(recording, handoff_id=grant['id'])
     with pytest.raises(AgentTaskError):
-        runtime.skills.control('record', request_for(recording, handoff_id=grant['id']))
+        runtime.skills.control('record', request)
     no_draft(recording)
 
 

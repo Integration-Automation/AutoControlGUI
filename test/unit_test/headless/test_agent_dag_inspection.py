@@ -25,13 +25,17 @@ def test_inspection_uses_lookup_only_and_never_grants_matching_or_resume(monkeyp
 
     monkeypatch.setattr(managed_tasks, "_connection", connection)
     result = inspect_agent_dag(definition())
-    assert result["inspection_only"] is True and result["resume_permitted"] is False
+    assert result["inspection_only"] is True
+    assert result["resume_permitted"] is False
     first, second = result["nodes"]
-    assert first["task_id"] == "task-one" and first["lookup"] == "found"
-    assert first["recorded_completion"] is True and first["request_match"] == "unverified"
+    assert first["task_id"] == "task-one"
+    assert first["lookup"] == "found"
+    assert first["recorded_completion"] is True
+    assert first["request_match"] == "unverified"
     assert second["lookup"] == "not_managed"
     assert "private-remote-path" not in str(result)
-    assert len(calls) == 1 and calls[0][0:2] == ("lookup", {"idempotency_key": "reviewed-one"})
+    assert len(calls) == 1
+    assert calls[0][0:2] == ("lookup", {"idempotency_key": "reviewed-one"})
     assert 0 < calls[0][2] <= 5
 
 
@@ -63,8 +67,9 @@ def test_remote_failures_are_bounded_fixed_diagnostics(monkeypatch):
 @pytest.mark.parametrize("role,host", [("viewer", "local"), ("operator", "remote")])
 def test_role_failure_prevents_opening_a_connection(role, host, monkeypatch):
     monkeypatch.setattr(managed_tasks, "_connection", lambda *_args: pytest.fail("opened forbidden connection"))
-    with authorization_scope(AuthorizationContext("caller", role)), pytest.raises(AuthorizationError):
-        inspect_agent_dag(definition(host=host))
+    caller, graph = AuthorizationContext("caller", role), definition(host=host)
+    with authorization_scope(caller), pytest.raises(AuthorizationError):
+        inspect_agent_dag(graph)
 
 
 def test_owner_revocation_during_lookup_discards_the_reply(tmp_path, monkeypatch):
@@ -77,8 +82,9 @@ def test_owner_revocation_during_lookup_discards_the_reply(tmp_path, monkeypatch
 
     monkeypatch.setattr(managed_tasks, "_connection", lambda _host: lookup)
     owner = AuthorizationContext("caller", "operator", store_path=str(store.path))
+    graph = definition()
     with authorization_scope(owner), pytest.raises(AuthorizationError):
-        inspect_agent_dag(definition())
+        inspect_agent_dag(graph)
 
 
 def test_cancellation_and_explicit_stop_do_not_send_control_requests(monkeypatch):
@@ -91,21 +97,24 @@ def test_cancellation_and_explicit_stop_do_not_send_control_requests(monkeypatch
         return {"found": True, "task": completed()}
 
     monkeypatch.setattr(managed_tasks, "_connection", lambda _host: lookup)
+    graph = definition()
     with cancellation_scope(token), pytest.raises(CancelledError):
-        inspect_agent_dag(definition())
+        inspect_agent_dag(graph)
     assert calls == ["lookup"]
     stop = threading.Event()
     stop.set()
+    graph = definition()
     with managed_tasks.managed_stop_scope(stop), pytest.raises(AgentTaskError, match="stopped"):
-        inspect_agent_dag(definition())
+        inspect_agent_dag(graph)
     assert calls == ["lookup"]
 
 
 @pytest.mark.parametrize("timeout", [False, 0, 301, float("inf")])
 def test_invalid_budgets_fail_before_queries(timeout, monkeypatch):
     monkeypatch.setattr(managed_tasks, "_connection", lambda *_args: pytest.fail("invalid budget made a request"))
+    graph = definition()
     with pytest.raises(AgentTaskError):
-        inspect_agent_dag(definition(), timeout)
+        inspect_agent_dag(graph, timeout)
 
 
 def test_graph_bounds_and_cycles_are_checked_before_queries(monkeypatch):
@@ -159,8 +168,9 @@ def test_managed_task_cannot_inspect_other_task_keys(monkeypatch):
 
     monkeypatch.setattr(managed_tasks, "_connection", lambda *_args: pytest.fail("nested lookup"))
     parent = TaskOperation(AgentTaskSpec.from_dict(task()["spec"]), lambda: None, None)
+    graph = definition()
     with operation_scope(parent), pytest.raises(AgentTaskError, match="cannot inspect"):
-        inspect_agent_dag(definition())
+        inspect_agent_dag(graph)
 
 
 def test_real_registered_host_lookup_does_not_submit_even_when_reviewed_spec_differs(tmp_path, monkeypatch):
@@ -195,12 +205,16 @@ def test_real_registered_host_lookup_does_not_submit_even_when_reviewed_spec_dif
         with authorization_scope(AuthorizationContext("local-admin", "admin")):
             result = inspect_agent_dag(graph)
         first = result["nodes"][0]
-        assert first["task_id"] == accepted.task_id and first["recorded_completion"] is True
-        assert first["request_match"] == "differs" and result["resume_permitted"] is False
-        assert len(calls) == 2 and all(call[0].endswith("/agent/lookup") for call in calls)
+        assert first["task_id"] == accepted.task_id
+        assert first["recorded_completion"] is True
+        assert first["request_match"] == "differs"
+        assert result["resume_permitted"] is False
+        assert len(calls) == 2
+        assert all(call[0].endswith("/agent/lookup") for call in calls)
         assert calls[0][1]["body"] == {"idempotency_key": "reviewed-one"}
         assert set(calls[1][1]["body"]) == {"idempotency_key", "spec"}
-        assert target.calls == ["AC_increment"] and len(service.runtime.list()) == 1
+        assert target.calls == ["AC_increment"]
+        assert len(service.runtime.list()) == 1
         assert "history_path" not in str(result)
     finally:
         service.close()

@@ -30,9 +30,6 @@ with protocol._bindings_lock:
         assert protocol._bindings[identifier]() is replacement
         assert protocol._find_binding(channel) is replacement
 '''.replace('REPLACE', repr(replacement))
-    try:
-        result = subprocess.run([sys.executable, '-c', program], cwd=Path(__file__).resolve().parents[3],
-                                capture_output=True, text=True, encoding='utf-8', timeout=10, check=False)
-    except subprocess.TimeoutExpired:
-        pytest.fail('garbage collection reentered the held registry lock and deadlocked')
+    result = subprocess.run([sys.executable, '-c', program], cwd=Path(__file__).resolve().parents[3],
+                            capture_output=True, text=True, encoding='utf-8', timeout=10, check=False)
     assert result.returncode == 0, result.stderr

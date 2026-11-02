@@ -36,8 +36,9 @@ def test_cold_maintenance_cannot_release_runtime_ownership_during_controller_con
                 assert entered.wait(5)
                 with pytest.raises(AgentTaskError, match='construction|mutation|active'):
                     reopened.close()
+                targets = {'local-files': FileTarget()}
                 with pytest.raises(AgentTaskError, match='still owns'):
-                    AgentRuntime(reopened.store.path, targets={'local-files': FileTarget()})
+                    AgentRuntime(reopened.store.path, targets=targets)
             finally:
                 release.set()
             maintaining.result(timeout=5)
@@ -73,8 +74,9 @@ def test_close_rechecks_a_controller_created_after_its_initial_retirement_check(
                 close_release.set()
                 with pytest.raises(AgentTaskError, match='active transfer'):
                     retiring.result(timeout=5)
+                targets = {'local-files': FileTarget()}
                 with pytest.raises(AgentTaskError, match='still owns'):
-                    AgentRuntime(reopened.store.path, targets={'local-files': FileTarget()})
+                    AgentRuntime(reopened.store.path, targets=targets)
             finally:
                 close_release.set()
                 cleanup_release.set()
@@ -116,7 +118,8 @@ def test_cold_cleanup_rejects_redirected_cache_before_opening_storage_and_preser
                 reopened.maintain()
             with reopened.store.connection() as connection:
                 retained = reopened.transfers.source.records.find(connection, record['id'])
-            assert retained['state'] == 'revoked' and retained['held'] is True
+            assert retained['state'] == 'revoked'
+            assert retained['held'] is True
             assert retained['expires'] == record['expires']
             assert foreign.path.read_bytes() == before
             assert foreign.store.read_chunk(record['account'], digest) == foreign_body

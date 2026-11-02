@@ -115,25 +115,30 @@ def test_explicit_renewal_finishes_real_files_without_reviving_the_original_orig
     with pytest.raises(AgentTaskError, match='managed origin'):
         runtime.recovery.control('preview_completion', {'task_id': source})
     preview, request = reviewed(renewal)
-    assert preview['approval_required'] is True and preview['source_completion_inherited'] is False
+    assert preview['approval_required'] is True
+    assert preview['source_completion_inherited'] is False
     assert preview['verification_spec']['actions'] == []
     assert preview['verification_spec']['roots'] == [str(renewal.reports)]
     assert preview['authorization']['replaced_origins'] == [renewal.old.identifier]
     child = runtime.recovery.control('create_authorized_completion', request)['task_id']
     runtime.observe(child)
     result = runtime.finish(child)
-    assert result.state == 'succeeded' and result.metadata['input_released'] is True
+    assert result.state == 'succeeded'
+    assert result.metadata['input_released'] is True
     assert result.metadata['completion_contract'] == 1
     assert [report['status'] for report in result.verification] == ['passed', 'passed', 'passed']
-    assert runtime.get(source).state == 'paused' and runtime.store.actions(source) == historical
-    assert runtime.store.actions(child) == [] and renewal.manifest.read_bytes() == manifest
+    assert runtime.get(source).state == 'paused'
+    assert runtime.store.actions(source) == historical
+    assert runtime.store.actions(child) == []
+    assert renewal.manifest.read_bytes() == manifest
     assert origin_policy._path(renewal.old.identifier).read_bytes() == revoked
     assert runtime.store.get(source)['spec']['roots'] == [str(renewal.allowed)]
     assert runtime.store.get(child)['spec']['roots'] == [str(renewal.reports)]
     assert runtime.recovery.control('create_authorized_completion', request)['task_id'] == child
+    upgrade = {'task_id': child, 'snapshot': 'irrelevant',
+               'spec': runtime.store.get(child)['spec'], 'note': 'Cannot upgrade to executable recovery'}
     with pytest.raises(AgentTaskError, match='read-only'):
-        runtime.recovery.control('create', {'task_id': child, 'snapshot': 'irrelevant',
-            'spec': runtime.store.get(child)['spec'], 'note': 'Cannot upgrade to executable recovery'})
+        runtime.recovery.control('create', upgrade)
 
 
 def test_original_effect_change_inside_admission_sql_rolls_back_the_entire_reader(renewal):

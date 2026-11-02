@@ -84,7 +84,9 @@ def test_existing_gui_stop_and_restart_retries_failed_and_offline_bytes(folder_p
         loop(engine, lambda: (owner.watch / 'pending.bin').write_bytes(b'previously unconfirmed'), lambda: None)
         assert not (pair.receiver / 'pending.bin').exists()
     disconnect(owner)
-    assert owner._viewer is None and owner._sync_engine is None and engine.stop_requested
+    assert owner._viewer is None
+    assert owner._sync_engine is None
+    assert engine.stop_requested
     (owner.watch / 'existing.bin').write_bytes(b'offline change')
     (owner.watch / 'offline.bin').write_bytes(b'created while disconnected')
     reconnect(owner, pair)
@@ -156,7 +158,8 @@ def test_resume_refreshes_the_original_user_and_preserves_pending_data_after_a_r
         guard.setattr(FolderSyncEngine, '_scan', lambda *_args: pytest.fail('revoked resume scanned the watch'))
         with authorization_scope(context):
             assert toggle(owner) is None
-    assert len(owner.warnings) == 1 and not (pair.receiver / 'pending.bin').exists()
+    assert len(owner.warnings) == 1
+    assert not (pair.receiver / 'pending.bin').exists()
     if changed == 'role':
         store.set_role('owner', Role.OPERATOR)
     else:
@@ -217,18 +220,21 @@ def test_handoff_waits_for_a_blocked_old_sender_and_late_old_work_cannot_adopt_t
     worker = engine._thread
     try:
         disconnect(owner)
-        assert engine.is_running() and engine.stop_requested
+        assert engine.is_running()
+        assert engine.stop_requested
         reconnect(owner, pair)
         with monkeypatch.context() as guard:
             guard.setattr(webrtc_viewer_files, 'make_folder_engine',
                           lambda *_args: pytest.fail('replacement began before the old sender exited'))
             assert toggle(owner) is None
-        assert len(owner.warnings) == 1 and 'retired' in owner.warnings[0]
+        assert len(owner.warnings) == 1
+        assert 'retired' in owner.warnings[0]
         assert pair.outgoing.sent == []
     finally:
         release.set()
         engine.stop()
-    assert worker is not None and not worker.is_alive()
+    assert worker is not None
+    assert not worker.is_alive()
     assert 'pending.bin' not in engine._content.snapshot
     assert pair.outgoing.sent == []
     pair.host.set_file_receipt_callback(lambda _receipt: delivered.set())

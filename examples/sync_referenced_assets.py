@@ -10,6 +10,8 @@ from examples.causal_peer_control import loopback_server
 from je_auto_control import CausalConfigStore, SyncAssetStore, SyncReference, SyncWorkspace
 from je_auto_control.utils.path_guard import PathPolicy
 
+_SCRIPT_NAME = 'demo.json'
+
 
 def configuration(root: Path, endpoint: str, *, sender: bool) -> dict[str, object]:
     """Select an exact native action file and bind one image argument to a private asset alias."""
@@ -20,9 +22,9 @@ def configuration(root: Path, endpoint: str, *, sender: bool) -> dict[str, objec
         image = root / 'template.png'
         image.write_bytes(_template_png())
         actions = [['AC_locate_image_center', {'image': str(image)}]]
-        (root / 'demo.json').write_text(json.dumps(actions), encoding='utf-8')
-        source = {'path': str(root), 'paths': ['demo.json']}
-        bindings = {'fields': {'demo.json': {'/actions/0/1/image': SyncReference('local', 'button').to_dict()}},
+        (root / _SCRIPT_NAME).write_text(json.dumps(actions), encoding='utf-8')
+        source = {'path': str(root), 'paths': [_SCRIPT_NAME]}
+        bindings = {'fields': {_SCRIPT_NAME: {'/actions/0/1/image': SyncReference('local', 'button').to_dict()}},
                     'local_values': {'button': str(image)}, 'assets': {'button': 'assets/template.png'}}
     return {'schema_version': 1, 'endpoint': endpoint, 'user_id': 'example',
             'outbox_path': str(root / 'outbox.sqlite3'), 'asset_cache_path': str(root / 'cache.sqlite3'),

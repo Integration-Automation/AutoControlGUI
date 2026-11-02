@@ -34,8 +34,10 @@ def test_child_result_output_and_runtime_versions_survive_the_wrapper(tmp_path, 
     raw = (directory / 'runtime.json').read_text(encoding='utf-8')
     record = json.loads(raw)
     assert 'controlled child evidence' in log
-    assert record['returncode'] == exit_code and record['elapsed_seconds'] >= 0
-    assert record['packages']['pytest'] and record['python']
+    assert record['returncode'] == exit_code
+    assert record['elapsed_seconds'] >= 0
+    assert record['packages']['pytest']
+    assert record['python']
     assert 'private-native-runner-sentinel' not in log + raw
     assert 'AC_CONTROLLED_PRIVATE_TEST_VALUE' not in log + raw
 
@@ -47,9 +49,12 @@ def test_real_native_abort_retains_a_backtrace_and_fails(tmp_path):
     assert result.returncode != 0
     log = (directory / 'process.log').read_text(encoding='utf-8')
     record = json.loads((directory / 'runtime.json').read_text(encoding='utf-8'))
-    assert 'before native abort' in log and 'SIGABRT' in log
-    assert '#0 ' in log and ('abort' in log or 'raise' in log)
-    assert record['returncode'] != 0 and record['debugger']
+    assert 'before native abort' in log
+    assert 'SIGABRT' in log
+    assert '#0 ' in log
+    assert 'abort' in log or 'raise' in log
+    assert record['returncode'] != 0
+    assert record['debugger']
 
 
 @pytest.mark.skipif(sys.platform != 'linux' or shutil.which('gdb') is None, reason='requires Linux GDB')
@@ -90,7 +95,8 @@ def test_unwritable_evidence_destination_prevents_launching_the_child(tmp_path):
     destination.write_text('preserve this file', encoding='utf-8')
     marker = tmp_path / 'must-not-launch'
     result = run_child(destination, f'from pathlib import Path;Path({str(marker)!r}).touch()')
-    assert result.returncode != 0 and not marker.exists()
+    assert result.returncode != 0
+    assert not marker.exists()
     assert destination.read_text(encoding='utf-8') == 'preserve this file'
 
 
@@ -99,14 +105,17 @@ def test_ci_workflows_keep_native_diagnostics_after_failure(name):
     workflow = yaml.safe_load((WORKFLOWS / name).read_text(encoding='utf-8'))
     steps = workflow['jobs']['pytest-headless']['steps']
     upload = next(step for step in steps if step.get('with', {}).get('name', '').startswith('native-'))
-    assert upload['if'] == 'always()' and upload['uses'].startswith('actions/upload-artifact@')
+    assert upload['if'] == 'always()'
+    assert upload['uses'].startswith('actions/upload-artifact@')
     runner = next(step for step in steps if step.get('name', '').startswith('Run headless pytest'))
     preflight = next(step for step in steps if step.get('name') == 'Verify native diagnostics runner (Linux)')
     assert steps.index(preflight) < steps.index(runner)
     assert preflight['if'] == "runner.os == 'Linux'"
     assert 'test/unit_test/headless/test_ci_native_diagnostics.py' in preflight['run']
-    assert '--timeout=30' in preflight['run'] and '/preflight' in preflight['run']
-    assert '--native' in runner['run'] and '--artifact-dir' in runner['run']
+    assert '--timeout=30' in preflight['run']
+    assert '/preflight' in preflight['run']
+    assert '--native' in runner['run']
+    assert '--artifact-dir' in runner['run']
     assert upload['with']['path'] in runner['run']
     assert ('python -m coverage run -m pytest' if name == 'quality.yml' else 'python -m pytest') in runner['run']
     assert any('gdb' in step.get('run', '') and step.get('if') == "runner.os == 'Linux'" for step in steps)

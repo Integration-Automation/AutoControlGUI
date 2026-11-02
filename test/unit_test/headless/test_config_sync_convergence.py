@@ -15,7 +15,8 @@ def test_parallel_edits_preserve_conflict():
     left=entry('desktop','dark')
     right=entry('laptop','light')
     conflict=merge_entries(left,right).conflict
-    assert conflict.local==left and conflict.remote==right
+    assert conflict.local==left
+    assert conflict.remote==right
     assert merge_entries(right,left).conflict.local==right
 
 
@@ -52,7 +53,8 @@ def test_retired_peer_requires_full_sync():
     with pytest.raises(FullResyncRequired):
         peers.register('laptop',full_revision=10)
     record=peers.register('laptop',full_revision=10,full_resync=True)
-    assert record.acknowledged_revision==10 and record.epoch==1
+    assert record.acknowledged_revision==10
+    assert record.epoch==1
     assert peers.require_active('laptop',epoch=1)==record
 
 

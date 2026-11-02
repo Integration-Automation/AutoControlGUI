@@ -441,4 +441,5 @@ def test_default_registry_offers_a_viewer_only_read_only_tools(users):
                      and capability_for_tool(tool.name, True) == Capability.READ_SCREEN}
     assert {"ac_get_mouse_position", "ac_screen_size"} <= names
     assert not {"ac_get_clipboard", "ac_sql_query", "ac_load_dotenv", "ac_jwt_encode"} & names
-    assert "ac_execute_actions" not in names and "ac_click_mouse" not in names
+    assert "ac_execute_actions" not in names
+    assert "ac_click_mouse" not in names

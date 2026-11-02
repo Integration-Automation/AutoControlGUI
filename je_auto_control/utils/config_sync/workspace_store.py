@@ -175,7 +175,7 @@ def _bind(connection: Connection, scope: tuple[str, str], bindings: Mapping[str,
 def _load(row: tuple[object, ...], scope: tuple[str, str]) -> SyncControlOperation:
     try:
         operation = _operation(row)
-    except (UnicodeError, ValueError, TypeError, RecursionError, ConfigSyncError) as error:
+    except (ValueError, TypeError, RecursionError, ConfigSyncError) as error:
         raise ConfigStoreError('invalid workspace control evidence') from error
     if (operation.identity.endpoint, operation.identity.user_id) != scope:
         raise ConfigStoreError('workspace control evidence belongs to another namespace')

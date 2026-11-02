@@ -1,5 +1,6 @@
 """Fresh capability checks and finite reader/watch retirement without native desktop observation."""
 from concurrent.futures import ThreadPoolExecutor
+import gc
 import json
 import threading
 import time
@@ -102,11 +103,22 @@ class Connection:
 
 @pytest.fixture
 def harness(monkeypatch):
-    value = Harness(monkeypatch)
+    # The reader must answer each probe within 0.25 s. Late in the suite, under coverage and gdb, one
+    # collection of the whole heap takes longer than that, and a fixed test order makes it land in the
+    # same window on every run: ready() failed twice in a row on the 1.2.0 release PR. Collect first and
+    # hold the collector off, so these tests measure the reader, not the size of the suite's heap.
+    enabled = gc.isenabled()
+    gc.collect()
+    gc.disable()
     try:
-        yield value
+        value = Harness(monkeypatch)
+        try:
+            yield value
+        finally:
+            value.cleanup()
     finally:
-        value.cleanup()
+        if enabled:
+            gc.enable()
 
 
 def test_reader_construction_status_check_before_ready_and_unstarted_close_are_inert(harness):
@@ -118,7 +130,8 @@ def test_reader_construction_status_check_before_ready_and_unstarted_close_are_i
     reader.close()
     with pytest.raises(AgentTaskError):
         reader.ready()
-    assert not harness.events and reader.retired
+    assert not harness.events
+    assert reader.retired
 
 
 @pytest.mark.parametrize('binding', [{}, {'generation': 'a' * 32}, {'generation': True, 'lease_id': 'b' * 32},
@@ -140,8 +153,11 @@ def test_each_ready_and_check_is_fresh_serial_io_for_the_same_detached_capabilit
     assert [item['request_id'] for item in harness.sent] == list(range(1, len(harness.sent) + 1))
     assert all(item['operation'] == 'check' and item['body'] == original for item in harness.sent)
     harness.reader.close()
-    assert len(harness.threads) == 1 and threading.get_ident() not in harness.threads
-    assert harness.reader.retired and harness.peer_closed and harness.connection_closed
+    assert len(harness.threads) == 1
+    assert threading.get_ident() not in harness.threads
+    assert harness.reader.retired
+    assert harness.peer_closed
+    assert harness.connection_closed
     assert not harness.notice.is_set()
     assert harness.issuer.request({'request_id': 2, 'operation': 'check', 'body': original})['status'] == 'ok'
 
@@ -155,7 +171,8 @@ def test_physical_revision_revokes_reader_between_actions_and_never_rearms(harne
         harness.reader.check()
     with pytest.raises(AgentTaskError):
         harness.reader.ready()
-    assert harness.events.count('notice') == 1 and harness.events.count('connect') == 1
+    assert harness.events.count('notice') == 1
+    assert harness.events.count('connect') == 1
 
 
 def mutate(value, change):
@@ -187,7 +204,8 @@ def test_gate_refuses_revoked_malformed_stale_or_changed_source_replies_once(har
     harness.transform = lambda value: value
     with pytest.raises(AgentTaskError):
         harness.reader.ready()
-    assert harness.events.count('notice') == 1 and harness.events.count('connect') == 1
+    assert harness.events.count('notice') == 1
+    assert harness.events.count('connect') == 1
 
 
 def test_existing_lease_may_keep_its_owned_held_input_without_new_acquisition(harness):
@@ -208,8 +226,10 @@ def test_first_bind_blocks_are_bounded_and_late_replies_never_authorize(harness,
     start = time.monotonic()
     with pytest.raises(AgentTaskError):
         harness.reader.ready()
-    assert time.monotonic() - start < 0.7 and harness.entered.is_set()
-    assert harness.notice.wait(0.3) and not harness.reader.retired
+    assert time.monotonic() - start < 0.7
+    assert harness.entered.is_set()
+    assert harness.notice.wait(0.3)
+    assert not harness.reader.retired
     start = time.monotonic()
     with pytest.raises(AgentTaskError):
         harness.reader.close()
@@ -246,8 +266,10 @@ def test_close_during_late_connect_retires_only_owned_resources_without_handshak
         with pytest.raises(AgentTaskError):
             waiting.result(timeout=1)
     harness.reader.close()
-    assert harness.reader.retired and harness.connection_closed
-    assert 'handshake' not in harness.events and not harness.sent
+    assert harness.reader.retired
+    assert harness.connection_closed
+    assert 'handshake' not in harness.events
+    assert not harness.sent
 
 
 def test_failed_native_close_retains_handle_and_explicit_retry_never_reconnects(harness):
@@ -255,10 +277,14 @@ def test_failed_native_close_retains_handle_and_explicit_retry_never_reconnects(
     harness.fail_close = True
     with pytest.raises(AgentTaskError):
         harness.reader.close()
-    assert harness.connection_closed and not harness.peer_closed and not harness.reader.retired
+    assert harness.connection_closed
+    assert not harness.peer_closed
+    assert not harness.reader.retired
     harness.fail_close = False
     harness.reader.close()
-    assert harness.peer_closed and harness.reader.retired and harness.events.count('connect') == 1
+    assert harness.peer_closed
+    assert harness.reader.retired
+    assert harness.events.count('connect') == 1
     assert not harness.notice.is_set()
 
 
@@ -276,7 +302,9 @@ def test_reader_thread_start_failure_is_typed_and_cannot_leave_a_live_or_unjoina
         with pytest.raises(AgentTaskError, match='thread'):
             harness.reader.ready()
     harness.reader.close()
-    assert harness.reader.retired and not harness.sent and harness.events.count('notice') == 1
+    assert harness.reader.retired
+    assert not harness.sent
+    assert harness.events.count('notice') == 1
 
 
 def test_cleanup_thread_start_failure_retains_unknown_query_handle_for_explicit_retry(harness, monkeypatch):
@@ -293,9 +321,11 @@ def test_cleanup_thread_start_failure_retains_unknown_query_handle_for_explicit_
         patch.setattr(threading.Thread, 'start', start)
         with pytest.raises(AgentTaskError, match='thread'):
             harness.reader.close()
-    assert not harness.reader.retired and not harness.peer_closed
+    assert not harness.reader.retired
+    assert not harness.peer_closed
     harness.reader.close()
-    assert harness.reader.retired and harness.events.count('connect') == 1
+    assert harness.reader.retired
+    assert harness.events.count('connect') == 1
 
 
 def test_reader_checks_actual_peer_liveness_without_connecting_to_another_process(harness):
@@ -304,7 +334,8 @@ def test_reader_checks_actual_peer_liveness_without_connecting_to_another_proces
     with pytest.raises(AgentTaskError):
         harness.reader.check()
     assert harness.notice.wait(0.3)
-    assert harness.events.count('notice') == 1 and harness.events.count('connect') == 1
+    assert harness.events.count('notice') == 1
+    assert harness.events.count('connect') == 1
 
 
 @pytest.mark.parametrize('boundary_name', ['on_ack', 'on_prepare'])
@@ -313,11 +344,15 @@ def test_actual_reader_revision_checks_fence_worker_ack_and_pointer_preparation(
     harness.reader.ready()
     boundary.worker._activity = harness.reader
     setattr(boundary, boundary_name, harness.source.state.physical)
-    with pytest.raises(AutoControlException):
+
+    def press_through_the_boundary():
         if boundary_name == 'on_prepare':
             boundary.worker._input({'kind': 'mouse_press', 'keycode': 'left', 'move_before_press': True})
         else:
             boundary.press()
+
+    with pytest.raises(AutoControlException):
+        press_through_the_boundary()
     assert 'pressed' not in boundary.events
     assert harness.notice.wait(0.3)
     assert harness.events.count('connect') == 1
@@ -330,6 +365,8 @@ def test_reader_loss_does_not_block_worker_owned_release_only_ack_cleanup(harnes
     harness.source.state.physical()
     assert harness.notice.wait(0.6)
     result = boundary.worker._release_owned({'keys': [{'keycode': 65, 'is_shift': False}], 'buttons': []})
-    assert result == {'cleaned': True} and 'released' in boundary.events and 'cleaned' in boundary.events
+    assert result == {'cleaned': True}
+    assert 'released' in boundary.events
+    assert 'cleaned' in boundary.events
     with pytest.raises(AgentTaskError):
         harness.reader.check()

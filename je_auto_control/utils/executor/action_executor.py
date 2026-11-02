@@ -1,6 +1,6 @@
 import threading
 import types
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 from je_auto_control.utils.diagnostics.capability_commands import probe_current_capabilities as _probe_capabilities
 
 from je_auto_control.utils.exception.exception_tags import (
@@ -8369,7 +8369,7 @@ class Executor:
         from je_auto_control.utils.executor.dispatch import execute_one
         return execute_one(self, name, arguments)
 
-    def execute_action(self, action_list: Union[list, dict],
+    def execute_action(self, action_list: list | dict,
                        raise_on_error: bool = False,
                        _validated: bool = False,
                        dry_run: bool = False,

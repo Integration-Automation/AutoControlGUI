@@ -59,8 +59,10 @@ def test_detached_or_revoked_folder_owner_cannot_begin_a_source_scan(tmp_path, m
     try:
         if worker is not None:
             worker.join(5)
-        assert not engine.is_running() and engine.stop_requested
-        assert not engine.wait_until_ready(0) and scans == []
+        assert not engine.is_running()
+        assert engine.stop_requested
+        assert not engine.wait_until_ready(0)
+        assert scans == []
     finally:
         engine.stop()
 
@@ -145,9 +147,13 @@ def test_mid_file_stop_or_replacement_aborts_without_committing_partial_bytes(
         (watch / 'payload.bin').write_bytes(b'abcdefgh')
         assert finished.wait(5)
         worker.join(5)
-        assert not engine.is_running() and engine.stop_requested and not engine.wait_until_ready(0)
-        assert writes == [4] and contexts == ['owner']
-        assert target.read_bytes() == b'previous target' and completed == []
+        assert not engine.is_running()
+        assert engine.stop_requested
+        assert not engine.wait_until_ready(0)
+        assert writes == [4]
+        assert contexts == ['owner']
+        assert target.read_bytes() == b'previous target'
+        assert completed == []
         assert sorted(path.name for path in target.parent.iterdir()) == ['payload.bin']
         assert failures == []
     finally:

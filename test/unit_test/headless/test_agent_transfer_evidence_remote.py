@@ -83,7 +83,8 @@ def test_registered_http_peer_resolves_other_owner_completion_without_general_ta
         binding = actual_binding(value.runtime, value.source)
         host_binding = value.coordinator.batches.transfer_binding('source')
         proof = resolve_remote_evidence(value.coordinator.transfers.remote, 'source', host_binding, identifier, binding)
-        assert proof['task_id'] == value.child and proof['node']['node_id'] == 'remote-file'
+        assert proof['task_id'] == value.child
+        assert proof['node']['node_id'] == 'remote-file'
         assert value.runtime.store.get(value.child)['owner']['user_id'] == 'reviewer'
         assert value.output.read_bytes() == value.body
         status, denied = post(value.server, '/agent/transfer/peer', {'operation': 'evidence', 'request': {
@@ -100,9 +101,10 @@ def test_fresh_remote_resolution_refuses_a_different_original_coordinator_witnes
         identifier = grant(value)
         binding = actual_binding(value.runtime, value.source)
         binding[change] = 'different-node' if change == 'node_id' else ('f' * (32 if change == 'batch_id' else 64))
+        coordinator_binding = value.coordinator.batches.transfer_binding('source')
         with pytest.raises(AgentTaskError):
             resolve_remote_evidence(value.coordinator.transfers.remote, 'source',
-                value.coordinator.batches.transfer_binding('source'), identifier, binding)
+                coordinator_binding, identifier, binding)
 
 
 @pytest.mark.parametrize('boundary', ['reserve', 'consume_review'])
@@ -143,7 +145,9 @@ def test_keyed_standalone_recovery_resolves_without_a_fabricated_dag_admission(t
         binding = actual_binding(value.runtime, source)
         proof = resolve_remote_evidence(value.coordinator.transfers.remote, 'source',
             value.coordinator.batches.transfer_binding('source'), created['evidence']['grant_id'], binding)
-        assert proof['source_task'] == source and proof['task_id'] == child and 'node' not in proof
+        assert proof['source_task'] == source
+        assert proof['task_id'] == child
+        assert 'node' not in proof
         with value.runtime.store.connection() as connection:
             assert connection.execute('SELECT count(*) FROM agent_dag_local_tasks').fetchone()[0] == 0
             submitted = connection.execute('SELECT 1 FROM agent_task_submissions WHERE task_id=?', (source,))
@@ -159,13 +163,16 @@ def test_revoked_wire_consent_never_recreates_wire_authority(tmp_path, monkeypat
         identifier = created['evidence']['grant_id']
         status, revoked = post(value.server, '/agent/transfer', {'operation': 'revoke_evidence',
             'request': {'grant_id': identifier}}, token=value.owner_token)
-        assert status == 200 and revoked['evidence']['state'] == 'revoked'
+        assert status == 200
+        assert revoked['evidence']['state'] == 'revoked'
         status, denied = evidence_create(value.server, reviewed, token=value.reviewer_token)
         assert status == 409, denied
+        coordinator_binding = value.coordinator.batches.transfer_binding('source')
+        binding = actual_binding(value.runtime, value.source)
         with pytest.raises(AgentTaskError):
             resolve_remote_evidence(value.coordinator.transfers.remote, 'source',
-                value.coordinator.batches.transfer_binding('source'), identifier,
-                actual_binding(value.runtime, value.source))
+                coordinator_binding, identifier, binding)
         with value.runtime.store.connection() as connection:
             record = value.runtime.transfers.source.records.find(connection, identifier)
-            assert record['state'] == 'revoked' and record['held'] is False
+            assert record['state'] == 'revoked'
+            assert record['held'] is False

@@ -92,7 +92,8 @@ def test_constructor_close_and_unbound_requests_never_discover_or_launch(monkeyp
     with pytest.raises(AgentTaskError):
         broker.request('inspect', {})
     broker.close()
-    assert not pipe.calls and not children
+    assert not pipe.calls
+    assert not children
 
 
 def test_missing_source_launches_once_and_busy_is_normal_without_resetting_generation(monkeypatch):
@@ -100,9 +101,11 @@ def test_missing_source_launches_once_and_busy_is_normal_without_resetting_gener
     broker = create()
     try:
         ready = broker.bootstrap()
-        assert ready['ready'] and len(children) == 1
+        assert ready['ready']
+        assert len(children) == 1
         assert broker.request('acquire', {})['status'] == 'busy'
-        assert broker.bootstrap() == ready and not children[0].closed
+        assert broker.bootstrap() == ready
+        assert not children[0].closed
         source.advance(60)
         assert broker.request('acquire', {})['result']['generation'] == ready['generation']
         assert len(children) == 1
@@ -180,7 +183,8 @@ def test_busy_initial_inspection_keeps_the_owned_source_and_existing_connection(
     broker = create()
     try:
         assert broker.bootstrap() == {'ready': False, 'status': 'busy'}
-        assert len(children) == 1 and not children[0].closed
+        assert len(children) == 1
+        assert not children[0].closed
         assert broker.bootstrap()['generation'] == source.status()['generation']
         assert len(children) == 1
     finally:
@@ -194,7 +198,8 @@ def test_wire_bootstrap_cannot_select_namespace_role_process_or_source(monkeypat
     with pytest.raises(AgentTaskError):
         broker.dispatch('bootstrap', payload)
     broker.close()
-    assert not pipe.calls and not children
+    assert not pipe.calls
+    assert not children
 
 
 @pytest.mark.parametrize('mutation', [{'request_id': True}, {'status': 'ok', 'result': {'generation': 'x'}},
@@ -211,4 +216,5 @@ def test_invalid_or_lost_source_response_is_fatal_and_never_replayed(monkeypatch
     with pytest.raises(AgentTaskError):
         broker.request('inspect', {})
     broker.close()
-    assert children[0].closed and len(children) == 1
+    assert children[0].closed
+    assert len(children) == 1

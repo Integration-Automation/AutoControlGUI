@@ -14,6 +14,10 @@ from je_auto_control.utils.config_sync.contract import ConfigStoreError, ConfigS
 from je_auto_control.utils.config_sync.contract import _identifier
 from je_auto_control.utils.config_sync.database import SyncDatabase
 
+_USER_ID = 'asset user_id'
+_BEGIN_IMMEDIATE = 'BEGIN IMMEDIATE'
+_COUNT_BLOBS = 'SELECT count(*) FROM sync_asset_blobs WHERE user_id=?'
+
 if TYPE_CHECKING:
     from sqlite3 import Connection
 
@@ -35,11 +39,11 @@ class SyncAssetStore:
 
     def put_chunk(self, user_id: str, digest: str, body: bytes) -> bool:
         """Store one verified nonempty bounded chunk once; repeat content consumes no additional quota."""
-        _identifier(user_id, 'asset user_id')
+        _identifier(user_id, _USER_ID)
         validate_digest(digest)
         _validate_chunk(digest, body, received=True)
         with self._database.connection() as connection:
-            connection.execute('BEGIN IMMEDIATE')
+            connection.execute(_BEGIN_IMMEDIATE)
             existing = _chunk(connection, user_id, digest, missing_ok=True)
             if existing is not None:
                 connection.execute('COMMIT')
@@ -56,7 +60,7 @@ class SyncAssetStore:
 
     def read_chunk(self, user_id: str, digest: str) -> bytes:
         """Return only a bounded chunk whose stored bytes still match their content address."""
-        _identifier(user_id, 'asset user_id')
+        _identifier(user_id, _USER_ID)
         validate_digest(digest)
         with self._database.connection() as connection:
             body = _chunk(connection, user_id, digest)
@@ -74,7 +78,7 @@ class SyncAssetStore:
         _validate_blob(user_id, blob)
         wire = _encoded(blob.to_dict())
         with self._database.connection() as connection:
-            connection.execute('BEGIN IMMEDIATE')
+            connection.execute(_BEGIN_IMMEDIATE)
             if _receipt(connection, user_id, blob):
                 connection.execute('COMMIT')
                 return False
@@ -110,25 +114,23 @@ class SyncAssetStore:
 
     def status(self, user_id: str) -> dict[str, int]:
         """Read bounded account counts without exposing chunk data or other accounts."""
-        _identifier(user_id, 'asset user_id')
+        _identifier(user_id, _USER_ID)
         with self._database.connection() as connection:
             row = connection.execute('SELECT bytes FROM sync_asset_users WHERE user_id=?', (user_id,)).fetchone()
             chunks = connection.execute('SELECT count(*) FROM sync_asset_chunks WHERE user_id=?',
                                          (user_id,)).fetchone()[0]
-            blobs = connection.execute('SELECT count(*) FROM sync_asset_blobs WHERE user_id=?',
-                                        (user_id,)).fetchone()[0]
+            blobs = connection.execute(_COUNT_BLOBS, (user_id,)).fetchone()[0]
         return {'bytes': row[0] if row else 0, 'chunks': chunks, 'blobs': blobs}
 
     def delete_account(self, user_id: str) -> dict[str, int]:
         """Atomically remove one host-selected account, including incomplete chunks and its quota slot."""
-        _identifier(user_id, 'asset user_id')
+        _identifier(user_id, _USER_ID)
         with self._database.connection() as connection:
-            connection.execute('BEGIN IMMEDIATE')
+            connection.execute(_BEGIN_IMMEDIATE)
             size, chunks = connection.execute(
                 'SELECT COALESCE(SUM(length(body)),0),count(*) FROM sync_asset_chunks WHERE user_id=?',
                 (user_id,)).fetchone()
-            blobs = connection.execute('SELECT count(*) FROM sync_asset_blobs WHERE user_id=?',
-                                       (user_id,)).fetchone()[0]
+            blobs = connection.execute(_COUNT_BLOBS, (user_id,)).fetchone()[0]
             connection.execute('DELETE FROM sync_asset_blobs WHERE user_id=?', (user_id,))
             connection.execute('DELETE FROM sync_asset_chunks WHERE user_id=?', (user_id,))
             connection.execute('DELETE FROM sync_asset_users WHERE user_id=?', (user_id,))
@@ -142,7 +144,7 @@ def _limit(value: int) -> None:
 
 
 def _validate_blob(user_id: str, blob: SyncAssetBlob) -> None:
-    _identifier(user_id, 'asset user_id')
+    _identifier(user_id, _USER_ID)
     if not isinstance(blob, SyncAssetBlob):
         raise ConfigSyncError('asset operations require a typed blob descriptor')
 
@@ -178,7 +180,7 @@ def _object_limit(connection: Connection, user_id: str, table: str, maximum: int
     if table not in {'sync_asset_chunks', 'sync_asset_blobs'}:
         raise ConfigStoreError('invalid owned asset quota table')
     query = ('SELECT count(*) FROM sync_asset_chunks WHERE user_id=?' if table == 'sync_asset_chunks'
-             else 'SELECT count(*) FROM sync_asset_blobs WHERE user_id=?')
+             else _COUNT_BLOBS)
     count = connection.execute(query, (user_id,)).fetchone()[0]
     if count >= maximum:
         raise ConfigStoreFull('asset account object quota exceeded')

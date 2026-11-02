@@ -63,8 +63,9 @@ def test_review_refuses_misbound_expired_private_or_nonconsensual_evidence(chang
             summary['node'] = {'batch_id': '1' * 32, 'graph_hash': '2' * 64, 'node_id': 'node',
                                'request_digest': '3' * 64}
         reply['digest'] = sha256(_canonical(summary)).hexdigest()
+    peer = TransferPeer(lambda *_args: reply)
     with pytest.raises(AgentTaskError):
-        TransferPeer(lambda *_args: reply).manage('source', 'f' * 64, 'review_evidence', request, 3)
+        peer.manage('source', 'f' * 64, 'review_evidence', request, 3)
 
 
 @pytest.mark.parametrize('operation,change', [('get_evidence', 'identity'), ('get_evidence', 'summary-id'),
@@ -85,5 +86,6 @@ def test_management_records_refuse_wrong_identity_state_quota_and_private_fields
         reply['evidence'] *= 201
     else:
         value['issuer'] = 'private'
+    peer = TransferPeer(lambda *_args: reply)
     with pytest.raises(AgentTaskError):
-        TransferPeer(lambda *_args: reply).manage('source', 'f' * 64, operation, request, 3)
+        peer.manage('source', 'f' * 64, operation, request, 3)

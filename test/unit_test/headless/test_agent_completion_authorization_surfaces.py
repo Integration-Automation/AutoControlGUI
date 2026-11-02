@@ -32,6 +32,7 @@ def test_shared_surfaces_renew_only_the_reviewed_independent_completion(renewal,
         metadata = renewal.runtime.get(child).metadata
         assert metadata['completion_contract'] == 1
         assert metadata['recovery']['reauthorization']['actor'] == 'owner'
-        assert renewal.runtime.store.actions(child) == [] and renewal.runtime.get(renewal.source).state == 'paused'
+        assert renewal.runtime.store.actions(child) == []
+        assert renewal.runtime.get(renewal.source).state == 'paused'
     finally:
         server.stop()

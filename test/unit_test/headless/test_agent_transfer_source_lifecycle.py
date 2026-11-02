@@ -55,16 +55,19 @@ def test_actual_ancestor_owner_and_explicit_reviewer_revocation_invalidates_expo
         review = review_for(runtime, child) if boundary != 'review' else None
         exported = create_for(runtime, review) if boundary in {'export', 'chunk'} else None
         (owners if lost == 'owner' else reviewers).remove_user(lost)
-        with pytest.raises(AgentTaskError):
+
+        def attempt():
             if boundary == 'review':
-                review_for(runtime, child)
-            elif boundary == 'create':
-                create_for(runtime, review)
-            else:
-                request = {'export_id': exported['export_id']}
-                if boundary == 'chunk':
-                    request['sha256'] = exported['manifest']['files'][0]['chunks'][0]
-                runtime.transfers.peer(boundary, request)
+                return review_for(runtime, child)
+            if boundary == 'create':
+                return create_for(runtime, review)
+            request = {'export_id': exported['export_id']}
+            if boundary == 'chunk':
+                request['sha256'] = exported['manifest']['files'][0]['chunks'][0]
+            return runtime.transfers.peer(boundary, request)
+
+        with pytest.raises(AgentTaskError):
+            attempt()
 
 
 @pytest.mark.parametrize('depth', [16, 17])
@@ -88,14 +91,17 @@ def test_cancelled_source_operation_does_not_continue_to_read_or_issue(tmp_path,
         exported = create_for(runtime, review) if boundary == 'chunk' else None
         token = CancellationToken(1)
         token.cancel()
-        with cancellation_scope(token), pytest.raises(CancelledError):
+
+        def attempt():
             if boundary == 'review':
-                review_for(runtime, task)
-            elif boundary == 'create':
-                create_for(runtime, review)
-            else:
-                runtime.transfers.peer('chunk', {'export_id': exported['export_id'],
-                    'sha256': exported['manifest']['files'][0]['chunks'][0]})
+                return review_for(runtime, task)
+            if boundary == 'create':
+                return create_for(runtime, review)
+            return runtime.transfers.peer('chunk', {'export_id': exported['export_id'],
+                'sha256': exported['manifest']['files'][0]['chunks'][0]})
+
+        with cancellation_scope(token), pytest.raises(CancelledError):
+            attempt()
 
 
 @pytest.mark.parametrize('boundary', ['reserve', 'consume_review'])
@@ -168,12 +174,14 @@ def test_failed_owned_cache_cleanup_keeps_revocation_and_capacity_until_confirme
             runtime.transfers.control('revoke_export', request)
         with runtime.store.connection() as connection:
             retained = source.records.find(connection, exported['export_id'])
-        assert retained['state'] == 'revoked' and retained['held']
+        assert retained['state'] == 'revoked'
+        assert retained['held']
         with pytest.raises(AgentTaskError):
             runtime.transfers.peer('export', request)
         monkeypatch.setattr(source._cache, 'delete_account', original)
         revoked = runtime.transfers.control('revoke_export', request)['export']
-        assert revoked['state'] == 'revoked' and not revoked['cleanup_pending']
+        assert revoked['state'] == 'revoked'
+        assert not revoked['cleanup_pending']
         assert output.read_bytes() == body
 
 
@@ -201,7 +209,8 @@ def test_artifact_expiry_uses_its_actual_completed_source_not_an_older_terminal_
         with runtime.store.connection() as connection:
             ancestor = runtime.store.read_task(connection, source)
             leaf = runtime.store.read_task(connection, child)
-        assert ancestor['state'] == 'cancelled' and leaf['updated'] - ancestor['updated'] >= 120
+        assert ancestor['state'] == 'cancelled'
+        assert leaf['updated'] - ancestor['updated'] >= 120
         exported = create_for(runtime, review_for(runtime, child))
         assert exported['manifest']['expires'] == leaf['updated'] + 30 * 86400
 
@@ -212,11 +221,14 @@ def test_actual_cyclic_recovery_relation_is_refused_without_unbounded_traversal(
         exported = create_for(runtime, review_for(runtime, child)) if boundary == 'export' else None
         with runtime.store.connection(write=True) as connection:
             connection.execute('UPDATE agent_task_recoveries SET source_task=? WHERE task_id=?', (child, child))
-        with pytest.raises(AgentTaskError, match='cyclic'):
+
+        def attempt():
             if boundary == 'review':
-                review_for(runtime, child)
-            else:
-                runtime.transfers.peer('export', {'export_id': exported['export_id']})
+                return review_for(runtime, child)
+            return runtime.transfers.peer('export', {'export_id': exported['export_id']})
+
+        with pytest.raises(AgentTaskError, match='cyclic'):
+            attempt()
 
 
 @pytest.mark.parametrize('boundary', ['create', 'export'])
@@ -235,11 +247,14 @@ def test_valid_replacement_of_actual_private_reviewer_still_requires_new_export_
                                            if key not in {'review', 'source_snapshot'}}, details['source_snapshot'])
             connection.execute('UPDATE agent_recovery_owners SET details=? WHERE task_id=?',
                                (json.dumps(replacement), child))
-        with pytest.raises(AgentTaskError, match='changed'):
+
+        def attempt():
             if boundary == 'create':
-                create_for(runtime, review)
-            else:
-                runtime.transfers.peer('export', {'export_id': exported['export_id']})
+                return create_for(runtime, review)
+            return runtime.transfers.peer('export', {'export_id': exported['export_id']})
+
+        with pytest.raises(AgentTaskError, match='changed'):
+            attempt()
 
 
 def test_expired_grant_never_reads_surviving_private_cached_bytes(tmp_path, monkeypatch):
@@ -272,7 +287,8 @@ def test_cancelled_reply_after_real_grant_commit_recovers_exact_intent_without_a
             create_for(runtime, review)
         with runtime.store.connection() as connection:
             committed = source.records.entries(connection, 'export')
-        assert len(committed) == 1 and committed[0]['state'] == 'active'
+        assert len(committed) == 1
+        assert committed[0]['state'] == 'active'
         recovered = create_for(runtime, review)
         assert recovered['export_id'] == committed[0]['id']
         with runtime.store.connection() as connection:
@@ -310,12 +326,13 @@ def test_actual_linked_source_directory_cannot_read_an_unrelated_out_of_scope_fi
                 raise AssertionError('the unrelated target descriptor must never be opened')
             return original(value, *args, **kwargs)
         monkeypatch.setattr(transfer_files.os, 'open', confined)
+        def attempt():
+            if boundary == 'create':
+                return create_for(runtime, review)
+            return runtime.transfers.peer('export', {'export_id': exported['export_id']})
         try:
             with pytest.raises(AgentTaskError):
-                if boundary == 'create':
-                    create_for(runtime, review)
-                else:
-                    runtime.transfers.peer('export', {'export_id': exported['export_id']})
+                attempt()
             assert outside.read_bytes() == body
         finally:
             if os.name == 'nt':

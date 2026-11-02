@@ -91,7 +91,8 @@ def test_real_worker_brackets_single_sdk_calls_and_refreshes_sequence(tmp_path, 
         assert adapter.ready(fixture_scope) == (True, '')
         assert adapter.perform('AC_increment', {}) == {'value': 1}
         assert (tmp_path / 'effects').read_text().splitlines() == ['invoke', 'invoke']
-        assert adapter._journal.sequence == 3 and not adapter._journal.pending
+        assert adapter._journal.sequence == 3
+        assert not adapter._journal.pending
         assert adapter.observe() == {'user': None, 'role': None}
     finally:
         release_fixture(adapter)
@@ -127,7 +128,8 @@ def test_local_return_or_failure_cannot_clear_unproved_remote_effect(tmp_path, f
             adapter.perform('AC_increment', {'mode': mode})
         assert 'private-password-and-command' not in str(error.value)
         assert (tmp_path / 'effects').read_text().splitlines() == ['invoke']
-        assert adapter._channel.retired and adapter._journal.pending
+        assert adapter._channel.retired
+        assert adapter._journal.pending
         with pytest.raises(AgentTaskError, match='quarantined'):
             adapter.cleanup()
     finally:
@@ -162,7 +164,8 @@ def test_timeout_or_cancel_after_ack_keeps_effect_quarantined(tmp_path, fixture_
             with pytest.raises((CancelledError, AgentTaskError)):
                 adapter.perform('AC_increment', {'mode': 'hang'})
         assert (tmp_path / 'effects').read_text().splitlines() == ['invoke']
-        assert adapter._journal.pending and adapter._channel.retired
+        assert adapter._journal.pending
+        assert adapter._channel.retired
         assert not adapter.can_reobserve
     finally:
         release_fixture(adapter)
@@ -239,6 +242,7 @@ def test_child_refreshes_revocation_after_begin_persistence_before_sdk(tmp_path,
             with pytest.raises(AgentTaskError):
                 adapter.perform('AC_increment', {})
         assert not (tmp_path / 'effects').exists()
-        assert adapter._journal.pending and adapter._channel.retired
+        assert adapter._journal.pending
+        assert adapter._channel.retired
     finally:
         release_fixture(adapter)

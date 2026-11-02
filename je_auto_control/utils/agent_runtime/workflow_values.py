@@ -6,6 +6,8 @@ from typing import Any, Mapping, Sequence
 from je_auto_control.utils.agent_runtime.errors import AgentTaskError
 from je_auto_control.utils.agent_runtime.models import AgentTaskSpec, thaw
 
+_CAPTURE = "$capture"
+
 
 def transformed(value: Any, operation: str = "identity") -> str:
     """Apply one allowlisted text transformation without evaluation or code execution."""
@@ -30,10 +32,10 @@ def captures(spec: AgentTaskSpec, receipts: Sequence[Mapping[str, Any]]) -> dict
 def resolve(value: Any, values: Mapping[str, Any]) -> Any:
     """Resolve exact capture objects recursively; external data cannot become command names."""
     if isinstance(value, Mapping):
-        if "$capture" in value:
-            if set(value) - {"$capture", "transform"} or value["$capture"] not in values:
+        if _CAPTURE in value:
+            if set(value) - {_CAPTURE, "transform"} or value[_CAPTURE] not in values:
                 raise AgentTaskError("workflow capture is missing or invalid")
-            return transformed(values[value["$capture"]], value.get("transform", "identity"))
+            return transformed(values[value[_CAPTURE]], value.get("transform", "identity"))
         return {key: resolve(item, values) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
         return [resolve(item, values) for item in value]

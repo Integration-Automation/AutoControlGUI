@@ -46,8 +46,9 @@ def test_stale_or_conflicting_review_never_selects_a_preference_winner(tmp_path,
     apply(tmp_path, config, [parallel])
     with pytest.raises(ac.ConfigSyncError, match='changed'):
         workspace.preferences(observed=reviewed)
+    current = workspace.review('workspace')
     with pytest.raises(ac.ConfigSyncError, match='conflict'):
-        workspace.preferences(observed=workspace.review('workspace'))
+        workspace.preferences(observed=current)
 
 
 def test_preferences_ac_mcp_builder_share_exact_review_and_do_not_read_sources(tmp_path, monkeypatch):
@@ -71,6 +72,7 @@ def test_preferences_ac_mcp_builder_share_exact_review_and_do_not_read_sources(t
 def test_preferences_refuse_malformed_review_before_opening_storage(tmp_path, monkeypatch, observed):
     monkeypatch.setenv('AUTOCONTROL_ALLOWED_PATH_ROOTS', str(tmp_path))
     tool = next(item for item in build_default_tool_registry() if item.name == 'ac_sync_workspace')
+    config = configuration(tmp_path)
     with pytest.raises(ac.ConfigSyncError):
-        tool.handler(configuration(tmp_path), 'preferences', {'observed': observed})
+        tool.handler(config, 'preferences', {'observed': observed})
     assert not list(tmp_path.glob('*.sqlite3'))

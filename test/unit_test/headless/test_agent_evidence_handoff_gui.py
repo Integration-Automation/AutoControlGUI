@@ -22,9 +22,11 @@ def test_actions_only_prepare_explicit_handoff_requests(monkeypatch, operation):
             assert request == {'handoff_id': '<handoff-id>'}
         else:
             assert request['task_id'] == '<final-evidence-task-id>'
-            assert request['batch_id'] == '<original-batch-id>' and request['node_id'] == '<node-id>'
+            assert request['batch_id'] == '<original-batch-id>'
+            assert request['node_id'] == '<node-id>'
             if operation == 'create_handoff':
-                assert request['review'] == '<handoff-review-token>' and request['note'] == ''
+                assert request['review'] == '<handoff-review-token>'
+                assert request['note'] == ''
         assert tab._pages.currentIndex() == tab._page_keys.index('agent_page_handoffs')
     finally:
         tab.close()

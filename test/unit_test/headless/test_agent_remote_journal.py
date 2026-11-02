@@ -43,14 +43,16 @@ def test_settled_events_advance_sequence_without_persisting_tool_arguments(journ
 ])
 def test_bad_events_never_change_durable_state(journal, change):
     before = journal.path.read_bytes()
+    bad = event(journal, **change)
     with pytest.raises(AgentTaskError):
-        journal.consume(event(journal, **change))
+        journal.consume(bad)
     assert journal.path.read_bytes() == before
 
 
 def test_duplicate_begin_and_unmatched_end_keep_quarantine(journal):
+    unmatched = event(journal, "remote_end")
     with pytest.raises(AgentTaskError):
-        journal.consume(event(journal, "remote_end"))
+        journal.consume(unmatched)
     journal.consume(event(journal))
     for proposal in (event(journal), event(journal, "remote_end", epoch="different")):
         with pytest.raises(AgentTaskError):
@@ -72,8 +74,9 @@ def test_pending_effect_cannot_lose_its_operation_marker(journal, operation):
 @pytest.mark.parametrize("operation", [None, "observe", "configure"])
 def test_read_only_operations_cannot_authorize_effects(journal, operation):
     journal.update({}, operation)
+    begin = event(journal)
     with pytest.raises(AgentTaskError, match="perform"):
-        journal.consume(event(journal))
+        journal.consume(begin)
 
 
 def test_recovery_baseline_is_after_retirement_not_the_input_epoch(journal):
@@ -105,8 +108,9 @@ def test_untrusted_or_incomplete_recovery_evidence_never_clears_effect(journal, 
 def test_remote_witness_blocks_other_owners_and_generic_local_recovery(journal):
     journal.consume(event(journal))
     resource = journal.path.with_suffix("")
+    other = RemoteInputJournal(resource, DEVICE)
     with pytest.raises(AgentTaskError, match="recovery"):
-        RemoteInputJournal(resource, DEVICE).acquire()
+        other.acquire()
     local = InputJournal(resource)
     with pytest.raises(AgentTaskError, match="device-specific"):
         local.acquire()
@@ -121,8 +125,9 @@ def test_corrupt_or_redirected_witness_is_never_acquired(journal, field, value):
     data = journal.read()
     data[field] = value
     journal.path.write_text(json.dumps(data), encoding="utf-8")
+    redirected = RemoteInputJournal(journal.path.with_suffix(""), DEVICE)
     with pytest.raises(AgentTaskError):
-        RemoteInputJournal(journal.path.with_suffix(""), DEVICE).acquire()
+        redirected.acquire()
 
 
 def test_identity_is_physical_not_endpoint_app_or_profile():

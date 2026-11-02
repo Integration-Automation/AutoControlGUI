@@ -28,37 +28,47 @@ def register_config_routes(app: FastAPI, store: ConfigStore, secret_dep: Callabl
 
     @app.get("/config/{user_id}", responses=_RESPONSES, dependencies=auth)
     def get_config(user_id: str, response: Response) -> dict[str, object]:
-        try:
-            body = store.get_document(user_id)
-            _require_plain(body)
-        except ConfigSyncError as error:
-            raise HTTPException(status_code=400, detail=str(error)) from error
-        except ConfigStoreError as error:
-            raise HTTPException(status_code=503, detail="config storage unavailable") from error
-        except ConfigRevisionConflict as error:
-            raise HTTPException(status_code=409, detail={"message": str(error),
-                                                         "revision": error.current_revision}) from error
-        if body is None:
-            raise HTTPException(status_code=404, detail="no bucket")
-        response.headers["X-Autocontrol-Config-Protocol"] = "2"
-        response.headers["X-Autocontrol-Config-CAS"] = "legacy-enabled" if allow_legacy_writes else "required"
-        return body
+        return _read_config(store, user_id, response, allow_legacy_writes)
 
     @app.put("/config/{user_id}", responses=_RESPONSES, dependencies=auth)
     @app.put("/config/{user_id}/commit", responses=_RESPONSES, dependencies=auth)
     def put_config(user_id: str, body: dict[str, object], request: Request) -> dict[str, object]:
-        try:
-            _identifier(user_id, "user_id")
-            legacy = allow_legacy_writes and request.scope["path"] == f"/config/{user_id}"
-            revision = _commit(store, user_id, body, legacy)
-        except ConfigSyncError as error:
-            raise HTTPException(status_code=400, detail=str(error)) from error
-        except ConfigRevisionConflict as error:
-            raise HTTPException(status_code=409, detail={"message": str(error),
-                                                         "revision": error.current_revision}) from error
-        except (ConfigStoreFull, ConfigStoreError) as error:
-            raise HTTPException(status_code=503, detail="config storage unavailable or full") from error
-        return {"ok": True, "version": 2, "revision": revision}
+        return _write_config(store, user_id, body, request, allow_legacy_writes)
+
+
+def _read_config(store: ConfigStore, user_id: str, response: Response,
+                 allow_legacy_writes: bool) -> dict[str, object]:
+    try:
+        body = store.get_document(user_id)
+        _require_plain(body)
+    except ConfigSyncError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except ConfigStoreError as error:
+        raise HTTPException(status_code=503, detail="config storage unavailable") from error
+    except ConfigRevisionConflict as error:
+        raise HTTPException(status_code=409, detail={"message": str(error),
+                                                     "revision": error.current_revision}) from error
+    if body is None:
+        raise HTTPException(status_code=404, detail="no bucket")
+    response.headers["X-Autocontrol-Config-Protocol"] = "2"
+    response.headers["X-Autocontrol-Config-CAS"] = "legacy-enabled" if allow_legacy_writes else "required"
+    return body
+
+
+def _write_config(store: ConfigStore, user_id: str, body: dict[str, object], request: Request,
+                  allow_legacy_writes: bool) -> dict[str, object]:
+    try:
+        _identifier(user_id, "user_id")
+        legacy = allow_legacy_writes and request.scope["path"] == f"/config/{user_id}"
+        revision = _commit(store, user_id, body, legacy)
+    except ConfigSyncError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except ConfigRevisionConflict as error:
+        raise HTTPException(status_code=409, detail={"message": str(error),
+                                                     "revision": error.current_revision}) from error
+    except (ConfigStoreFull, ConfigStoreError) as error:
+        raise HTTPException(status_code=503, detail="config storage unavailable or full") from error
+    return {"ok": True, "version": 2, "revision": revision}
 
 
 def _commit(store: ConfigStore, user_id: str, body: dict[str, object], legacy: bool) -> int:

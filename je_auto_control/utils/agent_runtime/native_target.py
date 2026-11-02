@@ -86,8 +86,10 @@ class NativeDesktopTarget:
 
     def check_resume(self, spec: AgentTaskSpec, receipts: list[dict]) -> None:
         """Fence UI prefixes before launching a replacement helper; file recovery uses persistent evidence."""
-        kind = self._profile.kind if self._profile is not None else (
-            "desktop" if spec.target == "local-desktop" else "")
+        if self._profile is not None:
+            kind = self._profile.kind
+        else:
+            kind = "desktop" if spec.target == "local-desktop" else ""
         if kind in {"browser", "desktop"}:
             connected = self._channel is not None and not self._channel.retired
             require_context_continuity(spec, receipts, connected, kind=kind)

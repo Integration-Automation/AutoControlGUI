@@ -31,8 +31,9 @@ def test_request_key_is_atomic_owner_scoped_and_rejects_conflicting_specs(runtim
     with authorization_scope(AuthorizationContext("alice", "operator")):
         first = runtime.submit(spec(), idempotency_key="request")
         assert runtime.submit(spec(), idempotency_key="request").task_id == first.task_id
+        different = spec(goal="different")
         with pytest.raises(AgentTaskError, match="different task"):
-            runtime.submit(spec(goal="different"), idempotency_key="request")
+            runtime.submit(different, idempotency_key="request")
     with authorization_scope(AuthorizationContext("bob", "operator")):
         second = runtime.submit(spec(), idempotency_key="request")
     assert second.task_id != first.task_id
@@ -192,7 +193,8 @@ def test_queued_emergency_stop_reads_status_in_batches_instead_of_per_task(runti
     monkeypatch.setattr(runtime.store, "connection", counted)
     result = runtime.stop_all()
     assert len(reads) <= 6
-    assert result["requested"] == 5 and all(item["state"] == "cancelled" for item in result["tasks"])
+    assert result["requested"] == 5
+    assert all(item["state"] == "cancelled" for item in result["tasks"])
 
 
 def test_canonical_root_replacement_requires_scope_review_before_target_acquisition(runtime, tmp_path):

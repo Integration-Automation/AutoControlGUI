@@ -165,9 +165,12 @@ class EvidenceHandoffs:
                issuer_policies: list[str] | None = None,
                authorization: dict | None = None) -> tuple[dict, list[dict], dict]:
         context = self._context(request, connection=connection, issuer_policies=issuer_policies)
-        allowed = ({'paused', 'waiting_user', 'recovering', 'cancelled', 'timed_out', 'failed', 'succeeded'}
-                   if self.records.standalone else
-                   {'waiting_review'} if issuing else {'waiting_review', 'approved', 'running'})
+        if self.records.standalone:
+            allowed = {'paused', 'waiting_user', 'recovering', 'cancelled', 'timed_out', 'failed', 'succeeded'}
+        elif issuing:
+            allowed = {'waiting_review'}
+        else:
+            allowed = {'waiting_review', 'approved', 'running'}
         if context['state'] not in allowed:
             raise AgentTaskError('handoff batch is not in a reviewed evidence state')
         _manager(actor, context['binding']['owner'])

@@ -29,15 +29,17 @@ def test_damaged_completion_cannot_leave_a_recorded_draft(recording, damage):
     }
     with recording.runtime.store.connection(write=True) as connection:
         connection.execute(*changes[damage])
+    request = request_for(recording)
     with pytest.raises(AgentTaskError):
-        recording.runtime.skills.control('record', request_for(recording))
+        recording.runtime.skills.control('record', request)
     assert_no_draft(recording)
 
 
 @pytest.mark.parametrize('identifier', [None, [], '', 'missing-completion'])
 def test_invalid_reader_identity_creates_no_draft(recording, identifier):
+    request = request_for(recording, completion_task_id=identifier)
     with pytest.raises(AgentTaskError):
-        recording.runtime.skills.control('record', request_for(recording, completion_task_id=identifier))
+        recording.runtime.skills.control('record', request)
     assert_no_draft(recording)
 
 
@@ -46,16 +48,18 @@ def test_unwinding_source_or_reader_cannot_be_recorded(recording, which):
     identifier = getattr(recording, which)
     recording.runtime._executing.add(identifier)
     try:
+        request = request_for(recording)
         with pytest.raises(AgentTaskError):
-            recording.runtime.skills.control('record', request_for(recording))
+            recording.runtime.skills.control('record', request)
         assert_no_draft(recording)
     finally:
         recording.runtime._executing.discard(identifier)
 
 
 def test_recording_without_host_completion_callbacks_refuses_before_writing(recording):
+    skills, request = AgentSkills(recording.runtime), request_for(recording)
     with pytest.raises(AgentTaskError, match='completion provider'):
-        AgentSkills(recording.runtime).control('record', request_for(recording))
+        skills.control('record', request)
     assert_no_draft(recording)
 
 
@@ -71,8 +75,9 @@ def test_source_changed_before_writer_admission_cannot_leave_a_stale_draft(recor
         with original(write=write) as connection:
             yield connection
     monkeypatch.setattr(recording.runtime.store, 'connection', changed)
+    request = request_for(recording)
     with pytest.raises(AgentTaskError, match='snapshot'):
-        recording.runtime.skills.control('record', request_for(recording))
+        recording.runtime.skills.control('record', request)
     assert_no_draft(recording)
 
 
@@ -83,8 +88,9 @@ def test_forged_options_and_success_do_not_grant_recording_provenance(recording)
     forged = runtime.submit(spec)
     reports = runtime.store.get(recording.child_id)['verification']
     runtime.store.update(forged.task_id, 'succeeded', verification=reports)
+    request = request_for(recording, completion_task_id=forged.task_id)
     with pytest.raises(AgentTaskError, match='private reviewed'):
-        runtime.skills.control('record', request_for(recording, completion_task_id=forged.task_id))
+        runtime.skills.control('record', request)
     assert_no_draft(recording)
 
 
@@ -92,22 +98,25 @@ def test_malformed_private_binding_returns_typed_refusal_without_a_draft(recordi
     with recording.runtime.store.connection(write=True) as connection:
         connection.execute('UPDATE agent_readonly_completions SET details=? WHERE task_id=?',
                            (json.dumps({'contract': 1}), recording.child_id))
+    request = request_for(recording)
     with pytest.raises(AgentTaskError):
-        recording.runtime.skills.control('record', request_for(recording))
+        recording.runtime.skills.control('record', request)
     assert_no_draft(recording)
 
 
 def test_unrelated_source_cannot_borrow_a_real_readers_evidence(recording):
     runtime = recording.runtime
     other = runtime.submit(runtime.store.get(recording.task_id)['spec'])
+    request = request_for(recording, task_id=other.task_id)
     with pytest.raises(AgentTaskError, match='original workflow'):
-        runtime.skills.control('record', request_for(recording, task_id=other.task_id))
+        runtime.skills.control('record', request)
     assert_no_draft(recording)
 
 
 @pytest.mark.parametrize('recording', ['origin'], indirect=True)
 def test_expired_source_scope_cannot_be_renewed_by_recording(recording):
     recording.origin.revoke()
+    request = request_for(recording)
     with pytest.raises(AgentTaskError):
-        recording.runtime.skills.control('record', request_for(recording))
+        recording.runtime.skills.control('record', request)
     assert_no_draft(recording)

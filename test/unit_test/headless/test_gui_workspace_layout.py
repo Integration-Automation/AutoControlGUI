@@ -56,7 +56,8 @@ def test_narrow_content_scrolls_without_changing_the_tab_widget_contract(qapp):
     qapp.processEvents()
     try:
         assert tabs.indexOf(page) == 0
-        assert tabs.widget(0) is page and tabs.currentWidget() is page
+        assert tabs.widget(0) is page
+        assert tabs.currentWidget() is page
         scroll = tabs.scroll_area(0)
         assert scroll.widget() is page
         assert scroll.horizontalScrollBar().maximum() > 0
@@ -69,7 +70,8 @@ def test_narrow_content_scrolls_without_changing_the_tab_widget_contract(qapp):
         tabs.removeTab(0)
         assert tabs.indexOf(page) == -1
         tabs.insertTab(0, page, "Wide again")
-        assert tabs.widget(0) is page and tabs.count() == 2
+        assert tabs.widget(0) is page
+        assert tabs.count() == 2
         assert len(tabs.findChildren(type(scroll))) == 2
     finally:
         tabs.close()

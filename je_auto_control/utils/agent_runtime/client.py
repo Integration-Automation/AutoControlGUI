@@ -12,6 +12,8 @@ from je_auto_control.utils.agent_runtime.service import default_connection_path
 from je_auto_control.utils.agent_runtime.transport import request_json
 from je_auto_control.utils.agent_runtime.control_admission import control_request
 
+_INVALID_METADATA = "invalid local runtime connection metadata"
+
 
 def _connection_identity(metadata: dict[str, Any]) -> str:
     generation = metadata.get("generation")
@@ -24,16 +26,16 @@ def _connection_identity(metadata: dict[str, Any]) -> str:
 def _validate_local_metadata(value: Any) -> dict[str, Any]:
     if (not isinstance(value, dict) or not isinstance(value.get("url"), str)
             or not isinstance(value.get("token"), str) or not value["token"]):
-        raise AgentTaskError("invalid local runtime connection metadata")
+        raise AgentTaskError(_INVALID_METADATA)
     try:
         parsed = urlparse(value["url"])
         valid = all((parsed.scheme == "http", parsed.hostname == "127.0.0.1", not parsed.path,
                      parsed.username is None, parsed.password is None, not parsed.query, not parsed.fragment,
                      parsed.port != 0))
     except ValueError:
-        raise AgentTaskError("invalid local runtime connection metadata") from None
+        raise AgentTaskError(_INVALID_METADATA) from None
     if not valid:
-        raise AgentTaskError("invalid local runtime connection metadata")
+        raise AgentTaskError(_INVALID_METADATA)
     return value
 
 

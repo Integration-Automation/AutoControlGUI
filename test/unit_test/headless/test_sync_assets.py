@@ -31,7 +31,8 @@ def test_script_asset_hash_round_trip_publishes_one_complete_generation(tmp_path
         assert (result.directory / item.path).read_bytes() == (source / item.path).read_bytes()
         assert sha256((result.directory / item.path).read_bytes()).hexdigest() == item.sha256
     repeated = ac.sync_assets(manifest, transport)
-    assert repeated.directory == result.directory and repeated.reused is True
+    assert repeated.directory == result.directory
+    assert repeated.reused is True
 
 
 def test_late_hash_failure_publishes_no_partial_script_or_template(tmp_path):
@@ -53,8 +54,9 @@ def test_cancelled_asset_read_keeps_previous_complete_generation_and_cleans_stag
         def open(self, _asset):
             event.set()
             return BytesIO(b'next')
+    cancelling = CancelledTransport()
     with pytest.raises(CancelledError):
-        ac.sync_assets(changed, CancelledTransport(), cancelled=event.is_set)
+        ac.sync_assets(changed, cancelling, cancelled=event.is_set)
     assert (previous.directory / 'script.json').is_file()
     assert len(list(transport.target_root.glob('generation-*'))) == 1
     assert not list(transport.target_root.glob('.incoming-*'))
@@ -70,8 +72,9 @@ def test_asset_manifest_refuses_nonportable_paths_before_any_storage(path):
 def test_asset_manifest_refuses_case_aliases_and_file_directory_collisions():
     for paths in [('A.json', 'a.json'), ('a', 'a/b'), ('Templates/a.png', 'templates/b.png'),
                   ('Templates/a', 'unrelated/x', 'templates/b'), ('caf\u00e9/a', 'cafe\u0301/b')]:
+        files = tuple(ac.AssetFile(path, '0' * 64, 1) for path in paths)
         with pytest.raises(ac.ConfigSyncError):
-            ac.AssetManifest(tuple(ac.AssetFile(path, '0' * 64, 1) for path in paths))
+            ac.AssetManifest(files)
 
 
 def test_tampered_cached_generation_is_refused_without_overwriting_evidence(tmp_path):
@@ -133,8 +136,9 @@ def test_empty_assets_are_verified_and_oversize_streams_publish_nothing(tmp_path
     transport = ac.DirectoryAssetTransport(source, tmp_path / 'target')
     assert (ac.sync_assets(manifest, transport).directory / 'empty.json').read_bytes() == b''
     (source / 'empty.json').write_bytes(b'extra')
+    other = ac.DirectoryAssetTransport(source, tmp_path / 'other-target')
     with pytest.raises(ac.ConfigSyncError):
-        ac.sync_assets(manifest, ac.DirectoryAssetTransport(source, tmp_path / 'other-target'))
+        ac.sync_assets(manifest, other)
     assert not list((tmp_path / 'other-target').glob('generation-*'))
 
 
@@ -145,6 +149,7 @@ def test_wrapped_transport_cancellation_keeps_its_control_flow_signal(tmp_path, 
         def open(self, _asset):
             raise error_type('wrapped interrupted transfer') from CancelledError()
     manifest = ac.AssetManifest((ac.AssetFile('script.json', '0' * 64, 1),))
+    interrupted = InterruptedTransport()
     with pytest.raises(CancelledError):
-        ac.sync_assets(manifest, InterruptedTransport())
+        ac.sync_assets(manifest, interrupted)
     assert not list(InterruptedTransport.target_root.glob('generation-*'))

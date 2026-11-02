@@ -17,8 +17,9 @@ pytestmark = pytest.mark.parametrize('renewal', ['named_dag'], indirect=True)
 
 @pytest.mark.parametrize('field', ['scope', 'completion_authorization', 'owner_policy', 'spec'])
 def test_public_requests_cannot_supply_private_completion_authority(completed, field):
+    request = {**request_for(completed), field: {}}
     with authorization_scope(completed.reviewer), pytest.raises(AgentTaskError, match='fields'):
-        completed.runtime.recovery.control('review_handoff', {**request_for(completed), field: {}})
+        completed.runtime.recovery.control('review_handoff', request)
 
 
 @pytest.mark.parametrize('change', ['source', 'origin', 'reviewer'])
@@ -34,9 +35,10 @@ def test_review_cannot_survive_changed_source_or_current_authority(completed, ch
             completed.current.revoke()
         else:
             completed.users.remove_user('reviewer')
+        request = {**request_for(completed), 'review': preview['handoff_review'],
+                   'note': 'Do not accept a stale completion grant'}
         with pytest.raises(AgentTaskError):
-            runtime.recovery.control('create_handoff', {**request_for(completed),
-                'review': preview['handoff_review'], 'note': 'Do not accept a stale completion grant'})
+            runtime.recovery.control('create_handoff', request)
     with runtime.store.connection() as connection:
         assert connection.execute('SELECT COUNT(*) FROM agent_evidence_handoffs').fetchone()[0] == 0
 

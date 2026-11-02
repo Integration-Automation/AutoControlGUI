@@ -17,7 +17,6 @@ from je_auto_control.utils.agent_runtime.transfer_evidence_contract import (
 )
 from je_auto_control.utils.config_sync.blob_models import CHUNK_BYTES
 from je_auto_control.utils.exception.cancellation import cancellation_checkpoint
-from je_auto_control.utils.rbac.authorization import AuthorizationError
 
 _PEER_SECONDS = 30  # the longest timeout one peer request may carry
 
@@ -79,7 +78,8 @@ class TransferPeer:
             return result
         except AgentTaskError:
             raise
-        except (AuthorizationError, OSError, ValueError, TypeError, KeyError, RecursionError) as error:
+        # OSError covers AuthorizationError, which is a PermissionError.
+        except (OSError, ValueError, TypeError, KeyError, RecursionError) as error:
             raise AgentTaskError('peer transfer is unavailable or its reply is malformed') from error
 
     @staticmethod

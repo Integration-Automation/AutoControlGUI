@@ -48,7 +48,7 @@ def execute_started(client: Any, started: dict, stop_event: threading.Event | No
         with cancellation_scope(None):
             try:
                 runner.control("finish", {})
-            except (AgentTaskError, OSError, RuntimeError, ValueError, TypeError):
+            except (OSError, RuntimeError, ValueError, TypeError):  # ValueError covers AgentTaskError
                 # The persisted running/claimed states require review; no completion is inferred from a lost reply.
                 pass
 
@@ -79,7 +79,7 @@ class _BatchRun:
             with cancellation_scope(None):
                 try:
                     self.control("record", {"node_id": node.id, "receipt": {"outcome": "unknown", "task_id": task_id}})
-                except (AgentTaskError, OSError, RuntimeError, ValueError, TypeError):
+                except (OSError, RuntimeError, ValueError, TypeError):  # ValueError covers AgentTaskError
                     pass  # the durable pre-delivery claim remains an unsettled, non-replayable witness
             raise
 

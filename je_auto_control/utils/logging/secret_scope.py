@@ -162,22 +162,26 @@ class SecretLogFilter(logging.Filter):
     """Scrub before any handler, including propagated and queued handlers."""
 
     def filter(self, record: logging.LogRecord) -> bool:
-        """Mask formatted messages, cached exception text and stack information."""
+        """Mask formatted messages, cached exception text and stack information; never drop a record."""
         scope = current_secret_scope()
-        if scope is None or not scope.has_values:
-            return True
-        try:
-            message = record.getMessage()
-        # pylint: disable-next=broad-exception-caught  # reason: match logging handler containment
-        except Exception:  # noqa: BLE001  # reason: user-defined formatting must not abort a command
-            message = "<unformattable application log record>"
-        record.msg = scope.scrub(message)
-        record.args = ()
-        if record.exc_info:
-            record.exc_text = logging.Formatter().formatException(record.exc_info)
-            record.exc_info = None
-        if record.exc_text:
-            record.exc_text = scope.scrub(record.exc_text)
-        if record.stack_info:
-            record.stack_info = scope.scrub(record.stack_info)
+        if scope is not None and scope.has_values:
+            _scrub_record(record, scope)
         return True
+
+
+def _scrub_record(record: logging.LogRecord, scope: SecretLogScope) -> None:
+    """Replace the record's message, exception text and stack information with their masked forms."""
+    try:
+        message = record.getMessage()
+    # pylint: disable-next=broad-exception-caught  # reason: match logging handler containment
+    except Exception:  # noqa: BLE001  # reason: user-defined formatting must not abort a command
+        message = "<unformattable application log record>"
+    record.msg = scope.scrub(message)
+    record.args = ()
+    if record.exc_info:
+        record.exc_text = logging.Formatter().formatException(record.exc_info)
+        record.exc_info = None
+    if record.exc_text:
+        record.exc_text = scope.scrub(record.exc_text)
+    if record.stack_info:
+        record.stack_info = scope.scrub(record.stack_info)

@@ -1,7 +1,7 @@
 """Match native generation values to exact portable heads and rebind verified asset references to a working root."""
 from copy import deepcopy
 from pathlib import Path
-from typing import Optional, cast
+from typing import Iterable, Optional, cast
 
 from je_auto_control.utils.config_sync.adapter_references import _reference
 from je_auto_control.utils.config_sync.asset_commands import _root
@@ -87,5 +87,10 @@ def _unresolved(value: object, depth: int = 0) -> bool:
         raise ConfigSyncError('native local binding exceeds the nesting limit')
     if _reference(value) is not None or asset_reference(value) is not None:
         return True
-    items = value.values() if isinstance(value, dict) else value if isinstance(value, list) else ()
+    if isinstance(value, dict):
+        items: Iterable[object] = value.values()
+    elif isinstance(value, list):
+        items = value
+    else:
+        return False
     return any(_unresolved(item, depth + 1) for item in items)

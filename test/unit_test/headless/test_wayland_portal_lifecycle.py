@@ -51,7 +51,8 @@ def test_abandoned_portal_request_is_closed_before_its_bus_connection(phase):
     assert len(bus.closes) == 1, 'the remote consent request was left open'
     path, interface, _method, budget = bus.closes[0]
     assert path == (actual if phase != 'reply' else bus.rules[0].split("path='")[1].split("'")[0])
-    assert interface == portal.REQUEST_INTERFACE and 0 < budget <= 0.5
+    assert interface == portal.REQUEST_INTERFACE
+    assert 0 < budget <= 0.5
     assert bus.events[-2:] == ['request-close', 'close']
 
 
@@ -68,7 +69,8 @@ def test_original_capture_controls_survive_request_cleanup(original, wrapped, cl
     with _with_bus(bus), pytest.raises(type(original)) as caught:
         portal.capture_png(timeout=0.02)
     assert caught.value is original
-    assert len(bus.closes) == 1 and bus.events[-1] == 'close'
+    assert len(bus.closes) == 1
+    assert bus.events[-1] == 'close'
 
 
 def test_subscription_failure_preserves_wrapped_control_without_creating_or_closing_a_request():
@@ -78,7 +80,8 @@ def test_subscription_failure_preserves_wrapped_control_without_creating_or_clos
     bus = PendingBus(failure, phase='subscribe')
     with _with_bus(bus), pytest.raises(OperationCancelledError) as caught:
         portal.capture_png(timeout=0.02)
-    assert caught.value is original and bus.requests == []
+    assert caught.value is original
+    assert bus.requests == []
 
 
 def test_cleanup_control_outweighs_an_ordinary_timeout():
@@ -86,7 +89,8 @@ def test_cleanup_control_outweighs_an_ordinary_timeout():
     bus = PendingBus(session_bus.DBusError('timeout'), close_failure=original)
     with _with_bus(bus), pytest.raises(OperationCancelledError) as caught:
         portal.capture_png(timeout=0.02)
-    assert caught.value is original and len(bus.closes) == 1
+    assert caught.value is original
+    assert len(bus.closes) == 1
 
 
 def test_original_control_outweighs_a_second_control_during_request_cleanup():
@@ -94,7 +98,8 @@ def test_original_control_outweighs_a_second_control_during_request_cleanup():
     bus = PendingBus(original, close_failure=SystemExit(9))
     with _with_bus(bus), pytest.raises(OperationCancelledError) as caught:
         portal.capture_png(timeout=0.02)
-    assert caught.value is original and len(bus.closes) == 1
+    assert caught.value is original
+    assert len(bus.closes) == 1
 
 
 @pytest.mark.parametrize('response', [0, 1, 2])
@@ -107,7 +112,8 @@ def test_completed_portal_response_does_not_close_an_already_ended_request(monke
                 portal.capture_png(timeout=0.02)
         else:
             assert portal.capture_png(timeout=0.02) == b'controlled bytes'
-    assert bus.closes == [] and bus.events[-1] == 'close'
+    assert bus.closes == []
+    assert bus.events[-1] == 'close'
 
 
 def test_dbus_call_timeout_includes_a_blocked_write_to_an_unresponsive_peer():
@@ -146,7 +152,9 @@ def test_dbus_call_timeout_includes_a_blocked_write_to_an_unresponsive_peer():
         if worker is not None:
             worker.join(2)
     assert timely, 'the D-Bus timeout did not bound its write'
-    assert not worker.is_alive() and len(errors) == 1 and isinstance(errors[0], session_bus.DBusError)
+    assert not worker.is_alive()
+    assert len(errors) == 1
+    assert isinstance(errors[0], session_bus.DBusError)
 
 
 def test_dbus_reply_uses_the_remaining_budget_after_sending(monkeypatch):
@@ -220,7 +228,8 @@ def test_cancellation_during_bus_open_closes_the_actual_owned_descriptor(monkeyp
         with pytest.raises(type(original)) as caught:
             bus.__enter__()
         assert caught.value is original
-        assert sender.fileno() == -1 and bus._socket is None, 'a failed __enter__ left its actual descriptor open'
+        assert sender.fileno() == -1, 'a failed __enter__ left its actual descriptor open'
+        assert bus._socket is None, 'a failed __enter__ left its actual descriptor open'
     finally:
         sender.close()
         peer.close()
@@ -239,7 +248,8 @@ def test_partial_connection_clears_ownership_before_a_second_cleanup_control(mon
     try:
         with pytest.raises(OperationCancelledError) as caught:
             bus._close_failed_open(original)
-        assert caught.value is original and sender.fileno() == -1
+        assert caught.value is original
+        assert sender.fileno() == -1
         assert bus._socket is None, 'interrupted close retained ownership of an already retired descriptor'
     finally:
         sender.close()

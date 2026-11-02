@@ -99,6 +99,7 @@ class TransferHost:
         with transaction as reading:
             row = self.managed(source_task, issuer, connection=reading)
             with _refresh(row['owner']).scope():
+                # reason: entering the scope re-checks the owner's current rights; nothing runs inside it
                 pass
             with _refresh(issuer).scope():
                 policy = self.policy(_with_origin_scope(row['spec'], origin_scope))

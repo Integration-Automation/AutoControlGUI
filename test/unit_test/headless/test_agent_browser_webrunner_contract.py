@@ -140,7 +140,8 @@ def test_hung_sdk_effect_reaps_only_owned_helper_and_preserves_uncertainty(tmp_p
         result = run_task(runtime, handle.task_id)
         assert result.state == "waiting_user"
         receipts = runtime.store.actions(handle.task_id)
-        assert len(receipts) == 1 and receipts[0]["status"] == "uncertain"
+        assert len(receipts) == 1
+        assert receipts[0]["status"] == "uncertain"
         assert adapter._channel is None
         assert adapter._ledger.empty
     finally:
@@ -279,8 +280,10 @@ def test_owned_browser_helper_refuses_cold_skill_prefix_before_relaunch(tmp_path
         assert adapter._channel is None
         runtime.resume(handle.task_id)
         outcome = run_task(runtime, handle.task_id)
-        assert outcome.state == "waiting_user" and "browser context" in outcome.reason
-        assert adapter._channel is None and adapter._resource is None
+        assert outcome.state == "waiting_user"
+        assert "browser context" in outcome.reason
+        assert adapter._channel is None
+        assert adapter._resource is None
         assert len(runtime.store.actions(handle.task_id)) == 2
     finally:
         runtime.close()
@@ -295,8 +298,10 @@ def test_dependency_probe_uses_real_sdk_loader_without_starting_its_factory(monk
     monkeypatch.setattr(playwright_wrapper, "_require_playwright", loader)
     report = inspect_browser_dependencies(True)
     assert report["status"] == "python_dependencies_ready"
-    assert report["readback_contract"] and report["transfer_contract"]
-    assert report["browser_launch"] == "not_probed" and report["native_evidence"] == "not_recorded"
+    assert report["readback_contract"]
+    assert report["transfer_contract"]
+    assert report["browser_launch"] == "not_probed"
+    assert report["native_evidence"] == "not_recorded"
     loader.assert_called_once()
     factory.assert_not_called()
 
@@ -308,6 +313,8 @@ def test_dependency_probe_contains_the_real_sdk_missing_runtime_error(monkeypatc
     loader = Mock(side_effect=playwright_wrapper.PlaywrightBackendError("private fixture diagnostic"))
     monkeypatch.setattr(playwright_wrapper, "_require_playwright", loader)
     report = inspect_browser_dependencies(True)
-    assert report["status"] == "dependency_missing" and report["playwright"] is False
-    assert report["browser_launch"] == "not_probed" and report["native_evidence"] == "not_recorded"
+    assert report["status"] == "dependency_missing"
+    assert report["playwright"] is False
+    assert report["browser_launch"] == "not_probed"
+    assert report["native_evidence"] == "not_recorded"
     assert "private fixture diagnostic" not in str(report)

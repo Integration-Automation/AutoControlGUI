@@ -169,10 +169,11 @@ class AgentTargetProfiles:
 
     def _summary(self, name: str) -> dict:
         profile = self._profiles.get(name)
-        kind = profile.kind if profile is not None else {"local-desktop": "desktop", "local-files": "files"}.get(
-            name, "injected")
-        tools = list(profile.allowed_tools) if profile is not None else sorted(
-            reviewed_tools(kind)) if kind in {"desktop", "files", "browser"} else []
+        if profile is not None:
+            kind, tools = profile.kind, list(profile.allowed_tools)
+        else:
+            kind = {"local-desktop": "desktop", "local-files": "files"}.get(name, "injected")
+            tools = sorted(reviewed_tools(kind)) if kind in {"desktop", "files", "browser"} else []
         result: dict[str, Any] = {"name": name, "kind": kind, "enabled": self._enabled.get(name, True),
                 "declared_tools": tools,
                 "managed_profile": profile is not None, "readiness": "not_probed", "native_evidence": "not_recorded",

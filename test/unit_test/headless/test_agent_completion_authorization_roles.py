@@ -38,7 +38,8 @@ def test_actual_renewal_reviewer_revocation_invalidates_current_completion_evide
     assert renewal.runtime.get(child).metadata['completion_contract'] == 1
     renewal.users.remove_user('reviewer')
     result = renewal.runtime.get(child)
-    assert result.state == 'succeeded' and result.metadata['completion_contract'] == 0
+    assert result.state == 'succeeded'
+    assert result.metadata['completion_contract'] == 0
 
 
 @pytest.mark.parametrize('renewal', ['named'], indirect=True)

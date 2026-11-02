@@ -85,14 +85,19 @@ def test_record_original_semantic_actions_without_replay_or_trial_fabrication(re
     receipts = runtime.store.actions(recording.task_id)
     manifest = recording.manifest.read_bytes()
     candidate = runtime.skills.control('record', request_for(recording))
-    assert candidate['state'] == 'draft' and candidate['version'] == 0 and candidate['publication'] is None
-    assert candidate['spec']['mode'] == 'skill' and candidate['spec']['actions'] == [recording.action]
+    assert candidate['state'] == 'draft'
+    assert candidate['version'] == 0
+    assert candidate['publication'] is None
+    assert candidate['spec']['mode'] == 'skill'
+    assert candidate['spec']['actions'] == [recording.action]
     assert candidate['provenance']['source_task'] == recording.task_id
     proof = candidate['provenance']['completion_review']
-    assert proof['task_id'] == recording.child_id and proof['effect_task'] == recording.task_id
+    assert proof['task_id'] == recording.child_id
+    assert proof['effect_task'] == recording.task_id
     assert 'skill_pin' not in candidate['spec']['options']
     assert runtime.get(recording.task_id).state == 'paused'
-    assert runtime.store.actions(recording.task_id) == receipts and runtime.store.actions(recording.child_id) == []
+    assert runtime.store.actions(recording.task_id) == receipts
+    assert runtime.store.actions(recording.child_id) == []
     assert recording.manifest.read_bytes() == manifest
     with runtime.store.connection() as connection:
         assert connection.execute('SELECT COUNT(*) FROM agent_skill_trials').fetchone()[0] == 0
@@ -128,7 +133,8 @@ def test_draft_publishes_only_after_its_own_new_validation(recording, monkeypatc
     assert run_task(runtime, trial['task_id']).state == 'succeeded'
     accepted = runtime.skills.control('accept', {'candidate_id': candidate['id'], 'task_id': trial['task_id'],
                                                'expected_version': 0, 'note': 'Reviewed the new exact trial'})
-    assert accepted['version'] == 1 and accepted['publication']['task_id'] == trial['task_id']
+    assert accepted['version'] == 1
+    assert accepted['publication']['task_id'] == trial['task_id']
     assert runtime.get(recording.task_id).state == 'paused'
     with runtime.store.connection() as connection:
         identifiers = connection.execute('SELECT task_id FROM agent_skill_trials').fetchall()
@@ -140,7 +146,8 @@ def test_added_criteria_do_not_inherit_the_readers_verified_result(recording, mo
     runtime = recording.runtime
     candidate = runtime.skills.control('record', request_for(recording, validation_criteria=[
         {'kind': 'file_text', 'path': str(recording.output), 'value': 'not independently verified'}]))
-    assert runtime.get(recording.child_id).state == 'succeeded' and candidate['publication'] is None
+    assert runtime.get(recording.child_id).state == 'succeeded'
+    assert candidate['publication'] is None
     trial = runtime.skills.control('validate', {'candidate_id': candidate['id']})
     monkeypatch.undo()
     assert run_task(runtime, trial['task_id']).state != 'succeeded'
@@ -162,10 +169,12 @@ def test_reader_retention_and_restart_preserve_only_historical_draft_provenance(
     reopened = AgentRuntime(runtime.store.path, targets={'local-files': NativeDesktopTarget()})
     try:
         current = reopened.skills.control('get', {'candidate_id': candidate['id']})
-        assert current['state'] == 'draft' and current['provenance']['completion_review'] == proof
+        assert current['state'] == 'draft'
+        assert current['provenance']['completion_review'] == proof
         fresh = reopened.skills.control('validate', {'candidate_id': candidate['id']})
         assert reopened.store.actions(fresh['task_id']) == []
+        request = request_for(recording)
         with pytest.raises(AgentTaskError):
-            reopened.skills.control('record', request_for(recording))
+            reopened.skills.control('record', request)
     finally:
         reopened.close()

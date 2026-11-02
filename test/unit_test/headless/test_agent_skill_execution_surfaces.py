@@ -46,11 +46,13 @@ def test_shared_surfaces_review_then_accept_complete_recovered_trial(execution, 
         monkeypatch.setattr('je_auto_control.utils.agent_runtime.client.default_connection_path', lambda: connection)
         request = review_request(execution)
         review = invoke(surface, connection, tmp_path, 'review_execution', request)
-        assert review['approval_required'] is True and review['publication_inherited'] is False
+        assert review['approval_required'] is True
+        assert review['publication_inherited'] is False
         accepted = invoke(surface, connection, tmp_path, 'accept', {**request,
             'execution_review': review['execution_review'], 'expected_version': 0,
             'note': 'Reviewed exact full original execution chain'})
-        assert accepted['publication']['task_id'] == execution.task_id and accepted['version'] == 1
+        assert accepted['publication']['task_id'] == execution.task_id
+        assert accepted['version'] == 1
         assert accepted['publication']['execution_review']['task_id'] == execution.child_id
         assert execution.runtime.get(execution.task_id).state == 'paused'
     finally:

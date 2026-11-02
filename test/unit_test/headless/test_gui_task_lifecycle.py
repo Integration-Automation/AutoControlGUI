@@ -70,13 +70,16 @@ def test_ui_tick_continues_during_network_wait(tasks):
         assert entered.wait(1)
         QTimer.singleShot(0, lambda: ticks.append('tick'))
         assert _pump(app, lambda: ticks)
-        assert not results and handle.is_running
+        assert not results
+        assert handle.is_running
     finally:
         release.set()
     assert _pump(app, lambda: results and controller.active_count == 0)
     outcome, callback_thread = results[0]
-    assert outcome.status == 'ok' and outcome.task_id == handle.task_id
-    assert outcome.value != threading.get_ident() and callback_thread == threading.get_ident()
+    assert outcome.status == 'ok'
+    assert outcome.task_id == handle.task_id
+    assert outcome.value != threading.get_ident()
+    assert callback_thread == threading.get_ident()
 
 
 def test_cancel_releases_session(tasks):
@@ -99,7 +102,9 @@ def test_cancel_releases_session(tasks):
     handle.cancel()
     assert _pump(app, lambda: handle.outcome is not None and controller.active_count == 0)
     assert handle.outcome.status == 'cancelled'
-    assert released.is_set() and sessions == [] and not handle.is_running
+    assert released.is_set()
+    assert sessions == []
+    assert not handle.is_running
 
 
 def test_owner_death_drops_result(tasks):
@@ -121,7 +126,9 @@ def test_owner_death_drops_result(tasks):
     finally:
         release.set()
     assert _pump(app, lambda: controller.active_count == 0)
-    assert received == [] and handle.outcome is None and handle.is_cancelled
+    assert received == []
+    assert handle.outcome is None
+    assert handle.is_cancelled
 
 
 def test_no_worker_touches_widget(tasks):
@@ -155,8 +162,11 @@ def test_submission_captures_context_and_viewer_authority_without_drive_privileg
     assert _pump(app, lambda: handle.outcome is not None and controller.active_count == 0)
     assert handle.outcome.status == 'ok'
     value, authority = handle.outcome.value
-    assert value == 'registrant' and authority.user_id == 'reader' and authority.role == 'viewer'
-    assert current_authorization() is None and marker.get() == 'ambient'
+    assert value == 'registrant'
+    assert authority.user_id == 'reader'
+    assert authority.role == 'viewer'
+    assert current_authorization() is None
+    assert marker.get() == 'ambient'
 
 
 @pytest.mark.parametrize('kind', ['keyboard', 'exit', 'generator', 'async', 'future', 'operation'])
@@ -174,7 +184,8 @@ def test_direct_and_wrapped_controls_have_a_cancelled_outcome_instead_of_an_ordi
 
     handle = controller.submit(work, owner=owner)
     assert _pump(app, lambda: handle.outcome is not None and controller.active_count == 0)
-    assert handle.outcome.status == 'cancelled' and handle.outcome.error == ''
+    assert handle.outcome.status == 'cancelled'
+    assert handle.outcome.error == ''
 
 
 def test_an_ordinary_error_finishes_once_and_does_not_block_a_later_task(tasks):
@@ -187,11 +198,14 @@ def test_an_ordinary_error_finishes_once_and_does_not_block_a_later_task(tasks):
     handle = controller.submit(broken, owner=owner)
     handle.finished.connect(outcomes.append)
     assert _pump(app, lambda: handle.outcome is not None and controller.active_count == 0)
-    assert handle.outcome.status == 'error' and 'controlled failure' in handle.outcome.error
+    assert handle.outcome.status == 'error'
+    assert 'controlled failure' in handle.outcome.error
     assert len(outcomes) == 1
     later = controller.submit(lambda _token: 42, owner=owner)
     assert _pump(app, lambda: later.outcome is not None and controller.active_count == 0)
-    assert later.outcome.status == 'ok' and later.outcome.value == 42 and later.task_id != handle.task_id
+    assert later.outcome.status == 'ok'
+    assert later.outcome.value == 42
+    assert later.task_id != handle.task_id
 
 
 def test_start_failure_does_not_leak_worker_or_controller_job(tasks, monkeypatch):
@@ -208,7 +222,8 @@ def test_start_failure_does_not_leak_worker_or_controller_job(tasks, monkeypatch
         with pytest.raises(RuntimeError) as caught:
             controller.submit(lambda _token: None, owner=owner)
         assert caught.value is original
-        assert controller.active_count == 0 and set(_worker_thread._RUNNING) == previous
+        assert controller.active_count == 0
+        assert set(_worker_thread._RUNNING) == previous
     finally:
         # A failed pre-fix run must not leave an unstarted thread for atexit to join.
         for handle in set(_worker_thread._RUNNING)-previous:
@@ -253,7 +268,8 @@ def test_authority_is_refreshed_before_work_not_merely_copied_at_submission(task
     finally:
         release.set()
     assert _pump(app, lambda: handle.outcome is not None and controller.active_count == 0)
-    assert handle.outcome.status == 'error' and calls == []
+    assert handle.outcome.status == 'error'
+    assert calls == []
 
 
 def test_destroying_one_owner_does_not_cancel_another_owners_work(tasks):
@@ -274,14 +290,17 @@ def test_destroying_one_owner_does_not_cancel_another_owners_work(tasks):
     first = controller.submit(first_work, owner=first_owner)
     second = controller.submit(second_work, owner=second_owner)
     try:
-        assert first_entered.wait(1) and second_entered.wait(1)
+        assert first_entered.wait(1)
+        assert second_entered.wait(1)
         first_owner.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
-        assert first.is_cancelled and not second.is_cancelled
+        assert first.is_cancelled
+        assert not second.is_cancelled
     finally:
         release.set()
     assert _pump(app, lambda: second.outcome is not None and controller.active_count == 0)
-    assert first.outcome is None and second.outcome.value == 'second owner'
+    assert first.outcome is None
+    assert second.outcome.value == 'second owner'
     second_owner.deleteLater()
 
 
@@ -301,7 +320,9 @@ def test_destroying_controller_cancels_jobs_and_drops_late_results(tasks):
     controller.deleteLater()
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     assert _pump(app, lambda: controller.active_count == 0)
-    assert handle.is_cancelled and handle.outcome is None and outcomes == []
+    assert handle.is_cancelled
+    assert handle.outcome is None
+    assert outcomes == []
 
 
 def test_discarding_a_handle_does_not_retain_it_through_worker_callbacks(tasks):
@@ -339,7 +360,8 @@ def test_worker_and_handle_do_not_keep_the_owner_alive_through_a_callback_cycle(
     gc.collect()
     assert owner_ref() is None
     assert _pump(app, lambda: controller.active_count == 0)
-    assert handle.outcome is None and handle.is_cancelled
+    assert handle.outcome is None
+    assert handle.is_cancelled
 
 
 def test_foreign_and_late_progress_or_results_cannot_replace_this_tasks_outcome(tasks):
@@ -357,13 +379,15 @@ def test_foreign_and_late_progress_or_results_cannot_replace_this_tasks_outcome(
     try:
         handle.complete(TaskOutcome(handle.task_id+1, 'ok', 'foreign'))
         handle.forward_progress(TaskProgress(handle.task_id+1, 1))
-        assert handle.outcome is None and progress == []
+        assert handle.outcome is None
+        assert progress == []
     finally:
         release.set()
     assert _pump(app, lambda: handle.outcome is not None and controller.active_count == 0)
     handle.complete(TaskOutcome(handle.task_id, 'error', error='late'))
     handle.forward_progress(TaskProgress(handle.task_id, 2))
-    assert handle.outcome.value == 'correct' and progress == []
+    assert handle.outcome.value == 'correct'
+    assert progress == []
 
 
 def test_late_cooperative_stop_does_not_relabel_successful_committed_work(tasks):
@@ -379,7 +403,9 @@ def test_late_cooperative_stop_does_not_relabel_successful_committed_work(tasks)
     assert entered.wait(1)
     handle.cancel()
     assert _pump(app, lambda: handle.outcome is not None and controller.active_count == 0)
-    assert handle.is_cancelled and handle.outcome.status == 'ok' and handle.outcome.value == 'committed'
+    assert handle.is_cancelled
+    assert handle.outcome.status == 'ok'
+    assert handle.outcome.value == 'committed'
 
 
 @pytest.mark.parametrize('operation', ['submit', 'close'])
@@ -399,7 +425,9 @@ def test_lifecycle_mutations_are_rejected_off_the_gui_thread(tasks, operation):
     thread = threading.Thread(target=off_thread)
     thread.start()
     thread.join(1)
-    assert not thread.is_alive() and len(errors) == 1 and controller.active_count == 0
+    assert not thread.is_alive()
+    assert len(errors) == 1
+    assert controller.active_count == 0
 
 
 def test_failure_cause_tracebacks_are_released_before_outcome_delivery(tasks):
@@ -415,7 +443,8 @@ def test_failure_cause_tracebacks_are_released_before_outcome_delivery(tasks):
     handle = controller.submit(work, owner=owner)
     assert _pump(app, lambda: handle.outcome is not None and controller.active_count == 0)
     assert handle.outcome.status == 'error'
-    assert original.__traceback__ is None and wrapper.__traceback__ is None
+    assert original.__traceback__ is None
+    assert wrapper.__traceback__ is None
 
 
 def test_worker_progress_and_error_text_use_the_captured_secret_scope(tasks):
@@ -435,8 +464,12 @@ def test_worker_progress_and_error_text_use_the_captured_secret_scope(tasks):
         handle.progress.connect(progress.append)
         release.set()
         assert _pump(app, lambda: handle.outcome is not None and controller.active_count == 0)
-    assert len(progress) == 1 and secret not in progress[0].detail and '***' in progress[0].detail
-    assert handle.outcome.status == 'error' and secret not in handle.outcome.error and '***' in handle.outcome.error
+    assert len(progress) == 1
+    assert secret not in progress[0].detail
+    assert '***' in progress[0].detail
+    assert handle.outcome.status == 'error'
+    assert secret not in handle.outcome.error
+    assert '***' in handle.outcome.error
 
 
 @pytest.mark.parametrize('kind', ['ordinary', 'keyboard', 'exit', 'generator', 'async', 'future', 'operation'])
@@ -456,9 +489,11 @@ def test_broken_error_formatters_still_deliver_one_typed_terminal_outcome(tasks,
     handle = controller.submit(work, owner=owner)
     assert _pump(app, lambda: handle.outcome is not None and controller.active_count == 0)
     if kind == 'ordinary':
-        assert handle.outcome.status == 'error' and 'detail unavailable' in handle.outcome.error
+        assert handle.outcome.status == 'error'
+        assert 'detail unavailable' in handle.outcome.error
     else:
-        assert handle.outcome.status == 'cancelled' and handle.outcome.error == ''
+        assert handle.outcome.status == 'cancelled'
+        assert handle.outcome.error == ''
 
 
 def test_retiring_tasks_disconnects_owner_notifications_instead_of_accumulating_them(tasks):

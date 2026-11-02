@@ -47,7 +47,9 @@ def test_actual_pool_retains_one_source_across_reference_and_borrower_replacemen
         wait_lost(verifier, left)
         assert verifier.request('check', right, timeout=3)['status'] == 'ok'
         other.close()
-        assert borrower.retired and channels[1].retired and not channels[0].retired
+        assert borrower.retired
+        assert channels[1].retired
+        assert not channels[0].retired
         wait_lost(verifier, borrowed)
         fresh = instance(namespace, clock, instances, channels).reference()
         try:
@@ -61,7 +63,8 @@ def test_actual_pool_retains_one_source_across_reference_and_borrower_replacemen
         second.close()
         if verifier is not None:
             verifier.close()
-    assert owner.retired and all(channel.retired for channel in channels)
+    assert owner.retired
+    assert all(channel.retired for channel in channels)
 
 
 def test_actual_pool_owner_loss_never_rearms_old_reference_or_imports_old_idle(tmp_path):
@@ -81,7 +84,8 @@ def test_actual_pool_owner_loss_never_rearms_old_reference_or_imports_old_idle(t
             borrower.acquire(noop, 3)
         with pytest.raises(AgentTaskError):
             borrower.acquire(noop, 3)
-        assert len(channels) == 2 and all(channel.retired for channel in channels)
+        assert len(channels) == 2
+        assert all(channel.retired for channel in channels)
         replacement = instance(namespace, clock, instances, channels).reference()
         with pytest.raises(AgentControlBusy):
             replacement.acquire(noop, 15)
@@ -128,11 +132,13 @@ def test_actual_pool_caller_cancellation_reaps_late_token_without_closing_shared
         verifier = create(namespace, clock, instances)
         verifier.request('bootstrap', {}, timeout=15)
         assert verifier.request('check', original, timeout=3)['status'] == 'ok'
-        assert len(instances.read_text().splitlines()) == 1 and len(channels) == 1
+        assert len(instances.read_text().splitlines()) == 1
+        assert len(channels) == 1
     finally:
         gate.unlink(missing_ok=True)
         first.close()
         second.close()
         if verifier is not None:
             verifier.close()
-    assert shared.retired and channels[0].retired
+    assert shared.retired
+    assert channels[0].retired

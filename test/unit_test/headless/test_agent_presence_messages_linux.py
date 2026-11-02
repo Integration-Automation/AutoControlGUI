@@ -72,12 +72,12 @@ class MessageOwnershipTests(unittest.TestCase):
                 'malformed_pidfd': [credentials, malformed],
             }[shape]
             received = module._owned_descriptors(controls, module._ancillary_abi())
-            connection = Mock()
+            connection, peer = Mock(), Mock()
             connection.recvmsg.return_value = (b'{}', controls, 0, None)
             try:
                 with self.subTest(shape=shape), patch.object(module, '_snapshot') as snapshot:
                     with self.assertRaises(AgentTaskError):
-                        module._receive(connection, Mock())
+                        module._receive(connection, peer)
                     snapshot.assert_not_called()
                 for descriptor in received:
                     with self.assertRaises(OSError):
@@ -101,20 +101,20 @@ class MessageOwnershipTests(unittest.TestCase):
             peer.alive.assert_not_called()
 
     def test_unknown_abi_and_missing_cmsg_cloexec_refuse_before_consumption(self):
-        connection = Mock(spec=socket.socket)
+        connection, peer = Mock(spec=socket.socket), Mock()
         with patch.object(socket, 'MSG_CMSG_CLOEXEC', 0):
             with self.assertRaises(AgentTaskError):
                 module._configure(connection)
         with patch.object(socket, 'SCM_PIDFD', None, create=True), patch(
                 'je_auto_control.utils.agent_runtime.presence_peer_linux.platform.machine', return_value='sparc64'):
             with self.assertRaises(AgentTaskError):
-                module._receive(connection, Mock())
+                module._receive(connection, peer)
         connection.recvmsg.assert_not_called()
 
     def test_missing_descriptor_control_abi_refuses_before_receiving_owned_fds(self):
-        connection = Mock(spec=socket.socket)
+        connection, peer = Mock(spec=socket.socket), Mock()
         for name in ('SCM_CREDENTIALS', 'SCM_RIGHTS'):
             with self.subTest(name=name), patch.object(socket, name, None):
                 with self.assertRaises(AgentTaskError):
-                    module._receive(connection, Mock())
+                    module._receive(connection, peer)
         connection.recvmsg.assert_not_called()

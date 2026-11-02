@@ -97,8 +97,9 @@ def test_reusing_a_state_machine_starts_a_new_scope_each_time(seen):
 
 def test_fsm_error_restores_the_previous_scope(seen):
     executor.variables.set("owner", "process")
+    machine = _machine([SET, READ], finish=False)
     with pytest.raises(StateMachineError, match="no transition"):
-        _machine([SET, READ], finish=False).run()
+        machine.run()
     assert seen == ["child"]
     assert executor.variables.as_dict() == {"owner": "process"}
     assert current_scope() is None

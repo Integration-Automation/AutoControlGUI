@@ -33,7 +33,8 @@ def test_cancel_does_not_fallback_silently(api, monkeypatch):
     monkeypatch.setattr(api.shutil, 'which', lambda _name: '/controlled/executable')
     canceled = api.probe_capabilities(api.BackendContext.current()).input
     assert canceled.state == 'needs_permission'
-    assert canceled.backend == 'libei' and canceled.recovery
+    assert canceled.backend == 'libei'
+    assert canceled.recovery
     assert 'private detail' not in json.dumps(canceled.to_dict())
 
 
@@ -48,21 +49,25 @@ def test_revoked_session_cannot_send(api, monkeypatch):
     with pytest.raises(libei.LibeiUnavailable):
         _select_input.emitted(backend, lambda sender: sender.press_key(30))
     snapshot = api.probe_capabilities(api.BackendContext.current())
-    assert len(writes) == 0 and snapshot.input.state == 'revoked'
+    assert len(writes) == 0
+    assert snapshot.input.state == 'revoked'
 
 
 def test_xwayland_scope_is_explicit(api):
     env = {'XDG_SESSION_TYPE': 'wayland', 'DISPLAY': ':9', 'JE_AUTOCONTROL_LINUX_DISPLAY_SERVER': 'x11'}
     snapshot = api.probe_capabilities(context(api, env=env))
-    assert snapshot.input.desktop_wide is False and snapshot.capture.desktop_wide is False
-    assert snapshot.display_server == 'x11' and snapshot.capture.backend == 'x11'
+    assert snapshot.input.desktop_wide is False
+    assert snapshot.capture.desktop_wide is False
+    assert snapshot.display_server == 'x11'
+    assert snapshot.capture.backend == 'x11'
 
 
 def test_xwayland_observation_cannot_broaden_its_native_window_scope(api):
     env = {'WAYLAND_DISPLAY': 'w', 'DISPLAY': ':9', 'JE_AUTOCONTROL_LINUX_DISPLAY_SERVER': 'x11'}
     previous = api.CapabilityStatus('input', 'available', 'x11', 'observed', 'verify operation', True)
     snapshot = api.probe_capabilities(context(api, env=env, input_state=previous))
-    assert snapshot.input.state == 'available' and snapshot.input.desktop_wide is False
+    assert snapshot.input.state == 'available'
+    assert snapshot.input.desktop_wide is False
 
 
 def test_an_existing_x11_scope_restriction_is_never_broadened(api):
@@ -75,28 +80,33 @@ def test_an_existing_x11_scope_restriction_is_never_broadened(api):
 def test_observed_native_refusal_outweighs_installed_cli_tools(api, state):
     observed = api.CapabilityStatus('input', state, 'libei', 'observed refusal', 'explicit recovery', True)
     snapshot = api.probe_capabilities(context(api, tools=('ydotool', 'grim'), input_state=observed))
-    assert snapshot.input is observed and snapshot.capture.backend == 'grim'
+    assert snapshot.input is observed
+    assert snapshot.capture.backend == 'grim'
     assert snapshot.capture.state == 'unverified'
 
 
 def test_dependency_detection_is_not_readiness_or_permission(api):
     snapshot = api.probe_capabilities(context(api, tools=('ydotool', 'grim')))
     assert snapshot.input.state == snapshot.capture.state == 'unverified'
-    assert snapshot.input.backend == 'auto' and snapshot.capture.backend == 'grim'
+    assert snapshot.input.backend == 'auto'
+    assert snapshot.capture.backend == 'grim'
     assert snapshot.to_dict()['passive'] is True
 
 
 def test_input_and_capture_dependencies_are_independent(api):
     env = {'XDG_SESSION_TYPE': 'wayland', 'JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND': 'cli'}
     snapshot = api.probe_capabilities(context(api, env=env, tools=('grim',)))
-    assert snapshot.input.state == 'needs_dependency' and snapshot.input.backend == 'ydotool'
-    assert snapshot.capture.state == 'unverified' and snapshot.capture.backend == 'grim'
+    assert snapshot.input.state == 'needs_dependency'
+    assert snapshot.input.backend == 'ydotool'
+    assert snapshot.capture.state == 'unverified'
+    assert snapshot.capture.backend == 'grim'
 
 
 def test_explicit_cli_selection_does_not_claim_a_running_daemon(api):
     env = {'WAYLAND_DISPLAY': 'wayland-0', 'JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND': 'cli'}
     snapshot = api.probe_capabilities(context(api, env=env, tools=('ydotool',)))
-    assert snapshot.input.state == 'unverified' and snapshot.input.backend == 'ydotool'
+    assert snapshot.input.state == 'unverified'
+    assert snapshot.input.backend == 'ydotool'
     assert snapshot.capture.state == 'needs_dependency'
 
 
@@ -104,13 +114,15 @@ def test_explicit_cli_selection_does_not_claim_a_running_daemon(api):
 def test_invalid_explicit_capture_command_never_selects_a_different_provider(api, template):
     env = {'WAYLAND_DISPLAY': 'wayland-0', 'JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND': template}
     snapshot = api.probe_capabilities(context(api, env=env, tools=('grim', 'capture')))
-    assert snapshot.capture.state == 'failed' and snapshot.capture.backend == 'custom-command'
+    assert snapshot.capture.state == 'failed'
+    assert snapshot.capture.backend == 'custom-command'
 
 
 def test_portal_bus_address_is_only_a_prerequisite_and_is_not_disclosed(api):
     secret = 'unix:path=/private/session-with-token'
     snapshot = api.probe_capabilities(context(api, env={'WAYLAND_DISPLAY': 'w', 'DBUS_SESSION_BUS_ADDRESS': secret}))
-    assert snapshot.capture.backend == 'portal' and snapshot.capture.state == 'unverified'
+    assert snapshot.capture.backend == 'portal'
+    assert snapshot.capture.state == 'unverified'
     assert secret not in json.dumps(snapshot.to_dict())
 
 
@@ -144,7 +156,8 @@ def test_current_context_does_not_load_native_libraries_connect_or_execute_tools
     monkeypatch.setitem(api.os.environ, 'XDG_SESSION_TYPE', 'wayland')
     monkeypatch.setattr(api.shutil, 'which', lambda _name: None)
     snapshot = api.probe_capabilities(api.BackendContext.current())
-    assert snapshot.input.state == 'unverified' and snapshot.capture.state in ('unverified', 'needs_dependency')
+    assert snapshot.input.state == 'unverified'
+    assert snapshot.capture.state in ('unverified', 'needs_dependency')
 
 
 def test_existing_sender_busy_on_another_thread_is_observed_without_waiting(api, monkeypatch):
@@ -156,7 +169,8 @@ def test_existing_sender_busy_on_another_thread_is_observed_without_waiting(api,
     monkeypatch.setattr(api.sys, 'platform', 'linux')
     monkeypatch.setitem(api.os.environ, 'XDG_SESSION_TYPE', 'wayland')
     snapshot = api.probe_capabilities(api.BackendContext.current())
-    assert attempts == [False] and snapshot.input.state == 'unverified'
+    assert attempts == [False]
+    assert snapshot.input.state == 'unverified'
 
 
 @pytest.mark.parametrize('platform,backend', [('win32', 'win32'), ('darwin', 'quartz')])
@@ -200,7 +214,8 @@ def test_cached_native_readiness_covers_all_requested_event_families(api, monkey
     monkeypatch.setattr(libei, '_BLOCKED_PROBE', None)
     monkeypatch.setitem(api.os.environ, 'XDG_SESSION_TYPE', 'wayland')
     snapshot = api.probe_capabilities(api.BackendContext.current())
-    assert snapshot.input.state == expected and snapshot.input.backend == 'libei'
+    assert snapshot.input.state == expected
+    assert snapshot.input.backend == 'libei'
 
 
 @pytest.mark.parametrize('choice,backend,state', [('auto', 'ydotool', 'unverified'),
@@ -214,14 +229,16 @@ def test_only_observed_optional_absence_allows_automatic_cli_diagnostics(api, mo
     monkeypatch.setitem(api.os.environ, 'JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND', choice)
     monkeypatch.setattr(api.shutil, 'which', lambda _name: '/controlled')
     snapshot = api.probe_capabilities(api.BackendContext.current())
-    assert snapshot.input.backend == backend and snapshot.input.state == state
+    assert snapshot.input.backend == backend
+    assert snapshot.input.state == state
 
 
 def test_owned_capture_permission_observation_remains_separate_from_input(api):
     observed = api.CapabilityStatus('capture', 'needs_permission', 'portal', 'refused', 'explicit retry', True)
     env = {'WAYLAND_DISPLAY': 'w', 'DBUS_SESSION_BUS_ADDRESS': 'controlled'}
     snapshot = api.probe_capabilities(context(api, env=env, capture_state=observed))
-    assert snapshot.capture is observed and snapshot.input.state == 'unverified'
+    assert snapshot.capture is observed
+    assert snapshot.input.state == 'unverified'
 
 
 def test_default_context_repr_and_result_do_not_disclose_environment_or_capture_arguments(api, monkeypatch):
@@ -232,7 +249,8 @@ def test_default_context_repr_and_result_do_not_disclose_environment_or_capture_
     monkeypatch.setattr(api.shutil, 'which', lambda _name: '/controlled')
     captured = api.BackendContext.current()
     result = api.probe_capabilities(captured)
-    assert secret not in repr(captured) and secret not in json.dumps(result.to_dict())
+    assert secret not in repr(captured)
+    assert secret not in json.dumps(result.to_dict())
 
 
 @pytest.mark.parametrize('invalid', [None, {}, []])

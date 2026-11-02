@@ -58,6 +58,10 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261103-01 | 2026-11-03 | Hold the collector off around the presence reader's timed windows | #incident #agent #ci #test | [2026-11](2026-11.md) |
+| U-20261102-03 | 2026-11-02 | Require Python 3.11; stop supporting 3.10 | #migration #deps #ci | [2026-11](2026-11.md) |
+| U-20261102-02 | 2026-11-02 | Clear the SonarCloud findings the 1.1.0 release PR reported | #ci #test #quality | [2026-11](2026-11.md) |
+| U-20261102-01 | 2026-11-02 | Merge the release line into dev for 1.1.0 | #release #migration | [2026-11](2026-11.md) |
 | U-20261101-17 | 2026-11-01 | Patch the dependencies named in Dependabot security alerts | #bugfix #deps #security #ci | [2026-11](2026-11.md) |
 | U-20261101-16 | 2026-11-01 | Accept either refusal when a revocation races the lease watch | #incident #ci #test | [2026-11](2026-11.md) |
 | U-20261101-15 | 2026-11-01 | Observe only the maintenance call's own writes in the receipt test | #incident #ci #test | [2026-11](2026-11.md) |
@@ -604,7 +608,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-11.md](2026-11.md) | 2026-11 | 17 |
+| [2026-11.md](2026-11.md) | 2026-11 | 21 |
 | [2026-10-f.md](2026-10-f.md) | 2026-10 | 5 |
 | [2026-10-e.md](2026-10-e.md) | 2026-10 | 91 |
 | [2026-10-d.md](2026-10-d.md) | 2026-10 | 15 |

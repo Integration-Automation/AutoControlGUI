@@ -110,12 +110,14 @@ def test_actual_worker_and_sdk_only_invoke_finite_input_after_durable_begin_ack(
         assert adapter.ready(spec) == (True, '')
         observed = adapter.observe()
         assert observed['identity']['physical_id'] == DEVICE
-        assert observed['elements'] == [] and observed['text'] == ''
+        assert observed['elements'] == []
+        assert observed['text'] == ''
         assert not any('/system/bin/input -d 0 ' in command for command in sdk.services)
         assert adapter.perform('AC_android_tap', {'x': 10, 'y': 20}) == {
             'android_phase': 'input_returned', 'may_have_effect': True}
         assert (sdk.directory / 'actions').read_text().splitlines() == ['-d', '0', 'tap', '10', '20']
-        assert not adapter._journal.pending and adapter._journal.sequence == 2
+        assert not adapter._journal.pending
+        assert adapter._journal.sequence == 2
         assert json.loads((sdk.directory / 'fence.json').read_text())['active'] is False
         assert not sdk.errors
     finally:
@@ -146,7 +148,8 @@ def test_bad_independent_settlement_keeps_effect_quarantined(android_sdk, flag):
         with pytest.raises(AgentTaskError):
             adapter.perform('AC_android_tap', {'x': 10, 'y': 20})
         assert (sdk.directory / 'actions').exists()
-        assert adapter._journal.pending and adapter._channel.retired
+        assert adapter._journal.pending
+        assert adapter._channel.retired
     finally:
         release_fixture(adapter)
 
@@ -161,7 +164,8 @@ def test_lost_shell_exit_stays_unknown_even_after_fixture_writer_settles(android
         with pytest.raises(AgentTaskError):
             adapter.perform('AC_android_tap', {'x': 10, 'y': 20})
         assert json.loads((sdk.directory / 'settlement.json').read_text())['queue_empty'] is True
-        assert adapter._journal.pending and adapter._channel.retired
+        assert adapter._journal.pending
+        assert adapter._channel.retired
     finally:
         release_fixture(adapter)
 
@@ -180,7 +184,8 @@ def test_stale_scope_or_unmatched_lease_cannot_begin_input(android_sdk, change):
             (sdk.directory / 'wrong_lease').touch()
         with pytest.raises(AgentTaskError):
             adapter.perform('AC_android_tap', {'x': 10, 'y': 20})
-        assert not adapter._journal.pending and not (sdk.directory / 'actions').exists()
+        assert not adapter._journal.pending
+        assert not (sdk.directory / 'actions').exists()
         assert not any('/system/bin/input -d 0 ' in command for command in sdk.services)
     finally:
         release_fixture(adapter)
@@ -275,6 +280,7 @@ def test_provider_revocation_after_begin_ack_prevents_actual_sdk_dispatch(androi
             adapter.perform('AC_android_tap', {'x': 10, 'y': 20})
         assert not (sdk.directory / 'actions').exists()
         assert not any('/system/bin/input -d 0 ' in command for command in sdk.services)
-        assert adapter._journal.pending and adapter._channel.retired
+        assert adapter._journal.pending
+        assert adapter._channel.retired
     finally:
         release_fixture(adapter)

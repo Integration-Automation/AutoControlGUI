@@ -64,7 +64,8 @@ def test_model_gets_image_geometry_and_reference_schema_without_mutating_shared_
     assert content["observation"]["image_geometry"]["original_size"] == [400, 200]
     assert "data" not in content["observation"]["image_geometry"]
     offered = payload["tools"][0]["function"]["parameters"]["properties"]
-    assert "observed_target" in offered and "observed_target" not in original[0]["function"]["parameters"]["properties"]
+    assert "observed_target" in offered
+    assert "observed_target" not in original[0]["function"]["parameters"]["properties"]
 
 
 def test_model_reference_is_resolved_once_by_shared_runtime(tmp_path):
@@ -96,7 +97,9 @@ def test_continuous_geometry_change_exhausts_retries_without_preparing_any_effec
     try:
         task = runtime.submit(specification())
         assert run_task(runtime, task.task_id, backend=backend).state == "waiting_user"
-        assert backend.decisions == 3 and target.calls == [] and runtime.store.actions(task.task_id) == []
+        assert backend.decisions == 3
+        assert target.calls == []
+        assert runtime.store.actions(task.task_id) == []
     finally:
         runtime.close()
 
@@ -107,7 +110,8 @@ def test_adapter_without_safe_reobservation_does_not_replan_past_held_input(tmp_
     try:
         task = runtime.submit(specification())
         assert run_task(runtime, task.task_id, backend=backend).state == "waiting_user"
-        assert backend.decisions == 1 and target.calls == []
+        assert backend.decisions == 1
+        assert target.calls == []
     finally:
         runtime.close()
 

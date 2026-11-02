@@ -32,7 +32,8 @@ def test_newer_receive_receipt_wins_over_an_older_send_completion(tmp_path):
 
     engine = FolderSyncEngine(watch_dir=tmp_path, sender=send)
     loop(engine, lambda: target.write_bytes(b'old local'), lambda: None)
-    assert sent == [b'old local'] and target.read_bytes() == b'newer remote'
+    assert sent == [b'old local']
+    assert target.read_bytes() == b'newer remote'
 
 
 def test_receive_during_initial_scan_is_not_overwritten_by_the_older_baseline(tmp_path, monkeypatch):
@@ -123,13 +124,12 @@ def test_wrapped_interruption_propagates_unchanged(tmp_path, monkeypatch, signal
     if boundary == 'receipt':
         target.write_bytes(b'data')
         monkeypatch.setattr(engine, '_digest', interrupted)
+        attempt, arguments = engine.record_received, (target,)
     else:
         monkeypatch.setattr(engine, '_scan' if boundary == 'scan' else '_sender', interrupted)
+        attempt, arguments = loop, (engine, lambda: target.write_bytes(b'data'))
     with pytest.raises(type(signal)) as caught:
-        if boundary == 'receipt':
-            engine.record_received(target)
-        else:
-            loop(engine, lambda: target.write_bytes(b'data'))
+        attempt(*arguments)
     assert caught.value is signal
 
 

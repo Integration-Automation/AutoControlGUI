@@ -283,9 +283,13 @@ def test_listener_failure_releases_owned_resources(x11, monkeypatch, failure_ste
         monkeypatch.setattr(x11.listener.XWindowsKeypressListener, "start", fail)
     else:
         monkeypatch.setattr(connection, "record_" + failure_step + "_context", fail)
-    with pytest.raises(AutoControlException) as caught:
+    if failure_step == "enable":
         x11.listener.check_key_is_press(38)
-        x11.listener._LISTENER.run()
+        attempt, arguments = x11.listener._LISTENER.run, ()
+    else:
+        attempt, arguments = x11.listener.check_key_is_press, (38,)
+    with pytest.raises(AutoControlException) as caught:
+        attempt(*arguments)
     assert isinstance(caught.value.__cause__, OSError)
     assert connection.calls[-1] == "close"
     assert ("free" in connection.calls) == (failure_step != "create")

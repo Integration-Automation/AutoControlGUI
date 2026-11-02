@@ -561,6 +561,7 @@ U-20261009-18 的每一個裝置面呼叫都只對假的 ADB／uiautomator2／WD
 `TODO` — `test/unit_test/headless/test_usb_acl_prompt.py::test_bridge_remember_persists_acl_rule`
 在 Python 3.10 的 Linux／macOS `coverage run -m pytest` 中仍有間歇 SIGSEGV（exit 139）紀錄。
 需在對應環境開啟 `faulthandler` 重跑並定位原生呼叫；單次重跑通過不足以證明已修復。
+2026-11-02 起不再支援 Python 3.10，CI 不再跑 3.10；同一機制（分配時觸發循環回收）在 3.11 也存在，改看 3.11 的方格。
 
 ---
 

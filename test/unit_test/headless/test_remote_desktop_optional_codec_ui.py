@@ -19,7 +19,7 @@ from je_auto_control.gui.remote_desktop import advanced_group, webrtc_host_media
 def qapp():
     """Keep Qt entirely offscreen for these widget checks."""
     app = QApplication.instance() or QApplication([])
-    yield app
+    return app
 
 
 @pytest.mark.parametrize("missing", ["available_hardware_codecs", "active_hardware_codec", "both"])

@@ -127,10 +127,12 @@ def test_confirmation_waits_for_remote_end_and_atomic_publication(native_pair, t
     result = sending(native_pair, source)
     try:
         assert native_pair.end_held.wait(5)
-        assert not result.done.wait(.05) and not (native_pair.receiver / source.name).exists()
+        assert not result.done.wait(.05)
+        assert not (native_pair.receiver / source.name).exists()
         native_pair.bridge.call_soon(native_pair.incoming.fire, 'message', native_pair.held.pop())
         finished(result)
-        assert result.errors == [] and (native_pair.receiver / source.name).read_bytes() == source.read_bytes()
+        assert result.errors == []
+        assert (native_pair.receiver / source.name).read_bytes() == source.read_bytes()
     finally:
         finished(result)
 
@@ -168,13 +170,15 @@ def test_an_unsupported_peer_is_refused_before_source_metadata_and_manual_send_s
     monkeypatch.setattr(Path, 'is_file', metadata)
     with pytest.raises(webrtc_files.FileTransferError):
         native_pair.viewer.send_file(source, require_commit=True)
-    assert reads == [] and list(native_pair.receiver.iterdir()) == []
+    assert reads == []
+    assert list(native_pair.receiver.iterdir()) == []
     native_pair.viewer.send_file(source)
     flush(native_pair)
     assert (native_pair.receiver / source.name).read_bytes() == b'legacy bytes'
     begins = [json.loads(message) for label, message in native_pair.sent
               if label == 'outbound' and isinstance(message, str) and json.loads(message).get('type') == 'file_begin']
-    assert len(begins) == 1 and 'commit' not in begins[0]
+    assert len(begins) == 1
+    assert 'commit' not in begins[0]
 
 
 @pytest.mark.parametrize('field,value', [('sha256', '0' * 64), ('size', 0), ('size', True)])
@@ -198,7 +202,8 @@ def test_corrupted_chunks_fail_checksum_before_replacing_an_existing_target(nati
     with pytest.raises(webrtc_files.FileTransferError):
         native_pair.viewer.send_file(source, require_commit=True)
     flush(native_pair)
-    assert target.read_bytes() == b'previous target' and receipts == []
+    assert target.read_bytes() == b'previous target'
+    assert receipts == []
     assert sorted(path.name for path in native_pair.receiver.iterdir()) == [source.name]
 
 
@@ -235,7 +240,8 @@ def test_pending_confirmation_fails_when_its_owner_ends_and_partial_target_is_pr
     native_pair.bridge.submit(ended()).result(5)
     finished(result)
     flush(native_pair)
-    assert len(result.errors) == 1 and isinstance(result.errors[0], webrtc_files.FileTransferError)
+    assert len(result.errors) == 1
+    assert isinstance(result.errors[0], webrtc_files.FileTransferError)
     assert target.read_bytes() == b'previous target'
     assert sorted(path.name for path in native_pair.receiver.iterdir()) == [source.name]
 
@@ -262,7 +268,8 @@ def test_old_acknowledgement_cannot_confirm_a_reused_transfer_id(native_pair, tm
         assert not second.done.wait(.05), 'an old transfer receipt confirmed a replacement request'
         native_pair.bridge.call_soon(native_pair.incoming.fire, 'message', native_pair.held.pop())
         finished(second)
-        assert len(second.errors) == 1 and isinstance(second.errors[0], webrtc_files.FileTransferError)
+        assert len(second.errors) == 1
+        assert isinstance(second.errors[0], webrtc_files.FileTransferError)
         assert not (native_pair.receiver / 'second.bin').exists()
     finally:
         finished(second)
@@ -277,7 +284,8 @@ def test_completed_publication_receipt_wins_over_late_cancellation(native_pair, 
     cancelled = Event()
     native_pair.after_ack = cancelled.set
     native_pair.viewer.send_file(source, require_commit=True, cancelled=cancelled.is_set)
-    assert cancelled.is_set() and (native_pair.receiver / source.name).read_bytes() == b'committed'
+    assert cancelled.is_set()
+    assert (native_pair.receiver / source.name).read_bytes() == b'committed'
 
 
 @pytest.mark.parametrize('signal', [KeyboardInterrupt, SystemExit, asyncio.CancelledError,
@@ -298,7 +306,8 @@ def test_original_wrapped_cancellation_while_awaiting_commit_is_preserved(native
     result = sending(native_pair, source, cancelled=cancelled)
     finished(result)
     flush(native_pair)
-    assert len(result.errors) == 1 and result.errors[0] is original
+    assert len(result.errors) == 1
+    assert result.errors[0] is original
     assert target.read_bytes() == b'previous target'
     assert sorted(path.name for path in native_pair.receiver.iterdir()) == [source.name]
 
@@ -314,10 +323,12 @@ def test_pending_commit_still_owns_the_channel_and_refuses_a_second_producer(nat
         count = len(native_pair.sent)
         with pytest.raises(webrtc_files.FileTransferError):
             native_pair.viewer.send_file(two, require_commit=True)
-        assert len(native_pair.sent) == count and not result.done.is_set()
+        assert len(native_pair.sent) == count
+        assert not result.done.is_set()
         native_pair.bridge.call_soon(native_pair.outgoing.fire, 'message', native_pair.held_acks.pop())
         finished(result)
-        assert result.errors == [] and not (native_pair.receiver / two.name).exists()
+        assert result.errors == []
+        assert not (native_pair.receiver / two.name).exists()
     finally:
         finished(result)
 
@@ -394,7 +405,8 @@ def test_global_confirmation_lookup_does_not_keep_unused_channels_or_bindings_al
     reference = weakref.ref(webrtc_file_commit._find_binding(channel))
     del channel, receiver
     gc.collect()
-    assert reference() is None and identifier not in webrtc_file_commit._bindings
+    assert reference() is None
+    assert identifier not in webrtc_file_commit._bindings
 
 
 @pytest.mark.parametrize('content', [b'', b'small file', b'Z' * (2 * 1024 * 1024)], ids=['empty', 'small', 'two_mib'])
@@ -466,7 +478,9 @@ def test_confirmed_receiver_validates_metadata_and_digest_before_publication(tmp
     receipts, errors = [], []
     for message in (json.dumps(begin), b'data', json.dumps(end)):
         receiver.handle_message(message, on_receipt=receipts.append, on_error=errors.append)
-    assert receipts == [] and errors and target.read_bytes() == b'previous'
+    assert receipts == []
+    assert errors
+    assert target.read_bytes() == b'previous'
     assert sorted(path.name for path in tmp_path.iterdir()) == [target.name]
 
 

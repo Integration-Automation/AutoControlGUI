@@ -83,9 +83,14 @@ def test_entry_changes_require_an_honest_origin_and_causal_floor(tmp_path, chang
     else:
         args.update(version=entry.version, operation_id=entry.operation_id)
     proposed = ac.SyncEntry(**args)
-    with pytest.raises(ac.ConfigSyncError):
+    claim = actor('desktop')
+
+    def commit_proposal():
         candidate = current.with_entries((proposed,))
-        store.commit('alice', candidate, base_revision=current.revision, operation_id=change, actor=actor('desktop'))
+        store.commit('alice', candidate, base_revision=current.revision, operation_id=change, actor=claim)
+
+    with pytest.raises(ac.ConfigSyncError):
+        commit_proposal()
     assert store.get('alice') == current
 
 
@@ -122,19 +127,23 @@ def test_collection_reclaims_payload_but_retains_floor_across_restart_and_restor
                  operation_id='collect', actor=actor('desktop', 'collect'))
     with sqlite3.connect(tmp_path / 'config.sqlite3') as connection:
         raw = json.loads(connection.execute('SELECT body FROM config_buckets').fetchone()[0])
-    assert raw['entries'] == [] and 'value' not in raw['fences'][0]
+    assert raw['entries'] == []
+    assert 'value' not in raw['fences'][0]
     current = ac.CausalConfigStore(tmp_path / 'config.sqlite3').get('alice')
     assert current.with_entries((entry, deleted)).entries == ()
     concurrent = ac.SyncEntry('settings', 'theme', {'value': 'offline'}, {'laptop': 1}, 'offline', 'laptop')
     conflict = current.with_entries((concurrent,))
     store.commit('alice', conflict, base_revision=current.revision, operation_id='offline', actor=actor('laptop'))
     current = store.get('alice')
-    assert len(current.conflicts) == 1 and current.collect() == current
+    assert len(current.conflicts) == 1
+    assert current.collect() == current
     resolved = concurrent.evolve({'value': 'restored'}, origin='laptop', operation_id='restore', observed=(deleted,))
     store.commit('alice', current.with_entries((resolved,)), base_revision=current.revision,
                  operation_id='restore', actor=actor('laptop'))
     final = store.get('alice')
-    assert final.live_entries == (resolved,) and final.fences == () and final.conflicts == ()
+    assert final.live_entries == (resolved,)
+    assert final.fences == ()
+    assert final.conflicts == ()
 
 
 def test_concurrent_store_instances_share_one_atomic_cas_boundary(tmp_path):
@@ -149,7 +158,8 @@ def test_concurrent_store_instances_share_one_atomic_cas_boundary(tmp_path):
             return 'conflict'
     with ThreadPoolExecutor(max_workers=2) as pool:
         outcomes = list(pool.map(write, ('desktop', 'laptop')))
-    assert outcomes.count('conflict') == 1 and outcomes.count(current.revision + 1) == 1
+    assert outcomes.count('conflict') == 1
+    assert outcomes.count(current.revision + 1) == 1
     assert store.get('alice').revision == current.revision + 1
 
 
@@ -159,11 +169,13 @@ def test_legacy_tombstones_never_expire_during_upgrade_and_opaque_data_is_not_lo
     legacy.put_legacy('alice', ac.ConfigBucket('alice', {'settings': {
         'old': {'deleted': True, 'last_modified': 0, 'value': 'previous'}}}).to_dict())
     state = ac.CausalConfigStore(path).get('alice')
-    assert state.entries[0].is_deleted and state.live_entries == ()
+    assert state.entries[0].is_deleted
+    assert state.live_entries == ()
     assert state.entries[0].value == {'value': 'previous'}
     legacy.put_legacy('bob', {'user_id': 'bob', 'opaque': {'important': True}})
+    upgraded = ac.CausalConfigStore(path)
     with pytest.raises(ac.ConfigSyncError):
-        ac.CausalConfigStore(path).get('bob')
+        upgraded.get('bob')
     assert legacy.get_document('bob')['opaque'] == {'important': True}
 
 
@@ -184,7 +196,8 @@ def test_causal_commands_share_existing_mcp_builder_and_private_path_guards(tmp_
     tools = {tool.name: tool for tool in build_default_tool_registry()}
     assert tools['ac_config_store_commit'].handler(**args) == {'version': 3, 'revision': 1, 'cas': True}
     read = tools['ac_config_store_get'].handler(path=args['path'], user_id='alice')
-    assert read['version'] == 3 and read['bucket']['revision'] == 1
+    assert read['version'] == 3
+    assert read['bucket']['revision'] == 1
 
 
 @pytest.mark.parametrize('bad', [[], {}, {'schema_version': 1}, {'schema_version': True}])
