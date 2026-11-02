@@ -46,15 +46,17 @@ def test_returned_input_and_partial_failure_keep_possible_effects(stdout, code, 
 ])
 @pytest.mark.parametrize("code", [0, 91, 93, 94, 95, 96])
 def test_partial_forged_extra_or_legacy_output_remains_unknown(stdout, code):
+    result = AdbShellResult(stdout, b"", code)
     with pytest.raises(AgentTaskError, match="unknown") as error:
-        parse_android_action_result(AdbShellResult(stdout, b"", code))
+        parse_android_action_result(result)
     assert "private-device-diagnostic" not in str(error.value)
 
 
 @pytest.mark.parametrize("code", [0, 91, 92, 94, 95, True, False, 93.0, "93"])
 def test_pre_refusal_with_wrong_exit_type_or_value_is_unknown(code):
+    result = AdbShellResult(ACTION_HEADER + b"refused:93\n", b"", code)
     with pytest.raises(AgentTaskError, match="unknown"):
-        parse_android_action_result(AdbShellResult(ACTION_HEADER + b"refused:93\n", b"", code))
+        parse_android_action_result(result)
 
 
 @pytest.mark.parametrize("result", [

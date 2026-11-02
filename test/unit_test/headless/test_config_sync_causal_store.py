@@ -36,8 +36,9 @@ def test_causal_upgrade_preserves_plain_data_and_guards_old_writers(tmp_path):
     assert state.live_entries==before.live_entries
     with pytest.raises(ConfigRevisionConflict):
         plain.commit('alice',bucket,base_revision=2,operation_id='old-writer')
+    legacy=bucket.to_dict()
     with pytest.raises(ConfigRevisionConflict):
-        plain.put_legacy('alice',bucket.to_dict())
+        plain.put_legacy('alice',legacy)
     assert store.get('alice').revision==2
 
 
@@ -49,9 +50,10 @@ def test_concurrent_edits_are_retained_and_missing_alternatives_are_rejected(tmp
     left=SyncEntry('settings','theme',{'value':'dark'},{'desktop':1},'left','desktop')
     right=SyncEntry('settings','theme',{'value':'light'},{'laptop':1},'right','laptop')
     store.commit('alice',base.with_entries((left,)),base_revision=base.revision,operation_id='left',actor=actor('desktop'))
+    stale=base.with_entries((right,))
+    laptop=actor('laptop')
     with pytest.raises(ConfigRevisionConflict):
-        store.commit('alice',base.with_entries((right,)),base_revision=base.revision,
-                     operation_id='stale-right',actor=actor('laptop'))
+        store.commit('alice',stale,base_revision=base.revision,operation_id='stale-right',actor=laptop)
     current=store.get('alice')
     store.commit('alice',current.with_entries((right,)),base_revision=current.revision,
                  operation_id='right',actor=actor('laptop'))
@@ -60,8 +62,9 @@ def test_concurrent_edits_are_retained_and_missing_alternatives_are_rejected(tmp
     assert set(current.conflicts[0].origins)=={'desktop','laptop'}
     assert current.live_entries==()
     bad=replace(current,entries=(left,),committed={left.change_id:current.committed[left.change_id]})
+    desktop=actor('desktop')
     with pytest.raises(ConfigSyncError):
-        store.commit('alice',bad,base_revision=current.revision,operation_id='drop-right',actor=actor('desktop'))
+        store.commit('alice',bad,base_revision=current.revision,operation_id='drop-right',actor=desktop)
     assert store.get('alice').revision==current.revision
 
 
@@ -108,16 +111,18 @@ def test_retired_peer_needs_explicit_rejoin_and_old_epoch_stays_invalid(tmp_path
     store.commit('alice',state.with_peers(peers),base_revision=state.revision,
                  operation_id='retire',actor=actor('desktop','retire',peer_id='laptop'))
     state=store.get('alice')
+    laptop=actor('laptop')
     with pytest.raises(FullResyncRequired):
-        store.commit('alice',state,base_revision=state.revision,operation_id='old-epoch',actor=actor('laptop'))
+        store.commit('alice',state,base_revision=state.revision,operation_id='old-epoch',actor=laptop)
     peers=state.peers
     peers.register('laptop',full_revision=state.revision,full_resync=True)
     store.commit('alice',state.with_peers(peers),base_revision=state.revision,operation_id='rejoin',
                  actor=actor('laptop','full_sync',epoch=1,revision=state.revision))
     current=store.get('alice')
     assert current.peers.require_active('laptop',epoch=1).epoch==1
+    laptop=actor('laptop')
     with pytest.raises(FullResyncRequired):
-        store.commit('alice',current,base_revision=current.revision,operation_id='stale-callback',actor=actor('laptop'))
+        store.commit('alice',current,base_revision=current.revision,operation_id='stale-callback',actor=laptop)
 
 
 def test_dedicated_causal_http_protocol_is_private_and_retries_are_idempotent(tmp_path):

@@ -34,16 +34,19 @@ def test_tagged_source_cannot_replace_a_missing_real_submission_witness_with_a_c
         exported = create_for(runtime, review) if boundary in {'export', 'chunk'} else None
         with runtime.store.connection(write=True) as connection:
             connection.execute('DELETE FROM agent_task_submissions WHERE task_id=?', (task.task_id,))
-        with pytest.raises(AgentTaskError):
+
+        def attempt():
             if boundary == 'review':
-                review_for(runtime, task.task_id)
-            elif boundary == 'create':
-                create_for(runtime, review)
-            else:
-                request = {'export_id': exported['export_id']}
-                if boundary == 'chunk':
-                    request['sha256'] = exported['manifest']['files'][0]['chunks'][0]
-                runtime.transfers.peer(boundary, request)
+                return review_for(runtime, task.task_id)
+            if boundary == 'create':
+                return create_for(runtime, review)
+            request = {'export_id': exported['export_id']}
+            if boundary == 'chunk':
+                request['sha256'] = exported['manifest']['files'][0]['chunks'][0]
+            return runtime.transfers.peer(boundary, request)
+
+        with pytest.raises(AgentTaskError):
+            attempt()
 
 
 @pytest.mark.parametrize('boundary', ['reserve', 'consume_review'])
@@ -73,8 +76,9 @@ def test_off_manifest_hash_and_corrupted_actual_chunk_are_refused(tmp_path):
     with completed_source(tmp_path) as (runtime, task, _output, _body, _users):
         created = create_for(runtime, review_for(runtime, task))
         source = runtime.transfers.source
+        other = sha256(b'other').hexdigest()
         with pytest.raises(AgentTaskError):
-            runtime.transfers.peer('chunk', {'export_id': created['export_id'], 'sha256': sha256(b'other').hexdigest()})
+            runtime.transfers.peer('chunk', {'export_id': created['export_id'], 'sha256': other})
         with runtime.store.connection() as connection:
             record = source.records.find(connection, created['export_id'])
         digest = created['manifest']['files'][0]['chunks'][0]
@@ -102,8 +106,9 @@ def test_runtime_close_refuses_active_source_work_and_keeps_the_real_owner_lock(
                 assert entered.wait(10)
                 with pytest.raises(AgentTaskError, match='active transfer'):
                     runtime.close()
+                targets = {'local-files': FileTarget()}
                 with pytest.raises(AgentTaskError, match='another runtime'):
-                    AgentRuntime(runtime.store.path, targets={'local-files': FileTarget()})
+                    AgentRuntime(runtime.store.path, targets=targets)
             finally:
                 release.set()
             assert future.result(timeout=10)['state'] == 'active'

@@ -331,7 +331,7 @@ for fd in fds:
                     with self.assertRaisesRegex(AgentTaskError, 'retirement is unconfirmed'):
                         channel.close(timeout=0.05)
                     self.assertLess(time.monotonic() - start, 0.5)
-                    self.assertTrue(owned <= descriptors())
+                    self.assertLessEqual(owned, descriptors())
                 finally:
                     release.set()
                     thread.join(5)

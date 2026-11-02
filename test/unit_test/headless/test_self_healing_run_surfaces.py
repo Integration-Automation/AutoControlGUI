@@ -77,14 +77,16 @@ def test_viewer_cannot_dispatch_before_capture_or_path_access():
 
 def test_nested_template_honors_roots_and_notification_revocation(tmp_path, controlled):
     request = {"template_path": str(FIXTURES / "new.png")}
+    heal = tool()
+    confined = ToolCallContext("roots", path_policy=PathPolicy([tmp_path]))
     with pytest.raises(PathNotAllowedError):
-        tool().handler(request, ctx=ToolCallContext("roots", path_policy=PathPolicy([tmp_path])))
+        heal.handler(request, ctx=confined)
     policy = PathPolicy(use_client_roots=True)
     policy.set_client_roots([FIXTURES])
     ctx = ToolCallContext("roots", progress_token="p", path_policy=policy)
     ctx.notifier = lambda *_: policy.set_client_roots([])
     with pytest.raises(PathNotAllowedError):
-        tool().handler(request, ctx=ctx)
+        heal.handler(request, ctx=ctx)
     assert not controlled.list_events()
 
 
@@ -150,7 +152,8 @@ def test_mcp_cancellation_at_each_phase_has_no_completion(false_verification, co
             ctx.cancelled_event.set()
 
     ctx.notifier = notify
+    heal = tool()
     with pytest.raises(OperationCancelledError):
-        tool().handler(request, ctx=ctx)
+        heal.handler(request, ctx=ctx)
     assert calls == (["click"] if phase in ("verifying", "settling") else [])
     assert not controlled.list_events()

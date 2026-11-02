@@ -55,8 +55,9 @@ def test_profiled_desktop_prefix_is_refused_before_any_helper_launch():
     profile = AgentTargetProfile(name="reviewed-desktop", kind="desktop", apps=("fixture",),
         allowed_tools=("AC_workflow_control",), settings={"platform": "windows"})
     target = NativeDesktopTarget(profile=profile.to_dict())
+    resumed = form()
     with pytest.raises(AgentHumanReview, match="desktop context"):
-        target.check_resume(form(), [{"status": "confirmed"}])
+        target.check_resume(resumed, [{"status": "confirmed"}])
     assert target._channel is None
     assert target._resource is None
 

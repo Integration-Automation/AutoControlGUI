@@ -139,8 +139,9 @@ def test_asset_capture_cancellation_keeps_chunks_without_recording_a_partial_sou
         stopped.set()
         return result
     monkeypatch.setattr(ac.SyncAssetStore, 'put_chunk', accept_then_cancel)
+    cancellable = ac.SyncWorkspace(config, cancelled=stopped.is_set)
     with pytest.raises(CancelledError):
-        ac.SyncWorkspace(config, cancelled=stopped.is_set).capture()
+        cancellable.capture()
     assert ac.SyncWorkspace(config).status()['outbox']['pending'] == 0
     assert not ac.SyncWorkspace(config).review('scripts')
     monkeypatch.setattr(ac.SyncAssetStore, 'put_chunk', original)

@@ -173,8 +173,9 @@ def test_partial_tail_does_not_complete_a_step_and_append_recovers_it(tmp_path):
 ])
 def test_invalid_events_fail_before_any_write(tmp_path, change):
     journal = ActionJournal(tmp_path / "events.jsonl")
+    event = _event(**change)
     with pytest.raises(ActionJournalError):
-        journal.append(_event(**change))
+        journal.append(event)
     assert not journal.path.exists()
 
 
@@ -220,8 +221,9 @@ def test_reader_checks_sequence_even_for_runs_it_filters_out(tmp_path):
 @pytest.mark.parametrize("value", ["\ud800", 10 ** 5000], ids=["invalid-unicode", "oversized-integer"])
 def test_invalid_json_encodings_are_framework_errors_before_write(tmp_path, value):
     journal = ActionJournal(tmp_path / "events.jsonl")
+    event = _event(parameters={"value": value})
     with pytest.raises(ActionJournalError, match="encoding"):
-        journal.append(_event(parameters={"value": value}))
+        journal.append(event)
     assert not journal.path.exists()
 
 
@@ -231,8 +233,9 @@ def test_sequence_exhaustion_does_not_append_an_unreadable_record(tmp_path):
     row = json.loads(journal.path.read_text(encoding="utf-8"))
     row["sequence"] = 2 ** 63 - 1
     journal.path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+    event = _event()
     with pytest.raises(ActionJournalError):
-        journal.append(_event())
+        journal.append(event)
     assert len(read_events(journal.path)) == 1
 
 
@@ -281,8 +284,9 @@ def test_processes_share_a_monotonic_append_order(tmp_path):
 
 def test_record_budget_uses_encoded_bytes_and_fails_before_write(tmp_path):
     journal = ActionJournal(tmp_path / "events.jsonl")
+    event = _event(parameters={"text": "界" * 3_000_000})
     with pytest.raises(ActionJournalError, match="8 MiB"):
-        journal.append(_event(parameters={"text": "界" * 3_000_000}))
+        journal.append(event)
     assert not journal.path.exists()
 
 
@@ -290,11 +294,14 @@ def test_record_budget_uses_encoded_bytes_and_fails_before_write(tmp_path):
 def test_storage_errors_stay_in_the_framework_exception_family(tmp_path, operation):
     destination = tmp_path / "directory"
     destination.mkdir()
-    with pytest.raises(ActionJournalError):
-        if operation == "read":
+    if operation == "read":
+        with pytest.raises(ActionJournalError):
             read_events(destination)
-        else:
-            ActionJournal(destination).append(_event())
+    else:
+        journal = ActionJournal(destination)
+        event = _event()
+        with pytest.raises(ActionJournalError):
+            journal.append(event)
 
 
 @pytest.mark.parametrize("existing", [
@@ -307,8 +314,9 @@ def test_storage_errors_stay_in_the_framework_exception_family(tmp_path, operati
 def test_append_never_truncates_an_existing_nonjournal_destination(tmp_path, existing):
     journal = ActionJournal(tmp_path / "existing.jsonl")
     journal.path.write_bytes(existing)
+    event = _event()
     with pytest.raises(ActionJournalError):
-        journal.append(_event())
+        journal.append(event)
     assert journal.path.read_bytes() == existing
     with pytest.raises(ActionJournalError):
         read_events(journal.path)
@@ -320,13 +328,15 @@ def test_corrupt_complete_record_prevents_torn_tail_repair(tmp_path):
     with journal.path.open("ab") as handle:
         handle.write(b'{not-json}\npartial')
     original = journal.path.read_bytes()
+    event = _event()
     with pytest.raises(ActionJournalError):
-        journal.append(_event())
+        journal.append(event)
     assert journal.path.read_bytes() == original
 
 
 def test_foreign_destination_reports_the_format_refusal(tmp_path):
     journal = ActionJournal(tmp_path / "existing.jsonl")
     journal.path.write_bytes(b"unrelated user content")
+    event = _event()
     with pytest.raises(ActionJournalError, match="destination has no committed journal"):
-        journal.append(_event())
+        journal.append(event)

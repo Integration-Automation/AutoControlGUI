@@ -53,8 +53,9 @@ def test_schema_lookup_is_single_tool_and_detached():
 @pytest.mark.parametrize("query,limit", [(None, 1), ("x" * 257, 1), ("", 0), ("", 51), ("", True)])
 def test_search_rejects_unbounded_inputs(query, limit):
     from je_auto_control.utils.mcp_server.discovery import ToolIndex
+    index = ToolIndex(catalog())
     with pytest.raises(ToolDiscoveryError, match="query|limit"):
-        ToolIndex(catalog()).search(query, limit=limit)
+        index.search(query, limit=limit)
 
 
 def test_mcp_discovery_uses_the_server_registry_including_plugins():

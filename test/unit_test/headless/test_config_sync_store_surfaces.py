@@ -50,11 +50,12 @@ def test_cancelled_or_confined_mcp_does_not_open_a_database(tmp_path,monkeypatch
     args=arguments(tmp_path)
     ctx=ToolCallContext('cancelled')
     ctx.cancelled_event.set()
+    commit_tool=tools()['ac_config_store_commit']
     with pytest.raises(OperationCancelledError):
-        tools()['ac_config_store_commit'].handler(**args,ctx=ctx)
+        commit_tool.handler(**args,ctx=ctx)
     ctx=ToolCallContext('confined',path_policy=PathPolicy([tmp_path/'elsewhere']))
     with pytest.raises(PathNotAllowedError):
-        tools()['ac_config_store_commit'].handler(**args,ctx=ctx)
+        commit_tool.handler(**args,ctx=ctx)
     assert not (tmp_path/'config.sqlite3').exists()
 
 

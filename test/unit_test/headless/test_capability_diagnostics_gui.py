@@ -92,8 +92,9 @@ def test_passive_probe_cancellation_retains_the_original_control(panel, monkeypa
         raise original
 
     monkeypatch.setattr(diagnostics_tab, 'probe_capabilities', canceled)
+    probe = dict(widget.menu_actions())['diag_probe']
     with pytest.raises(OperationCancelledError) as caught:
-        dict(widget.menu_actions())['diag_probe']()
+        probe()
     assert caught.value is original
     assert calls == []
     assert widget._table.rowCount() == 0

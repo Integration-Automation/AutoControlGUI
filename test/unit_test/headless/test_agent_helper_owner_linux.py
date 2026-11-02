@@ -188,10 +188,12 @@ def test_wire_layout_matches_the_native_frames():
 
 
 def test_wire_refuses_oversized_and_malformed_frames():
+    oversized = wire.ServiceRequest(wire.OP_WRITE, (1, 1), data=b"x" * (wire.DATA_BYTES + 1))
     with pytest.raises(AgentTaskError):
-        wire.ServiceRequest(wire.OP_WRITE, (1, 1), data=b"x" * (wire.DATA_BYTES + 1)).pack()
+        oversized.pack()
+    overlong = wire.ServiceRequest(wire.OP_START, (1, 1), arguments=("x" * wire.ARGUMENT_BYTES,))
     with pytest.raises(AgentTaskError):
-        wire.ServiceRequest(wire.OP_START, (1, 1), arguments=("x" * wire.ARGUMENT_BYTES,)).pack()
+        overlong.pack()
     with pytest.raises(AgentTaskError):
         wire.unpack_reply(b"\0" * wire.REPLY_SIZE)
     with pytest.raises(AgentTaskError):

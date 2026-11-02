@@ -18,8 +18,10 @@ def test_historical_get_cannot_attest_live_completion_after_issuing_origin_is_re
     result = Context().run(renewal.runtime.get, child)
     assert result.state == 'succeeded'
     assert result.metadata['completion_contract'] == 0
+    recorded = result.to_dict()
+    spec = renewal.runtime.store.get(renewal.source)['spec']
     with pytest.raises(AgentTaskError, match='retirement contract'):
-        validate_recorded_completion(result.to_dict(), renewal.runtime.store.get(renewal.source)['spec'])
+        validate_recorded_completion(recorded, spec)
 
 
 def test_recording_uses_reviewed_scope_and_still_requires_its_own_fresh_validation(renewal, monkeypatch):

@@ -90,8 +90,9 @@ def test_portable_revocation_inside_candidate_insert_rolls_back_the_entire_recor
     with runtime.store.connection(write=True) as connection:
         connection.execute('CREATE TRIGGER revoke_skill_grant AFTER INSERT ON agent_skill_candidates BEGIN '
             "UPDATE agent_transfer_grants SET state='revoked' WHERE id='" + identifier + "'; END")
+    request = request_for(recording, handoff_id=identifier)
     with pytest.raises(AgentTaskError):
-        runtime.skills.control('record', request_for(recording, handoff_id=identifier))
+        runtime.skills.control('record', request)
     assert runtime.skills.control('list')['total'] == 0
     with runtime.store.connection() as connection:
         assert connection.execute('SELECT count(*) FROM agent_skill_trials').fetchone()[0] == 0
@@ -103,8 +104,9 @@ def test_a_revoked_portable_grant_cannot_be_reinterpreted_as_an_old_local_grant(
     runtime = recording.runtime
     identifier = portable_grant(recording)
     runtime.transfers.control('revoke_evidence', {'grant_id': identifier})
+    request = request_for(recording, handoff_id=identifier)
     with pytest.raises(AgentTaskError):
-        runtime.skills.control('record', request_for(recording, handoff_id=identifier))
+        runtime.skills.control('record', request)
     assert runtime.skills.control('list')['total'] == 0
 
 
@@ -115,8 +117,9 @@ def test_revocation_inside_publication_rolls_back_version_and_completion_adoptio
     with runtime.store.connection(write=True) as connection:
         connection.execute('CREATE TRIGGER revoke_published_grant AFTER INSERT ON agent_skill_publications BEGIN '
             "UPDATE agent_transfer_grants SET state='revoked' WHERE id='" + identifier + "'; END")
+    request = {**acceptance(trial), 'handoff_id': identifier}
     with pytest.raises(AgentTaskError):
-        runtime.skills.control('accept', {**acceptance(trial), 'handoff_id': identifier})
+        runtime.skills.control('accept', request)
     candidate = runtime.skills.control('get', {'candidate_id': trial.candidate['id']})
     assert candidate['state'] == 'draft'
     assert candidate['version'] == 0
@@ -140,8 +143,9 @@ def test_changed_portable_authority_or_selection_cannot_record_a_skill(recording
             connection.execute('UPDATE agent_transfer_grants SET expires=0 WHERE id=?', (identifier,))
     else:
         selected = value.task_id
+    request = request_for(value, completion_task_id=selected, handoff_id=identifier)
     with pytest.raises(AgentTaskError):
-        runtime.skills.control('record', request_for(value, completion_task_id=selected, handoff_id=identifier))
+        runtime.skills.control('record', request)
     assert runtime.skills.control('list')['total'] == 0
 
 

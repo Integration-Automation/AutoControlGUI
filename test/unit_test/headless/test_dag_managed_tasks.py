@@ -76,15 +76,17 @@ def test_task_payload_is_detached_frozen_and_does_not_resolve_destination_roots(
     {"wait_seconds": 0}, {"wait_seconds": float("inf")}, {"wait_seconds": 86_401}, {"url": "http://evil"},
 ])
 def test_malformed_envelope_is_refused_before_dispatch(change):
+    graph = definition(task(**change))
     with pytest.raises(DagDefinitionError):
-        parse_dag(definition(task(**change)))
+        parse_dag(graph)
 
 
 def test_external_or_ambiguous_payloads_are_refused():
     payload = task()
     payload["spec"]["mode"] = "external"
+    external = definition(payload)
     with pytest.raises(DagDefinitionError):
-        parse_dag(definition(payload))
+        parse_dag(external)
     graph = definition()
     graph["nodes"][0]["actions"] = []
     with pytest.raises(DagDefinitionError):
@@ -164,8 +166,9 @@ def test_interrupted_wait_requests_pause_with_cancellation_suspended(reason, mon
     monkeypatch.setattr(managed_tasks, "_connection", lambda _host: endpoint)
     with cancellation_scope(token):
         if reason == "cancel":
+            graph = definition()
             with pytest.raises(CancelledError):
-                run_dag(definition(), stop_event=stop)
+                run_dag(graph, stop_event=stop)
         else:
             payload = task(wait_seconds=0.01) if reason == "timeout" else task()
             result = run_dag(definition(payload), stop_event=stop)

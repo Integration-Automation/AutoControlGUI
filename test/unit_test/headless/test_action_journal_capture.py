@@ -167,8 +167,9 @@ def test_completion_storage_failure_keeps_the_durable_start_incomplete(tmp_path,
         append(event)
 
     monkeypatch.setattr(journal, "append", interrupted)
+    scope = journal_scope(journal)
     with pytest.raises(AutoControlActionException if strict else ActionJournalError):
-        with journal_scope(journal):
+        with scope:
             executor.execute_action([["AC_journal_fail"]], raise_on_error=strict)
     assert [event.status for event in read_events(journal.path)] == ["incomplete"]
     assert current_journal() is None
@@ -180,8 +181,9 @@ def test_pre_dispatch_callback_cancellation_does_not_invent_an_attempt(tmp_path,
     def stopped(_action):
         raise KeyboardInterrupt()
 
+    scope = journal_scope(ActionJournal(path))
     with pytest.raises(KeyboardInterrupt):
-        with journal_scope(ActionJournal(path)):
+        with scope:
             executor.execute_action([[PROBE, {"value": "never"}]], step_callback=stopped)
     assert not path.exists()
     assert seen == []

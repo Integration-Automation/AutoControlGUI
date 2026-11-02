@@ -79,8 +79,9 @@ def test_lookup_absence_never_turns_a_claimed_node_back_into_dispatch(service):
     assert not value["can_approve"]
     assert value["decisions"][0]["action"] == "wait"
     value["decisions"][0] = {"node_id": "a", "action": "dispatch", "spec": definition["nodes"][0]["task"]["spec"]}
+    request = {"operation": "approve_continuation", "request": approval(value)}
     with pytest.raises(AgentTaskError, match="evidence or decisions changed"):
-        client.call("dag", {"operation": "approve_continuation", "request": approval(value)})
+        client.call("dag", request)
     assert target.count == 0
 
 

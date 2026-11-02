@@ -118,8 +118,9 @@ def test_owner_revocation_during_match_discards_proof(tmp_path, monkeypatch):
 
     monkeypatch.setattr(managed_tasks, "_connection", lambda _host: call)
     owner = AuthorizationContext("caller", "operator", store_path=str(store.path))
+    graph = definition()
     with authorization_scope(owner), pytest.raises(AuthorizationError):
-        inspect_agent_dag(definition())
+        inspect_agent_dag(graph)
     assert calls == ["lookup", "lookup"]
 
 

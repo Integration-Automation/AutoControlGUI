@@ -225,8 +225,9 @@ def test_poll_and_cleanup_cannot_run_on_a_different_window_owner_thread(monkeypa
         api.open(lambda: None)
         with ThreadPoolExecutor(max_workers=1) as executor:
             for operation in (lambda: api.poll(0), api.close):
+                future = executor.submit(operation)
                 with pytest.raises(AgentTaskError, match='thread'):
-                    executor.submit(operation).result(timeout=1)
+                    future.result(timeout=1)
         assert fake.user.DestroyWindow.calls == []
     finally:
         api.close()

@@ -173,7 +173,8 @@ def test_reader_retention_and_restart_preserve_only_historical_draft_provenance(
         assert current['provenance']['completion_review'] == proof
         fresh = reopened.skills.control('validate', {'candidate_id': candidate['id']})
         assert reopened.store.actions(fresh['task_id']) == []
+        request = request_for(recording)
         with pytest.raises(AgentTaskError):
-            reopened.skills.control('record', request_for(recording))
+            reopened.skills.control('record', request)
     finally:
         reopened.close()
