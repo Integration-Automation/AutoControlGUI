@@ -7,6 +7,7 @@ import weakref
 import pytest
 
 pytest.importorskip('PySide6.QtWidgets', exc_type=ImportError)
+from headless._qt_settle import settle
 from headless.test_remote_registry_owners_gui import qapp as qapp, _tab
 from je_auto_control.utils.clipboard import clipboard
 from je_auto_control.utils.rbac import AuthorizationContext, Role, UserStore, authorization_scope, current_authorization
@@ -42,6 +43,7 @@ def test_queued_clipboard_from_a_disconnected_gui_viewer_cannot_apply_to_a_repla
         panel._disconnect()
         if reconnect:
             panel._connect()
+            settle(panel)  # the connect runs off the GUI thread; its viewer is adopted when it answers
         qapp.processEvents()
         assert applied == [], 'the queued clipboard from the old connection changed local state'
         if reconnect:

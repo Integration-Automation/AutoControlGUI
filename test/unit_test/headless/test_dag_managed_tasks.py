@@ -170,7 +170,15 @@ def test_interrupted_wait_requests_pause_with_cancellation_suspended(reason, mon
             result = run_dag(definition(payload), stop_event=stop)
             assert not result.succeeded
             assert result.nodes["one"].result["input_released"] is None
-    assert calls == ["submit", "get", "pause"]
+    if reason == "timeout":
+        # A 10 ms budget: the poll's wait can wake just before the deadline on a coarse
+        # (Windows) timer and read the status once more before the budget runs out.
+        assert calls[0] == "submit", calls
+        assert calls[-1] == "pause", calls
+        assert calls[1:-1], calls
+        assert set(calls[1:-1]) == {"get"}, calls
+    else:
+        assert calls == ["submit", "get", "pause"]
 
 
 def test_owner_revocation_during_poll_stops_dispatch_and_preserves_review(tmp_path, monkeypatch):
