@@ -132,7 +132,10 @@ def test_wall_deadline_during_grounding_retires_before_input_cleanup(tmp_path):
     runtime = AgentRuntime(tmp_path / "one.sqlite", targets={"fixture": adapter})
     try:
         specification = spec()
-        specification["budget"] = {"wall_seconds": 2, "action_seconds": 5}
+        # The wall budget must outlast the helper start and the first observe/act on a slow
+        # runner, and still run out (before the 20 s action limit) while the fourth observation
+        # sleeps for 30 seconds.
+        specification["budget"] = {"wall_seconds": 6, "action_seconds": 20}
         task = runtime.submit(specification)
         frame = runtime.observe(task.task_id)
         runtime.act(task.task_id, {"tool": "AC_increment", "arguments": {"hold": True},

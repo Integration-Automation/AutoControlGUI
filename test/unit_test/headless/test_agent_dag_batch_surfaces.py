@@ -35,7 +35,7 @@ def test_versioned_api_and_catalog_expose_the_same_managed_batch_protocol():
 
 
 def test_gui_registers_only_on_action_and_discards_graph_or_batch_selection_changes(monkeypatch):
-    pytest.importorskip("PySide6")
+    pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)  # also when Qt cannot load (no libEGL)
     import shiboken6
     from PySide6.QtWidgets import QApplication
     from je_auto_control.gui.dag_tab import DagTab, _DagWorker

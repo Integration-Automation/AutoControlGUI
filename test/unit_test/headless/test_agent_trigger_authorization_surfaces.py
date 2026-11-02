@@ -54,7 +54,7 @@ def test_authenticated_http_preserves_owner_and_does_not_dispatch_inherited_queu
 
 
 def test_gui_review_prepares_separate_explicit_request_and_refuses_wrong_selection(monkeypatch):
-    pytest.importorskip("PySide6")
+    pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)  # also when Qt cannot load (no libEGL)
     from PySide6.QtWidgets import QApplication
     import shiboken6
     from je_auto_control.gui.agent_tasks_tab import AgentTasksTab

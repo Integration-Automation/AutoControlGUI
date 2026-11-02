@@ -53,7 +53,7 @@ def test_authenticated_http_can_review_and_create_without_executing_or_publishin
 
 
 def test_gui_skill_selector_dispatches_review_and_creation_only_on_explicit_actions(monkeypatch):
-    pytest.importorskip("PySide6")
+    pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)  # also when Qt cannot load (no libEGL)
     from PySide6.QtWidgets import QApplication
     import shiboken6
     from je_auto_control.gui.agent_tasks_tab import AgentTasksTab
