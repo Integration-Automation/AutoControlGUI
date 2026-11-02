@@ -79,16 +79,3 @@ jobs:
           name: android-helper-debug-apk
           path: native/android_helper/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
-
-      # Temporary: writes the dependency lock files once so they can be committed;
-      # removed again in the change that adds them.
-      - name: Write the Gradle dependency lock files
-        run: gradle --no-daemon -p native/android_helper dependencies :core:dependencies :app:dependencies --write-locks
-
-      - name: Keep the lock files
-        uses: actions/upload-artifact@v6
-        with:
-          name: android-helper-gradle-locks
-          path: native/android_helper/**/gradle.lockfile
-          if-no-files-found: error
-          retention-days: 7

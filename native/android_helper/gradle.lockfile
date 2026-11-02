@@ -1,0 +1,5 @@
+# This is a Gradle generated file for dependency locking.
+# Manual edits can break the build and are not advised.
+# This file is expected to be part of source control.
+# The root project only declares plugins (apply false) and resolves no configuration.
+empty=
