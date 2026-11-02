@@ -173,8 +173,10 @@ def test_interrupted_wait_requests_pause_with_cancellation_suspended(reason, mon
     if reason == "timeout":
         # A 10 ms budget: the poll's wait can wake just before the deadline on a coarse
         # (Windows) timer and read the status once more before the budget runs out.
-        assert calls[0] == "submit" and calls[-1] == "pause", calls
-        assert calls[1:-1] and set(calls[1:-1]) == {"get"}, calls
+        assert calls[0] == "submit", calls
+        assert calls[-1] == "pause", calls
+        assert calls[1:-1], calls
+        assert set(calls[1:-1]) == {"get"}, calls
     else:
         assert calls == ["submit", "get", "pause"]
 
