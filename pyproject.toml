@@ -47,7 +47,7 @@ dependencies = [
     # Pillow 13.0.0 fixes the 12.x advisories (critical: GHSA-v9pv-5gc8-w2m6,
     # GHSA-5x8w-8jj5-q52h).
     "pillow==13.0.0",
-    "pyobjc-core==12.2.2;platform_system=='Darwin'",
+    "pyobjc-core==13.0;platform_system=='Darwin'",
     "pyobjc==12.2.2;platform_system=='Darwin'",
     # The BSDs run the same X11 stack, and platform_system is the kernel
     # name there ("FreeBSD", "OpenBSD", "NetBSD"), so a Linux-only marker
